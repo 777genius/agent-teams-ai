@@ -139,24 +139,20 @@ interface TaskHistoryEventBase {
   timestamp: string;
   actor?: string;
 }
-
 export interface TaskCreatedEvent extends TaskHistoryEventBase {
   type: 'task_created';
   status: TeamTaskStatus;
 }
-
 export interface TaskStatusChangedEvent extends TaskHistoryEventBase {
   type: 'status_changed';
   from: TeamTaskStatus;
   to: TeamTaskStatus;
 }
-
 export interface TaskOwnerChangedEvent extends TaskHistoryEventBase {
   type: 'owner_changed';
   from?: string;
   to?: string;
 }
-
 export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   type: 'review_requested';
   from: TeamReviewState;
@@ -164,25 +160,28 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   reviewer?: string;
   note?: string;
 }
-
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
   type: 'review_changes_requested';
   from: TeamReviewState;
   to: 'needsFix';
   note?: string;
 }
-
 export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   type: 'review_approved';
   from: TeamReviewState;
   to: 'approved';
   note?: string;
 }
-
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
   type: 'review_started';
   from: TeamReviewState;
   to: 'review';
+}
+export interface TaskReviewResetEvent extends TaskHistoryEventBase {
+  type: 'review_reset';
+  from: TeamReviewState;
+  to: 'none';
+  reason: 'move_back_to_done';
 }
 
 export type TaskHistoryEvent =
@@ -192,7 +191,8 @@ export type TaskHistoryEvent =
   | TaskReviewRequestedEvent
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
-  | TaskReviewStartedEvent;
+  | TaskReviewStartedEvent
+  | TaskReviewResetEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
@@ -457,7 +457,49 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface MemberWorkSyncMessageMetadata {
+  /** Structured member-work-sync intent for runtime delivery and audit. */
+  workSyncIntent?: 'agenda_sync' | 'review_pickup';
+  /** Stable intent key, e.g. one review request event or a small review-request group. */
+  workSyncIntentKey?: string;
+  /** Concrete review_requested event IDs covered by this nudge. */
+  workSyncReviewRequestEventIds?: string[];
+  /** Protocol-2 early-continuation ticket identity. */
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeGeneration?: number;
+  workSyncRuntimeInstanceId?: string;
+  workSyncAdmissionPayloadHash?: string;
+  workSyncTeamIncarnation?: string;
+  /** Recovery control revision that bound this protocol-1/2 inbox nudge. */
+  workSyncControlRevision?: number;
+  /** Durable hash for idempotent hidden member-work-sync automation rows. */
+  workSyncPayloadHash?: string;
+}
+
+export interface TeamMessageContextMetadata extends MemberWorkSyncMessageMetadata {
+  /** Lead session ID that produced this message (for session boundary detection). */
+  leadSessionId?: string;
+  /** Stable cross-team thread ID shared across request/reply turns. */
+  conversationId?: string;
+  /** Explicit parent conversation/message reference for replies. */
+  replyToConversationId?: string;
+  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
+  toolSummary?: string;
+  /** Structured tool call details for tooltip display. */
+  toolCalls?: ToolCallMeta[];
+  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
+  messageKind?: InboxMessageKind;
+  /** Structured terminal runtime failure emitted by a teammate runtime. */
+  agentError?: AgentErrorMetadataV1;
+  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
+  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
+  /** Structured slash-command metadata for sent command rows. */
+  slashCommand?: SlashCommandMeta;
+  /** Structured command-output metadata for session-derived result rows. */
+  commandOutput?: CommandOutputMeta;
+}
+
+export interface InboxMessage extends TeamMessageContextMetadata {
   from: string;
   to?: string;
   text: string;
@@ -483,42 +525,6 @@ export interface InboxMessage {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
-  /** Lead session ID that produced this message (for session boundary detection). */
-  leadSessionId?: string;
-  /** Stable cross-team thread ID shared across request/reply turns. */
-  conversationId?: string;
-  /** Explicit parent conversation/message reference for replies. */
-  replyToConversationId?: string;
-  /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
-  toolSummary?: string;
-  /** Structured tool call details for tooltip display. */
-  toolCalls?: ToolCallMeta[];
-  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
-  messageKind?: InboxMessageKind;
-  /** Structured terminal runtime failure emitted by a teammate runtime. */
-  agentError?: AgentErrorMetadataV1;
-  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  /** Structured member-work-sync intent for runtime delivery and audit. */
-  workSyncIntent?: 'agenda_sync' | 'review_pickup';
-  /** Stable intent key, e.g. one review request event or a small review-request group. */
-  workSyncIntentKey?: string;
-  /** Concrete review_requested event IDs covered by this nudge. */
-  workSyncReviewRequestEventIds?: string[];
-  /** Protocol-2 early-continuation ticket identity. */
-  workSyncRuntimeTicketId?: string;
-  workSyncRuntimeGeneration?: number;
-  workSyncRuntimeInstanceId?: string;
-  workSyncAdmissionPayloadHash?: string;
-  workSyncTeamIncarnation?: string;
-  /** Recovery control revision that bound this protocol-1/2 inbox nudge. */
-  workSyncControlRevision?: number;
-  /** Durable hash for idempotent hidden member-work-sync automation rows. */
-  workSyncPayloadHash?: string;
-  /** Structured slash-command metadata for sent command rows. */
-  slashCommand?: SlashCommandMeta;
-  /** Structured command-output metadata for session-derived result rows. */
-  commandOutput?: CommandOutputMeta;
 }
 
 /** Cursor-based paginated messages response. */
@@ -527,16 +533,13 @@ export interface MessagesPage {
   /** Opaque cursor string for fetching older messages. Null when no more pages. */
   nextCursor: string | null;
   hasMore: boolean;
-  /**
-   * Content-stable revision of the full normalized feed that produced this page.
-   * Changes only when the semantic message feed changes.
-   */
+  /** Stable full-feed revision; changes only when the semantic message feed changes. */
   feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends TeamMessageContextMetadata {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -552,27 +555,6 @@ export interface SendMessageRequest {
   color?: string;
   attachments?: AttachmentPayload[];
   source?: InboxMessage['source'];
-  /** Lead session ID for session boundary detection. */
-  leadSessionId?: string;
-  conversationId?: string;
-  replyToConversationId?: string;
-  toolSummary?: string;
-  toolCalls?: ToolCallMeta[];
-  messageKind?: InboxMessageKind;
-  agentError?: AgentErrorMetadataV1;
-  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
-  workSyncIntent?: InboxMessage['workSyncIntent'];
-  workSyncIntentKey?: string;
-  workSyncReviewRequestEventIds?: string[];
-  workSyncRuntimeTicketId?: string;
-  workSyncRuntimeGeneration?: number;
-  workSyncRuntimeInstanceId?: string;
-  workSyncAdmissionPayloadHash?: string;
-  workSyncTeamIncarnation?: string;
-  workSyncControlRevision?: number;
-  workSyncPayloadHash?: string;
-  slashCommand?: SlashCommandMeta;
-  commandOutput?: CommandOutputMeta;
 }
 
 export interface SendMessageResult {
@@ -1019,6 +1001,14 @@ export interface PersistedTeamLaunchMemberState {
   hardFailure: boolean;
   hardFailureReason?: string;
   pendingPermissionRequestIds?: string[];
+  /** Backend identity is retained so persisted reconcile can select the
+   * process-only bootstrap transport projection without inferring readiness. */
+  backendType?: TeamAgentRuntimeBackendType;
+  tmuxPaneId?: string;
+  agentId?: string;
+  bootstrapRunId?: string;
+  bootstrapExpectedAfter?: string;
+  bootstrapRuntimeEventsPath?: string;
   runtimePid?: number;
   /** Runtime/bootstrap run id that produced current liveness or bootstrap evidence. */
   runtimeRunId?: string;
@@ -1560,7 +1550,6 @@ export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
 export interface MemberLeadSessionLogSummary extends MemberLogSummaryBase {
   kind: 'lead_session';
 }
-
 export interface MemberSessionLogSummary extends MemberLogSummaryBase {
   kind: 'member_session';
 }
@@ -1569,12 +1558,10 @@ export type MemberLogSummary =
   | MemberSubagentLogSummary
   | MemberLeadSessionLogSummary
   | MemberSessionLogSummary;
-
 export interface FileLineStats {
   added: number;
   removed: number;
 }
-
 export interface MemberFullStats {
   linesAdded: number;
   linesRemoved: number;
@@ -1591,7 +1578,6 @@ export interface MemberFullStats {
   sessionCount: number;
   computedAt: string;
 }
-
 export interface AddMemberRequest {
   name: string;
   role?: string;
@@ -1604,16 +1590,13 @@ export interface AddMemberRequest {
   fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
 }
-
 export interface RemoveMemberRequest {
   name: string;
 }
-
 export interface UpdateMemberRoleRequest {
   name: string;
   role: string | undefined;
 }
-
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
   /** Optional compare-and-swap intent from the member settings relaunch dialog. */
@@ -1627,7 +1610,6 @@ export interface ReplaceMembersRequest {
     effort: EffortLevel | null;
   };
 }
-
 /** Data sent from renderer to main for native OS team message notification. */
 export interface TeamMessageNotificationData {
   teamDisplayName: string;

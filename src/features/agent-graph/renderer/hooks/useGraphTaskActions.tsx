@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ReviewDialog } from '@renderer/components/team/dialogs/ReviewDialog';
 import { useStore } from '@renderer/store';
@@ -11,6 +10,7 @@ import {
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
 import type { TaskRef } from '@shared/types';
 
 interface GraphTaskActionHandlers {
@@ -29,7 +29,10 @@ interface UseGraphTaskActionsResult extends GraphTaskActionHandlers {
   taskActionHandlers: GraphTaskActionHandlers;
 }
 
-export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult {
+export function useGraphTaskActions(
+  teamName: string,
+  taskNotificationPort: TeamGraphTaskNotificationPort
+): UseGraphTaskActionsResult {
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const {
     teamData,
@@ -63,7 +66,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
           const task = teamData.tasks.find((candidate) => candidate.id === taskId);
           try {
             if (result.notifiedOwner && task?.owner) {
-              await api.teams.processSend(
+              await taskNotificationPort.notifyTeam(
                 teamName,
                 `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
               );
@@ -74,7 +77,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
               const desc = task?.description?.trim()
                 ? `\nDescription: ${task.description.trim()}`
                 : '';
-              await api.teams.processSend(
+              await taskNotificationPort.notifyTeam(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
               );
@@ -87,7 +90,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
         }
       })();
     },
-    [startTaskByUser, teamData, teamName]
+    [startTaskByUser, taskNotificationPort, teamData, teamName]
   );
 
   const onCompleteTask = useCallback(
@@ -139,7 +142,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
           if (teamData?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await api.teams.processSend(
+              await taskNotificationPort.notifyTeam(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -152,7 +155,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
         }
       })();
     },
-    [sendTeamMessage, teamData, teamName, updateTaskStatus]
+    [sendTeamMessage, taskNotificationPort, teamData, teamName, updateTaskStatus]
   );
 
   const onMoveBackToDone = useCallback(

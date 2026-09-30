@@ -1,9 +1,9 @@
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 vi.mock('electron', () => ({
   app: {
@@ -25,7 +25,9 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn(), showItemInFolder: vi.fn() },
 }));
 
-import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';

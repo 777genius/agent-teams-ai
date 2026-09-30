@@ -5,6 +5,10 @@ import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 import {
+  createDesktopTeamApplicationHost,
+  createTeamHttpMemberDiagnosticsApi,
+} from '@main/composition/team/createDesktopTeamApplicationHost';
+import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
   writeTeamControlApiState,
@@ -31,6 +35,27 @@ function functionSource(name: string): string {
 
 type ResolverKind = 'provisioning' | 'memberWorkSync';
 
+// Registration only binds the diagnostics-side ensurer and returns its argument
+// unchanged (see registerTeamControlApiEnsurer), so the bound identifier and its
+// wrapped function are the same resolver Host actually installs.
+function variableInitializer(name: string): ts.Expression {
+  let initializer: ts.Expression | undefined;
+  function visit(node: ts.Node): void {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer
+    ) {
+      initializer = node.initializer;
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  if (!initializer) throw new Error(`Missing Host resolver binding ${name}`);
+  return initializer;
+}
+
 function resolverSource(kind: ResolverKind): string {
   const matches: ts.Expression[] = [];
   function visit(node: ts.Node): void {
@@ -43,7 +68,7 @@ function resolverSource(kind: ResolverKind): string {
       }
       if (
         kind === 'memberWorkSync' &&
-        node.expression.getText(source) === 'createMemberWorkSyncFeature'
+        node.expression.getText(source) === 'createNodeMemberWorkSyncFeature'
       ) {
         const options = node.arguments[0];
         if (ts.isObjectLiteralExpression(options)) {
@@ -62,7 +87,17 @@ function resolverSource(kind: ResolverKind): string {
   }
   visit(source);
   if (matches.length !== 1) throw new Error(`Expected exactly one ${kind} Host resolver`);
-  return matches[0].getText(source);
+  let expression = matches[0];
+  if (ts.isIdentifier(expression)) {
+    expression = variableInitializer(expression.text);
+  }
+  if (
+    ts.isCallExpression(expression) &&
+    expression.expression.getText(source) === 'registerTeamControlApiEnsurer'
+  ) {
+    expression = expression.arguments[0];
+  }
+  return expression.getText(source);
 }
 
 function createHost(publish = writeTeamControlApiState) {
@@ -104,6 +139,9 @@ function createHost(publish = writeTeamControlApiState) {
     teamHttpHandlerApis: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
+    teamProvisioningService: {},
+    createDesktopTeamApplicationHost,
+    createTeamHttpMemberDiagnosticsApi,
     recentProjectsFeature: {},
     organizationsFeature: {},
     workspaceTrustStatus: {},

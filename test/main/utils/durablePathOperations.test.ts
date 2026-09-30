@@ -2,18 +2,18 @@
  * Transient-rename behaviour of the identity fence.
  *
  * The fence renames a directory tree aside before removing it, and renames it
- * back when validation rejects the detached tree. On Windows both renames can
- * be refused with EPERM/EACCES/EBUSY while some other process still holds a
- * handle inside the tree, which is why they retry - but the retry is bounded,
- * and every other error still reaches the caller on the first attempt.
+ * On Windows the detach rename can be refused with EPERM/EACCES/EBUSY while
+ * another process holds a handle. The retry is bounded.
  */
 
+import {
+  getDurablePathIdentity,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/durablePathOperations';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { removePathWithIdentityFenceAsync } from '@main/utils/durablePathOperations';
 
 const realRename = fs.promises.rename;
 
@@ -84,6 +84,51 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
     expect(rename).toHaveBeenCalledTimes(1);
   });
 
+  it('recovers a proof-backed detached object when a successful rename reports ENOENT', async () => {
+    const detachedPath = path.join(root, '.team-alpha.deleting.transaction');
+    const originalIdentity = getDurablePathIdentity(fs.lstatSync(target));
+    const events: string[] = [];
+    const rename = vi
+      .spyOn(fs.promises, 'rename')
+      .mockImplementation(async (from: fs.PathLike, to: fs.PathLike) => {
+        await realRename(from, to);
+        fs.mkdirSync(target);
+        fs.writeFileSync(path.join(target, 'replacement.json'), '{"replacement":true}');
+        throw errnoError('ENOENT');
+      });
+
+    await expect(
+      removePathWithIdentityFenceAsync(target, {
+        recursive: true,
+        force: true,
+        durability: 'strict',
+        validateDetached: async (candidatePath, identity) => {
+          events.push('validated');
+          expect(candidatePath).toBe(detachedPath);
+          expect(identity).toEqual(originalIdentity);
+          return true;
+        },
+        proofHooks: {
+          detachedPath,
+          onDetachedValidated: async () => {
+            events.push('detached-proof');
+            expect(fs.existsSync(detachedPath)).toBe(true);
+          },
+          onRemovalDurable: async () => {
+            events.push('removal-proof');
+            expect(fs.existsSync(detachedPath)).toBe(false);
+          },
+        },
+      })
+    ).resolves.toBe('deleted');
+
+    expect(rename).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(['validated', 'detached-proof', 'removal-proof']);
+    expect(fs.readFileSync(path.join(target, 'replacement.json'), 'utf8')).toBe(
+      '{"replacement":true}'
+    );
+  });
+
   it('completes the removal once a transient detach rename clears', async () => {
     let attempts = 0;
     const rename = vi
@@ -102,16 +147,8 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
     expect(fs.existsSync(target)).toBe(false);
   });
 
-  it('retries the rollback rename that puts a rejected tree back', async () => {
-    let attempts = 0;
-    const rename = vi
-      .spyOn(fs.promises, 'rename')
-      .mockImplementation(async (from: fs.PathLike, to: fs.PathLike) => {
-        attempts += 1;
-        // Attempt 1 detaches; attempt 2 is the rollback and is refused once.
-        if (attempts === 2) throw errnoError('EBUSY');
-        await realRename(from, to);
-      });
+  it('retains a rejected directory in quarantine without an unsafe rollback', async () => {
+    const rename = vi.spyOn(fs.promises, 'rename');
 
     await expect(
       removePathWithIdentityFenceAsync(target, {
@@ -121,8 +158,10 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
       })
     ).resolves.toBe('changed');
 
-    expect(rename).toHaveBeenCalledTimes(3);
-    expect(fs.existsSync(path.join(target, 'config.json'))).toBe(true);
-    expect(fs.readdirSync(root)).toEqual(['team-alpha']);
+    expect(rename).toHaveBeenCalledTimes(1);
+    expect(fs.existsSync(target)).toBe(false);
+    const [detached] = fs.readdirSync(root);
+    expect(detached).toMatch(/^\.team-alpha\.deleting\./);
+    expect(fs.existsSync(path.join(root, detached, 'config.json'))).toBe(true);
   });
 });

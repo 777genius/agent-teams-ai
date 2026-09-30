@@ -1,4 +1,5 @@
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,6 +46,10 @@ describe('POST /api/teams/:teamName/force-stop', () => {
     const created = Fastify();
     const services = {
       teamApis: { runtime: { stopTeam, getAliveTeams, getRuntimeState: vi.fn() } },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+      }),
     } as unknown as HttpServices;
     registerTeamRoutes(created, services);
     await created.ready();

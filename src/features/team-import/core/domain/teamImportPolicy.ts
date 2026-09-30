@@ -1,8 +1,27 @@
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import YAML from 'yaml';
 
-import type { TeamImportFolderSnapshot } from '../application/models/TeamImportFolderSnapshot';
 import type { TeamImportPreview, TeamImportWarning } from '@features/team-import/contracts';
+
+export interface TeamImportSourceFile {
+  fileName: string;
+  content: string;
+}
+
+export interface TeamImportSkillDefinition {
+  directoryName: string;
+  content: string;
+}
+
+/** Pure folder snapshot consumed by the import policy. */
+export interface TeamImportFolderSnapshot {
+  projectPath: string;
+  folderName: string;
+  agentFiles: TeamImportSourceFile[];
+  claudeMd?: string;
+  skills: TeamImportSkillDefinition[];
+  warnings: TeamImportWarning[];
+}
 
 const MEMBER_PREFIX = `## Team collaboration
 - When the lead assigns this board task, use task_start to mark it in progress.

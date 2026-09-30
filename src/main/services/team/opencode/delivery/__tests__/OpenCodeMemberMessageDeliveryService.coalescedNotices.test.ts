@@ -158,7 +158,10 @@ function createHarness(
   return {
     service: new OpenCodeMemberMessageDeliveryService(deps),
     ledger,
-    sentTexts: () => sendMessageToMember.mock.calls.map(([call]) => String(call.text ?? '')),
+    sentTexts: () =>
+      sendMessageToMember.mock.calls.map((call: Array<{ text?: unknown }>) =>
+        String(call[0]?.text ?? '')
+      ),
   };
 }
 

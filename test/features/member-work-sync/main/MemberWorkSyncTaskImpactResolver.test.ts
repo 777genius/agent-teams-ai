@@ -52,7 +52,7 @@ describe('MemberWorkSyncTaskImpactResolver', () => {
         id: 'task-a',
         displayId: '#11111111',
         subject: 'Changed',
-        status: 'in_progress',
+        status: 'completed',
         owner: 'alice',
         reviewState: 'review',
         historyEvents: [

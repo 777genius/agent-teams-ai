@@ -12,6 +12,21 @@ Start here:
 - Team Provisioning target architecture and migration rules: [docs/team-management/team-provisioning-target-architecture.md](docs/team-management/team-provisioning-target-architecture.md)
 - Agent team launch/runtime debugging runbook: [docs/team-management/debugging-agent-teams.md](docs/team-management/debugging-agent-teams.md)
 
+## Hosted Web
+
+For the active Hosted MVP and PR #252, read the accepted
+[Core v1 scope lock](docs/hosted-web-core-v1-scope-lock.md) and the
+[foundation delivery plan](docs/hosted-web-foundation-delivery-plan.md) before changing shared
+Desktop/Hosted behavior. The scope lock owns product inclusion; the foundation plan owns the
+selected architecture migration and its acceptance. For the separate actual-owner approval route,
+begin at [START_HERE.md](docs/hosted-web-phases/START_HERE.md) and follow
+[EXECUTION_INDEX.json](docs/hosted-web-phases/EXECUTION_INDEX.json). Its r6 `HOLD` is parked for
+that deferred route and does not block the accepted Hosted MVP. Do not insert another document into
+the phase router's mandatory read order or use it as authority for an MVP release.
+The monolithic plans ([hosted-web-e2e-completion-plan.md](docs/hosted-web-e2e-completion-plan.md),
+[hosted-web-phase-0-execution-packet.md](docs/hosted-web-phase-0-execution-packet.md)) are reference
+material; the execution index is the single source of truth for phase status.
+
 GitHub repository disambiguation:
 
 - For this workspace, the canonical GitHub repository is `777genius/agent-teams-ai`.

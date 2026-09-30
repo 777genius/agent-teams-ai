@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
-import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import {
@@ -15,8 +14,12 @@ import { ComposerLockedRecipient } from '@renderer/components/team/messages/Comp
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { getTaskSuggestionsForTeamNow, useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import {
+  getTaskSuggestionsForTeamNow,
+  useTaskSuggestions,
+} from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -52,14 +55,22 @@ import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId, isPreparedSendAllowed } from './composerSendUtils';
+import {
+  buildPreparedSendRequest,
+  buildRevisionCorrectionText,
+  createPendingSendId,
+  isPreparedSendAllowed,
+} from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
-import { type ComposerDraftAddressRequest, useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
+import {
+  type ComposerDraftAddressRequest,
+  useComposerDraftAddressRequest,
+} from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
@@ -69,7 +80,12 @@ import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCa
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerPreparedRequest, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type {
+  ComposerDraftAddress,
+  ComposerPreparedRequest,
+  ComposerWorkingSummary,
+  MessageRevisionContext,
+} from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -124,10 +140,11 @@ interface MessageComposerProps {
   onSubmitIntent?: () => void;
   onDraftMutation?: () => void;
   onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
-  onRevisionPreparationChange?: (
-    controller: MessageRevisionTargetController | null
-  ) => void;
-  onRevisionCancel?: (revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => boolean | void | Promise<boolean>;
+  onRevisionPreparationChange?: (controller: MessageRevisionTargetController | null) => void;
+  onRevisionCancel?: (
+    revision?: MessageRevisionContext | null,
+    address?: ComposerDraftAddress
+  ) => boolean | void | Promise<boolean>;
   onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
 }
 
@@ -141,6 +158,7 @@ export interface MessageRevisionRequest {
 
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
 export const MessageComposer = ({
   teamName,
@@ -203,7 +221,7 @@ export const MessageComposer = ({
 
   const refreshAliveTeams = useCallback(async () => {
     try {
-      const list = await api.teams.aliveList();
+      const list = await teamAliveListReadPort.listAliveTeams();
       setAliveTeams(new Set(list));
     } catch {
       // best-effort
@@ -233,26 +251,39 @@ export const MessageComposer = ({
           ...target,
           isOnline: aliveTeams.has(target.teamName),
         }))
-        .sort((a, b) => {
-          if (a.isOnline && !b.isOnline) return -1;
-          if (!a.isOnline && b.isOnline) return 1;
-          return (a.displayName || a.teamName).localeCompare(
-            b.displayName || b.teamName,
-            undefined,
-            {
+        .sort(
+          (a, b) =>
+            Number(b.isOnline) - Number(a.isOnline) ||
+            (a.displayName || a.teamName).localeCompare(b.displayName || b.teamName, undefined, {
               sensitivity: 'base',
-            }
-          );
-        }),
+            })
+        ),
     [aliveTeams, crossTeamTargets]
   );
   const hasCrossTeamOptions = sortedCrossTeamTargets.length > 0;
-  useComposerDraftAddressRequest({ request: draftAddressRequest, lockedRecipient, targets: crossTeamTargets, selectTeam: setSelectedTeam, selectMember: setCrossTeamRecipient });
+  useComposerDraftAddressRequest({
+    request: draftAddressRequest,
+    lockedRecipient,
+    targets: crossTeamTargets,
+    selectTeam: setSelectedTeam,
+    selectMember: setCrossTeamRecipient,
+  });
 
   const isCrossTeam = selectedTeam !== null;
   const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
   const selectedTargetMembers = useMemo(() => selectedTarget?.members ?? [], [selectedTarget]);
+  const recipientQuery = recipientSearch.toLowerCase().trim();
+  const recipientMembers = isCrossTeam ? selectedTargetMembers : members;
+  const sortedRecipientMembers = [
+    ...(recipientQuery
+      ? recipientMembers.filter((member) => member.name.toLowerCase().includes(recipientQuery))
+      : recipientMembers),
+  ].sort(
+    (a, b) =>
+      Number(isCrossTeam ? b.name === selectedTarget?.leadName : isLeadMember(b)) -
+      Number(isCrossTeam ? a.name === selectedTarget?.leadName : isLeadMember(a))
+  );
   const draftPreview = useCallback(
     (summary: ComposerWorkingSummary): string =>
       summary.preview ||
@@ -269,10 +300,7 @@ export const MessageComposer = ({
     [t]
   );
   const crossTeamDrafts = useMemo(
-    () =>
-      workingDraftSummaries.filter(
-        (summary) => summary.address.target.kind === 'cross-team'
-      ),
+    () => workingDraftSummaries.filter((summary) => summary.address.target.kind === 'cross-team'),
     [workingDraftSummaries]
   );
   const draftMetaByTeam = useMemo(
@@ -395,10 +423,8 @@ export const MessageComposer = ({
     textHasTaskMentionTrigger || draft.chips.length > 0 || revisionRequest != null;
   const teamSuggestionDataEnabled = textHasTeamMentionTrigger;
   const slashCommandDataEnabled = textHasSlashCommandTrigger;
-
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
-
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
       members.map((m) => ({
@@ -454,10 +480,8 @@ export const MessageComposer = ({
         : EMPTY_MENTION_SUGGESTIONS,
     [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills]
   );
-
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
   const standaloneSlashCommand = useMemo(() => parseStandaloneSlashCommand(trimmed), [trimmed]);
-
   const effectiveRecipient =
     lockedRecipient ?? (groupChatSelected ? groupChatRecipient : recipient);
   const selectedMember = members.find((m) => m.name === effectiveRecipient);
@@ -475,9 +499,7 @@ export const MessageComposer = ({
   const hasTeammates = members.length > 1;
   const canDelegate = isCrossTeam ? crossTeamRecipient === null : hasTeammates && isLeadRecipient;
   const shouldAutoDelegate = canDelegate && (isCrossTeam || isLeadRecipient);
-
   const { actionMode, setActionMode, isLoaded: draftLoaded } = draft;
-
   // Re-focus textarea after action mode changes (Do/Ask/Delegate button clicks)
   const prevActionModeRef = useRef(actionMode);
   useEffect(() => {
@@ -495,11 +517,6 @@ export const MessageComposer = ({
     actionMode,
     setActionMode,
   });
-  // NOTE: lead context ring disabled — usage formula is inaccurate
-  // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
-  // const leadContext = useStore((s) =>
-  //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
-  // );
   const supportsAttachments =
     !isCrossTeam &&
     !!isTeamAlive &&
@@ -565,20 +582,25 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
-  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest, editorContext: typeof draft.editorContext) => boolean>(() => false);
+  const currentSendEligibilityRef = useRef<
+    (
+      content: ReturnType<typeof draft.snapshot>,
+      request: ComposerPreparedRequest,
+      editorContext: typeof draft.editorContext
+    ) => boolean
+  >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
     isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
-        (revisableMessageId === undefined || editorContext.originalMessageId === revisableMessageId)));
-
+        (revisableMessageId === undefined ||
+          editorContext.originalMessageId === revisableMessageId)));
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
     const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
     const idx = modes.indexOf(actionMode);
     setActionMode(modes[(idx + 1) % modes.length]);
   }, [actionMode, canDelegate, sending, setActionMode]);
-
   const handleSend = useCallback(() => {
     if (!canSend) return;
     dismissMentionsRef.current?.();
@@ -591,41 +613,52 @@ export const MessageComposer = ({
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
-      attemptId, contextId: capturedContextId,
-      prepare: () => draft.beginAttempt(attemptId, (snapshot) => {
-        const { content, editorContext } = snapshot;
-        const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
-        if (syncedRevision?.requestId !== revisionRequestId) return null;
-        const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
-        if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
-        const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
-        const outboundText = syncedRevision
-          ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
-          : serialized;
-        const request = buildPreparedSendRequest({
-          attemptId,
-          teamName,
-          selectedTeam,
-          lockedRecipient,
-          crossTeamRecipient,
-          localRecipient: effectiveRecipient,
-          text: outboundText,
-          summary: syncedRevision
-            ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
-            : syncedTrimmed,
-          attachments: content.attachments,
-          actionMode: content.actionMode,
-          taskRefs: extractTaskRefsFromText(content.text, content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions),
-        });
-        return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
-      }),
+      attemptId,
+      contextId: capturedContextId,
+      prepare: () =>
+        draft.beginAttempt(attemptId, (snapshot) => {
+          const { content, editorContext } = snapshot;
+          const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
+          if (syncedRevision?.requestId !== revisionRequestId) return null;
+          const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
+          if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
+          const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
+          const outboundText = syncedRevision
+            ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
+            : serialized;
+          const request = buildPreparedSendRequest({
+            attemptId,
+            teamName,
+            selectedTeam,
+            lockedRecipient,
+            crossTeamRecipient,
+            localRecipient: effectiveRecipient,
+            text: outboundText,
+            summary: syncedRevision
+              ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
+              : syncedTrimmed,
+            attachments: content.attachments,
+            actionMode: content.actionMode,
+            taskRefs: extractTaskRefsFromText(
+              content.text,
+              content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions
+            ),
+          });
+          return currentSendEligibilityRef.current(content, request, editorContext)
+            ? request
+            : null;
+        }),
       isContextCurrent: (prepared) => {
         const store = useStore.getState();
         return (
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
           isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
-          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest, prepared.attempt.snapshot.editorContext)
+          currentSendEligibilityRef.current(
+            prepared.attempt.snapshot.content,
+            prepared.attempt.preparedRequest,
+            prepared.attempt.snapshot.editorContext
+          )
         );
       },
       transport: ({ attempt: { preparedRequest } }) =>
@@ -648,14 +681,16 @@ export const MessageComposer = ({
               preparedRequest.request.taskRefs,
               preparedRequest.request.messageId
             ),
-    }).then((result) => {
-      submissionFeedback.record(submissionAddressKey, result);
-      if (result.kind === 'accepted' && revisionRequestId) {
-        onRevisionComplete?.(revisionRequestId, submissionAddress);
-      }
-    }).finally(() => {
-      if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
-    });
+    })
+      .then((result) => {
+        submissionFeedback.record(submissionAddressKey, result);
+        if (result.kind === 'accepted' && revisionRequestId) {
+          onRevisionComplete?.(revisionRequestId, submissionAddress);
+        }
+      })
+      .finally(() => {
+        if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
+      });
     focusComposerTextarea();
   }, [
     canSend,
@@ -675,19 +710,21 @@ export const MessageComposer = ({
     taskSuggestions,
     teamName,
   ]);
-
-  const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError(
-      attachmentRestrictionReason ??
-        attachmentPayloadRestrictionReason ??
-        t('messageComposer.attachments.restrictions.leadOnly')
-    );
-    window.clearTimeout(fileRestrictionTimerRef.current);
-    fileRestrictionTimerRef.current = window.setTimeout(() => {
-      setFileRestrictionError(null);
-    }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
-
+  const showFileRestrictionError = useCallback(
+    (reason?: string) => {
+      setFileRestrictionError(
+        reason ??
+          attachmentRestrictionReason ??
+          attachmentPayloadRestrictionReason ??
+          t('messageComposer.attachments.restrictions.leadOnly')
+      );
+      window.clearTimeout(fileRestrictionTimerRef.current);
+      fileRestrictionTimerRef.current = window.setTimeout(() => {
+        setFileRestrictionError(null);
+      }, 4000);
+    },
+    [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]
+  );
   const validateSelectedAttachmentFiles = useCallback(
     (files: FileList | File[]): boolean => {
       const reason = validateAttachmentFilesForMember({
@@ -697,16 +734,11 @@ export const MessageComposer = ({
       if (!reason) {
         return true;
       }
-      setFileRestrictionError(reason);
-      window.clearTimeout(fileRestrictionTimerRef.current);
-      fileRestrictionTimerRef.current = window.setTimeout(() => {
-        setFileRestrictionError(null);
-      }, 4000);
+      showFileRestrictionError(reason);
       return false;
     },
-    [selectedMember]
+    [selectedMember, showFileRestrictionError]
   );
-
   const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -727,19 +759,16 @@ export const MessageComposer = ({
     },
     [canAttach, draftAddFiles, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
-
   // Cleanup restriction error timer on unmount
   useEffect(() => {
     const ref = fileRestrictionTimerRef;
     return () => window.clearTimeout(ref.current);
   }, []);
-
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     dragCounterRef.current += 1;
     if (dragCounterRef.current === 1) setIsDragOver(true);
   }, []);
-
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     dragCounterRef.current -= 1;
@@ -748,11 +777,9 @@ export const MessageComposer = ({
       setIsDragOver(false);
     }
   }, []);
-
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
-
   const { handleDrop: draftHandleDrop } = draft;
   const handleDropWrapper = useCallback(
     (e: React.DragEvent) => {
@@ -774,7 +801,6 @@ export const MessageComposer = ({
     },
     [canAttach, draftHandleDrop, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
-
   const { handlePaste: draftHandlePaste } = draft;
   const handlePasteWrapper = useCallback(
     (e: React.ClipboardEvent) => {
@@ -800,7 +826,16 @@ export const MessageComposer = ({
   );
   const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
   const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
-  const handleRevisionCancel = useMessageComposerRevisionCancel(draft, onRevisionCancel, focusComposerTextarea);
+  const handleRevisionCancel = useMessageComposerRevisionCancel(
+    draft,
+    onRevisionCancel,
+    focusComposerTextarea
+  );
+  const teamFeedColor = isCrossTeam
+    ? selectedTarget?.color
+      ? getTeamColorSet(selectedTarget.color).border
+      : nameColorSet(targetDisplayName ?? '').border
+    : currentTeamColor;
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
@@ -811,15 +846,16 @@ export const MessageComposer = ({
     attachmentCount: draft.attachments.length,
     textareaRef: internalTextareaRef,
   });
-  const revisionNotice = activeRevision || revisionPreparation ? (
-    <MessageComposerRevisionNotice
-      active={activeRevision !== null}
-      originalValid={revisionOriginalValid}
-      preparation={revisionPreparation}
-      onCancel={handleRevisionCancel}
-      onStash={draft.stashWorking}
-    />
-  ) : null;
+  const revisionNotice =
+    activeRevision || revisionPreparation ? (
+      <MessageComposerRevisionNotice
+        active={activeRevision !== null}
+        originalValid={revisionOriginalValid}
+        preparation={revisionPreparation}
+        onCancel={handleRevisionCancel}
+        onStash={draft.stashWorking}
+      />
+    ) : null;
   const hasStatusNotice = Boolean(
     draft.readError ||
     draft.persistenceStatus === 'memory-only' ||
@@ -990,13 +1026,7 @@ export const MessageComposer = ({
                         <span className="inline-flex items-center gap-1.5 text-[var(--color-text-secondary)]">
                           <span
                             className="inline-block size-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: isCrossTeam
-                                ? selectedTarget?.color
-                                  ? getTeamColorSet(selectedTarget.color).border
-                                  : nameColorSet(targetDisplayName ?? '').border
-                                : currentTeamColor,
-                            }}
+                            style={{ backgroundColor: teamFeedColor }}
                           />
                           {t('messages.chats.teamFeed')}
                         </span>
@@ -1050,13 +1080,7 @@ export const MessageComposer = ({
                       >
                         <span
                           className="inline-block size-2 shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: isCrossTeam
-                              ? selectedTarget?.color
-                                ? getTeamColorSet(selectedTarget.color).border
-                                : nameColorSet(targetDisplayName ?? '').border
-                              : currentTeamColor,
-                          }}
+                          style={{ backgroundColor: teamFeedColor }}
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block text-[var(--color-text)]">
@@ -1076,38 +1100,12 @@ export const MessageComposer = ({
                         ) : null}
                       </button>
                       <div className="my-1 h-px bg-[var(--color-border)]" />
-                      {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
-                      {(() => {
-                        const query = recipientSearch.toLowerCase().trim();
-                        const availableMembers = isCrossTeam ? selectedTargetMembers : members;
-                        const filtered = query
-                          ? availableMembers.filter((m) => m.name.toLowerCase().includes(query))
-                          : availableMembers;
-                        if (filtered.length === 0) {
-                          return (
-                            <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                              {t('messageComposer.recipient.noResults')}
-                            </div>
-                          );
-                        }
-                        const sorted = [...filtered].sort((a, b) => {
-                          const aIsLead = isCrossTeam
-                            ? a.name === selectedTarget?.leadName
-                              ? 1
-                              : 0
-                            : isLeadMember(a)
-                              ? 1
-                              : 0;
-                          const bIsLead = isCrossTeam
-                            ? b.name === selectedTarget?.leadName
-                              ? 1
-                              : 0
-                            : isLeadMember(b)
-                              ? 1
-                              : 0;
-                          return bIsLead - aIsLead;
-                        });
-                        return sorted.map((m) => {
+                      {sortedRecipientMembers.length === 0 ? (
+                        <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
+                          {t('messageComposer.recipient.noResults')}
+                        </div>
+                      ) : (
+                        sortedRecipientMembers.map((m) => {
                           const resolvedColor = isCrossTeam ? m.color : colorMap.get(m.name);
                           const role =
                             formatAgentRole(m.role) ??
@@ -1165,8 +1163,8 @@ export const MessageComposer = ({
                               ) : null}
                             </button>
                           );
-                        });
-                      })()}
+                        })
+                      )}
                     </div>
                   </PopoverContent>
                 </Popover>

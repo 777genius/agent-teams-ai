@@ -10,10 +10,11 @@ const indexedDbHarness = vi.hoisted(() => {
 vi.mock('idb-keyval', () => ({
   createStore:
     () =>
-    async <T,>(
+    async <T>(
       _mode: IDBTransactionMode,
       callback: (store: IDBObjectStore) => Promise<T>
-    ): Promise<T> => callback(indexedDbHarness.store),
+    ): Promise<T> =>
+      callback(indexedDbHarness.store),
   promisifyRequest: indexedDbHarness.promisifyRequest,
 }));
 

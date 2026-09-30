@@ -20,6 +20,7 @@ import { InMemoryCodexModelCatalogCache } from '../infrastructure/InMemoryCodexM
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexAccountFeatureFacade } from '@features/codex-account/main';
 import type { CodexModelCatalogDto } from '@features/codex-model-catalog/contracts';
+import type { CliProviderModelCatalogItem } from '@shared/types';
 import type { Logger } from '@shared/utils/logger';
 
 type LoggerPort = Pick<Logger, 'warn'>;
@@ -37,6 +38,10 @@ export interface CodexModelCatalogRequest {
 
 export interface CodexModelCatalogFeatureFacade {
   getCatalog(options?: CodexModelCatalogRequest): Promise<CodexModelCatalogDto>;
+  mergeConfiguredExtras(
+    primary: readonly CliProviderModelCatalogItem[],
+    options: { env?: NodeJS.ProcessEnv; includeHidden?: boolean }
+  ): Promise<{ models: CliProviderModelCatalogItem[]; diagnostic: string | null }>;
   invalidate(): void;
   dispose(): Promise<void>;
 }
@@ -390,6 +395,7 @@ export function createCodexModelCatalogFeature(options: {
 
   return {
     getCatalog,
+    mergeConfiguredExtras: mergeConfiguredCodexCatalogExtras,
     invalidate: () => {
       cacheGeneration += 1;
       cache.clear();

@@ -241,7 +241,7 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     );
   }
 
-  async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
+  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
     return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
   }
 

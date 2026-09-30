@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
-import { useStore } from '@renderer/store';
-
 import {
   canonicalLaunchTrustProviders,
   getWorkspaceTrustDisplayStatus,
 } from '../view-models/workspaceTrustLaunchNotice';
 
+import type { WorkspaceTrustStatusPorts } from '../ports/WorkspaceTrustStatusPorts';
 import type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
 import type { LaunchTrustRequest } from '@features/workspace-trust/contracts';
 
@@ -19,30 +17,16 @@ interface WorkspaceTrustStatusSnapshot {
   status: WorkspaceTrustDisplayStatus;
 }
 
-export function useWorkspaceTrustStatus(input: {
-  enabled: boolean;
-  projectPath: string | null;
-  providerIds: readonly string[];
-}): WorkspaceTrustDisplayStatus {
+export function useWorkspaceTrustStatus(
+  input: {
+    enabled: boolean;
+    projectPath: string | null;
+    providerIds: readonly string[];
+  },
+  ports: WorkspaceTrustStatusPorts
+): WorkspaceTrustDisplayStatus {
   const projectPath = input.projectPath?.trim() ?? '';
   const providerKey = canonicalLaunchTrustProviders(input.providerIds).join(',');
-  const localReadAllowed = useStore(
-    (state) =>
-      (!state.activeContextId || state.activeContextId === 'local') &&
-      !state.isContextSwitching &&
-      state.connectionMode !== 'ssh'
-  );
-  const sourceKey = useStore((state) =>
-    JSON.stringify([
-      state.activeContextId,
-      state.isContextSwitching,
-      state.targetContextId,
-      state.connectionMode,
-      state.connectionState,
-      state.connectedHost,
-      state.appConfig?.general?.claudeRootPath,
-    ])
-  );
   // Identity belongs to this open/path/provider/source lifecycle, never a cached pathname.
   const requestKey = useMemo(
     () =>
@@ -50,10 +34,10 @@ export function useWorkspaceTrustStatus(input: {
         ? {
             projectPath,
             providerIds: canonicalLaunchTrustProviders(providerKey.split(',')),
-            sourceKey,
+            sourceKey: ports.sourceKey,
           }
         : null,
-    [input.enabled, projectPath, providerKey, sourceKey]
+    [input.enabled, projectPath, providerKey, ports.sourceKey]
   );
   const [snapshot, setSnapshot] = useState<WorkspaceTrustStatusSnapshot>({
     requestKey: null,
@@ -65,8 +49,8 @@ export function useWorkspaceTrustStatus(input: {
       return undefined;
     }
 
-    const workspaceTrustApi = api.workspaceTrust;
-    if (!workspaceTrustApi || !localReadAllowed) {
+    const workspaceTrustApi = ports.transport;
+    if (!workspaceTrustApi || !ports.localReadAllowed) {
       setSnapshot({ requestKey, status: 'unknown' });
       return undefined;
     }
@@ -106,7 +90,7 @@ export function useWorkspaceTrustStatus(input: {
       window.clearTimeout(timeoutId);
       window.clearTimeout(deadlineId);
     };
-  }, [requestKey, localReadAllowed]);
+  }, [requestKey, ports.localReadAllowed, ports.transport]);
 
   if (!requestKey) {
     return 'disabled';

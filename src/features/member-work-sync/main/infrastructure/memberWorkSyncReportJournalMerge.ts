@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
 
-import { normalizeMemberWorkSyncTeamKey } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
+import { normalizeMemberWorkSyncTeamKey } from '@features/internal-storage/contracts';
 
 import { validateMemberWorkSyncReportJournalRow } from '../../core/domain/MemberWorkSyncReportJournalRow';
 

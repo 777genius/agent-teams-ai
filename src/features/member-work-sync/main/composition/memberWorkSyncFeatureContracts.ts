@@ -11,10 +11,10 @@ import type {
 import type {
   MemberWorkSyncNudgeDispatchSummary,
   MemberWorkSyncPendingReportReplaySummary,
+  MemberWorkSyncQueueDiagnostics,
   RuntimeTurnSettledDrainSummary,
 } from '../../core/application';
 import type { RuntimeTurnSettledProvider } from '../../core/domain';
-import type { MemberWorkSyncQueueDiagnostics } from '../infrastructure/MemberWorkSyncEventQueue';
 import type { TeamChangeEvent } from '@shared/types';
 
 export function buildMemberWorkSyncRuntimeTurnSettledEnvironment(input: {
@@ -63,6 +63,9 @@ export interface MemberWorkSyncFeatureFacade {
     teamName: string;
     memberName: string;
     reason?: string;
+    expectedIncarnation?: string;
+    expectedRuntimeInstanceId?: string;
+    localStopId?: string;
   }): Promise<MemberWorkSyncStatus>;
   resumeAutoResume(input: { teamName: string; memberName: string }): Promise<MemberWorkSyncStatus>;
   continueManually(input: {

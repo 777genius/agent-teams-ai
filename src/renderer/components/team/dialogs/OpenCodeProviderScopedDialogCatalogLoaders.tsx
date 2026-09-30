@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { useOpenCodeProviderModelCatalog } from '@features/runtime-provider-management/renderer';
+import { useOpenCodeProviderModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 

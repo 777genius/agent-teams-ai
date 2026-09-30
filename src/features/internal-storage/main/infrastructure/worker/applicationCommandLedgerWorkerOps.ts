@@ -1,26 +1,50 @@
 import {
-  ApplicationCommandBeginOutcome,
-  ApplicationCommandConflictReason,
-  ApplicationCommandFailureKind,
-  type ApplicationCommandLedgerBeginRequest,
-  type ApplicationCommandLedgerBeginResult,
   type ApplicationCommandLedgerCompleteRequest,
   type ApplicationCommandLedgerFailRequest,
   type ApplicationCommandLedgerListScopeRequest,
   type ApplicationCommandLedgerReadByCommandIdRequest,
   type ApplicationCommandLedgerReadByIdempotencyKeyRequest,
-  type ApplicationCommandLedgerRecord,
-  ApplicationCommandLedgerStatus,
 } from '@features/application-command-ledger/contracts';
-import { and, asc, eq } from 'drizzle-orm';
 
-import { applicationCommandLedger } from './internalStorageSchema';
+import { ApplicationCommandLedgerRecordRepository } from './applicationCommandLedgerRecordRepository';
+import { DurableApplicationCommandOutboxWorkerOps } from './durableApplicationCommandOutboxWorkerOps';
+import { DurableApplicationCommandWorkerOps } from './durableApplicationCommandWorkerOps';
+import { HostedAuthorityProjectionStorageOps } from './hostedAuthorityProjectionStorageOps';
+import { LegacyApplicationCommandLedgerWorkerOps } from './legacyApplicationCommandLedgerWorkerOps';
 
+import type {
+  AppCommandBeginRequest,
+  AppCommandBeginResult,
+  AppCommandRecord,
+} from './applicationCommandLedgerWorkerTypes';
+import type {
+  ApplicationCommandLedgerWorkerPayloadByOp,
+  StoredCommandCoordinationAttribution,
+} from './internalStorageWorkerProtocol';
+import type {
+  ApplicationCommandJsonValue,
+  DurableApplicationCommandAttemptLeaseRequest,
+  DurableApplicationCommandClaimResult,
+  DurableApplicationCommandClaimStatusRequest,
+  DurableApplicationCommandCommitRequest,
+  DurableApplicationCommandConsumerApplyRequest,
+  DurableApplicationCommandConsumerApplyResult,
+  DurableApplicationCommandConsumerProjectionRecord,
+  DurableApplicationCommandConsumerProjectionRequest,
+  DurableApplicationCommandEffectTransitionRequest,
+  DurableApplicationCommandOutboxClaimRequest,
+  DurableApplicationCommandOutboxDeliveryAcknowledgementRequest,
+  DurableApplicationCommandOutboxListRequest,
+  DurableApplicationCommandOutboxRecord,
+  DurableApplicationCommandPersistClaimRequest,
+  DurableApplicationCommandRecord,
+  DurableApplicationCommandStatusRequest,
+  DurableApplicationCommandTransitionRequest,
+} from '@features/application-command-ledger';
+import type DatabaseConstructor from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
-type AppCommandRecord = ApplicationCommandLedgerRecord<string>;
-type AppCommandBeginRequest = ApplicationCommandLedgerBeginRequest<string>;
-type AppCommandBeginResult = ApplicationCommandLedgerBeginResult<string>;
+type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 
 export function handleApplicationCommandLedgerOp(
   ops: ApplicationCommandLedgerWorkerOps,
@@ -29,7 +53,9 @@ export function handleApplicationCommandLedgerOp(
 ): unknown {
   switch (op) {
     case 'appCommandLedger.begin':
-      return ops.begin(payload as AppCommandBeginRequest);
+      // Keep the existing JSON-domain boundary explicit while the legacy
+      // cross-feature edge remains pinned by the architecture ratchet.
+      return ops.begin(payload as AppCommandBeginRequest & ApplicationCommandJsonValue);
     case 'appCommandLedger.markCompleted':
       ops.markCompleted(payload as ApplicationCommandLedgerCompleteRequest);
       return null;
@@ -44,372 +70,167 @@ export function handleApplicationCommandLedgerOp(
       );
     case 'appCommandLedger.listByScope':
       return ops.listByScope(payload as ApplicationCommandLedgerListScopeRequest);
+    case 'appCommandLedger.durable.claim':
+      return ops.durableClaim(
+        payload as ApplicationCommandLedgerWorkerPayloadByOp['appCommandLedger.durable.claim']
+      );
+    case 'appCommandLedger.durable.getStatus':
+      return ops.durableGetStatus(payload as DurableApplicationCommandStatusRequest);
+    case 'appCommandLedger.durable.getByClaim':
+      return ops.durableGetByClaim(payload as DurableApplicationCommandClaimStatusRequest);
+    case 'appCommandLedger.durable.renewAttemptLease':
+      return ops.durableRenewAttemptLease(payload as DurableApplicationCommandAttemptLeaseRequest);
+    case 'appCommandLedger.durable.transitionCommand':
+      return ops.durableTransitionCommand(payload as DurableApplicationCommandTransitionRequest);
+    case 'appCommandLedger.durable.transitionEffect':
+      return ops.durableTransitionEffect(
+        payload as DurableApplicationCommandEffectTransitionRequest
+      );
+    case 'appCommandLedger.durable.commit':
+      return ops.durableCommit(payload as DurableApplicationCommandCommitRequest);
+    case 'appCommandLedger.durable.listOutbox':
+      return ops.durableListOutbox(payload as DurableApplicationCommandOutboxListRequest);
+    case 'appCommandLedger.durable.claimOutbox':
+      return ops.durableClaimOutbox(payload as DurableApplicationCommandOutboxClaimRequest);
+    case 'appCommandLedger.durable.acknowledgeOutboxDelivery':
+      ops.durableAcknowledgeOutboxDelivery(
+        payload as DurableApplicationCommandOutboxDeliveryAcknowledgementRequest
+      );
+      return null;
+    case 'appCommandLedger.durable.applyConsumerEvent':
+      return ops.durableApplyConsumerEvent(
+        payload as DurableApplicationCommandConsumerApplyRequest
+      );
+    case 'appCommandLedger.durable.getConsumerProjection':
+      return ops.durableGetConsumerProjection(
+        payload as DurableApplicationCommandConsumerProjectionRequest
+      );
+    case 'appCommandLedger.hostedAuthorityProjection.commit':
+      return ops.hostedAuthorityProjectionCommit(payload);
+    case 'appCommandLedger.hostedAuthorityProjection.get':
+      return ops.hostedAuthorityProjectionGet(payload);
     default:
       throw new Error(`Unknown internal-storage op: ${op}`);
   }
 }
 
 export class ApplicationCommandLedgerWorkerOps {
-  constructor(private readonly getOrm: () => BetterSQLite3Database) {}
+  private readonly durableCommands: DurableApplicationCommandWorkerOps;
+  private readonly durableOutbox: DurableApplicationCommandOutboxWorkerOps;
+  private readonly hostedAuthorityProjections: HostedAuthorityProjectionStorageOps;
+  private readonly legacy: LegacyApplicationCommandLedgerWorkerOps;
+
+  constructor(getOrm: () => BetterSQLite3Database, getDb: () => SqliteDatabase) {
+    const repository = new ApplicationCommandLedgerRecordRepository(getOrm, getDb);
+    this.durableCommands = new DurableApplicationCommandWorkerOps(getOrm, getDb, repository);
+    this.durableOutbox = new DurableApplicationCommandOutboxWorkerOps(getOrm, repository);
+    this.hostedAuthorityProjections = new HostedAuthorityProjectionStorageOps(getDb, repository);
+    this.legacy = new LegacyApplicationCommandLedgerWorkerOps(getOrm, repository, getDb);
+  }
+
+  durableClaim<TCommandKind extends string>(
+    input: DurableApplicationCommandPersistClaimRequest<TCommandKind> & {
+      readonly coordinationAttribution?: StoredCommandCoordinationAttribution;
+    }
+  ): DurableApplicationCommandClaimResult<TCommandKind> {
+    return this.durableCommands.durableClaim(input);
+  }
+
+  durableGetStatus<TCommandKind extends string>(
+    input: DurableApplicationCommandStatusRequest
+  ): DurableApplicationCommandRecord<TCommandKind> | null {
+    return this.durableCommands.durableGetStatus(input);
+  }
+
+  durableGetByClaim<TCommandKind extends string>(
+    input: DurableApplicationCommandClaimStatusRequest<TCommandKind>
+  ): DurableApplicationCommandRecord<TCommandKind> | null {
+    return this.durableCommands.durableGetByClaim(input);
+  }
+
+  durableRenewAttemptLease(
+    input: DurableApplicationCommandAttemptLeaseRequest
+  ): DurableApplicationCommandRecord {
+    return this.durableCommands.durableRenewAttemptLease(input);
+  }
+
+  durableTransitionCommand(
+    input: DurableApplicationCommandTransitionRequest
+  ): DurableApplicationCommandRecord {
+    return this.durableCommands.durableTransitionCommand(input);
+  }
+
+  durableTransitionEffect(
+    input: DurableApplicationCommandEffectTransitionRequest
+  ): DurableApplicationCommandRecord {
+    return this.durableCommands.durableTransitionEffect(input);
+  }
+
+  durableCommit(input: DurableApplicationCommandCommitRequest): DurableApplicationCommandRecord {
+    return this.durableCommands.durableCommit(input);
+  }
+
+  durableListOutbox(
+    input: DurableApplicationCommandOutboxListRequest
+  ): DurableApplicationCommandOutboxRecord[] {
+    return this.durableOutbox.durableListOutbox(input);
+  }
+
+  durableClaimOutbox(
+    input: DurableApplicationCommandOutboxClaimRequest
+  ): DurableApplicationCommandOutboxRecord[] {
+    return this.durableOutbox.durableClaimOutbox(input);
+  }
+
+  durableAcknowledgeOutboxDelivery(
+    input: DurableApplicationCommandOutboxDeliveryAcknowledgementRequest
+  ): void {
+    this.durableOutbox.durableAcknowledgeOutboxDelivery(input);
+  }
+
+  durableApplyConsumerEvent(
+    input: DurableApplicationCommandConsumerApplyRequest
+  ): DurableApplicationCommandConsumerApplyResult {
+    return this.durableOutbox.durableApplyConsumerEvent(input);
+  }
+
+  durableGetConsumerProjection(
+    input: DurableApplicationCommandConsumerProjectionRequest
+  ): DurableApplicationCommandConsumerProjectionRecord | null {
+    return this.durableOutbox.durableGetConsumerProjection(input);
+  }
+
+  hostedAuthorityProjectionCommit(input: unknown): unknown {
+    return this.hostedAuthorityProjections.commit(input);
+  }
+
+  hostedAuthorityProjectionGet(input: unknown): unknown {
+    return this.hostedAuthorityProjections.get(input);
+  }
 
   begin(input: AppCommandBeginRequest): AppCommandBeginResult {
-    assertValidBeginTiming(input);
-    const orm = this.getOrm();
-    return orm.transaction((): AppCommandBeginResult => {
-      const currentByCommand = this.readByCommandId(input);
-      if (currentByCommand) {
-        return this.beginExistingCommand(currentByCommand, input);
-      }
-
-      const currentByIdempotencyKey = this.readByIdempotencyKey(input);
-      if (currentByIdempotencyKey) {
-        return this.beginExistingIdempotencyKey(currentByIdempotencyKey, input);
-      }
-
-      const created: AppCommandRecord = {
-        namespace: input.namespace,
-        scopeKey: input.scopeKey,
-        commandId: input.commandId,
-        idempotencyKey: input.idempotencyKey,
-        operation: input.operation,
-        payloadHash: input.payloadHash,
-        status: ApplicationCommandLedgerStatus.Started,
-        failureKind: null,
-        retryable: false,
-        attemptCount: 1,
-        resultHash: null,
-        resultJson: null,
-        metadataJson: input.metadataJson,
-        startedAt: input.nowIso,
-        updatedAt: input.nowIso,
-        completedAt: null,
-        lastError: null,
-      };
-      orm.insert(applicationCommandLedger).values(created).run();
-      return { outcome: ApplicationCommandBeginOutcome.Started, record: created };
-    });
+    return this.legacy.begin(input);
   }
 
   markCompleted(input: ApplicationCommandLedgerCompleteRequest): void {
-    const orm = this.getOrm();
-    orm.transaction(() => {
-      const current = this.readByCommandId(input);
-      if (!current) {
-        throw new Error(`Application command ledger entry not found: ${input.commandId}`);
-      }
-      if (current.status === ApplicationCommandLedgerStatus.Completed) {
-        if (current.resultHash === input.resultHash && current.resultJson === input.resultJson) {
-          return;
-        }
-        throw new Error(
-          `Application command completion conflicts with stored result: ${input.commandId}`
-        );
-      }
-      assertAttemptMatches(current, input.attemptCount);
-      if (!canFinalize(current.status)) {
-        throw new Error(
-          `Application command cannot be completed from status ${current.status}: ${input.commandId}`
-        );
-      }
-      this.replaceRow({
-        ...current,
-        status: ApplicationCommandLedgerStatus.Completed,
-        failureKind: null,
-        retryable: false,
-        resultHash: input.resultHash,
-        resultJson: input.resultJson,
-        updatedAt: input.completedAtIso,
-        completedAt: input.completedAtIso,
-        lastError: null,
-      });
-    });
+    this.legacy.markCompleted(input);
   }
 
   markFailed(input: ApplicationCommandLedgerFailRequest): void {
-    const orm = this.getOrm();
-    orm.transaction(() => {
-      const current = this.readByCommandId(input);
-      if (!current) {
-        throw new Error(`Application command ledger entry not found: ${input.commandId}`);
-      }
-      assertAttemptMatches(current, input.attemptCount);
-      const nextStatus = statusForFailure(input.failureKind);
-      if (
-        current.status === nextStatus &&
-        current.failureKind === input.failureKind &&
-        current.lastError === input.errorMessage
-      ) {
-        return;
-      }
-      if (!canFinalize(current.status)) {
-        throw new Error(
-          `Application command cannot be failed from status ${current.status}: ${input.commandId}`
-        );
-      }
-      this.replaceRow({
-        ...current,
-        status: nextStatus,
-        failureKind: input.failureKind,
-        retryable: input.failureKind === ApplicationCommandFailureKind.Retryable,
-        resultHash: null,
-        resultJson: null,
-        updatedAt: input.completedAtIso,
-        completedAt:
-          input.failureKind === ApplicationCommandFailureKind.UnknownAfterTimeout
-            ? null
-            : input.completedAtIso,
-        lastError: input.errorMessage,
-      });
-    });
+    this.legacy.markFailed(input);
   }
 
   getByCommandId(input: ApplicationCommandLedgerReadByCommandIdRequest): AppCommandRecord | null {
-    return this.readByCommandId(input);
+    return this.legacy.getByCommandId(input);
   }
 
   getByIdempotencyKey(
     input: ApplicationCommandLedgerReadByIdempotencyKeyRequest
   ): AppCommandRecord | null {
-    return this.readByIdempotencyKey(input);
+    return this.legacy.getByIdempotencyKey(input);
   }
 
   listByScope(input: ApplicationCommandLedgerListScopeRequest): AppCommandRecord[] {
-    return this.getOrm()
-      .select()
-      .from(applicationCommandLedger)
-      .where(
-        and(
-          eq(applicationCommandLedger.namespace, input.namespace),
-          eq(applicationCommandLedger.scopeKey, input.scopeKey)
-        )
-      )
-      .orderBy(asc(applicationCommandLedger.updatedAt), asc(applicationCommandLedger.commandId))
-      .all() as AppCommandRecord[];
-  }
-
-  private beginExistingCommand(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): AppCommandBeginResult {
-    const conflict =
-      current.idempotencyKey !== input.idempotencyKey
-        ? ApplicationCommandConflictReason.CommandIdReused
-        : this.findSemanticConflict(current, input);
-    if (conflict) {
-      return {
-        outcome: ApplicationCommandBeginOutcome.Conflict,
-        reason: conflict,
-        existing: current,
-        requested: input,
-      };
-    }
-
-    return this.beginExistingMatchingCommand(current, input);
-  }
-
-  private beginExistingIdempotencyKey(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): AppCommandBeginResult {
-    const conflict = this.findSemanticConflict(current, input);
-    if (conflict) {
-      return {
-        outcome: ApplicationCommandBeginOutcome.Conflict,
-        reason: conflict,
-        existing: current,
-        requested: input,
-      };
-    }
-
-    return this.beginExistingMatchingCommand(current, input);
-  }
-
-  private beginExistingMatchingCommand(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): AppCommandBeginResult {
-    switch (current.status) {
-      case ApplicationCommandLedgerStatus.Started:
-        if (isStartedStale(current, input)) {
-          const next: AppCommandRecord = {
-            ...current,
-            status: ApplicationCommandLedgerStatus.UnknownAfterTimeout,
-            failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout,
-            retryable: false,
-            updatedAt: input.nowIso,
-            completedAt: null,
-            lastError: `Started attempt ${current.attemptCount} exceeded ${input.startedStaleAfterMs}ms and requires reconciliation`,
-          };
-          this.replaceRow(next);
-          return {
-            outcome: ApplicationCommandBeginOutcome.UnknownAfterTimeout,
-            record: next,
-          };
-        }
-        return { outcome: ApplicationCommandBeginOutcome.AlreadyStarted, record: current };
-      case ApplicationCommandLedgerStatus.Completed:
-        return { outcome: ApplicationCommandBeginOutcome.DuplicateCompleted, record: current };
-      case ApplicationCommandLedgerStatus.FailedRetryable:
-        return this.restartRetryable(current, input);
-      case ApplicationCommandLedgerStatus.FailedTerminal:
-        return { outcome: ApplicationCommandBeginOutcome.FailedTerminal, record: current };
-      case ApplicationCommandLedgerStatus.UnknownAfterTimeout:
-        return { outcome: ApplicationCommandBeginOutcome.UnknownAfterTimeout, record: current };
-      default:
-        return {
-          outcome: ApplicationCommandBeginOutcome.Conflict,
-          reason: ApplicationCommandConflictReason.OperationMismatch,
-          existing: current,
-          requested: input,
-        };
-    }
-  }
-
-  private restartRetryable(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): AppCommandBeginResult {
-    const next: AppCommandRecord = {
-      ...current,
-      operation: input.operation,
-      payloadHash: input.payloadHash,
-      status: ApplicationCommandLedgerStatus.Started,
-      failureKind: null,
-      retryable: false,
-      attemptCount: current.attemptCount + 1,
-      resultHash: null,
-      resultJson: null,
-      metadataJson: input.metadataJson,
-      updatedAt: input.nowIso,
-      completedAt: null,
-      lastError: null,
-    };
-    this.replaceRow(next);
-    return { outcome: ApplicationCommandBeginOutcome.RetryStarted, record: next };
-  }
-
-  private findSemanticConflict(
-    current: AppCommandRecord,
-    input: AppCommandBeginRequest
-  ): ApplicationCommandConflictReason | null {
-    if (current.operation !== input.operation) {
-      return ApplicationCommandConflictReason.OperationMismatch;
-    }
-    if (current.payloadHash !== input.payloadHash) {
-      return ApplicationCommandConflictReason.PayloadHashMismatch;
-    }
-    return null;
-  }
-
-  private readByCommandId(input: {
-    namespace: string;
-    scopeKey: string;
-    commandId: string;
-  }): AppCommandRecord | null {
-    const rows = this.getOrm()
-      .select()
-      .from(applicationCommandLedger)
-      .where(
-        and(
-          eq(applicationCommandLedger.namespace, input.namespace),
-          eq(applicationCommandLedger.scopeKey, input.scopeKey),
-          eq(applicationCommandLedger.commandId, input.commandId)
-        )
-      )
-      .all() as AppCommandRecord[];
-    return rows[0] ?? null;
-  }
-
-  private readByIdempotencyKey(input: {
-    namespace: string;
-    scopeKey: string;
-    idempotencyKey: string;
-  }): AppCommandRecord | null {
-    const rows = this.getOrm()
-      .select()
-      .from(applicationCommandLedger)
-      .where(
-        and(
-          eq(applicationCommandLedger.namespace, input.namespace),
-          eq(applicationCommandLedger.scopeKey, input.scopeKey),
-          eq(applicationCommandLedger.idempotencyKey, input.idempotencyKey)
-        )
-      )
-      .all() as AppCommandRecord[];
-    return rows[0] ?? null;
-  }
-
-  private replaceRow(row: AppCommandRecord): void {
-    this.getOrm()
-      .update(applicationCommandLedger)
-      .set({
-        idempotencyKey: row.idempotencyKey,
-        operation: row.operation,
-        payloadHash: row.payloadHash,
-        status: row.status,
-        failureKind: row.failureKind,
-        retryable: row.retryable,
-        attemptCount: row.attemptCount,
-        resultHash: row.resultHash,
-        resultJson: row.resultJson,
-        metadataJson: row.metadataJson,
-        startedAt: row.startedAt,
-        updatedAt: row.updatedAt,
-        completedAt: row.completedAt,
-        lastError: row.lastError,
-      })
-      .where(
-        and(
-          eq(applicationCommandLedger.namespace, row.namespace),
-          eq(applicationCommandLedger.scopeKey, row.scopeKey),
-          eq(applicationCommandLedger.commandId, row.commandId)
-        )
-      )
-      .run();
-  }
-}
-
-function canFinalize(status: ApplicationCommandLedgerStatus): boolean {
-  return (
-    status === ApplicationCommandLedgerStatus.Started ||
-    status === ApplicationCommandLedgerStatus.UnknownAfterTimeout
-  );
-}
-
-function assertAttemptMatches(current: AppCommandRecord, requestedAttemptCount: number): void {
-  if (current.attemptCount !== requestedAttemptCount) {
-    throw new Error(
-      `Application command attempt is stale: ${current.commandId} expected=${current.attemptCount} actual=${requestedAttemptCount}`
-    );
-  }
-}
-
-function assertValidBeginTiming(input: AppCommandBeginRequest): void {
-  if (!Number.isSafeInteger(input.startedStaleAfterMs) || input.startedStaleAfterMs <= 0) {
-    throw new Error('Application command startedStaleAfterMs must be a positive integer');
-  }
-  if (!Number.isFinite(Date.parse(input.nowIso))) {
-    throw new Error('Application command nowIso must be a valid ISO timestamp');
-  }
-}
-
-function isStartedStale(current: AppCommandRecord, input: AppCommandBeginRequest): boolean {
-  const attemptStartedAtMs = Date.parse(current.updatedAt);
-  if (!Number.isFinite(attemptStartedAtMs)) {
-    return true;
-  }
-  return Date.parse(input.nowIso) - attemptStartedAtMs >= input.startedStaleAfterMs;
-}
-
-function statusForFailure(
-  failureKind: ApplicationCommandFailureKind
-): ApplicationCommandLedgerStatus {
-  switch (failureKind) {
-    case ApplicationCommandFailureKind.Retryable:
-      return ApplicationCommandLedgerStatus.FailedRetryable;
-    case ApplicationCommandFailureKind.Terminal:
-      return ApplicationCommandLedgerStatus.FailedTerminal;
-    case ApplicationCommandFailureKind.UnknownAfterTimeout:
-      return ApplicationCommandLedgerStatus.UnknownAfterTimeout;
+    return this.legacy.listByScope(input);
   }
 }

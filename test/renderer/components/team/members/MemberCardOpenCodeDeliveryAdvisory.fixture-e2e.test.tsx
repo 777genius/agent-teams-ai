@@ -26,6 +26,7 @@ vi.mock('@renderer/api', () => ({
   api: {
     openExternal: hoisted.openExternal,
   },
+  isElectronMode: () => true,
 }));
 
 vi.mock('@renderer/components/ui/badge', () => ({

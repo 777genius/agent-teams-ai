@@ -31,7 +31,13 @@ export const MessageComposerRevisionNotice = ({
     <div className="flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {active && !originalValid ? (
-        <Button type="button" variant="ghost" size="sm" className="h-auto shrink-0 px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/15" onClick={onCancel}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-auto shrink-0 px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/15"
+          onClick={onCancel}
+        >
           {t('messageComposer.revision.continueAsNew')}
         </Button>
       ) : null}
@@ -41,12 +47,20 @@ export const MessageComposerRevisionNotice = ({
           variant="ghost"
           size="sm"
           className="shrink-0 rounded px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/15"
-          onClick={() => void onStash().then((result) => result.kind === 'restored' && onCancel?.())}
+          onClick={() =>
+            void onStash().then((result) => result.kind === 'restored' && onCancel?.())
+          }
         >
           {t('messageComposer.revision.saveDraft')}
         </Button>
       ) : null}
-      <Button type="button" variant="ghost" size="sm" className="h-auto shrink-0 px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/15" onClick={onCancel}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-auto shrink-0 px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/15"
+        onClick={onCancel}
+      >
         {t('messageComposer.revision.cancel')}
       </Button>
     </div>

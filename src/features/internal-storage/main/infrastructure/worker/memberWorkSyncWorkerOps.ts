@@ -1,8 +1,8 @@
 import { and, asc, eq, gt, gte, inArray, isNull } from 'drizzle-orm';
 
 import {
-  isSameMemberWorkSyncTeam,
   normalizeMemberWorkSyncSnapshotTeamIdentity,
+  normalizeMemberWorkSyncTeamKey,
 } from '../../../contracts/memberWorkSyncTeamIdentity';
 
 import {
@@ -19,6 +19,18 @@ import {
   compareAndWriteMemberWorkSyncStatus,
   writeMemberWorkSyncStatus,
 } from './memberWorkSyncStatusWorkerOps';
+import {
+  canClaim,
+  canRevive,
+  chunked,
+  isOutboxTerminal,
+  METRIC_EVENT_RECORD_SELECTION,
+  METRIC_EVENTS_CAP,
+  OUTBOX_ITEM_RECORD_SELECTION,
+  REPORT_INTENT_RECORD_SELECTION,
+  STATUS_RECORD_SELECTION,
+  toPersistenceRow,
+} from './memberWorkSyncWorkerState';
 
 import type {
   MemberWorkSyncMetricEventRecord,
@@ -33,70 +45,6 @@ import type {
   MemberWorkSyncTeamSnapshotRecords,
 } from '../../../contracts/internalStorageContracts';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-
-// Mirrors MEMBER_WORK_SYNC_OUTBOX_CLAIM_STALE_MS in JsonMemberWorkSyncStore.
-const CLAIM_STALE_MS = 5 * 60 * 1000;
-const INSERT_CHUNK_SIZE = 200;
-
-function isOutboxTerminal(status: string): boolean {
-  return status === 'delivered' || status === 'superseded' || status === 'failed_terminal';
-}
-
-function canRevive(status: string): boolean {
-  return status === 'superseded' || (!isOutboxTerminal(status) && status !== 'pending');
-}
-
-function parseIsoMs(value: string | null | undefined): number | null {
-  const ms = value ? Date.parse(value) : Number.NaN;
-  return Number.isFinite(ms) ? ms : null;
-}
-
-function isStaleClaim(claimedAt: string | null, updatedAt: string, nowIso: string): boolean {
-  const claimedAtMs = parseIsoMs(claimedAt ?? updatedAt);
-  const nowMs = parseIsoMs(nowIso);
-  return (
-    claimedAtMs != null &&
-    nowMs != null &&
-    (claimedAtMs > nowMs || nowMs - claimedAtMs >= CLAIM_STALE_MS)
-  );
-}
-
-function isNextAttemptDue(nextAttemptAt: string | null, nowIso: string): boolean {
-  if (!nextAttemptAt) {
-    return true;
-  }
-  const nextAttemptAtMs = parseIsoMs(nextAttemptAt);
-  if (nextAttemptAtMs == null) {
-    return true;
-  }
-  const nowMs = parseIsoMs(nowIso);
-  return nowMs != null && nextAttemptAtMs <= nowMs;
-}
-
-function canClaim(item: MemberWorkSyncOutboxItemRecord, nowIso: string): boolean {
-  if (item.status === 'claimed') {
-    return isStaleClaim(item.claimedAt, item.updatedAt, nowIso);
-  }
-  if (item.status !== 'pending' && item.status !== 'failed_retryable') {
-    return false;
-  }
-  return isNextAttemptDue(item.nextAttemptAt, nowIso);
-}
-
-// Load-bearing guard, not just batching: drizzle's .values([]) throws, and an
-// empty set is a legitimate state (fresh team import). Iterating chunks means
-// zero .values() calls for empty input — do not inline bulk inserts without it.
-function chunked<T>(values: T[]): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < values.length; start += INSERT_CHUNK_SIZE) {
-    chunks.push(values.slice(start, start + INSERT_CHUNK_SIZE));
-  }
-  return chunks;
-}
-
-function rowsForTeam<T extends { teamName: string }>(rows: T[], teamName: string): T[] {
-  return rows.filter((row) => isSameMemberWorkSyncTeam(row.teamName, teamName));
-}
 
 /** Routes 'mws.*' worker requests to the ops instance. */
 export function handleMemberWorkSyncOp(
@@ -210,7 +158,7 @@ export class MemberWorkSyncWorkerOps {
 
   statusRead(teamName: string, memberKey: string): MemberWorkSyncStatusRecord | null {
     const rows = this.getOrm()
-      .select()
+      .select(STATUS_RECORD_SELECTION)
       .from(memberWorkSyncStatus)
       .where(
         and(
@@ -224,7 +172,7 @@ export class MemberWorkSyncWorkerOps {
 
   statusList(teamName: string): MemberWorkSyncStatusRecord[] {
     return this.getOrm()
-      .select()
+      .select(STATUS_RECORD_SELECTION)
       .from(memberWorkSyncStatus)
       .where(eq(memberWorkSyncStatus.teamName, teamName))
       .orderBy(asc(memberWorkSyncStatus.memberKey))
@@ -243,7 +191,7 @@ export class MemberWorkSyncWorkerOps {
 
   metricEventsList(teamName: string): MemberWorkSyncMetricEventRecord[] {
     return this.getOrm()
-      .select()
+      .select(METRIC_EVENT_RECORD_SELECTION)
       .from(memberWorkSyncMetricEvents)
       .where(eq(memberWorkSyncMetricEvents.teamName, teamName))
       .orderBy(asc(memberWorkSyncMetricEvents.recordedAt))
@@ -275,10 +223,11 @@ export class MemberWorkSyncWorkerOps {
       };
       orm
         .insert(memberWorkSyncReportIntents)
-        .values(next)
+        .values(toPersistenceRow(next))
         .onConflictDoUpdate({
           target: [memberWorkSyncReportIntents.teamName, memberWorkSyncReportIntents.id],
           set: {
+            teamKey: normalizeMemberWorkSyncTeamKey(next.teamName),
             memberKey: next.memberKey,
             memberName: next.memberName,
             status: next.status,
@@ -314,7 +263,7 @@ export class MemberWorkSyncWorkerOps {
 
   reportsListPending(teamName: string): MemberWorkSyncReportIntentRecord[] {
     return this.getOrm()
-      .select()
+      .select(REPORT_INTENT_RECORD_SELECTION)
       .from(memberWorkSyncReportIntents)
       .where(
         and(
@@ -423,7 +372,7 @@ export class MemberWorkSyncWorkerOps {
         createdAt: nowIso,
         updatedAt: nowIso,
       };
-      orm.insert(memberWorkSyncOutbox).values(created).run();
+      orm.insert(memberWorkSyncOutbox).values(toPersistenceRow(created)).run();
       return { ok: true, outcome: 'created', item: created };
     });
   }
@@ -442,7 +391,7 @@ export class MemberWorkSyncWorkerOps {
     const orm = this.getOrm();
     return orm.transaction(() => {
       const candidates = orm
-        .select()
+        .select(OUTBOX_ITEM_RECORD_SELECTION)
         .from(memberWorkSyncOutbox)
         .where(
           and(
@@ -663,7 +612,7 @@ export class MemberWorkSyncWorkerOps {
     sinceIso: string;
   }): MemberWorkSyncOutboxItemRecord | null {
     const rows = this.getOrm()
-      .select()
+      .select(OUTBOX_ITEM_RECORD_SELECTION)
       .from(memberWorkSyncOutbox)
       .where(
         and(
@@ -681,40 +630,74 @@ export class MemberWorkSyncWorkerOps {
 
   listTeamSnapshot(teamName: string): MemberWorkSyncTeamSnapshotRecords {
     const orm = this.getOrm();
+    const teamKey = normalizeMemberWorkSyncTeamKey(teamName);
+    if (!teamKey) {
+      return { statuses: [], reportIntents: [], outboxItems: [], metricEvents: [] };
+    }
     return {
-      statuses: rowsForTeam(orm.select().from(memberWorkSyncStatus).all(), teamName).sort(
-        (left, right) => left.memberKey.localeCompare(right.memberKey)
-      ),
-      reportIntents: rowsForTeam(
-        orm.select().from(memberWorkSyncReportIntents).all(),
-        teamName
-      ).sort((left, right) => left.id.localeCompare(right.id)),
-      outboxItems: rowsForTeam(orm.select().from(memberWorkSyncOutbox).all(), teamName).sort(
-        (left, right) => left.id.localeCompare(right.id)
-      ),
-      metricEvents: rowsForTeam(orm.select().from(memberWorkSyncMetricEvents).all(), teamName).sort(
-        (left, right) => {
+      statuses: orm
+        .select(STATUS_RECORD_SELECTION)
+        .from(memberWorkSyncStatus)
+        .where(eq(memberWorkSyncStatus.teamKey, teamKey))
+        .all()
+        .sort((left, right) => left.memberKey.localeCompare(right.memberKey)),
+      reportIntents: orm
+        .select(REPORT_INTENT_RECORD_SELECTION)
+        .from(memberWorkSyncReportIntents)
+        .where(eq(memberWorkSyncReportIntents.teamKey, teamKey))
+        .all()
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      outboxItems: orm
+        .select(OUTBOX_ITEM_RECORD_SELECTION)
+        .from(memberWorkSyncOutbox)
+        .where(eq(memberWorkSyncOutbox.teamKey, teamKey))
+        .all()
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      metricEvents: orm
+        .select(METRIC_EVENT_RECORD_SELECTION)
+        .from(memberWorkSyncMetricEvents)
+        .where(eq(memberWorkSyncMetricEvents.teamKey, teamKey))
+        .all()
+        .sort((left, right) => {
           const byTime = left.recordedAt.localeCompare(right.recordedAt);
           return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
-        }
-      ),
+        }),
     };
   }
 
-  /** One-transaction import: folds every case alias into the routing argument. */
+  /** One-transaction import: folds every whitespace/case alias into the routing argument. */
   importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): void {
     const orm = this.getOrm();
     const normalizedSnapshot = normalizeMemberWorkSyncSnapshotTeamIdentity(teamName, snapshot);
+    const teamKey = normalizeMemberWorkSyncTeamKey(teamName);
     orm.transaction(() => {
       const aliases = new Set<string>([teamName]);
-      const current = this.listTeamSnapshot(teamName);
-      for (const record of [
-        ...current.statuses,
-        ...current.reportIntents,
-        ...current.outboxItems,
-        ...current.metricEvents,
-      ]) {
-        aliases.add(record.teamName);
+      const aliasRows = teamKey
+        ? [
+            orm
+              .select({ teamName: memberWorkSyncStatus.teamName })
+              .from(memberWorkSyncStatus)
+              .where(eq(memberWorkSyncStatus.teamKey, teamKey))
+              .all(),
+            orm
+              .select({ teamName: memberWorkSyncReportIntents.teamName })
+              .from(memberWorkSyncReportIntents)
+              .where(eq(memberWorkSyncReportIntents.teamKey, teamKey))
+              .all(),
+            orm
+              .select({ teamName: memberWorkSyncOutbox.teamName })
+              .from(memberWorkSyncOutbox)
+              .where(eq(memberWorkSyncOutbox.teamKey, teamKey))
+              .all(),
+            orm
+              .select({ teamName: memberWorkSyncMetricEvents.teamName })
+              .from(memberWorkSyncMetricEvents)
+              .where(eq(memberWorkSyncMetricEvents.teamKey, teamKey))
+              .all(),
+          ]
+        : [];
+      for (const rows of aliasRows) {
+        for (const row of rows) aliases.add(row.teamName);
       }
       for (const alias of aliases) {
         orm.delete(memberWorkSyncStatus).where(eq(memberWorkSyncStatus.teamName, alias)).run();
@@ -729,23 +712,23 @@ export class MemberWorkSyncWorkerOps {
           .run();
       }
       for (const rows of chunked(normalizedSnapshot.statuses)) {
-        orm.insert(memberWorkSyncStatus).values(rows).run();
+        orm.insert(memberWorkSyncStatus).values(rows.map(toPersistenceRow)).run();
       }
       for (const rows of chunked(normalizedSnapshot.reportIntents)) {
-        orm.insert(memberWorkSyncReportIntents).values(rows).run();
+        orm.insert(memberWorkSyncReportIntents).values(rows.map(toPersistenceRow)).run();
       }
       for (const rows of chunked(normalizedSnapshot.outboxItems)) {
-        orm.insert(memberWorkSyncOutbox).values(rows).run();
+        orm.insert(memberWorkSyncOutbox).values(rows.map(toPersistenceRow)).run();
       }
       for (const rows of chunked(normalizedSnapshot.metricEvents)) {
-        orm.insert(memberWorkSyncMetricEvents).values(rows).run();
+        orm.insert(memberWorkSyncMetricEvents).values(rows.map(toPersistenceRow)).run();
       }
     });
   }
 
   private readReportRow(teamName: string, id: string): MemberWorkSyncReportIntentRecord | null {
     const rows = this.getOrm()
-      .select()
+      .select(REPORT_INTENT_RECORD_SELECTION)
       .from(memberWorkSyncReportIntents)
       .where(
         and(
@@ -759,7 +742,7 @@ export class MemberWorkSyncWorkerOps {
 
   private readOutboxRow(teamName: string, id: string): MemberWorkSyncOutboxItemRecord | null {
     const rows = this.getOrm()
-      .select()
+      .select(OUTBOX_ITEM_RECORD_SELECTION)
       .from(memberWorkSyncOutbox)
       .where(and(eq(memberWorkSyncOutbox.teamName, teamName), eq(memberWorkSyncOutbox.id, id)))
       .all();
@@ -770,6 +753,7 @@ export class MemberWorkSyncWorkerOps {
     this.getOrm()
       .update(memberWorkSyncOutbox)
       .set({
+        teamKey: normalizeMemberWorkSyncTeamKey(row.teamName),
         memberKey: row.memberKey,
         memberName: row.memberName,
         agendaFingerprint: row.agendaFingerprint,

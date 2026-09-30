@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.A",
+  "laneId": "p2-a-workspace-identity",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.A.RUNTIME_CONTEXT",
+      "path": "test/features/runtime-instance-context/RuntimeInstanceContext.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.A.GLOBAL_PATH_RATCHET",
+      "path": "test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": ["P2.A.RUNTIME_CONTEXT", "P2.A.GLOBAL_PATH_RATCHET"],
+  "authority": {
+    "routerBaseSha": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+    "foundationIntegrationCommit": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "foundationIntegrationHandoffPath": ".codex-handoff/phase-02-p2-if.json",
+    "foundationIntegrationHandoffSha256": "80c867114c55b44d4da9c5d918fc3e94a2fc0c3d71689b72e014b0da5b4fc07d",
+    "foundationIntegrationEvidencePath": "docs/research/hosted-web/phase-2/foundation-integration.json",
+    "foundationIntegrationEvidenceSha256": "dd90c4ce7bd7ea633320cf9496fdd306e2cba8f980d1faecbb49529b387acb41",
+    "foundationIntegrationIsAncestorOfCurrentBase": true,
+    "reviewedProducerBaseSha": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "admissionCanonicalBaseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "workspaceHeadAtHandoff": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "workspaceHeadMatchesAdmission": true,
+    "packetRevisionMatchesExecutionIndex": true,
+    "p2ADependencyMatchesExecutionIndex": true,
+    "p2AOwnershipMatchesExecutionIndex": true,
+    "reviewedProducerSourceAndTestBytesPreserved": true,
+    "baseDriftRequiredProductEdit": false,
+    "authorityMismatchCount": 0
+  },
+  "mandatoryReads": {
+    "commonContractOrderCompleted": true,
+    "assignedPacketCompleted": true,
+    "numberedLaneReadsCompletedInOrder": true,
+    "masterPlanHeading": "Phase 2: identity substrate and externally read-only team lifecycle",
+    "masterPlanTask": 1
+  },
+  "declaredWritablePaths": [
+    "src/features/runtime-instance-context/contracts/runtime-instance-context.ts",
+    "src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts",
+    "test/features/runtime-instance-context/RuntimeInstanceContext.test.ts",
+    "test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+    ".codex-handoff/phase-02-p2-a.json"
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-02-p2-a.json",
+    "src/features/runtime-instance-context/contracts/runtime-instance-context.ts",
+    "src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts",
+    "test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+    "test/features/runtime-instance-context/RuntimeInstanceContext.test.ts"
+  ],
+  "changedPathCount": 5,
+  "contentHashes": {
+    "src/features/runtime-instance-context/contracts/runtime-instance-context.ts": "4fdd3c006c5d63f29742dd2691d1811f77ef4a8c860b85170565d2109f2a96ee",
+    "src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts": "0306fd39c8cc67c6a69ddafb58d6244ec45a183c46f6bb6ab446977c5378631a",
+    "test/features/runtime-instance-context/RuntimeInstanceContext.test.ts": "d03ff8193a79c96f0d45623168e1a4d07632e4505226e8474094145db3ebfbdd",
+    "test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts": "3e1e80e2f6009250b6172416a69c57df660873584a403b9d6751749aaddbbd53"
+  },
+  "baseDriftAdoption": {
+    "reviewedOutputId": "1a5c15334d7ec0900fbac80404bb6a9f6de0e9773bcf2051230f982fbee0a537",
+    "reviewedComponentPatchSha256": "4e1a46b462d2c9d7fe85d457a9ad4f87f86a5035fb9d166c1e14ce350dfee7a1",
+    "reviewedComponentPatchByteLength": 29656,
+    "terminalMaterializedPatchSha256": "3e790ba583ff0313240b4eb620daff5fe9da1aa35515fc3b105ed1dda7dc3753",
+    "terminalMaterializedPatchByteLength": 29652,
+    "terminalDifferenceClassification": "the controller-admitted terminal handoff differs from the reviewed component patch only by four blank diff-separator bytes",
+    "blankDiffSeparatorByteDelta": 4,
+    "reviewedPathCount": 5,
+    "reviewedSourceAndTestPathCount": 4,
+    "reviewedSourceAndTestBytesPreserved": true,
+    "ownedPathOverlapWithBaseDrift": false,
+    "genuineBaseDriftInteractions": [
+      "current base caches phase-one identifier regular expressions in the accepted hosted identifier kernel",
+      "deployment and boot identifier prefixes, validation grammar, length limit, return values and failure semantics used by RuntimeInstanceContext remain unchanged"
+    ],
+    "resolution": "no product or test edit was required; the reviewed RuntimeInstanceContext behavior is preserved exactly while the handoff authority and fresh evidence are rebound to current canonical",
+    "currentBaseIdentifierRegressionPassed": true
+  },
+  "contract": {
+    "canonicalDeploymentIdParserReused": true,
+    "canonicalBootIdParserReused": true,
+    "rootReferencesAreOpaqueBrandedValues": true,
+    "rootReferenceKinds": ["claude", "app-data", "workspace", "temp", "logs"],
+    "crossKindRootReferencesRejected": true,
+    "unknownFieldsRejected": true,
+    "accessorAndNonPlainRecordsRejected": true,
+    "mutableReferenceContainersRejected": true,
+    "sourceValuesDefensivelyCopied": true,
+    "deeplyFrozenOutput": true,
+    "operationAuthorizationExposed": false,
+    "processLaunchExposed": false,
+    "orchestrationPolicyExposed": false,
+    "serviceLocatorExposed": false,
+    "filesystemReadPerformed": false,
+    "mutableGlobalReadPerformed": false,
+    "compositionWiringPerformed": false
+  },
+  "proofs": {
+    "P2.A.RUNTIME_CONTEXT": {
+      "proofLevel": "target_verified",
+      "positiveCases": [
+        "canonical deployment and boot identity parsing",
+        "opaque kind-specific root references",
+        "deep freezing of context, nested references and workspace-root collection",
+        "defensive copying against post-creation source mutation",
+        "two isolated contexts in one test process"
+      ],
+      "negativeCases": [
+        "missing context values",
+        "unknown top-level and nested fields",
+        "cross-kind deployment, boot and root references",
+        "non-string mutable root-reference values",
+        "accessor-backed values",
+        "custom record and array prototypes",
+        "sparse workspace-root collections",
+        "mutation of frozen outputs"
+      ]
+    },
+    "P2.A.GLOBAL_PATH_RATCHET": {
+      "proofLevel": "target_verified",
+      "positiveCases": [
+        "contract and domain sources pass the boundary scanner",
+        "domain imports only the shared value kernel and feature-local contract"
+      ],
+      "negativeCases": [
+        "Node filesystem, path and process imports",
+        "child-process, Electron and main-process imports",
+        "mutable exported let and object state",
+        "launch/provider service-locator responsibility"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 37,
+      "testsTotal": 37,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 36,
+      "testsTotal": 36,
+      "classification": "focused regression proof for the only genuine current-base interaction"
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/runtime-instance-context/contracts/runtime-instance-context.ts src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+      "exitCode": 0,
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "diagnosticCount": 0,
+      "classification": "clean at current canonical with the complete P2.A lane diff"
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/runtime-instance-context/contracts/runtime-instance-context.ts src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts .codex-handoff/phase-02-p2-a.json",
+      "exitCode": 0,
+      "checkedPathCount": 5
+    },
+    {
+      "command": "git diff --check && git diff --cached --check && git diff HEAD --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short --untracked-files=all",
+      "exitCode": 0,
+      "classification": "all five declared additions remain staged; only the declared lane handoff has the final base-drift adoption evidence update unstaged over its staged predecessor bytes"
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' src/features/runtime-instance-context/contracts/runtime-instance-context.ts src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts .codex-handoff/phase-02-p2-a.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "classification": "the false prohibited-operation flag and scanner command only; no sensitive payload"
+    },
+    {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' src/features/runtime-instance-context/contracts/runtime-instance-context.ts src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts test/features/runtime-instance-context/RuntimeInstanceContext.test.ts test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts .codex-handoff/phase-02-p2-a.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 1,
+      "classification": "scanner command only; no personal or ambient absolute path value"
+    }
+  ],
+  "scopeProof": {
+    "declaredPathCount": 5,
+    "actualPathCount": 5,
+    "unexpectedPathCount": 0,
+    "stagedProducerPathCount": 5,
+    "unstagedBaseDriftHandoffPathCount": 1,
+    "barrelOrIndexPathChanged": false,
+    "compositionPathChanged": false,
+    "legacyPathUtilityChanged": false,
+    "siblingLanePathChanged": false,
+    "onlyDeclaredP2APathsChanged": true,
+    "gitStatusClassification": "all five declared additions remain staged; only the declared lane handoff has the final base-drift adoption evidence update unstaged over its staged predecessor bytes"
+  },
+  "classifiedScans": {
+    "secretCredentialScan": {
+      "scopePathCount": 5,
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "the false prohibited-operation flag and scanner command only; no sensitive payload"
+    },
+    "privatePathScan": {
+      "scopePathCount": 5,
+      "exitCode": 0,
+      "observedMatchLineCount": 1,
+      "allMatchesClassified": true,
+      "classification": "scanner command only; no personal or ambient absolute path value"
+    },
+    "highConfidenceSecretSignatureScan": {
+      "scopePathCount": 5,
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no high-confidence secret, access-key or private-key signature"
+    }
+  },
+  "selfReview": {
+    "completeDiffReread": true,
+    "completeRebasedProductDiffReread": true,
+    "reviewedLaneBehaviorPreserved": true,
+    "currentBaseBehaviorPreserved": true,
+    "genuineBaseDriftInteractionsClassified": true,
+    "cleanArchitectureDependencyDirectionConfirmed": true,
+    "dddValueObjectInvariantsConfirmed": true,
+    "solidSingleResponsibilityConfirmed": true,
+    "interfaceSegregationConfirmed": true,
+    "browserSafeValueOnlyContractConfirmed": true,
+    "domainRuntimeIndependenceConfirmed": true,
+    "transportBoundaryConfirmed": true,
+    "deepImmutabilityConfirmed": true,
+    "strictFailClosedValidationConfirmed": true,
+    "safeNonReflectiveErrorConfirmed": true,
+    "noMutableExportedStateConfirmed": true,
+    "noMutableGlobalReadOrWriteConfirmed": true,
+    "noSiblingDependencyConfirmed": true,
+    "exactFivePathScopeConfirmed": true,
+    "secretAndPrivatePathClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "serial composition adoption of RuntimeInstanceContext",
+    "migration or removal of existing mutable global root reads",
+    "production root-reference allocation, resolution, containment or filesystem behavior",
+    "sibling P2.B through P2.E completion",
+    "fresh independent P2.R1 architecture/security acceptance",
+    "Phase 2 serial integration, milestone acceptance, commit, push, remote equality or successor launch",
+    "fresh independent remote-ref equality beyond the supplied bd6ac038c920180ee5398b96f2dbdc3d6f035e77 admission"
+  ],
+  "blockers": [],
+  "adrRecommendations": [],
+  "estimateBuckets": [],
+  "generatedAt": "2026-07-16T17:47:15Z",
+  "nextAction": "HOLD for controller-directed exact-five rematerialization and fresh P2.R1 review after all lane adoptions finish; do not launch successors"
+}

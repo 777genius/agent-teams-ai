@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.LINT.REMEDIATION",
+  "laneId": "p1-i-lint-remediation",
+  "packetRevision": "phase-01-p1-i-integration-r2",
+  "routerRevision": "phase-01-p1-i-lint-remediation-router-r1",
+  "evidenceId": "P1.I.LINT.REMEDIATION",
+  "baseSha": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+  "canonicalSha": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+  "planBundleCommit": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+  "phaseStartSha": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+  "headSha": "92b8c34722f61d5e65bfbe606c325d13792cef5c",
+  "status": "verified",
+  "producerProfile": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "serviceTier": "default",
+    "fastMode": false
+  },
+  "evidence": [
+    {
+      "id": "P1.I.LINT.REMEDIATION",
+      "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    "src/shared/contracts/hosted/app-error.ts",
+    "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+    ".codex-handoff/phase-01-p1-i-lint-remediation.json"
+  ],
+  "changedPathSha256": {
+    "src/shared/contracts/hosted/app-error.ts": "838c76670512e4178b9b7507e3ce34356a39e2f57a9761fd92583ccd78253820",
+    "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts": "52ee29acbca32a864b600ef3c833785fc11af382e515ec941fe0437ab3ccdf83"
+  },
+  "sourceChange": {
+    "path": "src/shared/contracts/hosted/app-error.ts",
+    "removedTokenSequence": " as string",
+    "location": "validated diagnosticId projection",
+    "onlyRedundantAssertionRemoved": true,
+    "otherSourceTokensChanged": 0
+  },
+  "regression": {
+    "path": "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+    "addedTestCount": 1,
+    "validDiagnosticIdPreservedUnchanged": true,
+    "safeProjectionFrozen": true,
+    "safeProjectionKnownFieldsOnly": true,
+    "unsafeDiagnosticRejectedWithExistingFailure": "hosted-contract-safe-error-invalid",
+    "inlineSyntheticValuesOnly": true
+  },
+  "semanticPreservation": {
+    "appErrorSemanticsUnchanged": true,
+    "requestSemanticsUnchanged": true,
+    "rawMessageHandlingUnchanged": true,
+    "transportFieldsUnchanged": true,
+    "retryRulesUnchanged": true,
+    "appErrorCodesUnchanged": true,
+    "validationGrammarUnchanged": true,
+    "projectionKeysUnchanged": true,
+    "freezeBehaviorUnchanged": true,
+    "importsExportsAndReturnTypeUnchanged": true
+  },
+  "baselineLint": {
+    "command": "pnpm lint",
+    "exitCode": 1,
+    "errorCount": 1,
+    "diagnostics": [
+      {
+        "path": "src/shared/contracts/hosted/app-error.ts",
+        "line": 29,
+        "column": 65,
+        "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+        "message": "This assertion is unnecessary since it does not change the type of the expression"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 1,
+        "total": 1
+      },
+      "tests": {
+        "passed": 2,
+        "total": 2
+      }
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "errorCount": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": {
+        "inherited": 7,
+        "owned": 0,
+        "unexpected": 0,
+        "matchesFrozenBaseline": true
+      },
+      "diagnostics": [
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7016",
+          "location": "25:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "66:31"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS18046",
+          "location": "117:68"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "413:48"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "733:10"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+          "code": "TS7016",
+          "location": "12:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+          "code": "TS2352",
+          "location": "162:44"
+        }
+      ]
+    },
+    {
+      "command": "pnpm exec prettier --check src/shared/contracts/hosted/app-error.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts .codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "exitCode": 0,
+      "checkedFiles": 3
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --quiet",
+      "exitCode": 0
+    }
+  ],
+  "scopeProof": {
+    "headMatchesPostRouterIntegrationAuthoritySha": true,
+    "trackedDiffPaths": [
+      "src/shared/contracts/hosted/app-error.ts",
+      "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts"
+    ],
+    "untrackedPaths": [".codex-handoff/phase-01-p1-i-lint-remediation.json"],
+    "stagedPathCount": 0,
+    "statusPathCount": 3,
+    "onlyDeclaredWriterPathsChanged": true,
+    "sourceDiffMatchesExactAssertionDeletion": true,
+    "testDiffIsOneFocusedRegressionOnly": true
+  },
+  "classifiedScans": {
+    "secretCredentialScan": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' src/shared/contracts/hosted/app-error.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts .codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "classification": "recorded scan-command control text only; no secret, credential, cookie, or authorization value"
+    },
+    "providerTermScan": {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' src/shared/contracts/hosted/app-error.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts .codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 4,
+      "classification": "required model/profile metadata, inherited typecheck diagnostic path, scan-command control text, and this classification label only; no auth payload or raw runtime value"
+    },
+    "privatePathScan": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' src/shared/contracts/hosted/app-error.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts .codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "classification": "recorded scan-command control text only; no private, real-project, home, or task-temporary path value"
+    },
+    "binaryScan": {
+      "command": "file --mime-type src/shared/contracts/hosted/app-error.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts .codex-handoff/phase-01-p1-i-lint-remediation.json",
+      "exitCode": 0,
+      "textFileCount": 3,
+      "binaryFileCount": 0,
+      "classifications": [
+        {
+          "path": "src/shared/contracts/hosted/app-error.ts",
+          "mimeType": "application/javascript",
+          "classification": "text"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+          "mimeType": "application/javascript",
+          "classification": "text"
+        },
+        {
+          "path": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+          "mimeType": "application/json",
+          "classification": "text"
+        }
+      ]
+    }
+  },
+  "selfReview": {
+    "sourceDiffReread": true,
+    "focusedRegressionDiffReread": true,
+    "completeHandoffReread": true,
+    "outputHashesRecomputed": true,
+    "writerScopeVerified": true,
+    "frozenTypecheckBaselineVerified": true,
+    "fullLintZeroErrorsVerified": true,
+    "appErrorSemanticsPreserved": true,
+    "scopeExpansion": false,
+    "unsupportedClaims": false
+  },
+  "unverifiedClaims": ["independent acceptance", "integration", "P1.I completion"],
+  "failures": [],
+  "blockers": [],
+  "nextAction": "independent-verification",
+  "terminalState": "HOLD"
+}

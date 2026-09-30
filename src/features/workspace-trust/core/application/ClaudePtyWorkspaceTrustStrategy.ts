@@ -15,8 +15,18 @@ const WORKSPACE_TRUST_RAW_TAIL_LIMIT = 4096;
 const CLAUDE_WORKSPACE_TRUST_PREFLIGHT_TIMEOUT_MS = 60_000;
 const CLAUDE_WORKSPACE_TRUST_CONFIRM_TIMEOUT_MS = 5_000;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export interface WorkspaceTrustClock {
+  nowMs(): number;
+}
+
+function readClock(clock: WorkspaceTrustClock | undefined): number | null {
+  if (!clock) return null;
+  try {
+    const nowMs = clock.nowMs();
+    return Number.isSafeInteger(nowMs) && nowMs >= 0 ? nowMs : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface ClaudePtyWorkspaceTrustStrategyInput {
@@ -27,6 +37,7 @@ export interface ClaudePtyWorkspaceTrustStrategyInput {
   stateProbe?: ProviderStateProbe;
   trustPersister?: ProviderTrustPersister;
   tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
+  clock?: WorkspaceTrustClock;
   isCancelled(): boolean;
   timeoutMs?: number;
   pollIntervalMs?: number;
@@ -59,16 +70,15 @@ async function waitForTrustedState(input: {
   isCancelled(): boolean;
   timeoutMs: number;
   pollIntervalMs: number;
+  delay(delayMs: number): Promise<void>;
 }): Promise<Awaited<ReturnType<ProviderStateProbe['readTrustState']>>> {
   const pollIntervalMs = Math.max(1, input.pollIntervalMs);
-  const deadline = Date.now() + input.timeoutMs;
+  let remainingMs = Math.max(0, input.timeoutMs);
   let last = await input.stateProbe.readTrustState(input.workspace);
-  while (last.status !== 'trusted' && !input.isCancelled()) {
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) {
-      break;
-    }
-    await sleep(Math.min(pollIntervalMs, remainingMs));
+  while (last.status !== 'trusted' && !input.isCancelled() && remainingMs > 0) {
+    const waitMs = Math.min(pollIntervalMs, remainingMs);
+    remainingMs -= waitMs;
+    await input.delay(waitMs);
     last = await input.stateProbe.readTrustState(input.workspace);
   }
   return last;
@@ -95,6 +105,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
       stateProbe?: ProviderStateProbe;
       trustPersister?: ProviderTrustPersister;
       tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
+      clock?: WorkspaceTrustClock;
     } = {}
   ) {}
 
@@ -106,6 +117,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
     const trustPersister = input.trustPersister ?? this.defaults.trustPersister;
     const tempEmptyMcpConfigStore =
       input.tempEmptyMcpConfigStore ?? this.defaults.tempEmptyMcpConfigStore;
+    const clock = input.clock ?? this.defaults.clock;
     if (!stateProbe || (!trustPersister && (!ptyProcess || !tempEmptyMcpConfigStore))) {
       return {
         id: 'claude-pty-workspace-trust',
@@ -117,7 +129,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
       };
     }
 
-    const startedAt = Date.now();
+    const startedAtMs = readClock(clock);
     const workspaceIds: string[] = [];
     const matchedRuleIds: string[] = [];
     const actions: string[] = [];
@@ -226,6 +238,9 @@ export class ClaudePtyWorkspaceTrustStrategy {
                   input.timeoutMs ?? CLAUDE_WORKSPACE_TRUST_CONFIRM_TIMEOUT_MS
                 ),
                 pollIntervalMs: input.pollIntervalMs ?? 100,
+                delay: async (delayMs) => {
+                  await spawnResult.session.readSnapshot(delayMs);
+                },
               });
               if (after.status === 'trusted') {
                 evidence.push(...after.evidence);
@@ -279,6 +294,11 @@ export class ClaudePtyWorkspaceTrustStrategy {
       }
     }
 
+    const finishedAtMs = readClock(clock);
+    const elapsedMs =
+      startedAtMs === null || finishedAtMs === null
+        ? null
+        : Math.max(0, finishedAtMs - startedAtMs);
     return {
       id: 'claude-pty-workspace-trust',
       provider: 'claude',
@@ -287,7 +307,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
       matchedRuleIds: [...new Set(matchedRuleIds)],
       actions,
       evidence: [...new Set(evidence)],
-      elapsedMs: Date.now() - startedAt,
+      ...(elapsedMs === null ? {} : { elapsedMs }),
       errorCode,
       errorMessage,
       rawTail,

@@ -313,9 +313,7 @@ export function getOpenCodeSourceTabCountState(input: {
   if (input.sourceScopedStatus === 'loading') return 'pending';
   if (input.sourceScopedStatus === 'error') return 'unavailable';
   if (input.sourceScopedStatus === 'ready' || !input.directoryExpectsModels) return 'known';
-  return input.passiveCatalogState === 'settled'
-    ? 'unknown'
-    : input.passiveCatalogState;
+  return input.passiveCatalogState === 'settled' ? 'unknown' : input.passiveCatalogState;
 }
 
 export function isOpenCodeProjectFolderMissing(
@@ -467,6 +465,15 @@ export function getOpenCodeReadinessMessage(
     return isOpenCodeProjectFolderMissing(providerStatus)
       ? t('modelSelector.openCodeStatus.messages.projectFolderMissingGeneric')
       : t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
+  }
+  if (
+    runtimeStatusUiState === 'checking' &&
+    runtimeStatus?.installed !== false &&
+    providerStatus?.supported &&
+    !providerStatus.authenticated &&
+    hasFreeOpenCodeModelRoute(providerStatus)
+  ) {
+    return t('modelSelector.openCodeStatus.messages.freeAvailable');
   }
   if (
     runtimeStatusUiState === 'checking' &&

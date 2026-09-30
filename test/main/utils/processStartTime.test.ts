@@ -101,22 +101,42 @@ describe('processStartTime', () => {
     expect(observe.mock.calls[0][0]).toContain('invalid pid');
   });
 
-  it('forces the C locale so POSIX lstart= stays parseable on a non-English desktop', async () => {
+  it('uses a UTC C-locale POSIX probe without inheriting provider runtime state', async () => {
     vi.stubEnv('LC_ALL', 'de_DE.UTF-8');
     vi.stubEnv('LC_TIME', 'de_DE.UTF-8');
-    vi.stubEnv('AGENT_TEAMS_PROBE_MARKER', 'kept');
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    vi.stubEnv('AGENT_TEAMS_PROVIDER_POISON', 'must-not-reach-ps');
+    vi.stubEnv('NODE_OPTIONS', '--require provider-poison');
     const probes = recordProbes({ stdout: 'Wed Aug 27 10:12:33 2025\n' });
 
     const startedAt = await readProcessStartTimeMs(4321, 'linux', 2_000);
 
-    expect(startedAt).toBe(Date.parse('Wed Aug 27 10:12:33 2025'));
+    // `ps` receives TZ=UTC and the parser explicitly reads its offset-less
+    // output as UTC, regardless of the parent process's timezone.
+    expect(startedAt).toBe(Date.UTC(2025, 7, 27, 10, 12, 33));
     expect(probes).toHaveLength(1);
     expect(probes[0].command).toBe('ps');
     expect(probes[0].args).toEqual(['-p', '4321', '-o', 'lstart=']);
-    expect(probes[0].options.env?.LC_ALL).toBe('C');
-    // The probe environment is an override of the app environment, not a replacement:
-    // dropping PATH here would break `ps` lookup on some hosts.
-    expect(probes[0].options.env?.AGENT_TEAMS_PROBE_MARKER).toBe('kept');
+    expect(probes[0].options.env).toEqual({
+      PATH: process.env.PATH ?? '',
+      LC_ALL: 'C',
+      LANG: 'C',
+      TZ: 'UTC',
+    });
+    expect(probes[0].options.env?.AGENT_TEAMS_PROVIDER_POISON).toBeUndefined();
+    expect(probes[0].options.env?.NODE_OPTIONS).toBeUndefined();
+  });
+
+  it('omits PATH instead of passing an empty command search path when it is absent', async () => {
+    vi.stubEnv('PATH', undefined);
+    const probes = recordProbes({ stdout: 'Wed Aug 27 10:12:33 2025\n' });
+
+    await expect(readProcessStartTimeMs(4321, 'linux', 2_000)).resolves.toBe(
+      Date.UTC(2025, 7, 27, 10, 12, 33)
+    );
+
+    expect(probes[0].options.env).not.toHaveProperty('PATH');
+    expect(probes[0].options.env).toMatchObject({ LC_ALL: 'C', LANG: 'C', TZ: 'UTC' });
   });
 
   it('still reads the Windows round-trip start time through the forced locale', async () => {
@@ -128,6 +148,10 @@ describe('processStartTime', () => {
     expect(probes[0].command).toBe('powershell.exe');
     expect(probes[0].args.at(-1)).toContain('Get-Process -Id 4321');
     expect(probes[0].options.env?.LC_ALL).toBe('C');
+    expect(probes[0].options.env?.LANG).toBe('C');
+    expect(probes[0].options.env?.PATH).toBe(process.env.PATH ?? '');
+    expect(probes[0].options.env?.SystemRoot).toBe(process.env.SystemRoot ?? 'C:\\Windows');
+    expect(probes[0].options.env?.TZ).toBeUndefined();
   });
 
   it('spends the timeout the caller asked for, and a bounded default when asked for none', async () => {

@@ -6,6 +6,59 @@ import { describe, expect, it } from 'vitest';
 import { TeamLaunchRunSourceDiscovery } from '../TeamLaunchRunSourceDiscovery';
 
 describe('TeamLaunchRunSourceDiscovery', () => {
+  it('does not read a strict-contract-invalid v2 launch-state document as a runtime run', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-v2-invalid-'));
+    try {
+      const teamDir = path.join(root, 'alpha');
+      await mkdir(teamDir, { recursive: true });
+      await writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: 'alpha', projectPath: '/sandbox/project' })
+      );
+      await writeFile(
+        path.join(teamDir, 'launch-state.json'),
+        JSON.stringify({
+          version: 2,
+          teamName: 'alpha',
+          updatedAt: '2026-06-30T00:04:00.000Z',
+          launchPhase: 'finished',
+          expectedMembers: ['builder'],
+          members: {
+            builder: {
+              name: 'builder',
+              providerId: 'opencode',
+              model: 'qwen-coder',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              runtimeRunId: 'runtime-run-1',
+              runtimeSessionId: 'native-session-1',
+              firstSpawnAcceptedAt: '2026-06-30T00:01:00.000Z',
+              lastRuntimeAliveAt: '2026-06-30T00:03:00.000Z',
+              lastEvaluatedAt: '2026-06-30T00:04:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 0,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'clean_success',
+          // This is the only malformed field. Without strict v2 validation,
+          // the former reader gates would discover the runtime run above.
+          unexpectedLaunchField: true,
+        })
+      );
+
+      await expect(new TeamLaunchRunSourceDiscovery(root).discoverAppRuns()).resolves.toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('discovers app-scoped team launch runs with command invocation attribution', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-'));
     try {
@@ -42,7 +95,7 @@ describe('TeamLaunchRunSourceDiscovery', () => {
               providerBackendId: 'adapter',
               billingMode: 'api',
               model: 'qwen-coder',
-              launchState: 'ready',
+              launchState: 'confirmed_alive',
               agentToolAccepted: true,
               runtimeAlive: true,
               bootstrapConfirmed: true,
@@ -59,7 +112,7 @@ describe('TeamLaunchRunSourceDiscovery', () => {
             failedCount: 0,
             runtimeAlivePendingCount: 0,
           },
-          teamLaunchState: 'ready',
+          teamLaunchState: 'clean_success',
         })
       );
 

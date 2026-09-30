@@ -70,4 +70,16 @@ describe('buildRecentProjectsSectionViewModel', () => {
       },
     });
   });
+
+  it('keeps invalid activity unknown and bounds future activity labels', () => {
+    const base: DashboardRecentProject = {
+      id: 'fixture', name: 'fixture', primaryPath: '/tmp/fixture', associatedPaths: ['/tmp/fixture'],
+      mostRecentActivity: Number.NaN, providerIds: [], source: 'claude',
+      openTarget: { type: 'synthetic-path', path: '/tmp/fixture' },
+    };
+    const input = { taskCountsByProject: new Map(), activeTeamsByProject: new Map(), tasksLoading: false };
+    expect(buildRecentProjectsSectionViewModel({ ...input, projects: [base] })[0]?.lastActivityLabel).toBe('');
+    const future = { ...base, mostRecentActivity: Date.now() + 86_400_000 };
+    expect(buildRecentProjectsSectionViewModel({ ...input, projects: [future] })[0]?.lastActivityLabel).toContain('ago');
+  });
 });

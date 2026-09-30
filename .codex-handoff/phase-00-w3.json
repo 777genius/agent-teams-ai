@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "w3",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "baseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "headVerifiedBeforeEdits": true,
+  "status": "ready_for_focused_re_review",
+  "originalProducer": {
+    "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+    "worktree": "phase-00-w3-state-writers-backup-v1",
+    "status": "characterized"
+  },
+  "review": {
+    "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1",
+    "reviewId": "w3-w5-reciprocal",
+    "originalDisposition": "reject",
+    "w3FindingIds": ["RW35-001", "RW35-006"]
+  },
+  "requirementsAuditDisposition": [
+    {
+      "id": "P0.REQ.W3.001",
+      "disposition": "retained_and_reverified",
+      "note": "The accepted 17-family authority/writer/schema/atomicity/corruption/backup catalog is semantically unchanged."
+    },
+    {
+      "id": "P0.REQ.W3.002",
+      "disposition": "retained_and_reverified",
+      "note": "All 12 operations retain honest ADR-29 coordination classes and unresolved writers remain fail-closed."
+    },
+    {
+      "id": "P0.REQ.W3.003",
+      "disposition": "retained_and_rerun",
+      "note": "The marker-owned external-process negative control again reports lostExternalUpdate=true."
+    },
+    {
+      "id": "P0.REQ.W3.004",
+      "disposition": "corrected",
+      "note": "Production TeamBackupService is now constructed and fault-characterized by TB-01 through TB-12."
+    },
+    {
+      "id": "P0.REQ.W3.005",
+      "disposition": "retained_and_rerun",
+      "note": "Supported Online Backup again proves active WAL, independent 2,000-row reopen/integrity, and fail-closed BUSY/corruption/deadline handling."
+    },
+    {
+      "id": "P0.REQ.W3.006",
+      "disposition": "external_final_topology_gate_not_claimed",
+      "note": "Final-image ABI, production async worker wire, and deployment quiescence require W6/controller integration and are deliberately outside this W3-only remediation."
+    },
+    {
+      "id": "P0.REQ.W3.007",
+      "disposition": "controller_input_clarified",
+      "note": "The handoff explicitly maps W3/W5 as overlapping decompositions under EST-RECOVERY-STATE; controller adoption remains outside this lane."
+    }
+  ],
+  "findingResolutions": [
+    {
+      "id": "RW35-001",
+      "status": "resolved_by_owner_evidence",
+      "evidenceId": "P0.W3.BACKUP_BEHAVIOR",
+      "resolution": "A marker-owned 12-case fixture now constructs the production TeamBackupService and asserts async/sync enumeration, config readiness, copy/error swallowing, stale/retention prune, identity mutation, split manifest/registry publication failures, corrupt-registry rebuild, and missing/corrupt/partial/mtime restore behavior.",
+      "proofPath": "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+      "result": "7 tests passed; 12 characterized cases; legacy_unverified classification retained"
+    },
+    {
+      "id": "RW35-006",
+      "status": "resolved_by_owner_evidence",
+      "resolution": "The remediation handoff records an explicit no-index whitespace check over all 16 entirely untracked W3 additions instead of relying on plain git diff --check.",
+      "proofPath": ".codex-handoff/phase-00-w3.json",
+      "result": "all handoff-listed additions checked; zero whitespace findings"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P0.W3.STATE_FAMILY_CATALOG",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W3.WRITER_COORDINATION",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+      "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W3.BACKUP_BEHAVIOR",
+      "path": "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W3.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "summary": {
+    "stateFamilyCounts": {
+      "total": 17,
+      "currentOrFallback": 16,
+      "phase1Required": 1,
+      "catalogRowsWithUnresolvedWriters": 8,
+      "externalOrPotentialExternalWriter": 6
+    },
+    "writerOperations": {
+      "total": 12,
+      "actionableUnresolvedWriterIdentities": 6
+    },
+    "teamBackupServiceFixture": {
+      "tests": 7,
+      "cases": 12,
+      "passed": 7,
+      "classification": "legacy_unverified safety copy"
+    },
+    "unresolvedWriterIdentities": [
+      "Claude CLI/provider versions and exact config.json mutation verbs",
+      "Claude task-tool writer implementation and lock behavior",
+      "native teammate inbox lock-file adoption",
+      "OpenCode reply-to-user inbox writer path and acknowledgement boundary",
+      "provider ownership/flush guarantees for members/** and transcript artifacts",
+      "legacy config/launch paths that bypass the intended coordinator"
+    ],
+    "backupFaultResults": [
+      {
+        "case": "production TeamBackupService fault characterization",
+        "result": "pass",
+        "detail": "7 tests assert 12 marker-owned cases; observed split publications and best-effort paths retain legacy_unverified classification"
+      },
+      {
+        "case": "WAL-active online snapshot",
+        "result": "pass",
+        "detail": "better-sqlite3#backup completed with live -wal, independent reopen returned 2,000 rows and integrity_check=ok"
+      },
+      {
+        "case": "app-only lock versus external process",
+        "result": "negative-control-pass",
+        "detail": "child replacement completed but stale app rename erased its update; lostExternalUpdate=true"
+      },
+      {
+        "case": "SQLITE_BUSY/LOCKED",
+        "result": "fail-closed-pass",
+        "detail": "fault-injected backup adapter returned typed backup_busy and partial DB/WAL/SHM outputs were absent"
+      },
+      {
+        "case": "source corruption",
+        "result": "fail-closed-pass",
+        "detail": "invalid SQLite source returned source_corrupt before destination publication"
+      },
+      {
+        "case": "backup deadline",
+        "result": "fail-closed-pass",
+        "detail": "progress deadline returned backup_deadline and removed partial output"
+      }
+    ]
+  },
+  "ownershipAudit": {
+    "changedPathCount": 16,
+    "ownedRoots": [
+      "docs/research/hosted-web/phase-0/state-writers/**",
+      "scripts/hosted-web/phase-0/state-writers/**",
+      "test/architecture/hosted-web/phase-0/state-writers/**",
+      ".codex-handoff/phase-00-w3.json"
+    ],
+    "outOfScopePaths": [],
+    "otherLanesModified": false,
+    "productionSourceModified": false
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-w3.json",
+    "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+    "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+    "docs/research/hosted-web/phase-0/state-writers/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/state-writers/index.md",
+    "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+    "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+    "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.md",
+    "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+    "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+    "scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+    "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+    "scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+    "test/architecture/hosted-web/phase-0/state-writers/fixtures/invalid-state-family-catalog.json",
+    "test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+    "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs"
+  ],
+  "checks": [
+    {
+      "command": "git rev-parse HEAD",
+      "exitCode": 0,
+      "result": "0e8431b1935c71a2e77bea1384b134ee25c8aa12 (before edits)"
+    },
+    {
+      "command": "node --import tsx test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+      "exitCode": 0,
+      "result": "7 tests passed; TB-01 through TB-12 asserted"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+      "exitCode": 0,
+      "result": "WAL active; 2,000 rows; independent integrity_check=ok"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+      "exitCode": 0,
+      "result": "lostExternalUpdate=true"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "6 evidence files, 17 families, 12 operations, 12 TeamBackupService cases"
+    },
+    {
+      "command": "node --test test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+      "exitCode": 0,
+      "result": "targeted W3 architecture test file passed"
+    },
+    {
+      "command": "jq -S semantic comparison of the six review-accepted original W3 evidence records against remediation copies",
+      "exitCode": 0,
+      "result": "state-family, writer-coordination, unknown-field, SQLite, estimate, and schema records are semantically unchanged"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <all five owned MJS files>",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec prettier --check <all handoff-listed W3 files>",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 16 handoff-listed files>; require empty diagnostic output",
+      "exitCode": 0,
+      "result": "16 entirely untracked W3 additions checked; zero whitespace findings"
+    },
+    {
+      "command": "bounded secret and real-user-path scan over all handoff-listed W3 files",
+      "exitCode": 0,
+      "result": "no private-key, provider-token, Bearer credential, or absolute user-home findings"
+    }
+  ],
+  "scopeExclusions": {
+    "broadCiRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false,
+    "integrationPerformed": false,
+    "otherLaneEvidenceModified": false,
+    "pushed": false
+  },
+  "unverifiedClaims": [
+    "The SQLite native addon was exercised on the current Linux Node ABI, not the final packaged Electron ABI/container artifact.",
+    "No real provider was launched; provider/version writer identities require W2 sanitized fixtures.",
+    "A deterministic real-lock Online Backup SQLITE_BUSY was not claimed; BUSY was injected at the Database#backup adapter boundary.",
+    "The standalone spike does not prove the production worker async wire operation, which is outside this Phase 0 W3 remediation.",
+    "No deployment recovery point was built; final-image ABI, writer drain, watcher watermarks, immutable publication, credential exclusion, and restore remain W6/controller gates."
+  ],
+  "blockers": [],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-23",
+      "recommendation": "accepted-design-implementation-open",
+      "reason": "future SQLite user_version currently does not close known-table mutation"
+    },
+    {
+      "adr": "ADR-24",
+      "recommendation": "accepted",
+      "reason": "unverified file writes remain team-scoped external actors; run attribution needs provider evidence"
+    },
+    {
+      "adr": "ADR-29",
+      "recommendation": "accepted",
+      "reason": "negative fixture proves app-only locking cannot support a lossless external-writer claim"
+    },
+    {
+      "adr": "ADR-32",
+      "recommendation": "accepted-with-two-products",
+      "reason": "Online Backup API is feasible and production TeamBackupService is fault-characterized as legacy_unverified; only quiesced verified publication can be a deployment recovery point"
+    }
+  ],
+  "estimateBuckets": [
+    {
+      "bucketId": "EST-W3-COMPAT-CATALOG",
+      "changedLines": { "min": 1100, "max": 1800 }
+    },
+    {
+      "bucketId": "EST-W3-WRITER-COORDINATION",
+      "changedLines": { "min": 1550, "max": 2450 }
+    },
+    {
+      "bucketId": "EST-W3-SQLITE-BACKUP",
+      "changedLines": { "min": 800, "max": 1300 }
+    },
+    {
+      "bucketId": "EST-W3-BACKUP-PARTICIPANTS",
+      "changedLines": { "min": 1050, "max": 1700 }
+    }
+  ],
+  "estimateReconciliation": {
+    "w3Range": { "min": 4500, "max": 7250 },
+    "w5Relationship": "overlapping decomposition; do not add",
+    "controllerAction": "deduplicate once under the shared EST-RECOVERY-STATE range"
+  },
+  "nextAction": "focused_w3_w5_re_review"
+}

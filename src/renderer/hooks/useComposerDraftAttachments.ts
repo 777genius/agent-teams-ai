@@ -22,9 +22,7 @@ interface UseComposerDraftAttachmentsOptions {
   readonly canMutate: () => boolean;
   readonly captureIdentity: () => AttachmentOperationIdentity;
   readonly identityIsCurrent: (identity: AttachmentOperationIdentity) => boolean;
-  readonly editContent: (
-    update: (content: ComposerDraftContent) => ComposerDraftContent
-  ) => void;
+  readonly editContent: (update: (content: ComposerDraftContent) => ComposerDraftContent) => void;
 }
 
 export function useComposerDraftAttachments({

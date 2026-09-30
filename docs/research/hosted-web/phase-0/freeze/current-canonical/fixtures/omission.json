@@ -1,0 +1,10 @@
+{
+  "fixtureId": "P0.CURRENT.NEGATIVE.OMISSION",
+  "targetIndex": "supersession-index.json",
+  "mutation": {
+    "type": "omit-supersession-source",
+    "supersessionId": "P0.CURRENT.SUPERSESSION.W2_INCORRECT_PHASE_START",
+    "path": "docs/research/hosted-web/phase-0/provider-runtime/README.md"
+  },
+  "expectedCode": "MISSING_PROVENANCE"
+}

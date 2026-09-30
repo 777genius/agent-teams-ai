@@ -110,44 +110,49 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       failed: 0,
     };
 
-    relayWithPortsMock.mockImplementationOnce(async (input, ports) => {
-      expect(input).toEqual({
-        teamName: 'team-a',
-        memberName: 'worker',
-        relayKey: 'relay/team-a/worker',
-        options: { onlyMessageId: 'message-1' },
-      });
-      expect(ports.inFlight).toBe(service.openCodeMemberInboxRelayInFlight);
-
-      await expect(
-        ports.resolveOpenCodeInboxAttachmentPayloads({
+    relayWithPortsMock.mockImplementationOnce(
+      async (
+        input: Parameters<typeof relayOpenCodeMemberInboxMessagesWithPorts>[0],
+        ports: Parameters<typeof relayOpenCodeMemberInboxMessagesWithPorts>[1]
+      ) => {
+        expect(input).toEqual({
           teamName: 'team-a',
-          message: inboxMessageWithStoredAttachment(),
-        })
-      ).resolves.toEqual({
-        ok: true,
-        attachments: [
-          {
-            id: 'attachment-1',
-            filename: 'note.txt',
-            mimeType: 'text/plain',
-            size: 5,
-            data: 'SGVsbG8=',
-          },
-        ],
-      });
-      await ports.resolveOpenCodeMemberDeliveryIdentity('team-a', 'worker');
-      await ports.applyDestinationProof({
-        ledger: {} as never,
-        ledgerRecord: {} as never,
-        teamName: 'team-a',
-        replyRecipient: 'user',
-        memberName: 'worker',
-      });
-      expect(ports.suppressRuntimeInactiveWarning('team-a')).toBe(false);
+          memberName: 'worker',
+          relayKey: 'relay/team-a/worker',
+          options: { onlyMessageId: 'message-1' },
+        });
+        expect(ports.inFlight).toBe(service.openCodeMemberInboxRelayInFlight);
 
-      return result;
-    });
+        await expect(
+          ports.resolveOpenCodeInboxAttachmentPayloads({
+            teamName: 'team-a',
+            message: inboxMessageWithStoredAttachment(),
+          })
+        ).resolves.toEqual({
+          ok: true,
+          attachments: [
+            {
+              id: 'attachment-1',
+              filename: 'note.txt',
+              mimeType: 'text/plain',
+              size: 5,
+              data: 'SGVsbG8=',
+            },
+          ],
+        });
+        await ports.resolveOpenCodeMemberDeliveryIdentity('team-a', 'worker');
+        await ports.applyDestinationProof({
+          ledger: {} as never,
+          ledgerRecord: {} as never,
+          teamName: 'team-a',
+          replyRecipient: 'user',
+          memberName: 'worker',
+        });
+        expect(ports.suppressRuntimeInactiveWarning('team-a')).toBe(false);
+
+        return result;
+      }
+    );
 
     await expect(
       service.openCodeMemberInboxRelayBoundary.relayOpenCodeMemberInboxMessages(
@@ -192,6 +197,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       laneId: 'primary',
       runId: 'old-run',
       state: 'idle',
+      observedAt: '2026-01-01T00:00:00.000Z',
     });
     run = { ...run, runId: 'new-run' };
     releaseDirectory({ config: null, teamMeta: null, metaMembers: [] });
@@ -213,6 +219,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       laneId: 'primary',
       runId: 'run-1',
       state: 'active',
+      observedAt: '2026-01-01T00:00:00.000Z',
     });
     await service.notifyOpenCodeLeadTurnActivity({
       teamName: 'team-a',
@@ -220,6 +227,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       laneId: 'primary',
       runId: 'run-1',
       state: 'idle',
+      observedAt: '2026-01-01T00:00:00.000Z',
     });
     await service.notifyOpenCodeLeadTurnActivity({
       teamName: 'team-b',
@@ -227,6 +235,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       laneId: 'primary',
       runId: 'run-1',
       state: 'active',
+      observedAt: '2026-01-01T00:00:00.000Z',
     });
 
     for (const input of [
@@ -234,7 +243,12 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       { memberName: 'team-lead', runId: 'old-run', laneId: 'primary' },
       { memberName: 'team-lead', runId: 'run-1', laneId: 'secondary:opencode:builder' },
     ]) {
-      await service.notifyOpenCodeLeadTurnActivity({ teamName: 'team-a', state: 'idle', ...input });
+      await service.notifyOpenCodeLeadTurnActivity({
+        teamName: 'team-a',
+        state: 'idle',
+        observedAt: '2026-01-01T00:00:00.000Z',
+        ...input,
+      });
     }
     expect(setLeadActivity.mock.calls).toEqual([
       [run, 'active'],
@@ -328,7 +342,9 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
         [run, 'active'],
         [run, 'idle'],
       ]);
-      expect(setLeadActivity.mock.calls.filter(([, state]) => state === 'idle')).toHaveLength(1);
+      expect(
+        setLeadActivity.mock.calls.filter((call: unknown[]) => call[1] === 'idle')
+      ).toHaveLength(1);
     });
 
     it('arms nothing for a team with no tracked run, and no-ops when the run disappears', async () => {
@@ -367,7 +383,6 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
 
       for (const dropped of [
         { ...leadTurnActivity('active'), laneId: 'secondary:opencode:builder' },
-        { ...leadTurnActivity('active'), runId: null },
         { ...leadTurnActivity('active'), memberName: 'builder' },
         { ...leadTurnActivity('active'), runId: 'replacement-run' },
       ]) {
@@ -421,6 +436,7 @@ function leadTurnActivity(state: 'active' | 'idle'): OpenCodeLeadTurnActivityNot
     laneId: 'primary',
     runId: 'run-1',
     state,
+    observedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
@@ -465,7 +481,7 @@ describe('the self-heal switch on the production wiring', () => {
 
   it.each(['new-run', 'committed', 'missing'] as const)(
     'fences the real delivery, queued facade and helper chain: %s',
-    async (scenario) => {
+    async (scenario: 'new-run' | 'committed' | 'missing') => {
       process.env[ENV_NAME] = '1';
       const clock = vi.spyOn(Date, 'now');
       clock.mockReturnValue(0);
@@ -606,15 +622,17 @@ function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
   return {
     createDeliveryHost: vi.fn(() => deliveryHostWithUnavailableBridge()),
     inboxRelayHost: {
-      getOpenCodeMemberRelayKey: vi.fn((teamName, memberName) => `relay/${teamName}/${memberName}`),
+      getOpenCodeMemberRelayKey: vi.fn(
+        (teamName: string, memberName: string) => `relay/${teamName}/${memberName}`
+      ),
       scheduleOpenCodeMemberInboxDeliveryWake: vi.fn(),
       isOpenCodeRuntimeRecipient: vi.fn(async () => true),
       createOpenCodePromptDeliveryLedger: vi.fn(() => ({})),
       requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: vi.fn(
-        async ({ ledgerRecord }) => ledgerRecord
+        async ({ ledgerRecord }: { ledgerRecord: unknown }) => ledgerRecord
       ),
       requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded: vi.fn(
-        async ({ ledgerRecord }) => ledgerRecord
+        async ({ ledgerRecord }: { ledgerRecord: unknown }) => ledgerRecord
       ),
       isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => true),
       markInboxMessagesRead: vi.fn(async () => undefined),
@@ -661,7 +679,9 @@ function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
       warn: vi.fn(),
     },
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
-    getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),
+    getErrorMessage: vi.fn((error: unknown) =>
+      error instanceof Error ? error.message : String(error)
+    ),
     ...overrides,
   };
 }

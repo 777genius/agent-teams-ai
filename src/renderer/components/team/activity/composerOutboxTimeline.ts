@@ -7,9 +7,7 @@ export type ActivityTimelineItem =
 
 function canonicalItemTimestamp(item: TimelineItem): number {
   const timestamp =
-    item.type === 'lead-thoughts'
-      ? item.group.thoughts[0]?.timestamp
-      : item.message.timestamp;
+    item.type === 'lead-thoughts' ? item.group.thoughts[0]?.timestamp : item.message.timestamp;
   const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : 0;
 }

@@ -2,6 +2,7 @@ import { BackendSelectingTaskStallJournalStore } from '@features/internal-storag
 import { createInternalStorageFeature } from '@features/internal-storage/main/composition/createInternalStorageFeature';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
+import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -94,7 +95,7 @@ describe('createInternalStorageFeature', () => {
     }
   });
 
-  it('keeps both journals working via JSON when sqlite is unavailable in this environment', async () => {
+  it('keeps both journals working via JSON when the native sqlite module is unavailable', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'internal-storage-feature-'));
     setClaudeBasePathOverride(tmpDir);
     await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
@@ -146,14 +147,24 @@ describe('createInternalStorageFeature', () => {
       entries: [replicatedComment],
     });
 
-    // Under vitest either the worker bundle is missing or the native module
-    // has the Electron ABI, so the feature must degrade to the JSON stores.
-    // Both degradation paths log expected warnings/errors.
+    // Keep the worker bundle available and inject the native-module load
+    // failure so this fallback scenario is independent of host artifacts.
+    const workerAvailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'isAvailable')
+      .mockReturnValue(true);
+    const nativeModuleUnavailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'ping')
+      .mockRejectedValue(
+        new Error('better-sqlite3 native module failed to load: test-injected unavailable binding')
+      );
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const feature = createInternalStorageFeature({
       userDataPath: path.join(tmpDir, 'user-data'),
     });
+    expect(feature.teamIdentityReadBackend).not.toBeNull();
+    expect(feature.teamRosterBackend).not.toBeNull();
+    expect(feature.teamRosterBackend?.gateway).toBeInstanceOf(InternalStorageWorkerClient);
 
     const entry: TaskStallJournalEntry = {
       epochKey: 'task-a:epoch-1',
@@ -181,6 +192,8 @@ describe('createInternalStorageFeature', () => {
     expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(false);
     await feature.taskCommentNotificationJournalStore.ensureInitialized('demo');
     expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(true);
+    expect(workerAvailable).toHaveBeenCalledOnce();
+    expect(nativeModuleUnavailable).toHaveBeenCalledOnce();
 
     const replicated = await feature.taskStallJournalStore.update('replica-team', (entries) => ({
       entries,
@@ -194,5 +207,28 @@ describe('createInternalStorageFeature', () => {
     expect(feature.memberWorkSyncBackend).not.toBeNull();
 
     await feature.dispose();
+    nativeModuleUnavailable.mockRestore();
+    workerAvailable.mockRestore();
+  });
+
+  it('never publishes a JSON fallback for durable team identity reads', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'internal-storage-feature-'));
+    const unavailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'isAvailable')
+      .mockReturnValue(false);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const feature = createInternalStorageFeature({
+      userDataPath: path.join(tmpDir, 'user-data'),
+    });
+
+    expect(feature.teamIdentityReadBackend).toBeNull();
+    expect(feature.teamRosterBackend).toBeNull();
+    expect(feature.coordinationDurabilityBackend).toBeNull();
+    await expect(feature.probeBackend()).resolves.toBe('json-fallback');
+    expect(feature.getBackendKind()).toBe('json-fallback');
+    await feature.dispose();
+    unavailable.mockRestore();
   });
 });

@@ -1,0 +1,1 @@
+export const MEMBER_WORK_SYNC_STATUS_POLL_MS = 15_000;

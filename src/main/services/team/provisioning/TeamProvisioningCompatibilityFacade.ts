@@ -12,7 +12,10 @@ import type {
   TeamProvisioningSendMessageToRunRun,
 } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 import type { TeamProvisioningTaskActivityRepairBoundaryRun } from './TeamProvisioningTaskActivityRepairBoundary';
-import type { TeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
+import type {
+  TeamProvisioningApplicationApi,
+  TeamProvisioningStatusApi,
+} from '@features/team-provisioning/contracts';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 export type TeamProvisioningCompatibilityDelegationRun = TeamProvisioningSendMessageToRunRun &
@@ -44,6 +47,7 @@ export interface TeamProvisioningCompatibilityDelegation<
     | 'writeLaunchFailureArtifactPackBestEffort'
     | 'repairStaleTaskActivityIntervalsBeforeSnapshot'
   >;
+  applicationFeature: TeamProvisioningApplicationApi;
   provisioningStatus: TeamProvisioningStatusApi;
   retainedProvisioningProgressState: Pick<
     TeamProvisioningRetainedProgressState,
@@ -66,6 +70,10 @@ export abstract class TeamProvisioningCompatibilityFacade<
     TeamProvisioningCompatibilityDelegationRun,
 > extends TeamProvisioningAppShellFacade {
   protected abstract readonly compatibilityDelegation: TeamProvisioningCompatibilityDelegation<TRun>;
+
+  protected get provisioningApplication(): TeamProvisioningApplicationApi {
+    return this.compatibilityDelegation.applicationFeature;
+  }
 
   buildProvisioningEnv(
     ...args: Parameters<TeamProvisioningProviderRuntimeCompatibility['buildProvisioningEnv']>

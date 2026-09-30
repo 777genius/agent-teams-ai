@@ -188,7 +188,7 @@ describe('TeamTaskStallPolicy', () => {
 
   it.each([
     ['completed', { status: 'completed' }],
-    ['approved', { status: 'in_progress', reviewState: 'approved' }],
+    ['approved placement', { status: 'in_progress', kanbanColumn: 'approved' }],
     ['soft-deleted', { status: 'in_progress', deletedAt: '2026-04-19T12:05:00.000Z' }],
   ] as const)('does not treat %s blockers as active stall blockers', (_label, blockerState) => {
     const blocker: TeamTask = {

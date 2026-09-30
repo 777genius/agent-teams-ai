@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "unavailable",
+  "auditedState": "unavailable",
+  "oracles": [
+    {
+      "kind": "failure",
+      "code": "unavailable",
+      "reason": "source_unavailable",
+      "retryable": true,
+      "diagnosticPresent": false,
+      "retryAfterMs": 2500
+    }
+  ]
+}

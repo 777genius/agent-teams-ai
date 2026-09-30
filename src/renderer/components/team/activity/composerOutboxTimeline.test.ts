@@ -50,12 +50,6 @@ describe('mergeComposerOutboxTimelineItems', () => {
             ? 'thought-group'
             : item.message.messageId
       )
-    ).toEqual([
-      'canonical-new',
-      'outbox-new',
-      'canonical-equal',
-      'outbox-equal',
-      'canonical-old',
-    ]);
+    ).toEqual(['canonical-new', 'outbox-new', 'canonical-equal', 'outbox-equal', 'canonical-old']);
   });
 });

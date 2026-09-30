@@ -21,6 +21,10 @@ import {
   CODEX_RUNTIME_VERSION_TIMEOUT_MS as VERSION_TIMEOUT_MS,
   probeManagedCodexVersion,
 } from './probeManagedCodexVersion';
+import {
+  getNetworkRetryDelayMs,
+  shouldRetryTransientNetworkError,
+} from './transientNetworkRetry';
 
 import type { CodexRuntimeInstallerPort } from '../../core/application/ports/CodexRuntimeInstallerPort';
 import type {
@@ -239,7 +243,11 @@ export function getCodexRuntimePlatformCandidates(
   throw new Error(`Codex app install is not supported on ${platform}/${arch}`);
 }
 
-async function fetchText(url: string, timeoutMs = METADATA_FETCH_TIMEOUT_MS): Promise<string> {
+async function fetchText(
+  url: string,
+  timeoutMs = METADATA_FETCH_TIMEOUT_MS,
+  attempt = 1
+): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -248,6 +256,11 @@ async function fetchText(url: string, timeoutMs = METADATA_FETCH_TIMEOUT_MS): Pr
       throw new Error(`HTTP ${response.status} from ${url}`);
     }
     return await response.text();
+  } catch (error) {
+    if (!shouldRetryTransientNetworkError(error, attempt)) throw error;
+    const delayMs = getNetworkRetryDelayMs(attempt);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return fetchText(url, timeoutMs, attempt + 1);
   } finally {
     clearTimeout(timer);
   }
@@ -293,7 +306,8 @@ export function verifyCodexRuntimePackageIntegrity(buffer: Buffer, integrity: st
 
 async function downloadTarball(
   url: string,
-  onProgress: (progress: CodexRuntimeInstallProgress) => void
+  onProgress: (progress: CodexRuntimeInstallProgress) => void,
+  attempt = 1
 ): Promise<Buffer> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -341,6 +355,11 @@ async function downloadTarball(
       });
     }
     return Buffer.concat(chunks, downloadedBytes);
+  } catch (error) {
+    if (!shouldRetryTransientNetworkError(error, attempt)) throw error;
+    const delayMs = getNetworkRetryDelayMs(attempt);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return downloadTarball(url, onProgress, attempt + 1);
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -470,10 +489,7 @@ function parsePlatformVersion(value: string | undefined, fallback: string): stri
     return fallback;
   }
   const aliasMatch = /^npm:@openai\/codex@(.+)$/.exec(normalized);
-  if (aliasMatch?.[1]) {
-    return aliasMatch[1];
-  }
-  return normalized.replace(/^[~^]/, '');
+  return aliasMatch?.[1] ?? normalized.replace(/^[~^]/, '');
 }
 
 async function writePackageFiles(

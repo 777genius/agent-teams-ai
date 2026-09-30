@@ -4,7 +4,6 @@ import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
-import * as path from 'path';
 
 import { resolveGeminiRuntimeAuth } from '../../runtime/geminiRuntimeAuth';
 import {
@@ -23,7 +22,9 @@ import { atomicWriteAsync } from '../atomicWrite';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
 import { buildCombinedLogs } from './TeamProvisioningCliExitPresentation';
+import { createAgentTeamsMcpValidationFixture } from './TeamProvisioningMcpValidationContract';
 import { boundProbeOutputBuffer } from './TeamProvisioningProgressBuffers';
+import { resolveProviderDiagnosticsSpawnOptions } from './TeamProvisioningProviderDiagnosticsProjectDirectoryLease';
 import {
   appendPreflightDebugLog,
   buildAgentTeamsMcpValidationError as buildAgentTeamsMcpValidationErrorMessage,
@@ -42,6 +43,8 @@ import {
 
 import type { TeamProviderId } from '@shared/types';
 
+export { createAgentTeamsMcpValidationFixture };
+
 const { AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 
 const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
@@ -54,12 +57,8 @@ const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
 const MCP_PREFLIGHT_SHUTDOWN_POLL_MS = 50;
 
 export interface SpawnProbeOptions {
-  /**
-   * Optional early success predicate. If this returns true based on
-   * buffered stdout/stderr, the probe resolves immediately (and the process
-   * is best-effort terminated) instead of waiting for `close`.
-   */
   resolveOnOutputMatch?: (ctx: { stdout: string; stderr: string }) => boolean;
+  isCancelled?: () => boolean;
 }
 
 export interface SpawnProbeResult {
@@ -156,14 +155,6 @@ export function createDefaultTeamProvisioningProviderDiagnosticsPorts(input: {
   };
 }
 
-/**
- * Two-stage preflight check:
- * 1. `claude --version` verifies the binary is executable.
- * 2. Runtime control-plane commands verify provider auth/team-launch readiness.
- *
- * Do not use `-p` here: full print mode can initialize MCP/plugin/LSP startup context
- * before the first response, which makes Create Team preflight slow and flaky.
- */
 export async function probeClaudeRuntime({
   claudePath,
   cwd,
@@ -430,11 +421,11 @@ export async function runProviderOneShotDiagnostic({
     resolvedProviderId === 'codex'
       ? diagnosticModel?.trim() || ports.getConfiguredCodexCustomProviderModel()
       : undefined;
-  const args = buildProviderCliCommandArgs(
+  const args = buildProviderLaunchCliCommandArgs(
     providerArgs,
     buildProviderPreflightPingArgs(providerId, { modelOverride })
   );
-  const timeoutMs = getPreflightTimeoutMs(providerId);
+  const timeoutMs = getProviderModelProbeTimeoutMs(providerId);
   ports.appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
     providerId: resolvedProviderId,
     cwd,
@@ -573,13 +564,6 @@ export function buildAgentTeamsMcpValidationError(
   return buildAgentTeamsMcpValidationErrorMessage(output, normalizeApiRetryErrorMessage);
 }
 
-export interface AgentTeamsMcpLaunchSpec {
-  command: string;
-  args: string[];
-  cwd?: string;
-  env: Record<string, string>;
-}
-
 interface McpJsonRpcErrorPayload {
   code?: number;
   message?: string;
@@ -606,10 +590,11 @@ interface McpToolCallResult {
   isError?: boolean;
 }
 
-interface AgentTeamsMcpValidationFixture {
-  claudeDir: string;
-  teamName: string;
-  memberName: string;
+export interface AgentTeamsMcpLaunchSpec {
+  command: string;
+  args: string[];
+  cwd?: string;
+  env: Record<string, string>;
 }
 
 export function parseAgentTeamsMcpLaunchSpec(
@@ -692,45 +677,6 @@ export async function readAgentTeamsMcpLaunchSpec({
   );
 }
 
-export async function createAgentTeamsMcpValidationFixture({
-  projectPath,
-  ports,
-}: {
-  projectPath: string;
-  ports: Pick<
-    TeamProvisioningProviderDiagnosticsPorts,
-    'makeTempDir' | 'tmpdir' | 'mkdirRecursive' | 'writeFileUtf8'
-  >;
-}): Promise<AgentTeamsMcpValidationFixture> {
-  const claudeDir = await ports.makeTempDir(path.join(ports.tmpdir(), 'agent-teams-mcp-validate-'));
-  const teamName = 'mcp-validation-team';
-  const memberName = 'mcp-validation-member';
-  const teamDir = path.join(claudeDir, 'teams', teamName);
-
-  await ports.mkdirRecursive(teamDir);
-  await ports.writeFileUtf8(
-    path.join(teamDir, 'config.json'),
-    JSON.stringify(
-      {
-        name: teamName,
-        projectPath,
-        members: [
-          { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
-          { name: memberName, agentType: 'teammate', role: 'developer' },
-        ],
-      },
-      null,
-      2
-    )
-  );
-
-  return {
-    claudeDir,
-    teamName,
-    memberName,
-  };
-}
-
 export async function validateAgentTeamsMcpRuntime({
   cwd,
   env,
@@ -747,13 +693,14 @@ export async function validateAgentTeamsMcpRuntime({
   };
   ports: TeamProvisioningProviderDiagnosticsPorts;
 }): Promise<void> {
-  let fixture: AgentTeamsMcpValidationFixture | null = null;
+  let fixture: Awaited<ReturnType<typeof createAgentTeamsMcpValidationFixture>> | null = null;
   let child: TeamProvisioningProbeChild | null = null;
   let stdoutBuffer = '';
   let stderrBuffer = '';
   let nextRequestId = 1;
   let cancellationTriggered = false;
   let cancellationTimer: ReturnType<typeof setInterval> | null = null;
+  let detachChildListeners: (() => void) | null = null;
   const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
   const cancellationError = new Error(cancellationMessage);
   const pending = new Map<
@@ -799,16 +746,18 @@ export async function validateAgentTeamsMcpRuntime({
     throwIfCancelled();
     fixture = await createAgentTeamsMcpValidationFixture({ projectPath: cwd, ports });
     throwIfCancelled();
-    child = ports.spawnCli(launchSpec.command, launchSpec.args, {
-      cwd: launchSpec.cwd ?? cwd,
-      env: {
-        ...env,
-        ...launchSpec.env,
-        AGENT_TEAMS_MCP_CLAUDE_DIR: fixture.claudeDir,
+    const spawnOptions = await resolveProviderDiagnosticsSpawnOptions(
+      cwd,
+      {
+        cwd,
+        env: { ...env, ...launchSpec.env, AGENT_TEAMS_MCP_CLAUDE_DIR: fixture.claudeDir },
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
       },
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
+      launchSpec.cwd ?? cwd
+    );
+    throwIfCancelled();
+    child = ports.spawnCli(launchSpec.command, launchSpec.args, spawnOptions);
     ports.addTransientProbeProcess(child);
     if (options.isCancelled) {
       cancellationTimer = setInterval(() => {
@@ -853,8 +802,7 @@ export async function validateAgentTeamsMcpRuntime({
       entry.resolve(message.result);
     };
 
-    child.stdout?.setEncoding('utf8');
-    child.stdout?.on('data', (chunk: string | Buffer) => {
+    const onStdoutData = (chunk: string | Buffer): void => {
       stdoutBuffer += chunk.toString();
 
       while (true) {
@@ -871,18 +819,22 @@ export async function validateAgentTeamsMcpRuntime({
         parseStdoutLine(line);
       }
       stdoutBuffer = boundProbeOutputBuffer(stdoutBuffer);
-    });
+    };
 
-    child.stderr?.setEncoding('utf8');
-    child.stderr?.on('data', (chunk: string | Buffer) => {
+    child.stdout?.setEncoding('utf8');
+    child.stdout?.on('data', onStdoutData);
+
+    const onStderrData = (chunk: string | Buffer): void => {
       stderrBuffer = boundProbeOutputBuffer(stderrBuffer + chunk.toString());
-    });
+    };
+    child.stderr?.setEncoding('utf8');
+    child.stderr?.on('data', onStderrData);
 
-    child.once('error', (error) => {
+    const onChildError = (error: Error): void => {
       rejectAll(error instanceof Error ? error : new Error(String(error)));
-    });
+    };
 
-    child.once('close', (code, signal) => {
+    const onChildClose = (code: number | null, signal: NodeJS.Signals | null): void => {
       if (pending.size === 0) {
         return;
       }
@@ -893,7 +845,16 @@ export async function validateAgentTeamsMcpRuntime({
           } signal=${signal ?? 'null'})`
         )
       );
-    });
+    };
+
+    child.once('error', onChildError);
+    child.once('close', onChildClose);
+    detachChildListeners = () => {
+      child?.stdout?.off('data', onStdoutData);
+      child?.stderr?.off('data', onStderrData);
+      child?.off('error', onChildError);
+      child?.off('close', onChildClose);
+    };
 
     const request = <TResult>(
       method: string,
@@ -1062,27 +1023,32 @@ export async function validateAgentTeamsMcpRuntime({
     if (child) {
       ports.removeTransientProbeProcess(child);
     }
-    if (child?.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
-      const stdin = child.stdin;
-      await new Promise<void>((resolve) => {
-        try {
-          stdin.end(() => resolve());
-        } catch {
-          resolve();
-        }
-      });
-    }
-    if (child?.pid) {
-      await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
-      if (ports.isProcessAlive(child.pid)) {
-        ports.killProcessTree(child);
-        await waitForPidsToExit([child.pid], {
-          timeoutMs: MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS,
-          pollMs: MCP_PREFLIGHT_SHUTDOWN_POLL_MS,
-          ports,
+    try {
+      if (child?.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
+        const stdin = child.stdin;
+        await new Promise<void>((resolve) => {
+          try {
+            stdin.end(() => resolve());
+          } catch {
+            resolve();
+          }
         });
-        await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
       }
+      if (child?.pid) {
+        await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
+        if (ports.isProcessAlive(child.pid)) {
+          ports.killProcessTree(child);
+          await waitForPidsToExit([child.pid], {
+            timeoutMs: MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS,
+            pollMs: MCP_PREFLIGHT_SHUTDOWN_POLL_MS,
+            ports,
+          });
+          await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
+        }
+      }
+    } finally {
+      detachChildListeners?.();
+      detachChildListeners = null;
     }
     if (fixture) {
       await ports.removeDirectory(fixture.claudeDir).catch(() => {});
@@ -1110,25 +1076,87 @@ export async function spawnProbe({
     'spawnCli' | 'killProcessTree' | 'addTransientProbeProcess' | 'removeTransientProbeProcess'
   >;
 }): Promise<SpawnProbeResult> {
+  const spawnOptions = await resolveProviderDiagnosticsSpawnOptions(cwd, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  if (options?.isCancelled?.()) throw new Error('Provider diagnostic probe cancelled by app shutdown');
   return new Promise((resolve, reject) => {
-    const child = ports.spawnCli(claudePath, args, {
-      cwd,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    ports.addTransientProbeProcess(child);
-    const cleanupProbe = (): void => {
-      ports.removeTransientProbeProcess(child);
-    };
     let stdoutText = '';
     let stderrText = '';
     let settled = false;
-
-    const timeoutHandle = setTimeout(() => {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const child = ports.spawnCli(claudePath, args, spawnOptions);
+    let ownsProbe = true;
+    const onStdoutData = (chunk: Buffer): void => {
+      stdoutText = boundProbeOutputBuffer(stdoutText + chunk.toString('utf8'));
+      maybeResolveEarly();
+    };
+    const onStderrData = (chunk: Buffer): void => {
+      stderrText = boundProbeOutputBuffer(stderrText + chunk.toString('utf8'));
+      maybeResolveEarly();
+    };
+    const detachChildListeners = (): void => {
+      child.stdout?.off('data', onStdoutData);
+      child.stderr?.off('data', onStderrData);
+      child.off('error', onChildError);
+      child.off('close', onChildClose);
+    };
+    const cleanupProbe = (): void => {
+      if (!ownsProbe) return;
+      ownsProbe = false;
+      ports.removeTransientProbeProcess(child);
+    };
+    const settle = (completion: () => void): void => {
+      if (settled) return;
       settled = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       cleanupProbe();
-      ports.killProcessTree(child);
-      reject(new Error(`Timeout running: ${getConfiguredCliCommandLabel()} ${args.join(' ')}`));
+      detachChildListeners();
+      completion();
+    };
+    const terminate = (completion: () => void): void => {
+      if (settled) return;
+      // Keep the error and close observers registered through a synchronous
+      // kill: child_process may emit either event before killProcessTree
+      // returns. They are detached immediately after that critical section.
+      settled = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      try {
+        ports.killProcessTree(child);
+      } finally {
+        cleanupProbe();
+        detachChildListeners();
+        completion();
+      }
+    };
+    const onChildError = (error: Error): void => settle(() => reject(error));
+    const onChildClose = (exitCode: number | null): void =>
+      settle(() =>
+        resolve({
+          exitCode,
+          stdout: stdoutText.trim(),
+          stderr: stderrText.trim(),
+        })
+      );
+
+    // `spawn()` returns synchronously but can emit `error` before the next turn.
+    // Claim and observe it before checking cancellation so a cancelled probe never
+    // leaves an unhandled child error behind.
+    child.once('error', onChildError);
+    child.once('close', onChildClose);
+    ports.addTransientProbeProcess(child);
+
+    child.stdout?.on('data', onStdoutData);
+    child.stderr?.on('data', onStderrData);
+
+    if (settled) return;
+    if (options?.isCancelled?.()) {
+      terminate(() => reject(new Error('Provider diagnostic probe cancelled by app shutdown')));
+      return;
+    }
+
+    timeoutHandle = setTimeout(() => {
+      terminate(() => {
+        reject(new Error(`Timeout running: ${getConfiguredCliCommandLabel()} ${args.join(' ')}`));
+      });
     }, timeoutMs);
     timeoutHandle.unref?.();
 
@@ -1138,50 +1166,11 @@ export async function spawnProbe({
       const ctx = { stdout: stdoutText.trim(), stderr: stderrText.trim() };
       if (!options.resolveOnOutputMatch(ctx)) return;
 
-      settled = true;
-      clearTimeout(timeoutHandle);
-      cleanupProbe();
       // If the process printed the match but hangs during teardown, don't
       // block the UI; terminate best-effort and resolve.
-      ports.killProcessTree(child);
-      resolve({ exitCode: 0, stdout: ctx.stdout, stderr: ctx.stderr });
+      terminate(() => resolve({ exitCode: 0, stdout: ctx.stdout, stderr: ctx.stderr }));
     };
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdoutText = boundProbeOutputBuffer(stdoutText + chunk.toString('utf8'));
-      maybeResolveEarly();
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderrText = boundProbeOutputBuffer(stderrText + chunk.toString('utf8'));
-      maybeResolveEarly();
-    });
-    child.once('error', (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutHandle);
-      cleanupProbe();
-      reject(error);
-    });
-    child.once('close', (exitCode) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutHandle);
-      cleanupProbe();
-      resolve({
-        exitCode,
-        stdout: stdoutText.trim(),
-        stderr: stderrText.trim(),
-      });
-    });
   });
-}
-
-function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {
-  return getProviderModelProbeTimeoutMs(providerId);
-}
-
-function buildProviderCliCommandArgs(providerArgs: string[], args: string[]): string[] {
-  return buildProviderLaunchCliCommandArgs(providerArgs, args);
 }
 
 function isMissingCwdSpawnError(message: string): boolean {

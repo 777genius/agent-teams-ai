@@ -10,7 +10,7 @@ import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 
 import type { MemberWorkSyncOutboxItem } from '../../contracts';
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
-import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
+import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts';
 
 export interface MemberWorkSyncPreparationIdentity {
   teamName: string;

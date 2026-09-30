@@ -1,5 +1,7 @@
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import { applyProjectDirectoryLeaseAtProviderBoundaryWithLease } from './TeamProvisioningProjectDirectoryLease';
+
 import type { TeamMetaFile } from '../TeamMetaStore';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { spawnCli } from '@main/utils/childProcess';
@@ -281,11 +283,23 @@ async function spawnReplacement(
 ): Promise<ChildProcess> {
   const context = run.spawnContext;
   if (!context) throw new Error('Lead spawn context is unavailable');
-  const child = ports.spawn(context.claudePath, args, {
+  const spawnOptions = {
     cwd: context.cwd,
     env: { ...context.env },
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+    stdio: context.stdio ?? ['pipe', 'pipe', 'pipe'],
+  } satisfies import('child_process').SpawnOptions;
+  const providerSpawnOptions =
+    context.projectDirectoryLease && context.projectDirectoryPath
+      ? await applyProjectDirectoryLeaseAtProviderBoundaryWithLease(
+          context.projectDirectoryLease,
+          context.projectDirectoryPath,
+          spawnOptions
+        )
+      : spawnOptions;
+  if (run.cancelRequested || run.processKilled) {
+    throw new Error('Team launch cancelled by app shutdown');
+  }
+  const child = ports.spawn(context.claudePath, args, providerSpawnOptions);
   onSpawn(child);
   run.child = child as ProvisioningRun['child'];
   ports.attachStdout(run);

@@ -8,6 +8,7 @@
 
 import { useEffect } from 'react';
 
+import { getOverlaySnapshot } from '@renderer/hooks/useOverlayOccupancy';
 import { physicalKey } from '@renderer/utils/keyboardUtils';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
@@ -58,6 +59,7 @@ export function useKeyboardShortcuts(): void {
     fetchSessionDetail,
     fetchSessions,
     openCommandPalette,
+    commandPaletteOpen,
     openSettingsTab,
     toggleSidebar,
     paneLayout,
@@ -86,6 +88,7 @@ export function useKeyboardShortcuts(): void {
       fetchSessionDetail: s.fetchSessionDetail,
       fetchSessions: s.fetchSessions,
       openCommandPalette: s.openCommandPalette,
+      commandPaletteOpen: s.commandPaletteOpen,
       openSettingsTab: s.openSettingsTab,
       toggleSidebar: s.toggleSidebar,
       paneLayout: s.paneLayout,
@@ -102,14 +105,38 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
+      const isMod = event.metaKey || event.ctrlKey;
+      const key = physicalKey(event);
+
+      // The shell owns Cmd/Ctrl+K, including when Dashboard search has focus.
+      // Preserve IME input and let an occupied overlay handle its own keys.
+      if (isMod && key === 'k' && !event.shiftKey && !event.altKey) {
+        if (
+          event.defaultPrevented ||
+          event.repeat ||
+          event.isComposing ||
+          event.keyCode === 229 ||
+          document.visibilityState === 'hidden' ||
+          !document.hasFocus() ||
+          commandPaletteOpen ||
+          getOverlaySnapshot().count > 0 ||
+          document.querySelector(
+            '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+          )
+        ) {
+          return;
+        }
+        event.preventDefault();
+        openCommandPalette();
+        return;
+      }
+
       if (isEditableShortcutEventTarget(event)) {
         return;
       }
 
       // Check if Cmd (macOS) or Ctrl (Windows/Linux) is pressed
-      const isMod = event.metaKey || event.ctrlKey;
       // Layout-independent key (uses event.code for letters/symbols)
-      const key = physicalKey(event);
 
       // Editor scope guard: when the editor overlay is open, these shortcuts are
       // handled by useEditorKeyboardShortcuts — yield control to avoid conflicts.
@@ -288,13 +315,6 @@ export function useKeyboardShortcuts(): void {
         return;
       }
 
-      // Cmd+K: Open command palette for global search
-      if (key === 'k') {
-        event.preventDefault();
-        openCommandPalette();
-        return;
-      }
-
       // Cmd+,: Open settings (standard macOS shortcut)
       if (key === ',') {
         event.preventDefault();
@@ -357,6 +377,7 @@ export function useKeyboardShortcuts(): void {
     fetchSessionDetail,
     fetchSessions,
     openCommandPalette,
+    commandPaletteOpen,
     openSettingsTab,
     toggleSidebar,
     paneLayout,

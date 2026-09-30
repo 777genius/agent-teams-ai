@@ -1,3 +1,7 @@
+import { rankRunningTeamFacts } from './rankRunningTeamFacts';
+
+import type { RunningTeamFacts } from './rankRunningTeamFacts';
+
 export type RunningTeamsCandidateStatus =
   | 'active'
   | 'idle'
@@ -34,29 +38,10 @@ export interface RunningTeamDashboardEntry extends RunningTeamCandidate {
   status: RunningTeamDashboardStatus;
 }
 
-const RUNNING_STATUS_PRIORITY: Record<RunningTeamDashboardStatus, number> = {
-  active: 0,
-  provisioning: 1,
-  idle: 2,
-};
-
 function isRunningDashboardStatus(
   status: RunningTeamsCandidateStatus
 ): status is RunningTeamDashboardStatus {
   return status === 'active' || status === 'idle' || status === 'provisioning';
-}
-
-function getInProgressTaskCount(team: RunningTeamCandidate): number {
-  return team.taskCounts?.inProgress ?? 0;
-}
-
-function getLastActivityMs(team: RunningTeamCandidate): number {
-  if (!team.lastActivity) {
-    return 0;
-  }
-
-  const parsed = Date.parse(team.lastActivity);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function mergeTeams(
@@ -75,25 +60,22 @@ export function buildRunningTeamsDashboard({
   teams,
   provisioningTeams = [],
 }: BuildRunningTeamsDashboardInput): RunningTeamDashboardEntry[] {
-  return mergeTeams(teams, provisioningTeams)
-    .filter((team): team is RunningTeamDashboardEntry => isRunningDashboardStatus(team.status))
-    .sort((left, right) => {
-      const statusDelta =
-        RUNNING_STATUS_PRIORITY[left.status] - RUNNING_STATUS_PRIORITY[right.status];
-      if (statusDelta !== 0) {
-        return statusDelta;
-      }
+  const running = mergeTeams(teams, provisioningTeams).filter(
+    (team): team is RunningTeamDashboardEntry => isRunningDashboardStatus(team.status)
+  );
+  const facts: RunningTeamFacts[] = running.map((team) => ({
+    targetKey: team.teamName,
+    displayName: team.displayName,
+    activity: team.status,
+    taskCounts: team.taskCounts ? { kind: 'known', counts: team.taskCounts } : { kind: 'unknown' },
+    lastActivity: team.lastActivity
+      ? { kind: 'known', iso: team.lastActivity }
+      : { kind: 'unknown' },
+  }));
+  const byFact = new Map(facts.map((fact, index) => [fact, running[index]]));
 
-      const inProgressDelta = getInProgressTaskCount(right) - getInProgressTaskCount(left);
-      if (inProgressDelta !== 0) {
-        return inProgressDelta;
-      }
-
-      const activityDelta = getLastActivityMs(right) - getLastActivityMs(left);
-      if (activityDelta !== 0) {
-        return activityDelta;
-      }
-
-      return left.displayName.localeCompare(right.displayName);
-    });
+  return rankRunningTeamFacts(facts).flatMap((fact) => {
+    const team = byFact.get(fact);
+    return team ? [team] : [];
+  });
 }

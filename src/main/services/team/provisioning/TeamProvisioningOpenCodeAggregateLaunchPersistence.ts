@@ -1,4 +1,5 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
+import * as path from 'path';
 
 import {
   createPersistedLaunchSnapshot,
@@ -21,11 +22,12 @@ import {
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import {
   appendDiagnosticOnce,
-  hasRetainableOpenCodeRuntimeMember,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 import type {
@@ -42,6 +44,8 @@ import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
 } from '@shared/types';
+
+type RuntimeLaneStorageClearResult = boolean | 'cleared' | 'owner_changed';
 
 export interface OpenCodeAggregatePrimaryLaneRun {
   runId: string;
@@ -76,6 +80,7 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    runId?: string;
     state: 'active' | 'degraded';
     diagnostics?: string[];
   }): Promise<void>;
@@ -90,7 +95,7 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     teamName: string;
     laneId: string;
     expectedRunId: string;
-  }): Promise<boolean>;
+  }): Promise<RuntimeLaneStorageClearResult>;
   persistOpenCodeRuntimeAdapterLaunchResult(
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
@@ -152,6 +157,12 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
   logDiagnostic?(message: string): void;
 }
 
+export class OpenCodeAggregateRuntimeStopError extends AggregateError {
+  constructor(errors: readonly unknown[]) {
+    super([...errors], 'OpenCode aggregate launch failed and runtime cleanup was not confirmed');
+  }
+}
+
 function collectOpenCodeAggregateRuntimeMemberEvidence(
   primaryMembers: TeamRuntimeLaunchResult['members'],
   secondaryLanes: readonly MixedSecondaryRuntimeLaneState[]
@@ -185,6 +196,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     assertStillCurrentAfterPersistence?: () => void;
+    onUntrackedPrimaryStopConfirmed?: () => void;
   },
   ports: LaunchOpenCodeAggregatePrimaryLanePorts
 ): Promise<TeamRuntimeLaunchResult | null> {
@@ -207,6 +219,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     teamsBasePath: ports.getTeamsBasePath(),
     teamName,
     laneId: 'primary',
+    runId,
     state: migration.degraded ? 'degraded' : 'active',
     diagnostics: migration.diagnostics,
   });
@@ -232,6 +245,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
     laneId: 'primary',
     teamName,
     cwd: launchCwd,
+    ...(path.resolve(launchCwd) === path.resolve(params.run.request.cwd)
+      ? { projectDirectoryLease: projectDirectoryLeaseForRequest(params.run.request) }
+      : {}),
     prompt: params.prompt,
     providerId: 'opencode',
     model: params.run.request.model,
@@ -270,8 +286,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     launchInput
   );
   params.assertStillCurrentAfterPersistence?.();
-  const retainPrimaryRuntime =
-    result.teamLaunchState !== 'partial_failure' || hasRetainableOpenCodeRuntimeMember(result);
+  const retainPrimaryRuntime = shouldRetainOpenCodeRuntimeLaunch(result);
   if (retainPrimaryRuntime) {
     const primaryMembers = result.members;
     const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
@@ -360,7 +375,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
           laneId: 'primary',
           expectedRunId: runId,
         });
-        if (!cleared) {
+        if (cleared !== true && cleared !== 'cleared') {
           throw new Error('OpenCode primary lane did not confirm exact-runtime storage cleanup');
         }
         // This is the operation that destroys the lane's session store, manifest
@@ -369,6 +384,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
         ports.logDiagnostic?.(describeClearedOpenCodePrimaryLaneStorage({ teamName, runId }));
         if (!storageOnlyCleanup) {
           ports.deleteRuntimeAdapterRunByTeamIfOwned?.(teamName, exactCleanupOwner);
+          params.onUntrackedPrimaryStopConfirmed?.();
         }
         recordOpenCodePrimaryCleanup(params.run, runId);
       } catch (error) {
@@ -408,11 +424,13 @@ export async function launchOpenCodeAggregatePrimaryLane(
       teamsBasePath: ports.getTeamsBasePath(),
       teamName,
       laneId: 'primary',
+      runId,
       state: 'degraded',
       diagnostics: Array.from(
         new Set([...(migration.diagnostics ?? []), ...result.diagnostics].filter(Boolean))
       ),
     });
+    params.assertStillCurrentAfterPersistence?.();
   }
   const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
   for (const member of expectedMembers) {

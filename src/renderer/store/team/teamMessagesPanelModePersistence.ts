@@ -1,4 +1,4 @@
-import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type { TeamMessagesPanelMode } from '@features/team-view-read-model/renderer';
 
 const MESSAGES_PANEL_MODE_STORAGE_KEY = 'team:messagesPanelMode';
 const DEFAULT_MESSAGES_PANEL_MODE: TeamMessagesPanelMode = 'sidebar';

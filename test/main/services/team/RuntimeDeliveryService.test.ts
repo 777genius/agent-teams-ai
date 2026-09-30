@@ -3,11 +3,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CrossTeamRuntimeDeliveryIdempotencyConflictError } from '../../../../src/main/services/team/CrossTeamOutbox';
 import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
-import {
-  canonicalizeRuntimeDeliveryCrossTeamIdentities,
-  canonicalizeRuntimeDeliveryJournalRecordIdentities,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
@@ -34,7 +31,10 @@ import {
   type RuntimeDeliveryVerifyResult,
 } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryService';
 import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
-import { CrossTeamRuntimeDeliveryIdempotencyConflictError } from '../../../../src/main/services/team/CrossTeamOutbox';
+import {
+  canonicalizeRuntimeDeliveryCrossTeamIdentities,
+  canonicalizeRuntimeDeliveryJournalRecordIdentities,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import { CROSS_TEAM_SENT_SOURCE } from '../../../../src/shared/constants/crossTeam';
 
 import type {
@@ -674,6 +674,100 @@ describe('RuntimeDeliveryService', () => {
       });
       expect(destination.messages).toHaveLength(1);
       expect(diagnostics.append).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['pending', 'failed_retryable'] as const)(
+    'promotes a trusted logical hash across a committed legacy %s recovery lineage',
+    async (legacyStatus) => {
+      const firstRunMessage = envelope({ idempotencyKey: 'legacy-recovery-key' });
+      const firstRunDestination = resolveRuntimeDeliveryDestination(firstRunMessage);
+      const firstRunMessageId = buildRuntimeDestinationMessageId(firstRunMessage);
+      const firstRunLocation = locationForDestination(firstRunDestination, firstRunMessageId);
+      await writeVersionedJournalEntries(path.join(tempDir, 'delivery-journal.json'), [
+        {
+          idempotencyKey: firstRunMessage.idempotencyKey,
+          runId: firstRunMessage.runId,
+          teamName: firstRunMessage.teamName,
+          fromMemberName: firstRunMessage.fromMemberName,
+          providerId: firstRunMessage.providerId,
+          runtimeSessionId: firstRunMessage.runtimeSessionId,
+          payloadHash: hashRuntimeDeliveryEnvelope(firstRunMessage),
+          destination: firstRunDestination,
+          destinationMessageId: firstRunMessageId,
+          committedLocation: null,
+          status: legacyStatus,
+          attempts: 1,
+          createdAt: firstRunMessage.createdAt,
+          updatedAt: firstRunMessage.createdAt,
+          committedAt: null,
+          lastError: legacyStatus === 'failed_retryable' ? 'retry after relaunch' : null,
+        },
+      ]);
+      destination.messages.set(firstRunMessageId, firstRunLocation);
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const secondRunMessage = {
+        ...firstRunMessage,
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+      };
+
+      await expect(createService().deliver(secondRunMessage)).resolves.toMatchObject({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate_destination_found',
+        location: firstRunLocation,
+      });
+
+      const logicalPayloadHash = hashRuntimeDeliveryEnvelope(secondRunMessage);
+      await expect(journal.list()).resolves.toEqual([
+        expect.objectContaining({
+          runId: 'run-1',
+          status: 'committed',
+          logicalPayloadHash,
+        }),
+        expect.objectContaining({
+          runId: 'run-2',
+          status: 'committed',
+          logicalPayloadHash,
+        }),
+      ]);
+
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-3';
+      const thirdRunMessage = {
+        ...secondRunMessage,
+        runId: 'run-3',
+        runtimeSessionId: 'session-3',
+      };
+      const verificationCountAfterRecovery = destination.verifyInputs.length;
+
+      await expect(createService().deliver(thirdRunMessage)).resolves.toEqual({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+        idempotencyKey: firstRunMessage.idempotencyKey,
+        location: firstRunLocation,
+      });
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs).toHaveLength(verificationCountAfterRecovery);
+
+      await expect(
+        createService().deliver({ ...thirdRunMessage, text: 'Changed logical payload' })
+      ).resolves.toMatchObject({
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+      });
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.verifyInputs).toHaveLength(verificationCountAfterRecovery);
     }
   );
 

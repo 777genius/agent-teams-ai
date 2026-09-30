@@ -16,10 +16,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  useWorkspaceTrustStatus,
-  WorkspaceTrustLaunchNotice,
-} from '@features/workspace-trust/renderer';
+import { WorkspaceTrustLaunchNotice } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
@@ -53,6 +50,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -145,6 +145,7 @@ import {
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -193,6 +194,9 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
+
 const TEAM_COLOR_NAMES = [
   'blue',
   'green',
@@ -209,24 +213,6 @@ const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker
 
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
-}
-
-function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
 }
 
 export interface TeamCopyData extends Pick<
@@ -357,6 +343,7 @@ export const CreateTeamDialog = ({
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
+  const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -555,7 +542,6 @@ export const CreateTeamDialog = ({
     setWorktreeNameRaw(storedName);
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
   }, [advancedKey]);
-
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
@@ -740,7 +726,7 @@ export const CreateTeamDialog = ({
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   const launchPreflightCanResolveBlockers =
     canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
+  const workspaceTrustStatus = useWorkspaceTrustShellStatus({
     enabled: open && canCreate && launchTeam,
     projectPath: effectiveCwd || null,
     providerIds: selectedMemberProviders,
@@ -1132,7 +1118,7 @@ export const CreateTeamDialog = ({
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    if (typeof prepareProvisioning !== 'function') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1296,7 +1282,7 @@ export const CreateTeamDialog = ({
                 providerId: plan.providerId,
                 selectedModelIds: plan.selectedModelIds,
                 selectedModelChecks: plan.selectedModelChecks,
-                prepareProvisioning: api.teams.prepareProvisioning,
+                prepareProvisioning,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
                 cachedModelResultsById: plan.cachedModelResultsById,
                 onModelProgress: ({ status, details }) => {
@@ -2208,7 +2194,7 @@ export const CreateTeamDialog = ({
             cwd: effectiveCwd,
             projectFolder: api.projectFolder,
           });
-          await api.teams.createConfig({
+          await teamConfigurationTransport.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
             description: request.description,

@@ -251,7 +251,9 @@ export default defineConfig({
         },
         output: {
           format: 'cjs',
-          entryFileNames: '[name].js'
+          // The repository root is type=module, so the preload must retain an
+          // explicit CommonJS extension for Electron to execute its require().
+          entryFileNames: '[name].cjs'
         }
       }
     }
@@ -264,7 +266,7 @@ export default defineConfig({
       esbuildOptions: {
         target: rendererDependencyEsbuildTarget,
       },
-      include: ['@codemirror/language-data'],
+      include: ['@codemirror/language-data', 'agent-teams-controller/task-semantics'],
       exclude: [
         '@claude-teams/agent-graph',
         '@terminal-platform/design-tokens',
@@ -308,6 +310,9 @@ export default defineConfig({
     plugins: [react(), ...createSentryPlugins('renderer')],
     build: {
       sourcemap: sourceMapSetting,
+      commonjsOptions: {
+        include: [/node_modules/, /agent-teams-controller[\\/]src[\\/]task-semantics\.js$/],
+      },
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html')

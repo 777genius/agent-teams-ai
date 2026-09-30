@@ -73,7 +73,7 @@ function item(value: unknown): boolean {
         reviewStartedAt: timestamp,
         reviewStartedBy: text,
         reviewObligation: oneOf('review_pickup_required', 'review_in_progress'),
-        canBypassPhase2: boolean,
+        canBypassDeliveryReadiness: boolean,
         reviewDiagnostics: strings,
         needsClarification: oneOf('lead', 'user'),
         blockerTaskIds: ids,

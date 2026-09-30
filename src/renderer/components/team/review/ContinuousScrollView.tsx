@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { resolveChangeReviewFileHunkCount as getFileHunkCount } from '@features/change-review';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
-import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import {
   findReviewFileByPath,
   getFileReviewKey,
@@ -149,6 +149,21 @@ export const ContinuousScrollView = ({
   const fileChunkCounts = useStore((s) => s.fileChunkCounts);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
   const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
+  const activeSelectionFilePathRef = useRef<string | null>(null);
+
+  const handleFileSelectionChange = useCallback(
+    (filePath: string, info: EditorSelectionInfo | null) => {
+      if (info) {
+        activeSelectionFilePathRef.current = filePath;
+        onSelectionChange?.({ ...info, filePath });
+        return;
+      }
+      if (activeSelectionFilePathRef.current !== filePath) return;
+      activeSelectionFilePathRef.current = null;
+      onSelectionChange?.(null);
+    },
+    [onSelectionChange]
+  );
 
   const handleToggleCollapse = useCallback(
     (filePath: string) => {
@@ -222,7 +237,9 @@ export const ContinuousScrollView = ({
   const hunkDecisionsRef = useRef(hunkDecisions);
   const hunkHashesRef = useRef(hunkContextHashesByFile);
   const editedContentsRef = useRef(editedContents);
-  useEffect(() => {
+  // A remounted editor publishes itself from a passive effect. Sync first so it cannot replay
+  // decisions or drafts from the render that triggered the remount.
+  useLayoutEffect(() => {
     fileDecisionsRef.current = fileDecisions;
     hunkDecisionsRef.current = hunkDecisions;
     hunkHashesRef.current = hunkContextHashesByFile;
@@ -336,9 +353,12 @@ export const ContinuousScrollView = ({
           hunkDecisions,
           decision
         );
-        const fileApplying = applying || filesApplying?.has(entryKey) === true;
+        const fileApplying =
+          applying ||
+          filesApplying?.has(entryKey) === true ||
+          filesApplying?.has(filePath) === true;
 
-        const isCollapsed = collapsedFiles.has(filePath);
+        const isCollapsed = collapsedFiles.has(entryKey);
 
         return (
           <div key={entryKey} ref={combinedRef(entryKey)} className="border-b border-border">
@@ -353,7 +373,7 @@ export const ContinuousScrollView = ({
               hasEdits={hasEdits}
               applying={fileApplying}
               isCollapsed={isCollapsed}
-              onToggleCollapse={handleToggleCollapse}
+              onToggleCollapse={() => handleToggleCollapse(entryKey)}
               onDiscard={onDiscard}
               onSave={onSave}
               onReloadFromDisk={onReloadFromDisk}
@@ -399,7 +419,11 @@ export const ContinuousScrollView = ({
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}
                 isViewed={isViewed}
-                onSelectionChange={onSelectionChange}
+                onSelectionChange={
+                  onSelectionChange
+                    ? (info) => handleFileSelectionChange(entryKey, info)
+                    : undefined
+                }
                 globalHunkOffset={globalHunkOffsets?.[entryKey] ?? 0}
                 totalReviewHunks={totalReviewHunks}
               />

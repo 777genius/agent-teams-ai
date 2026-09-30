@@ -13,6 +13,7 @@ import { buildDeterministicLaunchHydrationPrompt as defaultBuildDeterministicLau
 import { tryReadRegularFileUtf8 as defaultReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
 import { TEAM_CONFIG_MAX_BYTES, TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
 import { getTeamsBasePathsToProbe as getDefaultTeamsBasePathsToProbe } from './TeamProvisioningRuntimeLaunchSelection';
+import { ensureProvisioningTeamDirectory } from './TeamProvisioningRunWriterAuthority';
 
 export interface TeamProvisioningOpenCodeRuntimeAdapterTeamFlowServiceHost {
   pathExists: OpenCodeRuntimeAdapterTeamFlowPorts['pathExists'];
@@ -37,6 +38,7 @@ export interface TeamProvisioningOpenCodeRuntimeAdapterTeamFlowFactoryDeps {
   getTeamsBasePath?: OpenCodeRuntimeAdapterTeamFlowPorts['getTeamsBasePath'];
   getTasksBasePath?: OpenCodeRuntimeAdapterTeamFlowPorts['getTasksBasePath'];
   ensureCwdExists?: OpenCodeRuntimeAdapterTeamFlowPorts['ensureCwdExists'];
+  ensureTeamDirectory?: OpenCodeRuntimeAdapterTeamFlowPorts['ensureTeamDirectory'];
   mkdir?: OpenCodeRuntimeAdapterTeamFlowPorts['mkdir'];
   nowMs?: OpenCodeRuntimeAdapterTeamFlowPorts['nowMs'];
   readRegularFileUtf8?: typeof defaultReadRegularFileUtf8;
@@ -58,6 +60,7 @@ export function createOpenCodeRuntimeAdapterTeamFlowPortsFromService(
     getTasksBasePath: deps.getTasksBasePath ?? getDefaultTasksBasePath,
     pathExists: (filePath) => service.pathExists(filePath),
     ensureCwdExists: deps.ensureCwdExists ?? defaultEnsureCwdExists,
+    ensureTeamDirectory: deps.ensureTeamDirectory ?? ensureProvisioningTeamDirectory,
     mkdir:
       deps.mkdir ??
       (async (directoryPath) => {

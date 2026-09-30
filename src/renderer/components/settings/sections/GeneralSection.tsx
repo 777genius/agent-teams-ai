@@ -5,10 +5,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { normalizeAppLocalePreference } from '@features/localization';
-import { AppLanguageSelect, useAppTranslation } from '@features/localization/renderer';
+import {
+  AgentLanguageCombobox,
+  AppLanguageSelect,
+  useAppTranslation,
+} from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { Combobox } from '@renderer/components/ui/combobox';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -297,29 +300,6 @@ export const GeneralSection = ({
     [t]
   );
 
-  const languageComboboxOptions = useMemo(
-    () =>
-      AGENT_LANGUAGE_OPTIONS.map((opt) => ({
-        value: opt.value,
-        label: `${opt.flag}  ${opt.label}`,
-        meta: { flag: opt.flag },
-      })),
-    []
-  );
-
-  const renderLanguageOption = useCallback(
-    (
-      option: { value: string; label: string; meta?: Record<string, unknown> },
-      isSelected: boolean
-    ) => (
-      <>
-        <Check className={`mr-2 size-3.5 shrink-0 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
-        <span className="text-[var(--color-text)]">{option.label}</span>
-      </>
-    ),
-    []
-  );
-
   return (
     <div>
       <SettingsSectionHeader title={t('general.appLanguage.title')} />
@@ -336,16 +316,10 @@ export const GeneralSection = ({
 
       <SettingsSectionHeader title={t('general.agentLanguage.title')} />
       <SettingRow label={t('general.agentLanguage.label')} description={agentLanguageDescription}>
-        <Combobox
-          options={languageComboboxOptions}
+        <AgentLanguageCombobox
           value={safeConfig.general.agentLanguage ?? 'system'}
           onValueChange={onLanguageChange}
-          placeholder={t('general.agentLanguage.selectPlaceholder')}
-          searchPlaceholder={t('general.agentLanguage.searchPlaceholder')}
-          emptyMessage={t('general.agentLanguage.emptyMessage')}
           disabled={saving}
-          className="min-w-[180px]"
-          renderOption={renderLanguageOption}
         />
       </SettingRow>
 

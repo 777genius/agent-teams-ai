@@ -1,6 +1,7 @@
 import {
   buildReviewExternalReloadState,
   buildReviewHistoryRestorePlan,
+  partitionReviewFilesByApplyErrors,
 } from '@features/review-mutations';
 import { describe, expect, it } from 'vitest';
 
@@ -30,6 +31,18 @@ function hunkAction(id: string, filePath: string): ReviewUndoAction {
     action: { filePath, originalIndex: 0 },
   };
 }
+
+describe('partitionReviewFilesByApplyErrors', () => {
+  it('keeps case-distinct Windows files separate while matching separator aliases', () => {
+    const upper = file('C:\\Sensitive\\Foo.ts');
+    const lower = file('C:/Sensitive/foo.ts');
+
+    expect(partitionReviewFilesByApplyErrors([upper, lower], ['C:/Sensitive/foo.ts'])).toEqual({
+      successful: [upper],
+      failed: [lower],
+    });
+  });
+});
 
 describe('buildReviewExternalReloadState', () => {
   it('reloads every identity of one physical file while preserving independent decisions', () => {

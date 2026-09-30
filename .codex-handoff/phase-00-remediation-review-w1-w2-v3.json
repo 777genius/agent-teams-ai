@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "reviewId": "P0.R12R.W1_W2.V3",
+  "laneId": "remediation-review-w1-w2-v3",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "status": "failed",
+  "reviewedAt": "2026-07-11T19:25:00Z",
+  "evidence": [
+    {
+      "id": "P0.R12R.W1_W2.V3",
+      "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2-remediation-v3.md",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "producerSnapshots": [
+    {
+      "laneId": "w1",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v1",
+      "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w1-v1",
+      "registryProgress": "running_stale",
+      "processAlive": false,
+      "latestResultPresent": false,
+      "dirtyFileCount": 13
+    },
+    {
+      "laneId": "w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w2-v1",
+      "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w2-v1",
+      "registryProgress": "running_stale",
+      "processAlive": false,
+      "latestResultPresent": false,
+      "dirtyFileCount": 18
+    }
+  ],
+  "producerDispositions": [
+    {
+      "laneId": "w1",
+      "disposition": "remediate",
+      "requiredFindingIds": ["R12R-W1-001", "R12R-W1-002"]
+    },
+    {
+      "laneId": "w2",
+      "disposition": "remediate",
+      "requiredFindingIds": ["R12R-W2-001", "R12R-W2-002", "R12R-W2-003", "R12R-W2-004"]
+    }
+  ],
+  "approvedFiles": [
+    {
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-remediation-review-w1-w2-v3.json",
+    "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2-remediation-v3.md"
+  ],
+  "overlapAudit": {
+    "exactRelativePathCollisions": [],
+    "duplicateBasenames": ["README.md", "estimate-input.json", "estimate-input.schema.json"],
+    "unsafeSemanticOverlaps": [],
+    "consistentSemanticOverlaps": [
+      "team.lifecycle.stop is W1 team-lifecycle operator action and W2 operator-only authority",
+      "provider.management renderer actions remain separate from W2 runtime ingress",
+      "W1 and W2 contribute to distinct canonical estimate buckets"
+    ]
+  },
+  "checks": [
+    {
+      "command": "git status --porcelain=v1 -uall (both producer worktrees)",
+      "exitCode": 0,
+      "result": "W1 13 untracked files; W2 18 untracked files; no tracked diffs"
+    },
+    {
+      "command": "W1 scanner in isolated /tmp producer copy",
+      "exitCode": 0,
+      "result": "109 API members; 106 catalogued controls; raw bypass hash reproduced; generated hashes match producer"
+    },
+    {
+      "command": "pnpm exec vitest --config /tmp/phase-00-remediation-review-w1-w2-v3-vitest.config.mjs run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "exitCode": 0,
+      "result": "1 file, 7 tests passed"
+    },
+    {
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "exitCode": 0,
+      "result": "passes its current rules: 4 providers, 2 backends, 5 operations, 13 matrix rows"
+    },
+    {
+      "command": "pnpm exec vitest --config /tmp/phase-00-remediation-review-w1-w2-v3-vitest.config.mjs run test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "exitCode": 0,
+      "result": "1 file, 8 tests passed"
+    },
+    {
+      "command": "pnpm exec eslint --config eslint.fast.config.js --no-cache <W1/W2 scanners and tests>",
+      "exitCode": 0
+    },
+    {
+      "command": "W1 immediate-child coverage probe",
+      "exitCode": 1,
+      "result": "TeamListFilterPopover has 5 interaction sites and is absent from the four-file catalog"
+    },
+    {
+      "command": "W2 exhaustive classified-key removal probe",
+      "exitCode": 1,
+      "result": "8 explicit keys can be removed without a completeness diagnostic"
+    },
+    {
+      "command": "pnpm exec prettier --check <W1 owned outputs>",
+      "exitCode": 1,
+      "result": "11 files require formatting"
+    },
+    {
+      "command": "pnpm exec prettier --check <W2 owned outputs>",
+      "exitCode": 1,
+      "result": "scan-runtime-surfaces.ts requires formatting"
+    },
+    {
+      "command": "JSON parse plus git diff --check and per-untracked no-index checks",
+      "exitCode": 0,
+      "result": "all JSON parses; no whitespace diagnostics"
+    },
+    {
+      "command": "bounded secret and prohibited real-project-path scan",
+      "exitCode": 0,
+      "result": "no findings"
+    }
+  ],
+  "findings": [
+    {
+      "id": "R12R-W1-001",
+      "owner": "w1",
+      "severity": "high",
+      "evidencePath": "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "line": 11,
+      "requiredCorrection": "Cover the reachable visible team child-control closure and add an omitted-child negative fixture.",
+      "affected": ["R12-W1-001", "P0.REQ.W1.003", "P0.W1.RENDERER_ACTIONS", "P0.W1.SCANNER"]
+    },
+    {
+      "id": "R12R-W1-002",
+      "owner": "w1",
+      "severity": "medium",
+      "evidencePath": ".codex-handoff/phase-00-w1.json",
+      "line": 1,
+      "requiredCorrection": "Format only W1-owned files and rerun the focused scanner/test/hash checks.",
+      "affected": ["11 W1 files"]
+    },
+    {
+      "id": "R12R-W2-001",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "line": 190,
+      "requiredCorrection": "Make every explicit classified environment key removal-sensitive and test all non-wildcard keys.",
+      "affected": [
+        "R12-W2-001",
+        "P0.REQ.W2.003",
+        "P0.W2.ENVIRONMENT_PROVENANCE",
+        "P0.W2.RUNTIME_SCANNER"
+      ]
+    },
+    {
+      "id": "R12R-W2-002",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+      "line": 1,
+      "requiredCorrection": "Add deterministic positive and negative fixtures for malformed capability, restart/adoption, and OpenCode secondary recovery, or retain an explicit failed state.",
+      "affected": ["P0.REQ.W2.006", "P0.W2.RUNTIME_SCANNER"]
+    },
+    {
+      "id": "R12R-W2-003",
+      "owner": "w2",
+      "severity": "high",
+      "evidencePath": ".codex-handoff/phase-00-w2.json",
+      "line": 1,
+      "requiredCorrection": "Regenerate the handoff from all 18 dirty paths with current checks and finding resolutions.",
+      "affected": ["W2 structured handoff"]
+    },
+    {
+      "id": "R12R-W2-004",
+      "owner": "w2",
+      "severity": "low",
+      "evidencePath": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+      "line": 1,
+      "requiredCorrection": "Format the W2 scanner only and rerun focused lint/test/scanner checks.",
+      "affected": ["P0.W2.RUNTIME_SCANNER"]
+    }
+  ],
+  "unverifiedClaims": [
+    "No broad CI, typecheck, build, standalone/runtime smoke, final-image/provider execution, Phase 1, or terminal test was run.",
+    "Neither producer emitted a terminal registry result; decisions are based on frozen dirty worktree snapshots.",
+    "Approved files were not integrated, committed, or pushed."
+  ],
+  "blockers": [],
+  "nextAction": "selectively_adopt_only_approved_files_or_return_w1_w2_for_listed_corrections_then_rereview"
+}

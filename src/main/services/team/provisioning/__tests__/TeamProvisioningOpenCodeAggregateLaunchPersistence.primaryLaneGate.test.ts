@@ -64,7 +64,7 @@ async function runPrimaryLaneLaunch(
       migrateLegacyOpenCodeRuntimeState: async () => ({}),
       upsertOpenCodeRuntimeLaneIndexEntry: async () => {},
       setOpenCodeRuntimeActiveRunManifest: async () => {},
-      clearOpenCodeRuntimeLaneStorage: async () => true,
+      clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
       persistOpenCodeRuntimeAdapterLaunchResult: async (result: TeamRuntimeLaunchResult) => {
         persisted.push(result);
         return { result, snapshot: undefined };

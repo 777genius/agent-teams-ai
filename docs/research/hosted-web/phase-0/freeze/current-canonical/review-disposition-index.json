@@ -1,0 +1,255 @@
+{
+  "$schema": "./canonical-index.schema.json",
+  "schemaVersion": 1,
+  "indexType": "review-disposition",
+  "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
+  "phaseId": "phase-00",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+  "freezeCandidate": {
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+  },
+  "generatedAt": "2026-07-12T10:28:17Z",
+  "reviews": [
+    {
+      "reviewId": "P0.CURRENT.REVIEW.W1",
+      "lanes": ["w1"],
+      "disposition": "controller-adopted",
+      "scope": "The v9 bundle is adopted. Commit 0d1a82fe adds the reviewed external-callback census and is narrowed to renderer characterization. Commit a6bd7a39 integrates the pack-relative raw reference without raising the legacy-bypass proof level.",
+      "sources": [
+        {
+          "path": ".codex-handoff/phase-00-w1.json",
+          "sha256": "0cc95df4fe153e046788d8592dda638cfd2ebf199133f670917db22bab32a10e",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w1-f4.json",
+          "sha256": "4274fe8b9cbe8a1bf84b49801d1c16bd47694940c0158a47193ec4833858d196",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "89c1358925033d480bcfe3bdfee6c899df556431",
+          "disposition": "adopted",
+          "scope": "Original W1 v9 evidence bundle.",
+          "paths": [".codex-handoff/phase-00-w1.json"]
+        },
+        {
+          "commit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+          "disposition": "narrowed",
+          "scope": "Later renderer census and scanner correction, with legacy bypasses remaining source-observed.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
+        },
+        {
+          "commit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
+          "disposition": "narrowed",
+          "scope": "Pack-relative raw locator and deterministic scanner integration.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "reviewId": "P0.CURRENT.REVIEW.W2",
+      "lanes": ["w2"],
+      "disposition": "approve",
+      "scope": "The targeted A1 bundle is approved and commit 6d54e7c6 is narrowed to its omission-sensitive environment census; target-image provider execution and credential canaries remain unproved.",
+      "sources": [
+        {
+          "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-targeted-fix-review-a1-r9/.codex-handoff/phase-00-w2-targeted-fix-review-a1-r9.json",
+          "sha256": "ffb2d7173cff698deed1dbc7c93517f4926894a5eb3af9b923d3546fe1374abf",
+          "scope": "controller-external"
+        },
+        {
+          "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-review-a1-r9/agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-review-a1-r9.latest-result.json",
+          "sha256": "ff9d800de6a827aa479f988c8b70b546f9a93ffe0dbf1dea9405130564adbf30",
+          "scope": "controller-external"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w2-d1.json",
+          "sha256": "5f3ef80c62a4a3a5d894a1dc2339ffecbd84fa9a157037d5de0b64e925c85ca0",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+          "disposition": "adopted",
+          "scope": "Original approved W2 targeted A1 bundle.",
+          "paths": [".codex-handoff/phase-00-w2.json"]
+        },
+        {
+          "commit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+          "disposition": "narrowed",
+          "scope": "Omission-sensitive environment and credential census; no target-image readiness claim.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+            "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+            "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "reviewId": "P0.CURRENT.REVIEW.W3_W5",
+      "lanes": ["w3", "w5"],
+      "disposition": "compatible-narrowed",
+      "scope": "The adopted W3/W5 pair remains compatible only within the Phase 0 evidence boundary; commit 5d723407 is narrowed to its approved command-ownership and stable-format corrections.",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5-current-canonical.md",
+          "sha256": "7bc2ded46924f18e28b0b85d3dafbd09e17662cf7e95c11b139bfe799a4f1564",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w5-format-f4.json",
+          "sha256": "de86b44dc836f4342cb486d24d59a86fd866b9e24805957774baaca5e17b19d0",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "7f23e7b628b09e8fbed71c914af5e665f14dab25",
+          "disposition": "adopted",
+          "scope": "Current W3 evidence bundle.",
+          "paths": [".codex-handoff/phase-00-w3.json"]
+        },
+        {
+          "commit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8",
+          "disposition": "narrowed",
+          "scope": "Original evidence-only W5 adoption.",
+          "paths": [".codex-handoff/phase-00-w5.json"]
+        },
+        {
+          "commit": "5d723407f287767c0f30f3d708459fb943256eaf",
+          "disposition": "narrowed",
+          "scope": "Approved command ownership and formatting-stable evidence projections.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+            "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json"
+          ]
+        }
+      ]
+    },
+    {
+      "reviewId": "P0.CURRENT.REVIEW.W4_W6",
+      "lanes": ["w4", "w6"],
+      "disposition": "approve",
+      "scope": "W4/W6 remains characterization only. Commit c958c872 supplies artifact authority, and 3bc0dfa7 accepts fail-closed target-image narrowing. Exact-image admission and provider canaries remain later implementation risks, not Phase 0 blockers.",
+      "sources": [
+        {
+          "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
+          "sha256": "5c4c0ed2792df575dfd74c3a197ff00af6ed2abcc001dd815c39e70a87f7ed7a",
+          "scope": "controller-external"
+        },
+        {
+          "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6.latest-result.json",
+          "sha256": "b29b4188a98de25cead5f299e9fab0e16160d8f3f0252023050d8fc73cbe52cc",
+          "scope": "controller-external"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json",
+          "sha256": "507a6c280cc2f3cd82906111033653dd857ae5a89a875f191c67825f011f62b5",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+          "disposition": "narrowed",
+          "scope": "Original paired W4/W6 characterization.",
+          "paths": [".codex-handoff/phase-00-w4.json", ".codex-handoff/phase-00-w6.json"]
+        },
+        {
+          "commit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+          "disposition": "narrowed",
+          "scope": "Current-commit W6 artifact authority; no final-image, mutation, or terminal admission.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json"
+          ]
+        },
+        {
+          "commit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+          "disposition": "narrowed",
+          "scope": "Fail-closed target-image narrowing accepted for the Phase 0 exit; exact-image admission remains Phase 5 scope.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json"
+          ]
+        }
+      ]
+    }
+  ],
+  "acceptedAuthorities": [
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.ESTIMATE",
+      "commit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+      "disposition": "accepted",
+      "role": "estimate",
+      "source": {
+        "path": ".codex-handoff/estimate-semantics-h6.json",
+        "sha256": "246dac62c31f015ec3601cfb2cc3a6435bfa6f027aff192f05c9e03b06bf5f16",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.FINAL_GATE",
+      "commit": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+      "disposition": "accepted",
+      "role": "final-gate",
+      "source": {
+        "path": ".codex-handoff/final-gate-candidate-reconcile-h4.json",
+        "sha256": "f45033d339fca0f436ab52226aa5528416967f1000f80ee9e42c2caf38d30754",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.NAVIGATION",
+      "commit": "f32be6a6fcb2da7a47ef3553476430ef8052e19a",
+      "disposition": "accepted",
+      "role": "navigation",
+      "source": {
+        "path": ".codex-handoff/document-navigation-h6.json",
+        "sha256": "58e025f6dfe691b3151bdc2119955f87e303423910a14375354068f126663bcb",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.ORCHESTRATION",
+      "commit": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+      "disposition": "accepted",
+      "role": "orchestration",
+      "source": {
+        "path": ".codex-handoff/orchestration-authority-remediation-h5.json",
+        "sha256": "32c0a04bb321bd94f80bddc5e1eb2d749d781c9fb5e9ff85785e2510b1b5e3df",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.TARGET_IMAGE",
+      "commit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "disposition": "accepted",
+      "role": "target-image-narrowing",
+      "source": {
+        "path": ".codex-handoff/target-image-decision-h2.json",
+        "sha256": "fa6a5c9a7386eb202fdb247d59c4fa6e30c048f90b73b8148c643c1c2c2e39d8",
+        "scope": "repository"
+      }
+    }
+  ]
+}

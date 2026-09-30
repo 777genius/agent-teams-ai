@@ -1,0 +1,36 @@
+export type HostedAuthStorageOperation =
+  | 'configuration.claimMode'
+  | 'configuration.read'
+  | 'configuration.resetMode'
+  | 'configuration.markSecretsRotated'
+  | 'authority.load'
+  | 'authority.initialize'
+  | 'authority.compareAndSwap'
+  | 'oidcAttempt.create'
+  | 'oidcAttempt.consume'
+  | 'identity.bind'
+  | 'personal.ensureOwner'
+  | 'session.create'
+  | 'session.findByHash'
+  | 'session.touch'
+  | 'session.revoke'
+  | 'backchannel.apply'
+  | 'user.get'
+  | 'user.list'
+  | 'user.setStatus'
+  | 'role.getLocal'
+  | 'role.setLocal'
+  | 'role.clearLocal'
+  | 'workspace.isRegistered'
+  | 'workspace.seed'
+  | 'workspace.list'
+  | 'workspace.register'
+  | 'workspace.disable'
+  | 'workspace.grant.list'
+  | 'workspace.grant.set'
+  | 'workspace.grant.revoke'
+  | 'audit.append';
+
+export interface HostedAuthStorageGateway {
+  hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown>;
+}

@@ -121,7 +121,7 @@ describe('Claude native mailbox admission', () => {
           };
           await mkdir(join(memberRoot, 'runtime-1', 'acks'), { recursive: true });
           await writeFile(
-            join(memberRoot, 'runtime-1', 'acks', `${command.requestId}.json`),
+            join(memberRoot, 'runtime-1', 'acks', commandName),
             `${JSON.stringify({
               schemaVersion: 1,
               requestId: command.requestId,

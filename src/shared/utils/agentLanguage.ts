@@ -115,6 +115,22 @@ export function resolveLanguageName(code: string, systemLocale?: string): string
   return option?.label ?? effectiveCode;
 }
 
+/** Whether `value` is a selectable agent language code, `system` included. */
+export function isAgentLanguageCode(value: string): boolean {
+  return AGENT_LANGUAGE_OPTIONS.some((option) => option.value === value);
+}
+
+/** The selectable code for a locale's primary language (e.g. "ru-RU" → "ru"), else `system`. */
+export function resolveAgentLanguageCodeFromLocale(locale: string | undefined): string {
+  const primary = extractPrimaryLanguage(locale?.trim() ?? '').toLowerCase();
+  return primary && primary !== 'system' && isAgentLanguageCode(primary) ? primary : 'system';
+}
+
+/** The instruction every agent prompt carries for the resolved agent language name. */
+export function buildAgentLanguageInstruction(languageName: string): string {
+  return `IMPORTANT: Communicate in ${languageName}. All messages, summaries, and task descriptions MUST be in ${languageName}.`;
+}
+
 /** Extracts primary language subtag from a locale string (e.g. "en-US" → "en"). */
 function extractPrimaryLanguage(locale: string): string {
   const dash = locale.indexOf('-');

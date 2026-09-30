@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
@@ -23,14 +23,6 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
-import {
-  canCloseCreateTaskDialog,
-  type CreateTaskSubmitGate,
-  type PendingCreateTaskCommand,
-  resetCreateTaskSubmit,
-  resolveCreateTaskCommand,
-  tryBeginCreateTaskSubmit,
-} from '@renderer/utils/createTaskCommandIdentity';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -42,6 +34,10 @@ import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskI
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 
+import type {
+  CreateTaskInteractionController,
+  CreateTaskInteractionSnapshot,
+} from '@features/team-task-board';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CreateTaskRequest, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -58,8 +54,13 @@ interface CreateTaskDialogProps {
   defaultStartImmediately?: boolean;
   defaultChip?: InlineChip;
   onClose: () => void;
-  onSubmit: (request: CreateTaskRequest) => Promise<void>;
-  submitting?: boolean;
+  interaction: CreateTaskInteractionController<CreateTaskRequest>;
+}
+
+interface SubmittedDraftToken {
+  generation: number;
+  revision: number;
+  intentId: string | null;
 }
 
 export const CreateTaskDialog = ({
@@ -74,8 +75,7 @@ export const CreateTaskDialog = ({
   defaultStartImmediately,
   defaultChip,
   onClose,
-  onSubmit,
-  submitting = false,
+  interaction,
 }: CreateTaskDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
@@ -98,14 +98,30 @@ export const CreateTaskDialog = ({
   const [relatedSearch, setRelatedSearch] = useState('');
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const prevOpenRef = useRef(false);
-  const pendingCommandRef = useRef<PendingCreateTaskCommand | null>(null);
-  const submitGateRef = useRef<CreateTaskSubmitGate>({ inFlight: false });
+  const openGenerationRef = useRef(0);
+  const draftRevisionRef = useRef(0);
+  const submittedDraftRef = useRef<SubmittedDraftToken | null>(null);
+  const interactionSnapshot = useSyncExternalStore(
+    interaction.subscribe,
+    interaction.getSnapshot,
+    interaction.getSnapshot
+  );
+  const busy =
+    interactionSnapshot.phase === 'preparing' || interactionSnapshot.phase === 'submitting';
+
+  useEffect(() => {
+    openGenerationRef.current += 1;
+    return () => {
+      // A late result belongs to this view, not a replacement dialog or context.
+      openGenerationRef.current += 1;
+    };
+  }, [interaction, teamName]);
 
   // Reset form when dialog opens (avoid setState during render)
   useEffect(() => {
     if (open && !prevOpenRef.current) {
-      pendingCommandRef.current = null;
-      resetCreateTaskSubmit(submitGateRef.current);
+      openGenerationRef.current += 1;
+      submittedDraftRef.current = null;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setSubject(defaultSubject);
       if (defaultChip) {
@@ -129,8 +145,7 @@ export const CreateTaskDialog = ({
       setShowOptionalFields(false);
     }
     if (!open && prevOpenRef.current) {
-      pendingCommandRef.current = null;
-      resetCreateTaskSubmit(submitGateRef.current);
+      openGenerationRef.current += 1;
     }
     prevOpenRef.current = open;
   }, [
@@ -147,10 +162,17 @@ export const CreateTaskDialog = ({
   ]);
 
   useEffect(() => {
-    if (!submitting) {
-      resetCreateTaskSubmit(submitGateRef.current);
-    }
-  }, [submitting]);
+    draftRevisionRef.current += 1;
+  }, [
+    subject,
+    descriptionDraft.value,
+    descChipDraft.chips,
+    owner,
+    blockedBy,
+    related,
+    startImmediately,
+    promptDraft.value,
+  ]);
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
@@ -164,7 +186,14 @@ export const CreateTaskDialog = ({
   );
 
   const requiresOwner = defaultStartImmediately === true;
-  const canSubmit = subject.trim().length > 0 && !submitting && (!requiresOwner || !!owner);
+  const canSubmit =
+    subject.trim().length > 0 &&
+    (!requiresOwner || !!owner) &&
+    interactionSnapshot.availability.supported &&
+    interactionSnapshot.availability.available &&
+    ['idle', 'not_applied', 'conflict', 'dismissed_unconfirmed'].includes(
+      interactionSnapshot.phase
+    );
 
   // Only show non-internal, non-deleted tasks as candidates for blocking
   const availableTasks = tasks.filter(
@@ -183,8 +212,26 @@ export const CreateTaskDialog = ({
     );
   };
 
+  const finishConfirmed = (
+    result: CreateTaskInteractionSnapshot,
+    token: SubmittedDraftToken
+  ): void => {
+    if (
+      result.phase === 'confirmed' &&
+      result.freshness === 'fresh' &&
+      result.confirmed?.coverage === 'declared_effects' &&
+      result.envelope?.intentId === token.intentId &&
+      submittedDraftRef.current === token &&
+      openGenerationRef.current === token.generation &&
+      draftRevisionRef.current === token.revision
+    ) {
+      interaction.acknowledgeConfirmed();
+      onClose();
+    }
+  };
+
   const handleSubmit = (): void => {
-    if (!canSubmit || !tryBeginCreateTaskSubmit(submitGateRef.current)) return;
+    if (!canSubmit) return;
     const trimmedDescription = stripEncodedTaskReferenceMetadata(descriptionDraft.value.trim());
     const trimmedPrompt = stripEncodedTaskReferenceMetadata(promptDraft.value.trim());
     const serializedDesc = serializeChipsWithText(trimmedDescription, descChipDraft.chips);
@@ -203,21 +250,28 @@ export const CreateTaskDialog = ({
       descriptionTaskRefs,
       promptTaskRefs,
     };
-    pendingCommandRef.current = resolveCreateTaskCommand(
-      pendingCommandRef.current,
-      teamName,
-      request
-    );
-    void onSubmit({ ...request, command: pendingCommandRef.current.identity }).finally(() => {
-      resetCreateTaskSubmit(submitGateRef.current);
+    const token: SubmittedDraftToken = {
+      generation: openGenerationRef.current,
+      revision: draftRevisionRef.current,
+      intentId: null,
+    };
+    submittedDraftRef.current = token;
+    void interaction.submit(request).then((result) => {
+      token.intentId = result.envelope?.intentId ?? null;
+      finishConfirmed(result, token);
     });
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
-    if (!nextOpen && canCloseCreateTaskDialog(submitting)) {
+    if (!nextOpen && !busy) {
       onClose();
     }
   };
+
+  const pendingRequest =
+    interactionSnapshot.envelope?.body.kind === 'desktop'
+      ? interactionSnapshot.envelope.body.request
+      : null;
 
   const assigneeField = (
     <div className="grid gap-2">
@@ -516,12 +570,106 @@ export const CreateTaskDialog = ({
           ) : null}
         </div>
 
+        {interactionSnapshot.phase === 'uncertain' ? (
+          <div role="alert" className="rounded-md border border-amber-500/50 p-3 text-xs">
+            <p>
+              The create outcome is unknown. Check the original command before creating another
+              task.
+            </p>
+            <p className="mt-1 break-all">
+              Command: {interactionSnapshot.envelope?.identity.commandId}
+            </p>
+            <p>Team: {teamName}</p>
+            <p>Submitted task: {pendingRequest?.subject}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {interactionSnapshot.recovery === 'exact_replay' ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const token = submittedDraftRef.current;
+                    void interaction.retryExact().then((result) => {
+                      if (token) finishConfirmed(result, token);
+                    });
+                  }}
+                >
+                  Retry original command
+                </Button>
+              ) : null}
+              {interactionSnapshot.recovery === 'observe' ? (
+                <Button size="sm" variant="outline" onClick={() => void interaction.observe()}>
+                  Check task record
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" onClick={() => interaction.dismissUnresolved()}>
+                Dismiss after manual check
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {interactionSnapshot.phase === 'confirmed' ? (
+          <div role="status" className="rounded-md border border-[var(--color-border)] p-3 text-xs">
+            <p>
+              Task {interactionSnapshot.confirmed?.reference.taskId} was created
+              {interactionSnapshot.confirmed?.recordState === 'deleted' ? ' and later deleted' : ''}
+              .
+            </p>
+            {interactionSnapshot.confirmed?.coverage === 'task_write' &&
+            interactionSnapshot.envelope?.effects.kind === 'task_write_and_delivery' ? (
+              <p>
+                Requested prompt or start delivery has not been verified. Check the task before
+                continuing.
+              </p>
+            ) : null}
+            {interactionSnapshot.freshness === 'failed' ? (
+              <div className="mt-2 flex items-center gap-2">
+                <span>Board refresh failed; the task was still created.</span>
+                <Button size="sm" variant="outline" onClick={() => void interaction.refresh()}>
+                  Refresh board
+                </Button>
+              </div>
+            ) : null}
+            <Button
+              className="mt-2"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const token = submittedDraftRef.current;
+                const sameDraft =
+                  token !== null &&
+                  token.generation === openGenerationRef.current &&
+                  token.revision === draftRevisionRef.current &&
+                  token.intentId === interactionSnapshot.envelope?.intentId;
+                interaction.acknowledgeConfirmed();
+                if (sameDraft) onClose();
+              }}
+            >
+              {interactionSnapshot.confirmed?.coverage === 'task_write' &&
+              interactionSnapshot.envelope?.effects.kind === 'task_write_and_delivery'
+                ? 'Continue after manual check'
+                : 'Continue'}
+            </Button>
+          </div>
+        ) : null}
+
+        {interactionSnapshot.phase === 'not_applied' || interactionSnapshot.phase === 'conflict' ? (
+          <p role="alert" className="text-xs text-amber-500">
+            Task was not created. Review the details before submitting again.
+          </p>
+        ) : null}
+
+        {interactionSnapshot.phase === 'dismissed_unconfirmed' ? (
+          <p role="status" className="text-xs text-amber-500">
+            The previous task outcome remains unconfirmed. Check it before submitting a new task.
+          </p>
+        ) : null}
+
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
             {t('tasks.createTask.cancel')}
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-            {submitting ? t('tasks.createTask.creating') : t('tasks.createTask.create')}
+            {busy ? t('tasks.createTask.creating') : t('tasks.createTask.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

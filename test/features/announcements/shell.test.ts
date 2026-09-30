@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('@features/announcements/main', () => ({
   createAnnouncementsFeature: mocks.create,
+}));
+vi.mock('../../../src/main/registerAnnouncementsIpc', () => ({
   registerAnnouncementsIpc: mocks.register,
 }));
 vi.mock('electron', async () => {

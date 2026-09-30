@@ -1,0 +1,67 @@
+{
+  "format": "agent-teams.hosted-roster-identity-golden/v1",
+  "source": "agent-teams-ai test/main/composition/hosted/hostedRosterIdentity.golden.test.ts",
+  "teamId": "team_d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2",
+  "formula": [
+    {
+      "rawMemberName": "alice",
+      "memberId": "member_9b13197ac098cd3fb05617b8b4f3beda"
+    },
+    {
+      "rawMemberName": "Alice",
+      "memberId": "member_8852092b3e8f953483bdb1cee19f8adb"
+    },
+    {
+      "rawMemberName": "иван",
+      "memberId": "member_9b92d689d7a9182d98f0fe2573935f96"
+    },
+    {
+      "rawMemberName": "dev.ops_1",
+      "memberId": "member_ffc4aab7cb9004bf96fc762fa8c19489"
+    },
+    {
+      "rawMemberName": "alice\u00001790000000000",
+      "memberId": "member_8072584c726c18bc8a14386af5bd951e"
+    },
+    {
+      "rawMemberName": "alice@golden-roster-team",
+      "memberId": "member_cd83ec9d83cdce44397a113eca2a4307"
+    }
+  ],
+  "roster": {
+    "membersMetaJson": "{\n  \"version\": 1,\n  \"members\": [\n    {\n      \"name\": \"team-lead\",\n      \"agentId\": \"team-lead@golden-roster-team\",\n      \"agentType\": \"team-lead\"\n    },\n    {\n      \"name\": \"alice\",\n      \"memberId\": \"member_e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3\",\n      \"agentId\": \"alice@golden-roster-team\"\n    },\n    {\n      \"name\": \"bob\",\n      \"joinedAt\": 1790000000000,\n      \"agentId\": \"bob@golden-roster-team\"\n    },\n    {\n      \"name\": \"carol\"\n    },\n    {\n      \"name\": \"dave\",\n      \"agentId\": \"dave@golden-roster-team\",\n      \"removedAt\": 1790000000001\n    },\n    {\n      \"name\": \"user\"\n    }\n  ]\n}\n",
+    "activeMembers": [
+      {
+        "name": "team-lead",
+        "memberId": "member_a16d949bac4415d0860adf2ffada5089"
+      },
+      {
+        "name": "alice",
+        "memberId": "member_e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3"
+      },
+      {
+        "name": "bob",
+        "memberId": "member_e400ec732ceab52a142125e3b3bee210"
+      },
+      {
+        "name": "carol",
+        "memberId": "member_0136b2eaf87effc61ad72406c23e024b"
+      }
+    ],
+    "activeRecipients": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "inactiveNames": [
+      "team-lead",
+      "dave",
+      "user"
+    ]
+  },
+  "promotion": {
+    "legacyKey": "golden-roster-team",
+    "frozenDraftJson": "{\"configuration\":{\"schemaVersion\":1,\"toolApprovalMode\":\"auto\",\"lanes\":[{\"kind\":\"opencode\",\"provider\":\"opencode\",\"selectedModel\":\"openrouter/minimax-m2.5\",\"effort\":\"medium\",\"members\":[{\"name\":\"team-lead\",\"prompt\":\"Lead the team.\"},{\"name\":\"alice\",\"prompt\":\"Write code.\"},{\"name\":\"dev.ops_1\",\"prompt\":\"Run the build.\"}]}]}}",
+    "membersMetaJson": "{\n  \"version\": 1,\n  \"members\": [\n    {\n      \"name\": \"team-lead\",\n      \"memberId\": \"member_a16d949bac4415d0860adf2ffada5089\",\n      \"agentId\": \"team-lead@golden-roster-team\",\n      \"agentType\": \"team-lead\",\n      \"providerId\": \"opencode\",\n      \"model\": \"openrouter/minimax-m2.5\",\n      \"effort\": \"medium\"\n    },\n    {\n      \"name\": \"alice\",\n      \"memberId\": \"member_cd83ec9d83cdce44397a113eca2a4307\",\n      \"agentId\": \"alice@golden-roster-team\",\n      \"agentType\": \"general-purpose\",\n      \"providerId\": \"opencode\",\n      \"model\": \"openrouter/minimax-m2.5\",\n      \"effort\": \"medium\"\n    },\n    {\n      \"name\": \"dev.ops_1\",\n      \"memberId\": \"member_a95154d7a92bb275d16b1c1c9d81fa4d\",\n      \"agentId\": \"dev.ops_1@golden-roster-team\",\n      \"agentType\": \"general-purpose\",\n      \"providerId\": \"opencode\",\n      \"model\": \"openrouter/minimax-m2.5\",\n      \"effort\": \"medium\"\n    }\n  ]\n}\n"
+  }
+}

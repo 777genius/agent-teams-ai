@@ -1,5 +1,7 @@
-import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';

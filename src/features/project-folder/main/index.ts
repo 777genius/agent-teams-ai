@@ -1,9 +1,1 @@
-export {
-  registerProjectFolderIpc,
-  removeProjectFolderIpc,
-} from './adapters/input/registerProjectFolderIpc';
-export {
-  createProjectFolderFeature,
-  type ProjectFolderFeatureFacade,
-  registerProjectFolderFeature,
-} from './composition/createProjectFolderFeature';
+export type { ProjectFolderFeatureFacade } from './application/ProjectFolderFeatureFacade';

@@ -1,0 +1,320 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { constants, promises as fs } from 'node:fs';
+import path from 'node:path';
+
+import {
+  HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION,
+  type HostedOpenCodeCurrentManifestV2,
+  type HostedOpenCodeRuntimeAvailableArtifact,
+  type HostedOpenCodeRuntimeLockV3,
+  type HostedOpenCodeRuntimePlatformKey,
+  hostedOpenCodeRuntimePlatformKey,
+  parseHostedOpenCodeRuntimeLock,
+} from '@features/hosted-opencode-runtime';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
+import { execCli } from '@main/utils/childProcess';
+
+import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
+
+const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
+const FETCH_TIMEOUT_MS = 60_000;
+const MAX_RELEASE_REDIRECTS = 5;
+const VERSION_TIMEOUT_MS = 30_000;
+const installInFlight = new Map<string, Promise<HostedOpenCodeCurrentManifestV2>>();
+
+export interface HostedOpenCodeRuntimeInstallerOptions {
+  readonly runtimeRoot: string;
+  readonly lock: unknown;
+  readonly platform?: NodeJS.Platform;
+  readonly arch?: string;
+  readonly fetch?: typeof globalThis.fetch;
+  readonly archiveRoot?: string;
+  readonly onVerifiedArchive?: (archive: Buffer, file: string) => Promise<void>;
+  readonly executeVersion?: (binaryPath: string) => Promise<string>;
+  readonly beforePublishManifest?: (manifest: HostedOpenCodeCurrentManifestV2) => Promise<void>;
+}
+
+function sha256(value: Buffer): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function assertDigest(value: Buffer, expected: string, kind: 'archive' | 'binary'): void {
+  if (sha256(value) !== expected) throw new Error(`hosted_opencode_${kind}_sha256_mismatch`);
+}
+
+function manifestPath(runtimeRoot: string): string {
+  return path.join(runtimeRoot, 'current.json');
+}
+
+function expectedBinaryPath(
+  runtimeRoot: string,
+  lock: HostedOpenCodeRuntimeLockV3,
+  platform: HostedOpenCodeRuntimePlatformKey,
+  artifact: HostedOpenCodeRuntimeAvailableArtifact
+): string {
+  return path.join(runtimeRoot, 'versions', lock.version, platform, artifact.binaryName);
+}
+
+export function parseHostedOpenCodeCurrentManifest(
+  value: unknown,
+  runtimeRoot: string,
+  lock: HostedOpenCodeRuntimeLockV3,
+  platform: HostedOpenCodeRuntimePlatformKey,
+  artifact: HostedOpenCodeRuntimeAvailableArtifact
+): HostedOpenCodeCurrentManifestV2 {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('hosted_opencode_current_manifest_invalid');
+  }
+  const manifest = value as Partial<HostedOpenCodeCurrentManifestV2>;
+  const keys = Object.keys(value).toSorted();
+  const expectedKeys = [
+    'schemaVersion',
+    'runtime',
+    'version',
+    'tag',
+    'platform',
+    'binaryPath',
+    'assetUrl',
+    'archiveSha256',
+    'binarySha256',
+    'sourceCommit',
+    'installedAt',
+  ].toSorted();
+  if (
+    keys.length !== expectedKeys.length ||
+    !keys.every((key, index) => key === expectedKeys[index]) ||
+    manifest.schemaVersion !== HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION ||
+    manifest.runtime !== 'opencode' ||
+    manifest.version !== lock.version ||
+    manifest.tag !== lock.tag ||
+    manifest.platform !== platform ||
+    manifest.binaryPath !== expectedBinaryPath(runtimeRoot, lock, platform, artifact) ||
+    manifest.assetUrl !== artifact.assetUrl ||
+    manifest.archiveSha256 !== artifact.archiveSha256 ||
+    manifest.binarySha256 !== artifact.binarySha256 ||
+    manifest.sourceCommit !== lock.source.commit ||
+    typeof manifest.installedAt !== 'string' ||
+    !Number.isFinite(Date.parse(manifest.installedAt))
+  ) {
+    throw new Error('hosted_opencode_current_manifest_invalid');
+  }
+  return manifest as HostedOpenCodeCurrentManifestV2;
+}
+
+async function download(fetchImpl: typeof globalThis.fetch, url: string): Promise<Buffer> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    let response: Response | undefined;
+    let currentUrl = url;
+    for (let redirectCount = 0; redirectCount <= MAX_RELEASE_REDIRECTS; redirectCount++) {
+      response = await fetchImpl(currentUrl, { signal: controller.signal, redirect: 'manual' });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      if (redirectCount === MAX_RELEASE_REDIRECTS) {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      const location = response.headers.get('location');
+      if (!location) throw new Error('hosted_opencode_release_redirect_invalid');
+      let redirected: URL;
+      try {
+        redirected = new URL(location, currentUrl);
+      } catch {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      if (
+        redirected.protocol !== 'https:' ||
+        !['github.com', 'release-assets.githubusercontent.com'].includes(redirected.hostname)
+      ) {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      currentUrl = redirected.href;
+    }
+    if (!response) throw new Error('hosted_opencode_download_failed');
+    if (!response.ok || !response.body)
+      throw new Error(`hosted_opencode_download_failed:${response.status}`);
+    const declared = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declared) && declared > MAX_ARCHIVE_BYTES)
+      throw new Error('hosted_opencode_archive_too_large');
+    const chunks: Buffer[] = [];
+    let total = 0;
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_ARCHIVE_BYTES) throw new Error('hosted_opencode_archive_too_large');
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, total);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readOfflineArchive(archiveRoot: string, file: string): Promise<Buffer> {
+  let handle: Awaited<ReturnType<typeof fs.open>>;
+  try {
+    handle = await fs.open(path.join(archiveRoot, file), constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error('hosted_opencode_offline_archive_unavailable');
+  }
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > MAX_ARCHIVE_BYTES) {
+      throw new Error('hosted_opencode_offline_archive_invalid');
+    }
+    return await handle.readFile();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function defaultExecuteVersion(binaryPath: string): Promise<string> {
+  const result = await execCli(binaryPath, ['--version'], {
+    timeout: VERSION_TIMEOUT_MS,
+    windowsHide: true,
+  });
+  return `${result.stdout}\n${result.stderr}`.trim();
+}
+
+function selectArtifact(options: HostedOpenCodeRuntimeInstallerOptions): {
+  lock: HostedOpenCodeRuntimeLockV3;
+  platform: HostedOpenCodeRuntimePlatformKey;
+  artifact: HostedOpenCodeRuntimeAvailableArtifact;
+} {
+  const lock = parseHostedOpenCodeRuntimeLock(options.lock);
+  const platform = hostedOpenCodeRuntimePlatformKey(
+    options.platform ?? process.platform,
+    options.arch ?? process.arch
+  );
+  const artifact = lock.platforms[platform];
+  if (artifact.status !== 'available')
+    throw new Error(`hosted_opencode_artifact_unavailable:${platform}`);
+  if (!lock.productionEligible) {
+    throw new Error('hosted_opencode_runtime_not_production_eligible');
+  }
+  return { lock, platform, artifact };
+}
+
+async function installHostedOpenCodeRuntimeOnce(
+  options: HostedOpenCodeRuntimeInstallerOptions
+): Promise<HostedOpenCodeCurrentManifestV2> {
+  const { lock, platform, artifact } = selectArtifact(options);
+  const archive = options.archiveRoot
+    ? await readOfflineArchive(options.archiveRoot, artifact.file)
+    : await download(options.fetch ?? globalThis.fetch, artifact.assetUrl);
+  assertDigest(archive, artifact.archiveSha256, 'archive');
+  const binary = extractHostedOpenCodeBinary(archive, artifact.archiveKind, artifact.binaryName);
+  assertDigest(binary, artifact.binarySha256, 'binary');
+
+  const finalBinaryPath = expectedBinaryPath(options.runtimeRoot, lock, platform, artifact);
+  const finalDirectory = path.dirname(finalBinaryPath);
+  const stagingDirectory = path.join(
+    options.runtimeRoot,
+    `.installing-${process.pid}-${randomUUID()}`
+  );
+  const stagingBinaryPath = path.join(stagingDirectory, artifact.binaryName);
+  try {
+    await fs.mkdir(stagingDirectory, { recursive: true });
+    // Runtime installation deliberately publishes an executable after digest verification.
+    await fs.writeFile(stagingBinaryPath, binary, { mode: 0o755 });
+    if (process.platform !== 'win32') {
+      // eslint-disable-next-line sonarjs/file-permissions
+      await fs.chmod(stagingBinaryPath, 0o755);
+    }
+    const actualVersion = await (options.executeVersion ?? defaultExecuteVersion)(
+      stagingBinaryPath
+    );
+    if (actualVersion !== lock.version) throw new Error('hosted_opencode_version_mismatch');
+    await options.onVerifiedArchive?.(archive, artifact.file);
+
+    const manifest: HostedOpenCodeCurrentManifestV2 = {
+      schemaVersion: 2,
+      runtime: 'opencode',
+      version: lock.version,
+      tag: lock.tag,
+      platform,
+      binaryPath: finalBinaryPath,
+      assetUrl: artifact.assetUrl,
+      archiveSha256: artifact.archiveSha256,
+      binarySha256: artifact.binarySha256,
+      sourceCommit: lock.source.commit,
+      installedAt: new Date().toISOString(),
+    };
+    await options.beforePublishManifest?.(manifest);
+    let finalBinaryExists = false;
+    try {
+      const existing = await fs.readFile(finalBinaryPath);
+      assertDigest(existing, artifact.binarySha256, 'binary');
+      finalBinaryExists = true;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'hosted_opencode_binary_sha256_mismatch') {
+        throw error;
+      }
+    }
+    if (!finalBinaryExists) {
+      await fs.mkdir(path.dirname(finalDirectory), { recursive: true });
+      await renamePathWithRetry(stagingDirectory, finalDirectory);
+    }
+    await atomicWriteAsync(
+      manifestPath(options.runtimeRoot),
+      `${JSON.stringify(manifest, null, 2)}\n`
+    );
+    return manifest;
+  } finally {
+    await fs.rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+export function installHostedOpenCodeRuntime(
+  options: HostedOpenCodeRuntimeInstallerOptions
+): Promise<HostedOpenCodeCurrentManifestV2> {
+  const key = path.resolve(options.runtimeRoot);
+  const existing = installInFlight.get(key);
+  if (existing) return existing;
+  const request = installHostedOpenCodeRuntimeOnce(options).finally(() => {
+    if (installInFlight.get(key) === request) installInFlight.delete(key);
+  });
+  installInFlight.set(key, request);
+  return request;
+}
+
+export async function resolveHostedOpenCodeRuntimeBinary(
+  options: Omit<
+    HostedOpenCodeRuntimeInstallerOptions,
+    'fetch' | 'archiveRoot' | 'onVerifiedArchive' | 'executeVersion' | 'beforePublishManifest'
+  >
+): Promise<string> {
+  const { lock, platform, artifact } = selectArtifact(options);
+  let raw: string;
+  try {
+    raw = await fs.readFile(manifestPath(options.runtimeRoot), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new Error('hosted_opencode_current_manifest_unreadable');
+    }
+    throw new Error('hosted_opencode_current_manifest_missing');
+  }
+  let manifest: HostedOpenCodeCurrentManifestV2;
+  try {
+    manifest = parseHostedOpenCodeCurrentManifest(
+      JSON.parse(raw),
+      options.runtimeRoot,
+      lock,
+      platform,
+      artifact
+    );
+  } catch {
+    throw new Error('hosted_opencode_current_manifest_invalid');
+  }
+  let binary: Buffer;
+  try {
+    const stats = await fs.lstat(manifest.binaryPath);
+    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error('invalid');
+    binary = await fs.readFile(manifest.binaryPath);
+  } catch {
+    throw new Error('hosted_opencode_binary_missing');
+  }
+  assertDigest(binary, artifact.binarySha256, 'binary');
+  return manifest.binaryPath;
+}

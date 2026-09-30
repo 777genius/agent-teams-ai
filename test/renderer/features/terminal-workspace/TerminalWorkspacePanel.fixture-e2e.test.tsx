@@ -66,7 +66,7 @@ vi.mock('@features/localization/renderer', () => ({
         'terminalWorkspace.terminalTabsUnavailable': 'Terminal tabs are unavailable',
         'terminalWorkspace.closeTerminalTabDialogTitle': 'Close terminal tab?',
         'terminalWorkspace.closeTerminalTabDialogDescription':
-          'This tab has terminal output history. Closing it will remove the tab and its visible output from this workspace.',
+          'This tab may contain terminal output or running processes. Closing it will remove the tab and its visible output from this workspace.',
         'terminalWorkspace.cancel': 'Cancel',
         'terminalWorkspace.closeTab': 'Close tab',
         'terminalWorkspace.commandPlaceholder': 'Type a command...',
@@ -269,6 +269,7 @@ describe('terminal workspace panel fixture-e2e', () => {
   let root: Root;
   let getBootstrap: ReturnType<typeof vi.fn<() => Promise<TerminalWorkspaceBootstrap>>>;
   let stopTeamRuntime: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  let onSettingsOpenChange: ReturnType<typeof vi.fn<(open: boolean) => void>>;
   let openExternal: ReturnType<typeof vi.fn<(url: string) => Promise<void>>>;
   let nextSnapshot: MockWorkspaceSnapshot;
   let kernelCounter = 0;
@@ -304,6 +305,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     nextSnapshot = createWorkspaceSnapshot();
     getBootstrap = vi.fn().mockResolvedValue(createBootstrap());
     stopTeamRuntime = vi.fn().mockResolvedValue(undefined);
+    onSettingsOpenChange = vi.fn();
     openExternal = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
@@ -395,6 +397,222 @@ describe('terminal workspace panel fixture-e2e', () => {
         initialThemeId: null,
       })
     );
+  });
+
+  it('replaces the full stateful team scope before rendering another team on the same root', async () => {
+    const otherTeamName = 'terminal-fixture-team-b';
+    const teamAAppearance = {
+      version: 1,
+      fontSizePx: 16,
+      opacityPercent: 71,
+      backgroundMode: 'solid',
+      backgroundColor: '#112233',
+      backgroundImageUrl: '',
+      backgroundImageFit: 'cover',
+      backdropBlurPx: 8,
+      dimBackgroundImage: false,
+    };
+    const teamBAppearance = {
+      version: 1,
+      fontSizePx: 19,
+      opacityPercent: 82,
+      backgroundMode: 'image',
+      backgroundColor: '#445566',
+      backgroundImageUrl: 'https://example.test/team-b.jpg',
+      backgroundImageFit: 'contain',
+      backdropBlurPx: 12,
+      dimBackgroundImage: true,
+    };
+    const teamACommandRuns = [
+      {
+        clientEventId: 'team-a-command',
+        command: 'printf TEAM_A',
+        paneId: 'pane-1',
+        sessionId: 'session-1',
+        startedAtMs: 10,
+        status: 'succeeded',
+      },
+    ];
+    const teamBCommandRuns = [
+      {
+        clientEventId: 'team-b-command',
+        command: 'printf TEAM_B',
+        paneId: 'pane-1',
+        sessionId: 'session-1',
+        startedAtMs: 20,
+        status: 'failed',
+      },
+    ];
+    const teamAHistory = ['printf TEAM_A'];
+    const teamBHistory = ['printf TEAM_B'];
+    const teamATabPreferences = JSON.stringify({
+      colors: { 'tab-1': 'sky' },
+      order: ['tab-1'],
+      version: 1,
+    });
+    const teamBTabPreferences = JSON.stringify({
+      colors: { 'tab-1': 'violet' },
+      order: ['tab-1'],
+      version: 1,
+    });
+    const trackedStorageKeys = [
+      'appearance-settings',
+      'command-history',
+      'command-runs',
+      'font-scale',
+      'line-wrap',
+      'tab-preferences',
+      'theme',
+    ] as const;
+    const readTrackedTeamStorage = (teamName: string): Record<string, string | null> =>
+      Object.fromEntries(
+        trackedStorageKeys.map((key) => [
+          storageKeyForTeam(teamName, key),
+          window.localStorage.getItem(storageKeyForTeam(teamName, key)),
+        ])
+      );
+
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'appearance-settings'),
+      JSON.stringify(teamAAppearance)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'command-history'),
+      JSON.stringify(teamAHistory)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'command-runs'),
+      JSON.stringify(teamACommandRuns)
+    );
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'font-scale'), 'large');
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'line-wrap'), 'true');
+    window.localStorage.setItem(
+      storageKeyForTeam(TEAM_NAME, 'tab-preferences'),
+      teamATabPreferences
+    );
+    window.localStorage.setItem(storageKeyForTeam(TEAM_NAME, 'theme'), 'terminal-platform-light');
+
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'appearance-settings'),
+      JSON.stringify(teamBAppearance)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'command-history'),
+      JSON.stringify(teamBHistory)
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'command-runs'),
+      JSON.stringify(teamBCommandRuns)
+    );
+    window.localStorage.setItem(storageKeyForTeam(otherTeamName, 'font-scale'), 'compact');
+    window.localStorage.setItem(storageKeyForTeam(otherTeamName, 'line-wrap'), 'false');
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'tab-preferences'),
+      teamBTabPreferences
+    );
+    window.localStorage.setItem(
+      storageKeyForTeam(otherTeamName, 'theme'),
+      'terminal-platform-default'
+    );
+
+    getBootstrap
+      .mockResolvedValueOnce({
+        ...createBootstrap(),
+        controlPlaneUrl: 'ws://fixture-control-team-a',
+        sessionStreamUrl: 'ws://fixture-stream-team-a',
+      })
+      .mockResolvedValue({
+        ...createBootstrap(),
+        controlPlaneUrl: 'ws://fixture-control-team-b',
+        sessionStreamUrl: 'ws://fixture-stream-team-b',
+        teamName: otherTeamName,
+      });
+    nextSnapshot = createWorkspaceSnapshot({
+      commandHistoryEntries: teamAHistory,
+      fontScale: 'large',
+      lineWrap: true,
+      themeId: 'terminal-platform-light',
+    });
+
+    await renderPanel({ settingsOpen: true });
+    const teamAKernel = currentKernel();
+    const expectedTeamAStorage = readTrackedTeamStorage(TEAM_NAME);
+    const expectedTeamBStorage = readTrackedTeamStorage(otherTeamName);
+    const storageWriteSpy = vi.spyOn(window.localStorage, 'setItem');
+
+    try {
+      nextSnapshot = createWorkspaceSnapshot({
+        commandHistoryEntries: teamBHistory,
+        fontScale: 'compact',
+        lineWrap: false,
+        themeId: 'terminal-platform-default',
+      });
+      await renderPanel({
+        settingsOpen: true,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+
+      const teamBKernel = currentKernel();
+      expect(panelFixture.kernels).toHaveLength(2);
+      expect(teamAKernel.dispose).toHaveBeenCalledOnce();
+      expect(teamBKernel.dispose).not.toHaveBeenCalled();
+      expect(getBootstrap).toHaveBeenNthCalledWith(2, {
+        projectPath: PROJECT_PATH,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+      expect(panelFixture.createWorkspaceWebSocketTransport).toHaveBeenLastCalledWith({
+        controlUrl: 'ws://fixture-control-team-b',
+        streamUrl: 'ws://fixture-stream-team-b',
+      });
+      expect(panelFixture.createWorkspaceKernel).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          initialCommandHistoryEntries: teamBHistory,
+          initialTerminalFontScale: 'compact',
+          initialTerminalLineWrap: false,
+          initialThemeId: 'terminal-platform-default',
+        })
+      );
+
+      const expectedTeamBValues = new Map(Object.entries(expectedTeamBStorage));
+      const teamAWrites = storageWriteSpy.mock.calls.filter(([key]) =>
+        String(key).startsWith(`agent-teams:terminal-workspace:${TEAM_NAME}:`)
+      );
+      const teamBWrites = storageWriteSpy.mock.calls.filter(([key]) =>
+        String(key).startsWith(`agent-teams:terminal-workspace:${otherTeamName}:`)
+      );
+      expect(teamAWrites).toEqual([]);
+      expect(teamBWrites.length).toBeGreaterThan(0);
+      for (const [key, value] of teamBWrites) {
+        if (expectedTeamBValues.has(String(key))) {
+          expect(String(value)).toBe(expectedTeamBValues.get(String(key)));
+        }
+      }
+      expect(readTrackedTeamStorage(TEAM_NAME)).toEqual(expectedTeamAStorage);
+      expect(readTrackedTeamStorage(otherTeamName)).toEqual(expectedTeamBStorage);
+      expect(window.localStorage.getItem(storageKeyForTeam(TEAM_NAME, 'tab-preferences'))).toBe(
+        teamATabPreferences
+      );
+      expect(window.localStorage.getItem(storageKeyForTeam(otherTeamName, 'tab-preferences'))).toBe(
+        teamBTabPreferences
+      );
+
+      await clickTextButton('Reconnect');
+      expect(teamAKernel.commands.bootstrap).not.toHaveBeenCalled();
+      expect(teamBKernel.commands.bootstrap).toHaveBeenCalledOnce();
+
+      await clickTextButton('Stop');
+      expect(stopTeamRuntime).toHaveBeenCalledWith(otherTeamName);
+      expect(stopTeamRuntime).not.toHaveBeenCalledWith(TEAM_NAME);
+      expect(getBootstrap).toHaveBeenLastCalledWith({
+        projectPath: PROJECT_PATH,
+        teamDisplayName: 'Terminal Fixture B',
+        teamName: otherTeamName,
+      });
+    } finally {
+      storageWriteSpy.mockRestore();
+    }
   });
 
   it('ignores corrupt terminal storage without blocking workspace bootstrap', async () => {
@@ -529,6 +747,51 @@ describe('terminal workspace panel fixture-e2e', () => {
     }
   });
 
+  it('does not autocomplete commands from another pane or session', async () => {
+    vi.useFakeTimers();
+    nextSnapshot = createWorkspaceSnapshot({
+      commandHistoryEntries: [],
+    });
+    window.localStorage.setItem(
+      storageKey('command-runs'),
+      JSON.stringify([
+        {
+          clientEventId: 'other-session-run',
+          command: 'pnpm test --filter other-session',
+          paneId: 'pane-other',
+          sessionId: 'session-other',
+          startedAtMs: 1_000,
+          status: 'succeeded',
+        },
+      ])
+    );
+
+    try {
+      await renderPanel();
+
+      await act(async () => {
+        getRequiredElement('mock-terminal-command-dock').dispatchEvent(
+          new CustomEvent('tp-terminal-command-draft-change', {
+            bubbles: true,
+            detail: {
+              value: 'pnpm t',
+            },
+          })
+        );
+        await flushMicrotasks();
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(80);
+        await flushMicrotasks();
+      });
+
+      expect(panelFixture.commandDockProps.at(-1)?.autocompleteSuggestion).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('shows cwd, git branch, prompt label, and powered-by GitHub link in the command area', async () => {
     await renderPanel();
 
@@ -629,7 +892,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.body.textContent).toContain('mux gateway unavailable');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledTimes(1);
 
-    kernel.commands.dispatchMuxCommand.mockResolvedValue(undefined);
+    kernel.commands.dispatchMuxCommand.mockResolvedValue({ changed: true });
     await clickButton('Create terminal tab');
 
     expect(
@@ -733,7 +996,47 @@ describe('terminal workspace panel fixture-e2e', () => {
     });
   });
 
-  it('closes empty tabs immediately and asks for confirmation before dropping tab history', async () => {
+  it('rejects renaming a user tab to the internal prewarm title', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+
+    const tabButton = getTabButton('Terminal UI Smoke');
+    await act(async () => {
+      tabButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+      await flushMicrotasks();
+    });
+    const input = getRequiredElement('agent-team-terminal-tab-title-input') as HTMLInputElement;
+    await act(async () => {
+      setInputValue(input, '__tp_prewarmed_shell__');
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'Enter',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({ kind: 'rename_tab', tab_id: 'tab-1' })
+    );
+    expect(getVisibleTabLabels()).toEqual(['Terminal UI Smoke']);
+  });
+
+  it('asks for confirmation before closing tabs with history or unhydrated output', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       historicalPanes: {
         'pane-2': {
@@ -766,13 +1069,20 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     kernel.commands.dispatchMuxCommand.mockClear();
     await clickButton('Close terminal tab Terminal UI Smoke');
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalledWith('session-1', {
+      kind: 'close_tab',
+      tab_id: 'tab-1',
+    });
+    expect(document.body.textContent).toContain('Close terminal tab?');
+
+    await clickTextButton('Close tab');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
       kind: 'close_tab',
       tab_id: 'tab-1',
     });
   });
 
-  it('focuses the visible tab on the left after closing the active terminal tab', async () => {
+  it('restores DOM and mux focus to the visible tab on the left after closing the active tab', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       focusedTabId: 'tab-3',
       tabs: [
@@ -787,7 +1097,13 @@ describe('terminal workspace panel fixture-e2e', () => {
     const kernel = currentKernel();
     kernel.commands.dispatchMuxCommand.mockClear();
 
+    await act(async () => {
+      getTabCloseButton('Deploy').focus();
+      await flushMicrotasks();
+    });
     await clickButton('Close terminal tab Deploy');
+    expect(document.body.textContent).toContain('Close terminal tab?');
+    await clickTextButton('Close tab');
 
     expect(kernel.commands.dispatchMuxCommand.mock.calls.map(([, command]) => command)).toEqual([
       {
@@ -799,6 +1115,18 @@ describe('terminal workspace panel fixture-e2e', () => {
         tab_id: 'tab-2',
       },
     ]);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs: [
+        createTab('tab-1', 'Build', 'pane-build'),
+        createTab('tab-2', 'Tests', 'pane-tests'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ],
+    });
+    await renderPanel();
+
+    expect(document.activeElement).toBe(getTabButton('Tests'));
   });
 
   it('restores user tab order preferences and strips the hidden prewarmed tab from visible UI', async () => {
@@ -822,6 +1150,77 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     expect(getVisibleTabLabels()).toEqual(['Logs', 'Terminal UI Smoke']);
     expect(document.body.textContent).not.toContain('__tp_prewarmed_shell__');
+  });
+
+  it('uses roving tab focus and keyboard navigation for the terminal tab strip', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      tabs: [
+        createTab('tab-1', 'Build', 'pane-build'),
+        createTab('tab-2', 'Logs', 'pane-logs'),
+        createTab('tab-3', 'Deploy', 'pane-deploy'),
+      ],
+    });
+
+    await renderPanel();
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+    const buildTab = getTabButton('Build');
+    const logsTab = getTabButton('Logs');
+
+    expect(buildTab.tabIndex).toBe(0);
+    expect(logsTab.tabIndex).toBe(-1);
+
+    await act(async () => {
+      buildTab.focus();
+      buildTab.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowRight',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(logsTab);
+    expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
+      kind: 'focus_tab',
+      tab_id: 'tab-2',
+    });
+  });
+
+  it('moves keyboard focus from the open settings tab back to a terminal tab', async () => {
+    nextSnapshot = createWorkspaceSnapshot({
+      focusedTabId: 'tab-2',
+      tabs: [createTab('tab-1', 'Build', 'pane-build'), createTab('tab-2', 'Logs', 'pane-logs')],
+    });
+
+    await renderPanel({ settingsOpen: true });
+    const kernel = currentKernel();
+    kernel.commands.dispatchMuxCommand.mockClear();
+    const settingsTab = document.querySelector<HTMLButtonElement>(
+      '[data-testid="agent-team-terminal-settings-tab"] [role="tab"]'
+    );
+    if (!settingsTab) {
+      throw new Error('Missing terminal settings tab button');
+    }
+    const logsTab = getTabButton('Logs');
+
+    await act(async () => {
+      settingsTab.focus();
+      settingsTab.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowLeft',
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(document.activeElement).toBe(logsTab);
+    expect(onSettingsOpenChange).toHaveBeenCalledWith(false);
+    expect(kernel.commands.dispatchMuxCommand).not.toHaveBeenCalled();
   });
 
   it('keeps terminal tab close buttons hover-only and avoids mixed border style shorthands', async () => {
@@ -962,6 +1361,8 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(document.querySelector('[data-testid="agent-team-terminal-tab-drop-indicator"]')).toBe(
       null
     );
+    expect(document.body.textContent).toContain('Close terminal tab?');
+    await clickTextButton('Close tab');
     expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
       kind: 'close_tab',
       tab_id: 'tab-2',
@@ -980,7 +1381,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     await renderPanel();
 
     const kernel = currentKernel();
-    const pendingFocus = createDeferred<void>();
+    const pendingFocus = createDeferred<{ changed: boolean }>();
     kernel.commands.dispatchMuxCommand.mockImplementationOnce(() => pendingFocus.promise);
 
     await act(async () => {
@@ -992,7 +1393,7 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(getTabButton('Logs').querySelector('.animate-spin')).toBeNull();
 
     await act(async () => {
-      pendingFocus.resolve();
+      pendingFocus.resolve({ changed: true });
       await flushMicrotasks();
     });
 
@@ -1255,6 +1656,30 @@ describe('terminal workspace panel fixture-e2e', () => {
     await renderPanel();
 
     const screen = getRequiredElement('mock-terminal-screen');
+    const unrelatedTarget = document.createElement('span');
+    unrelatedTarget.textContent = 'ordinary terminal output';
+    screen.appendChild(unrelatedTarget);
+    const unrelatedContextMenu = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 80,
+      clientY: 90,
+    });
+    const stopPropagation = vi.spyOn(unrelatedContextMenu, 'stopPropagation');
+    const documentContextMenuListener = vi.fn();
+    document.addEventListener('contextmenu', documentContextMenuListener);
+    await act(async () => {
+      unrelatedTarget.dispatchEvent(unrelatedContextMenu);
+      await flushMicrotasks();
+    });
+    expect(unrelatedContextMenu.defaultPrevented).toBe(false);
+    expect(stopPropagation).not.toHaveBeenCalled();
+    expect(documentContextMenuListener).toHaveBeenCalledOnce();
+    expect(
+      document.querySelector('[data-testid="agent-team-terminal-command-context-menu"]')
+    ).toBeNull();
+    document.removeEventListener('contextmenu', documentContextMenuListener);
+
     const historyEntry = document.createElement('section');
     historyEntry.className = 'history-entry';
     historyEntry.setAttribute('part', 'history-entry');
@@ -1284,6 +1709,22 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(menu.textContent).toContain('Copy');
     expect(menu.textContent).toContain('Copy command');
     expect(menu.textContent).toContain('Copy output');
+    expect(document.activeElement).toBe(menu);
+    await act(async () => {
+      menu.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'ArrowDown',
+        })
+      );
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+    });
+    expect(document.activeElement).toBe(
+      getRequiredElement('agent-team-terminal-command-context-copy')
+    );
 
     await act(async () => {
       getRequiredElement('agent-team-terminal-command-context-copy-output').dispatchEvent(
@@ -1661,6 +2102,8 @@ describe('terminal workspace panel fixture-e2e', () => {
 
     await updateInputValue('#terminal-settings-font-size', '18');
     await updateInputValue('#terminal-settings-opacity', '63');
+    await selectRadixOption('Terminal theme', 'Light');
+    await selectRadixOption('Terminal font preset', 'Large');
     await clickCheckboxLabel('Wrap long command output');
     await clickTextButton('Reconnect');
     await clickTextButton('Sessions');
@@ -1678,9 +2121,22 @@ describe('terminal workspace panel fixture-e2e', () => {
       })
     );
     expect(kernel.commands.setTerminalLineWrap).toHaveBeenCalledWith(true);
+    expect(kernel.commands.setTheme).toHaveBeenCalledWith('terminal-platform-light');
+    expect(kernel.commands.setTerminalFontScale).toHaveBeenCalledWith('large');
     expect(kernel.commands.bootstrap).toHaveBeenCalled();
     expect(kernel.commands.refreshSessions).toHaveBeenCalled();
     expect(stopTeamRuntime).toHaveBeenCalledWith(TEAM_NAME);
+
+    await clickTextButton('Reset appearance');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-font-size')).toBe('15px');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-panel-opacity')).toBe('0.74');
+
+    await clickButton('Close terminal settings');
+    expect(onSettingsOpenChange).toHaveBeenCalledWith(false);
+
+    const bootstrapCallsBeforeReload = getBootstrap.mock.calls.length;
+    await clickTextButton('Reload');
+    expect(getBootstrap).toHaveBeenCalledTimes(bootstrapCallsBeforeReload + 1);
   });
 
   it('shows image-only background controls and applies image blur when image mode is selected', async () => {
@@ -1707,8 +2163,16 @@ describe('terminal workspace panel fixture-e2e', () => {
     await updateInputValue('#terminal-settings-blur', '22');
 
     const consoleElement = document.querySelector<HTMLElement>('.agent-team-terminal-console');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toContain(
+      'https://example.test/background.jpg'
+    );
     expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image-blur')).toBe(
       '22px'
+    );
+
+    await updateInputValue('#terminal-settings-background-image', 'file:///etc/passwd');
+    expect(consoleElement?.style.getPropertyValue('--agent-terminal-background-image')).toBe(
+      'none'
     );
   });
 
@@ -1776,8 +2240,12 @@ describe('terminal workspace panel fixture-e2e', () => {
 
   async function renderPanel({
     settingsOpen = false,
+    teamDisplayName = 'Terminal Fixture',
+    teamName = TEAM_NAME,
   }: {
     settingsOpen?: boolean;
+    teamDisplayName?: string;
+    teamName?: string;
   } = {}): Promise<void> {
     await act(async () => {
       root.render(
@@ -1788,12 +2256,13 @@ describe('terminal workspace panel fixture-e2e', () => {
             getBootstrap,
             gitBranch: 'main',
             isTeamAlive: true,
+            onSettingsOpenChange,
             projectPath: PROJECT_PATH,
             settingsOpen,
             stopTeamRuntime,
             surface: 'sheet',
-            teamDisplayName: 'Terminal Fixture',
-            teamName: TEAM_NAME,
+            teamDisplayName,
+            teamName,
           })
         )
       );
@@ -1810,7 +2279,7 @@ interface MockKernel {
     attachSession: ReturnType<typeof vi.fn<(sessionId: string) => Promise<void>>>;
     bootstrap: ReturnType<typeof vi.fn<() => Promise<void>>>;
     dispatchMuxCommand: ReturnType<
-      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<void>>
+      typeof vi.fn<(sessionId: string, command: MockMuxCommand) => Promise<{ changed: boolean }>>
     >;
     refreshSessions: ReturnType<typeof vi.fn<() => Promise<void>>>;
     setActiveSession: ReturnType<typeof vi.fn<(sessionId: string) => void>>;
@@ -1833,6 +2302,9 @@ interface MockWorkspaceSnapshot {
         lines: Array<{ text: string }>;
       };
     } | null;
+    session: {
+      session_id: string;
+    };
     session_id: string;
     topology: {
       focused_tab: string;
@@ -1917,7 +2389,7 @@ function createMockKernel(
     commands: {
       attachSession: vi.fn().mockResolvedValue(undefined),
       bootstrap: vi.fn().mockResolvedValue(undefined),
-      dispatchMuxCommand: vi.fn().mockResolvedValue(undefined),
+      dispatchMuxCommand: vi.fn().mockResolvedValue({ changed: true }),
       refreshSessions: vi.fn().mockResolvedValue(undefined),
       setActiveSession: vi.fn(),
       setTerminalFontScale: vi.fn(),
@@ -1993,6 +2465,9 @@ function createWorkspaceSnapshot({
             },
           }
         : null,
+      session: {
+        session_id: activeSessionId,
+      },
       session_id: activeSessionId,
       topology: {
         focused_tab: activeTab?.tab_id ?? focusedTabId,
@@ -2034,7 +2509,11 @@ function createTab(tabId: string, title: string, paneId: string): MockTab {
 }
 
 function storageKey(key: string): string {
-  return `agent-teams:terminal-workspace:${TEAM_NAME}:${key}`;
+  return storageKeyForTeam(TEAM_NAME, key);
+}
+
+function storageKeyForTeam(teamName: string, key: string): string {
+  return `agent-teams:terminal-workspace:${teamName}:${key}`;
 }
 
 function currentKernel(): MockKernel {
@@ -2192,6 +2671,46 @@ async function updateInputValue(selector: string, value: string): Promise<void> 
     )?.set;
     valueSetter?.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    await flushMicrotasks();
+  });
+}
+
+async function selectRadixOption(triggerLabel: string, optionText: string): Promise<void> {
+  const trigger = document.querySelector<HTMLButtonElement>(
+    `button[role="combobox"][aria-label="${triggerLabel}"]`
+  );
+  if (!trigger) {
+    throw new Error(`Missing select trigger: ${triggerLabel}`);
+  }
+
+  await act(async () => {
+    trigger.focus();
+    trigger.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowDown',
+      })
+    );
+    await flushMicrotasks();
+  });
+
+  const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+    (candidate) => candidate.textContent?.includes(optionText)
+  );
+  if (!option) {
+    throw new Error(`Missing select option: ${optionText}`);
+  }
+
+  await act(async () => {
+    option.dispatchEvent(
+      new MouseEvent('pointerup', {
+        bubbles: true,
+        button: 0,
+        cancelable: true,
+      })
+    );
+    option.click();
     await flushMicrotasks();
   });
 }

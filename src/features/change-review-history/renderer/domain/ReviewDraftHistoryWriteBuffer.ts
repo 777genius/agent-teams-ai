@@ -49,6 +49,11 @@ export class ReviewDraftHistoryWriteBuffer<T> {
     return preservePending ? pending : undefined;
   }
 
+  discard(key: string): void {
+    this.failed.delete(key);
+    this.pending.delete(key);
+  }
+
   keys(prefix: string): string[] {
     return [...new Set([...this.pending.keys(), ...this.failed.keys()])].filter((key) =>
       key.startsWith(prefix)

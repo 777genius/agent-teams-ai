@@ -99,7 +99,12 @@ export const StatusBlock = ({
       pendingCrossTeamReplies.length > 0 ||
       scopedPendingApprovals.length > 0
     );
-  }, [members, scopedPendingReplies, pendingCrossTeamReplies.length, scopedPendingApprovals.length]);
+  }, [
+    members,
+    scopedPendingReplies,
+    pendingCrossTeamReplies.length,
+    scopedPendingApprovals.length,
+  ]);
   const hasActiveTasks = useMemo(() => {
     const tMap = new Map(tasks.map((t) => [t.id, t]));
     return members.some((m) => {

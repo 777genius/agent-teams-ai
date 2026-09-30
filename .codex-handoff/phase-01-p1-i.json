@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "nodeId": "P1.I.INTEGRATION",
+  "laneId": "p1-i",
+  "packetRevision": "phase-01-p1-i-integration-r3",
+  "routerRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "baseSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "canonicalSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "planBundleCommit": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "phaseStartSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "headSha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+  "terminalState": "HOLD",
+  "status": "verified",
+  "evidence": [
+    {
+      "id": "P1.I.INTEGRATION",
+      "path": "docs/research/hosted-web/phase-1/integration-report.json",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.I.ROLLBACK",
+      "path": "docs/research/hosted-web/phase-1/integration-report.json",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-i.json",
+    "docs/research/hosted-web/phase-1/decision-register.json",
+    "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+    "docs/research/hosted-web/phase-1/evidence-index.json",
+    "docs/research/hosted-web/phase-1/integration-report.json"
+  ],
+  "changedPathCount": 5,
+  "canonicalInputs": {
+    "phase1CanonicalInputCount": 68,
+    "acceptedLintRemediationHandoffCount": 1,
+    "totalCount": 69,
+    "distinctCount": 69,
+    "manifestSha256": "623c24be71898e7557257beae2693175ce2300be16c387a1051feb0bbf26bc44",
+    "formatRemediationHandoffInputCount": 0
+  },
+  "ownedOutputSha256": {
+    "docs/research/hosted-web/phase-1/decision-register.json": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9",
+    "docs/research/hosted-web/phase-1/estimate-reconciliation.json": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328",
+    "docs/research/hosted-web/phase-1/evidence-index.json": "07a17cb6674916f65713e337f15deeb3f5405d36fbcccbbcdada3b5895724590",
+    "docs/research/hosted-web/phase-1/integration-report.json": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f"
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 13,
+        "total": 13
+      },
+      "tests": {
+        "passed": 60,
+        "total": 60
+      }
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "exitCode": 0,
+      "testFiles": {
+        "passed": 1,
+        "total": 1
+      },
+      "tests": {
+        "passed": 3,
+        "total": 3
+      },
+      "evidenceId": "P1.NEG.RATCHET_REGRESSION",
+      "diagnostic": "phase1-ratchet-regression"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": {
+        "inherited": 7,
+        "owned": 0,
+        "unexpected": 0,
+        "matchesFrozenBaseline": true
+      },
+      "diagnostics": [
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7016",
+          "location": "25:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "66:31"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS18046",
+          "location": "117:68"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "413:48"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "733:10"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+          "code": "TS7016",
+          "location": "12:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+          "code": "TS2352",
+          "location": "162:44"
+        }
+      ]
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "errorCount": 0,
+      "warningCount": 3031
+    },
+    {
+      "command": "pnpm exec prettier --check \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "matchedPathCount": 74
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --quiet",
+      "exitCode": 0
+    }
+  ],
+  "gateSummary": {
+    "required": 14,
+    "passed": 14,
+    "failed": 0,
+    "gates": [
+      {
+        "id": "P1.GATE.PROVENANCE",
+        "status": "passed",
+        "evidence": "authority equality, 69-input manifest hash, and provenance-only format handoff exclusion"
+      },
+      {
+        "id": "P1.GATE.PREDECESSORS",
+        "status": "passed",
+        "evidence": "accepted P1.R1, P1.R2, lint-remediation, and format-remediation authority present"
+      },
+      {
+        "id": "P1.GATE.SCOPE",
+        "status": "passed",
+        "evidence": "exact five untracked outputs, zero tracked/staged paths"
+      },
+      {
+        "id": "P1.GATE.TESTS",
+        "status": "passed",
+        "evidence": "13/13 files and 60/60 tests"
+      },
+      {
+        "id": "P1.GATE.TYPECHECK",
+        "status": "passed",
+        "evidence": "seven inherited, zero owned, zero unexpected diagnostics"
+      },
+      {
+        "id": "P1.GATE.LINT",
+        "status": "passed",
+        "evidence": "full lint exit 0 with zero errors"
+      },
+      {
+        "id": "P1.GATE.FORMAT",
+        "status": "passed",
+        "evidence": "exact 74-path pinned Prettier exit 0"
+      },
+      {
+        "id": "P1.GATE.NEGATIVES",
+        "status": "passed",
+        "evidence": "complete named negative inventory proved or explicitly deferred behind the passing no-filesystem gate"
+      },
+      {
+        "id": "P1.GATE.RATCHET",
+        "status": "passed",
+        "evidence": "focused 1/1 file and 3/3 tests"
+      },
+      {
+        "id": "P1.GATE.SECURITY",
+        "status": "passed",
+        "evidence": "exact 74-path classified scans plus UTF-8, NUL, and MIME proof"
+      },
+      {
+        "id": "P1.GATE.ROLLBACK",
+        "status": "passed",
+        "evidence": "exact 54-path scratch forward equality and reverse absence"
+      },
+      {
+        "id": "P1.GATE.ESTIMATE",
+        "status": "passed",
+        "evidence": "unique P1.I output allocation and variance reconciliation"
+      },
+      {
+        "id": "P1.GATE.DECISIONS",
+        "status": "passed",
+        "evidence": "complete freeze-candidate decision register"
+      },
+      {
+        "id": "P1.GATE.EVIDENCE_FREEZE",
+        "status": "passed",
+        "evidence": "input hashes, evidence lifecycle rows, owned output hashes, and self-review"
+      }
+    ]
+  },
+  "rollback": {
+    "bootstrapSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+    "authoritySha": "5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f",
+    "payloadPathCount": 54,
+    "distinctPayloadPathCount": 54,
+    "bootstrapAbsentPathCount": 54,
+    "forwardApplyCheckExitCode": 0,
+    "forwardApplyExitCode": 0,
+    "forwardByteEqualPathCount": 54,
+    "reverseApplyCheckExitCode": 0,
+    "reverseApplyExitCode": 0,
+    "reverseAbsentPathCount": 54,
+    "patchSha256": "bd0b8cce323c72e9104b620a899add44919c13f913d5fbbe169b6445d79ffb50",
+    "scratchOnly": true,
+    "workspaceApply": false,
+    "evidenceId": "P1.I.ROLLBACK",
+    "pathManifestSource": "EXECUTION_INDEX.json.rollbackPayload.paths exact declared order",
+    "pathManifestSha256": "d67e76fa0b63f51260bc6c3bdd59568a9115a730709f2508231df46da5ca880e",
+    "commands": [
+      "git diff --binary --full-index 5f30df49e052d1cc1d0e7efd03aa105673b5b614 5d588b73f6c9860e8aeb25f8975e14a7c73d6a2f -- \"${rollback_paths[@]}\"",
+      "git apply --no-index --check <scratch-forward-patch>",
+      "git apply --no-index <scratch-forward-patch>",
+      "git apply --no-index -R --check <scratch-forward-patch>",
+      "git apply --no-index -R <scratch-forward-patch>"
+    ]
+  },
+  "classifiedScans": {
+    "scopePathCount": 74,
+    "inputPathCount": 69,
+    "outputPathCount": 5,
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 27,
+      "classification": "canonical control text, synthetic negative-control terms, required scan-command text, and evidence metadata only; no secret or credential value",
+      "allMatchesClassified": true
+    },
+    "provider": {
+      "command": "rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 46,
+      "classification": "repository-relative paths, inherited diagnostic paths, required profile/process labels, synthetic negative-control text, and scan-command text only; no auth/provider payload",
+      "allMatchesClassified": true
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "observedMatchLineCount": 13,
+      "classification": "canonical provenance/control text and recorded scan-command text only; no private, real-project, home, or task-temporary path value",
+      "allMatchesClassified": true
+    },
+    "mime": {
+      "command": "file --mime-type \"${p1_paths[@]}\"",
+      "exitCode": 0,
+      "textFileCount": 74,
+      "binaryFileCount": 0
+    },
+    "utf8Nul": {
+      "command": "node exact-74-path fatal UTF-8 decode and NUL-byte assertion",
+      "exitCode": 0,
+      "validUtf8PathCount": 74,
+      "nulBytePathCount": 0
+    }
+  },
+  "scopeProof": {
+    "authorityHeadMatched": true,
+    "trackedDiffPaths": [],
+    "untrackedPaths": [
+      ".codex-handoff/phase-01-p1-i.json",
+      "docs/research/hosted-web/phase-1/decision-register.json",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+      "docs/research/hosted-web/phase-1/evidence-index.json",
+      "docs/research/hosted-web/phase-1/integration-report.json"
+    ],
+    "stagedPathCount": 0,
+    "statusPathCount": 5,
+    "onlyDeclaredWriterPathsChanged": true,
+    "productOrTestPathChanged": false,
+    "rejectedOutputBytesUsed": false
+  },
+  "selfReview": {
+    "allMandatoryDocumentsReadInContractOrder": true,
+    "all69InputsReadInExactManifestOrder": true,
+    "allFiveOutputsFresh": true,
+    "completeOutputDiffReread": true,
+    "all14GatesReread": true,
+    "allHashesRecomputed": true,
+    "allScanMatchesClassified": true,
+    "rollbackProofReread": true,
+    "rejectedAttemptQuarantineVerified": true,
+    "scopeExpansion": false,
+    "unsupportedClaims": false
+  },
+  "unverifiedClaims": ["independent acceptance", "integration", "P1.F authorization", "Phase 2+"],
+  "blockers": [],
+  "nextAction": "independent-verification",
+  "pathResolution": {
+    "arrayName": "p1_paths",
+    "inputManifestSource": "EXECUTION_INDEX.json.phase1CanonicalInputs exact group and path order followed by acceptedLintRemediationHandoffPath",
+    "outputManifestSource": "EXECUTION_INDEX.json.downstreamP1IOutputs.writablePaths writer order",
+    "inputPathCount": 69,
+    "outputPathCount": 5,
+    "totalPathCount": 74,
+    "distinctPathCount": 74,
+    "resolvedPathManifestSha256": "0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223"
+  }
+}

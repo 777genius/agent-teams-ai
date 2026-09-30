@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
+import { createTeamMessageAttachmentReadTransport } from '@renderer/composition/team/createTeamMessageAttachmentReadTransport';
 import { useStore } from '@renderer/store';
 import { isImageMime } from '@renderer/utils/attachmentUtils';
 import { Loader2 } from 'lucide-react';
@@ -16,6 +17,8 @@ interface AttachmentDisplayProps {
   messageId: string;
   attachments: AttachmentMeta[];
 }
+
+const attachmentReadTransport = createTeamMessageAttachmentReadTransport();
 
 export const AttachmentDisplay = ({
   teamName,
@@ -39,7 +42,7 @@ export const AttachmentDisplay = ({
 
   useEffect(() => {
     let cancelled = false;
-    void window.electronAPI.teams
+    void attachmentReadTransport
       .getAttachments(teamName, messageId)
       .then((data) => {
         if (!cancelled) setState({ loaded: data, loading: false, key: `${teamName}:${messageId}` });

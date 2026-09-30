@@ -46,6 +46,7 @@ export interface VersionedJsonStoreOptions<TData> {
   clock?: () => Date;
   quarantineDir?: string;
   lockOptions?: FileLockOptions;
+  accessLockTargetPath?: string;
 }
 
 export class VersionedJsonStoreError extends Error {
@@ -67,6 +68,7 @@ export class VersionedJsonStore<TData> {
   private readonly clock: () => Date;
   private readonly quarantineDir: string | null;
   private readonly lockOptions: FileLockOptions | undefined;
+  private readonly accessLockTargetPath: string | null;
 
   constructor(options: VersionedJsonStoreOptions<TData>) {
     this.filePath = options.filePath;
@@ -76,9 +78,13 @@ export class VersionedJsonStore<TData> {
     this.clock = options.clock ?? (() => new Date());
     this.quarantineDir = options.quarantineDir ?? null;
     this.lockOptions = options.lockOptions;
+    this.accessLockTargetPath = options.accessLockTargetPath ?? null;
   }
 
   async read(): Promise<VersionedJsonStoreReadResult<TData>> {
+    if (this.accessLockTargetPath) {
+      return withFileLock(this.accessLockTargetPath, () => this.readUnlocked(), this.lockOptions);
+    }
     return this.readUnlocked();
   }
 
@@ -86,7 +92,7 @@ export class VersionedJsonStore<TData> {
     updater: (current: TData) => TData | Promise<TData>
   ): Promise<VersionedJsonStoreUpdateResult<TData>> {
     return withFileLock(
-      this.filePath,
+      this.accessLockTargetPath ?? this.filePath,
       async () => {
         const current = await this.readUnlocked();
         if (!current.ok) {

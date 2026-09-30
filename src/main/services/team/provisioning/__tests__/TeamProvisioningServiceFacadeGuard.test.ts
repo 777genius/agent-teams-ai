@@ -22,6 +22,12 @@ const TEAM_PROVISIONING_SERVICE_FORMAT_OPTIONS: PrettierOptions = {
 };
 const SUBSCRIPTION_RUNTIME_REFERENCE_PATTERN = /subscription[-_\s]+runtime|subscriptionRuntime/i;
 const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
+const TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_CLASS_NAME =
+  'TeamProvisioningOpenCodeAggregatePrimaryFacade';
+const TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_PATH = resolve(
+  TEAM_PROVISIONING_FACADE_ROOT,
+  `${TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_CLASS_NAME}.ts`
+);
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'assessLeadRuntimeRestart',
   'createTeam',
@@ -29,14 +35,24 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   // orchestrator leadPrompt, and the launch flow drives it from outside.
   'deliverOpenCodeLaunchPromptToLead',
   'launchTeam',
+  'relayLeadInboxMessages',
   'restartLeadRuntime',
+  'setDesktopWriterWorkflowLease',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
+] as const;
+const INHERITED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  // Request admission remains on the concrete application facade. This
+  // recovery control stays public through the inherited compatibility facade.
+  'rebootstrapOpenCodeAggregatePrimaryLane',
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
   'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
+  // Shutdown admission is intentionally inherited from the stop-cleanup
+  // compatibility facade; main invokes it before awaiting cleanup work.
+  'beginShutdown',
   'buildCrossProviderMemberArgs',
   'buildProvisioningEnv',
   'cancelProvisioning',
@@ -66,6 +82,8 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getOpenCodeMemberDeliveryBusyStatus',
   'getOpenCodeRuntimeAdapter',
   'getOpenCodeRuntimeDeliveryStatus',
+  'getPendingToolApprovalFileTarget',
+  'getPendingToolApprovalFilePath',
   'getProvisioningStatus',
   'getRuntimeState',
   'getTeamAgentRuntimeSnapshot',
@@ -74,6 +92,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasProvisioningRun',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
+  'isShutdownRequested',
   'isTeamAlive',
   'launchTeam',
   'notifyLanguageChange',
@@ -95,8 +114,8 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'resolveCrossTeamReplyMetadata',
   'resolveRuntimeRecipientProviderId',
   'respondToToolApproval',
-  'restartLeadRuntime',
   'restartMember',
+  'restartLeadRuntime',
   'retryFailedOpenCodeSecondaryLanes',
   'runLiveRosterMutation',
   'tryRunLiveRosterMutation',
@@ -105,6 +124,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'sendMessageToTeam',
   'setControlApiBaseUrlResolver',
   'setCrossTeamSender',
+  'setDesktopWriterWorkflowLease',
   'setMainWindow',
   'setMemberRuntimeAdvisoryInvalidator',
   'setMemberWorkSyncAcceptedReportChecker',
@@ -702,10 +722,28 @@ describe('TeamProvisioningService facade guard', () => {
     const source = readTeamProvisioningServiceSource();
     const sourceFile = parseTeamProvisioningServiceSource(source);
     const serviceClass = findTeamProvisioningServiceClass(sourceFile);
+    const inheritedOwnerSource = readFileSync(
+      TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_PATH,
+      'utf8'
+    );
+    const inheritedOwnerSourceFile = parseTypeScriptSource(
+      TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_PATH,
+      inheritedOwnerSource
+    );
+    const inheritedOwnerClass = findClassDeclaration(
+      inheritedOwnerSourceFile,
+      TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_CLASS_NAME
+    );
 
     expect(getDeclaredPublicServiceEntryPointNames(sourceFile, serviceClass)).toEqual(
       [...DECLARED_PUBLIC_SERVICE_ENTRYPOINTS].sort((a, b) => a.localeCompare(b))
     );
+    expect(getSuperclassIdentifier(serviceClass)).toBe(
+      TEAM_PROVISIONING_INHERITED_ENTRYPOINT_OWNER_CLASS_NAME
+    );
+    expect(
+      getDeclaredPublicServiceEntryPointNames(inheritedOwnerSourceFile, inheritedOwnerClass)
+    ).toEqual(expect.arrayContaining([...INHERITED_PUBLIC_SERVICE_ENTRYPOINTS]));
   });
 
   it('keeps the effective public service instance surface documented and bounded', () => {
@@ -714,6 +752,9 @@ describe('TeamProvisioningService facade guard', () => {
 
     expect(publicMemberNames).toEqual(
       [...DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS].sort((a, b) => a.localeCompare(b))
+    );
+    expect(publicMemberNames).toEqual(
+      expect.arrayContaining([...INHERITED_PUBLIC_SERVICE_ENTRYPOINTS])
     );
     expect(publicMemberNames.some((memberName) => !declaredEntryPoints.has(memberName))).toBe(true);
   });

@@ -133,7 +133,7 @@ describe('TeamMemberResolver', () => {
       {
         id: 'task-approved-review',
         subject: 'Approved review',
-        status: 'in_progress',
+        status: 'completed',
         owner: 'carol',
         reviewState: 'approved',
       },
@@ -547,7 +547,7 @@ describe('TeamMemberResolver', () => {
     expect(bob?.currentTaskId).toBeNull();
   });
 
-  it('clears currentTaskId when task reviewState is approved even without kanbanColumn', () => {
+  it('keeps in-progress work current when stale reviewState is approved without kanbanColumn', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {
       name: 'Team',
@@ -565,7 +565,7 @@ describe('TeamMemberResolver', () => {
     ];
     const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
-    expect(bob?.currentTaskId).toBeNull();
+    expect(bob?.currentTaskId).toBe('t1');
   });
 
   it('merges inbox-derived "lead" alias into canonical "team-lead"', () => {

@@ -85,7 +85,7 @@ describe('stored status authority decoder', () => {
     [
       'invalid evidence flag',
       (s) => {
-        Object.assign(s.agenda.items[0].evidence, { canBypassPhase2: 'yes' });
+        Object.assign(s.agenda.items[0].evidence, { canBypassDeliveryReadiness: 'yes' });
       },
     ],
     [

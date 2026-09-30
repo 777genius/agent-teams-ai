@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 vi.mock('@renderer/api', () => ({
+  api: { teams: {} },
   isElectronMode: () => true,
 }));
 

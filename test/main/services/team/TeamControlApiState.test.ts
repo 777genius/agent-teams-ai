@@ -35,6 +35,8 @@ vi.mock('@main/utils/pathDecoder', () => ({ getClaudeBasePath: () => context.roo
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
+  ensureTeamControlApiBaseUrl,
+  registerTeamControlApiEnsurer,
   writeTeamControlApiState,
 } from '@main/services/team/TeamControlApiState';
 
@@ -160,5 +162,40 @@ describe('Host control endpoint publication', () => {
     } finally {
       context.root = originalRoot;
     }
+  });
+});
+
+describe('OpenCode bridge control endpoint', () => {
+  beforeEach(async () => {
+    context.root = await mkdtemp(path.join(os.tmpdir(), 'app-control-ensure-'));
+    writeGate.mockReset().mockResolvedValue(undefined);
+    removeGate.mockReset().mockResolvedValue(undefined);
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
+  });
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    await removeDirectory(context.root, { recursive: true, force: true });
+  });
+
+  it('starts publication before the first bridge command and then reuses the committed endpoint', async () => {
+    // A launch that ran before the Host published would pin no control URL into
+    // the OpenCode scope, and every later delivery would miss the launched host.
+    const ensure = vi.fn(async () => {
+      await writeTeamControlApiState('http://127.0.0.1:4580');
+      return 'http://127.0.0.1:4580';
+    });
+    registerTeamControlApiEnsurer(ensure);
+    await expect(ensureTeamControlApiBaseUrl()).resolves.toBe('http://127.0.0.1:4580');
+    await expect(ensureTeamControlApiBaseUrl()).resolves.toBe('http://127.0.0.1:4580');
+    expect(ensure).toHaveBeenCalledTimes(1);
+  });
+
+  it('degrades to no endpoint when the Host cannot publish one', async () => {
+    registerTeamControlApiEnsurer(() => Promise.reject(new Error('port unavailable')));
+    await expect(ensureTeamControlApiBaseUrl()).resolves.toBeNull();
+    expect(vi.mocked(console.warn).mock.calls.at(-1)?.join(' ')).toContain(
+      'Team control API is unavailable for OpenCode: port unavailable'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 });

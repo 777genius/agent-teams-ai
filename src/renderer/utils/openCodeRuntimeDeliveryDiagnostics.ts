@@ -1,32 +1,19 @@
+import type {
+  RuntimeDeliveryAttempt,
+  RuntimeDeliveryDebugDetails,
+} from '@features/team-message-delivery';
 import type { SendMessageResult } from '@shared/types';
 
-export interface OpenCodeRuntimeDeliveryDebugDetails {
-  messageId: string;
-  statusMessageId?: string;
-  providerId: string;
-  delivered: boolean | null;
-  accepted?: boolean | null;
-  responsePending: boolean | null;
-  responseState: string | null;
-  ledgerStatus: string | null;
-  ledgerRecordId?: string | null;
-  laneId?: string | null;
-  visibleReplyMessageId?: string | null;
-  visibleReplyCorrelation?: string | null;
-  queuedBehindMessageId?: string | null;
-  acceptanceUnknown: boolean | null;
-  reason: string | null;
-  diagnostics: string[];
-  userVisibleState?: string | null;
-  userVisibleReasonCode?: string | null;
-  userVisibleMessage?: string | null;
-  userVisibleNextReviewAt?: string | null;
-}
+export type OpenCodeRuntimeDeliveryDebugDetails = RuntimeDeliveryDebugDetails;
 
 interface OpenCodeRuntimeDeliveryDiagnostics {
   warning: string | null;
-  debugDetails: OpenCodeRuntimeDeliveryDebugDetails | null;
+  debugDetails: RuntimeDeliveryDebugDetails | null;
 }
+
+type RuntimeDeliveryDiagnosticsInput = Omit<SendMessageResult, 'runtimeDelivery'> & {
+  runtimeDelivery?: RuntimeDeliveryAttempt;
+};
 
 const PENDING_WARNING =
   'OpenCode delivery is still being checked. Message was saved and will be observed before retry if needed.';
@@ -119,7 +106,7 @@ function formatOpenCodeRuntimeDeliveryFailureReason(reason: string | null | unde
 }
 
 export function buildOpenCodeRuntimeDeliveryDiagnostics(
-  result: SendMessageResult
+  result: RuntimeDeliveryDiagnosticsInput
 ): OpenCodeRuntimeDeliveryDiagnostics {
   const runtimeDelivery = result.runtimeDelivery;
   if (runtimeDelivery?.attempted !== true) {
@@ -199,7 +186,7 @@ export function buildOpenCodeRuntimeDeliveryDiagnostics(
 }
 
 export function isOpenCodeRuntimeDeliveryHardUxFailure(
-  runtimeDelivery: SendMessageResult['runtimeDelivery'] | null | undefined
+  runtimeDelivery: RuntimeDeliveryAttempt | null | undefined
 ): boolean {
   if (runtimeDelivery?.attempted !== true) {
     return false;
@@ -212,7 +199,7 @@ export function isOpenCodeRuntimeDeliveryHardUxFailure(
 }
 
 export function isOpenCodeRuntimeDeliveryHardUxFailureFromDebugDetails(
-  details: OpenCodeRuntimeDeliveryDebugDetails | null | undefined
+  details: RuntimeDeliveryDebugDetails | null | undefined
 ): boolean {
   if (!details) {
     return false;
@@ -224,7 +211,7 @@ export function isOpenCodeRuntimeDeliveryHardUxFailureFromDebugDetails(
 }
 
 export function shouldClearPendingReplyForOpenCodeRuntimeDelivery(
-  runtimeDelivery: SendMessageResult['runtimeDelivery'] | null | undefined
+  runtimeDelivery: RuntimeDeliveryAttempt | null | undefined
 ): boolean {
   if (runtimeDelivery?.attempted !== true) {
     return false;
@@ -243,7 +230,7 @@ export function shouldClearPendingReplyForOpenCodeRuntimeDelivery(
 }
 
 export function formatOpenCodeRuntimeDeliveryDebugDetails(
-  details: OpenCodeRuntimeDeliveryDebugDetails
+  details: RuntimeDeliveryDebugDetails
 ): string {
   return JSON.stringify(
     {

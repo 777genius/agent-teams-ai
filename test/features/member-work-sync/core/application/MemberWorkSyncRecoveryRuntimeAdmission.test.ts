@@ -4,8 +4,9 @@ import {
   MemberWorkSyncTeamOperationGate,
   type MemberWorkSyncUseCaseDeps,
 } from '@features/member-work-sync/core/application';
+import { MemberWorkSyncRecoveryHealthError } from '@features/member-work-sync/core/domain';
 import { createAdmittedMemberWorkSyncStatusPort } from '@features/member-work-sync/main/composition/createAdmittedMemberWorkSyncStatusPort';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 import type {
@@ -55,9 +56,17 @@ function status(): MemberWorkSyncStatus {
 }
 
 function createCommands(
-  syncControl: NonNullable<MemberWorkSyncRuntimeTicketAdmissionPort['syncControl']>
+  syncControl: NonNullable<MemberWorkSyncRuntimeTicketAdmissionPort['syncControl']>,
+  readLiveControl?: NonNullable<MemberWorkSyncRuntimeTicketAdmissionPort['readLiveControl']>
 ) {
   const stored = new Map<string, MemberWorkSyncStatus>([['team-a:bob', status()]]);
+  const readStatus = vi.fn(
+    async (request: { teamName: string; memberName: string }) =>
+      stored.get(`${request.teamName}:${request.memberName}`) ?? null
+  );
+  const writeStatus = vi.fn(async (next: MemberWorkSyncStatus) => {
+    stored.set(`${next.teamName}:${next.memberName}`, next);
+  });
   const deps: MemberWorkSyncUseCaseDeps = {
     clock: { now: () => new Date('2026-05-06T00:06:00.000Z') },
     hash: { sha256Hex: (value) => `hash-${value.length}` },
@@ -67,10 +76,8 @@ function createCommands(
       },
     },
     statusStore: {
-      read: async (request) => stored.get(`${request.teamName}:${request.memberName}`) ?? null,
-      write: async (next) => {
-        stored.set(`${next.teamName}:${next.memberName}`, next);
-      },
+      read: readStatus,
+      write: writeStatus,
       readTeamMetrics: async () => {
         throw new Error('not used');
       },
@@ -79,12 +86,177 @@ function createCommands(
       admit: async () => ({ admitted: false, code: 'not_early' }),
       cancel: async () => undefined,
       syncControl,
+      ...(readLiveControl ? { readLiveControl } : {}),
     },
   };
-  return { commands: new MemberWorkSyncRecoveryCommands(deps), stored };
+  return {
+    commands: new MemberWorkSyncRecoveryCommands(deps),
+    stored,
+    readStatus,
+    writeStatus,
+  };
 }
 
 describe('recovery Stop runtime admission', () => {
+  it.each([
+    { length: 256, accepted: true },
+    { length: 257, accepted: false },
+  ])(
+    'enforces the $length-character ordinary Stop reason boundary before state or runtime access',
+    async ({ length, accepted }) => {
+      const syncControl = vi.fn(async (input) => ({
+        ok: true as const,
+        code: 'closed' as const,
+        controlRevision: input.controlRevision,
+      }));
+      const { commands, stored, readStatus, writeStatus } = createCommands(syncControl);
+      const stopping = commands.stop({
+        teamName: 'team-a',
+        memberName: 'bob',
+        reason: 'r'.repeat(length),
+      });
+
+      if (accepted) {
+        await expect(stopping).resolves.toMatchObject({ code: 'stopped' });
+        expect(stored.get('team-a:bob')?.recoveryHealth?.autoResumeStopLatch?.reason).toHaveLength(
+          256
+        );
+        expect(syncControl).toHaveBeenCalledTimes(1);
+      } else {
+        await expect(stopping).rejects.toBeInstanceOf(MemberWorkSyncRecoveryHealthError);
+        expect(readStatus).not.toHaveBeenCalled();
+        expect(writeStatus).not.toHaveBeenCalled();
+        expect(syncControl).not.toHaveBeenCalled();
+        expect(stored.get('team-a:bob')).toEqual(status());
+      }
+    }
+  );
+
+  it.each([
+    ['a trailing character beyond the boundary', `${'r'.repeat(256)} `],
+    ['an oversized whitespace-only value', ' '.repeat(257)],
+  ])('rejects %s before ordinary Stop state or runtime access', async (_label, reason) => {
+    const syncControl = vi.fn(async (input) => ({
+      ok: true as const,
+      code: 'closed' as const,
+      controlRevision: input.controlRevision,
+    }));
+    const { commands, stored, readStatus, writeStatus } = createCommands(syncControl);
+
+    await expect(
+      commands.stop({ teamName: 'team-a', memberName: 'bob', reason })
+    ).rejects.toBeInstanceOf(MemberWorkSyncRecoveryHealthError);
+    expect(readStatus).not.toHaveBeenCalled();
+    expect(writeStatus).not.toHaveBeenCalled();
+    expect(syncControl).not.toHaveBeenCalled();
+    expect(stored.get('team-a:bob')).toEqual(status());
+  });
+
+  it.each([undefined, '', '   '])(
+    'keeps the ordinary Stop default for absent or empty reason %#',
+    async (reason) => {
+      const syncControl = vi.fn(async (input) => ({
+        ok: true as const,
+        code: 'closed' as const,
+        controlRevision: input.controlRevision,
+      }));
+      const { commands, stored } = createCommands(syncControl);
+
+      await commands.stop({ teamName: 'team-a', memberName: 'bob', reason });
+
+      expect(stored.get('team-a:bob')?.recoveryHealth?.autoResumeStopLatch?.reason).toBe(
+        'user_stop'
+      );
+    }
+  );
+
+  it('does not persist a latch when the expected runtime was replaced', async () => {
+    const { commands, stored } = createCommands(
+      async () => {
+        throw new Error('sync must not run for a known replacement');
+      },
+      async () => ({
+        runtimeInstanceId: 'runtime-b',
+        controlRevision: 1,
+        stopped: false,
+        handshakeCompleted: true,
+      })
+    );
+    await expect(
+      commands.stop({
+        teamName: 'team-a',
+        memberName: 'bob',
+        expectedIncarnation: 'inc-live',
+        expectedRuntimeInstanceId: 'runtime-a',
+        localStopId: 'local-stop-1',
+      })
+    ).rejects.toMatchObject({ name: 'MemberWorkSyncStaleRuntimeInstanceError' });
+    expect(stored.get('team-a:bob')?.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+    expect(stored.get('team-a:bob')?.recoveryHealth?.durableStopReceipts).toBeUndefined();
+  });
+
+  it('leaves no persisted latch when replacement wins at syncControl', async () => {
+    const { commands, stored } = createCommands(
+      async () => ({ ok: false, code: 'instance_mismatch' }),
+      async () => ({
+        runtimeInstanceId: 'runtime-a',
+        controlRevision: 3,
+        stopped: false,
+        handshakeCompleted: true,
+      })
+    );
+    await expect(
+      commands.stop({
+        teamName: 'team-a',
+        memberName: 'bob',
+        expectedIncarnation: 'inc-live',
+        expectedRuntimeInstanceId: 'runtime-a',
+        localStopId: 'local-stop-1',
+      })
+    ).rejects.toMatchObject({ name: 'MemberWorkSyncStaleRuntimeInstanceError' });
+    expect(stored.get('team-a:bob')?.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+    expect(stored.get('team-a:bob')?.recoveryHealth?.durableStopReceipts).toBeUndefined();
+  });
+
+  it('keeps localStopId durable across Resume and does not stop recovery twice', async () => {
+    let live = {
+      runtimeInstanceId: 'runtime-a',
+      controlRevision: 3,
+      stopped: false,
+      handshakeCompleted: true,
+    };
+    const syncControl = vi.fn(async (input) => {
+      live = {
+        runtimeInstanceId: input.runtimeInstanceId,
+        controlRevision: input.controlRevision,
+        stopped: input.stopped,
+        handshakeCompleted: true,
+        ...(input.requestId ? { requestId: input.requestId } : {}),
+      };
+      return {
+        ok: true as const,
+        code: input.stopped ? ('closed' as const) : ('open' as const),
+        controlRevision: input.controlRevision,
+        ...(input.requestId ? { requestId: input.requestId } : {}),
+      };
+    });
+    const { commands, stored } = createCommands(syncControl, async () => live);
+    const stop = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      expectedIncarnation: 'inc-live',
+      expectedRuntimeInstanceId: 'runtime-a',
+      localStopId: 'local-stop-1',
+    };
+    await commands.stop(stop);
+    await commands.resume({ teamName: 'team-a', memberName: 'bob' });
+    const replayed = await commands.stop(stop);
+    expect(replayed.ok).toBe(true);
+    expect(syncControl).toHaveBeenCalledTimes(2);
+    expect(stored.get('team-a:bob')?.recoveryHealth?.autoResumeStopLatch).toBeUndefined();
+    expect(stored.get('team-a:bob')?.recoveryHealth?.durableStopReceipts).toHaveLength(1);
+  });
+
   it('keeps the durable latch when runtime ACK is applied', async () => {
     const { commands, stored } = createCommands(async (input) => {
       expect(input).toMatchObject({

@@ -1,10 +1,22 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  promises as fs,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { withFileLock } from '../../fileLock';
 import {
+  clearOpenCodeRuntimeLaneStorage,
+  getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeTeamRuntimeLaneDirectory,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
@@ -21,6 +33,7 @@ import {
   tryStopPersistedOpenCodeRuntimePidForStoppedLane,
 } from '../TeamProvisioningOpenCodeRuntimeLaneCleanup';
 
+import type { ClearOpenCodeRuntimeLaneStorageResult } from '../../opencode/store/OpenCodeBootstrapSessionNormalization';
 import type { TeamRuntimeStopInput } from '../../runtime';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
 
@@ -309,6 +322,280 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
     }
   });
 
+  it('never follows a substituted lane-directory symlink during stopped-team cleanup', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-symlink-'));
+    const externalRoot = mkdtempSync(join(tmpdir(), 'stopped-team-external-sentinel-'));
+    const teamName = 'team';
+    const laneId = 'primary';
+    const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+    const externalLaneDirectory = join(externalRoot, 'lane');
+    const externalSentinelPath = join(externalLaneDirectory, 'external-sentinel.txt');
+    const deleteSecondaryRuntimeRun = vi.fn();
+    const clearPrimaryRuntimeRun = vi.fn();
+    const markStoppedTeamOpenCodeRuntimeLanesCleaned = vi.fn();
+    const logWarning = vi.fn();
+    const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
+      renameSync(laneDirectory, externalLaneDirectory);
+      writeFileSync(externalSentinelPath, 'do-not-delete', 'utf8');
+      symlinkSync(
+        externalLaneDirectory,
+        laneDirectory,
+        process.platform === 'win32' ? 'junction' : 'dir'
+      );
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, teamName, {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            runId: 'run-symlink',
+            state: 'active',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName,
+        laneId,
+        runId: 'run-symlink',
+      });
+
+      await expect(
+        stopOpenCodeRuntimeLanesForStoppedTeam({
+          teamName,
+          teamsBasePath,
+          ports: {
+            withTeamLock: async (_teamName, operation) => operation(),
+            canDeliverToOpenCodeRuntimeForTeam: () => false,
+            getOpenCodeRuntimeAdapter: () =>
+              ({ providerId: 'opencode', stop }) as unknown as ReturnType<
+                Parameters<
+                  typeof stopOpenCodeRuntimeLanesForStoppedTeam
+                >[0]['ports']['getOpenCodeRuntimeAdapter']
+              >,
+            readPreviousLaunchState: async () => null,
+            readConfigForObservation: async () => null,
+            readMembersMeta: async () => [],
+            readPersistedTeamProjectPath: () => null,
+            tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+            deleteSecondaryRuntimeRun,
+            clearPrimaryRuntimeRun,
+            markStoppedTeamOpenCodeRuntimeLanesCleaned,
+            logWarning,
+          },
+        })
+      ).resolves.toBe(1);
+
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(clearPrimaryRuntimeRun).not.toHaveBeenCalled();
+      expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
+      expect(logWarning).toHaveBeenCalledWith(
+        '[team] OpenCode lane primary ownership changed before stopped-team storage cleanup; retaining current runtime tracking.'
+      );
+      expect(readFileSync(externalSentinelPath, 'utf8')).toBe('do-not-delete');
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+      rmSync(externalRoot, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform !== 'linux')(
+    'never follows a substituted lane ancestor during stopped-team cleanup',
+    async () => {
+      const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-ancestor-'));
+      const externalRoot = mkdtempSync(join(tmpdir(), 'stopped-team-ancestor-external-'));
+      const teamName = 'team';
+      const laneId = 'primary';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+      const lanesDirectory = dirname(laneDirectory);
+      const externalLanesDirectory = join(externalRoot, 'lanes');
+      const externalSentinelPath = join(externalLanesDirectory, laneId, 'external-sentinel.txt');
+      const deleteSecondaryRuntimeRun = vi.fn();
+      const clearPrimaryRuntimeRun = vi.fn();
+      const markStoppedTeamOpenCodeRuntimeLanesCleaned = vi.fn();
+      const logWarning = vi.fn();
+      const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
+        renameSync(lanesDirectory, externalLanesDirectory);
+        writeFileSync(externalSentinelPath, 'do-not-delete', 'utf8');
+        symlinkSync(externalLanesDirectory, lanesDirectory, 'dir');
+        return {
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+        };
+      });
+
+      try {
+        await writeOpenCodeRuntimeLaneIndex(teamsBasePath, teamName, {
+          version: 1,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          lanes: {
+            [laneId]: {
+              laneId,
+              runId: 'run-symlinked-ancestor',
+              state: 'active',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          },
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath,
+          teamName,
+          laneId,
+          runId: 'run-symlinked-ancestor',
+        });
+
+        await expect(
+          stopOpenCodeRuntimeLanesForStoppedTeam({
+            teamName,
+            teamsBasePath,
+            ports: {
+              withTeamLock: async (_teamName, operation) => operation(),
+              canDeliverToOpenCodeRuntimeForTeam: () => false,
+              getOpenCodeRuntimeAdapter: () =>
+                ({ providerId: 'opencode', stop }) as unknown as ReturnType<
+                  Parameters<
+                    typeof stopOpenCodeRuntimeLanesForStoppedTeam
+                  >[0]['ports']['getOpenCodeRuntimeAdapter']
+                >,
+              readPreviousLaunchState: async () => null,
+              readConfigForObservation: async () => null,
+              readMembersMeta: async () => [],
+              readPersistedTeamProjectPath: () => null,
+              tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+              deleteSecondaryRuntimeRun,
+              clearPrimaryRuntimeRun,
+              markStoppedTeamOpenCodeRuntimeLanesCleaned,
+              logWarning,
+            },
+          })
+        ).resolves.toBe(1);
+
+        expect(stop).toHaveBeenCalledTimes(1);
+        expect(deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+        expect(clearPrimaryRuntimeRun).not.toHaveBeenCalled();
+        expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
+        expect(logWarning).toHaveBeenCalledWith(
+          '[team] OpenCode lane primary ownership changed before stopped-team storage cleanup; retaining current runtime tracking.'
+        );
+        expect(readFileSync(externalSentinelPath, 'utf8')).toBe('do-not-delete');
+      } finally {
+        rmSync(teamsBasePath, { recursive: true, force: true });
+        rmSync(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'does not remove an external directory in a final-rmdir substitution',
+    async () => {
+      const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-final-rmdir-'));
+      const externalRoot = mkdtempSync(join(tmpdir(), 'stopped-team-final-rmdir-external-'));
+      const teamName = 'team';
+      const laneId = 'primary';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+      const externalLaneDirectory = join(externalRoot, 'lane');
+      let substitutedLaneDirectory = externalLaneDirectory;
+      const deleteSecondaryRuntimeRun = vi.fn();
+      const clearPrimaryRuntimeRun = vi.fn();
+      const markStoppedTeamOpenCodeRuntimeLanesCleaned = vi.fn();
+      const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, teamName, {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            runId: 'run-final-rmdir',
+            state: 'active',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName,
+        laneId,
+        runId: 'run-final-rmdir',
+      });
+      await fs.writeFile(join(laneDirectory, 'transient.json'), 'transient', 'utf8');
+      await fs.mkdir(externalLaneDirectory);
+
+      const originalRename = fs.rename.bind(fs);
+      const originalRmdir = fs.rmdir.bind(fs);
+      let substituted = false;
+      const rmdirSpy = vi.spyOn(fs, 'rmdir').mockImplementation(async (target) => {
+        if (!substituted && target.toString() === laneDirectory) {
+          await originalRename(externalLaneDirectory, laneDirectory);
+          substitutedLaneDirectory = laneDirectory;
+          substituted = true;
+        }
+        return originalRmdir(target);
+      });
+
+      try {
+        await expect(
+          stopOpenCodeRuntimeLanesForStoppedTeam({
+            teamName,
+            teamsBasePath,
+            ports: {
+              withTeamLock: async (_teamName, operation) => operation(),
+              canDeliverToOpenCodeRuntimeForTeam: () => false,
+              getOpenCodeRuntimeAdapter: () =>
+                ({ providerId: 'opencode', stop }) as unknown as ReturnType<
+                  Parameters<
+                    typeof stopOpenCodeRuntimeLanesForStoppedTeam
+                  >[0]['ports']['getOpenCodeRuntimeAdapter']
+                >,
+              readPreviousLaunchState: async () => null,
+              readConfigForObservation: async () => null,
+              readMembersMeta: async () => [],
+              readPersistedTeamProjectPath: () => null,
+              tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+              deleteSecondaryRuntimeRun,
+              clearPrimaryRuntimeRun,
+              markStoppedTeamOpenCodeRuntimeLanesCleaned,
+              logWarning: vi.fn(),
+            },
+          })
+        ).resolves.toBe(1);
+
+        expect(substituted).toBe(false);
+        expect((await fs.stat(substitutedLaneDirectory)).isDirectory()).toBe(true);
+        await expect(fs.readdir(substitutedLaneDirectory)).resolves.toEqual([]);
+        expect(clearPrimaryRuntimeRun).toHaveBeenCalledWith(teamName);
+        expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).toHaveBeenCalledWith(teamName);
+      } finally {
+        rmdirSpy.mockRestore();
+        rmSync(teamsBasePath, { recursive: true, force: true });
+        rmSync(externalRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('does not clear a replacement generation installed while stopped-team adapter stop is deferred', async () => {
     const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-replacement-'));
     const laneId = 'primary';
@@ -497,6 +784,102 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
     }
   });
 
+  it.each(['opencode-delivery-journal.json', 'opencode-run-tombstones.json'])(
+    'waits for the live %s owner before clearing lane storage',
+    async (barrierFileName) => {
+      const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-store-lock-'));
+      const teamName = 'team';
+      const laneId = 'primary';
+      const runId = 'run-locked';
+      const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+      const durableContents = new Map([
+        ['opencode-delivery-journal.json', 'journal'],
+        ['opencode-run-tombstones.json', 'tombstones'],
+        ['opencode-prompt-delivery-ledger.json', 'ledger'],
+      ]);
+      let signalLockHeld!: () => void;
+      let releaseLock!: () => void;
+      let lockOwner: Promise<void> | null = null;
+      let cleanup: Promise<ClearOpenCodeRuntimeLaneStorageResult> | null = null;
+      const lockHeld = new Promise<void>((resolve) => {
+        signalLockHeld = resolve;
+      });
+      const lockRelease = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+
+      try {
+        await writeOpenCodeRuntimeLaneIndex(teamsBasePath, teamName, {
+          version: 1,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          lanes: {
+            [laneId]: {
+              laneId,
+              runId,
+              state: 'active',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+          },
+        });
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath,
+          teamName,
+          laneId,
+          runId,
+        });
+        for (const [fileName, contents] of durableContents) {
+          await fs.writeFile(join(laneDirectory, fileName), contents, 'utf8');
+        }
+        await fs.writeFile(join(laneDirectory, 'ephemeral.json'), 'remove', 'utf8');
+
+        const barrierPath = getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath,
+          teamName,
+          laneId,
+          fileName: barrierFileName,
+        });
+        lockOwner = withFileLock(barrierPath, async () => {
+          signalLockHeld();
+          await lockRelease;
+        });
+        await lockHeld;
+
+        const cleanupPromise = clearOpenCodeRuntimeLaneStorage({
+          teamsBasePath,
+          teamName,
+          laneId,
+          expectedRunId: runId,
+        });
+        cleanup = cleanupPromise;
+        await expect(
+          Promise.race([
+            cleanupPromise.then(() => 'settled'),
+            new Promise<'waiting'>((resolve) => setTimeout(() => resolve('waiting'), 50)),
+          ])
+        ).resolves.toBe('waiting');
+
+        releaseLock();
+        await lockOwner;
+        await expect(cleanupPromise).resolves.toBe('cleared');
+        await expect(fs.stat(join(laneDirectory, 'ephemeral.json'))).rejects.toMatchObject({
+          code: 'ENOENT',
+        });
+        for (const [fileName, contents] of durableContents) {
+          await expect(fs.readFile(join(laneDirectory, fileName), 'utf8')).resolves.toBe(contents);
+          await expect(fs.stat(join(laneDirectory, `${fileName}.lock`))).rejects.toMatchObject({
+            code: 'ENOENT',
+          });
+        }
+        expect((await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName)).lanes[laneId]).toBe(
+          undefined
+        );
+      } finally {
+        releaseLock();
+        await Promise.allSettled([lockOwner, cleanup].filter((pending) => pending !== null));
+        rmSync(teamsBasePath, { recursive: true, force: true });
+      }
+    }
+  );
   it('does not warn when leftover degraded OpenCode storage has no successor owner', async () => {
     const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-degraded-'));
     const laneId = 'secondary:opencode:bob';

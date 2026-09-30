@@ -152,6 +152,11 @@ const CANCELLABLE_PROVISIONING_STATES: ReadonlySet<TeamProvisioningProgress['sta
   'verifying',
 ]);
 
+const RETAINED_CANCELLATION_RETRY_STATES: ReadonlySet<TeamProvisioningProgress['state']> = new Set([
+  'failed',
+  'cancelled',
+]);
+
 export function createTeamProvisioningCancellationBoundaryPortsFromService<
   TRun extends TeamProvisioningCancellationRun,
 >(
@@ -199,6 +204,33 @@ export function createTeamProvisioningCancellationBoundaryPortsFromService<
 export function createTeamProvisioningCancellationBoundary<
   TRun extends TeamProvisioningCancellationRun,
 >(ports: TeamProvisioningCancellationBoundaryPorts<TRun>): TeamProvisioningCancellationBoundary {
+  const completedTeamProcessStops = new WeakSet<TRun>();
+  const teamProcessStopInFlight = new WeakMap<TRun, Promise<void>>();
+  const retainedPrimaryStopFailures = new WeakMap<TRun, unknown>();
+  const retainedSecondaryStopFailures = new WeakMap<TRun, unknown>();
+  const cancellationInFlightByRunId = new Map<string, Promise<void>>();
+  const stopTeamProcessIfNeeded = (run: TRun): Promise<void> | null => {
+    if (completedTeamProcessStops.has(run)) {
+      return null;
+    }
+    const existingStop = teamProcessStopInFlight.get(run);
+    if (existingStop) {
+      return existingStop;
+    }
+    const stop = ports.killTeamProcessAndWait(run.child).then(
+      () => {
+        completedTeamProcessStops.add(run);
+        teamProcessStopInFlight.delete(run);
+      },
+      (error: unknown) => {
+        teamProcessStopInFlight.delete(run);
+        throw error;
+      }
+    );
+    teamProcessStopInFlight.set(run, stop);
+    return stop;
+  };
+
   const createRuntimeAdapterCancellationPorts = (): RuntimeAdapterCancellationPorts => ({
     ...createTeamProvisioningRuntimeAdapterCancellationPorts({
       cancelledRuntimeAdapterRunIds: ports.cancelledRuntimeAdapterRunIds,
@@ -267,99 +299,175 @@ export function createTeamProvisioningCancellationBoundary<
       ports: createRuntimeAdapterCancellationPorts(),
     });
 
-  return {
-    async cancelProvisioning(runId) {
-      const run = ports.runs.get(runId);
-      if (!run) {
-        const runtimeProgress = ports.runtimeAdapterProgressByRunId.get(runId);
-        if (runtimeProgress) {
-          await cancelRuntimeAdapterProvisioning(runId, runtimeProgress);
-          return;
-        }
-        throw new Error('Unknown runId');
+  const executeCancelProvisioning = async (runId: string): Promise<void> => {
+    const run = ports.runs.get(runId);
+    if (!run) {
+      const runtimeProgress = ports.runtimeAdapterProgressByRunId.get(runId);
+      if (runtimeProgress) {
+        await cancelRuntimeAdapterProvisioning(runId, runtimeProgress);
+        return;
       }
-      if (!CANCELLABLE_PROVISIONING_STATES.has(run.progress.state)) {
-        throw new Error('Provisioning cannot be cancelled in current state');
-      }
+      throw new Error('Unknown runId');
+    }
+    const isRetainedCancellationRetry =
+      run.cancelRequested && RETAINED_CANCELLATION_RETRY_STATES.has(run.progress.state);
+    if (!CANCELLABLE_PROVISIONING_STATES.has(run.progress.state) && !isRetainedCancellationRetry) {
+      throw new Error('Provisioning cannot be cancelled in current state');
+    }
 
-      run.cancelRequested = true;
-      run.processKilled = true;
-      // For a pure-OpenCode aggregate run, run.child is null so killTeamProcess is a
-      // no-op — the runtime lanes are adapter-managed. Mirror dev's
-      // stopOpenCodeAggregateRuntimeLanes: stop the owned primary OpenCode adapter
-      // lane AND any secondary lanes, otherwise cancelling mid-launch (state
-      // 'spawning', after the primary lane came up) orphans the primary runtime
-      // process.
-      let failedStop: PromiseRejectedResult | undefined;
-      let helperCleanupError: unknown = null;
-      const trackedRunId = ports.getTrackedRunId(run.teamName);
-      const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
-      const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
-      const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
-      const hasConflictingOwner = [
-        trackedRunId,
-        provisioningRunId,
-        aliveRunId,
-        primaryRun?.runId ?? null,
-      ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
-      const stops: Promise<void>[] = [ports.killTeamProcessAndWait(run.child)];
-      if (primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId) {
-        stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
-      }
-      if (!hasConflictingOwner) {
-        // Secondary runtime registration happens before adapter.launch, so the
-        // secondary-run store is the cleanup ownership handoff for every lane
-        // that can have spawned. Do not wait for primary/tracked ownership: an
-        // aggregate with no primary lane (or cancellation during primary
-        // promotion) can already own live secondary processes here. The
-        // conflicting-owner fence above still protects a newer run, while the
-        // secondary stop flow preserves each lane's exact runId and blocks
-        // rejoin until its process and storage rollback has completed.
-        if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
-          stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
-        }
-      }
-      if (stops.length > 0) {
-        const stopResults = await Promise.allSettled(stops);
-        failedStop = stopResults.find(
-          (result): result is PromiseRejectedResult => result.status === 'rejected'
+    run.cancelRequested = true;
+    run.processKilled = true;
+    // For a pure-OpenCode aggregate run, run.child is null so killTeamProcess is a
+    // no-op — the runtime lanes are adapter-managed. Mirror dev's
+    // stopOpenCodeAggregateRuntimeLanes: stop the owned primary OpenCode adapter
+    // lane AND any secondary lanes, otherwise cancelling mid-launch (state
+    // 'spawning', after the primary lane came up) orphans the primary runtime
+    // process.
+    let failedStop: PromiseRejectedResult | undefined;
+    let helperCleanupError: unknown = null;
+    const trackedRunId = ports.getTrackedRunId(run.teamName);
+    const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
+    const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
+    const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
+    const hasConflictingOwner = [
+      trackedRunId,
+      provisioningRunId,
+      aliveRunId,
+      primaryRun?.runId ?? null,
+    ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
+    const hasSecondaryRuntimeRuns = ports.hasSecondaryRuntimeRuns(run.teamName);
+    const retainedSecondaryStopIsFenced =
+      isRetainedCancellationRetry && hasConflictingOwner && retainedSecondaryStopFailures.has(run);
+    const retainedPrimaryStopIsFenced =
+      isRetainedCancellationRetry && hasConflictingOwner && retainedPrimaryStopFailures.has(run);
+    const stops: Promise<void>[] = [];
+    const teamProcessStop = stopTeamProcessIfNeeded(run);
+    if (teamProcessStop) {
+      stops.push(teamProcessStop);
+    }
+    if (
+      !retainedPrimaryStopIsFenced &&
+      primaryRun?.providerId === 'opencode' &&
+      primaryRun.runId === run.runId
+    ) {
+      stops.push(
+        ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId).then(
+          () => {
+            retainedPrimaryStopFailures.delete(run);
+          },
+          (error: unknown) => {
+            retainedPrimaryStopFailures.set(run, error);
+            throw error;
+          }
+        )
+      );
+    }
+    if (!hasConflictingOwner) {
+      // Secondary runtime registration happens before adapter.launch, so the
+      // secondary-run store is the cleanup ownership handoff for every lane
+      // that can have spawned. Do not wait for primary/tracked ownership: an
+      // aggregate with no primary lane (or cancellation during primary
+      // promotion) can already own live secondary processes here. The
+      // conflicting-owner fence above still protects a newer run, while the
+      // secondary stop flow preserves each lane's exact runId and blocks
+      // rejoin until its process and storage rollback has completed.
+      if (hasSecondaryRuntimeRuns) {
+        stops.push(
+          ports.stopMixedSecondaryRuntimeLanes(run.teamName).then(
+            () => {
+              retainedSecondaryStopFailures.delete(run);
+            },
+            (error: unknown) => {
+              retainedSecondaryStopFailures.set(run, error);
+              throw error;
+            }
+          )
         );
       }
-      if (!failedStop) {
-        await (
-          ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
-          cleanupRunOwnedAnthropicApiKeyHelper(run)
-        ).catch((error: unknown) => {
-          helperCleanupError = error;
-          ports.logWarning(
-            `[${run.teamName}] Failed to clean Anthropic API-key helper after cancellation: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        });
+    }
+    if (stops.length > 0) {
+      const stopResults = await Promise.allSettled(stops);
+      failedStop = stopResults.find(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+    }
+    if (!failedStop && retainedPrimaryStopIsFenced) {
+      // The primary stop is team-scoped even though it receives the old runId.
+      // Once any team ownership entry has been replaced, retrying it could
+      // target the newer runtime. Retain the original failure instead of
+      // treating changed old-run evidence as proof that the stop completed.
+      failedStop = {
+        status: 'rejected',
+        reason:
+          retainedPrimaryStopFailures.get(run) ??
+          new Error('Retained primary runtime cancellation is fenced by a newer run'),
+      };
+    }
+    if (!failedStop && retainedSecondaryStopIsFenced) {
+      // A team-wide secondary stop cannot be retried after another run acquires
+      // team ownership: it could target the newer run. Keep the old
+      // cancellation failure and its ownership evidence retained until an
+      // exact-owner stop can safely clear the old secondary lane.
+      failedStop = {
+        status: 'rejected',
+        reason:
+          retainedSecondaryStopFailures.get(run) ??
+          new Error('Retained secondary runtime cancellation is fenced by a newer run'),
+      };
+    }
+    if (!failedStop) {
+      await (
+        ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
+        cleanupRunOwnedAnthropicApiKeyHelper(run)
+      ).catch((error: unknown) => {
+        helperCleanupError = error;
+        ports.logWarning(
+          `[${run.teamName}] Failed to clean Anthropic API-key helper after cancellation: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      });
+    }
+    try {
+      const progress = failedStop
+        ? ports.updateProgress(
+            run,
+            'failed',
+            'Provisioning cancellation could not stop all runtime lanes'
+          )
+        : ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
+      run.onProgress(progress);
+    } finally {
+      if (!failedStop && !helperCleanupError) {
+        ports.cleanupRun(run);
       }
-      try {
-        const progress = failedStop
-          ? ports.updateProgress(
-              run,
-              'failed',
-              'Provisioning cancellation could not stop all runtime lanes'
-            )
-          : ports.updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
-        run.onProgress(progress);
-      } finally {
-        if (!failedStop && !helperCleanupError) {
-          ports.cleanupRun(run);
+    }
+    if (failedStop) {
+      throw failedStop.reason;
+    }
+    if (helperCleanupError) {
+      throw helperCleanupError instanceof Error
+        ? helperCleanupError
+        : new Error('Failed to clean app-managed Anthropic authentication material');
+    }
+  };
+
+  return {
+    cancelProvisioning(runId) {
+      const inFlightCancellation = cancellationInFlightByRunId.get(runId);
+      if (inFlightCancellation) {
+        return inFlightCancellation;
+      }
+
+      const cancellation = executeCancelProvisioning(runId);
+      cancellationInFlightByRunId.set(runId, cancellation);
+      const clearInFlightCancellation = (): void => {
+        if (cancellationInFlightByRunId.get(runId) === cancellation) {
+          cancellationInFlightByRunId.delete(runId);
         }
-      }
-      if (failedStop) {
-        throw failedStop.reason;
-      }
-      if (helperCleanupError) {
-        throw helperCleanupError instanceof Error
-          ? helperCleanupError
-          : new Error('Failed to clean app-managed Anthropic authentication material');
-      }
+      };
+      void cancellation.then(clearInFlightCancellation, clearInFlightCancellation);
+      return cancellation;
     },
 
     isCancellableRuntimeAdapterProgress(progress) {

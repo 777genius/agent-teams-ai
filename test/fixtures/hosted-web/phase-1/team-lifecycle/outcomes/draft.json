@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "draft",
+  "auditedState": "draft",
+  "oracles": [
+    {
+      "kind": "success",
+      "page": {
+        "schemaVersion": 1,
+        "snapshotRevision": "revision_snapshot_draft",
+        "items": [
+          {
+            "teamId": "team_draft_fixture",
+            "displayName": "Draft fixture",
+            "lifecycle": "draft",
+            "revision": "revision_team_draft"
+          }
+        ],
+        "nextCursor": null
+      },
+      "warnings": []
+    }
+  ]
+}

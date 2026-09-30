@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* global console, process, require */
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -12,14 +14,16 @@ function fail(message, error) {
   process.exit(1);
 }
 
-let packageRoot;
-try {
-  packageRoot = path.dirname(require.resolve('better-sqlite3-node/package.json'));
-} catch (error) {
-  fail('failed to resolve package root', error);
-}
-
-fs.rmSync(path.join(packageRoot, 'build'), { recursive: true, force: true });
+const packages = ['better-sqlite3', 'better-sqlite3-node'].map((packageName) => {
+  try {
+    return {
+      packageName,
+      packageRoot: path.dirname(require.resolve(`${packageName}/package.json`)),
+    };
+  } catch (error) {
+    fail(`failed to resolve ${packageName} package root`, error);
+  }
+});
 
 const env = { ...process.env };
 delete env.npm_config_runtime;
@@ -30,27 +34,31 @@ delete env.npm_config_target_arch;
 delete env.npm_config_target_platform;
 delete env.npm_config_build_from_source;
 
-const rebuild = spawnSync('npm', ['rebuild'], {
-  cwd: packageRoot,
-  env,
-  stdio: 'inherit',
-  shell: process.platform === 'win32',
-});
+for (const { packageName, packageRoot } of packages) {
+  fs.rmSync(path.join(packageRoot, 'build'), { recursive: true, force: true });
 
-if (rebuild.status !== 0) {
-  fail(`npm rebuild failed with status ${rebuild.status ?? 'unknown'}`);
-}
+  const rebuild = spawnSync('npm', ['rebuild'], {
+    cwd: packageRoot,
+    env,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
 
-try {
-  const Database = require('better-sqlite3-node');
-  const db = new Database(':memory:');
-  const row = db.prepare('select 1 as ok').get();
-  db.close();
-  if (row?.ok !== 1) {
-    fail('sqlite smoke query returned unexpected result');
+  if (rebuild.status !== 0) {
+    fail(`${packageName} npm rebuild failed with status ${rebuild.status ?? 'unknown'}`);
   }
-} catch (error) {
-  fail('sqlite smoke query failed after rebuild', error);
-}
 
-console.log('[better-sqlite3-node] Node ABI rebuild verified');
+  try {
+    const Database = require(packageName);
+    const db = new Database(':memory:');
+    const row = db.prepare('select 1 as ok').get();
+    db.close();
+    if (row?.ok !== 1) {
+      fail(`${packageName} sqlite smoke query returned unexpected result`);
+    }
+  } catch (error) {
+    fail(`${packageName} sqlite smoke query failed after rebuild`, error);
+  }
+
+  console.log(`[better-sqlite3-node] ${packageName} Node ABI rebuild verified`);
+}

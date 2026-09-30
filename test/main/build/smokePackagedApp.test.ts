@@ -15,6 +15,10 @@ interface SmokePackagedAppInternals {
     platform: string
   ): Promise<void>;
   waitForProcessClose(closePromise: Promise<unknown>, timeoutMs: number): Promise<boolean>;
+  isUnexpectedLeaderExit(
+    exit: { code: number | null; signal: string | null; beforeCleanup: boolean } | null,
+    platform: string
+  ): boolean;
 }
 
 interface SmokePackagedAppModule {
@@ -30,8 +34,12 @@ const smokePackagedAppInternals = smokePackagedApp._internal ?? smokePackagedApp
 if (!smokePackagedAppInternals) {
   throw new Error('smokePackagedApp internals were not exported');
 }
-const { getInternalStorageVerificationError, terminateChild, waitForProcessClose } =
-  smokePackagedAppInternals;
+const {
+  getInternalStorageVerificationError,
+  terminateChild,
+  waitForProcessClose,
+  isUnexpectedLeaderExit,
+} = smokePackagedAppInternals;
 
 describe('smokePackagedApp internal storage verification', () => {
   it('accepts an app.db file with the SQLite format header', () => {
@@ -95,6 +103,18 @@ describe('smokePackagedApp internal storage verification', () => {
 });
 
 describe('smokePackagedApp shutdown handling', () => {
+  it('rejects a fatal POSIX exit without misclassifying forced Windows cleanup', () => {
+    expect(
+      isUnexpectedLeaderExit({ code: null, signal: 'SIGILL', beforeCleanup: false }, 'linux')
+    ).toBe(true);
+    expect(
+      isUnexpectedLeaderExit({ code: 1, signal: null, beforeCleanup: false }, 'win32')
+    ).toBe(false);
+    expect(
+      isUnexpectedLeaderExit({ code: 1, signal: null, beforeCleanup: true }, 'win32')
+    ).toBe(true);
+  });
+
   it('reports successful process closure before the timeout', async () => {
     let resolveExit!: (value: unknown) => void;
     const exitPromise = new Promise((resolve) => {

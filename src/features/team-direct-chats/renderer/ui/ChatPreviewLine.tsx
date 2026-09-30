@@ -20,8 +20,7 @@ export const ChatPreviewLine = ({
   if (draft) {
     return (
       <span className="mt-0.5 block truncate text-xs text-[var(--color-text-secondary)]">
-        <span className="font-medium text-blue-400">{t('messages.chats.draft')}:</span>{' '}
-        {text}
+        <span className="font-medium text-blue-400">{t('messages.chats.draft')}:</span> {text}
       </span>
     );
   }

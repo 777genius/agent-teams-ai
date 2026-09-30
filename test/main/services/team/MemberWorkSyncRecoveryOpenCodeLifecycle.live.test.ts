@@ -6,9 +6,11 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   getOpenCodeRuntimePromptMessageIds,
   type OpenCodePromptDeliveryLedgerRecord,

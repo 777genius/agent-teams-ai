@@ -97,3 +97,8 @@ export function buildWorktreePathByMemberName(
   }
   return paths;
 }
+
+export const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+export const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
+export const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
+  'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';

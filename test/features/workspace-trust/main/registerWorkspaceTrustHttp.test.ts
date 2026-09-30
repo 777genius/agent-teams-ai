@@ -2,7 +2,7 @@ import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
 } from '@features/workspace-trust/contracts';
-import { registerWorkspaceTrustHttp } from '@features/workspace-trust/main/adapters/input/registerWorkspaceTrustHttp';
+import { registerWorkspaceTrustHttp } from '@main/composition/workspaceTrust/registerWorkspaceTrustHttp';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

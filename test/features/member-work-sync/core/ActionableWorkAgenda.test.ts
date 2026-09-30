@@ -66,7 +66,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-review-approved',
           subject: 'Approved review after stale work-sync status',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'jack',
           reviewState: 'approved',
         },
@@ -223,7 +223,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-1',
           subject: 'Review me',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'bob',
           reviewState: 'review',
           historyEvents: [
@@ -248,7 +248,7 @@ describe('buildActionableWorkAgenda', () => {
         reviewer: 'alice',
         reviewObligation: 'review_pickup_required',
         reviewRequestEventId: 'evt-1',
-        canBypassPhase2: true,
+        canBypassDeliveryReadiness: true,
       },
     });
   });
@@ -361,7 +361,7 @@ describe('buildActionableWorkAgenda', () => {
     expect(agenda.items[0]?.evidence).toMatchObject({
       reviewObligation: 'review_pickup_required',
       reviewRequestEventId: 'evt-new-request',
-      canBypassPhase2: true,
+      canBypassDeliveryReadiness: true,
       historyEventIds: ['evt-new-request'],
     });
     expect(agenda.items[0]?.evidence.reviewStartedEventId).toBeUndefined();
@@ -441,7 +441,7 @@ describe('buildActionableWorkAgenda', () => {
     });
   });
 
-  it('marks a started review as in-progress evidence that cannot bypass phase2', () => {
+  it('marks a started review as in-progress evidence that cannot bypass delivery readiness', () => {
     const agenda = buildActionableWorkAgenda({
       teamName: 'team-a',
       memberName: 'alice',
@@ -478,7 +478,7 @@ describe('buildActionableWorkAgenda', () => {
       reviewRequestEventId: 'evt-request',
       reviewStartedEventId: 'evt-start',
       reviewStartedBy: 'alice',
-      canBypassPhase2: false,
+      canBypassDeliveryReadiness: false,
       historyEventIds: ['evt-request', 'evt-start'],
     });
   });
@@ -621,7 +621,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-1',
           subject: 'Review me',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'bob',
           reviewState: 'review',
           historyEvents: [
@@ -812,7 +812,7 @@ describe('buildActionableWorkAgenda', () => {
     ]);
   });
 
-  it('treats needsFix as owner work', () => {
+  it('treats active work and completed needsFix review as owner work', () => {
     const agenda = buildActionableWorkAgenda({
       teamName: 'team-a',
       memberName: 'bob',
@@ -838,7 +838,7 @@ describe('buildActionableWorkAgenda', () => {
     });
 
     expect(agenda.items.map((item) => [item.taskId, item.kind, item.reason])).toEqual([
-      ['task-1', 'work', 'review_changes_requested'],
+      ['task-1', 'work', 'owned_in_progress_task'],
       ['task-2', 'work', 'review_changes_requested'],
     ]);
   });

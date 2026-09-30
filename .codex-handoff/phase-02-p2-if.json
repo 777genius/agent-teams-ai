@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.IF.INTEGRATION",
+  "laneId": "p2-if-integration",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+  "canonicalSha": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+  "headSha": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.IF.INTEGRATION",
+      "path": "docs/research/hosted-web/phase-2/foundation-integration.json",
+      "proofLevel": "target_verified",
+      "sha256": "dd90c4ce7bd7ea633320cf9496fdd306e2cba8f980d1faecbb49529b387acb41"
+    }
+  ],
+  "evidenceIds": ["P2.IF.INTEGRATION"],
+  "authority": {
+    "canonicalHead": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+    "workspaceHead": "11db7aea9ba9c7c4c6eabc777a4aa75e4cf302dc",
+    "authorityHeadEqual": true,
+    "workspaceMode": "verified_input_patch",
+    "mandatoryReadOrderCompletedByThisContinuedAttempt": true,
+    "authorityMismatchCount": 0
+  },
+  "predecessors": {
+    "p2F0": {
+      "status": "verified",
+      "disposition": "ACCEPT",
+      "handoffPath": ".codex-handoff/phase-02-p2-f0.json",
+      "handoffSha256": "53ce2854cad51ac973775d9d43e5573a6d87e1708ae672dc80d7fda9bb6ade3f",
+      "artifactPatchSha256": "659b9eb9286b6c9b40e45e43d9aa9871ddae9d26af903d8296d4db7d64f0094f",
+      "artifactManifestSha256": "d608ffa0de187918a1a23b8a8113669169e072442d25d12b51072c85070e1899",
+      "terminalState": "HOLD"
+    },
+    "p2R0": {
+      "status": "verified",
+      "disposition": "ACCEPT",
+      "handoffPath": ".codex-handoff/phase-02-p2-r0.json",
+      "handoffSha256": "209903b5ab6e99a43b38ae282bac08cffdc60cc7e3273b117c47156e9bba4dee",
+      "artifactPatchSha256": "fa896f654b352f3b0027180d87ab5b4e2ec1b0b66f821183a417f0235d1d46d1",
+      "artifactManifestSha256": "48bc27492edfcdcc60cc5e75ca2c1a7fb1bd15747c28997afea175ce56c77749",
+      "reviewEvidencePath": "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+      "reviewEvidenceSha256": "e207883a5a6ae5975cf2500df9b4738f600bca0ef6a220ad77fb2cd7ba34ccc0",
+      "findingCounts": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      },
+      "terminalState": "HOLD"
+    }
+  },
+  "provenance": {
+    "integrationInputArtifactSha256": "fa896f654b352f3b0027180d87ab5b4e2ec1b0b66f821183a417f0235d1d46d1",
+    "expectedWorkspaceStagedPatchSha256": "53c4a1ad71c58643f5e3229d2a358038d52597f0bc3ce3defc8ecb55270afcac",
+    "workspaceStagedPatchSha256": "53c4a1ad71c58643f5e3229d2a358038d52597f0bc3ce3defc8ecb55270afcac",
+    "workspaceStagedPatchByteEqualsPreservedHandoffArtifact": true,
+    "preservedWorkspaceHandoffManifestSha256": "100cc533bba4964d70da327ed9fff47543f2ca4ae3b049ac5935fb87fc4fd4a6",
+    "preservedWorkspaceHandoffSummarySha256": "809f10950fbced85159e0f99aa498916bbc0af585894d2e8b60e119bf075f5ba",
+    "acceptedInputPathListSha256": "237d2bcb27e556070541617aeb8082ae2dda95b78d379f118d8a1986cd8a289e",
+    "acceptedInputContentManifestSha256": "800315b2cc5493cdef842a0dbabd77bd7a4a56f160bfe8d7dbdfcd546f1148d0",
+    "allArtifactAndAdmissionHashesMatched": true
+  },
+  "acceptedInputPaths": [
+    {
+      "path": ".codex-handoff/phase-02-p2-f0.json",
+      "sha256": "53ce2854cad51ac973775d9d43e5573a6d87e1708ae672dc80d7fda9bb6ade3f"
+    },
+    {
+      "path": ".codex-handoff/phase-02-p2-r0.json",
+      "sha256": "209903b5ab6e99a43b38ae282bac08cffdc60cc7e3273b117c47156e9bba4dee"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+      "sha256": "e207883a5a6ae5975cf2500df9b4738f600bca0ef6a220ad77fb2cd7ba34ccc0"
+    },
+    {
+      "path": "src/shared/contracts/hosted/identifiers.ts",
+      "sha256": "73978dd8871f3af363810b9a90b4a42b464982a25898eac082677b9557d1dc41"
+    },
+    {
+      "path": "src/shared/contracts/hosted/index.ts",
+      "sha256": "a11b722edd3a9fb1b4ea451bbbf2f01703a93897515092ceefc6bef5157bbac2"
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+      "sha256": "7e8b88816245e95921dbcef8c444c572ec2d610cf32dee6d4934a65d33d63b42"
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "sha256": "19c327b55a2d407c623e8eae6bb60d20913eca60d737499f161d180d212ee511"
+    }
+  ],
+  "materialization": {
+    "cleanTargetedCanonicalReconstructionCheckExitCode": 0,
+    "cleanTargetedCanonicalReconstructionApplyExitCode": 0,
+    "acceptedR0ArtifactCheckExitCode": 0,
+    "acceptedR0ArtifactApplyExitCode": 0,
+    "materializedPathCount": 7,
+    "materializedContentManifestMatchesWorkspace": true,
+    "acceptedBytesMutated": false
+  },
+  "activation": {
+    "foundationAuthority": "activated",
+    "activationScope": "controller-consumable accepted foundation evidence at canonical authority",
+    "gitCommitCreated": false,
+    "gitPushPerformed": false,
+    "controllerIntegrationPerformed": false,
+    "successorLaunched": false,
+    "otherWorkerReviewed": false
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-02-p2-f0.json",
+    ".codex-handoff/phase-02-p2-if.json",
+    ".codex-handoff/phase-02-p2-r0.json",
+    "docs/research/hosted-web/phase-2/foundation-integration.json",
+    "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+    "src/shared/contracts/hosted/identifiers.ts",
+    "src/shared/contracts/hosted/index.ts",
+    "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+    "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts"
+  ],
+  "changedPathCount": 9,
+  "scopeProof": {
+    "acceptedInputPathCount": 7,
+    "integrationOutputPathCount": 2,
+    "stagedAcceptedPathCount": 7,
+    "untrackedIntegrationOutputPathCount": 2,
+    "unexpectedPathCount": 0,
+    "onlyAcceptedInputsAndDeclaredIntegrationEvidenceChanged": true,
+    "acceptedInputUnstagedByteDifferenceCount": 0,
+    "productSourceOrTestEditedByIntegrator": false
+  },
+  "checks": [
+    {
+      "id": "identity-tests",
+      "command": "cd .. && pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "cwd": "src",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 36,
+      "testsTotal": 36,
+      "toolVersion": "vitest 3.2.6"
+    },
+    {
+      "id": "lint",
+      "command": "cd .. && pnpm lint:fast:files -- src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "cwd": "src",
+      "exitCode": 0
+    },
+    {
+      "id": "typecheck",
+      "command": "cd .. && pnpm typecheck",
+      "cwd": "src",
+      "exitCode": 0,
+      "diagnosticCount": 0,
+      "classification": "clean at canonical integrated authority"
+    },
+    {
+      "id": "prettier",
+      "command": "cd .. && pnpm exec prettier --check src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts .codex-handoff/phase-02-p2-f0.json .codex-handoff/phase-02-p2-r0.json .codex-handoff/phase-02-p2-if.json docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md docs/research/hosted-web/phase-2/foundation-integration.json",
+      "cwd": "src",
+      "exitCode": 0,
+      "checkedPathCount": 9
+    },
+    {
+      "id": "diff",
+      "command": "cd .. && git diff --check",
+      "cwd": "src",
+      "exitCode": 0
+    },
+    {
+      "id": "status",
+      "command": "cd .. && git status --short",
+      "cwd": "src",
+      "exitCode": 0,
+      "classification": "exactly seven staged accepted inputs and two untracked integration evidence outputs"
+    },
+    {
+      "id": "accepted-staged-diff",
+      "command": "git diff --cached --check",
+      "exitCode": 0
+    }
+  ],
+  "classifiedScans": {
+    "secretCredentialScan": {
+      "scopePathCount": 9,
+      "exitCode": 0,
+      "observedMatchLineCount": 8,
+      "allMatchesClassified": true
+    },
+    "privatePathScan": {
+      "scopePathCount": 9,
+      "exitCode": 0,
+      "observedMatchLineCount": 7,
+      "allMatchesClassified": true
+    },
+    "highConfidenceSecretSignatureScan": {
+      "scopePathCount": 9,
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true
+    }
+  },
+  "selfReview": {
+    "completeIntegrationOutputReread": true,
+    "completeScopeDiffReread": true,
+    "cleanArchitectureDddSolidConclusionsPreserved": true,
+    "transportBoundaryPreserved": true,
+    "safeErrorsPreserved": true,
+    "phaseOneCompatibilityPreserved": true,
+    "noMutableIdentityDerivationIntroduced": true,
+    "exactNinePathScopeConfirmed": true,
+    "acceptedBytesRemainByteIdentical": true,
+    "secretAndPrivatePathClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "canonical identifier allocation, uniqueness, entropy and collision handling",
+    "restart, rename, display-name-change, remount, persistence, registry and legacy-adoption stability",
+    "production filesystem, persistence, transport, Electron, main-process, provider and composition behavior",
+    "successor execution, Phase 2 serial integration, milestone acceptance, commit and push"
+  ],
+  "blockers": [],
+  "generatedAt": "2026-07-16T11:22:27Z",
+  "nextAction": "controller may admit P2.A through P2.E subject to the fixed DAG, product slots and host budget"
+}

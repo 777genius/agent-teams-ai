@@ -36,6 +36,7 @@ function createDiagnosticsRuntime(
 function createDiagnosticsInput(): TeamProvisioningProviderDiagnosticsRuntimeInput {
   return {
     transientProbeProcesses: new Set<TeamProvisioningProbeChild>(),
+    isCancelled: () => false,
     providerConnectionService: {
       getConfiguredCodexCustomProviderModel: vi.fn(() => null),
     },
@@ -100,6 +101,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
     const isAuthFailureWarning = vi.fn(() => false);
     const normalizeApiRetryErrorMessage = vi.fn((text: string) => text);
     const service = {
+      isShutdownRequested: vi.fn(() => false),
       providerConnectionService,
       appShellBoundary,
     } satisfies TeamProvisioningProviderRuntimeFacadeServiceHost;
@@ -119,6 +121,8 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
     });
 
     expect(deps.diagnosticsRuntimeInput.transientProbeProcesses).toBe(transientProbeProcesses);
+    expect(deps.diagnosticsRuntimeInput.isCancelled()).toBe(false);
+    expect(service.isShutdownRequested).toHaveBeenCalledOnce();
     expect(deps.diagnosticsRuntimeInput.providerConnectionService).toBe(providerConnectionService);
     expect(deps.diagnosticsRuntimeInput.logger).toBe(logger);
     expect(deps.diagnosticsRuntimeInput.isAuthFailureWarning).toBe(isAuthFailureWarning);

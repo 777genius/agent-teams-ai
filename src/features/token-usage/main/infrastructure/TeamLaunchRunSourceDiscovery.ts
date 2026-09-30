@@ -1,11 +1,10 @@
+import { createHash } from 'node:crypto';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
+
+import { isSupportedLaunchStateDocument } from '@main/services/team/TeamLaunchStateDocumentPersistence';
 import { encodePath, getProjectsBasePath } from '@main/utils/pathDecoder';
-import {
-  inferProviderBillingMode,
-  normalizeProviderBillingMode,
-} from '@shared/utils/providerBillingMode';
-import { createHash } from 'crypto';
-import { readdir, readFile, stat } from 'fs/promises';
-import path from 'path';
+import { inferProviderBillingMode, normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 
 import type {
   TokenUsageBillingMode,
@@ -122,7 +121,15 @@ async function readLaunchState(filePath: string): Promise<PersistedTeamLaunchSna
   const teamName = readString(record?.teamName);
   const updatedAt = readString(record?.updatedAt);
   const members = asRecord(record?.members);
-  if (!teamName || !updatedAt || !members) return null;
+  if (
+    !teamName ||
+    !updatedAt ||
+    !members ||
+    record?.version !== 2 ||
+    !isSupportedLaunchStateDocument(path.basename(path.dirname(filePath)), record)
+  ) {
+    return null;
+  }
   return parsed as PersistedTeamLaunchSnapshot;
 }
 
@@ -621,9 +628,7 @@ function runtimeKindFromProvider(providerId: TeamProviderId | undefined): TokenU
   return 'unknown';
 }
 
-function buildTeamLaunchCommandId(teamName: string): string {
-  return `team-launch:${teamName}`;
-}
+function buildTeamLaunchCommandId(teamName: string): string { return `team-launch:${teamName}`; }
 
 function buildTeamLaunchInvocationId(
   teamName: string,

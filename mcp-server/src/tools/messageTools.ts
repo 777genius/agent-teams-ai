@@ -5,13 +5,21 @@ import { getController } from '../controller';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
+import {
+  dispatchHostedOwnerTool,
+  isHostedAgentToolMode,
+  type HostedAgentToolAdmissionOptions,
+} from './hostedAgentToolAdmission';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
   claudeDir: z.string().min(1).optional(),
 };
 
-export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
+export function registerMessageTools(
+  server: Pick<FastMCP, 'addTool'>,
+  hostedAdmission: HostedAgentToolAdmissionOptions = {}
+) {
   server.addTool({
     name: 'message_send',
     description:
@@ -50,19 +58,28 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
       leadSessionId,
       attachments,
       taskRefs,
-    }) => {
-      assertConfiguredTeam(teamName, claudeDir);
-      const result = getController(teamName, claudeDir).messages.sendMessage({
-        to,
-        text,
-        ...(from ? { from } : {}),
-        ...(summary ? { summary } : {}),
-        ...(source ? { source } : {}),
-        ...(relayOfMessageId ? { relayOfMessageId } : {}),
-        ...(leadSessionId ? { leadSessionId } : {}),
-        ...(attachments?.length ? { attachments } : {}),
-        ...(taskRefs?.length ? { taskRefs } : {}),
-      });
+    }, context) => {
+      let result: unknown;
+      if (isHostedAgentToolMode(hostedAdmission)) {
+        result = await dispatchHostedOwnerTool({
+          tool: 'message_send', teamName, from, to, text, summary, source,
+          relayOfMessageId, leadSessionId, hasAttachments: Boolean(attachments?.length),
+          taskRefs,
+        }, context, hostedAdmission);
+      } else {
+        assertConfiguredTeam(teamName, claudeDir);
+        result = getController(teamName, claudeDir).messages.sendMessage({
+          to,
+          text,
+          ...(from ? { from } : {}),
+          ...(summary ? { summary } : {}),
+          ...(source ? { source } : {}),
+          ...(relayOfMessageId ? { relayOfMessageId } : {}),
+          ...(leadSessionId ? { leadSessionId } : {}),
+          ...(attachments?.length ? { attachments } : {}),
+          ...(taskRefs?.length ? { taskRefs } : {}),
+        });
+      }
       const deduplicated =
         result && typeof result === 'object' && (result as { deduplicated?: unknown }).deduplicated === true;
       let protocolInstruction =

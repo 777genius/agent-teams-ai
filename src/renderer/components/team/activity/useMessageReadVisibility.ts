@@ -1,9 +1,6 @@
 import { type RefObject, useLayoutEffect, useRef } from 'react';
 
-import {
-  findConversationFooter,
-  getConversationVisibleBottom,
-} from './conversationVisibleArea';
+import { findConversationFooter, getConversationVisibleBottom } from './conversationVisibleArea';
 
 const BASE_VISIBILITY_RATIO = 0.15;
 const HEIGHT_ROUNDING_TOLERANCE_PX = 0.5;
@@ -239,7 +236,8 @@ export function useMessageReadVisibility({
         !row.isConnected ||
         document.visibilityState === 'hidden' ||
         !hasUncoveredReadArea(row, root, innerClip, measureVisibility(row, root, innerClip))
-      ) return;
+      )
+        return;
       reportState.current.reported = true;
       disconnectIntersectionObserver();
       stopListeningForUncover();
@@ -276,7 +274,9 @@ export function useMessageReadVisibility({
         row,
         root ?? document.documentElement,
         ...(innerClip ? [innerClip] : []),
-        ...(root ? [findConversationFooter(root)].filter((node): node is HTMLElement => !!node) : []),
+        ...(root
+          ? [findConversationFooter(root)].filter((node): node is HTMLElement => !!node)
+          : []),
       ]);
       for (const target of resizeTargets) resizeObserver.observe(target);
     }

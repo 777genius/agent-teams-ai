@@ -1,5 +1,20 @@
 # Team Provisioning Feature
 
+Owns desktop team creation, draft launch, relaunch, provisioning preflight, run status, cancellation, and launch diagnostics.
+
+## Boundaries
+
+- `contracts/` owns the stable provisioning IPC channel names.
+- `core/application/` coordinates launch policy through narrow ports and plans provisioning progress state transitions without depending on Electron, Zustand, or concrete filesystem services.
+- `main/adapters/input/` validates untrusted IPC input and owns renderer progress delivery.
+- `main/adapters/output/` binds filesystem, metadata, cache, diagnostics, and launch-observability effects.
+- `main/composition/` is the only place where concrete main-process services are wired to the application layer.
+- `renderer/` owns provisioning controls, progress side effects, and team/run-scoped runtime freshness memory, binding IPC, view refresh, analytics, and runtime cleanup through narrow ports.
+
+Create and launch always record launch intent before provisioning starts, engage the team watch scope before startup artifacts are written, report progress to the launch I/O governor before notifying the invoking renderer, and invalidate roster snapshots only after successful completion.
+
+Renderer store composition belongs in the app store composition root. Provisioning policies and control actions must be added through the feature's public entrypoints instead of growing `teamSlice.ts` with new IPC calls or duplicated state rules.
+
 This feature is being migrated incrementally from the legacy
 `TeamProvisioningService` hierarchy. New slices use explicit composition; the
 legacy service remains a stable compatibility facade while callers migrate.
@@ -47,8 +62,10 @@ replacement (and before stopping a live team).
 
 For a settings-originated relaunch, the optional `memberSettingsRelaunch` field on
 `ReplaceMembersRequest` carries the target and roster fingerprints into the
-existing IPC mutation gate. `persistNodeMemberSettingsRelaunch` validates this
-intent and composes the existing member repository and team metadata store.
+existing IPC mutation gate. The portable `createMemberSettingsRelaunchFeature`
+operation validates this intent and coordinates feature-owned persistence. The app-owned
+`persistNodeMemberSettingsRelaunch` compatibility wrapper supplies Node filesystem and metadata
+stores through the same construction path used by ordinary member settings.
 The config lock covers conflict checks, configured member writes and rollback;
 lead model/effort also update saved launch defaults and launch identity. This
 bounded path keeps the roster identity unchanged; add/remove members separately.
@@ -62,6 +79,9 @@ and inherited launch defaults before writes, then rechecks defaults inside the
 lead metadata update. Missing tokens fail closed. The mutation boundary also
 checks the existing `hasProvisioningRun` query, because a configuring successor
 has not yet become an alive team.
+
+The renderer shell injects that saved-request reader through the public dialog bridge;
+the feature renderer entrypoint does not import the concrete renderer API boundary.
 
 Settings roster projection uses the same canonical legacy-lead classification as
 member settings. Canonical metadata launch discovery also excludes those leads.

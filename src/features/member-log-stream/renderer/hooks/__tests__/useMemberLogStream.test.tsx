@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { memberLogObservationPorts } from '../../index';
 import { useMemberLogStream } from '../useMemberLogStream';
 
 import type { MemberLogStreamResponse } from '../../../contracts';
@@ -14,6 +15,8 @@ const apiMock = vi.hoisted(() => ({
     setMemberLogStreamTracking: vi.fn(),
   },
   teams: {
+    getLogsForTask: vi.fn(),
+    getMemberLogs: vi.fn(),
     onTeamChange: vi.fn(),
   },
 }));
@@ -88,6 +91,8 @@ describe('useMemberLogStream', () => {
     apiMock.memberLogStream.getMemberLogStream.mockReset();
     apiMock.memberLogStream.setMemberLogStreamTracking.mockReset();
     apiMock.memberLogStream.setMemberLogStreamTracking.mockResolvedValue(undefined);
+    apiMock.teams.getLogsForTask.mockReset();
+    apiMock.teams.getMemberLogs.mockReset();
     apiMock.teams.onTeamChange.mockReset();
     apiMock.teams.onTeamChange.mockReturnValue(() => undefined);
   });
@@ -221,6 +226,74 @@ describe('useMemberLogStream', () => {
     });
   });
 
+  it('tracks the mounted team and releases both tracking and the change subscription', async () => {
+    const unsubscribe = vi.fn();
+    apiMock.teams.onTeamChange.mockReturnValue(unsubscribe);
+    apiMock.memberLogStream.getMemberLogStream.mockResolvedValue(
+      response('2026-04-03T00:00:00.000Z')
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <HookProbe
+          teamName="alpha-team"
+          selectedMember={member('alice')}
+          onState={() => undefined}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(apiMock.memberLogStream.setMemberLogStreamTracking).toHaveBeenCalledWith(
+      'alpha-team',
+      true
+    );
+    expect(apiMock.teams.onTeamChange).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(apiMock.memberLogStream.setMemberLogStreamTracking).toHaveBeenLastCalledWith(
+      'alpha-team',
+      false
+    );
+  });
+
+  it('preserves the initial load error for the renderer', async () => {
+    apiMock.memberLogStream.getMemberLogStream.mockRejectedValue(
+      new Error('member stream unavailable')
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onState = vi.fn((_: ReturnType<typeof useMemberLogStream>) => undefined);
+
+    await act(async () => {
+      root.render(
+        <HookProbe teamName="alpha-team" selectedMember={member('alice')} onState={onState} />
+      );
+      await Promise.resolve();
+    });
+
+    expect(onState.mock.calls.at(-1)?.[0]).toMatchObject({
+      error: 'member stream unavailable',
+      loading: false,
+      stream: null,
+    });
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('releases stale in-flight state when the section is disabled before a request finishes', async () => {
     const firstLoad = createDeferred<MemberLogStreamResponse>();
     apiMock.memberLogStream.getMemberLogStream
@@ -321,6 +394,27 @@ describe('useMemberLogStream', () => {
 
     act(() => {
       root.unmount();
+    });
+  });
+
+  it('maps member and task summary queries through the feature adapter', async () => {
+    apiMock.teams.getMemberLogs.mockResolvedValue([]);
+    apiMock.teams.getLogsForTask.mockResolvedValue([]);
+
+    await memberLogObservationPorts.readMemberLogs('alpha-team', 'alice');
+    await memberLogObservationPorts.readTaskLogs('alpha-team', 'task-7', {
+      owner: 'alice',
+      status: 'in_progress',
+      intervals: [{ startedAt: '2026-04-03T00:00:00.000Z' }],
+      since: '2026-04-02T23:00:00.000Z',
+    });
+
+    expect(apiMock.teams.getMemberLogs).toHaveBeenCalledWith('alpha-team', 'alice');
+    expect(apiMock.teams.getLogsForTask).toHaveBeenCalledWith('alpha-team', 'task-7', {
+      owner: 'alice',
+      status: 'in_progress',
+      intervals: [{ startedAt: '2026-04-03T00:00:00.000Z' }],
+      since: '2026-04-02T23:00:00.000Z',
     });
   });
 });

@@ -1,8 +1,8 @@
-import { probeOpenCodeBinaryVersion } from '@features/runtime-provider-management/main';
 import {
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { probeOpenCodeBinaryVersion } from '@main/services/infrastructure/openCodeVersionDiagnostics';
 import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
 import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from './openCodeBridgeRuntimeEnv';

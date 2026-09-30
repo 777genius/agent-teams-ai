@@ -137,6 +137,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:05:00.000Z',
           actor: 'alice',
         },
@@ -188,6 +189,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:05:00.000Z',
           actor: 'alice',
         },
@@ -269,9 +271,7 @@ describe('TeamTaskActivityIntervalService', () => {
 
     expect(result.changedTasks).toBe(1);
     expect(task.description).toBe(longDescription);
-    expect(((task.comments as { text?: string }[] | undefined)?.[0]?.text ?? '')).toBe(
-      longComment
-    );
+    expect((task.comments as { text?: string }[] | undefined)?.[0]?.text ?? '').toBe(longComment);
     expect(task.workIntervals).toEqual([
       { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:10:00.000Z' },
     ]);
@@ -327,6 +327,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started-old',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:00:00.000Z',
           actor: 'alice',
         },
@@ -339,6 +340,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started-current',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:20:00.000Z',
           actor: 'alice',
         },
@@ -396,6 +398,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:05:00.000Z',
           actor: 'alice',
         },
@@ -451,6 +454,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:05:00.000Z',
           actor: 'alice',
         },
@@ -502,6 +506,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:06:00.000Z',
           actor: 'bob',
         },
@@ -595,11 +600,8 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.resumeActiveIntervalsForMembers(
-        'alpha',
-        ['bob'],
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.resumeActiveIntervalsForMembers('alpha', ['bob'], '2026-05-08T10:20:00.000Z')
+        .changedTasks
     ).toBe(0);
 
     const jsonParseSpy = vi.spyOn(JSON, 'parse');
@@ -625,11 +627,8 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.resumeActiveIntervalsForMembers(
-        'alpha',
-        ['bob'],
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.resumeActiveIntervalsForMembers('alpha', ['bob'], '2026-05-08T10:20:00.000Z')
+        .changedTasks
     ).toBe(0);
 
     const mutateWithLockSpy = vi.spyOn(
@@ -670,8 +669,9 @@ describe('TeamTaskActivityIntervalService', () => {
     });
 
     const service = new TeamTaskActivityIntervalService();
-    expect(service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:20:00.000Z').changedTasks)
-      .toBe(2);
+    expect(
+      service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:20:00.000Z').changedTasks
+    ).toBe(2);
 
     const jsonParseSpy = vi.spyOn(JSON, 'parse');
     const secondResult = service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:25:00.000Z');
@@ -691,8 +691,9 @@ describe('TeamTaskActivityIntervalService', () => {
     });
 
     const service = new TeamTaskActivityIntervalService();
-    expect(service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:20:00.000Z').changedTasks)
-      .toBe(1);
+    expect(
+      service.pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:20:00.000Z').changedTasks
+    ).toBe(1);
 
     await writeTask('alpha', {
       id: 'bob-task',
@@ -725,11 +726,8 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.resumeActiveIntervalsForMember(
-        'alpha',
-        'bob',
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.resumeActiveIntervalsForMember('alpha', 'bob', '2026-05-08T10:20:00.000Z')
+        .changedTasks
     ).toBe(0);
 
     const mutateWithLockSpy = vi.spyOn(
@@ -763,11 +761,8 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.resumeActiveIntervalsForMember(
-        'alpha',
-        'bob',
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.resumeActiveIntervalsForMember('alpha', 'bob', '2026-05-08T10:20:00.000Z')
+        .changedTasks
     ).toBe(0);
 
     await writeTask('alpha', {
@@ -811,11 +806,7 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.pauseActiveIntervalsForMember(
-        'alpha',
-        'bob',
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.pauseActiveIntervalsForMember('alpha', 'bob', '2026-05-08T10:20:00.000Z').changedTasks
     ).toBe(0);
 
     const mutateWithLockSpy = vi.spyOn(
@@ -849,11 +840,8 @@ describe('TeamTaskActivityIntervalService', () => {
 
     const service = new TeamTaskActivityIntervalService();
     expect(
-      service.resumeActiveIntervalsForMembers(
-        'alpha',
-        ['bob'],
-        '2026-05-08T10:20:00.000Z'
-      ).changedTasks
+      service.resumeActiveIntervalsForMembers('alpha', ['bob'], '2026-05-08T10:20:00.000Z')
+        .changedTasks
     ).toBe(0);
 
     await writeTask('alpha', {
@@ -954,6 +942,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:06:00.000Z',
           actor: 'bob',
         },
@@ -1004,6 +993,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:05:00.000Z',
           actor: 'bob',
         },
@@ -1037,6 +1027,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:06:00.000Z',
           actor: 'alice',
         },
@@ -1052,6 +1043,79 @@ describe('TeamTaskActivityIntervalService', () => {
 
     expect(result.changedTasks).toBe(0);
     expect(task.reviewIntervals).toBeUndefined();
+  });
+
+  it('does not resume review from a persisted start event missing its target state', async () => {
+    await writeTask('alpha', {
+      id: 'task-1',
+      subject: 'Build',
+      owner: 'bob',
+      status: 'completed',
+      historyEvents: [
+        {
+          id: 'invalid-review-start',
+          type: 'review_started',
+          timestamp: '2026-05-08T10:06:00.000Z',
+          actor: 'alice',
+        },
+      ],
+    });
+
+    const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMember(
+      'alpha',
+      'alice',
+      '2026-05-08T10:20:00.000Z'
+    );
+    expect(result.changedTasks).toBe(0);
+    expect((await readTask('alpha', 'task-1')).reviewIntervals).toBeUndefined();
+  });
+
+  it('does not resume a closed review interval after a persisted review reset', async () => {
+    await writeTask('alpha', {
+      id: 'task-1',
+      subject: 'Build',
+      owner: 'bob',
+      status: 'completed',
+      reviewState: 'none',
+      reviewIntervals: [
+        {
+          reviewer: 'alice',
+          startedAt: '2026-05-08T10:05:00.000Z',
+          completedAt: '2026-05-08T10:10:00.000Z',
+        },
+      ],
+      historyEvents: [
+        {
+          id: 'review-start',
+          type: 'review_started',
+          to: 'review',
+          timestamp: '2026-05-08T10:05:00.000Z',
+          actor: 'alice',
+        },
+        {
+          id: 'review-reset',
+          type: 'review_reset',
+          from: 'review',
+          to: 'none',
+          reason: 'move_back_to_done',
+          timestamp: '2026-05-08T10:10:00.000Z',
+        },
+      ],
+    });
+
+    const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMember(
+      'alpha',
+      'alice',
+      '2026-05-08T10:20:00.000Z'
+    );
+    expect(result.changedTasks).toBe(0);
+    expect((await readTask('alpha', 'task-1')).reviewIntervals).toEqual([
+      {
+        reviewer: 'alice',
+        startedAt: '2026-05-08T10:05:00.000Z',
+        completedAt: '2026-05-08T10:10:00.000Z',
+      },
+    ]);
   });
 
   it('repairs stale open intervals using last runtime evidence plus a small grace window', async () => {
@@ -1140,6 +1204,7 @@ describe('TeamTaskActivityIntervalService', () => {
         {
           id: 'event-review-started',
           type: 'review_started',
+          to: 'review',
           timestamp: '2026-05-08T10:10:00.000Z',
           actor: 'alice',
         },
@@ -1311,6 +1376,7 @@ describe('TeamTaskActivityIntervalService', () => {
             {
               id: 'event-review-started',
               type: 'review_started',
+              to: 'review',
               timestamp: '2026-05-08T10:06:00.000Z',
               actor: 'bob',
             },

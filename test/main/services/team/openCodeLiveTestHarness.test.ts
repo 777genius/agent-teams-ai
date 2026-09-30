@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildLiveTeamControlApiServices } from './openCodeLiveTestHarness';
 
+import type { TeamApplicationHost } from '../../../../src/main/composition/team/TeamApplicationHost';
 import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 
 function createServiceDouble(): TeamProvisioningService {
@@ -41,30 +42,26 @@ function createServiceDouble(): TeamProvisioningService {
 }
 
 describe('openCodeLiveTestHarness', () => {
-  it('wires runtime-control callbacks into the live team control API services', () => {
+  it('wires runtime control callbacks into the live team control API services', () => {
     const svc = createServiceDouble();
 
     const services = buildLiveTeamControlApiServices(svc);
 
-    expect(services.teamApis?.provisioningStart?.launchTeam).toBeDefined();
-    expect(services.teamApis?.provisioningStatus?.getProvisioningStatus).toBeDefined();
-    expect(services.teamApis?.runtime?.getRuntimeState).toBeDefined();
-    expect(services.teamApis?.runtimeControl?.recordOpenCodeRuntimeHeartbeat).toBeDefined();
+    expect(services.teamApplicationHost).toBeDefined();
+    expect(services.teamMemberDiagnosticsApi?.getMemberSpawnStatusesReadOnly).toBeDefined();
+    expect(services.teamMemberDiagnosticsApi?.getTeamAgentRuntimeSnapshotReadOnly).toBeDefined();
   });
 
   it('keeps explicit harness service overrides available for tests', () => {
     const svc = createServiceDouble();
-    const override = { service: 'runtime-control-override' } as unknown as TeamProvisioningService;
-    const defaultTeamApis = buildLiveTeamControlApiServices(svc).teamApis!;
+    const override = {
+      service: 'team-application-host-override',
+    } as unknown as TeamApplicationHost;
 
     const services = buildLiveTeamControlApiServices(svc, {
-      teamApis: {
-        ...defaultTeamApis,
-        runtimeControl: override,
-      },
+      teamApplicationHost: override,
     });
 
-    expect(services.teamApis?.runtimeControl).toBe(override);
-    expect(services.teamApis?.provisioningStart?.launchTeam).toBeDefined();
+    expect(services.teamApplicationHost).toBe(override);
   });
 });

@@ -239,6 +239,14 @@ const EventContent = ({
           <ReviewStateBadge state="approved" />
         </span>
       );
+    case 'review_reset':
+      return (
+        <span className="flex items-center gap-1">
+          <ReviewStateBadge state={event.from} />
+          <ArrowRight size={10} className="text-[var(--color-text-muted)]" />
+          <StatusBadge status="completed" />
+        </span>
+      );
     default:
       return <span>{t('taskDetail.workflowTimeline.unknownEvent')}</span>;
   }
@@ -323,6 +331,8 @@ function dotColor(event: TaskHistoryEvent): string {
       return 'bg-amber-400';
     case 'review_approved':
       return 'bg-emerald-400';
+    case 'review_reset':
+      return dotColorForStatus('completed');
     default:
       return 'bg-zinc-500';
   }

@@ -1,0 +1,6 @@
+{
+  "fixtureId": "P0.CURRENT.NEGATIVE.DUPLICATE_ID",
+  "targetIndex": "decision-index.json",
+  "mutation": { "type": "duplicate-first-id", "collection": "decisions", "idField": "decisionId" },
+  "expectedCode": "DUPLICATE_ID"
+}

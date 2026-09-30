@@ -7,7 +7,6 @@ import {
 } from '../../opencode/bridge/OpenCodeStartupSweepGate';
 import {
   bindTeamHttpHandlerApis,
-  bindTeamIpcHandlerApis,
   bindTeamProvisioningStartApi,
 } from '../TeamProvisioningApis';
 
@@ -29,7 +28,7 @@ const launchRequest: TeamLaunchRequest = {
   providerId: 'anthropic',
 };
 
-function fixture(transport: 'ipc' | 'http') {
+function fixture() {
   const createTeam = vi.fn().mockResolvedValue({ runId: 'created' });
   const launchTeam = vi.fn().mockResolvedValue({ runId: 'launched' });
   const declared: Record<string, unknown> = {
@@ -39,11 +38,8 @@ function fixture(transport: 'ipc' | 'http') {
   };
   const source = new Proxy(declared, {
     get: (target, key: string) => target[key] ?? vi.fn(),
-  }) as unknown as Parameters<typeof bindTeamIpcHandlerApis>[0] &
-    Parameters<typeof bindTeamHttpHandlerApis>[0];
-  const api = (transport === 'ipc' ? bindTeamIpcHandlerApis : bindTeamHttpHandlerApis)(
-    source
-  ).provisioningStart;
+  }) as unknown as Parameters<typeof bindTeamHttpHandlerApis>[0];
+  const api = bindTeamHttpHandlerApis(source).provisioningStart;
   return { api, createTeam, launchTeam };
 }
 
@@ -60,10 +56,8 @@ describe('Windows startup cleanup admission', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['ipc', 'http'] as const)(
-    '%s refuses mixed create and unknown saved launch without delayed forwarding; manual retry works',
-    async (transport) => {
-      const { api, createTeam, launchTeam } = fixture(transport);
+  it('refuses mixed create and unknown saved launch without delayed forwarding; manual retry works', async () => {
+      const { api, createTeam, launchTeam } = fixture();
       const onProgress = vi.fn();
       await expect(api.createTeam(createRequest, onProgress)).rejects.toBeInstanceOf(
         OpenCodeStartupCleanupBusyError
@@ -88,11 +82,10 @@ describe('Windows startup cleanup admission', () => {
       });
       expect(createTeam).toHaveBeenCalledTimes(1);
       expect(launchTeam).toHaveBeenCalledTimes(1);
-    }
-  );
+    });
 
   it('admits a known non-OpenCode create roster while cleanup is pending', async () => {
-    const { api, createTeam } = fixture('ipc');
+    const { api, createTeam } = fixture();
     await api.createTeam({ ...createRequest, members: [] }, vi.fn());
     await api.createTeam(
       { ...createRequest, members: [{ name: 'worker', role: 'Worker', providerId: 'codex' }] },
@@ -105,7 +98,7 @@ describe('Windows startup cleanup admission', () => {
   });
 
   it.each(['opencode', undefined] as const)('gates create provider %s', async (providerId) => {
-    const { api, createTeam } = fixture('ipc');
+    const { api, createTeam } = fixture();
     await expect(
       api.createTeam({ ...createRequest, providerId, members: [] }, vi.fn())
     ).rejects.toBeInstanceOf(OpenCodeStartupCleanupBusyError);
@@ -125,7 +118,7 @@ describe('Windows startup cleanup admission', () => {
   });
 
   it('swallows ordinary preparation errors for both operations, even with the busy error name', async () => {
-    const { createTeam, launchTeam } = fixture('ipc');
+    const { createTeam, launchTeam } = fixture();
     const error = new Error('ordinary preparation failure');
     error.name = 'OpenCodeStartupCleanupBusyError';
     const api = bindTeamProvisioningStartApi(
@@ -153,7 +146,7 @@ describe.each(['linux', 'darwin'])('%s startup sweep compatibility', (platform) 
   });
 
   it('waits before forwarding a mixed create and forwards once after release', async () => {
-    const { api, createTeam } = fixture('ipc');
+    const { api, createTeam } = fixture();
     const onProgress = vi.fn();
     const started = api.createTeam(createRequest, onProgress);
     await vi.advanceTimersByTimeAsync(1);
@@ -165,7 +158,7 @@ describe.each(['linux', 'darwin'])('%s startup sweep compatibility', (platform) 
   });
 
   it('retains the bounded waiter timeout and non-OpenCode saved lead bypass', async () => {
-    const { api, launchTeam } = fixture('ipc');
+    const { api, launchTeam } = fixture();
     await api.launchTeam(launchRequest, vi.fn());
     expect(launchTeam).toHaveBeenCalledTimes(1);
     const logWaited = vi.fn();

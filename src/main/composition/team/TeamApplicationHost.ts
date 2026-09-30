@@ -1,0 +1,153 @@
+import type {
+  TeamApplicationHostPorts,
+  TeamApplicationLaunchResult,
+  TeamApplicationView,
+  TeamLaunchRequestBranches,
+} from './TeamApplicationHostPorts';
+import type {
+  TeamCreateConfigRequest,
+  TeamProvisioningProgress,
+  TeamSummary,
+} from '@shared/types/team';
+
+const noProgress = (_progress: TeamProvisioningProgress): void => undefined;
+
+export class TeamApplicationUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TeamApplicationUnavailableError';
+  }
+}
+
+/**
+ * Provider-neutral application sequencing shared by the team HTTP routes.
+ *
+ * Process supervision and provider execution remain owned by the injected
+ * capabilities. This host only coordinates the application-visible effects
+ * around those existing owners.
+ */
+export class TeamApplicationHost {
+  constructor(private readonly ports: TeamApplicationHostPorts) {}
+
+  async listTeams(): Promise<TeamSummary[]> {
+    return this.requireData().listTeams();
+  }
+
+  async createTeamDraft(request: TeamCreateConfigRequest): Promise<void> {
+    await this.requireData().createTeamConfig(request);
+    this.ports.resume?.resumeTeam(request.teamName);
+  }
+
+  async getTeam(teamName: string): Promise<TeamApplicationView> {
+    const savedRequest = await this.findDraftSavedRequest(teamName);
+    if (savedRequest) {
+      return {
+        teamName,
+        pendingCreate: true,
+        savedRequest,
+      };
+    }
+
+    await this.ports.taskActivity?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+    const data = await this.requireData().getTeamData(teamName);
+    let isAlive: boolean | undefined;
+    try {
+      isAlive = (await this.ports.runtimeState?.getRuntimeState(teamName))?.isAlive;
+    } catch {
+      // A saved team snapshot remains usable when runtime observation fails.
+    }
+    return typeof isAlive === 'boolean' ? { ...data, isAlive } : data;
+  }
+
+  async launchTeam(
+    teamName: string,
+    requests: TeamLaunchRequestBranches
+  ): Promise<TeamApplicationLaunchResult> {
+    const savedRequest = await this.findDraftSavedRequest(teamName);
+    const provisioning = this.requireProvisioningStart();
+    let response: TeamApplicationLaunchResult;
+    let launchedDraftTeamName: string | null = null;
+    if (savedRequest) {
+      const createRequest = requests.createFromDraft(savedRequest);
+      if (createRequest.teamName !== teamName) {
+        const renameDraftTeam = this.requireData().renameDraftTeam;
+        if (!renameDraftTeam) {
+          throw new TeamApplicationUnavailableError('Team draft rename control is not available');
+        }
+        await renameDraftTeam(teamName, createRequest.teamName);
+      }
+      response = await provisioning.createTeam(createRequest, noProgress);
+      launchedDraftTeamName = createRequest.teamName;
+    } else {
+      response = await provisioning.launchTeam(requests.resumeExisting(), noProgress);
+    }
+
+    if (launchedDraftTeamName) {
+      this.ports.resume?.resumeTeam(launchedDraftTeamName);
+    }
+    this.ports.listInvalidation.invalidate();
+    return response;
+  }
+
+  async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
+    const status = this.ports.provisioningStatus;
+    if (!status) {
+      throw new TeamApplicationUnavailableError(
+        'Team provisioning status is not available in this mode'
+      );
+    }
+    return status.getProvisioningStatus(runId);
+  }
+
+  async recordRuntimeBootstrapCheckin(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeBootstrapCheckin(payload);
+  }
+
+  async deliverRuntimeMessage(payload: unknown) {
+    return this.requireRuntimeIngress().deliverRuntimeMessage(payload);
+  }
+
+  async recordRuntimeTaskEvent(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeTaskEvent(payload);
+  }
+
+  async recordRuntimeHeartbeat(payload: unknown) {
+    return this.requireRuntimeIngress().recordRuntimeHeartbeat(payload);
+  }
+
+  private async findDraftSavedRequest(teamName: string) {
+    const data = this.ports.data;
+    if (!data || (await this.ports.configPresence.hasConfig(teamName))) {
+      return null;
+    }
+    return data.getSavedRequest(teamName);
+  }
+
+  private requireData() {
+    const data = this.ports.data;
+    if (!data) {
+      throw new TeamApplicationUnavailableError('Team data control is not available in this mode');
+    }
+    return data;
+  }
+
+  private requireProvisioningStart() {
+    const provisioning = this.ports.provisioningStart;
+    if (!provisioning) {
+      throw new TeamApplicationUnavailableError(
+        'Team launch control is not available in this mode'
+      );
+    }
+    return provisioning;
+  }
+
+  private requireRuntimeIngress() {
+    const runtimeIngress = this.ports.runtimeIngress;
+    if (!runtimeIngress) {
+      throw new TeamApplicationUnavailableError(
+        'Team runtime ingress is not available in this mode'
+      );
+    }
+    return runtimeIngress;
+  }
+}

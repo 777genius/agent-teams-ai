@@ -23,6 +23,7 @@ import { GraphNodePopover } from './GraphNodePopover';
 import { GraphProvisioningHud } from './GraphProvisioningHud';
 import { GraphTransientHandoffHud } from './GraphTransientHandoffHud';
 
+import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
 import type {
   GraphDomainRef,
   GraphEventPort,
@@ -35,14 +36,18 @@ const TeamGraphOverlay = lazy(() =>
 
 export interface TeamGraphTabProps {
   teamName: string;
+  announcementsVisible: boolean;
   isActive?: boolean;
   isPaneFocused?: boolean;
+  taskNotificationPort: TeamGraphTaskNotificationPort;
 }
 
 export const TeamGraphTab = ({
   teamName,
+  announcementsVisible,
   isActive = true,
   isPaneFocused = false,
+  taskNotificationPort,
 }: TeamGraphTabProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName, { active: isActive });
   const { openTeamPage, commitOwnerSlotDrop, commitOwnerGridOrderDrop, setLayoutMode } =
@@ -55,7 +60,7 @@ export const TeamGraphTab = ({
   const sidebarSnapshot = useTeamSidebarPortalSnapshot();
   const hasSidebarSource = Boolean(sidebarSnapshot.activeSourceIdByTeam[teamName]);
   const effectiveSidebarVisible = sidebarVisible && hasSidebarSource;
-  const interactions = useGraphSurfaceInteractions(teamName);
+  const interactions = useGraphSurfaceInteractions(teamName, taskNotificationPort);
   const openCreateTask = useCallback(() => {
     interactions.openCreateTask('');
   }, [interactions]);
@@ -237,6 +242,8 @@ export const TeamGraphTab = ({
         <Suspense fallback={null}>
           <TeamGraphOverlay
             teamName={teamName}
+            announcementsVisible={announcementsVisible}
+            taskNotificationPort={taskNotificationPort}
             onClose={() => setFullscreen(false)}
             sidebarVisible={effectiveSidebarVisible}
             onToggleSidebar={hasSidebarSource ? toggleSidebarVisible : undefined}

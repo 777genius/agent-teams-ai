@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaId",
+    "schemaVersion",
+    "evidenceId",
+    "packetRevision",
+    "pinnedBaseSha",
+    "phaseStartSha",
+    "counts",
+    "members"
+  ],
+  "properties": {
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "stableId",
+          "source",
+          "sourceMember",
+          "legacySignature",
+          "sourceSignatureHash",
+          "rendererCallers",
+          "owningFeature",
+          "disposition",
+          "securityClass",
+          "requiredSemanticEvidence",
+          "actionId",
+          "targetWorkPackage"
+        ]
+      }
+    }
+  }
+}

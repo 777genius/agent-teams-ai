@@ -11,10 +11,10 @@ describe('taskFiltersState', () => {
 
     expect(taskMatchesStatus(pendingNeedsFixTask, new Set(['needs_fix']))).toBe(true);
     expect(taskMatchesStatus(completedNeedsFixTask, new Set(['needs_fix']))).toBe(true);
-    expect(taskMatchesStatus(activeNeedsFixTask, new Set(['needs_fix']))).toBe(true);
+    expect(taskMatchesStatus(activeNeedsFixTask, new Set(['needs_fix']))).toBe(false);
     expect(taskMatchesStatus(pendingNeedsFixTask, new Set(['todo']))).toBe(false);
     expect(taskMatchesStatus(completedNeedsFixTask, new Set(['done']))).toBe(false);
-    expect(taskMatchesStatus(activeNeedsFixTask, new Set(['in_progress']))).toBe(false);
+    expect(taskMatchesStatus(activeNeedsFixTask, new Set(['in_progress']))).toBe(true);
     expect(taskMatchesStatus(normalPendingTask, new Set(['todo']))).toBe(true);
   });
 

@@ -265,8 +265,9 @@ function createHarness(input: {
     },
     openCodePromptDeliveryWatchdogScheduler: { isEnabled: () => true },
     openCodePromptDeliveryFollowUpPolicy: { schedule: followUpSchedule },
-    openCodeStalePendingPolicyConfig:
-      input.stalePendingConfig ?? OPENCODE_STALE_PENDING_POLICY_CONFIG,
+    ...(input.stalePendingConfig
+      ? { openCodeStalePendingPolicyConfig: input.stalePendingConfig }
+      : {}),
     // Real read-commit semantics: plain-text settles non-user messages only.
     isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async (readInput: ReadCommitPortInput) => {
       await input.beforeRead?.(readInput, ledger);
@@ -351,7 +352,7 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     // was reported at all; the settlement itself is unchanged, and `idle` is
     // still the last thing the lane says.
     const notifiedStates = harness.notify.mock.calls.map(
-      (call) => (call[0] as { state: string }).state
+      (call: unknown[]) => (call[0] as { state: string }).state
     );
     expect(notifiedStates).toEqual(['active', 'idle']);
   });
@@ -480,19 +481,22 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       messageKind: 'member_work_sync_nudge' as const,
       workSyncIntent: 'agenda_sync' as const,
     },
-  ])('preserves stale busy or unknown accepted work: $messageId', async (message) => {
-    for (const diagnostics of [[BUSY], []]) {
-      const harness = createHarness({
-        ledgerDir,
-        observe: async () => observedResult({ observation: pendingObservation(), diagnostics }),
-      });
-      await seedAcceptedPendingRecord(harness.ledger, message, { ageMinutes: 90 });
-      const delivery = await harness.service.deliver(TEAM, message);
-      expect(delivery).toMatchObject({ accepted: true, responsePending: true });
-      expect(harness.send).not.toHaveBeenCalled();
-      expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
+  ])(
+    'preserves stale busy or unknown accepted work: $messageId',
+    async (message: OpenCodeMemberMessageDeliveryInput) => {
+      for (const diagnostics of [[BUSY], []]) {
+        const harness = createHarness({
+          ledgerDir,
+          observe: async () => observedResult({ observation: pendingObservation(), diagnostics }),
+        });
+        await seedAcceptedPendingRecord(harness.ledger, message, { ageMinutes: 90 });
+        const delivery = await harness.service.deliver(TEAM, message);
+        expect(delivery).toMatchObject({ accepted: true, responsePending: true });
+        expect(harness.send).not.toHaveBeenCalled();
+        expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
+      }
     }
-  });
+  );
   it('keeps a busy user prompt alive on wall time alone when no usage probe is wired', async () => {
     const harness = createHarness({
       ledgerDir,
@@ -648,7 +652,7 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
   });
   it.each(['user', 'alice'])(
     'wakes the queued %s message without requiring another inbox event',
-    async (replyRecipient) => {
+    async (replyRecipient: string) => {
       const harness = createHarness({ ledgerDir, send: async () => acceptedSendResult() });
       await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 2 });
       const queued = { ...userMessage, messageId: 'queued-peer', replyRecipient };
@@ -674,7 +678,7 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
   );
   it.each(['pending', 'prompt_not_indexed'] as const)(
     'marks the lead active when unknown acceptance is proven busy by observe (%s)',
-    async (state) => {
+    async (state: 'pending' | 'prompt_not_indexed') => {
       const ledgerDir = await mkdtemp(join(tmpdir(), 'review565-acceptance-recovery-'));
       try {
         const harness = createHarness({

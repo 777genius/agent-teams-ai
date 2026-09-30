@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { promises as fs } from 'node:fs';
 
 import { OpenCodeBridgeCommandLedgerError } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
@@ -24,6 +25,47 @@ type StateChangingExecuteMock = NonNullable<
   ReturnType<typeof vi.fn>;
 
 describe('OpenCodeReadinessBridge', () => {
+  it('forwards the authenticated project lease to Stop dispatch', async () => {
+    const projectPath = await fs.mkdtemp('/tmp/opencode-stop-lease-');
+    const directory = await fs.open(projectPath, 'r');
+    try {
+      const identity = await directory.stat({ bigint: true });
+      const projectDirectoryLease = {
+        fd: directory.fd,
+        dev: String(identity.dev),
+        ino: String(identity.ino),
+      };
+      const executor = fakeExecutor(
+        bridgeCommandSuccess({
+          command: 'opencode.stopTeam',
+          requestId: 'stop-lease-req',
+          data: { runId: 'run-1', stopped: true, members: {}, warnings: [], diagnostics: [] },
+        })
+      );
+      const bridge = new OpenCodeReadinessBridge(executor);
+      await bridge.stopOpenCodeTeam(
+        {
+          runId: 'run-1',
+          teamId: 'team',
+          teamName: 'team',
+          laneId: 'primary',
+          projectPath,
+          expectedCapabilitySnapshotId: null,
+          manifestHighWatermark: null,
+          reason: 'cleanup',
+        },
+        { projectDirectoryLease }
+      );
+      expect(executor.execute).toHaveBeenCalledWith(
+        'opencode.stopTeam',
+        expect.anything(),
+        expect.objectContaining({ cwd: projectPath, projectDirectoryLease })
+      );
+    } finally {
+      await directory.close();
+      await fs.rm(projectPath, { recursive: true, force: true });
+    }
+  });
   it('executes the read-only opencode.readiness command and returns readiness data', async () => {
     const readinessResult = readiness({ state: 'ready', launchAllowed: true });
     const executor = fakeExecutor(bridgeSuccess(readinessResult));

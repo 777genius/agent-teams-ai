@@ -1,7 +1,7 @@
 import { createMemberSettingsFingerprint } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
-import { LegacyMemberSettingsLifecycleAdapter } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsLifecycleAdapter';
-import { LegacyMemberSettingsMutationGateAdapter } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsMutationGateAdapter';
-import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/adapters/output/LegacyMemberSettingsRepositoryAdapter';
+import { LegacyMemberSettingsLifecycleAdapter } from '@features/team-provisioning/main/composition/LegacyMemberSettingsLifecycle';
+import { LegacyMemberSettingsMutationGateAdapter } from '@features/team-provisioning/main/composition/LegacyMemberSettingsMutationGate';
+import { LegacyMemberSettingsRepositoryAdapter } from '@features/team-provisioning/main/composition/LegacyMemberSettingsRepository';
 import { fingerprintResolvedMember } from '@features/team-provisioning/renderer/utils/memberSettingsPresentation';
 import { describe, expect, it, vi } from 'vitest';
 

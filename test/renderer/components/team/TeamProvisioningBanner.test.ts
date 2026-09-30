@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const storeState = {
   progress: null as Record<string, unknown> | null,
   cancelProvisioning: vi.fn(),
+  retryFailedRuntimeLanes: vi.fn(),
   provisioningErrorByTeam: {} as Record<string, string>,
   clearProvisioningError: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
@@ -115,7 +116,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       cliLogsTail: '',
       assistantOutput: '',
     };
-    storeState.retryFailedOpenCodeSecondaryLanes.mockResolvedValue({
+    storeState.retryFailedRuntimeLanes.mockResolvedValue({
       attempted: [],
       confirmed: [],
       pending: [],

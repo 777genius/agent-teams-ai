@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaId",
+    "schemaVersion",
+    "evidenceId",
+    "packetRevision",
+    "pinnedBaseSha",
+    "phaseStartSha",
+    "unit",
+    "buckets",
+    "varianceAssessment"
+  ],
+  "properties": {
+    "buckets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "bucketId",
+          "packages",
+          "productionLines",
+          "testLines",
+          "deletedLines",
+          "netLines",
+          "excludedGeneratedVendorLines",
+          "overlap",
+          "confidence",
+          "assumptions",
+          "evidenceRefs"
+        ]
+      }
+    },
+    "varianceAssessment": {
+      "type": "object",
+      "required": [
+        "parentRangeStillSupported",
+        "uniqueBucketOverTwentyPercent",
+        "scopeReviewRequired",
+        "changes"
+      ]
+    }
+  }
+}

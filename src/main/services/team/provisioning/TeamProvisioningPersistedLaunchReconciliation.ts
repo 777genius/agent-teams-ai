@@ -1,3 +1,4 @@
+import { isSupportedLaunchStateDocument } from '../TeamLaunchStateDocumentPersistence';
 import {
   createPersistedLaunchSnapshot,
   snapshotToMemberSpawnStatuses,
@@ -147,8 +148,15 @@ export async function reconcilePersistedLaunchStateWithPorts(
     snapshot: PersistedTeamLaunchSnapshot
   ): Promise<PersistedTeamLaunchSnapshot> =>
     expectedRunId
-      ? ports.writeLaunchStateSnapshot(teamName, snapshot, { runId: expectedRunId })
-      : ports.writeLaunchStateSnapshot(teamName, snapshot);
+      ? ports.writeLaunchStateSnapshot(
+          teamName,
+          createReconciliationLaunchStateDocument(teamName, snapshot),
+          { runId: expectedRunId }
+        )
+      : ports.writeLaunchStateSnapshot(
+          teamName,
+          createReconciliationLaunchStateDocument(teamName, snapshot)
+        );
   const clearPersistedState = (): Promise<void> =>
     expectedRunId
       ? ports.clearPersistedLaunchState(teamName, { expectedRunId })
@@ -364,6 +372,43 @@ export async function reconcilePersistedLaunchStateWithPorts(
 
   const writtenSnapshot = await writeSnapshot(reconciled);
   return projectPersistedLaunchReconciliationResult(writtenSnapshot);
+}
+
+/**
+ * Reconciliation can receive a snapshot produced before the current document
+ * schema was introduced (or from a test/runtime adapter boundary that did not
+ * serialize it first). Rebuild its owned fields through the canonical v2
+ * factory before handing it to the strict persistence boundary. This keeps
+ * legacy evidence readable while leaving the store's document validation
+ * unchanged.
+ */
+export function createReconciliationLaunchStateDocument(
+  teamName: string,
+  snapshot: PersistedTeamLaunchSnapshot
+): PersistedTeamLaunchSnapshot {
+  // The store already owns strict validation. Preserve an already-valid overlay
+  // object so callers retain the exact authoritative identity returned by the
+  // evidence boundary; only legacy documents need reconstruction.
+  if (
+    snapshot.teamName === teamName &&
+    isSupportedLaunchStateDocument(teamName, snapshot as unknown as Record<string, unknown>)
+  ) {
+    return snapshot;
+  }
+  const normalized = createPersistedLaunchSnapshot({
+    // Preserve a mismatched identity so the strict store validator continues
+    // to reject cross-team state rather than silently retargeting it.
+    teamName: snapshot.teamName === teamName ? teamName : snapshot.teamName,
+    expectedMembers: snapshot.expectedMembers,
+    bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
+    leadSessionId: snapshot.leadSessionId,
+    launchPhase: snapshot.launchPhase,
+    members: snapshot.members,
+    updatedAt: snapshot.updatedAt,
+  });
+  return typeof snapshot.publicationRunId === 'string' && snapshot.publicationRunId.trim()
+    ? { ...normalized, publicationRunId: snapshot.publicationRunId }
+    : normalized;
 }
 
 export function filterOptionalRemovedMembersFromLaunchSnapshot(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -21,11 +21,20 @@ import type {
 import type { RunningTeamRowModel } from '../view-models/runningTeamsSectionViewModel';
 import type { LeadActivityState, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
-interface RunningTeamsSectionState {
+export interface RunningTeamsSectionState {
   rows: RunningTeamRowModel[];
-  hidden: boolean;
+  readStatus: { phase: 'ready' | 'loading' | 'error'; stale: boolean };
+  retryAliveRead: () => void;
   openRunningTeam: (row: RunningTeamRowModel) => void;
 }
+
+interface AliveReadState {
+  teams: string[];
+  phase: 'ready' | 'loading' | 'error';
+  hasSuccess: boolean;
+}
+
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
 function toCandidate(input: {
   team: TeamSummary;
@@ -58,11 +67,13 @@ function toCandidate(input: {
   };
 }
 
-export function useRunningTeamsSection(searchQuery: string): RunningTeamsSectionState {
+export function useRunningTeamsSection(): RunningTeamsSectionState {
   const { t } = useAppTranslation('team');
   const {
     teams,
+    teamsReadOutcome,
     globalTasks,
+    globalTasksReadOutcome,
     openTeamTab,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
@@ -71,7 +82,9 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   } = useStore(
     useShallow((state) => ({
       teams: state.teams,
+      teamsReadOutcome: state.teamsReadOutcome,
       globalTasks: state.globalTasks,
+      globalTasksReadOutcome: state.globalTasksReadOutcome,
       openTeamTab: state.openTeamTab,
       provisioningRuns: state.provisioningRuns,
       currentProvisioningRunIdByTeam: state.currentProvisioningRunIdByTeam,
@@ -79,8 +92,38 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       leadActivityByTeam: state.leadActivityByTeam,
     }))
   );
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const searchActive = searchQuery.trim().length > 0;
+  const [aliveRead, setAliveRead] = useState<AliveReadState>({
+    teams: [],
+    phase: 'loading',
+    hasSuccess: false,
+  });
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryAliveRead = useCallback((): void => setRetryNonce((value) => value + 1), []);
+  const teamsOutcomeCurrent = teamsReadOutcome.snapshot === teams;
+  const tasksOutcomeCurrent = globalTasksReadOutcome.snapshot === globalTasks;
+  const teamsFresh = teamsOutcomeCurrent && teamsReadOutcome.lastAttempt === 'success';
+  const tasksKnown = tasksOutcomeCurrent && globalTasksReadOutcome.hasSuccess;
+  const tasksFresh = tasksOutcomeCurrent && globalTasksReadOutcome.lastAttempt === 'success';
+  const sourceFailed =
+    (teamsOutcomeCurrent && teamsReadOutcome.lastAttempt === 'failure') ||
+    (tasksOutcomeCurrent && globalTasksReadOutcome.lastAttempt === 'failure');
+  const sourceLoading =
+    !teamsOutcomeCurrent ||
+    !tasksOutcomeCurrent ||
+    teamsReadOutcome.lastAttempt === 'none' ||
+    teamsReadOutcome.lastAttempt === 'loading' ||
+    globalTasksReadOutcome.lastAttempt === 'none' ||
+    globalTasksReadOutcome.lastAttempt === 'loading';
+  const readPhase =
+    sourceFailed || aliveRead.phase === 'error'
+      ? 'error'
+      : sourceLoading || aliveRead.phase === 'loading'
+        ? 'loading'
+        : 'ready';
+  const stale =
+    (teams.length > 0 && !teamsFresh) ||
+    (globalTasks.length > 0 && !tasksFresh) ||
+    (aliveRead.hasSuccess && aliveRead.phase !== 'ready');
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -99,35 +142,28 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   );
 
   useEffect(() => {
-    if (searchActive) {
-      return;
-    }
-
     let cancelled = false;
-    void api.teams
-      .aliveList()
+    setAliveRead((previous) => ({ ...previous, phase: 'loading' }));
+    void teamAliveListReadPort
+      .listAliveTeams()
       .then((teamNames) => {
         if (!cancelled) {
-          setAliveTeams(teamNames);
+          setAliveRead({ teams: teamNames, phase: 'ready', hasSuccess: true });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setAliveTeams([]);
+          setAliveRead((previous) => ({ ...previous, phase: 'error' }));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [provisioningTeamNamesKey, searchActive, teams]);
+  }, [provisioningTeamNamesKey, retryNonce, teams]);
 
   const rows = useMemo(() => {
-    if (searchActive) {
-      return [];
-    }
-
-    const taskCountsByTeam = buildTaskCountsByTeam(globalTasks);
+    const taskCountsByTeam = buildTaskCountsByTeam(tasksKnown ? globalTasks : []);
     const existingTeamNames = new Set(teams.map((team) => team.teamName));
     const syntheticProvisioningTeams = provisioningTeamNames
       .filter((teamName) => !existingTeamNames.has(teamName))
@@ -135,7 +171,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       .filter((team): team is TeamSummary => Boolean(team));
     const nowMs = Date.now();
     const candidateInput = {
-      aliveTeams,
+      aliveTeams: aliveRead.teams,
       provisioningState,
       leadActivityByTeam,
       taskCountsByTeam,
@@ -157,13 +193,13 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       noProject: t('runningTeams.noProject'),
     });
   }, [
-    aliveTeams,
+    aliveRead.teams,
     globalTasks,
+    tasksKnown,
     leadActivityByTeam,
     provisioningSnapshotByTeam,
     provisioningState,
     provisioningTeamNames,
-    searchActive,
     teams,
     t,
   ]);
@@ -177,7 +213,11 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
 
   return {
     rows,
-    hidden: searchActive || rows.length === 0,
+    readStatus: {
+      phase: readPhase,
+      stale,
+    },
+    retryAliveRead,
     openRunningTeam,
   };
 }

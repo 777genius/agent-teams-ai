@@ -1,4 +1,7 @@
-import { belongsToConversation, type ConversationScope } from '@features/team-direct-chats/renderer';
+import {
+  belongsToConversation,
+  type ConversationScope,
+} from '@features/team-direct-chats/renderer';
 
 import type { InboxMessage, ToolApprovalRequest } from '@shared/types';
 

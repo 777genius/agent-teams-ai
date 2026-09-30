@@ -186,6 +186,7 @@ declare module 'agent-teams-controller' {
   export interface ControllerRuntimeApi {
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
+    getLocalTeam(): unknown;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;
     launchTeam(flags: Record<string, unknown>): Promise<unknown>;
     stopTeam(flags?: Record<string, unknown>): Promise<unknown>;
@@ -224,6 +225,76 @@ declare module 'agent-teams-controller' {
     buildProcessProtocolText(teamName: string): string;
   }
 
+  /** Hosted task-board identities shared by Product's read source and the hosted task command. */
+  export interface HostedBoardTask {
+    rawId: string;
+    publicId: string;
+    name: string;
+    displayId: string;
+    value: Record<string, unknown>;
+    subject: string;
+    description: string | null;
+    status: 'pending' | 'in_progress' | 'completed';
+    owner: string | null;
+    blockedBy: string[];
+    blocks: string[];
+    related: string[];
+  }
+
+  /** Hosted task-board view of the team files: parsing, visibility, columns, order, roster. */
+  export interface HostedBoardProjectionApi {
+    HOSTED_BOARD_COLUMNS: readonly ('todo' | 'in_progress' | 'review' | 'approved' | 'done')[];
+    parseHostedBoardTask(name: string, text: string): Omit<HostedBoardTask, 'publicId'> | null;
+    hostedBoardTasks(
+      teamId: string,
+      taskFiles: readonly { name: string; text: string }[]
+    ): Map<string, HostedBoardTask>;
+    hostedBoardColumnFor(kanban: unknown, rawId: string, status: string): string;
+    hostedBoardColumnOrder(
+      kanban: unknown,
+      column: string,
+      tasks: Iterable<{ rawId: string; displayId: string; status: string }>
+    ): string[];
+    hostedActiveRosterMembers(
+      teamId: string,
+      roster: { config: string | null; meta: string | null }
+    ): Map<string, string>;
+  }
+
+  export interface HostedBoardIdentityApi {
+    HOSTED_TASK_FILE_PATTERN: RegExp;
+    HOSTED_REVISION_ROSTER_FILES: readonly string[];
+    hostedBoardDigest(value: unknown): string;
+    hostedTaskBoardTaskId(teamId: string, rawTaskId: string): string;
+    hostedTaskBoardSourceGeneration(input: {
+      deploymentId: string;
+      bootId: string;
+      workspaceId: string;
+      mountGeneration: number;
+      teamId: string;
+      /** Decimal `[device, inode]` strings. */
+      teamDirectory: readonly [string, string];
+      tasksDirectory: readonly [string, string];
+    }): string;
+    hostedTaskBoardRevision(input: {
+      sourceGeneration: string;
+      taskFiles: readonly { name: string; text: string }[];
+      kanbanText: string | null;
+      rosterFiles?: readonly { name: string; text: string | null }[];
+    }): string;
+    hostedRosterImmutableIdentity(member: {
+      name: unknown;
+      joinedAt?: unknown;
+      agentId?: unknown;
+    }): string | null;
+    hostedRosterMemberIdForIdentity(teamId: string, immutableIdentity: string): string;
+    hostedRosterMemberId(
+      teamId: string | null,
+      member: { name: unknown; memberId?: unknown; joinedAt?: unknown; agentId?: unknown }
+    ): string | null;
+    hostedTaskIdForCommand(teamId: string, commandId: string): string;
+  }
+
   /** Context-free text classifiers shared with the MCP server. */
   export interface TaskTextSignalsApi {
     isTaskCompletionClaimText(text: string): boolean;
@@ -252,6 +323,24 @@ declare module 'agent-teams-controller' {
   export const protocols: ProtocolsApi;
 
   export const taskTextSignals: TaskTextSignalsApi;
+
+  export const hostedBoardIdentity: HostedBoardIdentityApi;
+
+  export const hostedBoardProjection: HostedBoardProjectionApi;
+  /** One hosted task-board mutation; docs/hosted-task-command-golden.json pins the wire. */
+  export interface HostedTaskCommandApi {
+    executeHostedTaskCommand(
+      input: unknown,
+      options: { claudeDir: string }
+    ): {
+      schemaVersion: 1;
+      result: Record<string, unknown>;
+      selfWriteEffects: { fileKey: string; expectedChecksum: string }[];
+    };
+    HostedTaskCommandInputError: new (message?: string) => Error;
+  }
+
+  export const hostedTaskCommand: HostedTaskCommandApi;
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

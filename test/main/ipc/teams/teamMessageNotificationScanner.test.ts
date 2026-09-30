@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   TeamMessageNotificationScanner,
   type TeamNotificationMessage,
-} from '../../../../src/main/ipc/teams/teamMessageNotificationScanner';
+} from '../../../../src/features/team-view-read-model/main/adapters/output/teamMessageNotificationScanner';
 
 import type { RateLimitAutoResumePlan } from '../../../../src/main/services/team/AutoResumeService';
 import type { TeamNotificationPayload } from '../../../../src/main/utils/teamNotificationBuilder';

@@ -87,7 +87,7 @@ async function paused(phase: string, implementation = 'sync') {
 function completeCanonical(phase: string) {
   const lock = `${resource}.lock`;
   if (fs.existsSync(lock))
-    expect(fs.readFileSync(lock, 'utf8')).toMatch(/^\d+\n\d+\n[a-f0-9-]{36}\n$/);
+    expect(fs.readFileSync(lock, 'utf8')).toMatch(/^\d+\n\d+\n[a-f0-9-]{36}\n(?:pidns:\d+\n)?$/);
   const gate = `${lock}-transition-v2`;
   if (fs.existsSync(gate)) {
     const entries = fs.readdirSync(gate);
@@ -97,7 +97,7 @@ function completeCanonical(phase: string) {
     for (const entry of entries) {
       expect(entry).toMatch(/^owner-\d+-[a-f0-9-]{36}$/);
       expect(fs.readFileSync(path.join(gate, entry), 'utf8')).toMatch(
-        /^file-lock-transition-v2\n\d+\n[a-f0-9-]{36}\n$/
+        /^file-lock-transition-v2\n\d+\n[a-f0-9-]{36}\n(?:pidns:\d+\n)?$/
       );
     }
   }

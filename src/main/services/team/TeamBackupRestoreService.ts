@@ -13,6 +13,7 @@ import {
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
+import { shouldRestoreTaskAttachmentBackupPath } from './TeamBackupFilePolicy';
 import { type BackupManifest } from './teamBackupManifest';
 import { TeamConfigReader } from './TeamConfigReader';
 import {
@@ -74,6 +75,12 @@ export function isValidConfig(content: string): boolean {
 
 export class TeamBackupRestoreService {
   constructor(private readonly ports: TeamBackupRestorePorts) {}
+
+  private async enumerateRestorableBackupFiles(teamName: string): Promise<string[]> {
+    return (await this.ports.enumerateBackupFiles(teamName)).filter(
+      shouldRestoreTaskAttachmentBackupPath
+    );
+  }
 
   private getDraftDeletionIdentityPath(teamName: string): string {
     return path.join(getTeamsBasePath(), teamName, DRAFT_DELETION_IDENTITY_FILE);
@@ -191,7 +198,9 @@ export class TeamBackupRestoreService {
     // Config missing or corrupted — full restore
     logger.info(`[Backup] Full restoring team ${teamName} (config ${sourceConfigResult.status})`);
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = genericFiles ?? (await this.ports.enumerateBackupFiles(teamName));
+    const backupFiles = (
+      genericFiles ?? (await this.ports.enumerateBackupFiles(teamName))
+    ).filter(shouldRestoreTaskAttachmentBackupPath);
     let count = 0;
 
     // Restore config.json first
@@ -307,7 +316,9 @@ export class TeamBackupRestoreService {
     quiet = false
   ): Promise<number> {
     const backupDir = this.ports.getBackupDir(teamName);
-    const backupFiles = genericFiles ?? (await this.ports.enumerateBackupFiles(teamName));
+    const backupFiles = (
+      genericFiles ?? (await this.ports.enumerateBackupFiles(teamName))
+    ).filter(shouldRestoreTaskAttachmentBackupPath);
     const launchStateFrozen = await this.isLaunchStateFrozenByStop(teamName, backupFiles);
     let count = 0;
 

@@ -48,7 +48,7 @@ interface RuntimeFailureObservation {
 export type TeamProvisioningRuntimeFailureAwareStreamEventPorts<
   TRun extends TeamProvisioningStreamEventPortsFactoryRun,
 > = TeamProvisioningStreamEventPorts<TRun> & {
-  observeRuntimeFailure(run: TRun, failure: RuntimeFailureObservation): void;
+  observeRuntimeFailure(run: TRun, failure: RuntimeFailureObservation): Promise<void>;
 };
 
 export interface TeamProvisioningStreamEventPortCallbacks<

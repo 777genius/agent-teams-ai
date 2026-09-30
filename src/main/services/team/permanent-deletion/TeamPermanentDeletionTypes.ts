@@ -24,7 +24,7 @@ export interface PermanentDeletionTargetRemovalProof {
   transactionId: string;
   target: PermanentDeletionTarget;
   targetIdentity: DurablePathIdentity;
-  state: 'detached' | 'removed';
+  state: 'authorized' | 'detached' | 'removed';
   detachedAt: string;
   removedAt?: string;
 }
@@ -113,7 +113,7 @@ export function isPermanentDeletionTargetRemovalProof(
     typeof proof.target === 'string' &&
     PERMANENT_DELETION_TARGETS.includes(proof.target) &&
     isDurablePathIdentity(proof.targetIdentity) &&
-    (proof.state === 'detached' || proof.state === 'removed') &&
+    (proof.state === 'authorized' || proof.state === 'detached' || proof.state === 'removed') &&
     typeof proof.detachedAt === 'string' &&
     Number.isFinite(Date.parse(proof.detachedAt)) &&
     (proof.state === 'removed'

@@ -1,11 +1,12 @@
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 
+import { sortRecentProjectPriority } from './recentProjectPriority';
+
 import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 
 const RECENT_PROJECT_OPEN_HISTORY_KEY = 'recent-projects:open-history';
 const RECENT_PROJECT_OPEN_HISTORY_EVENT = 'recent-projects:open-history-changed';
-const OPEN_PRIORITY_WINDOW_MS = 1000 * 60 * 60 * 48;
 const MAX_HISTORY_ENTRIES = 120;
 
 interface RecentProjectOpenHistoryEntry {
@@ -218,34 +219,15 @@ export function sortRecentProjectsByDisplayPriority(
   now: number = Date.now()
 ): DashboardRecentProject[] {
   const historyLookup = createHistoryLookup();
-
-  const isPriorityOpen = (openedAt: number): boolean =>
-    openedAt > 0 && now - openedAt <= OPEN_PRIORITY_WINDOW_MS;
-
-  return [...projects].sort((left, right) => {
-    const leftOpenedAt = getProjectLastOpenedAtFromLookup(historyLookup, left);
-    const rightOpenedAt = getProjectLastOpenedAtFromLookup(historyLookup, right);
-    const leftPriority = isPriorityOpen(leftOpenedAt);
-    const rightPriority = isPriorityOpen(rightOpenedAt);
-
-    if (leftPriority !== rightPriority) {
-      return leftPriority ? -1 : 1;
-    }
-
-    if (leftPriority && rightPriority && leftOpenedAt !== rightOpenedAt) {
-      return rightOpenedAt - leftOpenedAt;
-    }
-
-    if (left.mostRecentActivity !== right.mostRecentActivity) {
-      return right.mostRecentActivity - left.mostRecentActivity;
-    }
-
-    if (leftOpenedAt !== rightOpenedAt) {
-      return rightOpenedAt - leftOpenedAt;
-    }
-
-    return left.name.localeCompare(right.name);
-  });
+  return sortRecentProjectPriority(
+    projects,
+    (project) => ({
+      name: project.name,
+      activityAt: project.mostRecentActivity,
+      openedAt: getProjectLastOpenedAtFromLookup(historyLookup, project),
+    }),
+    now
+  );
 }
 
 export function subscribeRecentProjectOpenHistory(listener: () => void): () => void {

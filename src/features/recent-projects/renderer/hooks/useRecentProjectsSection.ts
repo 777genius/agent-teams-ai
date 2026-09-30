@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type DashboardRecentProject } from '@features/recent-projects/contracts';
 import { api, isElectronMode } from '@renderer/api';
+import { createTeamAliveListReadPort } from '@renderer/composition/team/createTeamAliveListReadPort';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import {
@@ -24,51 +25,34 @@ import { buildRecentProjectsSectionViewModel } from '../view-models/recentProjec
 
 import { useOpenRecentProject } from './useOpenRecentProject';
 
+import type { RecentProjectIdentity } from '../ui/recentProjectsModel';
 import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
 
-const INITIAL_RECENT_PROJECTS = 11;
-const LOAD_MORE_STEP = 8;
 const DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS = 30_000;
 const DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS = 120_000;
 const DEGRADED_RECENT_PROJECTS_FAST_RETRY_LIMIT = 3;
+const teamAliveListReadPort = createTeamAliveListReadPort();
 
-function matchesSearch(project: DashboardRecentProject, query: string): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return (
-    project.name.toLowerCase().includes(normalizedQuery) ||
-    project.primaryPath.toLowerCase().includes(normalizedQuery) ||
-    project.associatedPaths.some((projectPath) =>
-      projectPath.toLowerCase().includes(normalizedQuery)
-    ) ||
-    project.primaryBranch?.toLowerCase().includes(normalizedQuery) === true
-  );
-}
-
-export function useRecentProjectsSection(
-  searchQuery: string,
-  maxProjects = INITIAL_RECENT_PROJECTS
-): {
+export function useRecentProjectsSection(): {
   cards: RecentProjectCardModel[];
   loading: boolean;
   error: string | null;
-  canLoadMore: boolean;
   isElectron: boolean;
-  loadMore: () => void;
+  tasksKnown: boolean;
+  aliveTeamsKnown: boolean;
+  degraded: boolean;
+  stale: boolean;
+  scopeKey: string;
+  readEpoch: number;
+  isCurrentIntent: (intent: RecentProjectIdentity) => boolean;
   reload: () => Promise<void>;
-  openRecentProject: (project: DashboardRecentProject) => Promise<void>;
-  openProjectPath: (projectPath: string) => Promise<void>;
-  selectProjectFolder: () => Promise<void>;
+  openRecentProject: ReturnType<typeof useOpenRecentProject>['openRecentProject'];
+  openProjectPath: ReturnType<typeof useOpenRecentProject>['openProjectPath'];
+  selectProjectFolder: ReturnType<typeof useOpenRecentProject>['selectProjectFolder'];
 } {
   const {
     globalTasks,
+    globalTasksInitialized,
     globalTasksLoading,
     teams,
     activeContextId,
@@ -78,6 +62,7 @@ export function useRecentProjectsSection(
   } = useStore(
     useShallow((state) => ({
       globalTasks: state.globalTasks,
+      globalTasksInitialized: state.globalTasksInitialized,
       globalTasksLoading: state.globalTasksLoading,
       teams: state.teams,
       activeContextId: state.activeContextId,
@@ -97,13 +82,14 @@ export function useRecentProjectsSection(
   const [recentProjectsDegraded, setRecentProjectsDegraded] = useState(
     initialSnapshot?.payload.degraded ?? false
   );
+  const [recentProjectsStale, setRecentProjectsStale] = useState(initialSnapshot?.isStale ?? false);
   const [degradedRefreshCount, setDegradedRefreshCount] = useState(
     initialSnapshot?.payload.degraded ? 1 : 0
   );
   const [loading, setLoading] = useState(initialSnapshot == null);
   const [error, setError] = useState<string | null>(null);
-  const [visibleProjects, setVisibleProjects] = useState(maxProjects);
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [aliveTeamsKnown, setAliveTeamsKnown] = useState(false);
   const [openHistoryVersion, setOpenHistoryVersion] = useState(0);
   const recentProjectsRef = useRef<DashboardRecentProject[]>(
     initialSnapshot?.payload.projects ?? []
@@ -156,6 +142,7 @@ export function useRecentProjectsSection(
         }
         setRecentProjects(payload.projects);
         setRecentProjectsDegraded(payload.degraded);
+        setRecentProjectsStale(false);
         setDegradedRefreshCount((current) => (payload.degraded ? current + 1 : 0));
       } catch (nextError) {
         if (
@@ -165,6 +152,7 @@ export function useRecentProjectsSection(
           return;
         }
         setError(nextError instanceof Error ? nextError.message : 'Failed to load recent projects');
+        setRecentProjectsStale(true);
       } finally {
         if (
           activeContextIdRef.current === requestContextId &&
@@ -182,11 +170,13 @@ export function useRecentProjectsSection(
     if (snapshot) {
       setRecentProjects(snapshot.payload.projects);
       setRecentProjectsDegraded(snapshot.payload.degraded);
+      setRecentProjectsStale(snapshot.isStale);
       setDegradedRefreshCount(snapshot.payload.degraded ? 1 : 0);
       setLoading(false);
     } else {
       setRecentProjects([]);
       setRecentProjectsDegraded(false);
+      setRecentProjectsStale(false);
       setDegradedRefreshCount(0);
       setLoading(true);
     }
@@ -221,9 +211,11 @@ export function useRecentProjectsSection(
     let cancelled = false;
     const requestContextId = activeContextId;
     const requestContextEpoch = captureContextScopedRequestEpoch();
+    setAliveTeams([]);
+    setAliveTeamsKnown(false);
 
-    void api.teams
-      .aliveList()
+    void teamAliveListReadPort
+      .listAliveTeams()
       .then((teamNames) => {
         if (
           !cancelled &&
@@ -231,6 +223,7 @@ export function useRecentProjectsSection(
           isContextScopedRequestEpochCurrent(requestContextEpoch)
         ) {
           setAliveTeams(teamNames);
+          setAliveTeamsKnown(true);
         }
       })
       .catch(() => undefined);
@@ -239,12 +232,6 @@ export function useRecentProjectsSection(
       cancelled = true;
     };
   }, [activeContextId, provisioningTeamNamesKey, teams]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setVisibleProjects(maxProjects);
-    }
-  }, [maxProjects, searchQuery]);
 
   useEffect(
     () => subscribeRecentProjectOpenHistory(() => setOpenHistoryVersion((current) => current + 1)),
@@ -278,26 +265,20 @@ export function useRecentProjectsSection(
     taskCountsByProject,
   ]);
 
-  const filteredCards = useMemo(
-    () => decoratedCards.filter((card) => matchesSearch(card.project, searchQuery)),
-    [decoratedCards, searchQuery]
-  );
-
-  const cards = useMemo(() => {
-    if (searchQuery.trim()) {
-      return filteredCards;
-    }
-
-    return filteredCards.slice(0, visibleProjects);
-  }, [filteredCards, searchQuery, visibleProjects]);
-
   return {
-    cards,
+    cards: decoratedCards,
     loading,
     error,
-    canLoadMore: !searchQuery.trim() && filteredCards.length > visibleProjects,
     isElectron: isElectronMode(),
-    loadMore: () => setVisibleProjects((current) => current + LOAD_MORE_STEP),
+    tasksKnown: globalTasksInitialized && !globalTasksLoading,
+    aliveTeamsKnown,
+    degraded: recentProjectsDegraded,
+    stale: recentProjectsStale,
+    scopeKey: activeContextId,
+    readEpoch: captureContextScopedRequestEpoch(),
+    isCurrentIntent: (intent) =>
+      intent.scopeKey === useStore.getState().activeContextId &&
+      intent.readEpoch === captureContextScopedRequestEpoch(),
     reload,
     openRecentProject,
     openProjectPath,

@@ -71,9 +71,7 @@ describe('useComposerDraftAddressRequest', () => {
     const selectTeam = vi.fn();
     const selectMember = vi.fn();
     await act(async () => {
-      root.render(
-        <Harness value={request} selectTeam={selectTeam} selectMember={selectMember} />
-      );
+      root.render(<Harness value={request} selectTeam={selectTeam} selectMember={selectMember} />);
     });
     expect(selectTeam).toHaveBeenCalledWith('remote-team');
     expect(selectMember).toHaveBeenCalledWith('bob');

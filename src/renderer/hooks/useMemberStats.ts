@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { createTeamOperationalReadTransport } from '@renderer/composition/team/createTeamOperationalReadTransport';
 
 import type { MemberFullStats } from '@shared/types';
+
+const teamOperationalReadTransport = createTeamOperationalReadTransport();
 
 export function useMemberStats(
   teamName: string,
@@ -27,7 +29,7 @@ export function useMemberStats(
 
     void (async () => {
       try {
-        const result = await api.teams.getMemberStats(teamName, memberName);
+        const result = await teamOperationalReadTransport.readMemberStats(teamName, memberName);
         if (!cancelled) setStats(result);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Unknown error');

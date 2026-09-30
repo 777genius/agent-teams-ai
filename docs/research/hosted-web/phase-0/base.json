@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "scope": "0A-baseline-evidence-only",
+  "packetRevision": "phase-00-r2",
+  "capturedAt": "2026-07-11T17:30:54Z",
+  "baseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "sourcePlanCommit": "16c156db8a85e75a6b679f6919e1013af74fb112",
+  "planBundleCommit": "f1ad7a8cba2f26abf5f42ddd206937c24d143f77",
+  "currentIntegrationSha": "c1b8e3fe69e1c05ad94ec0c0301def25c8a464b5",
+  "phaseStartSha": null,
+  "phaseStartResolution": {
+    "status": "pending_external_integration_record",
+    "reason": "The evidence commit cannot embed its own Git SHA without changing the commit and invalidating that SHA.",
+    "requiredAction": "Adopt exactly the seven Phase 0A evidence files, record the resulting commit SHA in the controller integration-attempt record, and inject it unchanged into every lane job and prompt.",
+    "laneRule": "The externally recorded evidence commit is the lane phaseStartSha; currentIntegrationSha is not a substitute.",
+    "externalRecordOwner": "agent-teams-hosted-web-refactor-controller-v2"
+  },
+  "repository": {
+    "canonical": "777genius/agent-teams-ai",
+    "remoteUrl": "https://github.com/777genius/agent-teams-ai.git",
+    "baseBranch": "refactor/team-provisioning-round2-reapply",
+    "implementationBranch": "refactor/hosted-web-feature-boundaries"
+  },
+  "lineage": {
+    "baseObservedAt": "2026-07-11T13:58:01Z",
+    "baseObservation": "Host prepared-state record plus canonical remote-tracking ref; the evidence worker did not perform another network fetch.",
+    "ancestryChecks": {
+      "baseIsAncestorOfCurrentIntegration": true,
+      "adoptedPlanIsAncestorOfCurrentIntegration": true,
+      "sourcePlanIsAncestorOfCurrentIntegration": false
+    }
+  },
+  "planBundle": {
+    "preparedTreeDigestSha256": "cbeae6e4dce01f4e7f3f4d28ac476b18b7f838c8d993a21788dccb43a7510c68",
+    "files": [
+      {
+        "path": "docs/hosted-web-e2e-completion-plan.md",
+        "sha256": "4901a37dc4da373efab939b43a406739ed02e1b4e250a7a2e5754ad659fa4080"
+      },
+      {
+        "path": "docs/hosted-web-phase-0-execution-packet.md",
+        "sha256": "71c53d24f3211613dcfba11493bf18a2b6d49ae31e86186fc94c259d21f17fa8"
+      },
+      {
+        "path": "docs/hosted-web-phases/PACKET_STANDARD.md",
+        "sha256": "6e1539728840c1b311dd0575c514fc3c0f5284087467c73314c347901108f6d6"
+      },
+      {
+        "path": "docs/hosted-web-phases/README.md",
+        "sha256": "b53ff97a9a5db3ccc6226793ccd48f72f06e2e1c1027db0ed80f0e725ddfd80b"
+      },
+      {
+        "path": "docs/hosted-web-phases/_templates/phase-controller-packet.md",
+        "sha256": "ce79be9c8aa87aa7ccec8947fc1bec89bd7f30c3ef0cb6e8bf5874e2677e2f9d"
+      },
+      {
+        "path": "docs/hosted-web-phases/_templates/worker-lane-packet.md",
+        "sha256": "022d6f1d83ffcf396295a6793f834628633a04fd6c6b93efe893515737fc0ba7"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md",
+        "sha256": "b4f926763478d263aeac5739b8da03916c8363d330585392ea2ac6cc6b9cfe56"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md",
+        "sha256": "fc72e78c4d361f93443677c03500bcfa6e6737256753853855830afddad867b9"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md",
+        "sha256": "dac064c17427319ddf6c4930a84c6e2f9080a07fa90fc05582e313395fc0508f"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md",
+        "sha256": "4173ade12b5c8baf9057ea5dddbc98dc60108101a8f915014b0896a708451b79"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md",
+        "sha256": "1bc4fad1f9596c6bd5f5b51dfc46d3f49b2defd23e2d452ae9f8aa5294b32912"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md",
+        "sha256": "540c39eaa1466bbd6a47bce84c17a1db2bf4d60b93436026ab6ef8f0cf1e69c5"
+      }
+    ]
+  },
+  "toolchain": {
+    "node": "24.16.0",
+    "pnpm": "10.33.4",
+    "packageManagerSpec": "pnpm@10.33.4+sha512.1c67b3b359b2d408119ba1ed289f34b8fc3c6873412bec6fd264fbdc82489e510fcbecb9ce9d22dae7f3b76269d8441046014bdca53b9979cd7a561ad631b800",
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "Linux 6.8.0-124-generic",
+    "architecture": "x86_64",
+    "packageJsonSha256": "636d20eedef9a5ff48edd2c39d434c3ecb029119e20ee3353cd325199dced1f5",
+    "lockfileSha256": "2132ffb086bc3c75b94f1ae3eabca9640c342b4e084742710e53f46fabf111b0"
+  },
+  "dependencyMaterialization": {
+    "status": "ready",
+    "preflightFingerprint": "2c5340064d9a9856cbc8963519448f43db448d2f03141788bad88252b88a21f7",
+    "nodeModulesExists": true,
+    "requiredBinariesPresent": [
+      "eslint",
+      "tsc",
+      "vitest"
+    ],
+    "cacheRoot": "/var/data/agent-dependency-cache/agent-teams-hosted-web-refactor-45ab8b8b5f8e",
+    "installCommand": "pnpm fetch --frozen-lockfile --store-dir /var/data/agent-dependency-cache/agent-teams-hosted-web-refactor-45ab8b8b5f8e/pnpm-store && pnpm install --offline --frozen-lockfile --store-dir /var/data/agent-dependency-cache/agent-teams-hosted-web-refactor-45ab8b8b5f8e/pnpm-store",
+    "lockfileChanged": false
+  },
+  "controller": {
+    "projectId": "agent-teams-hosted-web-refactor",
+    "manifestId": "agent-teams-hosted-web-refactor-controller-v2",
+    "accessBoundary": "project_scoped_control",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "serviceTier": "fast",
+    "runtimeRelease": "7c264e3eed97261f57711bc63eb0d4ad8cf8435c",
+    "capacityController": {
+      "desiredWorkers": 0,
+      "dryRun": true,
+      "maxStartsPerRun": 0
+    },
+    "baselineJob": {
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-baseline-evidence-v2",
+      "accessBoundary": "isolated_workspace_write",
+      "prewarmOnStart": false
+    }
+  },
+  "baselineEvidence": {
+    "ledger": "docs/research/hosted-web/phase-0/baseline.md",
+    "command": "pnpm check:ci",
+    "integrationSha": "c1b8e3fe69e1c05ad94ec0c0301def25c8a464b5",
+    "exitCode": 1,
+    "durationSeconds": 2211,
+    "completedAt": "2026-07-11T17:08:58Z",
+    "result": "failed_only_at_full_root_lint",
+    "failureCounts": {
+      "baseOwnedFixRecords": 2,
+      "lintErrors": 5,
+      "lintWarnings": 2942,
+      "unknownFailures": 0
+    },
+    "externalArtifacts": [
+      {
+        "path": "/var/data/agent-teams-hosted-web-refactor/control/evidence/phase-00-check-ci.log",
+        "sha256": "78efb84ac4cc055f36fbe14a5ce481517b6193f5cea3b883e20401ec260cf0fa"
+      },
+      {
+        "path": "/var/data/agent-teams-hosted-web-refactor/control/evidence/phase-00-check-ci.result",
+        "sha256": "e0663fb85588bba536c90f09908dea9ebb2c10cc44b973ae765cc8be639fc1ce"
+      },
+      {
+        "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-baseline-evidence-v2/dependency-preflight.json",
+        "sha256": "7fa40575663888bcfd98a129f8e174a7d13ed3413ec9cc32e05f2b115db28208"
+      }
+    ]
+  },
+  "orchestrationIncident": {
+    "incidentId": "P0A-PREWARM-RUNAWAY-01",
+    "jobId": "agent-teams-hosted-web-refactor-phase-00-baseline-evidence-v1",
+    "prewarmOnStart": true,
+    "attemptCount": 22,
+    "startedAt": "2026-07-11T17:18:29.835Z",
+    "failedAt": "2026-07-11T17:23:16.287Z",
+    "result": "subscription_worker_prewarm_failed",
+    "cause": "Worker pool failed to prewarm; codex_app_server_exited:1",
+    "repositoryFilesChanged": false,
+    "resolution": "Clean v2 baseline and subsequent clean v2 jobs use prewarmOnStart=false.",
+    "externalResultSha256": "584d42c4afc347115a1a0ad4d058bdbe0802ee22d56271a05197c16b8812bda8"
+  }
+}

@@ -345,9 +345,8 @@ async function runOpenCodeMemberInboxRelayWork(
         return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
       }
       if (alreadyReadRecord && !alreadyReadRecord.inboxReadCommittedAt) {
-        // The read row IS the double-delivery guard; a missing ledger stamp is
-        // bookkeeping drift that keeps this record looking like unfinished
-        // work. Align the ledger with the row.
+        // The read row IS the double-delivery guard; a missing ledger stamp is bookkeeping drift
+        // that keeps this record looking unfinished. Align the ledger with the row.
         alreadyReadRecord = await commitOpenCodeAlreadyReadInboxRow({
           ledger: promptLedger,
           record: alreadyReadRecord,
@@ -357,9 +356,8 @@ async function runOpenCodeMemberInboxRelayWork(
       return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
     if (!targetMessage) {
-      // Definitively missing: the inbox read above succeeded, so the row was
-      // deleted rather than momentarily unreadable. Settle the ledger record,
-      // or every later pass re-arms this wake to find the same nothing.
+      // Definitively missing: the inbox read succeeded, so the row was deleted rather than
+      // momentarily unreadable. Settle the ledger, or every later pass re-arms this empty wake.
       await terminalizeOpenCodeMissingInboxRowRecord({
         teamName,
         canonicalMemberName: memberIdentity.canonicalMemberName,
@@ -381,9 +379,8 @@ async function runOpenCodeMemberInboxRelayWork(
     maxRelay: inboxMessages.length,
   });
 
-  // A rider that did not travel with this prompt must still get a turn of its
-  // own: the anchor's read-commit usually re-fires the inbox watcher, but a
-  // delivery that writes no inbox row would otherwise leave the rider waiting.
+  // A rider that did not travel with this prompt must still get its own turn: the anchor's
+  // read-commit usually re-fires the watcher, but no inbox write would leave the rider waiting.
   const scheduleOpenCodeCoalesceRiderWake = (rider?: RelayInboxMessage): void => {
     if (!rider || rider.read) return;
     ports.scheduleOpenCodeMemberInboxDeliveryWake({
@@ -400,9 +397,8 @@ async function runOpenCodeMemberInboxRelayWork(
     return taskRefInferenceTasks;
   };
 
-  // How a queued row is judged as a follower: by its own reply contract and its
-  // own ledger state, never by the anchor's. Both the coalescing prompt and the
-  // post-completion read-commit select followers this way.
+  // A queued row is judged as a follower by its own reply contract and ledger state, never the
+  // anchor's. Both the coalescing prompt and post-completion read-commit select this way.
   const coalescePorts: OpenCodeReplyOptionalCoalescePorts = {
     resolveReplyRecipient: (candidate) =>
       resolveOpenCodeMemberInboxDeliveryDecision({

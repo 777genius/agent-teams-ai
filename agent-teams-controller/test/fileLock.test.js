@@ -30,7 +30,9 @@ it('recovers a dead desktop strict transition gate so later acquisition can proc
 it('holds a complete token until callback return and releases on callback failure', () => {
   expect(() =>
     withFileLockSync(resource, () => {
-      expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toMatch(/^\d+\n\d+\n[a-f0-9-]{36}\n$/);
+      expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toMatch(
+        /^\d+\n\d+\n[a-f0-9-]{36}\n(?:pidns:\d+\n)?$/
+      );
       expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
       expect(withFileLockSync(path.join(dir, 'different'), () => 9)).toBe(9);
       throw new Error('callback failure');
@@ -54,6 +56,44 @@ it.each(['EPERM', 'EACCES', 'EINVAL'])('retains an owner when PID probing report
     throw Object.assign(new Error(code), { code });
   });
   expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+});
+
+describe.runIf(process.platform === 'linux')('owners in another PID namespace', () => {
+  const deadPid = 424242;
+  let ownNamespace;
+  beforeEach(() => {
+    ownNamespace = /^pid:\[(\d+)\]$/.exec(fs.readlinkSync('/proc/self/ns/pid'))[1];
+    vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error('ESRCH'), { code: 'ESRCH' });
+    });
+  });
+  const foreign = () => String(Number(ownNamespace) + 1);
+
+  it('keeps a lock and gate whose PID cannot be probed from this namespace', () => {
+    const lock = `${deadPid}\n0\ntoken\npidns:${foreign()}\n`;
+    fs.writeFileSync(`${resource}.lock`, lock);
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+    expect(fs.readFileSync(`${resource}.lock`, 'utf8')).toBe(lock);
+
+    fs.unlinkSync(`${resource}.lock`);
+    const token = '00000000-0000-4000-8000-000000000002';
+    const gateOwner = path.join(`${resource}.lock-transition-v2`, `owner-${deadPid}-${token}`);
+    fs.mkdirSync(path.dirname(gateOwner));
+    fs.writeFileSync(
+      gateOwner,
+      `file-lock-transition-v2\n${deadPid}\n${token}\npidns:${foreign()}\n`
+    );
+    expect(() => withFileLockSync(resource, () => {}, options)).toThrow('File lock timeout');
+    expect(fs.existsSync(gateOwner)).toBe(true);
+  });
+
+  it('still reclaims dead same-namespace and legacy owners', () => {
+    for (const suffix of [`pidns:${ownNamespace}\n`, '']) {
+      fs.writeFileSync(`${resource}.lock`, `${deadPid}\n0\ntoken\n${suffix}`);
+      expect(withFileLockSync(resource, () => 'ok', options)).toBe('ok');
+      expect(fs.existsSync(`${resource}.lock`)).toBe(false);
+    }
+  });
 });
 
 it('keeps legacy anonymous locks unknown regardless of age', () => {

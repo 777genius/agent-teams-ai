@@ -6,10 +6,16 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_MAX_LINES = 800;
 const POLICY_URL = new URL('./source-file-size-baseline.json', import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const POLICY_PATH = 'scripts/ci/source-file-size-baseline.json';
+const NO_PRIOR_COMMIT_REF = '0'.repeat(40);
 
 const SOURCE_EXTENSION_PATTERN =
   /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|css|scss|sass|less|html|sh)$/i;
 const GENERATED_SOURCE_PATHS = new Set(['src/features/localization/renderer/resources.d.ts']);
+const FROZEN_EVIDENCE_SOURCE_PATHS = new Set([
+  // Exact bytes are enforced by verify-hosted-phase0-evidence-integrity.mjs.
+  'scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts',
+]);
 const EXCLUDED_SEGMENT_PATTERN =
   /(?:^|\/)(?:test|tests|__tests__|fixture|fixtures|mock|mocks|__mocks__|e2e|smoke)(?:\/|$)/i;
 const EXCLUDED_ROOT_PATTERN =
@@ -37,6 +43,7 @@ export function isProductionSourcePath(filePath) {
   return (
     SOURCE_EXTENSION_PATTERN.test(normalizedPath) &&
     !GENERATED_SOURCE_PATHS.has(normalizedPath) &&
+    !FROZEN_EVIDENCE_SOURCE_PATHS.has(normalizedPath) &&
     !isTestFilePath(normalizedPath) &&
     !EXCLUDED_SEGMENT_PATTERN.test(normalizedPath) &&
     !EXCLUDED_ROOT_PATTERN.test(normalizedPath) &&
@@ -143,27 +150,82 @@ export function evaluateSourceFileSizes(records, policy) {
   };
 }
 
+export function strictSourceFileSizeViolations(result) {
+  return [
+    ...result.violations,
+    ...result.ratchetCandidates.map(({ path: filePath, lineCount, legacyCap }) => ({
+      code: 'legacy-cap-not-tight',
+      path: filePath,
+      lineCount,
+      message:
+        `${filePath}: legacy file is now ${lineCount} lines; ` +
+        `lower its frozen cap from ${legacyCap}.`,
+    })),
+  ];
+}
+
+export function evaluateSourceFileSizePolicyRatchet(policy, baselinePolicy) {
+  if (baselinePolicy === null) return [];
+
+  const violations = [];
+  const maxLines = policy.maxLines ?? DEFAULT_MAX_LINES;
+  const baselineMaxLines = baselinePolicy.maxLines ?? DEFAULT_MAX_LINES;
+  if (maxLines > baselineMaxLines) {
+    violations.push({
+      code: 'raised-global-limit',
+      path: POLICY_PATH,
+      message:
+        `${POLICY_PATH}: global limit ${maxLines} exceeds the base limit ` +
+        `${baselineMaxLines}.`,
+    });
+  }
+
+  const legacy = policy.legacy ?? {};
+  const baselineLegacy = baselinePolicy.legacy ?? {};
+  for (const [filePath, legacyCap] of Object.entries(legacy).sort(([left], [right]) =>
+    left.localeCompare(right)
+  )) {
+    const normalizedPath = normalizeRepoPath(filePath);
+    const baselineCap = baselineLegacy[normalizedPath];
+    if (baselineCap === undefined) {
+      violations.push({
+        code: 'new-legacy-exception',
+        path: normalizedPath,
+        message: `${normalizedPath}: new oversized-file exceptions are forbidden.`,
+      });
+    } else if (legacyCap > baselineCap) {
+      violations.push({
+        code: 'raised-legacy-cap',
+        path: normalizedPath,
+        message: `${normalizedPath}: legacy cap ${legacyCap} exceeds the base cap ${baselineCap}.`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function splitNullDelimited(output) {
   return output.split('\0').filter(Boolean);
 }
 
-function gitOutput(args) {
+function gitOutput(args, root = REPO_ROOT) {
   return execFileSync('git', args, {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
 }
 
-function readWorkingTreeRecords() {
+export function readWorkingTreeRecords(root = REPO_ROOT) {
   const fileNames = splitNullDelimited(
-    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'])
+    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
   );
   return fileNames
     .filter(isProductionSourcePath)
-    .filter((fileName) => existsSync(path.join(REPO_ROOT, fileName)))
+    .filter((fileName) => existsSync(path.join(root, fileName)))
     .map((fileName) => {
-      const contents = readFileSync(path.join(REPO_ROOT, fileName), 'utf8');
+      const contents = readFileSync(path.join(root, fileName), 'utf8');
       return { path: normalizeRepoPath(fileName), lineCount: countPhysicalLines(contents) };
     });
 }
@@ -185,6 +247,28 @@ function loadPolicy() {
   return JSON.parse(readFileSync(POLICY_URL, 'utf8'));
 }
 
+function loadBaselinePolicy({ requireBaseline = false } = {}) {
+  const configuredRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  if (configuredRef === undefined || configuredRef === '') {
+    if (requireBaseline) {
+      throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode.');
+    }
+    return null;
+  }
+  if (!/^[0-9a-f]{40}$/i.test(configuredRef)) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA.');
+  }
+  if (configuredRef === NO_PRIOR_COMMIT_REF) return null;
+
+  try {
+    return JSON.parse(gitOutput(['show', `${configuredRef}:${POLICY_PATH}`]));
+  } catch {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${POLICY_PATH} in source-size ratchet mode.`
+    );
+  }
+}
+
 function printBaselineFromHead() {
   const records = readHeadRecords();
   const legacy = Object.fromEntries(
@@ -196,11 +280,16 @@ function printBaselineFromHead() {
   process.stdout.write(`${JSON.stringify({ maxLines: DEFAULT_MAX_LINES, legacy }, null, 2)}\n`);
 }
 
-function runGuard() {
-  const result = evaluateSourceFileSizes(readWorkingTreeRecords(), loadPolicy());
-  if (result.violations.length > 0) {
-    console.error(`Source file size guard failed with ${result.violations.length} violation(s):\n`);
-    for (const violation of result.violations) console.error(`- ${violation.message}`);
+function runGuard({ requireBaseline = false } = {}) {
+  const policy = loadPolicy();
+  const result = evaluateSourceFileSizes(readWorkingTreeRecords(), policy);
+  const violations = [
+    ...evaluateSourceFileSizePolicyRatchet(policy, loadBaselinePolicy({ requireBaseline })),
+    ...strictSourceFileSizeViolations(result),
+  ];
+  if (violations.length > 0) {
+    console.error(`Source file size guard failed with ${violations.length} violation(s):\n`);
+    for (const violation of violations) console.error(`- ${violation.message}`);
     console.error(
       `\nNew production files must stay at or below ${result.maxLines} physical lines. ` +
         'Legacy caps in scripts/ci/source-file-size-baseline.json may only move downward.'
@@ -213,12 +302,6 @@ function runGuard() {
     `Source file size guard passed: ${result.checkedFiles} production files checked, ` +
       `${result.legacyFiles} frozen legacy exceptions, ${result.maxLines}-line limit.`
   );
-  if (result.ratchetCandidates.length > 0) {
-    console.log(
-      `${result.ratchetCandidates.length} legacy file(s) are below their frozen caps; ` +
-        'lower those caps when committing the refactor.'
-    );
-  }
 }
 
 const isEntrypoint =
@@ -227,5 +310,14 @@ const isEntrypoint =
 
 if (isEntrypoint) {
   if (process.argv.includes('--print-baseline-from-head')) printBaselineFromHead();
-  else runGuard();
+  else {
+    try {
+      runGuard({ requireBaseline: process.argv.includes('--require-baseline') });
+    } catch (error) {
+      console.error(
+        `Source file size guard failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      process.exitCode = 1;
+    }
+  }
 }

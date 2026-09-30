@@ -86,6 +86,7 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
     agentTeamsMcpHttpServer: server,
     ensureOpenCodeRuntimeBinaryEnv: vi.fn().mockResolvedValue(undefined),
     ensureOpenCodeLocalMcpLaunchEnv: vi.fn().mockResolvedValue(undefined),
+    ensureTeamControlApiBaseUrl: vi.fn().mockResolvedValue(null),
     buildOpenCodeAppScopedMcpUrl,
     openCodeManagedHostInstanceId: 'review-host',
     profileScope: profile,
@@ -167,7 +168,11 @@ describe('shutdown MCP transport authority', () => {
       clearInboxNotifyTimers: noOp,
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
-      teamProvisioningService: { setRuntimeRecoveryFailureObserver: noOp, stopAllTeams: stop },
+      teamProvisioningService: {
+        beginShutdown: noOp,
+        setRuntimeRecoveryFailureObserver: noOp,
+        stopAllTeams: stop,
+      },
       cleanupOpenCodeHostsForLifecycle: stop,
       agentTeamsMcpHttpServer: server,
       killTrackedCliProcesses: () => {

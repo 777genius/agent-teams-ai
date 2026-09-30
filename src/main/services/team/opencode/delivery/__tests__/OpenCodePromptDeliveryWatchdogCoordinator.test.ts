@@ -174,7 +174,7 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       isStaleError: vi.fn(async () => false),
     });
 
-    it.each(['bootstrap commit', 'runtime registration'])(
+    it.each(['bootstrap commit', 'runtime registration'] as const)(
       'does not wake an orphan active secondary lane from %s while the current primary is ready',
       async (entryPoint) => {
         const scheduler = makeScheduler();
@@ -211,30 +211,33 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       }
     );
 
-    it.each([true, false])('revalidates owned secondary lanes with ready=%s', async (ready) => {
-      const scheduler = makeScheduler();
-      const lane = { laneId: input.laneId, runId: input.runId };
-      const root = { mixedSecondaryLanes: [lane] };
-      let removeOwnerDuringRead = false;
-      const coordinator = makeCoordinator({
-        scheduler,
-        canDeliverToTeamRuntime: () => ready,
-        resolveTrackedBootstrapRunId: (member) =>
-          getTrackedOpenCodeBootstrapWakeRunId(member, {
-            runTracking: { resolveDeliverableTrackedRuntimeRunId: () => 'root-run-1' },
-            runs: new Map([['root-run-1', root]]),
-          }),
-        getInboxMessages: async () => {
-          if (removeOwnerDuringRead) root.mixedSecondaryLanes = [];
-          return [unread];
-        },
-      });
-      await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(1);
-      scheduler.schedule.mockClear();
-      removeOwnerDuringRead = true;
-      await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(0);
-      expect(scheduler.schedule).not.toHaveBeenCalled();
-    });
+    it.each([true, false])(
+      'revalidates owned secondary lanes with ready=%s',
+      async (ready: boolean) => {
+        const scheduler = makeScheduler();
+        const lane = { laneId: input.laneId, runId: input.runId };
+        const root = { mixedSecondaryLanes: [lane] };
+        let removeOwnerDuringRead = false;
+        const coordinator = makeCoordinator({
+          scheduler,
+          canDeliverToTeamRuntime: () => ready,
+          resolveTrackedBootstrapRunId: (member) =>
+            getTrackedOpenCodeBootstrapWakeRunId(member, {
+              runTracking: { resolveDeliverableTrackedRuntimeRunId: () => 'root-run-1' },
+              runs: new Map([['root-run-1', root]]),
+            }),
+          getInboxMessages: async () => {
+            if (removeOwnerDuringRead) root.mixedSecondaryLanes = [];
+            return [unread];
+          },
+        });
+        await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(1);
+        scheduler.schedule.mockClear();
+        removeOwnerDuringRead = true;
+        await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(0);
+        expect(scheduler.schedule).not.toHaveBeenCalled();
+      }
+    );
 
     it('preserves a ready standalone primary without an aggregate owner and rechecks its runtime ID', async () => {
       const scheduler = makeScheduler();
@@ -279,13 +282,14 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       expect(scheduler.schedule).not.toHaveBeenCalled();
       registered = true;
       await coordinator.wakeAfterRuntimeRegistration({ teamName: 'team', runId: 'run-1' });
-      expect(scheduler.schedule.mock.calls.map(([wake]) => wake.memberName)).toEqual([
-        'alice',
-        'bob',
-      ]);
+      expect(
+        scheduler.schedule.mock.calls.map(
+          (call: Array<{ memberName: string }>) => call[0]?.memberName
+        )
+      ).toEqual(['alice', 'bob']);
     });
 
-    it.each(['stopped', 'stale primary', 'replacement during proof'])(
+    it.each(['stopped', 'stale primary', 'replacement during proof'] as const)(
       'suppresses registration wake after %s',
       async (scenario) => {
         const scheduler = makeScheduler();
@@ -327,7 +331,7 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       });
     });
 
-    it.each(['empty inbox', 'disabled', 'stopped', 'stale run'])(
+    it.each(['empty inbox', 'disabled', 'stopped', 'stale run'] as const)(
       'does not wake for %s',
       async (scenario) => {
         const scheduler = makeScheduler();
@@ -344,24 +348,27 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       }
     );
 
-    it.each(['stop', 'relaunch'])('rechecks %s after reading the inbox', async (transition) => {
-      const scheduler = makeScheduler();
-      let currentRun = 'run-1';
-      let active = true;
-      const coordinator = makeCoordinator({
-        scheduler,
-        canDeliverToTeamRuntime: () => active,
-        resolveTrackedBootstrapRunId: () => (active ? 'root-run-1' : null),
-        resolveCurrentRuntimeRunId: async () => currentRun,
-        getInboxMessages: async () => {
-          if (transition === 'stop') active = false;
-          else currentRun = 'run-2';
-          return [unread];
-        },
-      });
-      await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(0);
-      expect(scheduler.schedule).not.toHaveBeenCalled();
-    });
+    it.each(['stop', 'relaunch'] as const)(
+      'rechecks %s after reading the inbox',
+      async (transition) => {
+        const scheduler = makeScheduler();
+        let currentRun = 'run-1';
+        let active = true;
+        const coordinator = makeCoordinator({
+          scheduler,
+          canDeliverToTeamRuntime: () => active,
+          resolveTrackedBootstrapRunId: () => (active ? 'root-run-1' : null),
+          resolveCurrentRuntimeRunId: async () => currentRun,
+          getInboxMessages: async () => {
+            if (transition === 'stop') active = false;
+            else currentRun = 'run-2';
+            return [unread];
+          },
+        });
+        await expect(coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(0);
+        expect(scheduler.schedule).not.toHaveBeenCalled();
+      }
+    );
 
     it('coalesces repeated commits through the existing scheduler and cancels on Stop', async () => {
       vi.useFakeTimers();
@@ -494,6 +501,7 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       laneId: 'primary',
       runId: 'run-1',
       state: 'idle',
+      observedAt: ISO,
     });
   });
 
@@ -501,6 +509,28 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
     const notifyLeadTurnActivity = vi.fn();
     const coordinator = makeCoordinator({ notifyLeadTurnActivity });
     const markFailedTerminal = vi.fn(async () => record({ status: 'failed_terminal' }));
+
+    await coordinator.markLedgerFailedTerminal({
+      ledger: { markFailedTerminal } as unknown as OpenCodePromptDeliveryLedgerStore,
+      id: 'record-1',
+      reason: 'opencode_prompt_delivery_failed_terminal',
+      failedAt: ISO,
+    });
+
+    expect(notifyLeadTurnActivity).not.toHaveBeenCalled();
+  });
+
+  it('does not report lead turn activity without a run ownership fence', async () => {
+    const notifyLeadTurnActivity = vi.fn();
+    const coordinator = makeCoordinator({ notifyLeadTurnActivity });
+    const markFailedTerminal = vi.fn(async () =>
+      record({
+        laneId: 'primary',
+        memberName: 'team-lead',
+        runId: null,
+        status: 'failed_terminal',
+      })
+    );
 
     await coordinator.markLedgerFailedTerminal({
       ledger: { markFailedTerminal } as unknown as OpenCodePromptDeliveryLedgerStore,

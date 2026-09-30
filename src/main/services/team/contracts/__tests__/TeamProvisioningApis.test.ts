@@ -2,24 +2,46 @@ import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'v
 
 import { beginOpenCodeStartupRuntimeSweep } from '../../opencode/bridge/OpenCodeStartupSweepGate';
 import {
-  bindTeamClaudeLogsApi,
-  bindTeamCrossTeamMessagingApi,
-  bindTeamDiagnosticsApi,
+  bindTeamApplicationDataApi,
+  bindTeamApplicationProvisioningStartApi,
+  bindTeamApplicationProvisioningStatusApi,
+  bindTeamApplicationResumeApi,
+  bindTeamApplicationRuntimeApi,
+  bindTeamApplicationRuntimeIngressApi,
+  bindTeamApplicationTaskActivityApi,
+} from '../TeamApplicationCapabilityApiBinder';
+import { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from '../TeamMessagingApiBinder';
+import {
   bindTeamHttpDataApi,
   bindTeamHttpHandlerApis,
-  bindTeamHttpRuntimeApi,
+  bindTeamProvisioningStartApi,
+} from '../TeamProvisioningApis';
+import {
+  bindTeamClaudeLogsApi,
+  bindTeamDiagnosticsApi,
   bindTeamMemberLifecycleApi,
-  bindTeamMessagingApi,
   bindTeamProvisioningPreflightApi,
   bindTeamProvisioningRunApi,
-  bindTeamProvisioningStartApi,
   bindTeamProvisioningStatusApi,
-  bindTeamRuntimeApi,
-  bindTeamRuntimeControlCompatibilityApi,
   bindTeamTaskActivityRepairApi,
   bindTeamToolApprovalApi,
-} from '../TeamProvisioningApis';
+} from '../TeamProvisioningCapabilityApiBinder';
+import {
+  bindTeamHttpRuntimeApi,
+  bindTeamOpenCodeRuntimeIngressCompatibilityApi,
+  bindTeamRuntimeApi,
+  bindTeamRuntimeControlCompatibilityApi,
+} from '../TeamRuntimeApiBinder';
 
+import type {
+  TeamApplicationDataApi,
+  TeamApplicationProvisioningStartApi,
+  TeamApplicationProvisioningStatusApi,
+  TeamApplicationResumeApi,
+  TeamApplicationRuntimeApi,
+  TeamApplicationRuntimeIngressApi,
+  TeamApplicationTaskActivityApi,
+} from '../TeamApplicationCapabilityApis';
 import type {
   OpenCodeRuntimeControlAck,
   TeamClaudeLogsApi,
@@ -49,6 +71,7 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningPrepareResult,
@@ -60,6 +83,136 @@ import type {
 } from '@shared/types/team';
 
 const TEST_TEAM_CWD = '/workspace/team';
+
+describe('TeamApplication capability binders', () => {
+  it('binds only provider-neutral application methods to their existing owners', async () => {
+    interface ApplicationSource
+      extends
+        TeamApplicationDataApi,
+        TeamApplicationProvisioningStartApi,
+        TeamApplicationProvisioningStatusApi,
+        TeamApplicationResumeApi,
+        TeamApplicationRuntimeApi,
+        TeamApplicationRuntimeIngressApi,
+        TeamApplicationTaskActivityApi {
+      readonly marker: string;
+    }
+
+    let resumedMarker: string | null = null;
+    const source: ApplicationSource = {
+      marker: 'application-owner',
+      listTeams: () => Promise.resolve([]),
+      getTeamData: () => Promise.resolve({} as TeamViewSnapshot),
+      getSavedRequest: () => Promise.resolve(null),
+      createTeamConfig: () => Promise.resolve(),
+      createTeam(this: ApplicationSource): Promise<TeamCreateResponse> {
+        return Promise.resolve({ runId: this.marker });
+      },
+      launchTeam(this: ApplicationSource): Promise<TeamLaunchResponse> {
+        return Promise.resolve({ runId: this.marker });
+      },
+      getProvisioningStatus(this: ApplicationSource): Promise<TeamProvisioningProgress> {
+        return Promise.resolve({
+          runId: this.marker,
+          teamName: 'application-team',
+          state: 'ready',
+          message: 'ready',
+          startedAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:01.000Z',
+        });
+      },
+      getRuntimeState: (teamName) =>
+        Promise.resolve({ teamName, isAlive: false, runId: null, progress: null }),
+      stopTeam: () => Promise.resolve(),
+      getAliveTeams(this: ApplicationSource): string[] {
+        return [this.marker];
+      },
+      recordRuntimeBootstrapCheckin: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'accepted' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      deliverRuntimeMessage: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'delivered' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      recordRuntimeTaskEvent: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'recorded' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      recordRuntimeHeartbeat: () =>
+        Promise.resolve({
+          ok: true as const,
+          providerId: 'application-runtime',
+          teamName: 'application-team',
+          runId: 'application-run',
+          state: 'recorded' as const,
+          diagnostics: [],
+          observedAt: '2026-01-01T00:00:02.000Z',
+        }),
+      repairStaleTaskActivityIntervalsBeforeSnapshot: () => Promise.resolve(),
+      resumeTeam(this: ApplicationSource): void {
+        resumedMarker = this.marker;
+      },
+    };
+
+    const data = bindTeamApplicationDataApi(source);
+    const provisioningStart = bindTeamApplicationProvisioningStartApi(source);
+    const provisioningStatus = bindTeamApplicationProvisioningStatusApi(source);
+    const runtime = bindTeamApplicationRuntimeApi(source);
+    const runtimeIngress = bindTeamApplicationRuntimeIngressApi(source);
+    const taskActivity = bindTeamApplicationTaskActivityApi(source);
+    const resume = bindTeamApplicationResumeApi(source);
+
+    expect(Object.keys(data).sort()).toEqual([
+      'createTeamConfig',
+      'getSavedRequest',
+      'getTeamData',
+      'listTeams',
+    ]);
+    expect(Object.keys(provisioningStart).sort()).toEqual(['createTeam', 'launchTeam']);
+    expect(Object.keys(provisioningStatus)).toEqual(['getProvisioningStatus']);
+    expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect(Object.keys(runtimeIngress).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
+    ]);
+    expect(Object.keys(taskActivity)).toEqual(['repairStaleTaskActivityIntervalsBeforeSnapshot']);
+    expect(Object.keys(resume)).toEqual(['resumeTeam']);
+
+    await expect(provisioningStart.createTeam({} as never, () => undefined)).resolves.toEqual({
+      runId: 'application-owner',
+    });
+    await expect(provisioningStatus.getProvisioningStatus('ignored')).resolves.toMatchObject({
+      runId: 'application-owner',
+    });
+    expect(runtime.getAliveTeams()).toEqual(['application-owner']);
+    await expect(runtimeIngress.recordRuntimeHeartbeat({})).resolves.toMatchObject({
+      state: 'recorded',
+    });
+    resume.resumeTeam('application-team');
+    expect(resumedMarker).toBe('application-owner');
+  });
+});
 
 describe('TeamProvisioning API binders', () => {
   it('binds provisioning start methods to the source object', async () => {
@@ -361,13 +514,11 @@ describe('TeamProvisioning API binders', () => {
     interface TeamDataSource extends TeamHttpDataApi {
       readonly suffix: string;
       createdTeamName: string | null;
-      renamedDraft: string | null;
     }
 
     const source: TeamDataSource = {
       suffix: 'bound',
       createdTeamName: null,
-      renamedDraft: null,
       listTeams(this: TeamDataSource): Promise<TeamSummary[]> {
         return Promise.resolve([
           {
@@ -396,14 +547,6 @@ describe('TeamProvisioning API binders', () => {
         this.createdTeamName = request.teamName;
         return Promise.resolve();
       },
-      renameDraftTeam(
-        this: TeamDataSource,
-        oldTeamName: string,
-        newTeamName: string
-      ): Promise<void> {
-        this.renamedDraft = `${oldTeamName}->${newTeamName}-${this.suffix}`;
-        return Promise.resolve();
-      },
     };
 
     const api = bindTeamHttpDataApi(source);
@@ -426,9 +569,6 @@ describe('TeamProvisioning API binders', () => {
       members: [],
     } as TeamCreateConfigRequest);
     expect(source.createdTeamName).toBe('created-team');
-    const renameDraftTeam = api.renameDraftTeam.bind(undefined);
-    await renameDraftTeam('old-draft', 'new-draft');
-    expect(source.renamedDraft).toBe('old-draft->new-draft-bound');
   });
 
   it('groups HTTP route controls behind narrow facade ports', async () => {
@@ -503,28 +643,25 @@ describe('TeamProvisioning API binders', () => {
     const provisioningStart = api.provisioningStart;
     const provisioningStatus = api.provisioningStatus;
     const runtime = api.runtime;
-    const runtimeControl = api.runtimeControl;
+    const runtimeIngress = api.runtimeIngress;
     const createTeam = provisioningStart.createTeam.bind(undefined);
     const launchTeam = provisioningStart.launchTeam.bind(undefined);
     const getRuntimeState = runtime.getRuntimeState.bind(undefined);
-    const deliverOpenCodeRuntimeMessage =
-      runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
+    const deliverRuntimeMessage = runtimeIngress.deliverRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
-      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeControl',
+      'runtimeIngress',
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
-    // Contract lock: the HTTP member diagnostics facade exposes the write-free
-    // reads and nothing else, so quietly re-pointing it at the mutating getters
-    // is a CI failure rather than a silent behaviour change.
-    expect(Object.keys(api.memberDiagnostics).sort()).toEqual([
-      'getMemberSpawnStatusesReadOnly',
-      'getTeamAgentRuntimeSnapshotReadOnly',
+    expect(Object.keys(runtimeIngress).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
     ]);
     expect((runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
     expect((runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
@@ -539,7 +676,7 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-http',
     });
     await expect(getRuntimeState('team-http')).resolves.toMatchObject({ runId: 'run-http' });
-    await expect(deliverOpenCodeRuntimeMessage({})).resolves.toMatchObject({
+    await expect(deliverRuntimeMessage({})).resolves.toMatchObject({
       runId: 'run-http',
       state: 'delivered',
     });
@@ -643,7 +780,7 @@ describe('TeamProvisioning API binders', () => {
     expect(source.compatibilityCalls).toBe(3);
   });
 
-  it('keeps runtime, runtime-control, task activity, and member lifecycle APIs as separate control surfaces', () => {
+  it('keeps runtime, runtime-control, task activity, and member lifecycle APIs as separate control surfaces', async () => {
     const ack: OpenCodeRuntimeControlAck = {
       ok: true,
       providerId: 'opencode',
@@ -696,6 +833,7 @@ describe('TeamProvisioning API binders', () => {
     const runtimeApi = bindTeamRuntimeApi(runtimeSource);
     const httpRuntimeApi = bindTeamHttpRuntimeApi(runtimeSource);
     const runtimeControlApi = bindTeamRuntimeControlCompatibilityApi(runtimeControlSource);
+    const runtimeIngressApi = bindTeamOpenCodeRuntimeIngressCompatibilityApi(runtimeControlSource);
     const taskActivityApi = bindTeamTaskActivityRepairApi(taskActivitySource);
     const lifecycleApi = bindTeamMemberLifecycleApi(lifecycleSource);
 
@@ -718,6 +856,16 @@ describe('TeamProvisioning API binders', () => {
       'recordOpenCodeRuntimeHeartbeat',
       'recordOpenCodeRuntimeTaskEvent',
     ]);
+    expect(Object.keys(runtimeIngressApi).sort()).toEqual([
+      'deliverRuntimeMessage',
+      'recordRuntimeBootstrapCheckin',
+      'recordRuntimeHeartbeat',
+      'recordRuntimeTaskEvent',
+    ]);
+    await expect(runtimeIngressApi.deliverRuntimeMessage({})).resolves.toMatchObject({
+      providerId: 'opencode',
+      state: 'delivered',
+    });
     expect(Object.keys(taskActivityApi).sort()).toEqual([
       'repairStaleTaskActivityIntervalsBeforeSnapshot',
     ]);
@@ -732,10 +880,12 @@ describe('TeamProvisioning API binders', () => {
     ]);
     const runtimeKeys = new Set(Object.keys(runtimeApi));
     const runtimeControlKeys = new Set(Object.keys(runtimeControlApi));
+    const runtimeIngressKeys = new Set(Object.keys(runtimeIngressApi));
     const taskActivityKeys = new Set(Object.keys(taskActivityApi));
     expect(Object.keys(runtimeControlApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(taskActivityApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(taskActivityApi).filter((key) => runtimeControlKeys.has(key))).toEqual([]);
+    expect(Object.keys(taskActivityApi).filter((key) => runtimeIngressKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => runtimeKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => runtimeControlKeys.has(key))).toEqual([]);
     expect(Object.keys(lifecycleApi).filter((key) => taskActivityKeys.has(key))).toEqual([]);
@@ -1113,6 +1263,18 @@ describe('TeamProvisioning API binders', () => {
         settings: ToolApprovalSettings;
         sourceName: string;
       } | null;
+      previewLookup: {
+        teamName: string;
+        runId: string;
+        requestId: string;
+        sourceName: string;
+      } | null;
+      previewPathLookup: {
+        teamName: string;
+        runId: string;
+        requestId: string;
+        sourceName: string;
+      } | null;
     }
 
     const settings: ToolApprovalSettings = {
@@ -1126,6 +1288,30 @@ describe('TeamProvisioning API binders', () => {
       sourceName: 'approval-source',
       response: null,
       settingsUpdate: null,
+      previewLookup: null,
+      previewPathLookup: null,
+      getPendingToolApprovalFilePath(
+        this: ToolApprovalSource,
+        teamName: string,
+        runId: string,
+        requestId: string
+      ): string | null {
+        this.previewPathLookup = { teamName, runId, requestId, sourceName: this.sourceName };
+        return 'approved.txt';
+      },
+      getPendingToolApprovalFileTarget(
+        this: ToolApprovalSource,
+        teamName: string,
+        runId: string,
+        requestId: string
+      ): { authorizationGeneration: string; authorizationPath: string; readPath: string } | null {
+        this.previewLookup = { teamName, runId, requestId, sourceName: this.sourceName };
+        return {
+          authorizationGeneration: 'approval-generation-1',
+          authorizationPath: 'approved.txt',
+          readPath: '/repo/approved.txt',
+        };
+      },
       respondToToolApproval(
         this: ToolApprovalSource,
         teamName: string,
@@ -1158,12 +1344,32 @@ describe('TeamProvisioning API binders', () => {
     };
 
     const api = bindTeamToolApprovalApi(source);
+    const getPendingToolApprovalFilePath = api.getPendingToolApprovalFilePath.bind(undefined);
+    const getPendingToolApprovalFileTarget = api.getPendingToolApprovalFileTarget.bind(undefined);
     const respondToToolApproval = api.respondToToolApproval.bind(undefined);
     const updateToolApprovalSettings = api.updateToolApprovalSettings.bind(undefined);
 
+    expect(getPendingToolApprovalFilePath('team-bound', 'run-1', 'request-1')).toBe('approved.txt');
+    expect(getPendingToolApprovalFileTarget('team-bound', 'run-1', 'request-1')).toEqual({
+      authorizationGeneration: 'approval-generation-1',
+      authorizationPath: 'approved.txt',
+      readPath: '/repo/approved.txt',
+    });
     await respondToToolApproval('team-bound', 'run-1', 'request-1', true, 'approved');
     updateToolApprovalSettings('team-bound', settings);
 
+    expect(source.previewLookup).toEqual({
+      teamName: 'team-bound',
+      runId: 'run-1',
+      requestId: 'request-1',
+      sourceName: 'approval-source',
+    });
+    expect(source.previewPathLookup).toEqual({
+      teamName: 'team-bound',
+      runId: 'run-1',
+      requestId: 'request-1',
+      sourceName: 'approval-source',
+    });
     expect(source.response).toEqual({
       teamName: 'team-bound',
       runId: 'run-1',
@@ -1187,8 +1393,9 @@ describe('the OpenCode start preparation both entry points install', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   function startApiFor(
-    request: TeamCreateRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
+    request: TeamCreateRequest | TeamLaunchRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void,
+    operation: 'createTeam' | 'launchTeam' = 'createTeam'
   ): Promise<void> {
     const declared: Record<string, unknown> = {
       createTeam: () => Promise.resolve({ runId: 'run-start' }),
@@ -1203,9 +1410,10 @@ describe('the OpenCode start preparation both entry points install', () => {
       get: (target, key: string) => target[key] ?? (() => Promise.resolve(undefined)),
     }) as unknown as Parameters<typeof bindTeamHttpHandlerApis>[0];
 
-    return bindTeamHttpHandlerApis(source)
-      .provisioningStart.createTeam(request, onProgress)
-      .then(() => undefined);
+    const startApi = bindTeamHttpHandlerApis(source).provisioningStart;
+    return operation === 'createTeam'
+      ? startApi.createTeam(request as TeamCreateRequest, onProgress).then(() => undefined)
+      : startApi.launchTeam(request as TeamLaunchRequest, onProgress).then(() => undefined);
   }
 
   // A start that cannot produce an `opencode serve` host has nothing to lose to
@@ -1247,6 +1455,29 @@ describe('the OpenCode start preparation both entry points install', () => {
         members: [{ name: 'lead', role: 'Lead', providerId: 'opencode' }],
       } as unknown as TeamCreateRequest,
       onProgress
+    );
+    settle();
+    await started;
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress.mock.calls[0][0]).toMatchObject({
+      runId: 'pending:team-a:opencode-startup-sweep',
+      teamName: 'team-a',
+      state: 'validating',
+    });
+  });
+
+  it('enrolls an unresolved saved launch before a caller can release the sweep', async () => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const onProgress = vi.fn();
+
+    const started = startApiFor(
+      {
+        teamName: 'team-a',
+        cwd: TEST_TEAM_CWD,
+      } as TeamLaunchRequest,
+      onProgress,
+      'launchTeam'
     );
     settle();
     await started;

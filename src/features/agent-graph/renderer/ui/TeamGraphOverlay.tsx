@@ -24,6 +24,7 @@ import { GraphNodePopover } from './GraphNodePopover';
 import { GraphProvisioningHud } from './GraphProvisioningHud';
 import { GraphTransientHandoffHud } from './GraphTransientHandoffHud';
 
+import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
 import type {
   GraphDomainRef,
   GraphEventPort,
@@ -32,6 +33,8 @@ import type {
 
 export interface TeamGraphOverlayProps {
   teamName: string;
+  announcementsVisible: boolean;
+  taskNotificationPort: TeamGraphTaskNotificationPort;
   onClose: () => void;
   onPinAsTab?: () => void;
   sidebarVisible?: boolean;
@@ -41,6 +44,8 @@ export interface TeamGraphOverlayProps {
 
 export const TeamGraphOverlay = ({
   teamName,
+  announcementsVisible,
+  taskNotificationPort,
   onClose,
   onPinAsTab,
   sidebarVisible,
@@ -56,7 +61,7 @@ export const TeamGraphOverlay = ({
   } = useTeamGraphSurfaceActions(teamName);
   const { sidebarVisible: persistedSidebarVisible, toggleSidebarVisible } =
     useGraphSidebarVisibility();
-  const interactions = useGraphSurfaceInteractions(teamName);
+  const interactions = useGraphSurfaceInteractions(teamName, taskNotificationPort);
   const [messagesPanelMountPoint, setMessagesPanelMountPoint] = useState<HTMLDivElement | null>(
     null
   );
@@ -114,7 +119,7 @@ export const TeamGraphOverlay = ({
         isSidebarVisible={effectiveSidebarVisible}
         renderTopToolbarContent={() => (
           <div className="flex items-center gap-1">
-            <AnnouncementNewsButton />
+            <AnnouncementNewsButton visible={announcementsVisible} />
             <GraphProvisioningHud teamName={teamName} />
           </div>
         )}

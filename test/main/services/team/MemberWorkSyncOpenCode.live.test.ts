@@ -1,4 +1,3 @@
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -7,10 +6,12 @@ import { promisify } from 'util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '../../../../src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamKanbanManager } from '../../../../src/main/services/team/TeamKanbanManager';
@@ -20,6 +21,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import {
   formatMemberWorkSyncDiagnostics,

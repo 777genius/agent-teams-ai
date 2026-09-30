@@ -292,10 +292,12 @@ Outside the feature, import only:
 - `@features/<feature>/main`
 - `@features/<feature>/preload`
 - `@features/<feature>/renderer`
+- a reviewed exact `@features/<feature>/renderer/hosted` facet when the shared renderer barrel
+  contains Desktop-only runtime dependencies
 
 Do not deep-import feature internals from app shell or from other features.
 Layer entrypoints should be explicit `index.ts` files that export only supported
-surface area. Focused tests may import internals when they are testing that unit
+surface area, except an intentional exact `hosted.ts` facet. Focused tests may import internals when they are testing that unit
 directly, but production integration code should not.
 
 ### Core isolation
@@ -333,6 +335,39 @@ directly, but production integration code should not.
 
 Push transport and store access into feature hooks or genuine boundary
 adapters. Keep presentation-only projection in `renderer/view-models/`.
+
+## Architecture Ratchet
+
+Run `pnpm guard:feature-architecture` for the repository-wide dependency gate.
+It scans production source and enforces:
+
+- cross-feature dependencies use only the feature root or the explicit
+  `contracts`, `main`, `preload`, or `renderer` entrypoint
+- `core/domain` stays independent from application, Node, Electron, frameworks,
+  transport, adapters, and infrastructure
+- `core/application` depends only on domain, contracts, and its own application
+  models, use cases, and ports
+- public feature entrypoints do not directly or transitively re-export adapters,
+  infrastructure, or concrete host boundaries hidden behind another directory
+  name
+
+Legacy violations are pinned as individual dependency edges in
+`scripts/ci/feature-architecture-baseline.json`. The identity is the rule,
+source path, and module specifier. Public API violations additionally include
+the public entrypoint plus the exported and imported symbol names, so extending
+an existing legacy barrel still fails the ratchet. Line numbers are deliberately
+excluded so unrelated edits do not create noise.
+
+The baseline is a ratchet, not a general allowlist:
+
+- an existing edge may remain unchanged while its migration is pending
+- a new violating edge fails even when it is added to a legacy file
+- removed violations require their exact baseline entries to be removed
+- CI compares the manifest with the PR base and rejects new exceptions
+- new files and new features therefore start with no architecture exceptions
+
+Use `pnpm guard:feature-architecture -- --report` only when the full legacy
+inventory is needed. The default successful output stays concise.
 
 ## Browser and Tauri Friendly Guidance
 
@@ -434,6 +469,40 @@ For the production-critical Team Provisioning migration, follow the concrete
 target and strangler protocol in
 [`team-provisioning-target-architecture.md`](team-management/team-provisioning-target-architecture.md).
 
+### One flow across Desktop and Hosted
+
+For a workflow migrated into both production entrypoints, assign one owner to each shared
+business decision and to each shared submitted-intent interaction. Desktop IPC and Hosted HTTP/SSE
+remain separate adapters, with their existing write owners, security checks, and recovery fences.
+Do not make a common UI component choose the transport or repeat the decision. After both
+compositions use the shared owner, remove the old active decision; a legacy facade may remain as
+a thin delegate.
+
+- Pass only facts that each source can actually prove. A partial page, missing optional field,
+  failed read, and known empty result are different states. Never create a fake rich Desktop DTO
+  or invent a revision, task count, runtime state, or capability for Hosted.
+- Keep a stable logical session identity for an unresolved command across a view remount or a
+  temporary capability/authentication outage. Capture its execution fence and request body when
+  it is submitted. A newer generation or revision does not silently rewrite the frozen command.
+  Confirmed authority loss disposes sensitive client state; read cancellation alone does not
+  prove that a mutation was cancelled.
+- Report write acknowledgement and subsequent projection refresh separately. A confirmed write
+  remains confirmed when refresh fails. An uncertain write keeps its original identity until an
+  authoritative observation, exact replay under the original fence, or explicit resolution.
+- Prefer the smallest browser-safe public feature entrypoint consumed by a real flow. Check both
+  direct and transitive imports in the actual bundle; a TypeScript-only import check does not
+  prove the emitted graph is safe. Do not hide Desktop/Node dependencies with a bundler alias,
+  stub, or fabricated transport method.
+- A shared presentational view accepts normalized facts and explicit available actions. Platform
+  composition owns scope, selection, navigation, effects, and request lifetime. Reuse a view
+  only after the underlying user-visible behavior agrees; preserve richer Desktop affordances
+  through explicit Desktop composition rather than dropping them from the shared contract.
+
+The bounded PR #252 migration and acceptance are specified in
+[`hosted-web-foundation-delivery-plan.md`](hosted-web-foundation-delivery-plan.md). These rules
+apply to later migrated flows too; the plan's named checkpoints are not a general requirement
+to create a new controller or package for every screen.
+
 ## Current Feature Shape Examples
 
 Use these local examples before inventing a new variant:
@@ -462,7 +531,22 @@ A feature is reference-quality when:
 - at least the main domain and application rules are tested when those layers
   exist
 - architecture is enforced by lint rules
+- every new production source file is at most 800 physical lines
 - feature has a concise standard or plan doc if it introduces a new pattern
+
+The `pnpm guard:source-file-size` gate covers production code in the app and
+workspace packages. Existing files above 800 lines are pinned to their exact
+current line count in `scripts/ci/source-file-size-legacy.json`: they may only
+shrink, and the exception must be removed once a file reaches 800 lines.
+Never add a new legacy exception or raise an existing cap. Split new
+responsibilities by domain/application/adapter/UI ownership instead.
+
+CI also ratchets the complete pre-existing policy in
+`scripts/ci/source-file-size-baseline.json`, including root configuration and
+production scripts outside the workspace source roots. Neither its global limit
+nor any legacy cap may increase. A zero predecessor SHA on the first push of a
+branch means there is no prior manifest to compare; the current-tree 800-line
+policy still runs normally.
 
 ## Recommended Test Coverage
 

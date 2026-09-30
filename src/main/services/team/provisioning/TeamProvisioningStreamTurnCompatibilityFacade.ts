@@ -127,8 +127,8 @@ export abstract class TeamProvisioningStreamTurnCompatibilityFacade<
    * Process a parsed stream-json message from stdout.
    * Extracts assistant text for progress reporting and detects turn completion.
    */
-  protected handleStreamJsonMessage(run: TRun, msg: Record<string, unknown>): void {
-    handleTeamProvisioningStreamJsonMessage(run, msg, this.getStreamJsonEventPorts());
+  protected handleStreamJsonMessage(run: TRun, msg: Record<string, unknown>): Promise<void> {
+    return handleTeamProvisioningStreamJsonMessage(run, msg, this.getStreamJsonEventPorts());
   }
 
   private getStreamJsonEventPorts(): TeamProvisioningStreamEventPorts<TRun> {

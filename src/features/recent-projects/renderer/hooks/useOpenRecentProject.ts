@@ -6,6 +6,10 @@ import {
 } from '@features/recent-projects/contracts';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import {
+  captureContextScopedRequestEpoch,
+  isContextScopedRequestEpochCurrent,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
 import { getWorktreeNavigationState } from '@renderer/store/utils/stateResetHelpers';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { createLogger } from '@shared/utils/logger';
@@ -19,12 +23,23 @@ import {
 } from '../utils/navigation';
 import { recordRecentProjectOpenPaths } from '../utils/recentProjectOpenHistory';
 
+import type { OpenResult } from '../ui/recentProjectsModel';
+
+const STALE: OpenResult = { kind: 'stale_target' };
+const FAILED: OpenResult = { kind: 'failed', message: 'Could not open the project. Try again.' };
 const logger = createLogger('Feature:RecentProjects:open');
 
+function logOpenFailure(operation: 'project' | 'reveal' | 'picker', error: unknown): void {
+  logger.error('Recent project action failed', {
+    operation,
+    errorType: error instanceof Error ? error.name : typeof error,
+  });
+}
+
 export function useOpenRecentProject(): {
-  openRecentProject: (project: DashboardRecentProject) => Promise<void>;
-  openProjectPath: (projectPath: string) => Promise<void>;
-  selectProjectFolder: () => Promise<void>;
+  openRecentProject: (project: DashboardRecentProject) => Promise<OpenResult>;
+  openProjectPath: (projectPath: string) => Promise<OpenResult>;
+  selectProjectFolder: () => Promise<OpenResult>;
 } {
   const { repositoryGroups, fetchRepositoryGroups, openTeamsTab } = useStore(
     useShallow((state) => ({
@@ -33,6 +48,14 @@ export function useOpenRecentProject(): {
       openTeamsTab: state.openTeamsTab,
     }))
   );
+
+  const captureContext = useCallback(() => {
+    const contextId = useStore.getState().activeContextId;
+    const epoch = captureContextScopedRequestEpoch();
+    return () =>
+      useStore.getState().activeContextId === contextId &&
+      isContextScopedRequestEpochCurrent(epoch);
+  }, []);
 
   const navigateToMatch = useCallback(
     (match: WorktreeMatch, projectPath: string): void => {
@@ -44,46 +67,42 @@ export function useOpenRecentProject(): {
   );
 
   const openSyntheticPath = useCallback(
-    async (path: string, associatedPaths: readonly string[]): Promise<void> => {
+    async (path: string, associatedPaths: readonly string[]): Promise<OpenResult> => {
+      const isCurrent = captureContext();
       const candidatePaths = associatedPaths.length > 0 ? associatedPaths : [path];
       const selectableCandidatePaths = candidatePaths.filter(
         (candidatePath) => !isEphemeralProjectPath(candidatePath)
       );
-
-      if (selectableCandidatePaths.length === 0) {
-        logger.warn('Skipped ephemeral recent project path', { path });
-        return;
+      if (selectableCandidatePaths.length === 0 || isEphemeralProjectPath(path)) {
+        return { kind: 'unavailable', reason: 'Project path is unavailable.' };
       }
 
       const initialMatch = findMatchingWorktree(repositoryGroups, selectableCandidatePaths);
       if (initialMatch) {
+        if (!isCurrent()) return STALE;
         navigateToMatch(initialMatch, path);
-        return;
+        return { kind: 'opened' };
       }
 
       await fetchRepositoryGroups();
+      if (!isCurrent()) return STALE;
       const refreshedGroups = useStore.getState().repositoryGroups;
       const refreshedMatch = findMatchingWorktree(refreshedGroups, selectableCandidatePaths);
       if (refreshedMatch) {
         navigateToMatch(refreshedMatch, path);
-        return;
-      }
-
-      if (isEphemeralProjectPath(path)) {
-        logger.warn('Skipped adding ephemeral recent project path', { path });
-        return;
+        return { kind: 'opened' };
       }
 
       await api.config.addCustomProjectPath(path);
-
+      if (!isCurrent()) return STALE;
       useStore.setState((state) => ({
         repositoryGroups: [buildSyntheticRepositoryGroup(path), ...state.repositoryGroups],
       }));
-
       const encodedId = encodeProjectPathForNavigation(path);
       navigateToMatch({ repoId: encodedId, worktreeId: encodedId }, path);
+      return { kind: 'opened' };
     },
-    [fetchRepositoryGroups, navigateToMatch, repositoryGroups]
+    [captureContext, fetchRepositoryGroups, navigateToMatch, repositoryGroups]
   );
 
   const openTarget = useCallback(
@@ -91,62 +110,76 @@ export function useOpenRecentProject(): {
       target: DashboardRecentProjectOpenTarget,
       associatedPaths: readonly string[],
       primaryPath: string
-    ): Promise<void> => {
+    ): Promise<OpenResult> => {
       if (target.type === 'existing-worktree') {
         navigateToMatch(
-          {
-            repoId: target.repositoryId,
-            worktreeId: target.worktreeId,
-          },
+          { repoId: target.repositoryId, worktreeId: target.worktreeId },
           primaryPath
         );
-        return;
+        return { kind: 'opened' };
       }
-
-      await openSyntheticPath(target.path, associatedPaths);
+      return openSyntheticPath(target.path, associatedPaths);
     },
     [navigateToMatch, openSyntheticPath]
   );
 
   const openRecentProject = useCallback(
-    async (project: DashboardRecentProject): Promise<void> => {
+    async (project: DashboardRecentProject): Promise<OpenResult> => {
       if (project.filesystemState === 'deleted') {
-        logger.warn('Skipped deleted recent project path', { path: project.primaryPath });
-        return;
+        return { kind: 'unavailable', reason: 'Project folder is missing.' };
       }
-
+      const isCurrent = captureContext();
+      if (!isCurrent()) return STALE;
       try {
-        await openTarget(project.openTarget, project.associatedPaths, project.primaryPath);
+        const outcome = await openTarget(
+          project.openTarget,
+          project.associatedPaths,
+          project.primaryPath
+        );
+        if (outcome.kind !== 'opened') return outcome;
+        if (!isCurrent()) return STALE;
         recordRecentProjectOpenPaths([project.primaryPath, ...project.associatedPaths]);
+        return outcome;
       } catch (error) {
-        logger.error('Failed to open recent project', error);
+        if (isCurrent()) logOpenFailure('project', error);
+        return isCurrent() ? FAILED : STALE;
       }
     },
-    [openTarget]
+    [captureContext, openTarget]
   );
 
-  const openProjectPath = useCallback(async (projectPath: string): Promise<void> => {
-    try {
-      await api.openPath(projectPath, projectPath);
-    } catch (error) {
-      logger.error('Failed to open project path', error);
-    }
-  }, []);
+  const openProjectPath = useCallback(
+    async (projectPath: string): Promise<OpenResult> => {
+      const isCurrent = captureContext();
+      if (!isCurrent()) return STALE;
+      try {
+        await api.openPath(projectPath, projectPath);
+        return isCurrent() ? { kind: 'opened' } : STALE;
+      } catch (error) {
+        if (isCurrent()) logOpenFailure('reveal', error);
+        return isCurrent() ? FAILED : STALE;
+      }
+    },
+    [captureContext]
+  );
 
-  const selectProjectFolder = useCallback(async (): Promise<void> => {
+  const selectProjectFolder = useCallback(async (): Promise<OpenResult> => {
+    const isCurrent = captureContext();
     try {
       const selectedPaths = await api.config.selectFolders();
+      if (!isCurrent()) return STALE;
       const selectedPath = selectedPaths[0];
-      if (!selectedPath) {
-        return;
-      }
-
-      await openSyntheticPath(selectedPath, [selectedPath]);
+      if (!selectedPath) return { kind: 'cancelled' };
+      const outcome = await openSyntheticPath(selectedPath, [selectedPath]);
+      if (outcome.kind !== 'opened') return outcome;
+      if (!isCurrent()) return STALE;
       recordRecentProjectOpenPaths([selectedPath]);
+      return outcome;
     } catch (error) {
-      logger.error('Failed to select project folder', error);
+      if (isCurrent()) logOpenFailure('picker', error);
+      return isCurrent() ? FAILED : STALE;
     }
-  }, [openSyntheticPath]);
+  }, [captureContext, openSyntheticPath]);
 
   return { openRecentProject, openProjectPath, selectProjectFolder };
 }

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OpenCodeBridgeCommandClient,
+  ExecCliOpenCodeBridgeProcessRunner,
   type OpenCodeBridgeDiagnosticsSink,
   type OpenCodeBridgeProcessRunInput,
   type OpenCodeBridgeProcessRunner,
@@ -124,6 +125,25 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(await fs.readdir(tempDir)).toEqual([]);
   });
 
+  it('removes bridge artifacts when cancellation wins during asynchronous preparation', async () => {
+    const controller = new AbortController();
+    const client = createClient({
+      envProvider: async () => {
+        controller.abort();
+        return {};
+      },
+    });
+    await expect(
+      client.execute('opencode.launchTeam', { runId: 'run-cancelled' }, {
+        cwd: tempDir,
+        timeoutMs: 100,
+        signal: controller.signal,
+      })
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(runner.calls).toHaveLength(0);
+    expect(await fs.readdir(tempDir)).toEqual([]);
+  });
+
   it('writes a private input envelope, executes the bridge command, and removes the input file', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
@@ -178,6 +198,74 @@ describe('OpenCodeBridgeCommandClient', () => {
     });
     await expect(fs.access(inputPath)).rejects.toThrow();
     await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
+  it('fences the production bridge process boundary after a project pathname swap', async () => {
+    const projectPath = path.join(tempDir, 'project');
+    const displacedPath = path.join(tempDir, 'project-before-swap');
+    await fs.mkdir(projectPath, { mode: 0o700 });
+    const directory = await fs.open(projectPath, 'r');
+    try {
+      const identity = await directory.stat({ bigint: true });
+      await expect(
+        createClient().execute(
+          'opencode.launchTeam',
+          { runId: 'run-lease-swap' },
+          {
+            cwd: projectPath,
+            timeoutMs: 10_000,
+            projectDirectoryLease: {
+              fd: directory.fd,
+              dev: String(identity.dev),
+              ino: String(identity.ino),
+              beforeEffect: async () => {
+                await fs.rename(projectPath, displacedPath);
+                await fs.mkdir(projectPath, { mode: 0o700 });
+              },
+            },
+          }
+        )
+      ).rejects.toThrow(/pathname changed at provider boundary/i);
+      expect(runner.calls).toHaveLength(0);
+    } finally {
+      await directory.close();
+    }
+  });
+
+  it('inherits the exact project lease fd into a bridge child', async () => {
+    if (process.platform !== 'linux') return;
+    const projectPath = path.join(tempDir, 'leased-project');
+    await fs.mkdir(projectPath, { mode: 0o700 });
+    const directory = await fs.open(projectPath, 'r');
+    try {
+      const identity = await directory.stat({ bigint: true });
+      const result = await new ExecCliOpenCodeBridgeProcessRunner().run({
+        binaryPath: process.execPath,
+        args: [
+          '-e',
+          `const fs=require('node:fs');const stat=fs.fstatSync(${directory.fd},{bigint:true});process.stdout.write(JSON.stringify({cwd:process.cwd(),dev:String(stat.dev),ino:String(stat.ino)}));`,
+        ],
+        cwd: `/proc/self/fd/${directory.fd}`,
+        timeoutMs: 5_000,
+        stdoutLimitBytes: 8_192,
+        stderrLimitBytes: 8_192,
+        env: process.env,
+        projectDirectoryPath: projectPath,
+        projectDirectoryLease: {
+          fd: directory.fd,
+          dev: String(identity.dev),
+          ino: String(identity.ino),
+        },
+      });
+      expect(result).toMatchObject({ exitCode: 0, timedOut: false });
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        cwd: projectPath,
+        dev: String(identity.dev),
+        ino: String(identity.ino),
+      });
+    } finally {
+      await directory.close();
+    }
   });
 
   it('reads bridge JSON from the output file when stdout is empty', async () => {

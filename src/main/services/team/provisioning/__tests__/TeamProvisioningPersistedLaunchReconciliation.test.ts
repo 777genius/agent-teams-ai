@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isSupportedLaunchStateDocument } from '../../TeamLaunchStateDocumentPersistence';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import {
+  createReconciliationLaunchStateDocument,
   decideFinalReconciledSnapshotWrite,
   decidePreferredBootstrapSnapshot,
   filterOptionalRemovedMembersFromLaunchSnapshot,
@@ -121,6 +123,20 @@ function createReconcilePorts(
 }
 
 describe('persisted launch reconciliation helpers', () => {
+  it('rebuilds pre-schema snapshots as strict v2 documents before reconciliation writes', () => {
+    const legacy = {
+      ...snapshot({ members: { Builder: member('Builder') } }),
+      version: undefined,
+    } as unknown as PersistedTeamLaunchSnapshot;
+
+    const rebuilt = createReconciliationLaunchStateDocument('demo', legacy);
+
+    expect(rebuilt.version).toBe(2);
+    expect(isSupportedLaunchStateDocument('demo', rebuilt as unknown as Record<string, unknown>)).toBe(
+      true
+    );
+  });
+
   it('filters removed snapshot members before projecting reconcile statuses', () => {
     const launchSnapshot = snapshot({
       expectedMembers: ['Builder', 'Removed'],

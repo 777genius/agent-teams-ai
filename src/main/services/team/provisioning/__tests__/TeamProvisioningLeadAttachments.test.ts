@@ -169,14 +169,14 @@ describe('lead attachment helpers', () => {
 
     expect(buildCodexNativeAttachmentDeliveryParts).toHaveBeenCalledWith({
       teamName: 'Team',
-      messageId: expect.stringMatching(/^lead_run-1_[0-9a-f]{16}$/),
+      messageId: expect.stringMatching(/^lead_run-1_[0-9a-f]{64}$/),
       text: 'hello',
       attachments,
     });
     expect(buildClaudeAttachmentDeliveryParts).not.toHaveBeenCalled();
   });
 
-  it('derives a stable codex-lead artifact messageId so runtime retries reuse the same dir', async () => {
+  it('reuses the Codex artifact identity for a persisted retry but separates compose identities', async () => {
     const attachments = toLeadAttachmentPayloads([
       { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
     ]);
@@ -202,8 +202,8 @@ describe('lead attachment helpers', () => {
     });
     const retryId = codexMock.mock.calls[0]?.[0]?.messageId;
 
-    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{16}$/);
-    expect(retryId).toBe(firstId); // idempotent: no fresh Date.now() dir per attempt
+    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(retryId).toBe(firstId);
 
     // A different compose (distinct attachment ids) resolves to a different dir.
     codexMock.mockClear();
@@ -224,5 +224,41 @@ describe('lead attachment helpers', () => {
       attachments: otherAttachments,
     });
     expect(codexMock.mock.calls[0]?.[0]?.messageId).not.toBe(firstId);
+  });
+
+  it('derives different Codex artifact identities for different ordered payloads', async () => {
+    const codexMock = vi.mocked(buildCodexNativeAttachmentDeliveryParts);
+    const firstInputs = [
+      { data: Buffer.from('first').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+      {
+        data: Buffer.from('second').toString('base64'),
+        mimeType: 'text/plain',
+        filename: 'note.txt',
+      },
+    ];
+    const secondInputs = [...firstInputs].reverse();
+
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(firstInputs),
+    });
+    const firstId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    codexMock.mockClear();
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(secondInputs),
+    });
+    const secondId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(secondId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(secondId).not.toBe(firstId);
   });
 });

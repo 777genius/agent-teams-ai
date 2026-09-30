@@ -1070,6 +1070,140 @@ describe('cliInstallerSlice', () => {
     });
   });
 
+  describe('provider status request races', () => {
+    it('does not let obsolete bootstrap fallback supersede current hydration', async () => {
+      const oldMetadata = createDeferredValue<CliInstallationStatus>();
+      const currentProvider = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const deferred = createDeferredProvider('anthropic', 'Anthropic');
+      const ready = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'oauth_token',
+        statusMessage: 'Connected',
+        models: ['claude-sonnet-4-5'],
+      });
+      vi.mocked(api.cliInstaller.getStatus)
+        .mockReturnValueOnce(oldMetadata.promise)
+        .mockResolvedValueOnce(createMultimodelStatus([deferred]));
+      let anthropicCallCount = 0;
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation((providerId) => {
+        if (providerId === 'anthropic') {
+          anthropicCallCount += 1;
+          return anthropicCallCount === 1 ? currentProvider.promise : Promise.resolve(deferred);
+        }
+        return Promise.resolve(
+          createMultimodelProvider({
+            providerId,
+            displayName: providerId,
+            statusMessage: 'Ready',
+          })
+        );
+      });
+
+      const oldBootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+      const currentBootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+      await vi.waitFor(() => {
+        expect(anthropicCallCount).toBe(1);
+      });
+      oldMetadata.reject(new Error('Obsolete aggregate timeout'));
+      await oldBootstrap;
+
+      currentProvider.resolve(ready);
+      await currentBootstrap;
+      expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({
+        authenticated: true,
+        verificationState: 'verified',
+        statusMessage: 'Connected',
+      });
+      expect(useStore.getState().cliProviderStatusLoading.anthropic).toBe(false);
+      expect(anthropicCallCount).toBe(1);
+    });
+
+    it('keeps a verification result that settles after an aggregate status request starts', async () => {
+      const aggregate = createDeferredValue<CliInstallationStatus>();
+      const statusRefresh = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const deferred = createDeferredProvider('anthropic', 'Anthropic');
+      const ready = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'oauth_token',
+        statusMessage: 'Connected',
+        models: ['claude-sonnet-4-5'],
+      });
+      useStore.setState({ cliStatus: createMultimodelStatus([deferred]) });
+      vi.mocked(api.cliInstaller.getStatus).mockReturnValue(aggregate.promise);
+      vi.mocked(api.cliInstaller.verifyProviderModels).mockResolvedValue(ready);
+      vi.mocked(api.cliInstaller.getProviderStatus).mockReturnValue(statusRefresh.promise);
+
+      const refresh = useStore.getState().fetchCliStatus();
+      await useStore.getState().fetchCliProviderStatus('anthropic', { verifyModels: true });
+      expect(useStore.getState().cliStatus?.providers[0].authenticated).toBe(true);
+
+      aggregate.resolve(createMultimodelStatus([deferred]));
+      await refresh;
+      expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({
+        authenticated: true,
+        verificationState: 'verified',
+        statusMessage: 'Connected',
+      });
+
+      statusRefresh.resolve(ready);
+      await vi.waitFor(() => {
+        expect(useStore.getState().cliStatus?.providers[0].authenticated).toBe(true);
+      });
+    });
+
+    it('starts fresh hydration when an older in-flight request belongs to a superseded epoch', async () => {
+      const oldStatus = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const newStatus = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const deferred = createDeferredProvider('anthropic', 'Anthropic');
+      const metadata = createMultimodelStatus([deferred]);
+      const ready = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'oauth_token',
+        statusMessage: 'Connected',
+        models: ['claude-sonnet-4-5'],
+      });
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(metadata);
+      let anthropicCallCount = 0;
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation((providerId) => {
+        if (providerId === 'anthropic') {
+          anthropicCallCount += 1;
+          return anthropicCallCount === 1 ? oldStatus.promise : newStatus.promise;
+        }
+        return Promise.resolve(
+          createMultimodelProvider({
+            providerId,
+            displayName: providerId,
+            statusMessage: 'Ready',
+          })
+        );
+      });
+
+      const bootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+      await vi.waitFor(() => {
+        expect(anthropicCallCount).toBe(1);
+      });
+      await useStore.getState().fetchCliStatus();
+      expect(anthropicCallCount).toBe(2);
+
+      newStatus.resolve(ready);
+      await vi.waitFor(() => {
+        expect(useStore.getState().cliStatus?.providers[0].authenticated).toBe(true);
+      });
+      oldStatus.resolve(deferred);
+      await bootstrap;
+      expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({
+        authenticated: true,
+        statusMessage: 'Connected',
+      });
+    });
+  });
+
   describe('fetchCliStatus', () => {
     it('updates cliStatus from API', async () => {
       const mockStatus: CliInstallationStatus = {

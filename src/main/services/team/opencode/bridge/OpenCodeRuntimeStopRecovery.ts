@@ -19,6 +19,7 @@ import {
 } from './OpenCodeRuntimeStopProtocol';
 import { type OpenCodeStopTarget, recoverCompletedStop } from './OpenCodeStopOutcomeRecovery';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
@@ -97,6 +98,7 @@ export async function recoverRuntimeStop<TData>(input: {
   bridge: OpenCodeBridgeCommandExecutor;
   ledger: OpenCodeBridgeCommandLedger;
   timeoutMs: number;
+  projectDirectoryLease?: ProjectDirectoryLease;
 }): Promise<OpenCodeBridgeResult<TData>> {
   const { entry, current, manifest } = input;
   if (entry.status === 'completed' && entry.stopRecovery)
@@ -121,6 +123,7 @@ export async function recoverRuntimeStop<TData>(input: {
     cwd: retained.cwd,
     teamId: retained.teamName,
     laneId: retained.laneId,
+    projectDirectoryLease: input.projectDirectoryLease,
   });
   const validation = validateOpenCodeBridgeHandshake({
     handshake,
@@ -143,7 +146,12 @@ export async function recoverRuntimeStop<TData>(input: {
     const result = await input.bridge.execute(
       command,
       { stopRecovery: request },
-      { cwd: retained.cwd, timeoutMs: input.timeoutMs, requestId }
+      {
+        cwd: retained.cwd,
+        timeoutMs: input.timeoutMs,
+        requestId,
+        projectDirectoryLease: input.projectDirectoryLease,
+      }
     );
     const parsed = parseSingleBridgeJsonResult<unknown>(JSON.stringify(result));
     if (

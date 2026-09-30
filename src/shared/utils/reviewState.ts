@@ -1,6 +1,7 @@
-import { getDerivedReviewStateFromHistory } from '@shared/utils/taskHistory';
+import { normalizeTaskHistoryEvents } from '@shared/utils/taskHistory';
+import { resolveReview } from 'agent-teams-controller/task-semantics';
 
-import type { TaskHistoryEvent, TeamReviewState } from '@shared/types';
+import type { TeamReviewState } from '@shared/types';
 
 interface ReviewStateLike {
   reviewState?: TeamReviewState | null;
@@ -14,43 +15,20 @@ export function normalizeReviewState(value: unknown): TeamReviewState {
 }
 
 export function getReviewStateFromTask(task: ReviewStateLike): TeamReviewState {
-  const fallbackStatus = typeof task.status === 'string' ? task.status : null;
-  const normalizeForStatus = (value: unknown): TeamReviewState | null => {
-    const explicit = normalizeReviewState(value);
-    if (explicit === 'none') return null;
-
-    if (fallbackStatus === 'in_progress' || fallbackStatus === 'deleted') {
-      return 'none';
-    }
-    if (fallbackStatus === 'pending') {
-      return explicit === 'needsFix' ? 'needsFix' : 'none';
-    }
-    if (fallbackStatus === 'completed') {
-      return explicit === 'review' || explicit === 'approved' || explicit === 'needsFix'
-        ? explicit
-        : 'none';
-    }
-    return explicit;
-  };
-
-  // Prefer derivation from historyEvents when available
-  if (Array.isArray(task.historyEvents) && task.historyEvents.length > 0) {
-    const derived = getDerivedReviewStateFromHistory({
-      historyEvents: task.historyEvents as TaskHistoryEvent[],
-    });
-    if (derived !== null) {
-      return normalizeForStatus(derived) ?? 'none';
-    }
-  }
-
-  const explicit = normalizeForStatus(task.reviewState);
-  if (explicit) return explicit;
-
-  if (task.kanbanColumn === 'review' || task.kanbanColumn === 'approved') {
-    return normalizeForStatus(task.kanbanColumn) ?? 'none';
-  }
-
-  return 'none';
+  const status = task.status;
+  return resolveReview({
+    key: '',
+    status:
+      status === 'pending' || status === 'in_progress' || status === 'deleted'
+        ? status
+        : 'completed',
+    reviewState: normalizeReviewState(task.reviewState),
+    history: normalizeTaskHistoryEvents(task.historyEvents),
+    placement:
+      task.kanbanColumn === 'review' || task.kanbanColumn === 'approved'
+        ? { column: task.kanbanColumn }
+        : null,
+  }).state;
 }
 
 export function getKanbanColumnFromReviewState(

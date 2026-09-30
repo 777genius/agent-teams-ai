@@ -1,0 +1,794 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { useHostedCoordinationEvents } from '@features/coordination-events/renderer';
+import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
+import { getHostedCsrfToken } from '@features/hosted-access/renderer';
+import { RunningTeamsSectionView } from '@features/running-teams/renderer/hosted';
+import {
+  createHostedTeamConfigurationTransport,
+  HostedTeamConfigurationPanel,
+} from '@features/team-configuration/renderer';
+import { HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
+import {
+  createHostedTeamLifecycleTransport,
+  HostedTeamLifecycleControls,
+  HostedTeamLifecycleList,
+  useHostedTeamDirectorySource,
+} from '@features/team-lifecycle/renderer';
+import {
+  createHostedTeamMessageTransport,
+  HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH,
+  HostedTeamMessagePanel,
+} from '@features/team-message-delivery/renderer';
+import { HostedTaskBoardPage } from '@features/team-task-board/renderer/hosted';
+import { Button } from '@renderer/components/ui/button';
+
+import { useHostedRunningTeamsView } from './HostedRunningTeamsSection';
+import { HostedTeamSyncError } from './HostedTeamSyncError';
+import { useHostedCreateTaskScope } from './useHostedCreateTaskScope';
+import { useHostedTaskBoardTransport } from './useHostedTaskBoardTransport';
+import { useHostedTeamMessageRecipients } from './useHostedTeamMessageRecipients';
+import { useHostedTeamSelectionReconciliation } from './useHostedTeamSelectionReconciliation';
+
+import type {
+  CoordinationJsonValue,
+  HostedCoordinationEventBootstrapSnapshot,
+  HostedCoordinationEventEnvelope,
+} from '@features/coordination-events/contracts';
+import type {
+  HostedCoordinationEventTransport,
+  HostedCoordinationSnapshotResyncInput,
+  HostedCoordinationSnapshotResyncPort,
+} from '@features/coordination-events/renderer';
+import type { RunningTeamsSectionViewProps } from '@features/running-teams/renderer/hosted';
+import type {
+  HostedTeamConfigurationFetchPort,
+  HostedTeamConfigurationPanelProps,
+  HostedTeamConfigurationTransport,
+} from '@features/team-configuration/renderer';
+import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
+import type {
+  HostedTeamDirectoryReadState,
+  HostedTeamDirectoryReadTransport,
+  HostedTeamLifecycleFetchPort,
+  HostedTeamLifecycleTransport,
+} from '@features/team-lifecycle/renderer';
+import type {
+  HostedTeamMessageFetchPort,
+  HostedTeamMessagePanelProps,
+  HostedTeamMessageTransport,
+} from '@features/team-message-delivery/renderer';
+import type {
+  HostedCreateTaskRegistry,
+  HostedTaskBoardFetchPort,
+} from '@features/team-task-board/renderer/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
+import type { ReactNode } from 'react';
+
+export interface HostedTeamCoordinationEventPorts {
+  readonly transport: HostedCoordinationEventTransport;
+  readonly snapshotResync: HostedCoordinationSnapshotResyncPort<HostedCoordinationEventBootstrapSnapshot>;
+}
+
+export interface HostedTeamWorkspaceProps {
+  readonly lifecycleTransport?:
+    | HostedTeamLifecycleTransport
+    | Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
+  readonly fetch?: HostedTaskBoardFetchPort;
+  readonly messageFetch?: HostedTeamMessageFetchPort;
+  readonly messageTransport?: HostedTeamMessageTransport;
+  readonly createClientMessageId?: HostedTeamMessagePanelProps['createClientMessageId'];
+  /** Test/alternate-transport capability input; production fetch derives this from the page response. */
+  readonly messageSendEnabled?: boolean;
+  readonly getCsrfToken?: () => string | null;
+  readonly workspaceId?: WorkspaceId;
+  readonly configurationFetch?: HostedTeamConfigurationFetchPort;
+  readonly configurationTransport?: HostedTeamConfigurationTransport;
+  readonly createConfigurationIdempotencyKey?: HostedTeamConfigurationPanelProps['createIdempotencyKey'];
+  /** Deployment runtime profile from the authenticated status; absent means OpenCode only. */
+  readonly launchTopologyPolicy?: HostedTeamConfigurationPanelProps['launchTopologyPolicy'];
+  readonly selectedTeamId?: TeamId | null;
+  readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
+  readonly operatorPanel?: ReactNode;
+  readonly onLifecycleInvalidation?: () => void;
+  readonly onDashboardRunningTeams?: (model: RunningTeamsSectionViewProps) => void;
+  readonly onDashboardDirectory?: (state: HostedTeamDirectoryReadState) => void;
+  readonly workspaceCapabilities?: readonly string[];
+  readonly teamCapabilities?: readonly string[];
+  readonly createRegistry?: HostedCreateTaskRegistry;
+  readonly createAuthorityEpoch?: string;
+  readonly authEffectsAvailable?: boolean;
+  readonly writeEffectsAvailable?: boolean;
+  readonly onProtectedAuthFailure?: () => void;
+  /** Injectable as one atomic pair so tests and alternate shells cannot split the C0/stream seam. */
+  readonly coordinationEvents: HostedTeamCoordinationEventPorts;
+}
+
+type HostedTeamInvalidationResource = 'team_task_board' | 'team_messages';
+type HostedTeamInvalidationListener = (event: Readonly<{ teamId: TeamId }>) => void;
+
+interface HostedTeamCoordinationSnapshot {
+  readonly bootstrap: HostedCoordinationEventBootstrapSnapshot;
+  readonly bootstrapSequence: number;
+  readonly taskInvalidations: number;
+  readonly messageInvalidations: number;
+}
+
+interface HostedWorkspaceCoordinationSnapshot {
+  readonly bootstrap: HostedCoordinationEventBootstrapSnapshot;
+  readonly lifecycleRevision: number;
+}
+
+interface HostedTeamInvalidationBus {
+  publish(resource: HostedTeamInvalidationResource, teamId: TeamId): void;
+  subscribe(
+    resource: HostedTeamInvalidationResource,
+    teamId: TeamId,
+    listener: HostedTeamInvalidationListener
+  ): () => void;
+}
+
+function hasLifecycleCommands(
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>
+): transport is HostedTeamLifecycleTransport {
+  const candidate = transport as Partial<HostedTeamLifecycleTransport>;
+  return (
+    typeof candidate.execute === 'function' &&
+    typeof candidate.getControlState === 'function' &&
+    typeof candidate.getProgress === 'function' &&
+    typeof candidate.prepare === 'function'
+  );
+}
+
+function hasControlStateRead(
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>
+): transport is Pick<HostedTeamLifecycleTransport, 'listTeamLifecycle' | 'getControlState'> {
+  return typeof (transport as Partial<HostedTeamLifecycleTransport>).getControlState === 'function';
+}
+
+const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
+const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => fetch(input, init);
+const hostedTeamMessageFetch: HostedTeamMessageFetchPort = (input, init) => fetch(input, init);
+const hostedTeamConfigurationFetch: HostedTeamConfigurationFetchPort = (input, init) =>
+  fetch(input, init);
+function createInvalidationBus(): HostedTeamInvalidationBus {
+  const listeners = new Map<string, Set<HostedTeamInvalidationListener>>();
+  const key = (resource: HostedTeamInvalidationResource, teamId: TeamId): string =>
+    `${resource}\u0000${teamId}`;
+  return Object.freeze({
+    publish(resource: HostedTeamInvalidationResource, teamId: TeamId) {
+      for (const listener of [...(listeners.get(key(resource, teamId)) ?? [])]) {
+        try {
+          listener(Object.freeze({ teamId }));
+        } catch {
+          // One panel cannot prevent the other bounded projection from refreshing.
+        }
+      }
+    },
+    subscribe(
+      resource: HostedTeamInvalidationResource,
+      teamId: TeamId,
+      listener: HostedTeamInvalidationListener
+    ) {
+      const listenerKey = key(resource, teamId);
+      const resourceListeners = listeners.get(listenerKey) ?? new Set();
+      resourceListeners.add(listener);
+      listeners.set(listenerKey, resourceListeners);
+      let active = true;
+      return () => {
+        if (!active) return;
+        active = false;
+        resourceListeners.delete(listener);
+        if (resourceListeners.size === 0) listeners.delete(listenerKey);
+      };
+    },
+  });
+}
+
+function invalidationResource(
+  event: HostedCoordinationEventEnvelope<CoordinationJsonValue>
+): HostedTeamInvalidationResource | null {
+  if (typeof event.payload !== 'object' || event.payload === null || Array.isArray(event.payload)) {
+    return null;
+  }
+  const payload = event.payload as Readonly<Record<string, CoordinationJsonValue>>;
+  const keys = Object.keys(payload);
+  if (keys.length !== 2 || !keys.includes('kind') || !keys.includes('resource')) return null;
+  if (payload.kind !== 'invalidate') return null;
+  if (
+    event.eventType === 'team.task.external_file_observed' &&
+    payload.resource === 'team_task_board'
+  ) {
+    return 'team_task_board';
+  }
+  if (
+    event.eventType === 'team.message.external_inbox_observed' &&
+    payload.resource === 'team_messages'
+  ) {
+    return 'team_messages';
+  }
+  return null;
+}
+
+export const HostedTeamWorkspace = ({
+  lifecycleTransport: providedLifecycleTransport,
+  fetch: taskBoardFetch = hostedTaskBoardFetch,
+  messageFetch = hostedTeamMessageFetch,
+  messageTransport: providedMessageTransport,
+  createClientMessageId,
+  messageSendEnabled = false,
+  getCsrfToken = getHostedCsrfToken,
+  workspaceId,
+  configurationFetch = hostedTeamConfigurationFetch,
+  configurationTransport: providedConfigurationTransport,
+  createConfigurationIdempotencyKey,
+  launchTopologyPolicy,
+  selectedTeamId: controlledSelectedTeamId,
+  onSelectedTeamIdChange,
+  operatorPanel,
+  onLifecycleInvalidation,
+  onDashboardRunningTeams,
+  onDashboardDirectory,
+  workspaceCapabilities,
+  teamCapabilities,
+  createRegistry: providedCreateRegistry,
+  createAuthorityEpoch,
+  authEffectsAvailable = true,
+  writeEffectsAvailable = true,
+  onProtectedAuthFailure,
+  coordinationEvents,
+}: HostedTeamWorkspaceProps): React.JSX.Element => {
+  const [uncontrolledSelectedTeamId, setUncontrolledSelectedTeamId] = useState<TeamId | null>(null);
+  const selectedTeamId =
+    controlledSelectedTeamId === undefined ? uncontrolledSelectedTeamId : controlledSelectedTeamId;
+  const [teamMessageSendEnabled, setTeamMessageSendEnabled] = useState(messageSendEnabled);
+  const [admittedTeams, setAdmittedTeams] = useState<ReadonlySet<string>>(() => new Set());
+  const [directoryQuery, setDirectoryQuery] = useState('');
+  const [directoryStatuses, setDirectoryStatuses] = useState<ReadonlySet<'running' | 'offline'>>(
+    () => new Set()
+  );
+  const previousBrowseWorkspace = useRef(workspaceId);
+  useEffect(() => {
+    if (previousBrowseWorkspace.current === workspaceId) return;
+    previousBrowseWorkspace.current = workspaceId;
+    setDirectoryQuery('');
+    setDirectoryStatuses(new Set());
+  }, [workspaceId]);
+  const { registry: createRegistry, scope: createScope } = useHostedCreateTaskScope(
+    workspaceId,
+    selectedTeamId,
+    providedCreateRegistry,
+    createAuthorityEpoch
+  );
+  const protectedAuthFailureRef = useRef(onProtectedAuthFailure);
+  protectedAuthFailureRef.current = onProtectedAuthFailure;
+  const authEffectsAvailableRef = useRef(authEffectsAvailable);
+  authEffectsAvailableRef.current = authEffectsAvailable;
+  const reportProtectedAuthFailure = useCallback((status: number): void => {
+    if (authEffectsAvailableRef.current && (status === 401 || status === 403)) {
+      protectedAuthFailureRef.current?.();
+    }
+  }, []);
+  const invalidationBus = useMemo(() => createInvalidationBus(), []);
+  const { transport: taskBoardTransport, resetCapability: resetTaskBoardCapability } =
+    useHostedTaskBoardTransport({
+      fetch: taskBoardFetch,
+      getCsrfToken,
+      createScope,
+      invalidationBus,
+      authEffectsAvailable:
+        authEffectsAvailable &&
+        writeEffectsAvailable &&
+        Boolean(teamCapabilities?.includes('task.write')),
+      onProtectedAuthFailure,
+    });
+  const coordinationBootstrapSequence = useRef(0);
+  const workspaceRevisionSequence = useRef(0);
+  const coordinationSnapshotResync = useMemo<
+    HostedCoordinationSnapshotResyncPort<HostedTeamCoordinationSnapshot>
+  >(
+    () =>
+      Object.freeze({
+        async loadSnapshot(input: HostedCoordinationSnapshotResyncInput) {
+          const envelope = await coordinationEvents.snapshotResync.loadSnapshot(input);
+          if (
+            input.scope.kind !== 'team' ||
+            envelope.snapshot.kind !== 'team_event_bootstrap' ||
+            envelope.snapshot.teamId !== input.scope.scopeId
+          ) {
+            throw new Error('hosted-team-bootstrap-scope-invalid');
+          }
+          coordinationBootstrapSequence.current += 1;
+          return Object.freeze({
+            metadata: envelope.metadata,
+            snapshot: Object.freeze({
+              bootstrap: envelope.snapshot,
+              bootstrapSequence: coordinationBootstrapSequence.current,
+              taskInvalidations: 0,
+              messageInvalidations: 0,
+            }),
+          });
+        },
+      }),
+    [coordinationEvents.snapshotResync]
+  );
+  const workspaceSnapshotResync = useMemo<
+    HostedCoordinationSnapshotResyncPort<HostedWorkspaceCoordinationSnapshot>
+  >(
+    () =>
+      Object.freeze({
+        async loadSnapshot(input: HostedCoordinationSnapshotResyncInput) {
+          const envelope = await coordinationEvents.snapshotResync.loadSnapshot(input);
+          if (
+            input.scope.kind !== 'workspace' ||
+            envelope.snapshot.kind !== 'workspace_event_bootstrap' ||
+            envelope.snapshot.workspaceId !== input.scope.scopeId
+          ) {
+            throw new Error('hosted-workspace-bootstrap-scope-invalid');
+          }
+          workspaceRevisionSequence.current += 1;
+          return Object.freeze({
+            metadata: envelope.metadata,
+            snapshot: Object.freeze({
+              bootstrap: envelope.snapshot,
+              lifecycleRevision: workspaceRevisionSequence.current,
+            }),
+          });
+        },
+      }),
+    [coordinationEvents.snapshotResync]
+  );
+  const coordinationState = useHostedCoordinationEvents({
+    authenticated: selectedTeamId !== null,
+    scope:
+      selectedTeamId === null
+        ? null
+        : Object.freeze({ kind: 'team' as const, scopeId: selectedTeamId }),
+    transport: coordinationEvents.transport,
+    snapshotResync: coordinationSnapshotResync,
+    applyEvent: (snapshot, event) => {
+      const resource = invalidationResource(event);
+      return resource === null
+        ? snapshot
+        : Object.freeze({
+            ...snapshot,
+            taskInvalidations:
+              snapshot.taskInvalidations + (resource === 'team_task_board' ? 1 : 0),
+            messageInvalidations:
+              snapshot.messageInvalidations + (resource === 'team_messages' ? 1 : 0),
+          });
+    },
+  });
+  const workspaceState = useHostedCoordinationEvents({
+    authenticated: workspaceId !== undefined,
+    scope:
+      workspaceId === undefined
+        ? null
+        : Object.freeze({ kind: 'workspace' as const, scopeId: workspaceId }),
+    transport: coordinationEvents.transport,
+    snapshotResync: workspaceSnapshotResync,
+    applyEvent: (snapshot, event) => {
+      if (
+        !event.eventType.startsWith('team-lifecycle.') ||
+        typeof event.payload !== 'object' ||
+        event.payload === null ||
+        Array.isArray(event.payload) ||
+        (event.payload as Readonly<Record<string, CoordinationJsonValue>>).kind !== 'invalidate' ||
+        (event.payload as Readonly<Record<string, CoordinationJsonValue>>).resource !==
+          'team_lifecycle'
+      )
+        return snapshot;
+      workspaceRevisionSequence.current =
+        Math.max(workspaceRevisionSequence.current, snapshot.lifecycleRevision) + 1;
+      return Object.freeze({ ...snapshot, lifecycleRevision: workspaceRevisionSequence.current });
+    },
+    shouldApplyEvent: (event, scope) =>
+      event.scope.kind === scope.kind && event.scope.scopeId === scope.scopeId,
+  });
+  const workspaceLifecycleRevision = workspaceState.snapshot?.lifecycleRevision ?? 0;
+  const previousLifecycleRevision = useRef<number | null>(null);
+  useEffect(() => {
+    if (
+      previousLifecycleRevision.current !== null &&
+      workspaceLifecycleRevision > previousLifecycleRevision.current
+    ) {
+      onLifecycleInvalidation?.();
+    }
+    previousLifecycleRevision.current = workspaceLifecycleRevision;
+  }, [workspaceLifecycleRevision, onLifecycleInvalidation]);
+  const priorCoordinationSnapshot = useRef<{
+    readonly teamId: TeamId;
+    readonly snapshot: HostedTeamCoordinationSnapshot;
+  } | null>(null);
+
+  useEffect(() => {
+    const snapshot = coordinationState.snapshot;
+    if (
+      selectedTeamId === null ||
+      snapshot === null ||
+      snapshot.bootstrap.kind !== 'team_event_bootstrap' ||
+      snapshot.bootstrap.teamId !== selectedTeamId
+    ) {
+      return;
+    }
+    const prior = priorCoordinationSnapshot.current;
+    priorCoordinationSnapshot.current = Object.freeze({ teamId: selectedTeamId, snapshot });
+    if (prior?.teamId !== selectedTeamId) return;
+    if (prior.snapshot.bootstrapSequence !== snapshot.bootstrapSequence) {
+      // Both projections stay mounted so a mutation or send in flight survives the resync; they
+      // only reread what the stream may have missed.
+      invalidationBus.publish('team_task_board', selectedTeamId);
+      invalidationBus.publish('team_messages', selectedTeamId);
+      return;
+    }
+    if (prior.snapshot.taskInvalidations !== snapshot.taskInvalidations) {
+      invalidationBus.publish('team_task_board', selectedTeamId);
+    }
+    if (prior.snapshot.messageInvalidations !== snapshot.messageInvalidations) {
+      invalidationBus.publish('team_messages', selectedTeamId);
+    }
+  }, [coordinationState.snapshot, invalidationBus, selectedTeamId]);
+
+  const selectedTeamReady =
+    selectedTeamId !== null &&
+    coordinationState.snapshot?.bootstrap.kind === 'team_event_bootstrap' &&
+    coordinationState.snapshot.bootstrap.teamId === selectedTeamId &&
+    coordinationState.status !== 'resyncing' &&
+    coordinationState.status !== 'error';
+  // Mounted after the team's first bootstrap and kept through later resyncs of the same team.
+  const [projectionTeamId, setProjectionTeamId] = useState<TeamId | null>(null);
+  if (selectedTeamReady && projectionTeamId !== selectedTeamId) {
+    setProjectionTeamId(selectedTeamId);
+  }
+  const selectTeam = (teamId: TeamId | null): void => {
+    if (teamId !== selectedTeamId) {
+      resetTaskBoardCapability();
+      setTeamMessageSendEnabled(
+        providedMessageTransport === undefined ? false : messageSendEnabled
+      );
+    }
+    setUncontrolledSelectedTeamId(teamId);
+    onSelectedTeamIdChange?.(teamId);
+  };
+  const lifecycleTransport = useMemo(() => {
+    return (
+      providedLifecycleTransport ??
+      createHostedTeamLifecycleTransport({
+        fetch: async (path, init) => {
+          const response = await hostedTeamLifecycleFetch(path, init);
+          reportProtectedAuthFailure(response.status);
+          return response;
+        },
+        getCsrfToken,
+        publicWorkspaceId: workspaceId,
+      })
+    );
+  }, [getCsrfToken, providedLifecycleTransport, reportProtectedAuthFailure, workspaceId]);
+  const directoryTransport = useMemo<HostedTeamDirectoryReadTransport>(
+    () => ({
+      listTeamLifecycle: (request, signal) => {
+        // The concrete Hosted transport accepts a signal; legacy one-argument test ports ignore it.
+        const read =
+          lifecycleTransport.listTeamLifecycle as HostedTeamDirectoryReadTransport['listTeamLifecycle'];
+        return read.call(lifecycleTransport, request, signal);
+      },
+      getControlState: hasControlStateRead(lifecycleTransport)
+        ? (request, signal) => lifecycleTransport.getControlState(request, signal)
+        : async () => ({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'unavailable' as const,
+            retryAfterMs: null,
+          }),
+    }),
+    [lifecycleTransport]
+  );
+  const workspaceReadAdmitted =
+    workspaceId !== undefined &&
+    workspaceState.snapshot?.bootstrap.kind === 'workspace_event_bootstrap' &&
+    workspaceState.status !== 'resyncing' &&
+    workspaceState.status !== 'error';
+  const directory = useHostedTeamDirectorySource(
+    workspaceId,
+    directoryTransport,
+    workspaceReadAdmitted
+  );
+  const directoryState = directory.state;
+  useEffect(() => {
+    onDashboardDirectory?.(directoryState);
+  }, [directoryState, onDashboardDirectory]);
+  const reloadDirectory = directory.reload;
+  const runningTeams = useHostedRunningTeamsView({
+    workspaceId: workspaceId!,
+    state: directoryState,
+    reload: reloadDirectory,
+    onSelect: (teamId) => selectTeam(teamId),
+  });
+  const publishedDirectoryState = useRef<HostedTeamDirectoryReadState | null>(null);
+  useEffect(() => {
+    if (publishedDirectoryState.current === directoryState) return;
+    publishedDirectoryState.current = directoryState;
+    onDashboardRunningTeams?.(runningTeams);
+  }, [directoryState, onDashboardRunningTeams, runningTeams]);
+  const selectionReconciliation = useHostedTeamSelectionReconciliation(
+    directoryState,
+    selectedTeamId,
+    selectedTeamReady,
+    () => selectTeam(null)
+  );
+  const previousDirectoryRevision = useRef<number | null>(null);
+  const previousDirectoryReadAdmitted = useRef(false);
+  useEffect(() => {
+    if (
+      workspaceReadAdmitted &&
+      previousDirectoryReadAdmitted.current &&
+      previousDirectoryRevision.current !== null &&
+      workspaceLifecycleRevision > previousDirectoryRevision.current
+    ) {
+      void reloadDirectory();
+    }
+    previousDirectoryReadAdmitted.current = workspaceReadAdmitted;
+    if (workspaceReadAdmitted) previousDirectoryRevision.current = workspaceLifecycleRevision;
+  }, [reloadDirectory, workspaceLifecycleRevision, workspaceReadAdmitted]);
+  const lifecycleCommandTransport = hasLifecycleCommands(lifecycleTransport)
+    ? lifecycleTransport
+    : null;
+  const currentMessageScope = useRef(createScope);
+  currentMessageScope.current = createScope;
+  const messageTransport = useMemo(() => {
+    const requestScope = createScope;
+    const transport =
+      providedMessageTransport ??
+      createHostedTeamMessageTransport({
+        fetch: async (input, init) => {
+          try {
+            const response = await messageFetch(input, init);
+            if (currentMessageScope.current === requestScope) {
+              reportProtectedAuthFailure(response.status);
+            }
+            if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH && !init.signal?.aborted) {
+              setTeamMessageSendEnabled(
+                response.status === 200 &&
+                  response.headers?.get(HOSTED_AUTH_HEADERS.teamMessageSendAdvertisement) ===
+                    'enabled'
+              );
+            }
+            if (
+              input !== HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH &&
+              (response.status === 401 || response.status === 403 || response.status === 503)
+            ) {
+              setTeamMessageSendEnabled(false);
+            }
+            return response;
+          } catch (error) {
+            // Only a failed page read withdraws the capability. A lost send or a read we cancelled
+            // proves nothing about it, and the panel reports that send as unconfirmed.
+            if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH && !init.signal?.aborted) {
+              setTeamMessageSendEnabled(false);
+            }
+            throw error;
+          }
+        },
+        getCsrfToken,
+      });
+    return Object.freeze({
+      getPage: (...args: Parameters<typeof transport.getPage>) => transport.getPage(...args),
+      sendMessage: (...args: Parameters<typeof transport.sendMessage>) =>
+        transport.sendMessage(...args),
+      subscribeToInvalidations: (teamId: TeamId, listener: HostedTeamInvalidationListener) =>
+        invalidationBus.subscribe('team_messages', teamId, listener),
+    });
+  }, [
+    createScope,
+    getCsrfToken,
+    invalidationBus,
+    messageFetch,
+    providedMessageTransport,
+    reportProtectedAuthFailure,
+  ]);
+  const configurationTransport = useMemo(
+    () =>
+      providedConfigurationTransport ??
+      createHostedTeamConfigurationTransport({
+        fetch: async (path, init) => {
+          const response = await configurationFetch(path, init);
+          reportProtectedAuthFailure(response.status);
+          return response;
+        },
+        getCsrfToken,
+      }),
+    [configurationFetch, getCsrfToken, providedConfigurationTransport, reportProtectedAuthFailure]
+  );
+  const messageRecipients = useHostedTeamMessageRecipients(
+    configurationTransport,
+    workspaceId,
+    teamMessageSendEnabled ? selectedTeamId : null
+  );
+
+  const teamSyncError = (
+    <HostedTeamSyncError
+      retryScheduledInMs={coordinationState.retryScheduledInMs}
+      retry={coordinationState.retry}
+    />
+  );
+
+  return (
+    <div className="grid size-full min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+      <aside
+        aria-label="Teams"
+        className="flex min-h-0 flex-col border-b border-[var(--color-border)] lg:border-b-0 lg:border-r"
+      >
+        <div className="min-h-0 flex-1">
+          {workspaceId !== undefined &&
+          (workspaceState.snapshot?.bootstrap.kind !== 'workspace_event_bootstrap' ||
+            workspaceState.status === 'resyncing' ||
+            workspaceState.status === 'error') ? (
+            <div className="p-4">
+              <p role={workspaceState.status === 'error' ? 'alert' : 'status'}>
+                {workspaceState.status === 'error'
+                  ? 'Live workspace data is temporarily unavailable.'
+                  : 'Synchronizing workspace data...'}
+              </p>
+              {workspaceState.status === 'error' ? (
+                <>
+                  {workspaceState.retryScheduledInMs === null ? null : (
+                    <p role="status">Retrying automatically.</p>
+                  )}
+                  <Button type="button" size="sm" variant="outline" onClick={workspaceState.retry}>
+                    Retry workspace data
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex size-full min-h-0 flex-col overflow-auto">
+              {workspaceId === undefined ? null : (
+                <div className="border-b border-[var(--color-border)] p-4 pb-0">
+                  <RunningTeamsSectionView {...runningTeams} />
+                </div>
+              )}
+              <div className="min-h-0 flex-1">
+                <HostedTeamLifecycleList
+                  transport={lifecycleTransport}
+                  directory={workspaceId === undefined ? undefined : directory}
+                  selectedTeamId={selectedTeamId}
+                  onSelectedTeamIdChange={selectTeam}
+                  query={directoryQuery}
+                  onQueryChange={setDirectoryQuery}
+                  selectedStatuses={directoryStatuses}
+                  onSelectedStatusesChange={setDirectoryStatuses}
+                  refreshSignal={workspaceLifecycleRevision}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        {workspaceId === undefined ||
+        selectedTeamId === null ||
+        lifecycleCommandTransport === null ||
+        !authEffectsAvailable ||
+        !writeEffectsAvailable ||
+        !teamCapabilities?.includes('lifecycle.command') ? null : (
+          <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
+            <HostedTeamLifecycleControls
+              key={`${workspaceId}:${selectedTeamId}:lifecycle`}
+              workspaceId={workspaceId}
+              teamId={selectedTeamId}
+              promotionAdmitted={admittedTeams.has(`${workspaceId}:${selectedTeamId}`)}
+              transport={lifecycleCommandTransport}
+              refreshSignal={workspaceLifecycleRevision}
+            />
+          </div>
+        )}
+        {workspaceId === undefined ||
+        !(selectedTeamId === null
+          ? workspaceCapabilities?.includes('configuration.write')
+          : teamCapabilities?.includes('configuration.write')) ? null : (
+          <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
+            <HostedTeamConfigurationPanel
+              key={`${workspaceId}:${selectedTeamId ?? 'create'}`}
+              workspaceId={workspaceId}
+              teamId={selectedTeamId}
+              transport={configurationTransport}
+              promotionEnabled={Boolean(teamCapabilities?.includes('promotion.execute'))}
+              effectsEnabled={authEffectsAvailable && writeEffectsAvailable}
+              createIdempotencyKey={createConfigurationIdempotencyKey}
+              launchTopologyPolicy={launchTopologyPolicy}
+              onTeamCreated={(teamId) => {
+                selectionReconciliation.recordCreated(teamId);
+                directory.advanceWatermark();
+                selectTeam(teamId);
+              }}
+              onTeamDeleted={(teamId) => {
+                selectionReconciliation.recordDeleted(teamId);
+                directory.advanceWatermark();
+                setAdmittedTeams((previous) => {
+                  const next = new Set(previous);
+                  next.delete(`${workspaceId}:${teamId}`);
+                  return next;
+                });
+                if (selectedTeamId === teamId) selectTeam(null);
+              }}
+              onTeamPromoted={(teamId) => {
+                directory.advanceWatermark();
+                setAdmittedTeams((previous) => new Set(previous).add(`${workspaceId}:${teamId}`));
+              }}
+            />
+          </div>
+        )}
+      </aside>
+
+      <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(20rem,auto)] overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(22rem,30rem)] xl:grid-rows-1">
+        <section aria-label="Selected team task board" className="min-h-0 overflow-auto">
+          {selectedTeamId === null ? (
+            <div className="flex min-h-full items-center justify-center p-6 text-center">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--color-text)]">Task board</h2>
+                <p role="status" className="mt-2 text-sm text-[var(--color-text-muted)]">
+                  Select a team to view its task board.
+                </p>
+              </div>
+            </div>
+          ) : projectionTeamId !== selectedTeamId ? (
+            <div className="flex min-h-full items-center justify-center p-6 text-center">
+              <div>
+                {coordinationState.status === 'error' ? (
+                  teamSyncError
+                ) : (
+                  <p role="status">Synchronizing team data...</p>
+                )}
+              </div>
+            </div>
+          ) : !teamCapabilities?.includes('task.read') ? (
+            <p role="status" className="p-6 text-sm">
+              Task board is unavailable for this team.
+            </p>
+          ) : (
+            <>
+              {coordinationState.status === 'error' ? (
+                <div className="p-3 text-center">{teamSyncError}</div>
+              ) : null}
+              <HostedTaskBoardPage
+                key={selectedTeamId}
+                teamId={selectedTeamId}
+                transport={taskBoardTransport}
+                createScope={createScope}
+                createRegistry={createRegistry}
+              />
+            </>
+          )}
+        </section>
+
+        {selectedTeamId === null ||
+        projectionTeamId !== selectedTeamId ||
+        !teamCapabilities?.includes('message.read') ? null : (
+          <aside
+            aria-label="Selected team messages"
+            className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:border-l xl:border-t-0"
+          >
+            <HostedTeamMessagePanel
+              key={selectedTeamId}
+              createClientMessageId={createClientMessageId}
+              recipients={messageRecipients}
+              sendEnabled={
+                authEffectsAvailable &&
+                writeEffectsAvailable &&
+                teamMessageSendEnabled &&
+                teamCapabilities?.includes('message.send')
+              }
+              teamId={selectedTeamId}
+              transport={messageTransport}
+            />
+          </aside>
+        )}
+        {operatorPanel === undefined ? null : (
+          <aside
+            aria-label="Hosted operator controls"
+            className="min-h-0 overflow-auto border-t border-[var(--color-border)] empty:hidden xl:col-span-2"
+          >
+            {operatorPanel}
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+};

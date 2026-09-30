@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -20,10 +19,12 @@ import type { AnnouncementsApi } from '../contracts';
 
 export const AnnouncementHost = ({
   ready,
-  client = api.announcements,
+  client,
+  openExternal,
 }: {
   ready: boolean;
-  client?: AnnouncementsApi;
+  client: AnnouncementsApi;
+  openExternal: (url: string) => void | Promise<unknown>;
 }): React.JSX.Element => {
   const { t, resolvedLanguage } = useAppTranslation('common');
   const host = useAnnouncementHost(client, ready);
@@ -103,6 +104,8 @@ export const AnnouncementHost = ({
                 markdown={host.article.markdown}
                 bodyUrl={host.article.bodyUrl}
                 heroImagePath={host.article.announcement.heroImagePath}
+                client={client}
+                openExternal={openExternal}
                 notice={
                   <>
                     {statusKey && (

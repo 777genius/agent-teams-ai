@@ -15,6 +15,30 @@ import type {
 const DEFAULT_CACHE_TTL_MS = 10_000;
 const DEFAULT_DEGRADED_CACHE_TTL_MS = 30_000;
 
+interface RecentProjectsDeadline {
+  schedule(delayMs: number, onDeadline: () => void): () => void;
+}
+
+const PORTABLE_DEADLINE: RecentProjectsDeadline = {
+  schedule(delayMs, onDeadline) {
+    const signal = AbortSignal.timeout(delayMs);
+    let active = true;
+    const handleDeadline = (): void => {
+      if (!active) return;
+      active = false;
+      onDeadline();
+    };
+    signal.addEventListener('abort', handleDeadline, { once: true });
+    if (signal.aborted) {
+      handleDeadline();
+    }
+    return () => {
+      active = false;
+      signal.removeEventListener('abort', handleDeadline);
+    };
+  },
+};
+
 interface SourceLoadResult {
   candidates: RecentProjectCandidate[];
   degraded: boolean;
@@ -39,6 +63,8 @@ export interface ListDashboardRecentProjectsDeps<TViewModel> {
   cache: RecentProjectsCachePort<TViewModel>;
   output: ListDashboardRecentProjectsOutputPort<TViewModel>;
   clock: ClockPort;
+  /** Injectable for deterministic tests and runtimes with a specialized scheduler. */
+  deadline?: RecentProjectsDeadline;
   logger: LoggerPort;
   cacheTtlMs?: number;
   degradedCacheTtlMs?: number;
@@ -47,11 +73,13 @@ export interface ListDashboardRecentProjectsDeps<TViewModel> {
 export class ListDashboardRecentProjectsUseCase<TViewModel> {
   readonly #cacheTtlMs: number;
   readonly #degradedCacheTtlMs: number;
+  readonly #deadline: RecentProjectsDeadline;
   readonly #inFlightByCacheKey = new Map<string, Promise<TViewModel>>();
 
   constructor(private readonly deps: ListDashboardRecentProjectsDeps<TViewModel>) {
     this.#cacheTtlMs = deps.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
     this.#degradedCacheTtlMs = deps.degradedCacheTtlMs ?? DEFAULT_DEGRADED_CACHE_TTL_MS;
+    this.#deadline = deps.deadline ?? PORTABLE_DEADLINE;
   }
 
   async execute(cacheKey: string): Promise<TViewModel> {
@@ -122,8 +150,22 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
       return this.#loadSourceWithoutTimeout(source, sourceId, sourceIndex);
     }
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelDeadline = (): void => undefined;
     try {
+      const deadline = new Promise<{ kind: 'timeout' }>((resolve) => {
+        try {
+          const cancel = this.#deadline.schedule(source.timeoutMs!, () =>
+            resolve({ kind: 'timeout' })
+          );
+          if (typeof cancel !== 'function') {
+            resolve({ kind: 'timeout' });
+            return;
+          }
+          cancelDeadline = cancel;
+        } catch {
+          resolve({ kind: 'timeout' });
+        }
+      });
       const result = await Promise.race([
         source
           .list()
@@ -141,9 +183,7 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
                 error,
               }) as const
           ),
-        new Promise<{ kind: 'timeout' }>((resolve) => {
-          timer = setTimeout(() => resolve({ kind: 'timeout' }), source.timeoutMs);
-        }),
+        deadline,
       ]);
 
       if (result.kind === 'success') {
@@ -166,8 +206,10 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
       });
       return { candidates: [], degraded: true };
     } finally {
-      if (timer) {
-        clearTimeout(timer);
+      try {
+        cancelDeadline();
+      } catch {
+        // The load result is already settled; cancellation is best effort.
       }
     }
   }

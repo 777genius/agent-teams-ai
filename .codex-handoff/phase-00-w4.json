@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 2,
+  "phaseId": "phase-00",
+  "laneId": "w4",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "packetRevision": "phase-00-r3",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "baseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-w6-v7",
+  "remediationProvenance": {
+    "approvedV6Review": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
+    "approvedV6ReviewSha256": "5c4c0ed2792df575dfd74c3a197ff00af6ed2abcc001dd815c39e70a87f7ed7a",
+    "supersedingReviewRecord": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6.review.json",
+    "supersedingReviewRecordSha256": "b68ad9f064e622edc64e96194bd00bea42b5c31467a0503b58b8e826911eaa8b",
+    "rejectedIntegrationArchive": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/project-integration/integration-attempts/a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767/attempt.json",
+    "rejectedIntegrationArchiveSha256": "1b49a4f0745b5e67fe8d56c97174ae55af4d9c5edb006112440b467bc9cea1dc",
+    "v6PreservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6.preserved.patch",
+    "v6PreservedPatchSha256": "479f78a3a89a7e132899ede39a7606c59ce9b201ebe04d97df281e3a4825f690"
+  },
+  "salvage": {
+    "sourceTaskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5",
+    "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-w6-v5",
+    "preservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5.preserved.patch",
+    "preservedPatchSha256": "183069adf05cb254c846cbd37a7c39ac930b2cb5dd6994f6b5b96dc5d4304d79",
+    "independentlyVerified": true
+  },
+  "headVerifiedBeforeEdits": true,
+  "status": "characterized",
+  "scope": {
+    "disposition": "current_host_characterization_and_read_only_projection_only",
+    "hostedMutationReady": false,
+    "workspaceEffectsReady": false,
+    "providerLaunchReady": false,
+    "productionCompositionReady": false,
+    "terminalImplemented": false
+  },
+  "crossLaneContracts": {
+    "drainDto": "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "controllerArtifactContract": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "controllerArtifactContractSha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f",
+    "projection": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json"
+  },
+  "evidence": [
+    {
+      "id": "P0.W4.TARGET_HOST_ENVELOPE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W4.INSTANCE_LEASE_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W4.WORKSPACE_GUARD_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W4.PROCESS_ANCHOR_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W4.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-w4.json",
+    "docs/research/hosted-web/phase-0/host-primitives/current-host-probe-results.json",
+    "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lock.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+    "docs/research/hosted-web/phase-0/host-primitives/native-protocol.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/probe-results.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard.protocol.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.schema.json",
+    "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+    "scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+    "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+    "scripts/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.mjs",
+    "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+    "test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts",
+    "test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "git rev-parse HEAD before edits",
+      "exitCode": 0,
+      "result": "f7d98790eb868714e536f77bd796072ea706911a"
+    },
+    {
+      "command": "sha256sum <V5 preserved patch>",
+      "exitCode": 0,
+      "result": "183069adf05cb254c846cbd37a7c39ac930b2cb5dd6994f6b5b96dc5d4304d79; patch mechanically salvaged, then independently reviewed and corrected in V6"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "current-host-only lease/guard/anchor characterization passed; exact ready/drained DTOs, pidfd-only descendant signaling, cleanup, high-FD and negative controls passed; finalShapeContainer=false"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+      "exitCode": 0,
+      "result": "W4 evidence, controller projection, exact V7 provenance and r3 narrowing passed"
+    },
+    {
+      "command": "pnpm exec vitest run --maxWorkers=1 --minWorkers=1 <four focused W4/W6/cross-lane files>",
+      "exitCode": 0,
+      "result": "4 files and 51 tests passed, including exact DTO, reset-action census, standalone-authority disagreement regression, projection equality and omission/drift negatives"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <8 owned JS/TS files>",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <33 supported V7 additions>",
+      "exitCode": 0,
+      "result": "all matched files use Prettier style"
+    },
+    {
+      "command": "/usr/bin/python3 -m py_compile scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "Python syntax passed; generated cache removed"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 37 V7 additions>",
+      "exitCode": 0,
+      "result": "all entirely untracked additions checked; zero whitespace diagnostics"
+    },
+    {
+      "command": "bounded private-key/Bearer/provider-token/absolute-home scan over all 37 V7 additions",
+      "exitCode": 0,
+      "result": "no findings"
+    }
+  ],
+  "unverifiedClaims": [
+    "No admitted final image or final topology was tested.",
+    "The C programs remain current-host feasibility spikes, not production artifacts.",
+    "No hosted mutation/runtime readiness, workspace effect authority, provider launch authority, or production composition was established.",
+    "Terminal absence remains a rule and is not claimed achieved."
+  ],
+  "blockers": [],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-16",
+      "outcome": "narrowed",
+      "reason": "Current-host lease characterization grants no hosted mutation/runtime readiness before Phase 5 final-image proof."
+    },
+    {
+      "adr": "ADR-28",
+      "outcome": "narrowed",
+      "reason": "Current-host guard characterization grants no workspace read/write/Git/provider-spawn effect authority before Phase 5."
+    },
+    {
+      "adr": "ADR-31",
+      "outcome": "narrowed",
+      "reason": "Current-host anchor characterization grants no hosted provider launch authority before Phase 5."
+    }
+  ],
+  "estimateBuckets": ["EST-LIFECYCLE-RUNTIME"],
+  "nextAction": "focused_paired_w4_w6_re_review"
+}

@@ -177,8 +177,8 @@ describe('JSON canonical status CAS', () => {
     expect((await store.readCanonicalStatusSnapshot(identity)).state).toBe('present');
   });
 
-  it.each(['file_sync', 'directory_sync'])(
-    'classifies real atomic-write fault at %s',
+  it.each(['file_sync', 'directory_sync_before_publish'])(
+    'classifies pre-publication atomic-write fault at %s as write_failed',
     async (cut) => {
       const path = paths.getMemberStatusPath(identity.teamName, identity.memberName);
       const open = fs.promises.open.bind(fs.promises);
@@ -187,7 +187,7 @@ describe('JSON canonical status CAS', () => {
         const target = String(args[0]);
         if (
           (cut === 'file_sync' && dirname(target) === dirname(path) && target.includes('/.tmp.')) ||
-          (cut === 'directory_sync' && target === dirname(path))
+          (cut === 'directory_sync_before_publish' && target === dirname(path))
         ) {
           vi.spyOn(handle, 'sync').mockRejectedValue(
             Object.assign(new Error('test EIO'), { code: 'EIO' })
@@ -196,19 +196,41 @@ describe('JSON canonical status CAS', () => {
         return handle;
       });
       const result = await commit(null, 'faulted');
-      expect(result).toEqual(
-        cut === 'file_sync'
-          ? { committed: false, reason: 'write_failed' }
-          : { committed: 'unknown', reason: 'commit_unknown', mutationId: 'faulted' }
-      );
+      expect(result).toEqual({ committed: false, reason: 'write_failed' });
       const observed = await store.readCanonicalStatusSnapshot(identity);
-      expect(observed.state).toBe(cut === 'file_sync' ? 'absent' : 'present');
-      if (cut === 'directory_sync') {
-        expect(await commit(null, 'unsafe-retry')).toMatchObject({
-          committed: false,
-          reason: 'conflict',
-        });
-      }
+      expect(observed.state).toBe('absent');
     }
   );
+
+  it('classifies only the post-publication directory-sync fault as commit_unknown', async () => {
+    const path = paths.getMemberStatusPath(identity.teamName, identity.memberName);
+    const open = fs.promises.open.bind(fs.promises);
+    let directorySyncCalls = 0;
+    vi.spyOn(fs.promises, 'open').mockImplementation(async (...args: Parameters<typeof open>) => {
+      const handle = await open(...args);
+      if (String(args[0]) === dirname(path)) {
+        const sync = handle.sync.bind(handle);
+        vi.spyOn(handle, 'sync').mockImplementation(async () => {
+          directorySyncCalls += 1;
+          if (directorySyncCalls === 2) {
+            throw Object.assign(new Error('test EIO'), { code: 'EIO' });
+          }
+          return sync();
+        });
+      }
+      return handle;
+    });
+
+    expect(await commit(null, 'faulted')).toEqual({
+      committed: 'unknown',
+      reason: 'commit_unknown',
+      mutationId: 'faulted',
+    });
+    expect(directorySyncCalls).toBe(2);
+    expect((await store.readCanonicalStatusSnapshot(identity)).state).toBe('present');
+    expect(await commit(null, 'unsafe-retry')).toMatchObject({
+      committed: false,
+      reason: 'conflict',
+    });
+  });
 });

@@ -118,6 +118,9 @@ function createPorts(
     ensureCwdExists: async (cwd) => {
       calls.push(`ensureCwdExists:${cwd}`);
     },
+    ensureTeamDirectory: async (teamName) => {
+      calls.push(`ensureTeamDirectory:${teamName}`);
+    },
     mkdir: async (directoryPath) => {
       calls.push(`mkdir:${directoryPath}`);
     },
@@ -243,8 +246,7 @@ describe('OpenCode runtime adapter team flow', () => {
       `pathExists:${path.join('/default', 'teams', 'alpha', 'config.json')}`,
       'ensureCwdExists:/repo',
       'prepareOpenCodeRuntimeAdapterLaunch',
-      'getTeamsBasePath',
-      `mkdir:${path.join('/configured', 'teams', 'alpha')}`,
+      'ensureTeamDirectory:alpha',
       'getTasksBasePath',
       `mkdir:${path.join('/configured', 'tasks', 'alpha')}`,
       'writeTeamMeta:123:/repo',

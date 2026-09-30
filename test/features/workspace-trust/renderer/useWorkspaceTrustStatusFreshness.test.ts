@@ -1,7 +1,7 @@
 import { act, createElement, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { useWorkspaceTrustStatus } from '@features/workspace-trust/renderer';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceTrustProjectStatusResult } from '@features/workspace-trust/contracts';
@@ -20,11 +20,11 @@ describe('workspace trust request freshness', () => {
   let root: ReturnType<typeof createRoot>;
   let enabled: boolean;
   let projectPath: string;
-  let status: ReturnType<typeof useWorkspaceTrustStatus>;
+  let status: ReturnType<typeof useWorkspaceTrustShellStatus>;
   let resolveRequests: ((result: WorkspaceTrustProjectStatusResult) => void)[];
 
   function Probe() {
-    status = useWorkspaceTrustStatus({ enabled, projectPath, providerIds: ['anthropic'] });
+    status = useWorkspaceTrustShellStatus({ enabled, projectPath, providerIds: ['anthropic'] });
     return null;
   }
   const render = () =>

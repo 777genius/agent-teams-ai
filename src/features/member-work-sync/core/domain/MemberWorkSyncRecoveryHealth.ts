@@ -1,9 +1,14 @@
+import { isValidMemberWorkSyncRuntimeControlReason } from '../../contracts';
+
 import type {
   MemberWorkSyncAutoResumeStopLatch,
+  MemberWorkSyncDurableStopReceipt,
+  MemberWorkSyncPendingRuntimeControl,
   MemberWorkSyncRecoveryEpisode,
   MemberWorkSyncRecoveryHealth,
   MemberWorkSyncRecoveryPhase,
   MemberWorkSyncRecoveryReservation,
+  MemberWorkSyncRetiredStopFilter,
 } from '../../contracts';
 
 export const MEMBER_WORK_SYNC_RECOVERY_ATTENTION_MS = 20 * 60_000;
@@ -40,6 +45,103 @@ const phases: MemberWorkSyncRecoveryPhase[] = [
   'attention',
   'expected_wait',
 ];
+export const MEMBER_WORK_SYNC_DURABLE_STOP_RECEIPT_LIMIT = 64;
+const DURABLE_STOP_RECEIPT_IDENTIFIER_LIMIT = 256;
+const RETIRED_STOP_FILTER_HEX_LENGTH = 512;
+
+const boundedIdentifier = (value: unknown): value is string =>
+  identifier(value) && value.length <= DURABLE_STOP_RECEIPT_IDENTIFIER_LIMIT;
+
+function readDurableStopReceipt(value: unknown): MemberWorkSyncDurableStopReceipt {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  const receipt = value as Record<string, unknown>;
+  const controlRevision = readControlRevision(receipt.controlRevision);
+  if (
+    !boundedIdentifier(receipt.teamName) ||
+    !boundedIdentifier(receipt.memberName) ||
+    !boundedIdentifier(receipt.incarnation) ||
+    !boundedIdentifier(receipt.runtimeInstanceId) ||
+    !boundedIdentifier(receipt.localStopId) ||
+    !timestamp(receipt.appliedAt) ||
+    controlRevision == null
+  ) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  return {
+    teamName: receipt.teamName,
+    memberName: receipt.memberName,
+    incarnation: receipt.incarnation,
+    runtimeInstanceId: receipt.runtimeInstanceId,
+    localStopId: receipt.localStopId,
+    appliedAt: receipt.appliedAt,
+    controlRevision,
+  };
+}
+
+function readPendingRuntimeControl(value: unknown): MemberWorkSyncPendingRuntimeControl {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  const pending = value as Record<string, unknown>;
+  const controlRevision = readControlRevision(pending.controlRevision);
+  if (
+    !boundedIdentifier(pending.teamName) ||
+    !boundedIdentifier(pending.memberName) ||
+    !boundedIdentifier(pending.incarnation) ||
+    !boundedIdentifier(pending.runtimeInstanceId) ||
+    !boundedIdentifier(pending.requestId) ||
+    (pending.localStopId !== undefined && !boundedIdentifier(pending.localStopId)) ||
+    controlRevision == null ||
+    typeof pending.stopped !== 'boolean' ||
+    !timestamp(pending.issuedAt) ||
+    !isValidMemberWorkSyncRuntimeControlReason(pending.reason)
+  ) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  if (pending.stopped !== (pending.localStopId !== undefined)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  const previousStopLatch =
+    pending.previousStopLatch === undefined ? undefined : readStopLatch(pending.previousStopLatch);
+  return {
+    teamName: pending.teamName,
+    memberName: pending.memberName,
+    incarnation: pending.incarnation,
+    runtimeInstanceId: pending.runtimeInstanceId,
+    requestId: pending.requestId,
+    ...(typeof pending.localStopId === 'string' ? { localStopId: pending.localStopId } : {}),
+    controlRevision,
+    stopped: pending.stopped,
+    issuedAt: pending.issuedAt,
+    reason: pending.reason,
+    ...(previousStopLatch ? { previousStopLatch } : {}),
+  };
+}
+
+function readRetiredStopFilter(value: unknown): MemberWorkSyncRetiredStopFilter {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  const filter = value as Record<string, unknown>;
+  if (
+    filter.algorithm !== 'fnv1a-2048-v1' ||
+    typeof filter.bits !== 'string' ||
+    filter.bits.length !== RETIRED_STOP_FILTER_HEX_LENGTH ||
+    !/^[0-9a-f]+$/.test(filter.bits) ||
+    typeof filter.retiredCount !== 'number' ||
+    !Number.isSafeInteger(filter.retiredCount) ||
+    filter.retiredCount < 0
+  ) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  return {
+    algorithm: 'fnv1a-2048-v1',
+    bits: filter.bits,
+    retiredCount: filter.retiredCount,
+  };
+}
 
 function readEpisode(value: unknown): MemberWorkSyncRecoveryEpisode {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -157,8 +259,7 @@ function readStopLatch(value: unknown): MemberWorkSyncAutoResumeStopLatch {
   const latch = value as Record<string, unknown>;
   if (
     !timestamp(latch.stoppedAt) ||
-    typeof latch.reason !== 'string' ||
-    latch.reason.trim() === ''
+    !isValidMemberWorkSyncRuntimeControlReason(latch.reason)
   ) {
     throw new MemberWorkSyncRecoveryHealthError();
   }
@@ -199,6 +300,24 @@ export function readMemberWorkSyncRecoveryHealth(
   if (health.reservations !== undefined && !Array.isArray(health.reservations)) {
     throw new MemberWorkSyncRecoveryHealthError();
   }
+  if (
+    health.durableStopReceipts !== undefined &&
+    (!Array.isArray(health.durableStopReceipts) ||
+      health.durableStopReceipts.length > MEMBER_WORK_SYNC_DURABLE_STOP_RECEIPT_LIMIT)
+  ) {
+    throw new MemberWorkSyncRecoveryHealthError();
+  }
+  const durableStopReceipts = Array.isArray(health.durableStopReceipts)
+    ? health.durableStopReceipts.map(readDurableStopReceipt)
+    : undefined;
+  const pendingRuntimeControl =
+    health.pendingRuntimeControl === undefined
+      ? undefined
+      : readPendingRuntimeControl(health.pendingRuntimeControl);
+  const retiredStopFilter =
+    health.retiredStopFilter === undefined
+      ? undefined
+      : readRetiredStopFilter(health.retiredStopFilter);
   return {
     schemaVersion: 1,
     episodes,
@@ -210,6 +329,9 @@ export function readMemberWorkSyncRecoveryHealth(
     ...(autoResumeStopLatch ? { autoResumeStopLatch } : {}),
     ...(controlRevision != null ? { controlRevision } : {}),
     ...(reservations ? { reservations } : {}),
+    ...(durableStopReceipts ? { durableStopReceipts } : {}),
+    ...(pendingRuntimeControl ? { pendingRuntimeControl } : {}),
+    ...(retiredStopFilter ? { retiredStopFilter } : {}),
   };
 }
 
@@ -318,7 +440,10 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
   if (
     episodes.length === 0 &&
     !input.previous?.unresolvedIntentId &&
-    !input.previous?.autoResumeStopLatch
+    !input.previous?.autoResumeStopLatch &&
+    !input.previous?.durableStopReceipts?.length &&
+    !input.previous?.pendingRuntimeControl &&
+    !input.previous?.retiredStopFilter
   ) {
     return undefined;
   }
@@ -339,6 +464,15 @@ export function observeMemberWorkSyncRecoveryHealth(input: {
       ? { controlRevision: input.previous.controlRevision }
       : {}),
     ...(input.previous?.reservations ? { reservations: input.previous.reservations } : {}),
+    ...(input.previous?.durableStopReceipts
+      ? { durableStopReceipts: input.previous.durableStopReceipts }
+      : {}),
+    ...(input.previous?.pendingRuntimeControl
+      ? { pendingRuntimeControl: input.previous.pendingRuntimeControl }
+      : {}),
+    ...(input.previous?.retiredStopFilter
+      ? { retiredStopFilter: input.previous.retiredStopFilter }
+      : {}),
   };
 }
 

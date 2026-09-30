@@ -1,6 +1,8 @@
 import { countLineChanges } from '@shared/utils/lineDiffStats';
+import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
 import type {
+  FileChangeSummary,
   ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewUndoAction,
@@ -28,6 +30,29 @@ export interface ReviewHistoryDiskTransition {
 
 const MAX_EXACT_LINE_STATS_TRANSITIONS = 5;
 const MAX_EXACT_UPDATE_DIFF_CHARACTERS = 512 * 1024;
+
+export function isLedgerRenameReviewFile(file: FileChangeSummary | undefined): boolean {
+  return Boolean(file?.snippets.some((snippet) => snippet.ledger?.relation?.kind === 'rename'));
+}
+
+/**
+ * Rebases an Undo preimage onto the content main actually applied. When both
+ * sides changed the same region, the durable snapshot is retained but fenced.
+ */
+export function alignReviewDiskUndoSnapshotWithAppliedContent(
+  snapshot: ReviewDiskUndoSnapshot,
+  appliedContent: string
+): void {
+  if (snapshot.afterContent === null) return;
+  const merged = threeWayTextMerge(snapshot.afterContent, appliedContent, snapshot.beforeContent);
+  snapshot.afterContent = appliedContent;
+  if (merged.hasConflicts) {
+    snapshot.restoreConflict =
+      'Undo conflicts with edits that were preserved while applying the rejection.';
+    return;
+  }
+  snapshot.beforeContent = merged.content;
+}
 
 export function buildUndoDiskMutationSteps(
   actionId: string,

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "phase-00",
+  "laneId": "w1-freeze-fix-f4",
+  "packetRevision": "phase-00-r2",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-w1-f4",
+  "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-freeze-fix-w1-f4",
+  "baseSha": "6cf53a3d71e1bd34ff71f99968b705a0e1aa939c",
+  "workspaceHeadSha": "6cf53a3d71e1bd34ff71f99968b705a0e1aa939c",
+  "integrationCommitSha": null,
+  "commitStatus": "uncommitted_by_linked_worktree_worker_policy",
+  "status": "characterized",
+  "sourceRecreation": {
+    "sourceJobId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-w1-d1",
+    "sourceBaseSha": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+    "preservedPatchSha256": "sha256:bb297e5bc0cda6a2ee1b05bfc867a87058ed1b7299b6adab163d46f6116b790c",
+    "recreatedAgainstCurrentCanonical": true
+  },
+  "findingResolutions": [
+    {
+      "id": "P0.FREEZE.W1_W2.C1.001",
+      "status": "resolved",
+      "resolution": "The approved d1 React event-family, mixed-handler, subject-save, catalog, and evidence work is recreated on the current canonical base. Mounted interaction discovery now additionally finds every on* callback on directly imported external package components and maps all 817 reachable sites exactly once."
+    },
+    {
+      "id": "P0.FREEZE.W1_W2.C1.001.E1",
+      "status": "resolved",
+      "resolution": "Both repository DndContext.onDragCancel sites and the mounted Sheet.onClose and Sheet.onSnap sites are discovered and dispositioned. Repository-backed removal negatives independently prove omission of each callback family makes the checked-in catalog fail closed."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P0.W1.RENDERER_ACTIONS",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W1.RENDERER_CHILD_CONTROLS",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W1.SCANNER",
+      "path": "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "proofLevel": "fixture_characterized"
+    }
+  ],
+  "counts": {
+    "apiMembers": 109,
+    "reachableControlFiles": 171,
+    "reachableInteractionSites": 817,
+    "semanticActions": 491,
+    "deliberateAbsenceClasses": 6,
+    "childCatalogMappings": 666,
+    "excludedUnreachableTeamFiles": 7,
+    "excludedUnreachableInteractionSites": 11
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-w1-f4.json",
+    "docs/research/hosted-web/phase-0/parity-renderer/README.md",
+    "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+    "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+    "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+    "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+    "test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "W1_RAW_EVIDENCE_ROOT=/tmp/agent-teams-hosted-web-refactor-phase-00-freeze-fix-w1-f4-artifacts node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "exitCode": 0,
+      "result": "109 API members and 817 mapped sites; schemas valid; raw bypass hash reproduced"
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "exitCode": 0,
+      "result": "1 file and 21 tests passed, including three repository-backed external-callback omission negatives"
+    },
+    {
+      "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 2,
+      "result": "changed W1 scanner/test files are clean; the repository-wide check remains blocked by seven pre-existing errors in untouched auth-artifacts, host-primitives, and provider-runtime tests"
+    },
+    {
+      "command": "pnpm exec prettier --check <seven W1-owned changed paths>",
+      "exitCode": 0,
+      "result": "all changed W1-owned files match Prettier style"
+    },
+    {
+      "command": "git diff --check; exact W1 path allowlist; bounded secret scan",
+      "exitCode": 0,
+      "result": "no whitespace, out-of-scope path, or secret findings"
+    }
+  ],
+  "externalRawEvidence": {
+    "path": "/tmp/agent-teams-hosted-web-refactor-phase-00-freeze-fix-w1-f4-artifacts/legacy-bypass-raw.json",
+    "sha256": "sha256:2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497",
+    "recordCount": 610,
+    "ephemeral": true
+  },
+  "scopeExclusions": [
+    "No W2, W3, W4, W5, W6, production source, controller index, shared architecture, package, lockfile, or terminal implementation was edited."
+  ],
+  "risks": [
+    "External callback discovery is intentionally anchored to direct external package imports; internal component callback props are counted at their mounted DOM or external-package interaction boundary to avoid double-counting.",
+    "Repository-wide pnpm typecheck still exits 2 on seven errors outside this lane; none points to either changed TypeScript file."
+  ],
+  "blockers": [],
+  "nextAction": "integration controller commits the verified workspace diff and requests independent review of P0.FREEZE.W1_W2.C1.001.E1"
+}

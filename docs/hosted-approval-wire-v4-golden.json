@@ -1,0 +1,9 @@
+{
+  "format": "agent-teams.hosted-approval-wire-golden/v1",
+  "consumerHead": "44ada5b51032a3aafe81ce8e30b50cdb4a06c909",
+  "capability": "{\"format\":\"agent-teams.hosted-approval-wire-capability/v1\",\"wireSchemaVersion\":4,\"ownerProofDomain\":\"agent-teams.hosted-runtime-approval.owner-proof/v1\",\"operations\":[\"approval_ingress_claim\",\"approval_ingress_ack\",\"approval_ingress_authority_resolve\",\"approval_decision_deliver\",\"approval_decision_reconcile\"],\"openCodeProtocol\":\"agent-teams-hosted-approval-v2\",\"openCodeSchemaVersion\":2}",
+  "capabilitySha256": "40a6c4a131b4e64c04b87337fbce667c91f274fb85b3879c6cdcac49dbbbd639",
+  "ownerProofKeyHex": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+  "serializedUnsignedRequest": "{\"schemaVersion\":4,\"exchangeId\":\"approval-request_66666666666666666666666666666666\",\"operation\":\"approval_ingress_ack\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_approval-wire\",\"ownerGeneration\":7,\"ownerSessionId\":\"owner-session_approval-wire\",\"socketIdentity\":{\"device\":\"11\",\"inode\":\"12\",\"uid\":501,\"gid\":20,\"mode\":384}},\"authority\":{\"actorId\":\"actor_approval-wire\",\"deploymentId\":\"deployment_approval-wire\",\"bootId\":\"boot_approval-wire\",\"restoreGeneration\":4,\"workspaceId\":\"workspace_33333333333333333333333333333333\",\"mountBinding\":{\"mountGeneration\":9,\"declaredRootHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}},\"payload\":{\"outboxId\":\"runtime_permission:effect:5555555555555555555555555555555555555555555555555555555555555555\",\"generation\":3,\"ownerId\":\"owner_approval-wire\",\"leaseToken\":\"lease_approval-wire\"}}",
+  "requestOwnerProof": "a1043f9a8b698597c7bc30cf994c3caa529bc5a614dbdf972376f4b29b4bb1c9"
+}

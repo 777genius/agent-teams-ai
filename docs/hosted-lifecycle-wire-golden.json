@@ -1,0 +1,224 @@
+{
+  "format": "agent-teams.hosted-lifecycle-wire-golden/v1",
+  "source": "agent-teams-ai test/main/composition/hosted/hostedLifecycleWire.golden.test.ts",
+  "proofDomain": "agent-teams.hosted-lifecycle.owner-proof/v1",
+  "proofKeyHex": "6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+  "ownerAuthority": {
+    "deploymentId": "deployment_golden-lifecycle",
+    "bootId": "boot_golden-lifecycle",
+    "restoreGeneration": 2,
+    "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+    "mountBinding": {
+      "mountGeneration": 3,
+      "declaredRootHash": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1"
+    },
+    "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4"
+  },
+  "ownerBinding": {
+    "ownerAuthority": "owner-authority_golden-lifecycle",
+    "ownerGeneration": 5,
+    "ownerSessionId": "owner-session_golden-lifecycle-0005",
+    "socketIdentity": {
+      "device": "253",
+      "inode": "7002",
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384
+    }
+  },
+  "bootstrapBinding": {
+    "deploymentId": "deployment_golden-lifecycle",
+    "bootId": "boot_golden-lifecycle",
+    "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+    "mountGeneration": 3,
+    "bootstrapDigest": "d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7",
+    "ownerArtifactDigest": "sha256:e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8",
+    "proofKeyId": "0c0524a72a27631c8da35155361d40ccaa627803afa39b78a0bcf666d25456c8"
+  },
+  "readiness": {
+    "requestLine": "{\"schemaVersion\":2,\"operation\":\"readiness\",\"capability\":\"hosted-lifecycle-command\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384},\"challenge\":\"c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9\",\"bootstrapBinding\":{\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"mountGeneration\":3,\"bootstrapDigest\":\"d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7\",\"ownerArtifactDigest\":\"sha256:e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8\",\"proofKeyId\":\"0c0524a72a27631c8da35155361d40ccaa627803afa39b78a0bcf666d25456c8\"},\"expectedOwnerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"controllerProof\":\"e534c45e593c104ce72470feeac574d4ba94a66aa75751425c6f1c043123b9fe\"}\n",
+    "responseLine": "{\"schemaVersion\":2,\"kind\":\"ready\",\"capability\":\"hosted-lifecycle-command\",\"challenge\":\"c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9\",\"bootstrapDigest\":\"d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerProof\":\"9c8898b28970e3f3d9e4d3b8230c1010998ad7d25bb31d87eebb9fd8e6e38db8\"}\n"
+  },
+  "cases": [
+    {
+      "name": "control_state",
+      "operation": "control_state",
+      "requestLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000001\",\"operation\":\"control_state\",\"provenance\":{\"from\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"to\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000001\",\"operation\":\"control_state\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"payload\":{\"request\":{\"schemaVersion\":1,\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"},\"context\":{\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"requestId\":\"request_golden-lifecycle\",\"authorizedScope\":\"scope_golden-lifecycle\",\"deadlineAtMs\":1790000010000},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":null,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"5f006e6081bf529e31464fd3b61653f9549cab9d082471bc33aede2b6546ca18\"}\n",
+      "ownerResult": {
+        "payload": {
+          "schemaVersion": 1,
+          "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+          "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+          "deploymentId": "deployment_golden-lifecycle",
+          "bootId": "boot_golden-lifecycle",
+          "runId": "run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+          "resourceRevision": "revision_golden-lifecycle",
+          "availableActions": [
+            "stop"
+          ],
+          "kind": "control_state"
+        },
+        "resourceRevision": "revision_golden-lifecycle"
+      },
+      "responseLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000001\",\"operation\":\"control_state\",\"provenance\":{\"from\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"to\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000001\",\"operation\":\"control_state\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"payload\":{\"schemaVersion\":1,\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"resourceRevision\":\"revision_golden-lifecycle\",\"availableActions\":[\"stop\"],\"kind\":\"control_state\"},\"ownerProof\":\"60e1c4d3bdaa77b55d7e6edb22155dc376498d53e7e4002d49f8f6e1d7569d43\"}\n"
+    },
+    {
+      "name": "get_provisioning_status",
+      "operation": "get_provisioning_status",
+      "requestLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000002\",\"operation\":\"get_provisioning_status\",\"provenance\":{\"from\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"to\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000002\",\"operation\":\"get_provisioning_status\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"payload\":{\"request\":{\"schemaVersion\":1,\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"},\"context\":{\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"requestId\":\"request_golden-lifecycle\",\"authorizedScope\":\"scope_golden-lifecycle\",\"deadlineAtMs\":1790000010000},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":null,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"23091b2ea11ef5d75c528b83a7a3168ab9150d0596240a02819e2cfb81ce3f89\"}\n",
+      "ownerResult": {
+        "payload": {
+          "schemaVersion": 1,
+          "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+          "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+          "deploymentId": "deployment_golden-lifecycle",
+          "bootId": "boot_golden-lifecycle",
+          "runId": "run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+          "resourceRevision": "revision_golden-lifecycle",
+          "availableActions": [
+            "stop"
+          ],
+          "kind": "provisioning_status",
+          "recentCommands": []
+        },
+        "resourceRevision": "revision_golden-lifecycle"
+      },
+      "responseLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000002\",\"operation\":\"get_provisioning_status\",\"provenance\":{\"from\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"to\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000002\",\"operation\":\"get_provisioning_status\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"payload\":{\"schemaVersion\":1,\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"resourceRevision\":\"revision_golden-lifecycle\",\"availableActions\":[\"stop\"],\"kind\":\"provisioning_status\",\"recentCommands\":[]},\"ownerProof\":\"7265a115da43f53e74b054b2f6c24698091976deb3176a7b96e97f3331b74b5d\"}\n"
+    },
+    {
+      "name": "authorize",
+      "operation": "authorize",
+      "requestLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000003\",\"operation\":\"authorize\",\"provenance\":{\"from\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"to\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000003\",\"operation\":\"authorize\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"payload\":{\"command\":{\"schemaVersion\":1,\"action\":\"stop\",\"commandId\":\"lifecycle-command_golden-lifecycle-stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"expectedRevision\":\"revision_golden-lifecycle\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\"},\"context\":{\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"requestId\":\"request_golden-lifecycle\",\"authorizedScope\":\"scope_golden-lifecycle\",\"deadlineAtMs\":1790000010000},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"f5129e631b1b339b5a82fb0c505e3b940431e561ac93dcfb70e1f9c46f62527e\"}\n",
+      "ownerResult": {
+        "payload": {
+          "schemaVersion": 2,
+          "kind": "authorized",
+          "authorization": {
+            "grantId": "grant_golden-lifecycle-0001",
+            "authorizationGeneration": "authorization-generation_golden-lifecycle-0001",
+            "deploymentId": "deployment_golden-lifecycle",
+            "bootId": "boot_golden-lifecycle",
+            "resourceRevision": "revision_golden-lifecycle",
+            "actorId": "actor_golden-lifecycle",
+            "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+            "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+            "restoreGeneration": 2,
+            "mountGeneration": 3,
+            "ownerEffectFence": {
+              "grantRevision": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+              "identityChecksum": "8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e"
+            }
+          }
+        },
+        "resourceRevision": "revision_golden-lifecycle"
+      },
+      "responseLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000003\",\"operation\":\"authorize\",\"provenance\":{\"from\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"to\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000003\",\"operation\":\"authorize\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"authorized\",\"authorization\":{\"grantId\":\"grant_golden-lifecycle-0001\",\"authorizationGeneration\":\"authorization-generation_golden-lifecycle-0001\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"395fab3efc498c283b46ded95db3beb1991c76bf941afb66a984aa81eac5fe66\"}\n"
+    },
+    {
+      "name": "replay_lookup",
+      "operation": "replay_lookup",
+      "requestLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000004\",\"operation\":\"replay_lookup\",\"provenance\":{\"from\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"to\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000004\",\"operation\":\"replay_lookup\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"payload\":{\"command\":{\"schemaVersion\":1,\"action\":\"stop\",\"commandId\":\"lifecycle-command_golden-lifecycle-stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"expectedRevision\":\"revision_golden-lifecycle\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\"},\"authorization\":{\"grantId\":\"grant_golden-lifecycle-0001\",\"authorizationGeneration\":\"authorization-generation_golden-lifecycle-0001\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"durableCommand\":{\"schemaVersion\":1,\"commandFingerprint\":{\"algorithm\":\"sha256\",\"version\":1,\"digest\":\"8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874\"},\"idempotency\":{\"deploymentId\":\"deployment_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"action\":\"stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\"},\"resource\":{\"bootId\":\"boot_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"expectedRevision\":\"revision_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"context\":{\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"requestId\":\"request_golden-lifecycle\",\"authorizedScope\":\"scope_golden-lifecycle\",\"deadlineAtMs\":1790000010000},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"7faef0ffc855f2eb5d3f01fb11e5ea151fd125bfc0b62f65bca631395b97bb78\"}\n",
+      "ownerResult": {
+        "payload": {
+          "schemaVersion": 2,
+          "kind": "not_started",
+          "durableCommand": {
+            "schemaVersion": 1,
+            "commandFingerprint": {
+              "algorithm": "sha256",
+              "version": 1,
+              "digest": "8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874"
+            },
+            "idempotency": {
+              "deploymentId": "deployment_golden-lifecycle",
+              "actorId": "actor_golden-lifecycle",
+              "action": "stop",
+              "idempotencyKey": "idempotency_golden-lifecycle-stop"
+            },
+            "resource": {
+              "bootId": "boot_golden-lifecycle",
+              "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+              "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+              "runId": "run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+              "expectedRevision": "revision_golden-lifecycle",
+              "restoreGeneration": 2,
+              "mountGeneration": 3,
+              "ownerEffectFence": {
+                "grantRevision": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+                "identityChecksum": "8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e"
+              }
+            }
+          }
+        },
+        "resourceRevision": "revision_golden-lifecycle"
+      },
+      "responseLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000004\",\"operation\":\"replay_lookup\",\"provenance\":{\"from\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"to\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000004\",\"operation\":\"replay_lookup\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"not_started\",\"durableCommand\":{\"schemaVersion\":1,\"commandFingerprint\":{\"algorithm\":\"sha256\",\"version\":1,\"digest\":\"8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874\"},\"idempotency\":{\"deploymentId\":\"deployment_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"action\":\"stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\"},\"resource\":{\"bootId\":\"boot_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"expectedRevision\":\"revision_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}}},\"ownerProof\":\"0b041c869c1916de116b712ac3ba1d71b8e461e0ae59c37e97944e455a2ede2c\"}\n"
+    },
+    {
+      "name": "execute",
+      "operation": "execute",
+      "requestLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000005\",\"operation\":\"execute\",\"provenance\":{\"from\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"to\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000005\",\"operation\":\"execute\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"payload\":{\"command\":{\"schemaVersion\":1,\"action\":\"stop\",\"commandId\":\"lifecycle-command_golden-lifecycle-stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"expectedRevision\":\"revision_golden-lifecycle\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\"},\"authorization\":{\"grantId\":\"grant_golden-lifecycle-0001\",\"authorizationGeneration\":\"authorization-generation_golden-lifecycle-0001\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"durableCommand\":{\"schemaVersion\":1,\"commandFingerprint\":{\"algorithm\":\"sha256\",\"version\":1,\"digest\":\"8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874\"},\"idempotency\":{\"deploymentId\":\"deployment_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"action\":\"stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\"},\"resource\":{\"bootId\":\"boot_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"expectedRevision\":\"revision_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"context\":{\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"requestId\":\"request_golden-lifecycle\",\"authorizedScope\":\"scope_golden-lifecycle\",\"deadlineAtMs\":1790000010000},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"142abd0b1f6fcaf6aa1d0ca7182841eb5b2c5fe696059b6b3d158dac7046c27b\"}\n",
+      "ownerResult": {
+        "payload": {
+          "schemaVersion": 2,
+          "kind": "settled",
+          "durableCommand": {
+            "schemaVersion": 1,
+            "commandFingerprint": {
+              "algorithm": "sha256",
+              "version": 1,
+              "digest": "8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874"
+            },
+            "idempotency": {
+              "deploymentId": "deployment_golden-lifecycle",
+              "actorId": "actor_golden-lifecycle",
+              "action": "stop",
+              "idempotencyKey": "idempotency_golden-lifecycle-stop"
+            },
+            "resource": {
+              "bootId": "boot_golden-lifecycle",
+              "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+              "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+              "runId": "run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+              "expectedRevision": "revision_golden-lifecycle",
+              "restoreGeneration": 2,
+              "mountGeneration": 3,
+              "ownerEffectFence": {
+                "grantRevision": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+                "identityChecksum": "8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e"
+              }
+            }
+          },
+          "result": {
+            "schemaVersion": 1,
+            "kind": "accepted",
+            "action": "stop",
+            "commandId": "lifecycle-command_golden-lifecycle-stop",
+            "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+            "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+            "runId": "run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+            "resourceRevision": "revision_golden-lifecycle"
+          },
+          "authorization": {
+            "grantId": "grant_golden-lifecycle-0001",
+            "authorizationGeneration": "authorization-generation_golden-lifecycle-0001",
+            "deploymentId": "deployment_golden-lifecycle",
+            "bootId": "boot_golden-lifecycle",
+            "resourceRevision": "revision_golden-lifecycle",
+            "actorId": "actor_golden-lifecycle",
+            "workspaceId": "workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+            "teamId": "team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+            "restoreGeneration": 2,
+            "mountGeneration": 3,
+            "ownerEffectFence": {
+              "grantRevision": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f",
+              "identityChecksum": "8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e"
+            }
+          }
+        },
+        "resourceRevision": "revision_golden-lifecycle"
+      },
+      "responseLine": "{\"schemaVersion\":2,\"exchangeId\":\"lifecycle-request_00000000000000000000000000000005\",\"operation\":\"execute\",\"provenance\":{\"from\":{\"kind\":\"owner\",\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\"},\"to\":{\"kind\":\"controller\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"sessionId\":\"session_golden-lifecycle\"},\"target\":{\"capability\":\"hosted-lifecycle-command\",\"exchangeId\":\"lifecycle-request_00000000000000000000000000000005\",\"operation\":\"execute\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\"}},\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-lifecycle\",\"ownerGeneration\":5,\"ownerSessionId\":\"owner-session_golden-lifecycle-0005\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7002\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"},\"authority\":{\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"deploymentId\":\"deployment_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"settled\",\"durableCommand\":{\"schemaVersion\":1,\"commandFingerprint\":{\"algorithm\":\"sha256\",\"version\":1,\"digest\":\"8b57cbf6ffc9670cb00581bff80e98b45ba7c2f08459e55451554431cfcb0874\"},\"idempotency\":{\"deploymentId\":\"deployment_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"action\":\"stop\",\"idempotencyKey\":\"idempotency_golden-lifecycle-stop\"},\"resource\":{\"bootId\":\"boot_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"expectedRevision\":\"revision_golden-lifecycle\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"result\":{\"schemaVersion\":1,\"kind\":\"accepted\",\"action\":\"stop\",\"commandId\":\"lifecycle-command_golden-lifecycle-stop\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"runId\":\"run_c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6\",\"resourceRevision\":\"revision_golden-lifecycle\"},\"authorization\":{\"grantId\":\"grant_golden-lifecycle-0001\",\"authorizationGeneration\":\"authorization-generation_golden-lifecycle-0001\",\"deploymentId\":\"deployment_golden-lifecycle\",\"bootId\":\"boot_golden-lifecycle\",\"resourceRevision\":\"revision_golden-lifecycle\",\"actorId\":\"actor_golden-lifecycle\",\"workspaceId\":\"workspace_b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5\",\"teamId\":\"team_a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4\",\"restoreGeneration\":2,\"mountGeneration\":3,\"ownerEffectFence\":{\"grantRevision\":\"7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f\",\"identityChecksum\":\"8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e\"}}},\"ownerProof\":\"39248d73ee7d4c572b91ec6e1c8393dc75938d077ca0b72f4ea0ce030733f788\"}\n"
+    }
+  ]
+}

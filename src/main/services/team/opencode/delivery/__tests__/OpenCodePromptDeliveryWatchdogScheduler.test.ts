@@ -27,7 +27,7 @@ function makeScheduler(overrides: Partial<SchedulerDeps> = {}): {
     resolveIdentity: vi.fn(async () => ({ ok: true, laneId: 'lane-1' })),
     isLaneActive: vi.fn(async () => true),
     isRecordNotFoundError: vi.fn(
-      (error) =>
+      (error: unknown) =>
         error instanceof Error &&
         error.message.startsWith('OpenCode prompt delivery record not found:')
     ),
@@ -35,7 +35,9 @@ function makeScheduler(overrides: Partial<SchedulerDeps> = {}): {
     warn: vi.fn(),
     debug: vi.fn(),
     diagnostic: vi.fn(),
-    getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),
+    getErrorMessage: vi.fn((error: unknown) =>
+      error instanceof Error ? error.message : String(error)
+    ),
     ...overrides,
   };
 

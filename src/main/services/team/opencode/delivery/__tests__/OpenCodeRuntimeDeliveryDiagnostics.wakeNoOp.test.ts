@@ -8,7 +8,7 @@ import {
 describe('isInformationalOpenCodeRuntimeDeliveryDiagnostic (wake no-op outcomes)', () => {
   it.each(OPENCODE_INBOX_RELAY_WAKE_NO_OP_DIAGNOSTICS.map((prefix) => [prefix]))(
     'treats %s as informational, with the message id it carries',
-    (prefix) => {
+    (prefix: string) => {
       expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(`${prefix}: msg-1`)).toBe(true);
       expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(prefix)).toBe(true);
     }

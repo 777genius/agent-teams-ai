@@ -1,14 +1,22 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
+
+
+import { EventEmitter } from 'node:events';
+import { promises as fs } from 'node:fs';
+import { PassThrough } from 'node:stream';
+
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { bindProjectDirectoryLease } from '../TeamProvisioningProjectDirectoryLease';
 import {
   buildAgentTeamsMcpValidationError,
   createAgentTeamsMcpValidationFixture,
   parseAgentTeamsMcpLaunchSpec,
   readAgentTeamsMcpLaunchSpec,
   runProviderOneShotDiagnostic,
+  spawnProbe,
   type TeamProvisioningProbeChild,
   type TeamProvisioningProviderDiagnosticsPorts,
   validateAgentTeamsMcpRuntime,
@@ -16,7 +24,14 @@ import {
 import {
   buildTeamProvisioningProviderDiagnosticsPorts,
   createTeamProvisioningProviderDiagnosticsBasePorts,
+  createTeamProvisioningProviderDiagnosticsRuntime,
 } from '../TeamProvisioningProviderDiagnosticsPorts';
+
+import type { TeamCreateRequest } from '@shared/types';
+
+function createLeaseRequest(cwd: string): TeamCreateRequest {
+  return { teamName: 'provider-diagnostics-lease', cwd, members: [] };
+}
 
 function createFakePorts(
   overrides: Partial<TeamProvisioningProviderDiagnosticsPorts> = {}
@@ -56,6 +71,224 @@ function createFakePorts(
 }
 
 describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
+  it('does not spawn a probe when shutdown wins during async lease preparation', async () => {
+    const projectPath = await fs.mkdtemp('/tmp/provider-diagnostics-cancelled-lease-');
+    const directory = await fs.open(projectPath, 'r');
+    try {
+      const identity = await directory.stat({ bigint: true });
+      let cancelled = false;
+      bindProjectDirectoryLease(createLeaseRequest(projectPath), {
+        fd: directory.fd,
+        dev: String(identity.dev),
+        ino: String(identity.ino),
+        beforeEffect: () => {
+          cancelled = true;
+        },
+      });
+      const ports = createFakePorts();
+
+      await expect(
+        spawnProbe({
+          claudePath: '/fake/claude',
+          args: ['--version'],
+          cwd: projectPath,
+          env: {},
+          timeoutMs: 1_000,
+          options: { isCancelled: () => cancelled },
+          ports,
+        })
+      ).rejects.toThrow('Provider diagnostic probe cancelled by app shutdown');
+
+      expect(ports.spawnCli).not.toHaveBeenCalled();
+      expect(ports.addTransientProbeProcess).not.toHaveBeenCalled();
+      expect(ports.removeTransientProbeProcess).not.toHaveBeenCalled();
+    } finally {
+      await directory.close();
+      await fs.rm(projectPath, { recursive: true, force: true });
+    }
+  });
+
+  it('claims and cleans a child when shutdown races synchronous spawn', async () => {
+    let cancelled = false;
+    const child = Object.assign(new EventEmitter(), {
+      pid: 456,
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    }) as unknown as TeamProvisioningProbeChild;
+    const ports = createFakePorts({
+      spawnCli: vi.fn(() => {
+        cancelled = true;
+        return child;
+      }),
+    });
+
+    await expect(
+      spawnProbe({
+        claudePath: '/fake/claude',
+        args: ['--version'],
+        cwd: '/tmp',
+        env: {},
+        timeoutMs: 1_000,
+        options: { isCancelled: () => cancelled },
+        ports,
+      })
+    ).rejects.toThrow('Provider diagnostic probe cancelled by app shutdown');
+
+    expect(ports.addTransientProbeProcess).toHaveBeenCalledWith(child);
+    expect(ports.removeTransientProbeProcess).toHaveBeenCalledWith(child);
+    expect(ports.killProcessTree).toHaveBeenCalledWith(child);
+  });
+
+  it('handles a synchronous child error after cancellation without losing probe ownership', async () => {
+    let cancelled = false;
+    let errorListenerAttachedBeforeCancellation = false;
+    let closeListenerAttachedBeforeCancellation = false;
+    let stdoutListenerAttachedBeforeCancellation = false;
+    let stderrListenerAttachedBeforeCancellation = false;
+    let emittedErrorObserved: Error | undefined;
+    let killProcessTreeReturnedNormally = false;
+    const unhandledRejections: unknown[] = [];
+    const onUnhandledRejection = (reason: unknown): void => {
+      unhandledRejections.push(reason);
+    };
+    const child = Object.assign(new EventEmitter(), {
+      pid: 457,
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    }) as unknown as TeamProvisioningProbeChild;
+    const stdout = child.stdout;
+    const stderr = child.stderr;
+    if (!stdout || !stderr) throw new Error('Probe fixture requires stdout and stderr streams.');
+    const childError = new Error('spawn failed after cancellation');
+    process.on('unhandledRejection', onUnhandledRejection);
+    child.once('error', (error) => {
+      emittedErrorObserved = error;
+    });
+    const ports = createFakePorts({
+      spawnCli: vi.fn(() => {
+        cancelled = true;
+        return child;
+      }),
+      killProcessTree: vi.fn(() => {
+        errorListenerAttachedBeforeCancellation = child.listenerCount('error') > 1;
+        closeListenerAttachedBeforeCancellation = child.listenerCount('close') > 0;
+        stdoutListenerAttachedBeforeCancellation = stdout.listenerCount('data') > 0;
+        stderrListenerAttachedBeforeCancellation = stderr.listenerCount('data') > 0;
+        child.emit('error', childError);
+        child.emit('close', null, 'SIGTERM');
+        killProcessTreeReturnedNormally = true;
+      }),
+    });
+
+    try {
+      await expect(
+        spawnProbe({
+          claudePath: '/fake/claude',
+          args: ['--version'],
+          cwd: '/tmp',
+          env: {},
+          timeoutMs: 1_000,
+          options: { isCancelled: () => cancelled },
+          ports,
+        })
+      ).rejects.toThrow('Provider diagnostic probe cancelled by app shutdown');
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection);
+    }
+
+    expect(ports.addTransientProbeProcess).toHaveBeenCalledWith(child);
+    expect(ports.removeTransientProbeProcess).toHaveBeenCalledExactlyOnceWith(child);
+    expect(ports.killProcessTree).toHaveBeenCalledWith(child);
+    expect(errorListenerAttachedBeforeCancellation).toBe(true);
+    expect(closeListenerAttachedBeforeCancellation).toBe(true);
+    expect(stdoutListenerAttachedBeforeCancellation).toBe(true);
+    expect(stderrListenerAttachedBeforeCancellation).toBe(true);
+    expect(killProcessTreeReturnedNormally).toBe(true);
+    expect(emittedErrorObserved).toBe(childError);
+    expect(child.listenerCount('error')).toBe(0);
+    expect(child.listenerCount('close')).toBe(0);
+    expect(stdout.listenerCount('data')).toBe(0);
+    expect(stderr.listenerCount('data')).toBe(0);
+    expect(unhandledRejections).toEqual([]);
+  });
+
+  it('fences and inherits a bound project descriptor for both diagnostic spawn callers', async () => {
+    const projectPath = await fs.mkdtemp('/tmp/provider-diagnostics-lease-');
+    const directory = await fs.open(projectPath, 'r');
+    const child = Object.assign(new EventEmitter(), {
+      pid: 123,
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    }) as unknown as TeamProvisioningProbeChild;
+    try {
+      const identity = await directory.stat({ bigint: true });
+      bindProjectDirectoryLease(createLeaseRequest(projectPath), {
+        fd: directory.fd,
+        dev: String(identity.dev),
+        ino: String(identity.ino),
+      });
+      const probeSpawnCli = vi.fn(() => {
+        queueMicrotask(() => child.emit('close', 0, null));
+        return child;
+      });
+      await expect(
+        spawnProbe({
+          claudePath: '/fake/claude',
+          args: ['--version'],
+          cwd: projectPath,
+          env: {},
+          timeoutMs: 1_000,
+          ports: createFakePorts({ spawnCli: probeSpawnCli }),
+        })
+      ).resolves.toMatchObject({ exitCode: 0 });
+      expect(probeSpawnCli).toHaveBeenCalledWith(
+        '/fake/claude',
+        ['--version'],
+        expect.objectContaining({
+          cwd: `/proc/self/fd/${directory.fd}`,
+          stdio: expect.arrayContaining([directory.fd]),
+        })
+      );
+
+      let cancelled = false;
+      const mcpSpawnCli = vi.fn(() => {
+        cancelled = true;
+        return child;
+      });
+      const ports = createFakePorts({
+        readFileUtf8: vi.fn().mockResolvedValue(
+          JSON.stringify({ mcpServers: { 'agent-teams': { command: 'node', args: [] } } })
+        ),
+        spawnCli: mcpSpawnCli,
+      });
+      await expect(
+        validateAgentTeamsMcpRuntime({
+          claudePath: '/fake/claude',
+          cwd: projectPath,
+          env: {},
+          mcpConfigPath: '/tmp/mcp.json',
+          options: { isCancelled: () => cancelled },
+          ports,
+        })
+      ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+      expect(mcpSpawnCli).toHaveBeenCalledWith(
+        'node',
+        [],
+        expect.objectContaining({
+          cwd: `/proc/self/fd/${directory.fd}`,
+          stdio: expect.arrayContaining([directory.fd]),
+        })
+      );
+      expect(ports.killProcessTree).toHaveBeenCalledWith(child);
+      expect(ports.removeTransientProbeProcess).toHaveBeenCalledWith(child);
+    } finally {
+      await directory.close();
+      await fs.rm(projectPath, { recursive: true, force: true });
+    }
+  });
+
   it('builds normalized MCP validation error details', () => {
     expect(
       buildAgentTeamsMcpValidationError('api error: 429 retry later', (text) =>
@@ -331,6 +564,10 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     });
   });
 });
+
+
+
+
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */
 
 describe('TeamProvisioningProviderDiagnostics provider probes', () => {
@@ -449,6 +686,30 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
 });
 
 describe('TeamProvisioningProviderDiagnostics ports factory', () => {
+  it('combines forwarded cancellation with the app-shutdown predicate for diagnostics', async () => {
+    const forwardedCancellation = vi.fn(() => false);
+    const appShutdownRequested = vi.fn(() => true);
+    const runtime = createTeamProvisioningProviderDiagnosticsRuntime({
+      transientProbeProcesses: new Set<TeamProvisioningProbeChild>(),
+      isCancelled: appShutdownRequested,
+      providerConnectionService: {
+        getConfiguredCodexCustomProviderModel: vi.fn(() => null),
+      },
+      logger: { info: vi.fn(), warn: vi.fn() },
+      isAuthFailureWarning: vi.fn(() => false),
+      normalizeApiRetryErrorMessage: vi.fn((text: string) => text),
+    });
+
+    await expect(
+      runtime.spawnProbe('/fake/claude', ['--version'], '/tmp', {}, 1_000, {
+        isCancelled: forwardedCancellation,
+      })
+    ).rejects.toThrow('Provider diagnostic probe cancelled by app shutdown');
+
+    expect(forwardedCancellation).toHaveBeenCalledOnce();
+    expect(appShutdownRequested).toHaveBeenCalledOnce();
+  });
+
   it('overlays spawnProbe while preserving base ports', () => {
     const basePorts = createFakePorts();
     const spawnProbe = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>();
@@ -475,6 +736,7 @@ describe('TeamProvisioningProviderDiagnostics ports factory', () => {
 
     const ports = createTeamProvisioningProviderDiagnosticsBasePorts({
       transientProbeProcesses,
+      isCancelled: () => false,
       providerConnectionService,
       logger,
       isAuthFailureWarning,

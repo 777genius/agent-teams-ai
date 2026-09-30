@@ -1,3 +1,4 @@
+import type { ProjectDirectoryLease } from '../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   EffortLevel,
   MemberLaunchState,
@@ -76,6 +77,8 @@ export interface TeamRuntimeLaunchInput {
   teamName: string;
   laneId?: string;
   cwd: string;
+  /** Invocation-only descriptor capability. This must never be persisted. */
+  projectDirectoryLease?: ProjectDirectoryLease;
   prompt?: string;
   providerId: TeamRuntimeProviderId;
   model?: string;
@@ -187,6 +190,7 @@ export interface TeamRuntimeReconcileInput {
   providerId: TeamRuntimeProviderId;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  projectDirectoryLease?: ProjectDirectoryLease;
   reason: TeamRuntimeReconcileReason;
 }
 
@@ -208,6 +212,8 @@ export interface TeamRuntimeStopInput {
   teamName: string;
   laneId?: string;
   cwd?: string;
+  /** Invocation-only descriptor capability; never persist it with lane state. */
+  projectDirectoryLease?: ProjectDirectoryLease;
   providerId: TeamRuntimeProviderId;
   reason: TeamRuntimeStopReason;
   previousLaunchState: PersistedTeamLaunchSnapshot | null;

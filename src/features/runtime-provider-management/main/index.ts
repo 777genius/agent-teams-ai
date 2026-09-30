@@ -2,6 +2,17 @@ export {
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
 } from './adapters/input/registerRuntimeProviderManagementIpc';
+export type {
+  OpenCodeVersionCommandOptions,
+  OpenCodeVersionCommandResult,
+  OpenCodeVersionDiagnosticMetadata,
+  OpenCodeVersionDiagnosticPorts,
+} from './application/OpenCodeVersionDiagnosticPorts';
+export {
+  type OpenCodeBinaryCandidateFailure,
+  type OpenCodeBinaryVersionProbe,
+  probeOpenCodeBinaryVersion,
+} from './application/openCodeVersionDiagnostics';
 export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,
@@ -13,8 +24,3 @@ export {
   RECOMMENDED_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS,
 } from './infrastructure/OpenCodeLocalModelRuntimeInspector';
 export { OpenCodeLocalProviderConnector } from './infrastructure/OpenCodeLocalProviderConnector';
-export {
-  type OpenCodeBinaryCandidateFailure,
-  type OpenCodeBinaryVersionProbe,
-  probeOpenCodeBinaryVersion,
-} from './infrastructure/openCodeVersionDiagnostics';

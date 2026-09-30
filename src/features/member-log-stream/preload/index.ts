@@ -1,1 +1,4 @@
-export { createMemberLogStreamBridge } from './createMemberLogStreamBridge';
+export {
+  createMemberLogStreamBridge,
+  type MemberLogStreamBridgeTransport,
+} from './createMemberLogStreamBridge';

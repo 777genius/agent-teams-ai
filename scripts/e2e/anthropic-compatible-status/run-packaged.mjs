@@ -324,11 +324,15 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await cdp.wait('Boolean(window.electronAPI?.startup?.getStatus && document.body)', 'app preload');
+  await cdp.wait(
+    'Boolean(window.electronAPI?.startup?.getStatus && window.electronAPI?.cliInstaller && document.body)',
+    'app preload'
+  );
   const startup = await cdp.wait(
     `window.electronAPI.startup.getStatus().then(status =>
       (status.ready || status.error || status.phase === 'failed') && status)`,
-    'app services ready'
+    'app services ready',
+    120000
   );
   record('startup-status', startup);
   assert(

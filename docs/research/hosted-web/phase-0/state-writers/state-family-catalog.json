@@ -1,0 +1,397 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.STATE_FAMILY_CATALOG",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "scope": "Hosted team coordination state and the app-owned durable stores that govern it; workspace source files are catalogued as an external effect, not backed-up state.",
+  "families": [
+    {
+      "id": "app-preferences",
+      "pathPattern": "${CLAUDE_ROOT}/agent-teams-config.json",
+      "implementationStatus": "current",
+      "authority": "desktop application configuration",
+      "writers": ["ConfigManager", "legacy-config migration copy"],
+      "unresolvedWriters": [],
+      "schemaVersion": "unversioned AppConfig object",
+      "maxBytes": "not explicitly bounded",
+      "lockingModel": "none; fire-and-forget async writes",
+      "atomicity": "single-file temp write, best-effort temp fsync, rename; no parent-directory fsync",
+      "unknownFieldPolicy": "lost when normalized AppConfig is serialized",
+      "corruptionPolicy": "default configuration is loaded; corrupt bytes are not a mutation authority",
+      "backupRole": "coordination_backup participant only if a future migration needs settings; not provider state",
+      "secretClass": "may contain provider and SSH settings; redact/exclude secret values",
+      "sourceRefs": [
+        "src/main/services/infrastructure/ConfigManager.ts",
+        "src/main/utils/atomicWrite.ts"
+      ]
+    },
+    {
+      "id": "cli-team-config",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/config.json",
+      "implementationStatus": "current",
+      "authority": "Claude-compatible team layout and provider launch input; not canonical TeamId/roster authority",
+      "writers": [
+        "TeamDataService",
+        "TeamConfigReader write helpers",
+        "TeamTranscriptProjectResolver",
+        "TeamProvisioning* config maintenance",
+        "TeamBackupService",
+        "Claude-compatible CLI/runtime"
+      ],
+      "unresolvedWriters": [
+        "exact Claude CLI versions/operations that write config.json",
+        "whether any provider writer honors an app lock"
+      ],
+      "schemaVersion": "unversioned provider-compatible JSON object",
+      "maxBytes": "reader-specific; no single writer-wide limit",
+      "lockingModel": "multiple app paths; provider writers have no proven common lock",
+      "atomicity": "individual app replacements are rename-atomic; multi-file provisioning is not transactional",
+      "unknownFieldPolicy": "must preserve raw unknown fields; current full-document writers are inconsistent",
+      "corruptionPolicy": "launch/readiness blocks or degrades by caller; backup currently treats missing/corrupt config as restore trigger",
+      "backupRole": "deployment_recovery_point only after writer quiescence; legacy copies are legacy_unverified",
+      "secretClass": "provider/team metadata; paths and provider settings require redaction",
+      "sourceRefs": [
+        "src/main/services/team/TeamDataService.ts",
+        "src/main/services/team/TeamConfigReader.ts",
+        "src/main/services/team/TeamTranscriptProjectResolver.ts",
+        "src/main/services/team/TeamBackupService.ts"
+      ]
+    },
+    {
+      "id": "team-metadata",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/{team.meta.json,members.meta.json}",
+      "implementationStatus": "current",
+      "authority": "app draft/display and member launch compatibility metadata; never TeamId authority",
+      "writers": ["TeamDataService", "TeamProvisioningConfigMaintenance", "TeamMembersMetaStore"],
+      "unresolvedWriters": ["whether external CLI releases rewrite members.meta.json"],
+      "schemaVersion": "version fields exist in selected metadata shapes but enforcement is incomplete",
+      "maxBytes": "bounded by selected readers, not by a shared contract",
+      "lockingModel": "process-local serialization varies by callsite",
+      "atomicity": "single-file rename replacement; team and member metadata do not commit together",
+      "unknownFieldPolicy": "known-field normalization rewrites complete documents and drops unknown fields",
+      "corruptionPolicy": "fallback to config/inbox-derived metadata; mutation ambiguity must block",
+      "backupRole": "app participant; include only with explicit schema and identity mapping",
+      "secretClass": "non-secret metadata with user paths/models requiring redaction",
+      "sourceRefs": [
+        "src/main/services/team/TeamDataService.ts",
+        "src/main/services/team/TeamMembersMetaStore.ts",
+        "src/main/services/team/provisioning/TeamProvisioningConfigMaintenance.ts"
+      ]
+    },
+    {
+      "id": "cli-tasks",
+      "pathPattern": "${CLAUDE_ROOT}/tasks/<LegacyTeamKey>/*.json",
+      "implementationStatus": "current",
+      "authority": "Claude-compatible task records and relationship projection",
+      "writers": [
+        "TeamTaskWriter",
+        "TeamKanbanManager-triggered task flows",
+        "Claude-compatible CLI/agents",
+        "MCP team tools"
+      ],
+      "unresolvedWriters": [
+        "provider/version-specific task tool writer implementation",
+        "active writer liveness evidence"
+      ],
+      "schemaVersion": "unversioned TeamTask/CLI-compatible JSON",
+      "maxBytes": "reader bounds vary; writer has no explicit maximum",
+      "lockingModel": "per-path in-process promise locks; no external exclusion",
+      "atomicity": "one file per rename; relationship edges use two independent renames",
+      "unknownFieldPolicy": "most mutations patch parsed raw records, but creation/full rewrites require fixture proof",
+      "corruptionPolicy": "read/operation fails or skips invalid task; asymmetric relationships have no intent recovery",
+      "backupRole": "deployment_recovery_point only after uncoordinated writers are drained",
+      "secretClass": "may contain prompts/descriptions; sensitive content",
+      "sourceRefs": [
+        "src/main/services/team/TeamTaskWriter.ts",
+        "src/main/services/team/TeamTaskReader.ts"
+      ]
+    },
+    {
+      "id": "cli-inboxes",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/inboxes/*.json",
+      "implementationStatus": "current",
+      "authority": "Claude-compatible message queue/projection; delivery outcome requires provider-specific evidence",
+      "writers": [
+        "TeamInboxWriter",
+        "TeamProvisioning inbox maintenance",
+        "Claude-compatible agents/tools",
+        "OpenCode delivery compatibility path"
+      ],
+      "unresolvedWriters": [
+        "which native teammates honor .lock files",
+        "whether user.json replies always traverse the app/MCP writer"
+      ],
+      "schemaVersion": "unversioned array of InboxMessage-compatible objects",
+      "maxBytes": "10 MiB reader bound",
+      "lockingModel": "cross-process .lock plus in-process lock for TeamInboxWriter only; external adoption unproven",
+      "atomicity": "single-file replacement plus post-read verification; append is read-modify-write",
+      "unknownFieldPolicy": "raw array entries are generally retained, but normalization paths need provider fixtures",
+      "corruptionPolicy": "readers return empty/diagnostic; writers must not silently replace corrupt evidence",
+      "backupRole": "deployment_recovery_point after writer quiescence; excluded from coordination_backup",
+      "secretClass": "message content and attachments metadata are sensitive",
+      "sourceRefs": [
+        "src/main/services/team/TeamInboxWriter.ts",
+        "src/main/services/team/TeamInboxReader.ts",
+        "src/main/services/team/fileLock.ts",
+        "src/main/services/team/inboxLock.ts"
+      ]
+    },
+    {
+      "id": "kanban-projection",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/kanban-state.json",
+      "implementationStatus": "current",
+      "authority": "app review-column/order projection, subordinate to task existence",
+      "writers": ["TeamKanbanManager", "TeamDataService workflows"],
+      "unresolvedWriters": [],
+      "schemaVersion": "unversioned KanbanState",
+      "maxBytes": "512 KiB read bound",
+      "lockingModel": "none across concurrent read-modify-write calls",
+      "atomicity": "single-file rename replacement; read-modify-write is not compare-and-swap",
+      "unknownFieldPolicy": "sanitization and rewrite drop unknown top-level and task fields",
+      "corruptionPolicy": "returns empty default, risking overwrite if mutation proceeds",
+      "backupRole": "derived participant; rebuild policy must be explicit before inclusion",
+      "secretClass": "non-secret workflow metadata",
+      "sourceRefs": ["src/main/services/team/TeamKanbanManager.ts"]
+    },
+    {
+      "id": "review-decisions",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/review-decisions/*.json",
+      "implementationStatus": "current",
+      "authority": "app review-decision UI state; workspace file effects remain separate authority",
+      "writers": ["ReviewDecisionStore"],
+      "unresolvedWriters": [],
+      "schemaVersion": "v2 filename/scope convention; payload compatibility is reader-defined",
+      "maxBytes": "not explicitly bounded",
+      "lockingModel": "no cross-process lock",
+      "atomicity": "single-file replacement; clear/delete independent",
+      "unknownFieldPolicy": "complete store serialization; unknown fields not guaranteed",
+      "corruptionPolicy": "logs and returns empty; must not imply workspace rollback safety",
+      "backupRole": "optional app participant; never substitutes for Git/workspace truth",
+      "secretClass": "may expose workspace paths and diff context",
+      "sourceRefs": [
+        "src/main/services/team/ReviewDecisionStore.ts",
+        "src/main/services/team/ReviewApplierService.ts"
+      ]
+    },
+    {
+      "id": "message-dedupe-history",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/{sentMessages.json,sent-cross-team.json}",
+      "implementationStatus": "current",
+      "authority": "app delivery/deduplication history, not provider acknowledgement",
+      "writers": ["TeamSentMessagesStore", "cross-team message services"],
+      "unresolvedWriters": [],
+      "schemaVersion": "unversioned bounded JSON arrays/objects",
+      "maxBytes": "store-specific bounded retention",
+      "lockingModel": "app process-local coordination",
+      "atomicity": "single-file atomic replacement",
+      "unknownFieldPolicy": "store-owned records; unknown future fields are not guaranteed",
+      "corruptionPolicy": "sent-message store refuses to overwrite corrupt history",
+      "backupRole": "coordination/deployment participant only if dedupe retention requires it",
+      "secretClass": "message identifiers and routing metadata; sensitive",
+      "sourceRefs": [
+        "src/main/services/team/TeamSentMessagesStore.ts",
+        "src/main/services/team/TeamBackupService.ts"
+      ]
+    },
+    {
+      "id": "launch-state",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/launch-state.json",
+      "implementationStatus": "current",
+      "authority": "provider execution/bootstrap facts only; not accepted LifecycleRun authority",
+      "writers": ["TeamLaunchStateStore", "TeamProvisioningLaunchStateStoreBoundary"],
+      "unresolvedWriters": ["all legacy provisioning paths that bypass the boundary"],
+      "schemaVersion": "normalized persisted launch snapshot without durable manifest version",
+      "maxBytes": "reader-specific bound",
+      "lockingModel": "boundary serializes within one process; in-memory run guard is restart-volatile",
+      "atomicity": "launch state and summary are sequential independent replacements",
+      "unknownFieldPolicy": "normalization drops unknown fields",
+      "corruptionPolicy": "read returns null; writes log/swallow selected failures and missing-directory races",
+      "backupRole": "deployment participant as provider evidence only after quiescence",
+      "secretClass": "runtime diagnostics/process metadata; redact paths/commands",
+      "sourceRefs": [
+        "src/main/services/team/TeamLaunchStateStore.ts",
+        "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts"
+      ]
+    },
+    {
+      "id": "launch-summary",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/launch-summary.json",
+      "implementationStatus": "current",
+      "authority": "derived launch-state projection",
+      "writers": ["TeamLaunchStateStore"],
+      "unresolvedWriters": [],
+      "schemaVersion": "derived unversioned summary",
+      "maxBytes": "small derived document; no explicit contract",
+      "lockingModel": "same process path as launch state",
+      "atomicity": "written after launch-state, so pair can disagree",
+      "unknownFieldPolicy": "fully regenerated",
+      "corruptionPolicy": "rebuild from authoritative launch facts",
+      "backupRole": "exclude as rebuildable derived cache",
+      "secretClass": "redacted diagnostic summary",
+      "sourceRefs": ["src/main/services/team/TeamLaunchStateStore.ts"]
+    },
+    {
+      "id": "bootstrap-and-runtime-evidence",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/{bootstrap-state.json,bootstrap-journal.jsonl,.opencode-runtime/**,members/**}",
+      "implementationStatus": "current",
+      "authority": "provider-specific launch/bootstrap/delivery evidence according to each manifest",
+      "writers": [
+        "TeamProvisioning bootstrap/runtime stores",
+        "OpenCode bridge/runtime adapters",
+        "provider child processes"
+      ],
+      "unresolvedWriters": [
+        "provider-version ownership for every members/** artifact",
+        "which files can change after process drain"
+      ],
+      "schemaVersion": "mixed: manifest/versioned JSON stores plus unversioned JSONL diagnostics",
+      "maxBytes": "store-specific; recursive legacy backup only caps individual files at 20 MiB",
+      "lockingModel": "mixed atomic stores, journals, and provider-owned appenders",
+      "atomicity": "per-store only; manifests may bind entries but directory is not transactional",
+      "unknownFieldPolicy": "VersionedJsonStore rejects/quarantines incompatible state; other stores vary",
+      "corruptionPolicy": "manifest mismatch/quarantine or recovery-blocking diagnostics by artifact",
+      "backupRole": "catalog each manifest entry; deployment recovery only after provider drain",
+      "secretClass": "may contain diagnostics, session references and payload hashes; redact/exclude raw secrets",
+      "sourceRefs": [
+        "src/main/services/team/opencode/store/VersionedJsonStore.ts",
+        "src/main/services/team/opencode/store/RuntimeStoreManifest.ts",
+        "src/main/services/team/TeamBootstrapStateReader.ts",
+        "src/main/services/team/TeamBackupService.ts"
+      ]
+    },
+    {
+      "id": "provider-transcripts",
+      "pathPattern": "${CLAUDE_ROOT}/projects/**/*.jsonl and team member transcript/trace paths",
+      "implementationStatus": "current",
+      "authority": "provider-owned append history; read-only application input",
+      "writers": ["Claude/Codex/OpenCode provider runtimes"],
+      "unresolvedWriters": ["retention and flush guarantees by provider/version"],
+      "schemaVersion": "provider/version-specific JSONL event schemas",
+      "maxBytes": "streamed/bounded readers; files themselves unbounded",
+      "lockingModel": "provider-owned append; app observes without writer fence",
+      "atomicity": "append records; tail may be partial on crash",
+      "unknownFieldPolicy": "readers should ignore/preserve unknown event fields without rewriting",
+      "corruptionPolicy": "bounded line parsing and last-valid projection; never app-repair provider logs",
+      "backupRole": "excluded from v1 recovery point unless an explicit encrypted history-export policy is adopted",
+      "secretClass": "highly sensitive prompts/tool output/history",
+      "sourceRefs": [
+        "src/main/services/team/TeamTranscriptProjectResolver.ts",
+        "src/features/member-log-stream/main/adapters/output/sources/ClaudeMemberTranscriptPreviewSource.ts"
+      ]
+    },
+    {
+      "id": "attachment-blobs",
+      "pathPattern": "${APP_DATA}/attachments/<LegacyTeamKey>/* and ${APP_DATA}/task-attachments/<LegacyTeamKey>/**",
+      "implementationStatus": "current",
+      "authority": "app-owned attachment blob content addressed/referenced by messages/tasks",
+      "writers": ["agent-attachments feature adapters"],
+      "unresolvedWriters": [],
+      "schemaVersion": "blob plus feature metadata contract",
+      "maxBytes": "feature upload/storage limits; legacy backup caps individual files at 20 MiB",
+      "lockingModel": "app-owned file operations; no deployment lease today",
+      "atomicity": "individual blob publication; references and blobs are not one transaction",
+      "unknownFieldPolicy": "not applicable to opaque blobs",
+      "corruptionPolicy": "hash/metadata verification required; missing blobs degrade attachment only",
+      "backupRole": "explicit file participant with hashes; never recursive path inference",
+      "secretClass": "user content; sensitive",
+      "sourceRefs": [
+        "src/features/agent-attachments/main",
+        "src/main/services/team/TeamBackupService.ts"
+      ]
+    },
+    {
+      "id": "internal-storage-sqlite",
+      "pathPattern": "${ELECTRON_USER_DATA}/internal-storage/app.db",
+      "implementationStatus": "current",
+      "authority": "app-owned stall/comment/member-work-sync journals and outbox tables",
+      "writers": ["single internal-storage worker request queue"],
+      "unresolvedWriters": [],
+      "schemaVersion": "PRAGMA user_version=3, append-only migrations",
+      "maxBytes": "not explicitly bounded; table retention is feature-specific",
+      "lockingModel": "one worker connection in WAL mode; SQLite locking across connections",
+      "atomicity": "SQLite transactions per worker operation",
+      "unknownFieldPolicy": "future user_version is opened read/write for known tables today; ADR-23 must close mutation readiness",
+      "corruptionPolicy": "integrity_check then rename db/-wal/-shm as forensic corrupt copies and recreate; selector may fall back to legacy JSON",
+      "backupRole": "coordination_backup and deployment_recovery_point use Online Backup API only",
+      "secretClass": "coordination payload JSON can contain sensitive task/message data; exclude auth secrets unless explicitly designed",
+      "sourceRefs": [
+        "src/features/internal-storage/contracts/internalStorageContracts.ts",
+        "src/features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageMigrations.ts"
+      ]
+    },
+    {
+      "id": "legacy-json-journals",
+      "pathPattern": "${CLAUDE_ROOT}/teams/<LegacyTeamKey>/{comment-notification-journal.json,task-stall-journal.json and member work-sync journals}",
+      "implementationStatus": "current_fallback",
+      "authority": "fallback/import source when SQLite backend is unavailable; authority selected once per session",
+      "writers": ["legacy JSON journal stores", "member-work-sync compatibility stores"],
+      "unresolvedWriters": [],
+      "schemaVersion": "store-specific unversioned or versioned JSON/JSONL",
+      "maxBytes": "store-specific",
+      "lockingModel": "app process-local coordination",
+      "atomicity": "single JSON replacement or JSONL append",
+      "unknownFieldPolicy": "store-specific; comment journal treats corruption as an error, stall journal imports corrupt as empty",
+      "corruptionPolicy": "inconsistent by store; import archives must retain evidence",
+      "backupRole": "include only when selected authority; do not back up SQLite and fallback as two coequal truths",
+      "secretClass": "task/member coordination metadata; sensitive",
+      "sourceRefs": [
+        "src/features/internal-storage/main/adapters/output/CommentJournalLegacyJsonSource.ts",
+        "src/features/internal-storage/main/adapters/output/StallJournalLegacyJsonSource.ts",
+        "src/features/internal-storage/main/composition/InternalStorageBackendSelector.ts"
+      ]
+    },
+    {
+      "id": "legacy-team-backups",
+      "pathPattern": "${CLAUDE_ROOT}/backups/{registry.json,teams/<LegacyTeamKey>/**}",
+      "implementationStatus": "current_legacy_unverified",
+      "authority": "diagnostic safety copy and legacy restore input only",
+      "writers": [
+        "TeamBackupService periodic async path",
+        "TeamBackupService shutdown sync path",
+        "file watcher/debounce triggers"
+      ],
+      "unresolvedWriters": [],
+      "schemaVersion": "registry version 1; unversioned manifest",
+      "maxBytes": "20 MiB per copied source file",
+      "lockingModel": "process-local per-team promise mutex; no provider/CLI fence",
+      "atomicity": "independent file copies, manifest and registry replacements; no commit marker",
+      "unknownFieldPolicy": "copied JSON bytes usually preserved; config _backupIdentityId is patched; restore semantics are file-specific",
+      "corruptionPolicy": "registry rebuilds from manifests; per-file errors can be swallowed; partial/mtime restore",
+      "backupRole": "legacy_unverified only; never replace_deployment input",
+      "secretClass": "recursively copied content may be sensitive; current exclusion policy is incomplete",
+      "sourceRefs": ["src/main/services/team/TeamBackupService.ts"]
+    },
+    {
+      "id": "canonical-identities-and-lifecycle",
+      "pathPattern": "future app-owned SQLite identity/lifecycle tables plus team.identity.json portable anchor",
+      "implementationStatus": "phase1_required",
+      "authority": "stable DeploymentId/WorkspaceId/TeamId/MemberId, currentRunRef and fileWriterEpoch",
+      "writers": ["future hosted controller under ADR-16 lease"],
+      "unresolvedWriters": ["final table/schema owner packages after Phase 0 integration"],
+      "schemaVersion": "must be declared in StateCompatibilityManifest before first write",
+      "maxBytes": "bounded typed records",
+      "lockingModel": "SQLite transaction plus write-once anchor publication and checksum agreement",
+      "atomicity": "SQLite row is local authority; portable anchor replication is journaled and disagreement blocks",
+      "unknownFieldPolicy": "future schema/version refuses mutation outside read/write range",
+      "corruptionPolicy": "identity disagreement or unknown schema fails closed",
+      "backupRole": "required identity inventory in both backup products",
+      "secretClass": "identifiers non-secret; paths/mount facts redacted; no credentials",
+      "sourceRefs": ["docs/hosted-web-e2e-completion-plan.md"]
+    }
+  ],
+  "counts": {
+    "total": 17,
+    "currentOrFallback": 16,
+    "phase1Required": 1,
+    "withUnresolvedWriterIdentity": 8,
+    "externalOrPotentialExternalWriter": 6,
+    "legacyUnverifiedBackup": 1
+  },
+  "proofLevel": "source-characterized",
+  "limitations": [
+    "No real provider or user CLAUDE_ROOT was inspected.",
+    "Provider/version writer identities remain source-inferred until W2 sanitized fixtures and target versions are integrated.",
+    "The catalog groups manifest-bound runtime artifacts into families; Phase 1 must enumerate each manifest entry before it can join a recovery point."
+  ]
+}

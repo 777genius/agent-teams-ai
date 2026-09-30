@@ -16,7 +16,5 @@ export interface ComposerDraftDestination {
     id: string,
     options?: { readonly asNewMessage?: boolean }
   ) => Promise<RestoreRecoveryResult>;
-  readonly moveWorkingAsNew: (
-    summary: ComposerWorkingSummary
-  ) => Promise<RestoreRecoveryResult>;
+  readonly moveWorkingAsNew: (summary: ComposerWorkingSummary) => Promise<RestoreRecoveryResult>;
 }

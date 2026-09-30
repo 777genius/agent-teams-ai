@@ -4,6 +4,7 @@ import { readOpenCodeStopSessionIdentity } from '../opencode/store/OpenCodeStopS
 import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
 
+import type { ClearOpenCodeRuntimeLaneStorageResult } from '../opencode/store/OpenCodeBootstrapSessionNormalization';
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeMemberLaunchEvidence,
@@ -51,9 +52,9 @@ export interface OpenCodeRuntimeStopFlowPorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
-    expectedRunId?: string;
+    expectedRunId: string;
     expectedSessionIdentityHash?: string;
-  }): Promise<boolean>;
+  }): Promise<ClearOpenCodeRuntimeLaneStorageResult>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   clearSecondaryRuntimeRuns(teamName: string): void;
   runtimeAdapterRunByTeam: Map<string, RuntimeAdapterRunEntry>;
@@ -97,11 +98,31 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
     teamsBasePath: string;
     teamName: string;
     laneId: string;
-    expectedRunId?: string;
+    expectedRunId: string;
     expectedSessionIdentityHash?: string;
-  }): Promise<boolean>;
+  }): Promise<ClearOpenCodeRuntimeLaneStorageResult>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   logger: StopLogger;
+}
+
+export interface SecondaryRuntimeStopOwner {
+  readonly laneId: string;
+  readonly runId: string;
+}
+
+export type SecondaryRuntimeStopFence = readonly SecondaryRuntimeStopOwner[];
+
+export function createSecondaryRuntimeStopFence(
+  secondaryRuns: readonly Pick<SecondaryRuntimeRunEntry, 'laneId' | 'runId'>[]
+): SecondaryRuntimeStopFence {
+  return Object.freeze(
+    secondaryRuns.map(({ laneId, runId }) =>
+      Object.freeze({
+        laneId,
+        runId,
+      })
+    )
+  );
 }
 
 export async function stopSingleMixedSecondaryRuntimeLane(
@@ -172,7 +193,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       expectedRunId: targetRunId,
       expectedSessionIdentityHash: targetSessionIdentity,
     });
-    if (!cleared) {
+    if (cleared !== 'cleared') {
       if (lane.runId !== targetRunId) {
         keepStopFence = false;
         return;
@@ -231,12 +252,20 @@ export const SLOW_SECONDARY_LANE_STOP_WARN_MS = 10_000;
 
 export async function stopMixedSecondaryRuntimeLanes(
   teamName: string,
-  ports: OpenCodeRuntimeStopFlowPorts
+  ports: OpenCodeRuntimeStopFlowPorts,
+  ownershipFence?: SecondaryRuntimeStopFence
 ): Promise<void> {
+  const ownedRunIdByLaneId = ownershipFence
+    ? new Map(ownershipFence.map(({ laneId, runId }) => [laneId, runId] as const))
+    : null;
   // The store returns live lane objects. Snapshot every stop target before the
   // first await so a same-lane relaunch cannot retarget this cleanup in place.
   const secondaryRuns = ports
     .getSecondaryRuntimeRuns(teamName)
+    .filter(
+      (secondaryRun) =>
+        !ownedRunIdByLaneId || ownedRunIdByLaneId.get(secondaryRun.laneId) === secondaryRun.runId
+    )
     .map((secondaryRun) => ({ ...secondaryRun }));
   if (secondaryRuns.length === 0) {
     return;
@@ -307,7 +336,7 @@ export async function stopMixedSecondaryRuntimeLanes(
             ports,
             targetSessionIdentity
           );
-          if (!cleared) {
+          if (cleared !== 'cleared') {
             if (!isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
               return;
             }
@@ -405,7 +434,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
       return;
     }
     const cleared = await clearPrimaryRuntimeLaneStorage(teamName, runId, ports, targetSessionIdentity);
-    if (!cleared) {
+    if (cleared !== 'cleared') {
       if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
         return;
       }
@@ -484,7 +513,7 @@ async function clearSecondaryRuntimeLaneStorage(
   runId: string,
   ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>,
   expectedSessionIdentityHash?: string
-): Promise<boolean> {
+): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
   return ports.clearOpenCodeRuntimeLaneStorage({
     teamsBasePath: ports.teamsBasePath,
     teamName,
@@ -515,7 +544,7 @@ async function clearPrimaryRuntimeLaneStorage(
   runId: string,
   ports: Pick<OpenCodeRuntimeStopFlowPorts, 'clearOpenCodeRuntimeLaneStorage' | 'teamsBasePath'>,
   expectedSessionIdentityHash?: string
-): Promise<boolean> {
+): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
   return ports.clearOpenCodeRuntimeLaneStorage({
     teamsBasePath: ports.teamsBasePath,
     teamName,

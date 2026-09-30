@@ -607,13 +607,21 @@ describe('OpenCode semantic messaging sandbox safety', () => {
 
   it('rejects an explicitly configured project outside the system temp directory', async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-semantic-safety-'));
+    const outsideProject = await fs.mkdtemp(
+      path.join(
+        process.platform === 'win32' ? path.dirname(os.tmpdir()) : '/var/tmp',
+        'opencode-semantic-outside-temp-'
+      )
+    );
 
     try {
-      await expect(resolveIsolatedSemanticProjectPath(tempDir, process.cwd())).rejects.toThrow(
+      await expect(resolveIsolatedSemanticProjectPath(tempDir, outsideProject)).rejects.toThrow(
         'must resolve inside the system temp directory'
       );
+      expect(await fs.readdir(outsideProject)).toEqual([]);
     } finally {
       await fs.rm(tempDir, { recursive: true, force: true });
+      await fs.rm(outsideProject, { recursive: true, force: true });
     }
   });
 });

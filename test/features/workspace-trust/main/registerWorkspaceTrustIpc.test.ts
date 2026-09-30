@@ -5,7 +5,7 @@ import {
 import {
   registerWorkspaceTrustIpc,
   removeWorkspaceTrustIpc,
-} from '@features/workspace-trust/main/adapters/input/registerWorkspaceTrustIpc';
+} from '@main/composition/workspaceTrust/registerWorkspaceTrustIpc';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';

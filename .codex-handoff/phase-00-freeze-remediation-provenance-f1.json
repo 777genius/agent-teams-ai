@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "phase-00-freeze-remediation-provenance-f1",
+  "status": "freeze_candidate_ready_for_independent_review",
+  "canonicalBaseSha": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "freezeCandidate": {
+    "integrationCommit": null,
+    "evidenceIndexSha256": "d5c8725dfb22f7e0228e0dd51f53d978d117ed7253fdb279c8ddba7000ff8758",
+    "authorization": "not_authorized"
+  },
+  "findingResolutions": [
+    {
+      "id": "F12-E1-001",
+      "status": "resolved_in_candidate",
+      "resolution": "Lane identity, review disposition, decisions, evidence rows and the canonical verifier now record explicit narrowed adoption for later W1 commit 0d1a82fe, W2 commit 6d54e7c6 and W5 commit 5d723407. Integrated rows are re-hashed from git-show bytes at their true commits. The two portability-normalized W1 bytes are explicitly pending integration and are not attributed to an existing commit."
+    },
+    {
+      "id": "F12-E1-002",
+      "status": "resolved_in_candidate",
+      "resolution": "P0.W1.LEGACY_BYPASSES now records only artifact-pack-relative legacy-bypass-raw.json, the raw digest/count and a deterministic repository command. The scanner regenerates the same envelope regardless of its task-local output directory, and the verifier rejects non-portable provenance."
+    },
+    {
+      "id": "F12-E1-003",
+      "status": "resolved_in_candidate",
+      "resolution": "Phase 1 projections use the current W1/W2, W3/W5 and W4/W6 dispositions. R12, RW35, R46, hold-all-adoption and failed-freeze conclusions are retained only as explicitly historical evidence. Current blockers are limited to candidate integration, target-image proof, estimate reconciliation, final gate/typecheck normalization, serial bootstrap and explicit authorization."
+    },
+    {
+      "id": "F12-E1-004",
+      "status": "resolved_in_candidate",
+      "resolution": "Phase 1 is a blocked, non-authoritative proposal. Exact paths, shared writers, contract IDs, review pairs and ownership remain unassigned until readiness and serial bootstrap; producer target is zero and no implementation is authorized."
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-remediation-provenance-f1.json",
+    "docs/hosted-web-phases/phase-01/README.md",
+    "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "docs/hosted-web-phases/phase-01/packet-inputs.md",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/acceptance-and-completion.md",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/canonical-index.schema.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/decision-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/handoff-census.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs",
+    "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+    "docs/research/hosted-web/phase-0/parity-renderer/schemas/legacy-bypass-inventory.schema.json",
+    "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+  ],
+  "checks": [
+    {
+      "command": "node docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs --include-controller-external",
+      "exitCode": 0,
+      "result": "Five schemas, 40 evidence IDs, three negative fixtures, repository/worktree hashes, controller-external hashes, true git-commit byte provenance, explicit later-byte dispositions and candidate/integration separation passed."
+    },
+    {
+      "command": "W1_RAW_EVIDENCE_ROOT=/tmp/phase-00-freeze-remediation-provenance-f1-artifacts node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "exitCode": 0,
+      "result": "109 API members, 817 mapped sites and raw SHA-256 2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497 reproduced; the checked-in envelope remained pack-relative and byte-stable."
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "result": "W1: 1 file and 21 tests passed."
+    },
+    {
+      "command": "node --experimental-strip-types scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts; pnpm exec vitest run test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts --reporter=verbose",
+      "exitCode": 0,
+      "result": "W2 scanner passed and 2 files/42 tests passed."
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs --check; node --test test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs",
+      "exitCode": 0,
+      "result": "W5 verified nine evidence files and the focused Node test passed."
+    },
+    {
+      "command": "pnpm lint:fast:files -- docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "exitCode": 0,
+      "result": "Focused fast lint passed."
+    },
+    {
+      "command": "pnpm exec prettier --check <exact 18 changed paths>",
+      "exitCode": 0,
+      "result": "All changed paths match Prettier formatting."
+    },
+    {
+      "command": "JSON parse; git diff --check plus untracked checks; exact scope allowlist; bounded secret and task-local-path scans",
+      "exitCode": 0,
+      "result": "All changed JSON parsed; no whitespace, scope, secret or task-local provenance finding."
+    }
+  ],
+  "notRun": [
+    "Repo-wide typecheck, per user instruction. The inherited seven-diagnostic normalization remains an explicit final-gate requirement.",
+    "Final full Phase 0 gate, per user instruction.",
+    "Target-image/container/provider/terminal probes; these remain explicit readiness blockers."
+  ],
+  "scope": {
+    "changedPathCount": 18,
+    "productionSourceModified": false,
+    "terminalModified": false,
+    "dockerModified": false,
+    "packagesOrLockfilesModified": false,
+    "phase1Started": false,
+    "phase1Authorized": false,
+    "committed": false,
+    "pushed": false,
+    "integrated": false
+  },
+  "risks": [
+    "The freeze candidate has no integration commit. After independent approval and controller integration, current indexes must be regenerated or finalized with the actual freeze commit without attributing candidate bytes to c958c872.",
+    "Final target-image proof, estimate reconciliation, the final gate with inherited typecheck normalization, serial bootstrap and explicit authorization remain open."
+  ],
+  "nextAction": "Independent review of the intact 18-path candidate. If approved, the project controller may integrate it, record the actual freeze commit and integrated evidence digest, and keep Phase 1 blocked until every readiness item and explicit authorization are satisfied."
+}

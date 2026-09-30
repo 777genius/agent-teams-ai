@@ -7,6 +7,8 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
+type RuntimeLaneStorageClearResult = boolean | 'cleared' | 'owner_changed';
+
 export interface RuntimeAdapterRunEntry {
   runId: string;
   providerId: TeamProviderId;
@@ -40,7 +42,7 @@ export interface RuntimeAdapterCancellationPorts {
     teamName: string;
     laneId: string;
     expectedRunId?: string;
-  }): Promise<boolean>;
+  }): Promise<RuntimeLaneStorageClearResult>;
   logWarning(message: string): void;
 }
 
@@ -296,7 +298,7 @@ export async function clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input: {
     laneId: 'primary',
     expectedRunId: runId,
   });
-  if (!cleared) {
+  if (cleared !== true && cleared !== 'cleared') {
     return false;
   }
   if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
@@ -421,6 +423,7 @@ export async function stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input
         ...previousProgress,
         updatedAt: ports.nowIso(),
       });
+      ports.invalidateRuntimeSnapshotCaches(teamName);
     }
     return cleared;
   } catch (error) {

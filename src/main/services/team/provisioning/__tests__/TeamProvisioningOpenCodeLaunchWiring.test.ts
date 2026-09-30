@@ -21,7 +21,7 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
 });
 
 vi.mock('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader', () => ({
-  clearOpenCodeRuntimeLaneStorage: vi.fn(async () => undefined),
+  clearOpenCodeRuntimeLaneStorage: vi.fn(async () => 'cleared' as const),
   migrateLegacyOpenCodeRuntimeState: vi.fn(async () => undefined),
   setOpenCodeRuntimeActiveRunManifest: vi.fn(async () => undefined),
   upsertOpenCodeRuntimeLaneIndexEntry: vi.fn(async () => undefined),
@@ -420,6 +420,18 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       launch: vi.fn(async () =>
         runtimeResult({
           teamLaunchState: 'partial_failure',
+          members: {
+            alice: {
+              memberName: 'alice',
+              providerId: 'opencode',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              diagnostics: ['readiness failed'],
+            },
+          },
           diagnostics: ['readiness failed'],
         })
       ),
@@ -438,7 +450,6 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
         providerId: 'opencode',
       });
       host.aliveRuns.set('team-a', 'newer-run');
-      return true;
     });
 
     const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({

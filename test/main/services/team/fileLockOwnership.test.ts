@@ -32,7 +32,7 @@ describe('file lock physical owner mode', () => {
           'File lock timeout'
         );
         expect(await readFile(`${path}.lock`, 'utf8')).toMatch(
-          /^[1-9][0-9]*\n[0-9]+\nstrict-[0-9a-f-]{36}\n$/
+          /^[1-9][0-9]*\n[0-9]+\nstrict-[0-9a-f-]{36}\n(?:pidns:[0-9]+\n)?$/
         );
       },
       { preventLiveOwnerTakeover: true }

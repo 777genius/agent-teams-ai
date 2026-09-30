@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "partial",
+  "auditedState": "partial",
+  "oracles": [
+    {
+      "kind": "failure",
+      "code": "unavailable",
+      "reason": "partial_source",
+      "retryable": true,
+      "diagnosticPresent": false,
+      "retryAfterMs": 1000
+    }
+  ]
+}

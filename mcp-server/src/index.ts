@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 import { FastMCP } from 'fastmcp';
 
+import { HOSTED_TASK_COMMAND_FLAG, runHostedTaskCommandMode } from './hostedTaskCommandMode';
 import { registerTools } from './tools';
 
 const HTTP_TRANSPORT = 'httpStream';
@@ -163,6 +164,14 @@ export function resolveStartOptions(
 }
 
 async function main(): Promise<void> {
+  if (process.argv.slice(2).includes(HOSTED_TASK_COMMAND_FLAG)) {
+    process.exitCode = await runHostedTaskCommandMode({
+      input: process.stdin,
+      output: process.stdout,
+      env: process.env,
+    });
+    return;
+  }
   const startOptions = resolveStartOptions();
   const server = createServer({ healthIdentity: buildHttpHealthIdentity(startOptions) });
   await server.start(startOptions);

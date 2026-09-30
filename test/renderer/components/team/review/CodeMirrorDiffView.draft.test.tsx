@@ -235,4 +235,44 @@ describe('CodeMirrorDiffView draft propagation', () => {
     expect(undoDepth(requireView().state)).toBe(150);
     await act(async () => restarted.unmount());
   });
+
+  it('clears the parent selection action when a keyed editor remounts', async () => {
+    const root = createRoot(container);
+    const actionPayloads: string[] = [];
+
+    function SelectionHarness({ editorKey }: Readonly<{ editorKey: number }>): React.JSX.Element {
+      const [selection, setSelection] = React.useState<{
+        selectedText: string;
+      } | null>({ selectedText: 'stale selection' });
+      return (
+        <>
+          <CodeMirrorDiffView
+            key={editorKey}
+            original="before"
+            modified="after"
+            fileName="file.txt"
+            readOnly={true}
+            collapseUnchanged={false}
+            onSelectionChange={(info) =>
+              setSelection(info ? { selectedText: info.text } : null)
+            }
+          />
+          {selection && (
+            <button type="button" onClick={() => actionPayloads.push(selection.selectedText)}>
+              Create action
+            </button>
+          )}
+        </>
+      );
+    }
+
+    await act(async () => root.render(<SelectionHarness editorKey={0} />));
+    expect(container.querySelector('button')?.textContent).toBe('Create action');
+
+    await act(async () => root.render(<SelectionHarness editorKey={1} />));
+
+    expect(container.querySelector('button')).toBeNull();
+    expect(actionPayloads).toEqual([]);
+    await act(async () => root.unmount());
+  });
 });

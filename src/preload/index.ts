@@ -1,8 +1,6 @@
-import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
-import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
@@ -10,6 +8,7 @@ import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
+import { TEAM_MOVE_TASK_TO_STATUS_COLUMN } from '@features/team-task-board/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -280,6 +279,9 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
+import { createElectronAnnouncementsBridge } from './createElectronAnnouncementsBridge';
+import { createElectronListTeamLifecycle, type IpcResult } from './createElectronListTeamLifecycle';
+import { createElectronMemberLogStreamBridge } from './createElectronMemberLogStreamBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -328,7 +330,6 @@ import type {
   GlobalTask,
   HttpServerStatus,
   HunkDecision,
-  IpcResult,
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
@@ -507,18 +508,19 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  listTeamLifecycle: createElectronListTeamLifecycle(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
-  announcements: createAnnouncementsBridge(),
+  announcements: createElectronAnnouncementsBridge(ipcRenderer),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
-  memberLogStream: createMemberLogStreamBridge(),
+  memberLogStream: createElectronMemberLogStreamBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
@@ -911,9 +913,7 @@ const electronAPI: ElectronAPI = {
   },
   teams: {
     ...createTeamMemberSettingsBridge(invokeIpcWithResult),
-    list: async () => {
-      return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
-    },
+    list: async () => invokeIpcWithResult<TeamSummary[]>(TEAM_LIST),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
@@ -1032,12 +1032,12 @@ const electronAPI: ElectronAPI = {
     getTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<TeamTaskWithKanban | null>(TEAM_GET_TASK, teamName, taskId);
     },
-    requestReview: async (teamName: string, taskId: string) => {
-      return invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId);
-    },
-    updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
-    },
+    requestReview: (teamName: string, taskId: string) =>
+      invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId),
+    updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) =>
+      invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch),
+    moveTaskToStatusColumn: (teamName: string, taskId: string, column: 'done') =>
+      invokeIpcWithResult<void>(TEAM_MOVE_TASK_TO_STATUS_COLUMN, teamName, taskId, column),
     updateKanbanColumnOrder: async (
       teamName: string,
       columnId: KanbanColumnId,
@@ -1050,9 +1050,8 @@ const electronAPI: ElectronAPI = {
         orderedTaskIds
       );
     },
-    updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status);
-    },
+    updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) =>
+      invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status),
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },
@@ -1417,8 +1416,8 @@ const electronAPI: ElectronAPI = {
     updateToolApprovalSettings: async (teamName: string, settings: ToolApprovalSettings) => {
       return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, teamName, settings);
     },
-    readFileForToolApproval: async (filePath: string) => {
-      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, filePath);
+    readFileForToolApproval: async (request) => {
+      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, request);
     },
   },
   crossTeam: {

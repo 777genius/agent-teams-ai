@@ -2,74 +2,45 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import {
+  resolveTeamDirectoryOpenIntent,
+  TeamDirectoryQueryInput,
+  TeamDirectoryRows,
+} from '@features/team-directory/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@renderer/components/ui/dialog';
-import { Input } from '@renderer/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import {
-  getTeamColorSet,
-  getThemedBorder,
-  type TeamColorSet,
-} from '@renderer/constants/teamColors';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import {
-  getCurrentProvisioningProgressForTeam,
-  isTeamProvisioningActive,
-} from '@renderer/store/slices/teamSlice';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
 } from '@renderer/store/utils/stateResetHelpers';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import {
-  buildTaskCountsByTeam,
-  normalizePath,
-  type TaskStatusCounts,
-} from '@renderer/utils/pathNormalize';
-import { getBaseName } from '@renderer/utils/pathUtils';
+import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
-import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
-import {
-  Copy,
-  FolderOpen,
-  GitBranch,
-  Import,
-  Loader2,
-  Network,
-  Play,
-  Plus,
-  RotateCcw,
-  Search,
-  Square,
-  Trash2,
-  UsersRound,
-} from 'lucide-react';
+import { Import, Network, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { CreateTeamDialogLoadingFallback } from './CreateTeamDialogLoadingFallback';
+import { ActiveTeamCard, DesktopTeamDirectoryMemberNames } from './DesktopTeamDirectoryCard';
+import { buildDesktopTeamDirectoryView } from './desktopTeamDirectoryRows';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { formatTeamProjectPathName, resolveLaunchDialogMembers } from './teamListPresentation';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
@@ -77,23 +48,14 @@ import {
   resolveTeamsProjectNavigationPath,
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
-import { TeamStatusBadge } from './TeamStatusBadge';
-import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
+import { useTeamRendererPorts } from './useTeamRendererPorts';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
-import type { TeamStatus } from '@renderer/utils/teamListStatus';
-import type {
-  ResolvedTeamMember,
-  TeamCreateRequest,
-  TeamLaunchRequest,
-  TeamMemberSnapshot,
-  TeamSummary,
-  TeamSummaryMember,
-} from '@shared/types';
+import type { ResolvedTeamMember, TeamCreateRequest, TeamLaunchRequest } from '@shared/types';
 
 const CreateTeamDialog = lazy(() =>
   import('./dialogs/CreateTeamDialog').then((m) => ({ default: m.CreateTeamDialog }))
@@ -108,45 +70,6 @@ const ImportTeamDialog = lazy(() =>
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
 
-interface CreateTeamDialogLoadingFallbackProps {
-  readonly isCopy: boolean;
-  readonly onClose: () => void;
-}
-
-const CreateTeamDialogLoadingFallback = ({
-  isCopy,
-  onClose,
-}: CreateTeamDialogLoadingFallbackProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const { t: tCommon } = useAppTranslation('common');
-
-  return (
-    <Dialog
-      open
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          onClose();
-        }
-      }}
-    >
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-sm">
-            {isCopy ? t('create.title.copy') : t('create.title.create')}
-          </DialogTitle>
-          <DialogDescription className="sr-only" aria-live="polite">
-            {tCommon('states.loading')}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-          <Loader2 className="size-3.5 animate-spin" />
-          <span>{tCommon('states.loading')}</span>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
   const existing = new Set(existingNames);
@@ -158,325 +81,25 @@ function generateUniqueName(sourceName: string, existingNames: string[]): string
   }
 }
 
-function getRecentProjects(team: TeamSummary): string[] {
-  const history = team.projectPathHistory;
-  if (!history || history.length === 0) {
-    return team.projectPath ? [team.projectPath] : [];
-  }
-  return history.slice(-3).reverse();
-}
-
-function folderName(fullPath: string): string {
-  return getBaseName(fullPath) || fullPath;
-}
-
-function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): ResolvedTeamMember[] {
-  return members.map((member) => {
-    return {
-      ...member,
-      status: member.currentTaskId ? 'active' : 'idle',
-      messageCount: 0,
-      lastActiveAt: null,
-    };
-  });
-}
-
-function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
-  const teamColorMap = buildMemberColorMap(members);
-  return (
-    <>
-      {members.map((m) => {
-        const resolvedColor = teamColorMap.get(m.name);
-        const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-        return (
-          <span key={m.name} className="inline-flex items-center gap-1">
-            <span
-              className="text-[10px] font-medium tracking-wide"
-              style={memberColor ? { color: memberColor.text } : undefined}
-            >
-              {m.name}
-            </span>
-            {m.role ? (
-              <span className="text-[9px] text-[var(--color-text-muted)]">{m.role}</span>
-            ) : null}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-function renderTeamRecentPaths(
-  team: TeamSummary,
-  status: TeamStatus,
-  matchesCurrentProject: boolean,
-  isLight: boolean,
-  selectedProjectPath: string | null
-): React.JSX.Element | null {
-  const recentPaths = getRecentProjects(team);
-  const visibleRecentPaths =
-    matchesCurrentProject && selectedProjectPath
-      ? recentPaths.filter((path) => normalizePath(path) !== normalizePath(selectedProjectPath))
-      : recentPaths;
-  if (visibleRecentPaths.length === 0) return null;
-  return (
-    <div className="mt-2 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-      {matchesCurrentProject && !selectedProjectPath ? (
-        <span
-          className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-0.5 text-[12px] font-medium ${
-            isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/15 text-emerald-400'
-          }`}
-        >
-          <FolderOpen size={12} className="shrink-0" />
-          {visibleRecentPaths.map((p, i) => (
-            <span key={p} title={p}>
-              {folderName(p)}
-              {i < visibleRecentPaths.length - 1 ? ', ' : ''}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <>
-          <FolderOpen size={10} className="shrink-0" />
-          <span className="truncate">
-            {visibleRecentPaths.map((p, i) => (
-              <span key={p} title={p}>
-                {i === 0 && (status === 'active' || status === 'idle') ? (
-                  <span className="text-emerald-400">{folderName(p)}</span>
-                ) : (
-                  folderName(p)
-                )}
-                {i < visibleRecentPaths.length - 1 ? ', ' : ''}
-              </span>
-            ))}
-          </span>
-        </>
-      )}
-    </div>
-  );
-}
-
-type TeamT = ReturnType<typeof useAppTranslation>['t'];
-
-interface ActiveTeamCardProps {
-  team: TeamSummary;
-  status: TeamStatus;
-  teamColorSet: TeamColorSet;
-  isLight: boolean;
-  matchesCurrentProject: boolean;
-  currentProjectPath: string | null;
-  branchName?: string;
-  taskCounts?: TaskStatusCounts;
-  launchingTeamName: string | null;
-  isStopping: boolean;
-  onOpenTeam: (teamName: string, projectPath?: string) => void;
-  onLaunchTeam: (
-    teamName: string,
-    projectPath: string | undefined,
-    mode: TeamLaunchDialogMode,
-    event: React.MouseEvent
-  ) => void;
-  onStopTeam: (teamName: string, event: React.MouseEvent) => void;
-  onCopyTeam: (teamName: string, event: React.MouseEvent) => void;
-  onDeleteTeam: (teamName: string, pendingCreate: boolean, event: React.MouseEvent) => void;
-  t: TeamT;
-}
-
-const ActiveTeamCard = ({
-  team,
-  status,
-  teamColorSet,
-  isLight,
-  matchesCurrentProject,
-  currentProjectPath,
-  branchName,
-  taskCounts,
-  launchingTeamName,
-  isStopping,
-  onOpenTeam,
-  onLaunchTeam,
-  onStopTeam,
-  onCopyTeam,
-  onDeleteTeam,
-  t,
-}: Readonly<ActiveTeamCardProps>): React.JSX.Element => {
-  const canLaunch =
-    (status === 'offline' ||
-      status === 'partial_failure' ||
-      status === 'partial_skipped' ||
-      status === 'partial_pending') &&
-    Boolean(team.projectPath);
-  const launchMode: TeamLaunchDialogMode = status === 'offline' ? 'launch' : 'relaunch';
-  const launchLabel =
-    launchMode === 'relaunch' ? t('list.actions.relaunchTeam') : t('list.actions.launchTeam');
-  const launchTitle =
-    launchingTeamName === team.teamName ? t('list.actions.launching') : launchLabel;
-  const stopTitle = isStopping ? t('list.actions.stopping') : t('list.actions.stopTeam');
-  const stopIconClass = isStopping ? 'animate-pulse' : '';
-  const copyTitle = t('list.actions.copyTeam');
-  const deleteTitle = t('list.actions.deleteTeam');
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      className="team-row-zebra-card group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] p-4 transition-colors duration-200 hover:border-[var(--color-border-emphasis)]"
-      onClick={() => onOpenTeam(team.teamName, team.projectPath ?? undefined)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpenTeam(team.teamName, team.projectPath ?? undefined);
-        }
-      }}
-    >
-      <div className="flex flex-1 flex-col">
-        <div className="space-y-2">
-          <div className="flex min-w-0 items-start gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] transition-colors group-hover:border-[var(--color-border-emphasis)]">
-              <UsersRound
-                className="size-4 transition-colors"
-                style={{ color: getThemedBorder(teamColorSet, isLight) }}
-              />
-            </div>
-            <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-[var(--color-text)]">
-              {team.displayName}
-            </h3>
-            <div className="pointer-events-none shrink-0">
-              <TeamStatusBadge status={status} teamName={team.teamName} />
-            </div>
-          </div>
-          <div className="flex min-h-6 items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {branchName ? (
-                <span
-                  className="flex max-w-full items-center gap-1 rounded bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
-                  title={branchName}
-                >
-                  <GitBranch size={10} className="shrink-0" />
-                  <span className="truncate">{branchName}</span>
-                </span>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 gap-1">
-              {canLaunch ? (
-                <button
-                  type="button"
-                  className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50 group-hover:opacity-100"
-                  onClick={(event) =>
-                    onLaunchTeam(team.teamName, team.projectPath ?? undefined, launchMode, event)
-                  }
-                  disabled={launchingTeamName === team.teamName}
-                  aria-label={launchTitle}
-                  title={launchTitle}
-                >
-                  <Play size={14} fill="currentColor" />
-                </button>
-              ) : null}
-              {status === 'active' || status === 'idle' ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 focus-visible:opacity-100 disabled:opacity-50 group-hover:opacity-100"
-                      onClick={(event) => onStopTeam(team.teamName, event)}
-                      onKeyDown={(event) => event.stopPropagation()}
-                      disabled={isStopping}
-                      aria-busy={isStopping}
-                      aria-label={stopTitle}
-                    >
-                      <Square size={14} fill="currentColor" className={stopIconClass} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{stopTitle}</TooltipContent>
-                </Tooltip>
-              ) : null}
-              {!team.pendingCreate ? (
-                <button
-                  type="button"
-                  className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-blue-500/10 hover:text-blue-300 group-hover:opacity-100"
-                  onClick={(event) => onCopyTeam(team.teamName, event)}
-                  aria-label={copyTitle}
-                  title={copyTitle}
-                >
-                  <Copy size={14} />
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
-                onClick={(event) => onDeleteTeam(team.teamName, !!team.pendingCreate, event)}
-                aria-label={deleteTitle}
-                title={deleteTitle}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="mt-2 flex min-h-10 items-start gap-2">
-          <p className="line-clamp-2 min-w-0 flex-1 text-xs text-[var(--color-text-muted)]">
-            {team.description || t('list.noDescription')}
-          </p>
-        </div>
-        {team.teamLaunchState === 'partial_pending' ? (
-          <p className="mt-2 text-[11px] text-amber-300">
-            {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
-              ? buildPendingRuntimeSummaryCopy({
-                  confirmedCount: team.confirmedCount,
-                  expectedMemberCount: team.expectedMemberCount,
-                  memberCount: team.memberCount,
-                  runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-                  includePeriod: true,
-                })
-              : t('list.partial.pending')}
-          </p>
-        ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
-          <p className="mt-2 text-[11px] text-amber-400">
-            {team.missingMembers?.length
-              ? t('detail.offline.partialMissing', {
-                  missing: team.missingMembers.length,
-                  expected: team.expectedMemberCount ?? team.missingMembers.length,
-                })
-              : t('detail.offline.partialFailed')}
-          </p>
-        ) : team.teamLaunchState === 'partial_skipped' ? (
-          <p className="mt-2 text-[11px] text-sky-300">
-            {team.skippedMembers?.length
-              ? t('list.partial.skippedWithCount', {
-                  count: team.skippedMembers.length,
-                  expected: team.expectedMemberCount ?? team.skippedMembers.length,
-                })
-              : t('list.partial.skipped')}
-          </p>
-        ) : null}
-        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-          {team.members && team.members.length > 0 ? (
-            renderMemberNames(team.members)
-          ) : team.memberCount === 0 ? (
-            <Badge variant="secondary" className="text-[10px] font-normal">
-              {t('list.solo')}
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-[10px] font-normal">
-              {t('list.membersCount', { count: team.memberCount })}
-            </Badge>
-          )}
-        </div>
-        <div className="mt-auto">
-          <TeamTaskStatusSummary counts={taskCounts} />
-          {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
+  const launchTeamFromStore = useCallback(
+    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request),
+    []
+  );
+  const {
+    read: productionTeamListReadPorts,
+    lifecycle: productionTeamListLifecyclePorts,
+    provisioning: productionTeamListProvisioningPorts,
+    roster: productionTeamListRosterPorts,
+    stopRunningTeam,
+  } = useTeamRendererPorts(api, launchTeamFromStore);
+  const teamStopControl = useTeamStopControl({
+    stopRunningTeam,
+  });
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
@@ -484,6 +107,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [teamPriorityProjectPath, setTeamPriorityProjectPath] = useState<string | null>(null);
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [aliveReadScopeKey, setAliveReadScopeKey] = useState<string | null>(null);
   const [teamSectionVisibleCountByKey, setTeamSectionVisibleCountByKey] = useState<
     Record<string, number>
   >({});
@@ -532,8 +156,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   );
   const {
     connectionMode,
+    activeContextId,
     createTeam,
-    launchTeam,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
@@ -543,8 +167,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   } = useStore(
     useShallow((s) => ({
       connectionMode: s.connectionMode,
+      activeContextId: s.activeContextId,
       createTeam: s.createTeam,
-      launchTeam: s.launchTeam,
       provisioningErrorByTeam: s.provisioningErrorByTeam,
       clearProvisioningError: s.clearProvisioningError,
       provisioningRuns: s.provisioningRuns,
@@ -578,24 +202,29 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
     if (!electronMode) return null;
     try {
-      return await api.teams.aliveList();
+      return await productionTeamListLifecyclePorts.listAliveTeams();
     } catch {
       return null;
     }
-  }, [electronMode]);
+  }, [electronMode, productionTeamListLifecyclePorts]);
 
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
+      if (cancelled || useStore.getState().activeContextId !== activeContextId) return;
+      if (list) {
         setAliveTeams(list);
+        setAliveReadScopeKey(activeContextId);
+      } else {
+        // Failed refresh leaves the team list intact, but runtime state is unknown.
+        setAliveReadScopeKey(null);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [fetchAliveTeams, teams]);
+  }, [activeContextId, fetchAliveTeams, teams]);
 
   const readyProgressRefreshKey = useMemo(() => {
     return Object.entries(currentProvisioningRunIdByTeam)
@@ -615,28 +244,38 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     if (!readyProgressRefreshKey) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
+      if (cancelled || useStore.getState().activeContextId !== activeContextId) return;
+      if (list) {
         setAliveTeams(list);
+        setAliveReadScopeKey(activeContextId);
+      } else {
+        // Failed refresh leaves the team list intact, but runtime state is unknown.
+        setAliveReadScopeKey(null);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [fetchAliveTeams, readyProgressRefreshKey]);
+  }, [activeContextId, fetchAliveTeams, readyProgressRefreshKey]);
 
   // Refresh alive teams when opening the create dialog so conflict warning is accurate.
   useEffect(() => {
     if (!electronMode || !showCreateDialog) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
+      if (cancelled || useStore.getState().activeContextId !== activeContextId) return;
+      if (list) {
         setAliveTeams(list);
+        setAliveReadScopeKey(activeContextId);
+      } else {
+        // Failed refresh leaves the team list intact, but runtime state is unknown.
+        setAliveReadScopeKey(null);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [electronMode, fetchAliveTeams, showCreateDialog]);
+  }, [activeContextId, electronMode, fetchAliveTeams, showCreateDialog]);
 
   const currentProjectSelection = useMemo(
     () =>
@@ -669,81 +308,51 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     priorityProjectPath: teamPriorityProjectPath,
   });
 
-  const filteredTeams = useMemo<TeamSummary[]>(() => {
-    let result = teamsWithProvisioning;
-
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter(
-        (t) =>
-          t.teamName.toLowerCase().includes(q) ||
-          t.displayName.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q)
-      );
-    }
-
-    if (filter.selectedStatuses.size > 0) {
-      result = result.filter((t) => {
-        const status = resolveTeamStatus(
-          t,
-          t.teamName,
-          aliveTeams,
-          getCurrentProvisioningProgressForTeam(provisioningState, t.teamName),
-          leadActivityByTeam
-        );
-        const isRunning = isTeamListStatusRunning(status);
-        if (filter.selectedStatuses.has('running') && isRunning) return true;
-        if (filter.selectedStatuses.has('offline') && !isRunning) return true;
-        return false;
-      });
-    }
-
-    const matchesCurrentProject = currentProjectPath
-      ? (team: TeamSummary): boolean => teamMatchesProjectSelection(team, currentProjectPath)
-      : null;
-    const nowMs = Date.now();
-    const statusForTeam = (team: TeamSummary): TeamStatus =>
-      resolveTeamStatus(
-        team,
-        team.teamName,
-        aliveTeams,
-        getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
+  const directoryView = useMemo(
+    () =>
+      buildDesktopTeamDirectoryView({
+        teams: teamsWithProvisioning,
+        scopeKey: activeContextId,
+        aliveTeams: aliveReadScopeKey === activeContextId ? aliveTeams : [],
+        aliveReadKnown: aliveReadScopeKey === activeContextId,
+        provisioningState,
         leadActivityByTeam,
-        nowMs
+        currentProjectPath,
+        filter: {
+          query: searchQuery,
+          selectedStatuses: filter.selectedStatuses,
+        },
+        nowMs: Date.now(),
+      }),
+    [
+      teamsWithProvisioning,
+      activeContextId,
+      aliveTeams,
+      aliveReadScopeKey,
+      provisioningState,
+      leadActivityByTeam,
+      currentProjectPath,
+      searchQuery,
+      filter,
+    ]
+  );
+  const filteredTeams = directoryView.teams;
+  const statusByName = directoryView.statusByName;
+  const openDirectoryTeam = useCallback(
+    (teamName: string, projectPath?: string): void => {
+      const currentState = useStore.getState();
+      const currentScopeKey = currentState.activeContextId;
+      const row = resolveTeamDirectoryOpenIntent(
+        { scopeKey: activeContextId, targetKey: teamName, readEpoch: 0 },
+        { scopeKey: currentScopeKey, readEpoch: 0, rows: directoryView.rows }
       );
-
-    result = [...result].sort((a, b) => {
-      // 1. Running teams first, including the short ready-before-alive-list gap.
-      const runningA = isTeamListStatusRunning(statusForTeam(a)) ? 0 : 1;
-      const runningB = isTeamListStatusRunning(statusForTeam(b)) ? 0 : 1;
-      if (runningA !== runningB) return runningA - runningB;
-
-      // 2. Teams related to the selected project are prioritized next
-      if (matchesCurrentProject) {
-        const projectA = matchesCurrentProject(a) ? 0 : 1;
-        const projectB = matchesCurrentProject(b) ? 0 : 1;
-        if (projectA !== projectB) return projectA - projectB;
-      }
-
-      // 3. Most recently active teams first (stable secondary sort)
-      const tsA = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
-      const tsB = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
-      if (tsA !== tsB) return tsB - tsA;
-
-      // 4. Fallback: alphabetical by team name for deterministic order
-      return a.teamName.localeCompare(b.teamName);
-    });
-
-    return result;
-  }, [
-    teamsWithProvisioning,
-    searchQuery,
-    currentProjectPath,
-    aliveTeams,
-    filter,
-    provisioningState,
-    leadActivityByTeam,
-  ]);
+      const stillPresent =
+        currentState.teams.some((team) => team.teamName === teamName) ||
+        Boolean(currentState.provisioningSnapshotByTeam[teamName]);
+      if (row && stillPresent) openTeamTab(teamName, projectPath);
+    },
+    [activeContextId, directoryView.rows, openTeamTab]
+  );
 
   const handleProjectSelectionChange = useCallback(
     (projectPath: string | null): void => {
@@ -793,7 +402,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             variant: 'danger',
           });
           if (confirmed) {
-            void api.teams.deleteDraft(teamName).catch(() => {});
+            void productionTeamListProvisioningPorts.deleteDraft(teamName).catch(() => {});
           }
           return;
         }
@@ -809,7 +418,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [deleteTeam, t]
+    [deleteTeam, productionTeamListProvisioningPorts, t]
   );
 
   const handleRestoreTeam = useCallback(
@@ -854,7 +463,9 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         try {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
-          const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
+          const savedRequest = await productionTeamListProvisioningPorts
+            .readDraft(teamName)
+            .catch(() => null);
           if (savedRequest) {
             setCopyData({
               teamName: uniqueName,
@@ -875,7 +486,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             return;
           }
 
-          const data = await api.teams.getData(teamName, {
+          const data = await productionTeamListReadPorts.readTeamData(teamName, {
             includeMemberBranches: false,
           });
           setCopyData({
@@ -891,7 +502,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [teams]
+    [productionTeamListProvisioningPorts, productionTeamListReadPorts, teams]
   );
 
   const handleStopTeam = useCallback(
@@ -934,7 +545,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       e.stopPropagation();
       if (!projectPath) return;
       try {
-        const data = await api.teams.getData(teamName, {
+        const data = await productionTeamListReadPorts.readTeamData(teamName, {
           includeMemberBranches: false,
         });
         setLaunchDialogMode(mode);
@@ -955,14 +566,14 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchDialogOpen(true);
       }
     },
-    []
+    [productionTeamListReadPorts]
   );
 
   const handleLaunchSubmit = useCallback(
     async (request: TeamLaunchRequest) => {
       setLaunchingTeamName(request.teamName);
       try {
-        await launchTeam(request);
+        await productionTeamListProvisioningPorts.launchTeam(request);
       } catch (err) {
         console.error('Failed to launch team:', err);
         throw err;
@@ -970,7 +581,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [productionTeamListProvisioningPorts]
   );
 
   const handleRelaunchSubmit = useCallback(
@@ -984,7 +595,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await api.teams.stop(nextTeamName);
+              await productionTeamListLifecyclePorts.stopRunningTeam(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
                 success: true,
@@ -1002,8 +613,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             }
           },
           replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
-          launchTeam,
+            productionTeamListRosterPorts.replaceRoster(nextTeamName, nextRequest),
+          launchTeam: productionTeamListProvisioningPorts.launchTeam,
         });
       } catch (err) {
         console.error('Failed to relaunch team:', err);
@@ -1012,7 +623,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [
+      productionTeamListLifecyclePorts,
+      productionTeamListProvisioningPorts,
+      productionTeamListRosterPorts,
+    ]
   );
 
   useEffect(() => {
@@ -1203,11 +818,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
               size={14}
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
             />
-            <Input
-              type="text"
-              placeholder={t('list.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+            <TeamDirectoryQueryInput
+              label={t('list.searchPlaceholder')}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
               className="h-8 pl-8 text-xs"
             />
           </div>
@@ -1215,7 +829,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             filter={filter}
             selectedProjectPath={currentProjectPath}
             teams={teamsWithProvisioning}
-            aliveTeams={aliveTeams}
+            aliveTeams={aliveReadScopeKey === activeContextId ? aliveTeams : []}
+            aliveReadKnown={aliveReadScopeKey === activeContextId}
             onFilterChange={setFilter}
             onProjectChange={handleProjectSelectionChange}
           />
@@ -1287,7 +902,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           {
             key: selectedProjectSectionKey,
             title: t('list.sections.projectTeams', {
-              project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
+              project:
+                formatTeamProjectPathName(currentProjectPath) || t('list.sections.selectedProject'),
             }),
             teams: activeFiltered.filter((team) =>
               teamMatchesProjectSelection(team, currentProjectPath)
@@ -1337,15 +953,17 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                       </span>
                     </div>
                   ) : null}
-                  <div className="team-row-zebra-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {visibleTeams.map((team) => {
-                      const status = resolveTeamStatus(
-                        team,
-                        team.teamName,
-                        aliveTeams,
-                        getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-                        leadActivityByTeam
-                      );
+                  <TeamDirectoryRows
+                    as="div"
+                    className="team-row-zebra-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    rows={visibleTeams.flatMap((team) => {
+                      const row = directoryView.rowByName.get(team.teamName);
+                      return row ? [row] : [];
+                    })}
+                    renderRow={(row) => {
+                      const team = directoryView.teamByName.get(row.teamName);
+                      if (!team) return null;
+                      const status = statusByName.get(team.teamName) ?? 'offline';
                       const teamColorSet = team.color
                         ? getTeamColorSet(team.color)
                         : nameColorSet(team.displayName);
@@ -1357,6 +975,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                           key={team.teamName}
                           team={team}
                           status={status}
+                          runtimeUnknown={row.runtime === 'unknown'}
+                          unknownLabel={tCommon('states.unknown')}
                           teamColorSet={teamColorSet}
                           isLight={isLight}
                           matchesCurrentProject={matchesCurrentProject}
@@ -1369,7 +989,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                           taskCounts={taskCountsByTeam.get(team.teamName)}
                           launchingTeamName={launchingTeamName}
                           isStopping={teamStopControl.isStopping(team.teamName)}
-                          onOpenTeam={openTeamTab}
+                          onOpenTeam={openDirectoryTeam}
                           onLaunchTeam={handleLaunchTeam}
                           onStopTeam={handleStopTeam}
                           onCopyTeam={handleCopyTeam}
@@ -1377,8 +997,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                           t={t}
                         />
                       );
-                    })}
-                  </div>
+                    }}
+                  />
                   {(canShowMore || canShowLess) && (
                     <div className="mt-3 flex items-center justify-center gap-3">
                       {canShowMore ? (
@@ -1488,7 +1108,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                     </p>
                     {team.members && team.members.length > 0 && (
                       <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-                        {renderMemberNames(team.members)}
+                        {<DesktopTeamDirectoryMemberNames members={team.members} />}
                       </div>
                     )}
                   </div>

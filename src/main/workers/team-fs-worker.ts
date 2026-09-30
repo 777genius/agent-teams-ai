@@ -1653,21 +1653,18 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
 }
 
 function eventReviewState(event: RawHistoryEvent): string | null {
-  const type = typeof event.type === 'string' ? event.type : '';
-  if (!REVIEW_LIFECYCLE_EVENTS.has(type)) {
-    return null;
-  }
-  return normalizeReviewState(event.to);
+  if (typeof event.type !== 'string' || !REVIEW_LIFECYCLE_EVENTS.has(event.type)) return null;
+  const to = typeof event.to === 'string' ? event.to.trim() : '';
+  const state = normalizeReviewState(to);
+  return state === 'none' ? null : state;
 }
-
 function derivePendingReviewState(events: RawHistoryEvent[], startIndex: number): string {
   for (let i = startIndex - 1; i >= 0; i--) {
     const previous = events[i];
     const reviewState = eventReviewState(previous);
-    if (reviewState) {
-      return reviewState === 'needsFix' ? 'needsFix' : 'none';
-    }
+    if (reviewState) return reviewState === 'needsFix' ? 'needsFix' : 'none';
     if (
+      previous.type === 'review_reset' ||
       previous.type === 'task_created' ||
       (previous.type === 'status_changed' &&
         (REVIEW_RESET_STATUSES.has(String(previous.to || '')) || previous.to === 'pending'))
@@ -1684,10 +1681,11 @@ function deriveReviewStateFromEvents(events: RawHistoryEvent[] | undefined): str
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     const reviewState = eventReviewState(e);
-    if (reviewState) {
-      return reviewState;
-    }
-    if (e.type === 'status_changed' && REVIEW_RESET_STATUSES.has(String(e.to || ''))) {
+    if (reviewState) return reviewState;
+    if (
+      e.type === 'review_reset' ||
+      (e.type === 'status_changed' && REVIEW_RESET_STATUSES.has(String(e.to || '')))
+    ) {
       return 'none';
     }
     if (e.type === 'status_changed' && e.to === 'pending') {

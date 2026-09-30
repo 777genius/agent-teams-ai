@@ -23,6 +23,7 @@ import type { MemberWorkSyncReportJournalPort } from './MemberWorkSyncReportJour
 
 export interface MemberWorkSyncClockPort {
   now(): Date;
+  delay?(milliseconds: number): Promise<void>;
 }
 
 export interface MemberWorkSyncHashPort {
@@ -408,8 +409,12 @@ export interface MemberWorkSyncRuntimeTicketAdmissionPort {
     runtimeInstanceId: string;
     controlRevision: number;
     stopped: boolean;
+    /** Stable across recovery retries of a persisted control checkpoint. */
+    requestId?: string;
+    /** Stable wire timestamp paired with requestId. */
+    issuedAt?: string;
   }): Promise<
-    | { ok: true; code: 'closed' | 'open'; controlRevision: number }
+    | { ok: true; code: 'closed' | 'open'; controlRevision: number; requestId?: string }
     | { ok: false; code: 'unknown' | 'superseded' | 'conflict' | 'instance_mismatch' }
   >;
   readLiveControl?(input: { teamName: string; memberName: string }): Promise<{
@@ -417,6 +422,7 @@ export interface MemberWorkSyncRuntimeTicketAdmissionPort {
     controlRevision: number;
     stopped: boolean;
     handshakeCompleted: boolean;
+    requestId?: string;
   } | null>;
   confirmReserved?(
     ticket: MemberWorkSyncRuntimeTicket

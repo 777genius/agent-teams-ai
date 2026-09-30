@@ -44,4 +44,37 @@ describe('attachment IPC payload validation', () => {
       });
     }
   );
+
+  it.each(['text/plain', 'text/markdown', 'text/csv'])(
+    'accepts the supported text attachment type %s',
+    (mimeType) => {
+      const result = validateAgentAttachmentIpcPayload([
+        {
+          id: 'text_1',
+          filename: 'notes.txt',
+          mimeType,
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ]);
+      expect(result.valid).toBe(true);
+    }
+  );
+
+  it('rejects an unsupported non-text attachment type', () => {
+    expect(
+      validateAgentAttachmentIpcPayload([
+        {
+          id: 'json_1',
+          filename: 'data.json',
+          mimeType: 'application/json',
+          size: 4,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ])
+    ).toEqual({
+      valid: false,
+      error: 'Unsupported attachment type: application/json',
+    });
+  });
 });

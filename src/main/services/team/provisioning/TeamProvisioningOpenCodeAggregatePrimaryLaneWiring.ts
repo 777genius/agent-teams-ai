@@ -9,6 +9,7 @@ import type {
   OpenCodeAggregatePrimaryProgressPublisher,
   OpenCodeAggregatePrimaryProgressPublisherPorts,
 } from './OpenCodeAggregatePrimaryProgressPublisher';
+import type { PendingOpenCodePrimaryCleanup } from './TeamProvisioningLaunchStateStoreBoundary';
 import type {
   OpenCodePrimaryLaneRebootstrapPorts,
   OpenCodePrimaryLaneRebootstrapRun,
@@ -27,6 +28,7 @@ export interface OpenCodeAggregatePrimaryLaneWiringHost extends OpenCodeAggregat
   getRuntimeOwner(teamName: string): RuntimeAdapterRunByTeamEntry | undefined;
   setRuntimeOwner(teamName: string, owner: RuntimeAdapterRunByTeamEntry): void;
   deleteRuntimeOwner(teamName: string): void;
+  appendPendingCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<void>;
   getOpenCodeRuntimeLaunchCwd(baseCwd: string, members: TeamCreateRequest['members']): string;
   logWarn(message: string): void;
 }
@@ -140,6 +142,7 @@ export function createOpenCodeAggregatePrimaryLaneStopPorts(
     getRuntimeOwner: (teamName) => host.getRuntimeOwner(teamName),
     setRuntimeOwner: (teamName, owner) => host.setRuntimeOwner(teamName, owner),
     deleteRuntimeOwner: (teamName) => host.deleteRuntimeOwner(teamName),
+    appendPendingCleanup: (cleanup) => host.appendPendingCleanup(cleanup),
     getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
       host.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
     publishPending: (message) => progress.publishPending(run, message),

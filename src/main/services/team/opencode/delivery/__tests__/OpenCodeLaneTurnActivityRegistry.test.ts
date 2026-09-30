@@ -114,6 +114,7 @@ describe('noteOpenCodeLaneTurnActivity', () => {
           memberName: 'team-lead',
           laneId: 'primary',
           state: 'active',
+          observedAt: '2026-08-23T01:34:00.000Z',
         },
       ],
     ]);

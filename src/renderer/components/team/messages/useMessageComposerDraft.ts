@@ -22,9 +22,7 @@ interface UseMessageComposerDraftOptions {
   readonly revisionRequest?: MessageRevisionRequest | null;
   readonly onSelectRevisionRecipient: (recipient: string) => void;
   readonly onDraftMutation?: () => void;
-  readonly onRecoveryDestinationChange?: (
-    destination: ComposerDraftDestination | null
-  ) => void;
+  readonly onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
   readonly onRevisionPreparationChange?: (
     controller: MessageRevisionTargetController | null
   ) => void;
@@ -88,10 +86,7 @@ export function useMessageComposerDraft({
   const prepareRevisionTarget = useCallback(
     (nextRecipient: string, signal: AbortSignal): Promise<MessageRevisionDraftTarget | null> => {
       const normalized = normalizeConversationParticipant(nextRecipient);
-      if (
-        lockedRecipient &&
-        normalizeConversationParticipant(lockedRecipient) !== normalized
-      ) {
+      if (lockedRecipient && normalizeConversationParticipant(lockedRecipient) !== normalized) {
         return Promise.resolve(null);
       }
       pendingPreparationRef.current?.resolve(null);

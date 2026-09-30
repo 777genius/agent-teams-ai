@@ -175,7 +175,11 @@ function renderDraft(
   draftRef: { current: UseComposerDraftResult | null }
 ): void {
   root.render(
-    <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
+    <Harness
+      address={address}
+      repository={repository}
+      onValue={(value) => (draftRef.current = value)}
+    />
   );
 }
 
@@ -207,7 +211,11 @@ describe('useComposerDraft address lifecycle', () => {
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
     act(() => {
       root.render(
-        <Harness address={alice} repository={repository} onValue={(value) => (draftRef.current = value)} />
+        <Harness
+          address={alice}
+          repository={repository}
+          onValue={(value) => (draftRef.current = value)}
+        />
       );
     });
     act(() => draftRef.current?.setText('typed during slow load'));
@@ -237,7 +245,11 @@ describe('useComposerDraft address lifecycle', () => {
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
     act(() => {
       root.render(
-        <Harness address={alice} repository={repository} onValue={(value) => (draftRef.current = value)} />
+        <Harness
+          address={alice}
+          repository={repository}
+          onValue={(value) => (draftRef.current = value)}
+        />
       );
     });
     act(() => draftRef.current?.setText('typed before Alice hydrated'));
@@ -251,7 +263,11 @@ describe('useComposerDraft address lifecycle', () => {
     const remountRoot = createRoot(host);
     await act(async () => {
       remountRoot.render(
-        <Harness address={alice} repository={repository} onValue={(value) => (draftRef.current = value)} />
+        <Harness
+          address={alice}
+          repository={repository}
+          onValue={(value) => (draftRef.current = value)}
+        />
       );
     });
     expect(draftRef.current?.text).toBe('typed before Alice hydrated');
@@ -268,7 +284,9 @@ describe('useComposerDraft address lifecycle', () => {
     act(() => draftRef.current?.setText('alice text'));
     await act(async () => renderDraft(root, bob, repository, draftRef));
 
-    expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe('alice text');
+    expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe(
+      'alice text'
+    );
     expect(draftRef.current?.address).toEqual(bob);
     expect(draftRef.current?.text).toBe('');
     act(() => root.unmount());
@@ -283,14 +301,20 @@ describe('useComposerDraft address lifecycle', () => {
     await act(async () => renderDraft(root, alice, repository, draftRef));
     act(() => draftRef.current?.setText('unsaved Alice'));
     let finishSave!: () => void;
-    repository.saveDeferred = new Promise((resolve) => { finishSave = resolve; });
+    repository.saveDeferred = new Promise((resolve) => {
+      finishSave = resolve;
+    });
     await act(async () => renderDraft(root, bob, repository, draftRef));
     act(() => renderDraft(root, alice, repository, draftRef));
 
-    expect(repository.loadCalls.filter((key) => key === composerDraftAddressKey(alice))).toHaveLength(1);
+    expect(
+      repository.loadCalls.filter((key) => key === composerDraftAddressKey(alice))
+    ).toHaveLength(1);
     await act(async () => finishSave());
 
-    expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe('unsaved Alice');
+    expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe(
+      'unsaved Alice'
+    );
     expect(draftRef.current?.text).toBe('unsaved Alice');
     act(() => root.unmount());
   });
@@ -331,7 +355,11 @@ describe('useComposerDraft address lifecycle', () => {
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
     await act(async () => {
       root.render(
-        <Harness address={bob} repository={repository} onValue={(value) => (draftRef.current = value)} />
+        <Harness
+          address={bob}
+          repository={repository}
+          onValue={(value) => (draftRef.current = value)}
+        />
       );
     });
     act(() => {
@@ -363,7 +391,11 @@ describe('useComposerDraft address lifecycle', () => {
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
     await act(async () => {
       root.render(
-        <Harness address={alice} repository={repository} onValue={(value) => (draftRef.current = value)} />
+        <Harness
+          address={alice}
+          repository={repository}
+          onValue={(value) => (draftRef.current = value)}
+        />
       );
     });
     act(() => draftRef.current?.setText('frozen A'));
@@ -444,7 +476,9 @@ describe('useComposerDraft address lifecycle', () => {
       restore = draftRef.current!.restoreRecovery('context-a', 'team-a', 'recovery-1');
       draftRef.current?.setText('blocked while restoring');
     });
-    await act(async () => draftRef.current?.addFiles([new File(['x'], 'x.png', { type: 'image/png' })]));
+    await act(async () =>
+      draftRef.current?.addFiles([new File(['x'], 'x.png', { type: 'image/png' })])
+    );
     expect(draftRef.current?.text).toBe('');
     expect(draftRef.current?.attachments).toEqual([]);
     expect(draftRef.current?.isRestoring).toBe(true);
@@ -508,7 +542,10 @@ describe('useComposerDraft address lifecycle', () => {
     await act(async () => stash);
 
     expect(repository.stashCalls).toEqual([
-      expect.objectContaining({ address: alice, expectedRevision: expect.stringMatching(/^edit:/) }),
+      expect.objectContaining({
+        address: alice,
+        expectedRevision: expect.stringMatching(/^edit:/),
+      }),
     ]);
     expect(draftRef.current?.address).toEqual(bob);
     expect(draftRef.current?.text).toBe('');
@@ -518,7 +555,9 @@ describe('useComposerDraft address lifecycle', () => {
   it('holds a stash lease through navigation and releases it after completion', async () => {
     const repository = createRepository();
     let resolveStash!: (result: RestoreRecoveryResult) => void;
-    repository.stashDeferred = new Promise((resolve) => { resolveStash = resolve; });
+    repository.stashDeferred = new Promise((resolve) => {
+      resolveStash = resolve;
+    });
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
@@ -538,7 +577,9 @@ describe('useComposerDraft address lifecycle', () => {
     await act(async () => renderDraft(root, bob, repository, draftRef));
     act(() => draftRef.current?.setText('blocked Bob edit'));
     expect(draftRef.current?.text).toBe('');
-    await act(async () => resolveStash({ kind: 'restored', status: 'durable', working: emptyWorking(alice) }));
+    await act(async () =>
+      resolveStash({ kind: 'restored', status: 'durable', working: emptyWorking(alice) })
+    );
     await act(async () => stash);
     act(() => draftRef.current?.setText('Bob text'));
     expect(draftRef.current?.text).toBe('Bob text');

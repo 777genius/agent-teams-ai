@@ -115,12 +115,9 @@ export function composerWorkingKeyPrefix(contextId: string, teamName: string): s
 }
 
 export function composerNamespacePrefix(contextId: string, teamName: string): string {
-  return [
-    COMPOSER_V2_PREFIX,
-    encodeURIComponent(contextId),
-    encodeURIComponent(teamName),
-    '',
-  ].join(':');
+  return [COMPOSER_V2_PREFIX, encodeURIComponent(contextId), encodeURIComponent(teamName), ''].join(
+    ':'
+  );
 }
 
 export function composerDraftNamespace(address: ComposerDraftAddress): string {

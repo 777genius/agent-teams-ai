@@ -134,9 +134,9 @@ describe('attachmentRecipientCapabilities', () => {
     expect(validateAttachmentFilesForMember({ member: kimi, files: [videoFile] })).toBe(
       'This provider path does not support video attachments through this delivery path.'
     );
-    expect(
-      validateAttachmentPayloadsForMember({ member: kimi, attachments: [videoPayload] })
-    ).toBe('This provider path does not support video attachments through this delivery path.');
+    expect(validateAttachmentPayloadsForMember({ member: kimi, attachments: [videoPayload] })).toBe(
+      'This provider path does not support video attachments through this delivery path.'
+    );
   });
 
   it('enforces one video and the 8MiB per-video/mixed budget for MiniMax', () => {

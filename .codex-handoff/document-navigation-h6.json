@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase-0/document-navigation/1587615c/none/producer/r1",
+  "exactBase": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+  "status": "ready_for_review",
+  "changedPaths": [
+    ".codex-handoff/document-navigation-h6.json",
+    "AGENTS.md",
+    "docs/hosted-web-phases/EXECUTION_INDEX.json",
+    "docs/hosted-web-phases/README.md",
+    "docs/hosted-web-phases/START_HERE.md",
+    "docs/hosted-web-phases/worker-start-contract.schema.json",
+    "scripts/hosted-web/orchestration/validate-worker-start.mjs",
+    "test/architecture/hosted-web/orchestration/fixtures/valid-worker-start.template.json",
+    "test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs"
+  ],
+  "focusedChecks": [
+    {
+      "command": "/usr/local/bin/node --test test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs",
+      "exitCode": 0,
+      "result": "pass"
+    },
+    {
+      "command": "/usr/bin/git diff --check",
+      "exitCode": 0,
+      "result": "pass"
+    }
+  ],
+  "risks": [
+    "Each mandatory read list is capped at 64 exact files; a future larger lane must be split or deliberately revise the contract.",
+    "Controllers must run the bounded worker-start validator before the registry admission gate, as documented in START_HERE.md."
+  ]
+}

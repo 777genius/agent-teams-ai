@@ -150,6 +150,31 @@ describe('executeTeamRelaunch', () => {
     expect(replaceMembers).toHaveBeenCalledWith('team-alpha', { members });
     expect(launchTeam).toHaveBeenCalledWith(request);
   });
+
+  it('preserves roster replacement rejection and does not launch', async () => {
+    const replacementError = new Error('replace failed');
+    const stopTeam = vi.fn(async () => undefined);
+    const replaceMembers = vi.fn(async () => {
+      throw replacementError;
+    });
+    const launchTeam = vi.fn(async () => undefined);
+
+    await expect(
+      executeTeamRelaunch({
+        teamName: 'team-alpha',
+        isTeamAlive: true,
+        request: { teamName: 'team-alpha', cwd: '/tmp/project' },
+        members: [{ name: 'alice', role: 'Reviewer' }],
+        stopTeam,
+        replaceMembers,
+        launchTeam,
+      })
+    ).rejects.toBe(replacementError);
+
+    expect(stopTeam).toHaveBeenCalledOnce();
+    expect(replaceMembers).toHaveBeenCalledOnce();
+    expect(launchTeam).not.toHaveBeenCalled();
+  });
 });
 
 it('passes the target guard into persistence and does not launch after a write conflict', async () => {

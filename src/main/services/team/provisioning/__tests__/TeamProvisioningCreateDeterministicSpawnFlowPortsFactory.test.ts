@@ -103,7 +103,6 @@ function createDeps(host: BoundCallbackHost): {
     deps: {
       teamMetaStore: {
         writeMeta: vi.fn(async () => undefined),
-        deleteMeta: vi.fn(async () => undefined),
       },
       membersMetaStore: {
         writeMembers: vi.fn(async () => undefined),
@@ -124,6 +123,7 @@ function createDeps(host: BoundCallbackHost): {
         appManagedSettingsPath: null,
       })),
       seedLeadBootstrapPermissionRules: vi.fn(async () => undefined),
+      assertCurrentGeneration: vi.fn(),
       spawnCli:
         vi.fn() as unknown as TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TestRun>['spawnCli'],
       updateProgress: vi.fn((run) => run.progress),
@@ -177,6 +177,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       removeRunMemberMcpConfigFiles: deps.removeRunMemberMcpConfigFiles,
     } satisfies TeamProvisioningCreateDeterministicSpawnFlowServiceHost<TestRun>;
     const builtDeps = createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(service, {
+      assertCurrentGeneration: deps.assertCurrentGeneration,
       spawnCli: deps.spawnCli,
       updateProgress: deps.updateProgress,
       killTeamProcessAndWait: deps.killTeamProcessAndWait,
@@ -192,6 +193,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
 
     await ports.teamMetaStore.writeMeta(request.teamName, metaPayload);
     await ports.validateAgentTeamsMcpRuntime(TEST_MCP_CONFIG_PATH, { isCancelled: () => false });
+    ports.assertCurrentGeneration(run);
     ports.attachStdoutHandler(run);
     ports.unregisterRun(run.runId, request.teamName);
 
@@ -206,6 +208,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       TEST_MCP_CONFIG_PATH,
       { isCancelled: expect.any(Function) }
     );
+    expect(deps.assertCurrentGeneration).toHaveBeenCalledWith(run);
     expect(host.calls).toEqual(['host-context:stdout:run-1']);
     expect(runs.has('run-1')).toBe(false);
     expect(provisioningRunByTeam.has('demo')).toBe(false);

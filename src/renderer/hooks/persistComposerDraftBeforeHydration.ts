@@ -21,7 +21,9 @@ interface PersistBeforeHydrationOptions {
 }
 
 export function contentIsEmpty(content: ComposerDraftContent): boolean {
-  return content.text.length === 0 && content.chips.length === 0 && content.attachments.length === 0;
+  return (
+    content.text.length === 0 && content.chips.length === 0 && content.attachments.length === 0
+  );
 }
 
 export function contentEquals(left: ComposerDraftContent, right: ComposerDraftContent): boolean {
@@ -44,8 +46,7 @@ export async function persistComposerDraftBeforeHydration({
     !contentIsEmpty(loaded.working.content) &&
     !contentEquals(loaded.working.content, pending.content)
   ) {
-    const displacedId =
-      `displaced:${encodeURIComponent(pending.addressKey)}:${revision}`;
+    const displacedId = `displaced:${encodeURIComponent(pending.addressKey)}:${revision}`;
     const stashed = await repository.stashWorking(pending.address, revision, displacedId);
     if (stashed.kind !== 'restored') return;
     revision = stashed.working.workingRevision;

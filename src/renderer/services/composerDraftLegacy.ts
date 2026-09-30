@@ -20,7 +20,10 @@ function parseLegacyText(value: unknown): string {
   return isObject(value) && typeof value.value === 'string' ? value.value : '';
 }
 
-function parseLegacyArray<T>(value: unknown, validate: (candidate: unknown) => candidate is T[]): T[] {
+function parseLegacyArray<T>(
+  value: unknown,
+  validate: (candidate: unknown) => candidate is T[]
+): T[] {
   try {
     const unwrapped = isObject(value) && 'value' in value ? value.value : value;
     const parsed = typeof unwrapped === 'string' ? (JSON.parse(unwrapped) as unknown) : unwrapped;
@@ -31,7 +34,9 @@ function parseLegacyArray<T>(value: unknown, validate: (candidate: unknown) => c
 }
 
 function isChipArray(value: unknown): value is InlineChip[] {
-  return Array.isArray(value) && value.every((item) => isObject(item) && typeof item.id === 'string');
+  return (
+    Array.isArray(value) && value.every((item) => isObject(item) && typeof item.id === 'string')
+  );
 }
 
 function isAttachmentArray(value: unknown): value is AttachmentPayload[] {

@@ -3,7 +3,7 @@ import { ShieldAlert } from 'lucide-react';
 
 import { shouldShowWorkspaceTrustLaunchNotice } from '../view-models/workspaceTrustLaunchNotice';
 
-import type { WorkspaceTrustDisplayStatus } from '../hooks/useWorkspaceTrustStatus';
+import type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
 
 export const WorkspaceTrustLaunchNotice = (props: {
   status: WorkspaceTrustDisplayStatus;

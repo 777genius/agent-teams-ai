@@ -72,7 +72,8 @@ vi.mock('../../../../src/renderer/utils/taskGrouping', () => ({
   projectLabelFromPath: () => 'hookplex',
 }));
 
-vi.mock('../../../../src/shared/utils/reviewState', () => ({
+vi.mock('../../../../src/shared/utils/reviewState', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../src/shared/utils/reviewState')>()),
   getTaskKanbanColumn: () => 'todo',
 }));
 
@@ -244,6 +245,7 @@ describe('SidebarTaskItem unread styling', () => {
         React.createElement(SidebarTaskItem, {
           task: makeTask({
             createdAt: createdAt.toISOString(),
+            status: 'completed',
             reviewState: 'needsFix',
             updatedAt: updatedAt.toISOString(),
           }),

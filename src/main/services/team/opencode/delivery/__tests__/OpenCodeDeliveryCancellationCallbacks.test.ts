@@ -66,7 +66,7 @@ function respondedRecord(): OpenCodePromptDeliveryLedgerRecord {
 describe('OpenCode delivery cancellation callback boundaries', () => {
   it.each(['materialize', 'destination'] as const)(
     'does not write or enrich after %s lookup is cancelled',
-    async (operation) => {
+    async (operation: 'materialize' | 'destination') => {
       const record = respondedRecord();
       let current = record;
       let release!: () => void;

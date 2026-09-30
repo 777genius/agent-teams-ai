@@ -1,5 +1,6 @@
+import { isTerminalProvisioningState } from '@features/team-provisioning';
+
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
-import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
 import type {
   LeadActivityState,

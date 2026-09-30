@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "phaseId": "phase-00",
+  "laneId": "w6",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "packetRevision": "phase-00-r3",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "baseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-w6-v7",
+  "remediationProvenance": {
+    "approvedV6Review": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
+    "approvedV6ReviewSha256": "5c4c0ed2792df575dfd74c3a197ff00af6ed2abcc001dd815c39e70a87f7ed7a",
+    "supersedingReviewRecord": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6.review.json",
+    "supersedingReviewRecordSha256": "b68ad9f064e622edc64e96194bd00bea42b5c31467a0503b58b8e826911eaa8b",
+    "rejectedIntegrationArchive": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/project-integration/integration-attempts/a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767/attempt.json",
+    "rejectedIntegrationArchiveSha256": "1b49a4f0745b5e67fe8d56c97174ae55af4d9c5edb006112440b467bc9cea1dc",
+    "v6PreservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6.preserved.patch",
+    "v6PreservedPatchSha256": "479f78a3a89a7e132899ede39a7606c59ce9b201ebe04d97df281e3a4825f690"
+  },
+  "salvage": {
+    "sourceTaskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5",
+    "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-w6-v5",
+    "preservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v5.preserved.patch",
+    "preservedPatchSha256": "183069adf05cb254c846cbd37a7c39ac930b2cb5dd6994f6b5b96dc5d4304d79",
+    "independentlyVerified": true
+  },
+  "headVerifiedBeforeEdits": true,
+  "status": "characterized",
+  "scope": {
+    "disposition": "standalone_artifact_rejected_for_hosted_v1",
+    "remoteAuthReady": false,
+    "remoteMutationReady": false,
+    "productionCompositionReady": false,
+    "terminalAbsenceAchieved": false,
+    "terminalImplemented": false
+  },
+  "crossLaneContracts": {
+    "drainDto": "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "controllerArtifactContract": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "controllerArtifactContractSha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f",
+    "projection": "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json"
+  },
+  "evidence": [
+    {
+      "id": "P0.W6.AUTH_TRANSITIONS",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.COOKIE_VERSION_EVIDENCE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W6.ARTIFACT_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W6.ABI_STUB_REPORT",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.TERMINAL_ABSENCE_REPORT",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W6.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-w6.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.schema.json",
+    "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+    "scripts/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.mjs",
+    "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "git rev-parse HEAD before edits",
+      "exitCode": 0,
+      "result": "f7d98790eb868714e536f77bd796072ea706911a"
+    },
+    {
+      "command": "sha256sum <V5 preserved patch>",
+      "exitCode": 0,
+      "result": "183069adf05cb254c846cbd37a7c39ac930b2cb5dd6994f6b5b96dc5d4304d79; patch mechanically salvaged, then independently reviewed and corrected in V6"
+    },
+    {
+      "command": "rejected canonical integration archive emitted-evidence extraction plus semantic authority hash",
+      "exitCode": 0,
+      "result": "seven canonical integration candidate CJS paths/bytes/hashes regenerated under one observed-artifact-scan authority; isolated source scanning no longer consults mutable ambient output"
+    },
+    {
+      "command": "scanStandalone with rejected canonical candidate dist-standalone as explicit buildRoot",
+      "exitCode": 0,
+      "result": "all seven emitted paths, byte counts, SHA-256 hashes and marker facts matched the sole committed authority"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "W6 r3 evidence, exact W4 DTO/artifact consumption, all-action reset admission fence, standalone authority/rejection, terminal rule, ABI characterization and V7 provenance passed"
+    },
+    {
+      "command": "pnpm exec vitest run --maxWorkers=1 --minWorkers=1 <four focused W4/W6/cross-lane files>",
+      "exitCode": 0,
+      "result": "4 files and 51 tests passed; stale standalone projection plus missing, extra, duplicate, renamed, artifact-path, artifact-hash, controller-path and controller-hash drift are rejected"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <8 owned JS/TS files>",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <33 supported V7 additions>",
+      "exitCode": 0,
+      "result": "all matched files use Prettier style"
+    },
+    {
+      "command": "node JSON.parse over 19 V7 JSON additions",
+      "exitCode": 0,
+      "result": "all JSON parsed; W6 verifier also validated evidence and the controller-owned artifact schema"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 37 V7 additions>",
+      "exitCode": 0,
+      "result": "all entirely untracked additions checked; zero whitespace diagnostics"
+    },
+    {
+      "command": "bounded private-key/Bearer/provider-token/absolute-home scan over all 37 V7 additions",
+      "exitCode": 0,
+      "result": "no findings"
+    }
+  ],
+  "unverifiedClaims": [
+    "No remote authentication, remote mutation, browser production E2E, or production composition was enabled or claimed ready.",
+    "No admitted final image, live edge, durable keyring crash schedule, Electron native load, or final ABI load was tested.",
+    "Terminal absence remains a rule; the current standalone artifact violates it."
+  ],
+  "blockers": [],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-7",
+      "outcome": "narrowed",
+      "reason": "Reset/auth schedules are fixture characterization only; Phase 6 owns real HTTPS, durable auth, and proxy proof."
+    },
+    {
+      "adr": "ADR-14",
+      "outcome": "narrowed",
+      "reason": "Origin/proxy ordering remains a negative contract fixture and grants no remote authority."
+    },
+    {
+      "adr": "ADR-17",
+      "outcome": "blocked",
+      "reason": "The current standalone artifact is rejected for hosted v1; Phase 5 owns the clean artifact and terminal-negative image gate."
+    }
+  ],
+  "estimateBuckets": ["EST-HOSTED-OPS"],
+  "nextAction": "focused_paired_w4_w6_re_review"
+}

@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ReviewFileTree } from '../../../../../src/features/change-review/renderer/ui/ReviewFileTree';
 import { ContinuousScrollView } from '../../../../../src/renderer/components/team/review/ContinuousScrollView';
 import { getReviewHunkOrder } from '../../../../../src/renderer/components/team/review/reviewEntryNavigation';
-import { ReviewFileTree } from '../../../../../src/renderer/components/team/review/ReviewFileTree';
 import { TooltipProvider } from '../../../../../src/renderer/components/ui/tooltip';
 
 import type { FileChangeSummary } from '@shared/types/review';
@@ -217,7 +217,12 @@ describe('duplicate review entries', () => {
     act(() =>
       root.render(
         <TooltipProvider>
-          <ReviewFileTree files={files} selectedFilePath={null} onSelectFile={onSelectFile} />
+          <ReviewFileTree
+            files={files}
+            decisionState={{ hunkDecisions: {}, fileDecisions: {}, fileChunkCounts: {} }}
+            selectedFilePath={null}
+            onSelectFile={onSelectFile}
+          />
         </TooltipProvider>
       )
     );

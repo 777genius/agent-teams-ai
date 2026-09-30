@@ -1,12 +1,10 @@
 import {
-  forwardRef,
   lazy,
   memo,
   Suspense,
   useCallback,
   useEffect,
   useId,
-  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -14,14 +12,15 @@ import {
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  assertMemberSettingsRelaunchRoster,
+  createTeamMemberSettingsRendererApi,
   type MemberSettingsRelaunchDraft,
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
+  validateMemberSettingsRelaunchFreshRoster,
 } from '@features/team-provisioning/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
@@ -35,6 +34,8 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
+import { getDesktopCreateTaskInteraction } from '@renderer/composition/team/desktopCreateTaskSessions';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -50,10 +51,6 @@ import {
   selectTeamMemberSnapshotsForName,
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
-import {
-  SIDEBAR_LOGS_MAX_HEIGHT,
-  SIDEBAR_LOGS_MIN_HEIGHT,
-} from '@renderer/store/team/sidebarLogsHeight';
 import {
   buildChangeReviewLifecycleSessionId,
   requestChangeReviewLifecycleReservation,
@@ -105,6 +102,11 @@ import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { ReviewDialog } from './dialogs/ReviewDialog';
+import {
+  preloadTaskDetailDialog,
+  TaskDetailDialogHost,
+  type TaskDetailDialogHostHandle,
+} from './dialogs/TaskDetailDialogHost';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
@@ -116,6 +118,7 @@ import { deriveMetrics } from './context-metric-alias';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 import { TeamStatusBadge } from './TeamStatusBadge';
+import { useTeamRendererPorts } from './useTeamRendererPorts';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
@@ -132,6 +135,8 @@ const LaunchTeamDialog = lazy(() =>
 // Stable empty roster for the draft view: an inline [] would change identity
 // every render and retrigger LaunchTeamDialog's hydration effect.
 const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
+const teamMemberSettingsApi = createTeamMemberSettingsRendererApi(api);
+const detailTaskPorts = createTeamTaskDetailTransport();
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
@@ -140,25 +145,6 @@ const TeamGraphOverlay = lazy(() =>
     default: m.TeamGraphOverlay,
   }))
 );
-type TaskDetailDialogComponent = typeof import('./dialogs/TaskDetailDialog').TaskDetailDialog;
-let loadedTaskDetailDialogComponent: TaskDetailDialogComponent | null = null;
-let taskDetailDialogImportPromise: Promise<{ default: TaskDetailDialogComponent }> | null = null;
-function loadTaskDetailDialog(): Promise<{ default: TaskDetailDialogComponent }> {
-  taskDetailDialogImportPromise ??= import('./dialogs/TaskDetailDialog')
-    .then((m) => {
-      loadedTaskDetailDialogComponent = m.TaskDetailDialog;
-      return { default: m.TaskDetailDialog };
-    })
-    .catch((error) => {
-      taskDetailDialogImportPromise = null;
-      throw error;
-    });
-  return taskDetailDialogImportPromise;
-}
-function preloadTaskDetailDialog(): void {
-  void loadTaskDetailDialog().catch(() => undefined);
-}
-const LazyTaskDetailDialog = lazy(loadTaskDetailDialog);
 const SendMessageDialog = lazy(() =>
   import('./dialogs/SendMessageDialog').then((m) => ({ default: m.SendMessageDialog }))
 );
@@ -170,8 +156,6 @@ const ChangeReviewDialog = lazy(() =>
 );
 import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
-import { type ExpandedChatHost } from './messages/MessagesThreadPlacement';
-import { useExpandedTeamChat } from './messages/useExpandedTeamChat';
 import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
@@ -200,9 +184,7 @@ import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
-  CreateTaskRequest,
   KanbanColumnId,
-  KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TeamAgentRuntimeEntry,
@@ -214,145 +196,12 @@ import type {
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
-interface TaskDetailDialogHostHandle {
-  openTask: (task: TeamTaskWithKanban) => void;
-  close: () => void;
-}
-
-interface TaskDetailDialogHostProps {
-  teamName: string;
-  kanbanTaskStateByTaskId: Record<string, KanbanTaskState>;
-  taskMap: Map<string, TeamTaskWithKanban>;
-  members: ResolvedTeamMember[];
-  onOwnerChange: (taskId: string, owner: string | null) => void;
-  onViewChanges: (taskId: string, filePath?: string) => void;
-  onOpenInEditor: (filePath: string) => void;
-  onDeleteTask: (taskId: string) => void;
-}
-
-const TaskDetailDialogHost = memo(
-  forwardRef<TaskDetailDialogHostHandle, TaskDetailDialogHostProps>(function TaskDetailDialogHost(
-    {
-      teamName,
-      kanbanTaskStateByTaskId,
-      taskMap,
-      members,
-      onOwnerChange,
-      onViewChanges,
-      onOpenInEditor,
-      onDeleteTask,
-    },
-    ref
-  ) {
-    const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
-    const [loadedTask, setLoadedTask] = useState<TeamTaskWithKanban | null>(null);
-    const selectedTaskId = selectedTask?.id ?? null;
-    const selectedTaskSnapshot =
-      selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
-    const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
-    const dialogTaskMap = useMemo(() => {
-      if (!currentTask) {
-        return taskMap;
-      }
-      const next = new Map(taskMap);
-      next.set(currentTask.id, currentTask);
-      return next;
-    }, [currentTask, taskMap]);
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        openTask: (task) => {
-          setLoadedTask(null);
-          setSelectedTask(task);
-        },
-        close: () => {
-          setLoadedTask(null);
-          setSelectedTask(null);
-        },
-      }),
-      []
-    );
-
-    useEffect(() => {
-      if (!selectedTaskId) {
-        setLoadedTask(null);
-        return undefined;
-      }
-
-      let cancelled = false;
-      setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
-        .then((task) => {
-          if (!cancelled && task?.id === selectedTaskId) {
-            setLoadedTask(task);
-          }
-        })
-        .catch(() => undefined);
-
-      return () => {
-        cancelled = true;
-      };
-    }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
-
-    const handleScrollToTask = useCallback((taskId: string) => {
-      setSelectedTask(null);
-      setLoadedTask(null);
-      const el = document.querySelector(`[data-task-id="${taskId}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        el.classList.remove('kanban-card-focus-pulse');
-        void (el as HTMLElement).offsetWidth;
-        el.classList.add('kanban-card-focus-pulse');
-        el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
-          once: true,
-        });
-      }
-    }, []);
-
-    if (currentTask === null) {
-      return null;
-    }
-
-    const DialogComponent = loadedTaskDetailDialogComponent ?? LazyTaskDetailDialog;
-    const dialog = (
-      <DialogComponent
-        open
-        task={currentTask}
-        teamName={teamName}
-        kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
-        taskMap={dialogTaskMap}
-        members={members}
-        onClose={() => {
-          setLoadedTask(null);
-          setSelectedTask(null);
-        }}
-        onScrollToTask={handleScrollToTask}
-        onOwnerChange={onOwnerChange}
-        onViewChanges={onViewChanges}
-        onOpenInEditor={onOpenInEditor}
-        onDeleteTask={onDeleteTask}
-      />
-    );
-
-    if (loadedTaskDetailDialogComponent) {
-      return dialog;
-    }
-
-    return <Suspense fallback={null}>{dialog}</Suspense>;
-  })
-);
-TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
-
 interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
+  taskNotificationPort: ComponentProps<typeof TeamGraphOverlay>['taskNotificationPort'];
 }
-
 interface TeamReviewDialogState {
   open: boolean;
   mode: 'agent' | 'task';
@@ -549,7 +398,6 @@ type TeamSidebarRailBridgeProps = Omit<
   'messagesPanelProps'
 > & {
   messagesPanelProps: SharedTeamMessagesPanelProps;
-  expandedChatHost: ExpandedChatHost;
 };
 interface LeadLoadBridgeProps {
   teamName: string;
@@ -728,8 +576,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       setSelectedContextPhaseForTab: s.setSelectedContextPhaseForTab,
     }))
   );
-  // const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
-
   const setContextPanelVisible = useCallback(
     (visible: boolean) => {
       if (!tabId) return;
@@ -841,19 +687,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       visibleContextTokens,
     ]
   );
-  // const contextUsedPercentLabel = useMemo(
-  //   () =>
-  //     deriveLeadLoadButtonLabel({
-  //       liveContextUsedPercent: leadContextSnapshot?.contextUsedPercent,
-  //       fullContextUsedPercent: contextMetrics.contextUsedPercentOfContextWindow,
-  //       contextPanelOpen: isContextPanelVisible,
-  //     }),
-  //   [
-  //     contextMetrics.contextUsedPercentOfContextWindow,
-  //     isContextPanelVisible,
-  //     leadContextSnapshot?.contextUsedPercent,
-  //   ]
-  // );
   const shouldShowLeadContextUi = canShowLeadLoadUi(leadProviderId);
   const shouldLoadFullLeadDetail = Boolean(
     leadSessionId && shouldShowLeadContextUi && isThisTabActive && isContextPanelVisible
@@ -1087,7 +920,6 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
 
 const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
   messagesPanelProps,
-  expandedChatHost,
   ...props
 }: TeamSidebarRailBridgeProps): React.JSX.Element {
   const teamName = messagesPanelProps.teamName;
@@ -1134,7 +966,6 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       pendingRepliesByMember,
       onPendingReplyChange: handlePendingReplyChange,
-      expandedChatHost,
     }),
     [
       handlePendingReplyChange,
@@ -1142,7 +973,6 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
       leadContextUpdatedAt,
       messagesPanelProps,
       pendingRepliesByMember,
-      expandedChatHost,
     ]
   );
 
@@ -1286,20 +1116,32 @@ const TeamKanbanBoardBridge = memo(function TeamKanbanBoardBridge({
   ...props
 }: TeamKanbanBoardBridgeProps): React.JSX.Element {
   const activeTaskLogActivity = useStore((s) => s.activeTaskLogActivityByTeam[teamName]);
-
   return (
     <KanbanBoard {...props} teamName={teamName} activeTaskLogActivity={activeTaskLogActivity} />
   );
 });
-
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
   isPaneFocused = false,
+  taskNotificationPort,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
-  const teamStopControl = useTeamStopControl();
+  const launchTeamFromStore = useCallback(
+    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request),
+    []
+  );
+  const {
+    lifecycle: detailLifecyclePorts,
+    provisioning: provisioningPorts,
+    read: detailReadPorts,
+    roster: detailRosterPorts,
+    stopRunningTeam,
+  } = useTeamRendererPorts(api, launchTeamFromStore);
+  const teamStopControl = useTeamStopControl({
+    stopRunningTeam,
+  });
   const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
@@ -1313,7 +1155,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     defaultDescription: '',
     defaultOwner: '',
   });
-  const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
@@ -1393,6 +1234,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     [isLight]
   );
   useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    if (editorOpen || graphOpen) {
+      el.setAttribute('inert', '');
+    } else {
+      el.removeAttribute('inert');
+    }
+  }, [editorOpen, graphOpen]);
+
+  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.teamName === teamName) {
@@ -1402,6 +1253,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     window.addEventListener('toggle-team-graph', handler);
     return () => window.removeEventListener('toggle-team-graph', handler);
   }, [handleOpenGraphTab, teamName]);
+
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
@@ -1443,11 +1295,11 @@ export const TeamDetailView = memo(function TeamDetailView({
     initTabUIState,
     selectTeam,
     updateKanban,
+    moveTaskToStatusColumn,
     updateKanbanColumnOrder,
     updateTaskStatus,
     updateTaskOwner,
     requestReview,
-    createTeamTask,
     startTaskByUser,
     deleteTeam,
     openTeamsTab,
@@ -1458,7 +1310,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     skipMemberForLaunch,
     removeMember,
     restoreMember,
-    launchTeam,
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
@@ -1476,10 +1327,10 @@ export const TeamDetailView = memo(function TeamDetailView({
     messagesPanelWidth,
     sidebarLogsHeight,
     sidebarLogsHeightCustom,
+    applyDefaultSidebarLogsHeight,
     setMessagesPanelMode,
     setMessagesPanelWidth,
     setSidebarLogsHeight,
-    applyDefaultSidebarLogsHeight,
     selectReviewFile,
     pendingReviewRequest,
     setPendingReviewRequest,
@@ -1487,6 +1338,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     isTeamKnownOffline,
     teamSummaryColor,
     teamSummaryDisplayName,
+    activeContextId,
   } = useStore(
     useShallow((s) => ({
       projects: s.projects,
@@ -1494,11 +1346,11 @@ export const TeamDetailView = memo(function TeamDetailView({
       initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
+      moveTaskToStatusColumn: s.moveTaskToStatusColumn,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
       updateTaskStatus: s.updateTaskStatus,
       updateTaskOwner: s.updateTaskOwner,
       requestReview: s.requestReview,
-      createTeamTask: s.createTeamTask,
       startTaskByUser: s.startTaskByUser,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
@@ -1509,7 +1361,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
-      launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
@@ -1524,6 +1375,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         : false,
       teamSummaryColor: teamName ? s.teamByName[teamName]?.color : undefined,
       teamSummaryDisplayName: teamName ? s.teamByName[teamName]?.displayName : undefined,
+      activeContextId: s.activeContextId,
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
@@ -1540,10 +1392,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       messagesPanelWidth: s.messagesPanelWidth,
       sidebarLogsHeight: s.sidebarLogsHeight,
       sidebarLogsHeightCustom: s.sidebarLogsHeightCustom,
+      applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       setMessagesPanelMode: s.setMessagesPanelMode,
       setMessagesPanelWidth: s.setMessagesPanelWidth,
       setSidebarLogsHeight: s.setSidebarLogsHeight,
-      applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       selectReviewFile: s.selectReviewFile,
       pendingReviewRequest: s.pendingReviewRequest,
       setPendingReviewRequest: s.setPendingReviewRequest,
@@ -1570,24 +1422,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
   );
   const isThisTabActive = isActive;
-  const expandedChatController = useExpandedTeamChat({
-    teamName,
-    messagesPanelMode,
-    isActive: isThisTabActive,
-    graphOpen,
-    editorOpen,
-    contentRef,
-  });
-  const {
-    expanded: expandedChat,
-    rendersSidebar,
-    host: expandedChatHost,
-    collapse: collapseExpandedChat,
-    setTarget: setExpandedChatTarget,
-    onNativeOwnershipChange: handleNativeSidebarOwnershipChange,
-    onRenderedSidebarChange: handleRenderedSidebarChange,
-  } = expandedChatController;
-  const interactiveTeamRef = useRef<string | null>(null);
+  const wasInteractiveRef = useRef(false);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
   const loadingHeaderColorSet = useMemo(
     () =>
@@ -1609,17 +1444,16 @@ export const TeamDetailView = memo(function TeamDetailView({
   const { isResizing: isLogsPanelResizing, handleProps: logsPanelHandleProps } = useResizablePanel({
     height: sidebarLogsHeight,
     onHeightChange: setSidebarLogsHeight,
-    minHeight: SIDEBAR_LOGS_MIN_HEIGHT,
-    maxHeight: SIDEBAR_LOGS_MAX_HEIGHT,
-    side: 'bottom',
+    minHeight: 120,
+    maxHeight: 520,
+    side: 'top',
   });
 
   const changeMessagesPanelMode = useCallback(
     (mode: TeamMessagesPanelMode) => {
-      collapseExpandedChat();
       setMessagesPanelMode(mode);
     },
-    [collapseExpandedChat, setMessagesPanelMode]
+    [setMessagesPanelMode]
   );
   useEffect(() => {
     if (tabId) {
@@ -1698,63 +1532,33 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [isThisTabActive, pendingRevealFile, data?.config.projectPath]);
 
   useEffect(() => {
-    if (!isThisTabActive || !isPaneFocused || !teamName) {
-      return;
-    }
-    if (useStore.getState().selectedTeamName === teamName) {
-      return;
-    }
-    void selectTeam(teamName);
-  }, [isThisTabActive, isPaneFocused, teamName, selectTeam]);
-
-  useEffect(() => {
     if (!isThisTabActive || !teamName) {
       return;
     }
-    const selected = useStore.getState();
-    if (selected.selectedTeamName !== teamName || selected.selectedTeamLoading) {
-      return;
-    }
+    void selectTeam(teamName);
     void fetchDeletedTasks(teamName);
-  }, [isThisTabActive, teamName, loading, fetchDeletedTasks]);
+  }, [isThisTabActive, teamName, selectTeam, fetchDeletedTasks]);
 
   // Re-trigger selectTeam when this visible tab becomes active and store data is stale.
   const storedTeamName = data?.teamName;
   useEffect(() => {
-    if (!isThisTabActive || !isPaneFocused || !teamName || loading) return;
+    if (!isThisTabActive || !teamName || loading) return;
     if (storedTeamName != null && storedTeamName !== teamName) {
       void selectTeam(teamName);
     }
-  }, [isThisTabActive, isPaneFocused, teamName, storedTeamName, loading, selectTeam]);
+  }, [isThisTabActive, teamName, storedTeamName, loading, selectTeam]);
 
   useEffect(() => {
     const isInteractive = isThisTabActive && isPaneFocused;
-    if (!isInteractive) {
-      interactiveTeamRef.current = null;
+    const justBecameInteractive = isInteractive && !wasInteractiveRef.current;
+    wasInteractiveRef.current = isInteractive;
+    if (!justBecameInteractive || !teamName) {
       return;
     }
-    if (!teamName) {
-      return;
-    }
-
-    const selected = useStore.getState();
-    if (selected.selectedTeamName === teamName && selected.selectedTeamLoading) {
-      // Drop the marker so error/provisioning paths that skip post-paint still retry.
-      interactiveTeamRef.current = null;
-      return;
-    }
-
-    if (interactiveTeamRef.current === teamName) {
-      return;
-    }
-    interactiveTeamRef.current = teamName;
 
     void (async () => {
       try {
         const headResult = await refreshTeamMessagesHead(teamName);
-        if (interactiveTeamRef.current !== teamName) {
-          return;
-        }
         if (headResult.feedChanged) {
           await refreshMemberActivityMeta(teamName);
         }
@@ -1765,7 +1569,6 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [
     isPaneFocused,
     isThisTabActive,
-    loading,
     refreshMemberActivityMeta,
     refreshTeamMessagesHead,
     teamName,
@@ -1777,7 +1580,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
-        const aliveList = await api.teams.aliveList();
+        const aliveList = await detailLifecyclePorts.listAliveTeams();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
         const refs = teamsSnapshot
@@ -1795,7 +1598,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     return () => {
       cancelled = true;
     };
-  }, [isThisTabActive, launchDialogOpen]);
+  }, [detailLifecyclePorts, isThisTabActive, launchDialogOpen]);
 
   useEffect(() => {
     if (kanbanFilterQuery) {
@@ -2155,13 +1958,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     [openCreateTaskDialog]
   );
 
-  const handleReplyToMessage = useCallback((message: { from: string; text: string }, recipientHint?: string) => {
-    setSendDialogRecipient(recipientHint ?? message.from);
-    setSendDialogDefaultText(undefined);
-    setSendDialogDefaultChip(undefined);
-    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-    setSendDialogOpen(true);
-  }, []);
+  const handleReplyToMessage = useCallback(
+    (message: { from: string; text: string }, recipientHint?: string) => {
+      setSendDialogRecipient(recipientHint ?? message.from);
+      setSendDialogDefaultText(undefined);
+      setSendDialogDefaultChip(undefined);
+      setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+      setSendDialogOpen(true);
+    },
+    []
+  );
 
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
     setLaunchDialogState({ open: true, mode });
@@ -2177,22 +1983,21 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
+      await provisioningPorts.launchTeam(request);
     },
-    [launchTeam]
+    [provisioningPorts]
   );
 
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
     if (!memberSettingsDraft || !baselineMembers) return;
-    const current = await api.teams.getData(teamName, { includeMemberBranches: false });
-    assertMemberSettingsRelaunchRoster(
-      current.teamName,
-      current.members,
+    await validateMemberSettingsRelaunchFreshRoster({
+      teamName,
       baselineMembers,
-      memberSettingsDraft
-    );
-  }, [launchDialogState, teamName]);
+      draft: memberSettingsDraft,
+      rosterRead: detailReadPorts,
+    });
+  }, [detailReadPorts, launchDialogState, teamName]);
 
   const handleRelaunchDialogSubmit = useCallback(
     async (
@@ -2209,7 +2014,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
-            await api.teams.stop(nextTeamName);
+            await detailLifecyclePorts.stopRunningTeam(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
               success: true,
@@ -2233,15 +2038,17 @@ export const TeamDetailView = memo(function TeamDetailView({
           }
         },
         replaceMembers: (nextTeamName, nextRequest) =>
-          api.teams.replaceMembers(nextTeamName, nextRequest),
-        launchTeam,
+          detailRosterPorts.replaceRoster(nextTeamName, nextRequest),
+        launchTeam: provisioningPorts.launchTeam,
       });
     },
     [
       data?.isAlive,
       data?.members,
       data?.tasks,
-      launchTeam,
+      detailLifecyclePorts,
+      detailRosterPorts,
+      provisioningPorts,
       teamName,
       validateMemberSettingsRelaunch,
     ]
@@ -2431,14 +2238,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           : pendingTeamSectionFocus.section;
 
     if (sectionId === 'overview') {
-      const revealOverview = (): void =>
-        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (expandedChat) {
-        collapseExpandedChat();
-        window.requestAnimationFrame(revealOverview);
-      } else {
-        revealOverview();
-      }
+      contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       clearTeamSectionFocus();
       return;
     }
@@ -2449,15 +2249,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (!section) return;
     section.dispatchEvent(new CustomEvent('team-section-navigate'));
     clearTeamSectionFocus();
-  }, [
-    pendingTeamSectionFocus,
-    clearTeamSectionFocus,
-    isThisTabActive,
-    teamName,
-    data,
-    expandedChat,
-    collapseExpandedChat,
-  ]);
+  }, [pendingTeamSectionFocus, clearTeamSectionFocus, isThisTabActive, teamName, data]);
 
   // Pick up pending member profile request from MemberHoverCard
   const pendingMemberProfile = useStore((s) => s.pendingMemberProfile);
@@ -2565,14 +2357,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     (taskId: string) => {
       void (async () => {
         try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
+          await moveTaskToStatusColumn(teamName, taskId, 'done');
         } catch {
           // error via store
         }
       })();
     },
-    [teamName, updateKanban, updateTaskStatus]
+    [teamName, moveTaskToStatusColumn]
   );
 
   const handleStartTask = useCallback(
@@ -2584,7 +2375,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             const task = taskMapRef.current.get(taskId);
             try {
               if (result.notifiedOwner && task?.owner) {
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                 );
@@ -2592,7 +2383,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 const desc = task?.description?.trim()
                   ? `\nDescription: ${task.description.trim()}`
                   : '';
-                await api.teams.processSend(
+                await detailTaskPorts.notifyTaskLead(
                   teamName,
                   `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                 );
@@ -2632,7 +2423,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           // Notify assignee directly via inbox - they'll see it immediately
           if (task?.owner) {
             try {
-              await api.teams.sendMessage(teamName, {
+              await useStore.getState().sendTeamMessage(teamName, {
                 member: task.owner,
                 text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
                 summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
@@ -2646,7 +2437,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
-              await api.teams.processSend(
+              await detailTaskPorts.notifyTaskLead(
                 teamName,
                 `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
               );
@@ -2675,28 +2466,17 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, updateKanbanColumnOrder]
   );
 
-  const handleScrollToTask = useCallback(
-    (taskId: string) => {
-      const reveal = (): void => {
-        const el = contentRef.current?.querySelector(`[data-task-id="${taskId}"]`);
-        if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        el.classList.remove('kanban-card-focus-pulse');
-        void (el as HTMLElement).offsetWidth;
-        el.classList.add('kanban-card-focus-pulse');
-        el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
-          once: true,
-        });
-      };
-      if (expandedChat) {
-        collapseExpandedChat();
-        window.requestAnimationFrame(reveal);
-        return;
-      }
-      reveal();
-    },
-    [collapseExpandedChat, expandedChat]
-  );
+  const handleScrollToTask = useCallback((taskId: string) => {
+    const el = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    el.classList.remove('kanban-card-focus-pulse');
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add('kanban-card-focus-pulse');
+    el.addEventListener('animationend', () => el.classList.remove('kanban-card-focus-pulse'), {
+      once: true,
+    });
+  }, []);
 
   const handleAddTask = useCallback(
     (startImmediately: boolean) => {
@@ -2727,33 +2507,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
-  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
-    const { owner, prompt, startImmediately, subject } = request;
-    setCreatingTask(true);
-    try {
-      await createTeamTask(teamName, request);
-
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-        try {
-          await api.teams.processSend(teamName, msg);
-        } catch {
-          // best-effort
-        }
-      }
-
-      closeCreateTaskDialog();
-    } catch {
-      // error shown via store
-    } finally {
-      setCreatingTask(false);
-    }
-  };
+  // Render both Desktop create surfaces against the same scope-owned session.
+  const createTaskInteraction = getDesktopCreateTaskInteraction(teamName, activeContextId);
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
+
   const sharedMessagesPanelProps = useMemo<SharedTeamMessagesPanelProps>(
     () => ({
-      isActive: isThisTabActive || rendersSidebar,
       teamName,
       onPositionChange: changeMessagesPanelMode,
       mountPoint: messagesPanelMountPoint,
@@ -2787,10 +2547,9 @@ export const TeamDetailView = memo(function TeamDetailView({
       teamName,
       timeWindow,
       changeMessagesPanelMode,
-      isThisTabActive,
-      rendersSidebar,
     ]
   );
+
   const renderTeamActionButtons = (pinned: boolean): React.JSX.Element => (
     <div
       className={cn(
@@ -2802,7 +2561,6 @@ export const TeamDetailView = memo(function TeamDetailView({
           ? {
               right: pinnedVisualizeButtonPosition.right,
               top: pinnedVisualizeButtonPosition.top,
-              zIndex: messagesPanelMode === 'bottom-sheet' ? 20 : 50,
             }
           : undefined
       }
@@ -2812,18 +2570,15 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Button
             variant="ghost"
             size="sm"
-            aria-label={t('detail.actions.visualize')}
-            data-visualize-button={pinned ? 'pinned' : 'header'}
             className={cn(
               TEAM_HEADER_NAV_ACTION_CLASS,
-              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95',
-              pinned && 'w-8 px-0'
+              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
           >
             <Network size={13} className="shrink-0" />
-            {pinned ? null : t('detail.actions.visualize')}
+            {t('detail.actions.visualize')}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
@@ -2902,7 +2657,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <button
                   className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
                   onClick={() => {
-                    void api.teams.deleteDraft(teamName).catch(() => {});
+                    void provisioningPorts.deleteDraft(teamName).catch(() => {});
                   }}
                 >
                   {t('detail.actions.delete')}
@@ -2949,7 +2704,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
     return (
       <>
-        {pinnedVisualizeButtonPosition && !expandedChat ? renderTeamActionButtons(true) : null}
+        {pinnedVisualizeButtonPosition ? renderTeamActionButtons(true) : null}
         <div className="relative flex size-full overflow-hidden">
           <LeadLoadBridge
             teamName={teamName}
@@ -2961,6 +2716,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             isThisTabActive={isThisTabActive}
           />
 
+          {/* Messages sidebar (left, after context panel) */}
           <TeamSidebarHost
             teamName={teamName}
             surface="team"
@@ -2971,20 +2727,17 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               isActive={isThisTabActive}
               isFocused={isPaneFocused}
-              onNativeOwnershipChange={handleNativeSidebarOwnershipChange}
-              onRenderedSidebarChange={handleRenderedSidebarChange}
             >
               <TeamSidebarRailBridge
                 teamName={teamName}
                 messagesPanelProps={sharedMessagesPanelProps}
-                expandedChatHost={expandedChatHost}
                 isResizing={isMessagesPanelResizing}
                 onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
                 logsHeight={sidebarLogsHeight}
                 logsHeightIsCustom={sidebarLogsHeightCustom}
+                onApplyDefaultLogsHeight={applyDefaultSidebarLogsHeight}
                 isLogsResizing={isLogsPanelResizing}
                 onLogsResizeMouseDown={logsPanelHandleProps.onMouseDown}
-                onApplyDefaultLogsHeight={applyDefaultSidebarLogsHeight}
               />
             </TeamSidebarPortalSource>
           </TeamSidebarHost>
@@ -2992,10 +2745,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           <div className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={contentRef}
-              className={cn(
-                'size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0',
-                expandedChat && 'invisible'
-              )}
+              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0"
               style={{ paddingBottom: floatingComposerScrollReserve }}
               data-team-name={teamName}
             >
@@ -3384,9 +3134,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                   variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
-                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}
+                  badge={data.processes.filter((p) => !p.stoppedAt).length}
                   headerExtra={
-                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (
+                    data.processes.some((p) => !p.stoppedAt) ? (
                       <span
                         className="pointer-events-none relative inline-flex size-2 shrink-0"
                         title={t('detail.status.active')}
@@ -3402,7 +3152,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                     teamName={teamName}
                     members={membersWithLiveBranches}
                     processes={data.processes}
-                    isTeamAlive={data.isAlive}
                   />
                 </CollapsibleTeamSection>
               )}
@@ -3507,8 +3256,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     defaultStartImmediately={createTaskDialog.defaultStartImmediately}
                     defaultChip={createTaskDialog.defaultChip}
                     onClose={closeCreateTaskDialog}
-                    onSubmit={handleCreateTask}
-                    submitting={creatingTask}
+                    interaction={createTaskInteraction}
                   />
                 </Suspense>
               )}
@@ -3531,7 +3279,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onSaved={() => void selectTeam(teamName)}
                 />
               )}
-
               {editTarget?.kind === 'member' ? (
                 <TeamMemberSettingsDialogBridge
                   teamName={teamName}
@@ -3540,6 +3287,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                   isTeamAlive={data.isAlive === true}
                   isTeamProvisioning={isTeamProvisioning}
                   projectPath={data.config.projectPath}
+                  getSavedRequest={provisioningPorts.readDraft}
+                  updateMemberSettings={teamMemberSettingsApi.updateMemberSettings}
                   onClose={() => setEditTarget(null)}
                   onRefresh={(settings) => refreshTeamMemberSettings(teamName, settings)}
                   onRelaunchRequired={handleChangeLeadRuntime}
@@ -3668,6 +3417,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               <TaskDetailDialogHost
                 ref={taskDetailDialogRef}
                 teamName={teamName}
+                taskPorts={detailTaskPorts}
                 kanbanTaskStateByTaskId={data.kanbanState.tasks}
                 taskMap={taskMap}
                 members={activeMembers}
@@ -3723,16 +3473,6 @@ export const TeamDetailView = memo(function TeamDetailView({
               )}
             </div>
             <div
-              ref={setExpandedChatTarget}
-              className={cn(
-                'absolute inset-0 z-10 min-h-0 min-w-0 overflow-hidden',
-                expandedChat ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
-              )}
-              aria-hidden={!expandedChat || editorOpen || graphOpen ? 'true' : undefined}
-              inert={editorOpen || graphOpen ? true : undefined}
-              data-messages-thread-slot="main"
-            />
-            <div
               ref={setMessagesPanelMountPoint}
               className="pointer-events-none absolute inset-0 z-30"
             />
@@ -3752,12 +3492,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               teamName={teamName}
               bottomOffset={Math.max(floatingComposerHeight + 18, 18)}
               buttonTestId="open-terminal-floating-button"
-              enabled={
-                isThisTabActive &&
-                !graphOpen &&
-                !expandedChat &&
-                messagesPanelMode !== 'bottom-sheet'
-              }
+              enabled={isThisTabActive && !graphOpen}
             />
           </div>
         </div>
@@ -3776,6 +3511,8 @@ export const TeamDetailView = memo(function TeamDetailView({
           <Suspense fallback={null}>
             <TeamGraphOverlay
               teamName={teamName}
+              announcementsVisible={isElectronMode()}
+              taskNotificationPort={taskNotificationPort}
               onClose={() => setGraphOpen(false)}
               onPinAsTab={() => {
                 setGraphOpen(false);
@@ -3796,7 +3533,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     );
   };
 
-  // Keep the launch dialog outside renderBody so branch changes preserve in-progress edits.
+  // The launch dialog renders outside renderBody's branches so a branch change
+  // (e.g. draft view → provisioning view after Launch) does not unmount it and
+  // discard in-progress user edits. The draft view has no resolved members yet.
   const isDraftTeamView = error === 'TEAM_DRAFT';
   const launchDialogDefaultProjectPath = isDraftTeamView
     ? useStore.getState().teamByName[teamName]?.projectPath

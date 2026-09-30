@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { parentPort, workerData } from 'node:worker_threads';
 
+import { createHostedPromotionCommitAuthority } from './hostedPromotionCommitAuthority';
 import { InternalStorageWorkerCore } from './InternalStorageWorkerCore';
 
 import type {
@@ -43,16 +44,26 @@ function loadNativeDriver(): typeof DatabaseConstructor {
 
 const core = new InternalStorageWorkerCore({
   databasePath: data.databasePath,
-  createDatabase: (databasePath) => {
+  ...(data.mode === undefined ? {} : { mode: data.mode }),
+  ...(data.promotionCommitBinding === undefined
+    ? {}
+    : {
+        promotionCommitAuthority: createHostedPromotionCommitAuthority(
+          () => core.databaseForPromotionCommit(),
+          data.promotionCommitBinding,
+          Date.now
+        ),
+      }),
+  createDatabase: (databasePath, options) => {
     const Driver = loadNativeDriver();
-    return new Driver(databasePath);
+    return new Driver(databasePath, options);
   },
 });
 
-port.on('message', (message: InternalStorageWorkerRequest) => {
+port.on('message', async (message: InternalStorageWorkerRequest) => {
   let response: InternalStorageWorkerResponse;
   try {
-    const result = core.handle(message.op, message.payload);
+    const result = await core.handleAsync(message.op, message.payload);
     response = { id: message.id, ok: true, result };
   } catch (error) {
     response = {

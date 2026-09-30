@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { createProjectFolderFeature } from '@features/project-folder/main';
+import { createProjectFolderFeature } from '@features/project-folder/main/composition';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';

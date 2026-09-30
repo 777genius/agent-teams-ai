@@ -6,6 +6,7 @@ import {
   TeamLaunchStateStore,
   withTeamLaunchStatePublicationLock,
 } from '@main/services/team/TeamLaunchStateStore';
+import { createPersistedLaunchSummaryProjection } from '@main/services/team/TeamLaunchSummaryProjection';
 import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,9 +26,12 @@ vi.mock('@main/services/team/atomicWrite', () => ({
   atomicWriteAsync: mocks.atomicWriteAsync,
 }));
 
-function snapshot(updatedAt = '2026-01-01T00:00:00.000Z'): PersistedTeamLaunchSnapshot {
+function snapshot(
+  updatedAt = '2026-01-01T00:00:00.000Z',
+  teamName = 'demo'
+): PersistedTeamLaunchSnapshot {
   return createPersistedLaunchSnapshot({
-    teamName: 'demo',
+    teamName,
     expectedMembers: ['Builder'],
     launchPhase: 'active',
     members: {
@@ -153,6 +157,95 @@ describe('TeamLaunchStateStore', () => {
       expect.any(String),
       expect.objectContaining({ beforeCommit: expect.any(Function) })
     );
+  });
+
+  it('rejects an invalid producer snapshot without touching an existing publication', async () => {
+    const invalidSnapshot = snapshot();
+    invalidSnapshot.members.Builder.launchIdentity = {
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      selectedModel: 'opencode/big-pickle',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'opencode/big-pickle',
+      catalogId: 'opencode/big-pickle',
+      // `bundled` is not a catalog source in the persisted launch-state contract.
+      catalogSource: 'bundled' as never,
+      catalogFetchedAt: '2026-01-01T00:00:00.000Z',
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+    };
+    const statePath = getTeamLaunchStatePath('demo');
+    const summaryPath = getTeamLaunchSummaryPath('demo');
+    const existingState = `${JSON.stringify(snapshot(), null, 2)}\n`;
+    const existingSummary = `${JSON.stringify(
+      createPersistedLaunchSummaryProjection(snapshot()),
+      null,
+      2
+    )}\n`;
+    fs.writeFileSync(statePath, existingState);
+    fs.writeFileSync(summaryPath, existingSummary);
+    const remove = vi.spyOn(fs.promises, 'rm');
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', invalidSnapshot)).rejects.toThrow(
+        'Refusing to persist malformed launch state'
+      );
+
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
+      expect(fs.readFileSync(statePath, 'utf8')).toBe(existingState);
+      expect(fs.readFileSync(summaryPath, 'utf8')).toBe(existingSummary);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('persists and reads the runtime identity fields produced for a process teammate', async () => {
+    const produced = snapshot();
+    Object.assign(produced.members.Builder, {
+      backendType: 'process',
+      tmuxPaneId: 'process:4242',
+      agentId: 'Builder@demo',
+      bootstrapRunId: 'run-1',
+      bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+      bootstrapRuntimeEventsPath: '/sandbox/demo/Builder.runtime.jsonl',
+    });
+    mocks.atomicWriteAsync.mockImplementation(async (target: string, content: string) => {
+      fs.writeFileSync(target, content);
+    });
+
+    await expect(new TeamLaunchStateStore().write('demo', produced)).resolves.toBe(true);
+    expect(await new TeamLaunchStateStore().read('demo')).toMatchObject({
+      members: {
+        Builder: expect.objectContaining({
+          backendType: 'process',
+          tmuxPaneId: 'process:4242',
+          agentId: 'Builder@demo',
+          bootstrapRunId: 'run-1',
+          bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+          bootstrapRuntimeEventsPath: '/sandbox/demo/Builder.runtime.jsonl',
+        }),
+      },
+    });
+  });
+
+  it('rejects malformed runtime identity fields from a producer before writing', async () => {
+    for (const [field, value] of [
+      ['backendType', 'unexpected-backend'],
+      ['tmuxPaneId', 42],
+      ['agentId', { name: 'Builder' }],
+      ['bootstrapRunId', 42],
+      ['bootstrapExpectedAfter', false],
+      ['bootstrapRuntimeEventsPath', ['/unsafe/path']],
+    ] as const) {
+      const produced = snapshot();
+      Object.assign(produced.members.Builder, { [field]: value });
+      await expect(new TeamLaunchStateStore().write('demo', produced)).rejects.toThrow(
+        'Refusing to persist malformed launch state'
+      );
+    }
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
   it('resolves only after both files from the snapshot generation are persisted', async () => {
@@ -290,7 +383,7 @@ describe('TeamLaunchStateStore', () => {
     mocks.atomicWriteAsync.mockRejectedValueOnce(missingDirectoryError);
 
     await expect(
-      new TeamLaunchStateStore().write('removed-team', snapshot())
+      new TeamLaunchStateStore().write('removed-team', snapshot(undefined, 'removed-team'))
     ).resolves.toBe(false);
     expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
@@ -531,6 +624,246 @@ describe('TeamLaunchStateStore', () => {
       expect(remove).toHaveBeenNthCalledWith(2, getTeamLaunchSummaryPath('demo'), { force: true });
     } finally {
       remove.mockRestore();
+    }
+  });
+
+  it('does not overwrite a v2 document with unknown fields', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const summaryPath = getTeamLaunchSummaryPath('demo');
+    const existingState = {
+      ...snapshot(),
+      futureRoot: { retained: true },
+      members: {
+        Builder: {
+          ...snapshot().members.Builder,
+          runtimeDiagnostic: 'remove known optional field',
+          futureMember: { retained: true },
+          sources: {
+            processAlive: true,
+            futureSource: { retained: true },
+          },
+        },
+        Removed: {
+          ...snapshot().members.Builder,
+          name: 'Removed',
+          futureMember: { doNotResurrect: true },
+        },
+      },
+      summary: {
+        ...snapshot().summary,
+        futureSummary: { retained: true },
+      },
+    };
+    const existingSummary = {
+      version: 1,
+      teamName: 'demo',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      futureProjection: { retained: true },
+    };
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      const raw = filePath === statePath ? existingState : existingSummary;
+      return {
+        isFile: () => true,
+        size: Buffer.byteLength(JSON.stringify(raw)),
+      } as fs.Stats;
+    });
+    const readSpy = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (filePath) => {
+        if (filePath === statePath) return JSON.stringify(existingState);
+        if (filePath === summaryPath) return JSON.stringify(existingSummary);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+        'Refusing to replace malformed launch state'
+      );
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
+  it('migrates a legacy partial launch marker before publishing a successor snapshot', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const teamDirectory = path.dirname(statePath);
+    const teamDirectoryStat = fs.statSync(teamDirectory);
+    const legacy = JSON.stringify({
+      state: 'partial_launch_failure',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      expectedMembers: ['Builder', 'Reviewer'],
+      confirmedMembers: ['Builder'],
+      missingMembers: ['Reviewer'],
+    });
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      if (filePath === statePath) {
+        return { isFile: () => true, size: Buffer.byteLength(legacy) } as fs.Stats;
+      }
+      if (filePath === teamDirectory) return teamDirectoryStat;
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockImplementation(async (filePath) => {
+      if (filePath === statePath) return legacy;
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).resolves.toBe(true);
+      const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
+      expect(persisted).toMatchObject({ version: 2, teamName: 'demo' });
+      expect(persisted.members).toHaveProperty('Builder');
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
+  it('migrates only a v2 member key/name mismatch before publishing a successor snapshot', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const existing = snapshot();
+    existing.members.Builder.name = 'Duplicated primary member';
+    fs.writeFileSync(statePath, JSON.stringify(existing));
+
+    await expect(
+      new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
+    ).resolves.toBe(true);
+
+    const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
+    expect(persisted.members.Builder.name).toBe('Builder');
+  });
+
+  it('does not bypass v2 validation through the legacy partial-launch marker', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    fs.writeFileSync(
+      statePath,
+      JSON.stringify({
+        version: 2,
+        teamName: 'demo',
+        state: 'partial_launch_failure',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        expectedMembers: ['Builder', 'Reviewer'],
+        confirmedMembers: ['Builder'],
+        missingMembers: ['Reviewer'],
+      })
+    );
+
+    await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+      'Refusing to replace malformed launch state'
+    );
+    await expect(new TeamLaunchStateStore().readResult('demo')).resolves.toMatchObject({
+      status: 'unreadable',
+    });
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it.each([
+    [
+      'a missing required member field',
+      (document: ReturnType<typeof snapshot>) => {
+        delete (document.members.Builder as Partial<PersistedTeamLaunchSnapshot['members']['Builder']>)
+          .runtimeAlive;
+      },
+    ],
+    [
+      'an invalid member boolean',
+      (document: ReturnType<typeof snapshot>) => {
+        document.members.Builder.agentToolAccepted = 'true' as never;
+      },
+    ],
+    [
+      'a malformed summary count',
+      (document: ReturnType<typeof snapshot>) => {
+        document.summary.confirmedCount = 'one' as never;
+      },
+    ],
+  ])('does not migrate a v2 key/name mismatch with %s', async (_label, corrupt) => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const malformed = snapshot();
+    malformed.members.Builder.name = 'Duplicated primary member';
+    corrupt(malformed);
+    fs.writeFileSync(statePath, JSON.stringify(malformed));
+
+    await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+      'Refusing to replace malformed launch state'
+    );
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it.each([
+    ['future version', JSON.stringify({ version: 3, teamName: 'demo' }), 32],
+    ['malformed JSON', '{not-json', 9],
+    ['malformed document', JSON.stringify({ version: 2, teamName: 'demo' }), 32],
+    [
+      'malformed known member source',
+      JSON.stringify({
+        ...snapshot(),
+        members: {
+          Builder: {
+            ...snapshot().members.Builder,
+            sources: { processAlive: 'yes' },
+          },
+        },
+      }),
+      1,
+    ],
+    [
+      'malformed known launch summary count',
+      JSON.stringify({
+        ...snapshot(),
+        summary: { ...snapshot().summary, confirmedCount: 'one' },
+      }),
+      1,
+    ],
+    ['oversized JSON', '{}', 256 * 1024 + 1],
+  ])('fails closed on %s without publishing either launch file', async (_label, raw, size) => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      if (filePath === statePath) {
+        return { isFile: () => true, size } as fs.Stats;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(raw);
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBeTruthy();
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
+  it('fails closed on malformed known summary-projection fields before publishing either file', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const stateRaw = JSON.stringify(snapshot());
+    const summaryRaw = JSON.stringify({
+      version: 1,
+      teamName: 'demo',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      missingMembers: ['Builder', 42],
+    });
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      const raw = filePath === statePath ? stateRaw : summaryRaw;
+      return { isFile: () => true, size: Buffer.byteLength(raw) } as fs.Stats;
+    });
+    const readSpy = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (filePath) => (filePath === statePath ? stateRaw : summaryRaw));
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBeTruthy();
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
     }
   });
 });

@@ -32,6 +32,13 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
+export type {
+  OpenCodeCatalogDependencies,
+  OpenCodeCatalogTransportPort,
+  OpenCodeConnectedCatalogDependencies,
+  OpenCodeConnectedCatalogTransportPort,
+} from './ports/OpenCodeCatalogTransportPort';
+export type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,

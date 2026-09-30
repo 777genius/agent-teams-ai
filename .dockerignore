@@ -28,6 +28,7 @@ resources/runtime/*
 .home/
 .serena/
 .playwright-mcp/
+docker/secrets/
 logs/
 *.log
 .env

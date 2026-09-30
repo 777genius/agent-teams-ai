@@ -18,7 +18,10 @@ import {
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
-import { useSavedLaunchSettings } from '../hooks/useSavedLaunchSettings';
+import {
+  type SavedLaunchSettingsReader,
+  useSavedLaunchSettingsFingerprint,
+} from '../hooks/useSavedLaunchSettingsFingerprint';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -27,6 +30,7 @@ import {
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
 
+import type { TeamMemberSettingsApi } from '../../contracts';
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import type {
@@ -51,6 +55,8 @@ export interface EditTeamMemberDialogProps {
   leadFastMode?: TeamFastMode;
   projectPath?: string | null;
   targetAvailable?: boolean;
+  getSavedRequest: SavedLaunchSettingsReader;
+  updateMemberSettings: TeamMemberSettingsApi['updateMemberSettings'];
   isLead?: boolean;
   onClose: () => void;
   onRefresh: (settings?: {
@@ -93,6 +99,8 @@ export const EditTeamMemberDialog = ({
   leadFastMode,
   projectPath,
   targetAvailable = true,
+  getSavedRequest,
+  updateMemberSettings,
   isLead = false,
   onClose,
   onRefresh,
@@ -100,12 +108,12 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
-  const savedLaunchSettings = useSavedLaunchSettings(teamName);
+  const savedLaunchSettings = useSavedLaunchSettingsFingerprint(teamName, getSavedRequest);
   const teamSettingsFingerprint = savedLaunchSettings.fingerprint;
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
-  const { saving, save, resetIdentity } = useUpdateMemberSettings();
+  const { saving, save, resetIdentity } = useUpdateMemberSettings(updateMemberSettings);
   const incomingFingerprint = useMemo(() => fingerprintResolvedMember(member), [member]);
   const fingerprint = useMemo(() => fingerprintResolvedMember(baseline), [baseline]);
   const settings = useMemo(() => draftToEditableSettings(draft), [draft]);

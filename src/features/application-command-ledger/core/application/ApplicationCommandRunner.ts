@@ -6,6 +6,7 @@ import {
   type ApplicationCommandLedgerBeginResult,
   ApplicationCommandLedgerErrorCode,
   type ApplicationCommandLedgerRecord,
+  type ApplicationCommandMutationFenceClaim,
   ApplicationCommandRunOutcome,
 } from '../../contracts';
 import { type ApplicationCommandJsonValue, stableJsonStringify } from '../domain/stableJson';
@@ -31,6 +32,10 @@ export type ApplicationCommandReconciliation<TResult extends ApplicationCommandR
   | { outcome: 'not_applied'; message?: string }
   | { outcome: 'unknown'; message?: string };
 
+export type ApplicationCommandResultClassification =
+  | { outcome: 'completed' }
+  | { outcome: 'unknown'; message?: string };
+
 export interface ApplicationCommandRunInput<
   TOperation extends string = string,
   TResult extends ApplicationCommandResult = ApplicationCommandResult,
@@ -39,7 +44,9 @@ export interface ApplicationCommandRunInput<
   metadata?: ApplicationCommandJsonValue;
   payloadHash?: string;
   startedStaleAfterMs?: number;
+  mutationFence?: ApplicationCommandMutationFenceClaim;
   classifyError(error: unknown): ApplicationCommandErrorClassification;
+  classifyResult?(result: TResult): ApplicationCommandResultClassification;
   reconcile?(
     record: ApplicationCommandLedgerRecord<TOperation>
   ): Promise<ApplicationCommandReconciliation<TResult>>;
@@ -126,6 +133,7 @@ export class ApplicationCommandRunner {
         metadataJson,
         nowIso,
         startedStaleAfterMs,
+        mutationFence: input.mutationFence,
       });
     } catch (error) {
       throw this.storeError('begin', 'Application command could not be started', input, error);
@@ -163,6 +171,48 @@ export class ApplicationCommandRunner {
       const classification = this.classifyExecutionError(input, error);
       await this.persistFailure(activeIdentity, classification, error, 'execute');
       throw error;
+    }
+
+    if (input.classifyResult) {
+      let classification: ApplicationCommandResultClassification;
+      try {
+        classification = input.classifyResult(result);
+        if (classification.outcome !== 'completed' && classification.outcome !== 'unknown') {
+          throw new TypeError('Application command result classifier returned an invalid outcome');
+        }
+      } catch (error) {
+        await this.persistFailure(
+          activeIdentity,
+          {
+            failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout,
+            message: `Application command result classification failed: ${this.describeError(error)}`,
+          },
+          error,
+          'classify_result'
+        );
+        throw error;
+      }
+      if (classification.outcome === 'unknown') {
+        const message =
+          classification.message ?? 'Application command result has an ambiguous provider outcome';
+        await this.persistFailure(
+          activeIdentity,
+          {
+            failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout,
+            message,
+          },
+          new Error(message),
+          'classify_result'
+        );
+        return {
+          outcome:
+            begin.outcome === ApplicationCommandBeginOutcome.RetryStarted
+              ? ApplicationCommandRunOutcome.Retried
+              : ApplicationCommandRunOutcome.Executed,
+          result,
+          record: await this.readCommittedRecord<TOperation>(activeIdentity),
+        };
+      }
     }
 
     let resultJson: string;
@@ -317,7 +367,7 @@ export class ApplicationCommandRunner {
     identity: { namespace: string; scopeKey: string; commandId: string; attemptCount: number },
     classification: ApplicationCommandErrorClassification,
     originalError: unknown,
-    stage: 'execute' | 'serialize_result' | 'reconcile_not_applied'
+    stage: 'execute' | 'classify_result' | 'serialize_result' | 'reconcile_not_applied'
   ): Promise<void> {
     try {
       await this.ledger.markFailed({

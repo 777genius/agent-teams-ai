@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "P0.W4.NATIVE_PROTOCOL_SCHEMA.V1",
+  "x-processAnchorDrainEvidence": {
+    "authority": "phase-00-controller",
+    "envelopeId": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1",
+    "schemaPath": "docs/research/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.schema.json",
+    "schemaSha256": "764e707edc1148e45f18f1ac70a30b681e2a794b55d6f8946fb5b50601bc099f",
+    "readyResponseType": "ready",
+    "drainedResponseType": "drained",
+    "projection": "exact_required_fields_no_lane_owned_wrapper"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "artifactId",
+    "owner",
+    "status",
+    "protocolVersion",
+    "request",
+    "responses",
+    "failClosed"
+  ],
+  "properties": {
+    "$schema": { "const": "./native-protocol.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "artifactId": { "type": "string", "minLength": 1 },
+    "owner": { "const": "w4" },
+    "status": { "const": "proposed_characterized" },
+    "protocolVersion": { "const": 1 },
+    "request": { "type": "object" },
+    "responses": { "type": "array", "minItems": 1 },
+    "failClosed": { "type": "array", "minItems": 1 },
+    "sharedDrainDto": { "type": "object" },
+    "signalSemantics": { "type": "object" }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "fixtureFormat": "hosted-state-compatibility-fixture/v1",
+  "schemaVersion": 1,
+  "caseId": "corrupted-archive-refusal",
+  "kind": "restore_archive",
+  "evidence": {
+    "publication": "committed",
+    "immutableVerification": { "status": "verified", "inspection": {} },
+    "expectedRestoreSet": {
+      "format": "hosted-state-restore-set/v1",
+      "schemaVersion": 1,
+      "deploymentId": "deployment-fixture",
+      "backupRunId": "backup_fixture",
+      "manifestHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "fenceGeneration": 7,
+      "stateCompatibilityManifest": {
+        "manifestId": "hosted-state-n",
+        "schemaVersion": 3,
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "snapshot": {
+        "deploymentId": "deployment-fixture",
+        "eventEpoch": "event-epoch-fixture",
+        "replayCursor": "cursor-fixture"
+      }
+    },
+    "observedRestoreSet": {
+      "format": "hosted-state-restore-set/v1",
+      "schemaVersion": 1,
+      "deploymentId": "deployment-fixture",
+      "backupRunId": "backup_fixture",
+      "manifestHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "fenceGeneration": 7,
+      "stateCompatibilityManifest": {
+        "manifestId": "hosted-state-n",
+        "schemaVersion": 3,
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "snapshot": {
+        "deploymentId": "deployment-fixture",
+        "eventEpoch": "event-epoch-fixture",
+        "replayCursor": "cursor-fixture"
+      }
+    },
+    "manifestSnapshot": {
+      "deploymentId": "deployment-fixture",
+      "eventEpoch": "event-epoch-fixture",
+      "replayCursor": "cursor-fixture"
+    },
+    "expectedChecksums": [
+      {
+        "entryId": "state.sqlite",
+        "byteLength": 4096,
+        "mode": 384,
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "observedChecksums": [
+      {
+        "entryId": "state.sqlite",
+        "byteLength": 4096,
+        "mode": 384,
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "sqliteIntegrity": "ok"
+  },
+  "expected": {
+    "status": "invalid",
+    "reasons": ["archive_checksum_mismatch"]
+  }
+}

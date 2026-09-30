@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,3 +29,16 @@ async function copyRecursive(sourceDir, targetDir) {
 await rm(distDir, { recursive: true, force: true });
 await mkdir(distDir, { recursive: true });
 await copyRecursive(srcDir, distDir);
+// A dist-only artifact must resolve its own entries, independent of the source tree.
+const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
+manifest.main = 'index.js';
+manifest.exports = {
+  '.': './index.js',
+  './task-semantics': {
+    types: './task-semantics.d.ts',
+    require: './task-semantics.js',
+    default: './task-semantics.js',
+  },
+};
+manifest.files = ['.'];
+await writeFile(path.join(distDir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);

@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "audit-completion-v3",
+  "packetRevision": "phase-00-r2",
+  "status": "completed_audit_rejects_phase_completion",
+  "rootSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "integrationEvidenceSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "evidence": [
+    {
+      "id": "P0.AUDIT.COMPLETION.V3",
+      "path": "docs/research/hosted-web/phase-0/audits/completion/requirement-matrix.json",
+      "proofLevel": "cross_worktree_registry_audited"
+    }
+  ],
+  "overallClassification": "contradicted",
+  "overallDecision": "remediate",
+  "adopt": [
+    "W1 selection-reconciliation-invariants.md only; corrected W1 review holds the other 12 files",
+    "W2 execution topology, runtime-ingress inventory, credential-exposure matrix and canonical estimate, with their four schemas",
+    "W3 state catalog, writer classes, unknown-field catalog, TeamBackupService fault characterization and current-ABI Online Backup spike",
+    "W4 six corrected-review-approved target/lease/workspace/native-proposal and source files only",
+    "W5 event inventory, snapshot-handoff scheduler, fingerprint goldens and estimate only",
+    "W6 observed current-artifact scan as contradiction evidence only"
+  ],
+  "reject": [
+    "Any Phase 0 completion/freeze claim",
+    "W1 claim that four reviewed composition files exhaust every visible team control",
+    "W4 process-anchor adoption while numeric process-group reuse and deterministic PID reuse remain unresolved",
+    "Current W6 standalone artifact as the v1 hosted artifact",
+    "Current W6 terminal-absence claim",
+    "The pre-freeze blocked Phase 1 draft as a valid JIT handoff"
+  ],
+  "remediate": [
+    "Complete W1 visible-control discovery independently of the manual four-file list and repeat its focused review",
+    "Refresh W2, W5 and W6 standard handoffs/results; add W4 handoff/result; ensure no-index checks cover every untracked file",
+    "Fix W4 native-probes cleanup assertion and rerun the owned suite",
+    "Align W4/W6 artifact paths, manifest identity fields and drain/reset generation protocol",
+    "Make every explicit W2 environment key removal-sensitive and add the three missing provider fixture pairs",
+    "Make W5 mutation census omission-detecting against the full mutating source interfaces",
+    "Make W5 effect recovery reload through a fresh runner at every boundary and fix two whitespace errors",
+    "Fix the W6 import-sort lint error and repeat the focused W4/W6 review",
+    "Repair the integrated lane ledger and consume corrected review results",
+    "Repeat the omitted 0A.4 commands and post-prerequisite baseline evidence before any completion claim"
+  ],
+  "furtherProof": [
+    "Final non-root image, shared-volume two-container/manual contender, seccomp/init/UID/filesystem and native artifact hashes/probes",
+    "Final Node worker Online Backup/recovery topology",
+    "Final HTTPS edge/private listener/trusted CIDR auth/proxy schedules and real durable keyring/SQLite behavior",
+    "Official Fastify-5 @fastify/cookie compatibility and exact pinned dependency",
+    "Controller estimate variance/deduplication, all freeze decisions, post-adoption narrow/required repository gates and completion report"
+  ],
+  "registryDecisions": {
+    "originalW1ThroughW6": "reject",
+    "originalReciprocalReviews": "adopt_as_historical_rejection_evidence",
+    "remediationW1": "remediate; corrected review approves one file and rejects lane adoption",
+    "remediationW2": "remediate; corrected review approves eight evidence/schema files and rejects lane adoption",
+    "remediationW3": "adopt all 16 files per completed corrected review",
+    "remediationW4": "remediate; corrected review approves six files and rejects lane/pair adoption",
+    "remediationW5": "remediate; corrected review approves four evidence files and holds 13",
+    "remediationW6": "remediate; corrected review approves observed artifact scan only and rejects lane/pair adoption",
+    "phase0Freeze": "reject"
+  },
+  "checks": [
+    {
+      "command": "W1 focused Vitest via read-only-safe temp Vite cache",
+      "exitCode": 0,
+      "result": "7/7"
+    },
+    { "command": "W2 scanner and focused Vitest", "exitCode": 0, "result": "scanner pass; 8/8" },
+    {
+      "command": "W3 verifier and focused Node tests",
+      "exitCode": 0,
+      "result": "verifier pass; 1/1 plus 7/7"
+    },
+    {
+      "command": "W4 current-host native probes and evidence scanner",
+      "exitCode": 0,
+      "result": "current host only; finalShapeContainer=false"
+    },
+    {
+      "command": "W4 focused Vitest",
+      "exitCode": 1,
+      "result": "2/3; stale cleanup exact-object assertion"
+    },
+    {
+      "command": "W5 generator check and focused Node tests",
+      "exitCode": 0,
+      "result": "9 evidence files; 7/7"
+    },
+    {
+      "command": "W6 verifier and focused Vitest",
+      "exitCode": 0,
+      "result": "fixture/contract verifier pass; 25/25"
+    },
+    {
+      "command": "scope-corrected W1/W2 remediation review",
+      "exitCode": 0,
+      "result": "completed; remediate/reject both; 9 exact files approved; 6 findings"
+    },
+    {
+      "command": "scope-corrected W3/W5 remediation review",
+      "exitCode": 0,
+      "result": "completed; adopt all W3, remediate W5; 4 W5 files approved; 4 findings"
+    },
+    {
+      "command": "scope-corrected W4/W6 remediation review",
+      "exitCode": 0,
+      "result": "completed; remediate both/reject pair; 7 exact files approved; W4 test and W6 lint red"
+    },
+    {
+      "command": "git status --short --branch in integration worktree",
+      "exitCode": 0,
+      "result": "clean at 0e8431b"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null over each untracked audit artifact",
+      "exitCode": 1,
+      "result": "no whitespace diagnostics; no-index returns 1 because each file differs from /dev/null"
+    },
+    {
+      "command": "jq validation and matrix vocabulary/count checks",
+      "exitCode": 0,
+      "result": "valid JSON; 119 classified rows; satisfied=48, contradicted=28, weak=31, missing=12; adopt=48, reject=6, remediate=37, further-proof=28"
+    }
+  ],
+  "scope": {
+    "integrationPerformed": false,
+    "pushed": false,
+    "broadOrFinalGateRun": false,
+    "phase1WorkPerformed": false,
+    "terminalImplementationPerformed": false,
+    "productionSourceChanged": false
+  },
+  "nextAction": "Controller should consume this audit as a remediation/further-proof gate, not as Phase 0 completion."
+}

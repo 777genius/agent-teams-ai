@@ -120,10 +120,7 @@ export function useUnreadBelowViewport({
     () => collectUnreadCandidates(rows, readSet, getMessageKey, unreadSnapshot),
     [rows, readSet, getMessageKey, unreadSnapshot]
   );
-  const rowIndexByKey = useMemo(
-    () => new Map(rows.map((row, index) => [row.key, index])),
-    [rows]
-  );
+  const rowIndexByKey = useMemo(() => new Map(rows.map((row, index) => [row.key, index])), [rows]);
 
   useLayoutEffect(() => {
     if (!onChange) return;
@@ -169,7 +166,8 @@ export function useUnreadBelowViewport({
     measure();
     scroll.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
-    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     resizeObserver?.observe(scroll);
     resizeObserver?.observe(content);
     const footer = findConversationFooter(scroll);

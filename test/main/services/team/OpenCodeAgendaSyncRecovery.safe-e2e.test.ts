@@ -1,5 +1,6 @@
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
-import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -14,10 +15,12 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
+
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import type { MemberWorkSyncNudgeDeliveryWakePort } from '@features/member-work-sync/core/application/ports';
 import type { InboxMessage, TaskRef } from '@shared/types/team';
+import type { Mock } from 'vitest';
 
 const tempRoots: string[] = [];
 
@@ -395,7 +398,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
         expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
         expect(nudges[0]?.text).toContain('Do not search the filesystem');
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: { state: 'collecting_shadow_data' },
+          deliveryReadiness: { state: 'collecting_shadow_data' },
         });
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
           teamName,

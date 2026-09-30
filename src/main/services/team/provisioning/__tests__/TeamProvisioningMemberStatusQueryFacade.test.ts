@@ -38,6 +38,9 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   };
 
   protected readonly compatibilityDelegation = {
+    applicationFeature: {
+      getTeamAgentRuntimeSnapshot: this.getTeamAgentRuntimeSnapshotMock,
+    },
     configFacade: {
       readConfigSnapshot: this.readConfigSnapshotMock,
     },
@@ -178,6 +181,30 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
     expect(facade.readConfigSnapshotMock).toHaveBeenCalledWith('alpha');
     expect(facade.getMembersMock).toHaveBeenCalledWith('alpha');
     expect(facade.getTeamAgentRuntimeSnapshotMock).toHaveBeenCalledWith('alpha');
+  });
+
+  it('returns the exact composed runtime snapshot promise', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const snapshot = { teamName: 'alpha' } as unknown as TeamAgentRuntimeSnapshot;
+    const promise = Promise.resolve(snapshot);
+    facade.getTeamAgentRuntimeSnapshotMock.mockReturnValueOnce(promise);
+
+    const result = facade.getTeamAgentRuntimeSnapshot('alpha');
+
+    expect(result).toBe(promise);
+    await expect(result).resolves.toBe(snapshot);
+  });
+
+  it('forwards runtime snapshot rejection without wrapping its promise', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const error = new Error('snapshot failed');
+    const promise = Promise.reject<TeamAgentRuntimeSnapshot>(error);
+    facade.getTeamAgentRuntimeSnapshotMock.mockReturnValueOnce(promise);
+
+    const result = facade.getTeamAgentRuntimeSnapshot('alpha');
+
+    expect(result).toBe(promise);
+    await expect(result).rejects.toBe(error);
   });
 
   it('keeps member launch grace timers scoped to member status handling', () => {

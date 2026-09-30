@@ -116,9 +116,7 @@ export function collectThreadUnreadSnapshotKeys(args: {
   openedAt: number;
   existing?: ReadonlySet<string>;
 }): Set<string> {
-  const next = new Set(
-    [...(args.existing ?? [])].filter((key) => !args.readSetNow?.has(key))
-  );
+  const next = new Set([...(args.existing ?? [])].filter((key) => !args.readSetNow?.has(key)));
   for (const message of args.messages) {
     const timestamp = Date.parse(message.timestamp);
     if (args.openedAt > 0 && Number.isFinite(timestamp) && timestamp > args.openedAt) {

@@ -23,6 +23,7 @@ import {
   type TeamProvisioningCheckpointRun,
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
+import { ensureProvisioningTeamDirectory } from './TeamProvisioningRunWriterAuthority';
 
 import type {
   TeamRuntimeLaunchArgsPlan,
@@ -311,7 +312,7 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
   const teamDir = path.join(getTeamsBasePath(), request.teamName);
   const tasksDir = path.join(getTasksBasePath(), request.teamName);
-  await fs.promises.mkdir(teamDir, { recursive: true });
+  await ensureProvisioningTeamDirectory(request.teamName);
   await fs.promises.mkdir(tasksDir, { recursive: true });
   await teamMetaStore.writeMeta(
     request.teamName,

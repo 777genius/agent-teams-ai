@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-freeze-fix-index-d1",
+  "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
+  "status": "done",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+  "scope": {
+    "ownedDirectory": "docs/research/hosted-web/phase-0/freeze/current-canonical",
+    "ownedHandoff": ".codex-handoff/phase-00-freeze-fix-index-d1.json",
+    "immutableHistoricalPathsEdited": false
+  },
+  "resolutions": [
+    {
+      "findingId": "P0.C1.IDENTITY.001",
+      "status": "resolved",
+      "evidence": "A schema-validated controller index maps exactly one current identity for every lane W1-W6, with one phaseStartSha and exact integration/handoff provenance."
+    },
+    {
+      "findingId": "P0.C1.STALE.001",
+      "status": "resolved",
+      "evidence": "Controller-owned current review, decision, evidence and supersession indexes replace stale current-state interpretations while preserving all historical files byte-for-byte."
+    }
+  ],
+  "w2PhaseStartCorrection": {
+    "historicalIncorrectClaim": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+    "authoritativePhaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+    "historicalClaimDisposition": "explicitly-superseded-not-rewritten",
+    "authorityPath": "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-freeze-fix-index-d1.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/canonical-index.schema.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/decision-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/fixtures/duplicate-id.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/fixtures/omission.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/fixtures/stale-hash.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/negative-fixture.schema.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json",
+    "docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs"
+  ],
+  "checks": [
+    {
+      "command": "node docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs --include-controller-external",
+      "exitCode": 0,
+      "result": "5 indexes schema-valid; 40 unique evidence IDs and repository/controller-external provenance hashes valid; omission, stale-hash and duplicate-ID negatives failed with expected diagnostics"
+    },
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-0/freeze/current-canonical",
+      "exitCode": 0,
+      "result": "all matched files use Prettier style"
+    },
+    {
+      "command": "pnpm lint:fast:files -- docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "no tracked whitespace diagnostics; all new current-canonical files also passed Prettier"
+    }
+  ],
+  "blockers": [],
+  "nextAction": "controller integration"
+}

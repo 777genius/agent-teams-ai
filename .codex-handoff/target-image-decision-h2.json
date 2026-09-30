@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "target-image-decision-h2",
+  "status": "ready_for_integration",
+  "canonicalSource": {
+    "commit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+    "tree": "4bc04a743c20ea48e06ada55c761d03881117cac"
+  },
+  "decision": {
+    "id": "P0.D.TARGET_IMAGE",
+    "state": "accepted",
+    "outcome": "capability_narrowed",
+    "phase0Gate": "closed_by_accepted_narrowing",
+    "exactImageEarliestOwner": "phase-5",
+    "phase5AdmissionGate": "fail_closed"
+  },
+  "proof": {
+    "path": "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json",
+    "recordType": "phase-0-target-image-capability-narrowing-decision",
+    "normalizedFactSha256": "97f783c0c98b2437b368902f650d5558ca636f84ae6c9bbf0a176e1766e30ff0",
+    "canonicalSourceGapCount": 51,
+    "gapGroups": {
+      "composition": 21,
+      "image": 4,
+      "inventory": 3,
+      "profile": 12,
+      "provider_runtime": 2,
+      "terminal_negative": 9
+    },
+    "currentCandidateTerminalAbsencePasses": false,
+    "currentCandidateTerminalViolationCount": 4,
+    "phase5Admitted": false
+  },
+  "currentCommitAuthority": {
+    "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "recordType": "w6-current-commit-artifact-scan",
+    "canonicalSourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+    "semanticSha256": "d91ceece21873f48f23a121cf1a9987534a6197017d350071b7c26a2e70b081c",
+    "proofLevel": "targeted_current_commit_build_observed",
+    "targetedBuildCompared": true
+  },
+  "historicalProvenance": {
+    "path": "docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json",
+    "relationship": "historical_only_not_current_commit_authority"
+  },
+  "drainEnvelopeConsumer": {
+    "envelopeId": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1",
+    "schemaPath": "docs/research/hosted-web/phase-0/w4-w6-contract/drain-evidence-envelope.schema.json",
+    "schemaSha256": "764e707edc1148e45f18f1ac70a30b681e2a794b55d6f8946fb5b50601bc099f",
+    "authority": "phase-00-controller",
+    "projection": "exact_required_fields_no_lane_owned_wrapper"
+  },
+  "artifactEvolution": {
+    "assumption": "The existing standalone source/build path may evolve in place, but the exact canonical artifact is rejected and evolution remains unproved; any resulting candidate requires a separately reviewed packet."
+  },
+  "proofLevels": {
+    "artifactInventory": "targeted_current_commit_build_observed",
+    "currentTerminalRuleEvaluation": "targeted_current_commit_build_observed"
+  },
+  "provenanceModel": {
+    "immutableSourceIdentity": "canonical commit/tree and authority bytes read from the canonical commit",
+    "postCommitEvidenceIdentity": "repositoryHeadAtVerification is reported separately and must equal or descend from the canonical source",
+    "comparison": "normalized deterministic facts and explicit authority provenance",
+    "liveDockerStateCompared": false,
+    "dockerSocketAssumed": false
+  },
+  "reviewFindingResolutions": [
+    {
+      "id": "TIP-R1-001",
+      "status": "resolved",
+      "resolution": "Immutable canonical source commit/tree no longer changes with repository HEAD; descendant evidence identity is separate and regression tested."
+    },
+    {
+      "id": "TIP-R1-002",
+      "status": "resolved",
+      "resolution": "No live Docker probe participates in deterministic decision collection or comparison, and no Docker CLI, daemon or socket is assumed."
+    },
+    {
+      "id": "TIP-R1-003",
+      "status": "resolved",
+      "resolution": "The report states the tested scope accurately; focused tests now mutate every image identity/profile field and every native provenance field."
+    }
+  ],
+  "scope": {
+    "disposition": "standalone_artifact_rejected_for_hosted_v1",
+    "realUserProjectsOpened": false,
+    "rawCredentialsRecorded": false,
+    "dockerSocketUsed": false,
+    "phase1AuthorizedOrImplemented": false,
+    "hostedCapabilityEnabled": false,
+    "terminalCapabilityEnabled": false
+  },
+  "changedPaths": [
+    ".codex-handoff/target-image-decision-h2.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+    "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json",
+    "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/prove-target-image-admission.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+    "test/architecture/hosted-web/phase-0/auth-artifacts/target-image-admission.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "git rev-parse HEAD; git rev-parse 42ec333848e29e97c41699b9fed73ed199740e3f^{tree}",
+      "exitCode": 0,
+      "result": "Exact canonical source commit 42ec333848e29e97c41699b9fed73ed199740e3f and tree 4bc04a743c20ea48e06ada55c761d03881117cac confirmed."
+    },
+    {
+      "command": "TMPDIR=/tmp pnpm exec vitest run test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts test/architecture/hosted-web/phase-0/auth-artifacts/target-image-admission.test.ts test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "result": "Three files and 94 tests passed, including 37 target-image narrowing/admission tests."
+    },
+    {
+      "command": "TMPDIR=/tmp node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "Combined W6 and target-image verifier passed, including normalized source provenance, the descendant relationship, all 51 Phase 5 obligations, current standalone rejection and terminal absence."
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/prove-target-image-admission.mjs --require-admission",
+      "exitCode": 2,
+      "result": "Expected fail-closed negative: Phase 5 admission remains false with exactly 51 canonical-source gaps."
+    },
+    {
+      "command": "pnpm exec tsc --noEmit <focused strict target-image test options>",
+      "exitCode": 0,
+      "result": "The focused target-image test compiles strictly without diagnostics."
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 2,
+      "result": "The repository-wide check retains seven pre-existing Phase 0 test diagnostics: five in auth-artifacts-spike.test.ts, one in evidence-scanner.test.ts and one in scan-runtime-surfaces.test.ts. The new target-image test has no diagnostic and its focused strict compile passes."
+    },
+    {
+      "command": "pnpm lint:fast:files -- <four changed script/test files>",
+      "exitCode": 0,
+      "result": "Focused fast lint passed."
+    },
+    {
+      "command": "pnpm exec prettier --check <all 11 changed paths>",
+      "exitCode": 0,
+      "result": "All changed paths use Prettier style."
+    },
+    {
+      "command": "git diff --check; exact scope/diff/JSON/secret/path scans",
+      "exitCode": 0,
+      "result": "No whitespace, out-of-scope path, malformed JSON, secret-like value, raw credential or real-user-project path finding."
+    }
+  ],
+  "remainingPhase5Requirements": "Instantiate one reviewed immutable production image and satisfy every preserved admission obligation before Phase 5 routes/capabilities or Phase 6 non-loopback mutations are admitted."
+}

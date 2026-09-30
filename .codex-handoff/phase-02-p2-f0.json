@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.F0.IDENTITY",
+  "laneId": "p2-f0-identity",
+  "packetRevision": "phase-02-jit-router-r1",
+  "routerBaseSha": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+  "baseSha": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+  "status": "verified",
+  "disposition": "ACCEPT",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.F0.CANONICAL_IDENTITY",
+      "path": "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.F0.IDENTITY_COMPATIBILITY",
+      "path": "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": ["P2.F0.CANONICAL_IDENTITY", "P2.F0.IDENTITY_COMPATIBILITY"],
+  "declaredWritablePaths": [
+    "src/shared/contracts/hosted/identifiers.ts",
+    "src/shared/contracts/hosted/index.ts",
+    "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+    "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+    ".codex-handoff/phase-02-p2-f0.json"
+  ],
+  "changedPaths": [
+    "src/shared/contracts/hosted/identifiers.ts",
+    "src/shared/contracts/hosted/index.ts",
+    "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+    "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+    ".codex-handoff/phase-02-p2-f0.json"
+  ],
+  "changedPathCount": 5,
+  "authority": {
+    "integratedRouterCommit": "39f98d62089a345c58f10bead0e5610b5c2a0b2d",
+    "integratedRouterParent": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+    "integratedRouterPathCount": 12,
+    "integratedRouterMatchesExclusiveOwnership": true,
+    "initialWorktreeClean": true,
+    "phaseOnePredecessorDisposition": "ACCEPT",
+    "phaseOnePredecessorFindingCounts": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    }
+  },
+  "contract": {
+    "teamIdFormat": "team_ followed by exactly 32 lowercase hexadecimal characters",
+    "workspaceIdFormat": "workspace_ followed by exactly 32 lowercase hexadecimal characters",
+    "opaqueBrandedTypes": true,
+    "compileTimeKindSeparation": true,
+    "runtimeCrossKindRejection": true,
+    "byteStableJsonRoundTrip": true,
+    "whitespaceRejected": true,
+    "nameLikeValuesRejected": true,
+    "pathLikeValuesRejected": true,
+    "phaseOneSyntheticParserPreserved": true,
+    "identityDerivationIntroduced": false,
+    "filesystemOrPersistenceIntroduced": false,
+    "clockOrRandomnessIntroduced": false,
+    "transportOrCompositionIntroduced": false
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 36,
+      "testsTotal": 36
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "seven inherited Phase 0 diagnostics exactly match accepted Phase 1 baseline; zero diagnostic names an authorized P2.F0 path"
+    },
+    {
+      "command": "pnpm exec prettier --check src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts .codex-handoff/phase-02-p2-f0.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short --untracked-files=all",
+      "exitCode": 0,
+      "classification": "exactly the five declared writable paths are modified or untracked"
+    },
+    {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts .codex-handoff/phase-02-p2-f0.json",
+      "exitCode": 0,
+      "classification": "scanner command text and authority terminology only; no secret, credential, cookie, bearer, token, password, or authorization payload"
+    },
+    {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts .codex-handoff/phase-02-p2-f0.json",
+      "exitCode": 0,
+      "classification": "scanner command and classification text only; no private, home, temporary, task-temporary, or real-project path value"
+    }
+  ],
+  "typecheckClassification": {
+    "observedDiagnosticCount": 7,
+    "inheritedDiagnosticCount": 7,
+    "newDiagnosticCount": 0,
+    "baselineSources": [
+      "docs/research/hosted-web/phase-1/integration-report.json",
+      "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+    ],
+    "diagnostics": [
+      "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts: TS7016 at 25:8, TS7031 at 66:31, TS18046 at 117:68, TS7031 at 413:48, TS7031 at 733:10",
+      "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts: TS7016 at 12:8",
+      "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts: TS2352 at 162:44"
+    ]
+  },
+  "proofs": {
+    "P2.F0.CANONICAL_IDENTITY": {
+      "proofLevel": "target_verified",
+      "positiveCases": [
+        "TeamId parse",
+        "WorkspaceId parse",
+        "compile-time type separation",
+        "JSON serialize/reparse byte stability"
+      ],
+      "negativeCases": [
+        "unknown non-string values",
+        "short and long values",
+        "uppercase values",
+        "leading, trailing and embedded whitespace",
+        "display names and slugs",
+        "POSIX and Windows path-like values",
+        "TeamId/WorkspaceId cross-kind values"
+      ]
+    },
+    "P2.F0.IDENTITY_COMPATIBILITY": {
+      "proofLevel": "target_verified",
+      "positiveCases": [
+        "all frozen Phase 1 identifier fixtures",
+        "explicit synthetic TeamId parser"
+      ],
+      "negativeCases": [
+        "Phase 1 cross-kind value",
+        "synthetic fixture ID rejected by canonical TeamId parser"
+      ]
+    }
+  },
+  "selfReview": {
+    "completeDiffReread": true,
+    "cleanArchitectureConfirmed": true,
+    "dddIdentitySemanticsConfirmed": true,
+    "solidBoundedParserResponsibilityConfirmed": true,
+    "browserSafeValueOnlyContractConfirmed": true,
+    "safeNonReflectiveErrorsConfirmed": true,
+    "phaseOneCompatibilityConfirmed": true,
+    "noMutableLegacyIdentityDerivationConfirmed": true,
+    "noForbiddenDependenciesConfirmed": true,
+    "exactFivePathScopeConfirmed": true,
+    "secretAndPrivatePathClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "canonical identifier allocation, uniqueness, entropy, or collision handling",
+    "restart, rename, display-name-change, remount, persistence, registry, or legacy-adoption stability",
+    "independent P2.R0 architecture/security acceptance",
+    "foundation integration, push, remote equality, successor launch, or Phase 2 milestone acceptance",
+    "production filesystem, persistence, transport, Electron, main-process, provider, or composition behavior"
+  ],
+  "blockers": [],
+  "nextAction": "P2.R0.ARCH_SECURITY"
+}

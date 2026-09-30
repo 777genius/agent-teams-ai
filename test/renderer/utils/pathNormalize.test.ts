@@ -47,12 +47,12 @@ describe('pathNormalize task counts', () => {
     const counts = buildTaskCountsByOwner([
       {
         owner: 'jack',
-        status: 'in_progress',
+        status: 'completed',
         kanbanColumn: 'approved',
       },
       {
         owner: 'jack',
-        status: 'in_progress',
+        status: 'completed',
         reviewState: 'approved',
       },
     ]);

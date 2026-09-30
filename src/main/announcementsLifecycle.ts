@@ -3,12 +3,12 @@ import {
   type AnnouncementsFeature,
   type AnnouncementWindowContext,
   createAnnouncementsFeature,
-  registerAnnouncementsIpc,
 } from '@features/announcements/main';
 import { type BrowserWindow, type IpcMainInvokeEvent, powerMonitor } from 'electron';
 
 import { safeSendToRenderer } from './utils/safeWebContentsSend';
 import { announcementsSourcePolicy } from './announcementsSourcePolicy';
+import { registerAnnouncementsIpc } from './registerAnnouncementsIpc';
 
 import type { AnnouncementsProfileProbe } from './announcementsProfileProbe';
 

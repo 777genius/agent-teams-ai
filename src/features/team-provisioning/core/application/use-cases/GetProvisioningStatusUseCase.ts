@@ -1,4 +1,4 @@
-import type { TeamProvisioningProgress } from '@shared/types/team';
+import type { TeamProvisioningProgress } from '../models/TeamProvisioningModels';
 
 export interface ProvisioningStatusReaderPort {
   findByRunId(runId: string): Promise<TeamProvisioningProgress | undefined>;

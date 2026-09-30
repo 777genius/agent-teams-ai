@@ -10,13 +10,15 @@ import {
   sameMemberName,
 } from '../../../core/domain';
 
-import type { TeamKanbanManager } from '@main/services/team/TeamKanbanManager';
-import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
+import type {
+  MemberWorkSyncKanbanReaderPort,
+  MemberWorkSyncTaskReaderPort,
+} from '../../composition/memberWorkSyncPublicContracts';
 import type { TeamTask } from '@shared/types';
 
 export interface MemberWorkSyncTaskImpactResolverDeps {
-  taskReader: Pick<TeamTaskReader, 'getTasks'>;
-  kanbanManager: Pick<TeamKanbanManager, 'getState'>;
+  taskReader: MemberWorkSyncTaskReaderPort;
+  kanbanManager: MemberWorkSyncKanbanReaderPort;
   activeMemberSource: {
     loadActiveMemberNames(teamName: string): Promise<string[]>;
   };

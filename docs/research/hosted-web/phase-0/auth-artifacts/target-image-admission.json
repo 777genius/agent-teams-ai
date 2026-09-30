@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 2,
+  "recordType": "phase-0-target-image-capability-narrowing-decision",
+  "decision": {
+    "id": "P0.D.TARGET_IMAGE",
+    "state": "accepted",
+    "outcome": "capability_narrowed",
+    "phase0Gate": "closed_by_accepted_narrowing",
+    "exactImageEarliestOwner": "phase-5",
+    "rationale": "Phase 0 characterizes source and contracts but does not implement the production composition that Phase 5 must build; exact-image admission before Phase 5 would be circular.",
+    "phase0Capability": "Preserve the complete fail-closed admission contract and canonical-source gaps without claiming an image exists.",
+    "deferredCapability": "No hosted route, mutation, provider runtime, credential canary, production composition, or terminal-negative image readiness is admitted."
+  },
+  "sourceIdentity": {
+    "canonicalCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+    "canonicalTree": "4bc04a743c20ea48e06ada55c761d03881117cac",
+    "verificationRelationship": "repository_head_is_source_or_descendant",
+    "evidenceIdentityPolicy": "The verifier reports repositoryHeadAtVerification separately; it never substitutes that mutable commit into this immutable source decision."
+  },
+  "scope": {
+    "sandboxAndSyntheticFixturesOnly": true,
+    "realUserProjectsOpened": false,
+    "dockerSocketRequiredForPhase0Decision": false,
+    "liveContainerRuntimeObservationInDeterministicFacts": false,
+    "phase1AuthorizedOrImplemented": false
+  },
+  "authorities": [
+    {
+      "path": "docker/Dockerfile",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "74d803a3898f8c274979af1183f9f62a5aa819331865811b15364e91f24f9eb7"
+    },
+    {
+      "path": "docker/docker-compose.yml",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "fde5e1358a15e15efe6ce2a05582ed4562fa5a17eeb44c55bd9fb2f88fc41c09"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "e93deb209a9c3b4f569f94d427fc45b6afd22c769ef4eea393ea7a80b5113bb8"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "83fede2fb9ce5e663963af951f7bac0fb24ee636024ac767108a7045114a9eec"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "40650b7ec3549a30419932fa43330b1484468c393ddef0555438f9f308c97e3a"
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+      "sourceCommit": "42ec333848e29e97c41699b9fed73ed199740e3f",
+      "sha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f"
+    }
+  ],
+  "canonicalSourceFacts": {
+    "currentCandidate": {
+      "dockerfileBaseDigestPinned": false,
+      "finalImageDigestDeclared": false,
+      "nonRootUserDeclared": false,
+      "initEntrypointDeclared": false,
+      "controllerArtifactsCopied": false,
+      "terminalAbsence": {
+        "passes": false,
+        "violations": [
+          "terminal_sdk_dependencies_in_production_manifest",
+          "terminal_node_install_stub",
+          "unpruned_production_node_modules",
+          "terminal_service_in_server_bundle"
+        ]
+      }
+    },
+    "controllerArtifacts": [
+      {
+        "artifactId": "agent-teams-instance-lock",
+        "finalImagePath": "/app/bin/agent-teams-instance-lock",
+        "binaryDigest": null,
+        "builderImageDigest": null,
+        "compilerIdentity": null,
+        "uid": null,
+        "gid": null,
+        "mode": null
+      },
+      {
+        "artifactId": "agent-teams-process-anchor",
+        "finalImagePath": "/app/bin/agent-teams-process-anchor",
+        "binaryDigest": null,
+        "builderImageDigest": null,
+        "compilerIdentity": null,
+        "uid": null,
+        "gid": null,
+        "mode": null
+      },
+      {
+        "artifactId": "agent-teams-workspace-guard",
+        "finalImagePath": "/app/bin/agent-teams-workspace-guard",
+        "binaryDigest": null,
+        "builderImageDigest": null,
+        "compilerIdentity": null,
+        "uid": null,
+        "gid": null,
+        "mode": null
+      }
+    ]
+  },
+  "providerRuntimeCanaryFixture": {
+    "status": "passed_fixture_only",
+    "executionBoundary": "synthetic_environment_records_no_project_opened",
+    "rawCredentialValueRecorded": false,
+    "redactionToken": "[REDACTED]",
+    "records": [
+      {
+        "provider": "anthropic",
+        "expectedKey": "ANTHROPIC_API_KEY",
+        "expectedCanaryPresent": true,
+        "crossProviderCanaryKeys": [],
+        "canaryRendering": {
+          "ANTHROPIC_API_KEY": "[REDACTED]"
+        },
+        "rawCredentialValueRecorded": false,
+        "fixtureEvaluationPassed": true
+      },
+      {
+        "provider": "codex",
+        "expectedKey": "OPENAI_API_KEY",
+        "expectedCanaryPresent": true,
+        "crossProviderCanaryKeys": [],
+        "canaryRendering": {
+          "OPENAI_API_KEY": "[REDACTED]"
+        },
+        "rawCredentialValueRecorded": false,
+        "fixtureEvaluationPassed": true
+      },
+      {
+        "provider": "gemini",
+        "expectedKey": "GEMINI_API_KEY",
+        "expectedCanaryPresent": true,
+        "crossProviderCanaryKeys": [],
+        "canaryRendering": {
+          "GEMINI_API_KEY": "[REDACTED]"
+        },
+        "rawCredentialValueRecorded": false,
+        "fixtureEvaluationPassed": true
+      },
+      {
+        "provider": "opencode",
+        "expectedKey": "OPENCODE_CONFIG_CONTENT",
+        "expectedCanaryPresent": true,
+        "crossProviderCanaryKeys": [],
+        "canaryRendering": {
+          "OPENCODE_CONFIG_CONTENT": "[REDACTED]"
+        },
+        "rawCredentialValueRecorded": false,
+        "fixtureEvaluationPassed": true
+      }
+    ],
+    "limitation": "This fixture proves only deterministic admission-harness behavior; it is not target-image provider execution."
+  },
+  "phase5AdmissionGate": {
+    "state": "fail_closed",
+    "admitted": false,
+    "admissionRequiredBefore": [
+      "phase-5 route admission",
+      "phase-5 capability advertisement",
+      "phase-6 non-loopback mutation enablement"
+    ],
+    "terminalSensitiveSurfaces": [
+      "capabilities",
+      "files",
+      "migrations",
+      "packages",
+      "ports",
+      "processes",
+      "rendererChunks",
+      "routes",
+      "volumes"
+    ],
+    "canonicalSourceGapCount": 51,
+    "canonicalSourceGaps": [
+      "composition:agent-teams-instance-lock:binary_digest_missing",
+      "composition:agent-teams-instance-lock:builder_image_digest_missing",
+      "composition:agent-teams-instance-lock:compiler_identity_missing",
+      "composition:agent-teams-instance-lock:gid_missing",
+      "composition:agent-teams-instance-lock:mode_missing",
+      "composition:agent-teams-instance-lock:not_in_file_inventory",
+      "composition:agent-teams-instance-lock:uid_missing",
+      "composition:agent-teams-process-anchor:binary_digest_missing",
+      "composition:agent-teams-process-anchor:builder_image_digest_missing",
+      "composition:agent-teams-process-anchor:compiler_identity_missing",
+      "composition:agent-teams-process-anchor:gid_missing",
+      "composition:agent-teams-process-anchor:mode_missing",
+      "composition:agent-teams-process-anchor:not_in_file_inventory",
+      "composition:agent-teams-process-anchor:uid_missing",
+      "composition:agent-teams-workspace-guard:binary_digest_missing",
+      "composition:agent-teams-workspace-guard:builder_image_digest_missing",
+      "composition:agent-teams-workspace-guard:compiler_identity_missing",
+      "composition:agent-teams-workspace-guard:gid_missing",
+      "composition:agent-teams-workspace-guard:mode_missing",
+      "composition:agent-teams-workspace-guard:not_in_file_inventory",
+      "composition:agent-teams-workspace-guard:uid_missing",
+      "image:immutable_config_digest_missing",
+      "image:immutable_digest_missing",
+      "image:immutable_manifest_digest_missing",
+      "image:pinned_base_image_missing",
+      "inventory:completeness_unproved",
+      "inventory:image_digest_binding_mismatch",
+      "inventory:scanner_digest_missing",
+      "profile:capability_drop_all_unproved",
+      "profile:debian_slim_unproved",
+      "profile:launcher_before_node_unproved",
+      "profile:linux_x64_unproved",
+      "profile:minimal_init_unproved",
+      "profile:no_new_privileges_unproved",
+      "profile:node_24_unproved",
+      "profile:non_root_gid_missing",
+      "profile:non_root_uid_missing",
+      "profile:read_only_root_unproved",
+      "profile:seccomp_digest_missing",
+      "profile:startup_order_missing",
+      "provider_runtime:canary_record_invalid",
+      "provider_runtime:target_image_canaries_unproved",
+      "terminal_negative:unscanned_surface:capability",
+      "terminal_negative:unscanned_surface:file",
+      "terminal_negative:unscanned_surface:migration",
+      "terminal_negative:unscanned_surface:package",
+      "terminal_negative:unscanned_surface:port",
+      "terminal_negative:unscanned_surface:process",
+      "terminal_negative:unscanned_surface:renderer_chunk",
+      "terminal_negative:unscanned_surface:route",
+      "terminal_negative:unscanned_surface:volume"
+    ],
+    "terminalNegative": false,
+    "requiredEvidence": "One reviewed immutable target-image manifest/profile and an instantiated digest with complete digest-bound inventory, native provenance/ownership/modes, startup-order proof, target-executed provider canaries, and terminal-negative scans over every named surface."
+  },
+  "claims": {
+    "exactImageInstantiated": false,
+    "exactHostedCompositionProved": false,
+    "providerRuntimeTargetProved": false,
+    "credentialCanariesTargetProved": false,
+    "terminalNegativeAdmission": false,
+    "phase1AuthorizedOrImplemented": false
+  }
+}

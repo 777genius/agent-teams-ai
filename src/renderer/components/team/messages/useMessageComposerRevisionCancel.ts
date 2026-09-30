@@ -10,7 +10,12 @@ type RevisionDraft = Pick<
 
 export function useMessageComposerRevisionCancel(
   draft: RevisionDraft,
-  onCancel: ((revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => boolean | void | Promise<boolean>) | undefined,
+  onCancel:
+    | ((
+        revision?: MessageRevisionContext | null,
+        address?: ComposerDraftAddress
+      ) => boolean | void | Promise<boolean>)
+    | undefined,
   focusComposer: () => void
 ): () => Promise<void> {
   const currentTargetRef = useRef({
@@ -33,7 +38,8 @@ export function useMessageComposerRevisionCancel(
       current.addressKey !== target.addressKey ||
       current.loadGeneration !== target.loadGeneration ||
       current.requestId !== target.requestId
-    ) return;
+    )
+      return;
     draft.clearRevision();
     focusComposer();
   }, [draft, focusComposer, onCancel]);

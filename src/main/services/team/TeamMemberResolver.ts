@@ -112,7 +112,10 @@ export class TeamMemberResolver {
       leadProviderBackendId?: TeamProviderBackendId | null;
       leadFastMode?: TeamMember['fastMode'];
       leadResolvedFastMode?: boolean | null;
-      leadRuntimeSettings?: Pick<TeamMemberSnapshot, 'model' | 'effort' | 'resolvedFastMode'>;
+      leadRuntimeSettings?: Pick<
+        TeamMemberSnapshot,
+        'model' | 'effort' | 'configuredRuntimeSettings' | 'resolvedFastMode'
+      >;
     }
   ): TeamMemberSnapshot[] {
     const names = new Set<string>();

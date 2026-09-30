@@ -1,0 +1,1563 @@
+{
+  "schemaVersion": 1,
+  "historicalCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+  "canonicalBaseSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "sourceFiles": [
+    {
+      "path": "docs/hosted-web-e2e-completion-plan.md",
+      "tokens": [
+        "provider/agent process receives"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+      "tokens": [],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/features/codex-account/.historical-fixture.ts",
+      "tokens": [],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/features/member-work-sync/.historical-fixture.ts",
+      "tokens": [],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment.ts",
+      "tokens": [
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT"
+      ],
+      "environmentKeys": [
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
+      "tokens": [
+        "export function planTeamRuntimeLanes",
+        "mode: 'mixed_opencode_side_lanes'",
+        "mode: 'primary_only'",
+        "mode: 'pure_opencode'",
+        "mode: 'pure_opencode_solo'",
+        "mode: 'pure_opencode_worktree_root_lanes'",
+        "reason: 'unsupported_opencode_led_mixed_team'"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/features/workspace-trust/main/infrastructure/workspaceTrustPreflightEnv.ts",
+      "tokens": [
+        "AGENT_TEAMS_MCP_",
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_",
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER",
+        "CLAUDE_TEAM_BOOTSTRAP_",
+        "STRIP_ENV_PREFIXES"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER"
+      ],
+      "environmentPrefixes": [
+        "AGENT_TEAMS_MCP_",
+        "AGENT_TEAMS_RUNTIME_TURN_SETTLED_",
+        "CLAUDE_TEAM_BOOTSTRAP_"
+      ]
+    },
+    {
+      "path": "src/main/http/teams.ts",
+      "tokens": [
+        "'/api/teams/:teamName/opencode/runtime/bootstrap-checkin'",
+        "'/api/teams/:teamName/opencode/runtime/deliver-message'",
+        "'/api/teams/:teamName/opencode/runtime/heartbeat'",
+        "'/api/teams/:teamName/opencode/runtime/permission-answer'",
+        "'/api/teams/:teamName/opencode/runtime/task-event'",
+        "/opencode/runtime/bootstrap-checkin"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/index.ts",
+      "tokens": [
+        "AGENT_TEAMS_DISABLE_GPU",
+        "AGENT_TEAMS_MCP_CLAUDE_DIR",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON",
+        "AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON",
+        "BUILD_ID",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH",
+        "CLAUDE_TEAM_APP_INSTANCE_ID",
+        "ELECTRON_RENDERER_URL",
+        "ELECTRON_RUN_AS_NODE",
+        "ELECTRON_VITE_DEV_SERVER_URL",
+        "GIT_SHA",
+        "NODE_ENV",
+        "UV_THREADPOOL_SIZE",
+        "VITE_BUILD_ID",
+        "VITE_DEV_SERVER_URL",
+        "VITE_GIT_SHA",
+        "process.env"
+      ],
+      "environmentKeys": [
+        "AGENT_TEAMS_DISABLE_GPU",
+        "AGENT_TEAMS_MCP_CLAUDE_DIR",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON",
+        "AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND",
+        "AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON",
+        "BUILD_ID",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL",
+        "CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH",
+        "CLAUDE_TEAM_APP_INSTANCE_ID",
+        "ELECTRON_RENDERER_URL",
+        "ELECTRON_RUN_AS_NODE",
+        "ELECTRON_VITE_DEV_SERVER_URL",
+        "GIT_SHA",
+        "NODE_ENV",
+        "UV_THREADPOOL_SIZE",
+        "VITE_BUILD_ID",
+        "VITE_DEV_SERVER_URL",
+        "VITE_GIT_SHA"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/ipc/cliInstaller.ts",
+      "tokens": [
+        "CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/ipc/config.ts",
+      "tokens": [
+        "EDITOR",
+        "SystemRoot",
+        "USERNAME",
+        "VISUAL",
+        "WINDIR"
+      ],
+      "environmentKeys": [
+        "EDITOR",
+        "SystemRoot",
+        "USERNAME",
+        "VISUAL",
+        "WINDIR"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/sentry.ts",
+      "tokens": [
+        "SENTRY_DSN"
+      ],
+      "environmentKeys": [
+        "SENTRY_DSN"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/discovery/WorktreeGrouper.ts",
+      "tokens": [
+        "CLAUDE_DEVTOOLS_STRICT_SESSION_FILTER"
+      ],
+      "environmentKeys": [
+        "CLAUDE_DEVTOOLS_STRICT_SESSION_FILTER"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/identity/AgentTeamsIdentityStore.ts",
+      "tokens": [
+        "AGENT_TEAMS_IDENTITY_STORE_PATH"
+      ],
+      "environmentKeys": [
+        "AGENT_TEAMS_IDENTITY_STORE_PATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/CliInstallerService.ts",
+      "tokens": [
+        "CLAUDE_SKIP_ANALYTICS",
+        "PATH"
+      ],
+      "environmentKeys": [
+        "CLAUDE_SKIP_ANALYTICS",
+        "PATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/CodexBinaryResolver.ts",
+      "tokens": [
+        "CODEX_CLI_PATH",
+        "PATHEXT"
+      ],
+      "environmentKeys": [
+        "CODEX_CLI_PATH",
+        "PATHEXT"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/EventLoopLagMonitor.ts",
+      "tokens": [
+        "CLAUDE_TEAM_EVENT_LOOP_LAG_MONITOR_ENABLED"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_EVENT_LOOP_LAG_MONITOR_ENABLED"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/HttpServer.ts",
+      "tokens": [
+        "CORS_ORIGIN",
+        "RENDERER_PATH"
+      ],
+      "environmentKeys": [
+        "CORS_ORIGIN",
+        "RENDERER_PATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+      "tokens": [
+        "APPDATA"
+      ],
+      "environmentKeys": [
+        "APPDATA"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/PtyTerminalService.ts",
+      "tokens": [
+        "COMSPEC",
+        "SHELL"
+      ],
+      "environmentKeys": [
+        "COMSPEC",
+        "SHELL"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/ServiceContext.ts",
+      "tokens": [
+        "CLAUDE_CONTEXT_DISABLE_CACHE"
+      ],
+      "environmentKeys": [
+        "CLAUDE_CONTEXT_DISABLE_CACHE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/infrastructure/SshConnectionManager.ts",
+      "tokens": [
+        "SSH_AUTH_SOCK",
+        "USERPROFILE"
+      ],
+      "environmentKeys": [
+        "SSH_AUTH_SOCK",
+        "USERPROFILE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/agentChildProcessPreflight.ts",
+      "tokens": [
+        "AGENT_STUDIO_NPM_CMD",
+        "AGENT_STUDIO_NPX_CMD",
+        "AGENT_STUDIO_RUNNER_CACHE_ROOT",
+        "ANDROID_SDK_HOME",
+        "ANDROID_USER_HOME",
+        "ComSpec",
+        "GRADLE_OPTS",
+        "GRADLE_USER_HOME",
+        "HOME",
+        "JAVA_TOOL_OPTIONS",
+        "LOCALAPPDATA",
+        "NPM_CONFIG_CACHE",
+        "STUDIO_AGENT_CACHE_ROOT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "npm_config_cache",
+        "npm_config_script_shell"
+      ],
+      "environmentKeys": [
+        "AGENT_STUDIO_NPM_CMD",
+        "AGENT_STUDIO_NPX_CMD",
+        "AGENT_STUDIO_RUNNER_CACHE_ROOT",
+        "ANDROID_SDK_HOME",
+        "ANDROID_USER_HOME",
+        "ComSpec",
+        "GRADLE_OPTS",
+        "GRADLE_USER_HOME",
+        "HOME",
+        "JAVA_TOOL_OPTIONS",
+        "LOCALAPPDATA",
+        "NPM_CONFIG_CACHE",
+        "STUDIO_AGENT_CACHE_ROOT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "npm_config_cache",
+        "npm_config_script_shell"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/anthropicTeamApiKeyHelper.ts",
+      "tokens": [
+        "ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS",
+        "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+        "CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH",
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE",
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV",
+        "CLAUDE_TEAM_DISABLE_ANTHROPIC_API_KEY_HELPER"
+      ],
+      "environmentKeys": [
+        "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+        "CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH",
+        "CLAUDE_TEAM_ANTHROPIC_AUTH_MODE",
+        "CLAUDE_TEAM_DISABLE_ANTHROPIC_API_KEY_HELPER"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+      "tokens": [
+        "CLAUDE_CODE_CODEX_BACKEND",
+        "CLAUDE_CODE_GEMINI_BACKEND",
+        "OPENCODE_DISABLE_AUTOUPDATE",
+        "applyConfiguredRuntimeBackendsEnv"
+      ],
+      "environmentKeys": [
+        "CLAUDE_CODE_CODEX_BACKEND",
+        "CLAUDE_CODE_GEMINI_BACKEND",
+        "OPENCODE_DISABLE_AUTOUPDATE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+      "tokens": [
+        "ANTHROPIC_AUTH_TOKEN"
+      ],
+      "environmentKeys": [
+        "ANTHROPIC_AUTH_TOKEN"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/geminiRuntimeAuth.ts",
+      "tokens": [
+        "GCLOUD_PROJECT",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_PROJECT_ID"
+      ],
+      "environmentKeys": [
+        "GCLOUD_PROJECT",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_PROJECT_ID"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+      "tokens": [
+        "CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE",
+        "CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE_ENV",
+        "OPENCODE_DISABLE_AUTOUPDATE_ENV"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/openCodeRuntimeBinaryEnv.ts",
+      "tokens": [
+        "CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH",
+        "OPENCODE_BIN_PATH",
+        "OPENCODE_RUNTIME_BINARY_PATH_ENV"
+      ],
+      "environmentKeys": [
+        "CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH",
+        "OPENCODE_BIN_PATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/providerAwareCliEnv.ts",
+      "tokens": [
+        "removeGlobalElectronRunAsNodeEnv"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/ProviderConnectionService.ts",
+      "tokens": [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_BASE_URL",
+        "CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD",
+        "CODEX_API_KEY",
+        "CODEX_HOME",
+        "CODEX_NATIVE_API_KEY_ENV_VAR",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY"
+      ],
+      "environmentKeys": [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_BASE_URL",
+        "CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD",
+        "CODEX_API_KEY",
+        "CODEX_HOME",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/providerRuntimeEnv.test.ts",
+      "tokens": [
+        "AWS_PROFILE",
+        "AWS_REGION"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/runtime/providerRuntimeEnv.ts",
+      "tokens": [
+        "ANTHROPIC_AWS_WORKSPACE_ID",
+        "CLAUDE_CODE_ENTRY_PROVIDER",
+        "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+        "CLAUDE_CODE_USE_BEDROCK",
+        "CLAUDE_CODE_USE_FOUNDRY",
+        "CLAUDE_CODE_USE_GEMINI",
+        "CLAUDE_CODE_USE_OPENAI",
+        "CLAUDE_CODE_USE_VERTEX",
+        "NodeJS.ProcessEnv",
+        "backend === 'bedrock'",
+        "backend === 'foundry'",
+        "backend === 'vertex'",
+        "env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST = '1'",
+        "for (const key of PROVIDER_ROUTING_ENV_KEYS)"
+      ],
+      "environmentKeys": [
+        "ANTHROPIC_AWS_WORKSPACE_ID",
+        "CLAUDE_CODE_ENTRY_PROVIDER",
+        "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+        "CLAUDE_CODE_USE_BEDROCK",
+        "CLAUDE_CODE_USE_FOUNDRY",
+        "CLAUDE_CODE_USE_GEMINI",
+        "CLAUDE_CODE_USE_OPENAI",
+        "CLAUDE_CODE_USE_VERTEX"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/schedule/ScheduledTaskExecutor.ts",
+      "tokens": [
+        "CLAUDECODE"
+      ],
+      "environmentKeys": [
+        "CLAUDECODE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/AgentTeamsMcpHttpServer.ts",
+      "tokens": [
+        "AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH",
+        "AGENT_TEAMS_MCP_HTTP_ENDPOINT",
+        "AGENT_TEAMS_MCP_HTTP_HOST",
+        "AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE",
+        "AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH",
+        "AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID",
+        "AGENT_TEAMS_MCP_HTTP_PORT",
+        "AGENT_TEAMS_MCP_TRANSPORT",
+        "CLAUDE_TEAM_DISABLE_MCP_ORPHAN_CLEANUP",
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT"
+      ],
+      "environmentKeys": [
+        "AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH",
+        "AGENT_TEAMS_MCP_HTTP_ENDPOINT",
+        "AGENT_TEAMS_MCP_HTTP_HOST",
+        "AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE",
+        "AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH",
+        "AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID",
+        "AGENT_TEAMS_MCP_HTTP_PORT",
+        "AGENT_TEAMS_MCP_TRANSPORT",
+        "CLAUDE_TEAM_DISABLE_MCP_ORPHAN_CLEANUP",
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/ChangeExtractorService.ts",
+      "tokens": [
+        "CLAUDE_TEAM_ENABLE_PERSISTED_TASK_CHANGE_CACHE"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_ENABLE_PERSISTED_TASK_CHANGE_CACHE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/ClaudeBinaryResolver.ts",
+      "tokens": [
+        "CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH",
+        "CLAUDE_CLI_PATH",
+        "ProgramFiles"
+      ],
+      "environmentKeys": [
+        "CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH",
+        "CLAUDE_CLI_PATH",
+        "ProgramFiles"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/ClaudeDoctorProbe.ts",
+      "tokens": [
+        "COLUMNS",
+        "LINES"
+      ],
+      "environmentKeys": [
+        "COLUMNS",
+        "LINES"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/cliFlavor.ts",
+      "tokens": [
+        "CLAUDE_TEAM_CLI_FLAVOR"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_CLI_FLAVOR"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup.ts",
+      "tokens": [
+        "CLAUDE_MULTIMODEL_DATA_HOME",
+        "CLAUDE_MULTIMODEL_DATA_HOME=",
+        "OPENCODE_CONFIG_CONTENT"
+      ],
+      "environmentKeys": [
+        "CLAUDE_MULTIMODEL_DATA_HOME",
+        "OPENCODE_CONFIG_CONTENT"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv.ts",
+      "tokens": [
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_OPENCODE_MCP_HTTP"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities.ts",
+      "tokens": [
+        "export async function detectOpenCodeApiCapabilities"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler.ts",
+      "tokens": [
+        "CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningAgentLanguage.ts",
+      "tokens": [
+        "LANG"
+      ],
+      "environmentKeys": [
+        "LANG"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts",
+      "tokens": [
+        "CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "environmentKeys": [
+        "CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningDirectRestart.ts",
+      "tokens": [
+        "ANTHROPIC_AWS_API_KEY",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+        "CLAUDE_TEAM_RUNTIME_SETTINGS_PATH",
+        "CURL_CA_BUNDLE",
+        "GEMINI_API_VERSION",
+        "GEMINI_BASE_URL",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "NODE_EXTRA_CA_CERTS",
+        "NO_PROXY",
+        "REQUESTS_CA_BUNDLE",
+        "SSL_CERT_FILE"
+      ],
+      "environmentKeys": [
+        "ANTHROPIC_AWS_API_KEY",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+        "CLAUDE_TEAM_RUNTIME_SETTINGS_PATH",
+        "CURL_CA_BUNDLE",
+        "GEMINI_API_VERSION",
+        "GEMINI_BASE_URL",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "NODE_EXTRA_CA_CERTS",
+        "NO_PROXY",
+        "REQUESTS_CA_BUNDLE",
+        "SSL_CERT_FILE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+      "tokens": [
+        "...processEnv",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+        "CLAUDE_CONFIG_DIR",
+        "LOGNAME",
+        "TERM",
+        "USER",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME",
+        "resolvedClaudeBasePath !== autoDetectedClaudeBasePath"
+      ],
+      "environmentKeys": [
+        "CLAUDE_CONFIG_DIR",
+        "LOGNAME",
+        "TERM",
+        "USER",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningEnvGuards.ts",
+      "tokens": [
+        "CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "environmentKeys": [
+        "CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP",
+        "CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts",
+      "tokens": [
+        "CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts",
+      "tokens": [
+        "CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN",
+        "CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH"
+      ],
+      "environmentKeys": [
+        "CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN",
+        "CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME",
+        "CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+      "tokens": [
+        "export function extractAuthStatusReadiness"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeDiagnostics.ts",
+      "tokens": [
+        "CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStaleMixedSecondaryRecovery.ts",
+      "tokens": [
+        "export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/runtime-control/domain/RuntimeControlCommand.ts",
+      "tokens": [
+        "runtime.permission-answer",
+        "| 'runtime.bootstrap-checkin'",
+        "| 'runtime.deliver-message'",
+        "| 'runtime.heartbeat'",
+        "| 'runtime.permission-answer'",
+        "| 'runtime.task-event'"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+      "tokens": [
+        "export class OpenCodeTeamRuntimeAdapter"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/runtime/TeamRuntimeAdapter.ts",
+      "tokens": [
+        "'anthropic'",
+        "'codex'",
+        "'gemini'",
+        "'opencode'",
+        "TEAM_RUNTIME_PROVIDER_IDS = ['anthropic', 'codex', 'gemini', 'opencode']"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/runtimeTeammateMode.ts",
+      "tokens": [
+        "CLAUDE_TEAM_TEAMMATE_MODE"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_TEAMMATE_MODE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/stallMonitor/featureGates.ts",
+      "tokens": [
+        "CLAUDE_TEAM_OPENCODE_TASK_STALL_REMEDIATION_ENABLED",
+        "CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS",
+        "CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS",
+        "CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_ALERT_COOLDOWN_MS",
+        "CLAUDE_TEAM_TASK_STALL_MONITOR_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS",
+        "CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_OPENCODE_TASK_STALL_REMEDIATION_ENABLED",
+        "CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS",
+        "CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS",
+        "CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_ALERT_COOLDOWN_MS",
+        "CLAUDE_TEAM_TASK_STALL_MONITOR_ENABLED",
+        "CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS",
+        "CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/TaskChangeWorkerClient.ts",
+      "tokens": [
+        "CLAUDE_TEAM_ENABLE_TASK_CHANGE_WORKER"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_ENABLE_TASK_CHANGE_WORKER"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/taskLogs/activity/featureGates.ts",
+      "tokens": [
+        "CLAUDE_TEAM_BOARD_TASK_ACTIVITY_READ_ENABLED"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_BOARD_TASK_ACTIVITY_READ_ENABLED"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/taskLogs/exact/featureGates.ts",
+      "tokens": [
+        "CLAUDE_TEAM_BOARD_TASK_EXACT_LOGS_READ_ENABLED",
+        "CLAUDE_TEAM_CODEX_NATIVE_TRACE_FALLBACK_ENABLED"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_BOARD_TASK_EXACT_LOGS_READ_ENABLED",
+        "CLAUDE_TEAM_CODEX_NATIVE_TRACE_FALLBACK_ENABLED"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/TeamFsWorkerClient.ts",
+      "tokens": [
+        "VITEST"
+      ],
+      "environmentKeys": [
+        "VITEST"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/TeamMcpConfigBuilder.ts",
+      "tokens": [
+        "CLAUDE_TEAM_CONTROL_URL",
+        "NODE_BINARY",
+        "NODE_OPTIONS"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_CONTROL_URL",
+        "NODE_BINARY",
+        "NODE_OPTIONS"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/TeamRuntimeTelemetry.ts",
+      "tokens": [
+        "CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/services/team/TeamTranscriptProjectResolver.ts",
+      "tokens": [
+        "CLAUDE_TEAM_TRANSCRIPT_AFFINITY_INDEX"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_TRANSCRIPT_AFFINITY_INDEX"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/standalone.ts",
+      "tokens": [
+        "CLAUDE_ROOT",
+        "HOST",
+        "PORT"
+      ],
+      "environmentKeys": [
+        "CLAUDE_ROOT",
+        "HOST",
+        "PORT"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/utils/childProcess.ts",
+      "tokens": [
+        "CLAUDE_HOOK_JUDGE_MODE"
+      ],
+      "environmentKeys": [
+        "CLAUDE_HOOK_JUDGE_MODE"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.ts",
+      "tokens": [
+        "AGENT_TEAMS_ELECTRON_CLAUDE_ROOT",
+        "AGENT_TEAMS_ELECTRON_USER_DATA_DIR"
+      ],
+      "environmentKeys": [
+        "AGENT_TEAMS_ELECTRON_CLAUDE_ROOT",
+        "AGENT_TEAMS_ELECTRON_USER_DATA_DIR"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/utils/openCodeTaskChangeDiagLog.ts",
+      "tokens": [
+        "CLAUDE_TEAM_OPENCODE_TASK_CHANGE_DIAG"
+      ],
+      "environmentKeys": [
+        "CLAUDE_TEAM_OPENCODE_TASK_CHANGE_DIAG"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "src/main/utils/pathDecoder.ts",
+      "tokens": [
+        "HOMEDRIVE",
+        "HOMEPATH"
+      ],
+      "environmentKeys": [
+        "HOMEDRIVE",
+        "HOMEPATH"
+      ],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/provider-runtime/fake-runtime-seams.test.ts",
+      "tokens": [
+        "it('w2.fake-runtime.homogeneous_anthropic.failing-negative'",
+        "it('w2.fake-runtime.homogeneous_anthropic.positive'",
+        "it('w2.fake-runtime.homogeneous_codex.failing-negative'",
+        "it('w2.fake-runtime.homogeneous_codex.positive'",
+        "it('w2.fake-runtime.homogeneous_gemini.failing-negative'",
+        "it('w2.fake-runtime.homogeneous_gemini.positive'",
+        "it('w2.fake-runtime.homogeneous_opencode.failing-negative'",
+        "it('w2.fake-runtime.homogeneous_opencode.positive'",
+        "it('w2.fake-runtime.malformed_capability_response.failing-negative'",
+        "it('w2.fake-runtime.malformed_capability_response.positive'",
+        "it('w2.fake-runtime.missing_auth.failing-negative'",
+        "it('w2.fake-runtime.missing_auth.positive'",
+        "it('w2.fake-runtime.missing_runtime.failing-negative'",
+        "it('w2.fake-runtime.missing_runtime.positive'",
+        "it('w2.fake-runtime.mixed_provider_team.failing-negative'",
+        "it('w2.fake-runtime.mixed_provider_team.positive'",
+        "it('w2.fake-runtime.opencode_secondary_lane_recovery.failing-negative'",
+        "it('w2.fake-runtime.opencode_secondary_lane_recovery.positive'",
+        "it('w2.fake-runtime.partial_launch.failing-negative'",
+        "it('w2.fake-runtime.partial_launch.positive'",
+        "it('w2.fake-runtime.process_timeout.failing-negative'",
+        "it('w2.fake-runtime.process_timeout.positive'",
+        "it('w2.fake-runtime.restart_adoption.failing-negative'",
+        "it('w2.fake-runtime.restart_adoption.positive'",
+        "it('w2.fake-runtime.unsupported_backend.failing-negative'",
+        "it('w2.fake-runtime.unsupported_backend.positive'"
+      ],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "tokens": [],
+      "environmentKeys": [],
+      "environmentPrefixes": []
+    }
+  ],
+  "routingObservations": [
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CONFIG_DIR",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "preserved_when_custom_configuration"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_ENTRY_PROVIDER",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "emitted_always"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_OPENAI",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "emitted_when_backend_selected"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_BEDROCK",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "emitted_when_backend_selected"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_VERTEX",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "optional",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "emitted_when_backend_selected"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_FOUNDRY",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_USE_GEMINI",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "forbidden",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "removed_before_spawn"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_CODEX_BACKEND",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_default",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_bedrock",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_vertex",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_foundry",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "anthropic_claude_platform_aws",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "codex_configured",
+      "emissionDisposition": "emitted_configured_backend"
+    },
+    {
+      "key": "CLAUDE_CODE_GEMINI_BACKEND",
+      "providerId": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "targetDisposition": "required",
+      "runtimeBackend": "gemini_configured",
+      "emissionDisposition": "emitted_configured_backend"
+    }
+  ]
+}

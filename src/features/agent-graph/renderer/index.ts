@@ -9,6 +9,7 @@ export type { InlineActivityEntry } from '../core/domain/buildInlineActivityEntr
 export { buildInlineActivityEntries } from '../core/domain/buildInlineActivityEntries';
 export { buildGraphMemberNodeIdForMember } from '../core/domain/graphOwnerIdentity';
 export { TeamGraphAdapter } from './adapters/TeamGraphAdapter';
+export type { TeamGraphTaskNotificationPort } from './ports/TeamGraphTaskNotificationPort';
 export type { TeamGraphOverlayProps } from './ui/TeamGraphOverlay';
 export { TeamGraphOverlay } from './ui/TeamGraphOverlay';
 export { TeamGraphTab } from './ui/TeamGraphTab';

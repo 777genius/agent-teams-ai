@@ -67,6 +67,43 @@ export function restoreReviewDecisionRecordsForFiles(
   );
 }
 
+export function partitionReviewFilesByApplyErrors(
+  files: readonly FileChangeSummary[],
+  errorPaths: readonly string[] | null
+): { successful: FileChangeSummary[]; failed: FileChangeSummary[] } {
+  if (errorPaths === null) return { successful: [], failed: [...files] };
+  // Disk transitions can contain case-distinct siblings, even in Windows-style paths.
+  const normalizePath = (filePath: string): string => filePath.replaceAll('\\', '/');
+  const normalizedErrors = new Set(errorPaths.map(normalizePath));
+  const requestedPaths = new Set(files.map((file) => normalizePath(file.filePath)));
+  const hasUnknownError = [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
+  if (hasUnknownError) {
+    return { successful: [], failed: [...files] };
+  }
+  return {
+    successful: files.filter((file) => !normalizedErrors.has(normalizePath(file.filePath))),
+    failed: files.filter((file) => normalizedErrors.has(normalizePath(file.filePath))),
+  };
+}
+
+/**
+ * Keeps successful decisions while restoring the exact pre-apply records for
+ * every failed file. Unknown failures fail closed for the complete request.
+ */
+export function reconcileReviewDecisionRecordsAfterApply(
+  files: readonly FileChangeSummary[],
+  errorPaths: readonly string[] | null,
+  current: ReviewDecisionRecords,
+  snapshot: ReviewDecisionRecords
+): ReviewDecisionRecords & {
+  successful: FileChangeSummary[];
+  failed: FileChangeSummary[];
+} {
+  const partition = partitionReviewFilesByApplyErrors(files, errorPaths);
+  const reconciled = restoreReviewDecisionRecordsForFiles(partition.failed, current, snapshot);
+  return { ...partition, ...reconciled };
+}
+
 /** Produces the canonical post-Restore decision state for one reviewed file. */
 export function buildReviewRestoreDecisionState(
   file: FileChangeSummary,

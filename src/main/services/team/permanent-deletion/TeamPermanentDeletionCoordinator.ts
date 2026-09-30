@@ -28,41 +28,14 @@ import {
 import { TeamWorkSyncIdentityAccess } from './TeamWorkSyncIdentityAccess';
 import { observeTeamWorkSyncPriorIdentity } from './TeamWorkSyncPriorIdentity';
 import { isTeamWorkSyncRestoreReady } from './TeamWorkSyncRestoreReadiness';
+import { TeamWriterAuthorityRegistry } from './TeamWriterAuthorityRegistry';
 
-interface BackupManifestPort {
-  teamName: string;
-  identityId: string;
-  projectPath?: string;
-  displayName?: string;
-  status: 'active' | 'deleted_by_user';
-  deletedByUserAt?: string;
-  firstBackupAt: string;
-  lastBackupAt: string;
-  fileStats: Record<string, { mtime: number; size: number }>;
-}
+import type {
+  BackupRegistryEntryPort,
+  TeamPermanentDeletionCoordinatorPorts,
+} from './TeamPermanentDeletionCoordinatorPorts';
 
-interface BackupRegistryEntryPort {
-  teamName: string;
-  identityId: string;
-  status: 'active' | 'deleted_by_user';
-  deletedByUserAt?: string;
-  lastBackupAt: string;
-}
-
-export interface TeamPermanentDeletionCoordinatorPorts {
-  awaitInitialization(): Promise<void>;
-  isInitialized(): boolean;
-  isShuttingDown(): boolean;
-  withTeamMutex<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
-  registry(): Record<string, BackupRegistryEntryPort>;
-  loadManifest(teamName: string): Promise<BackupManifestPort | null>;
-  saveManifest(teamName: string, manifest: BackupManifestPort, strict?: boolean): Promise<void>;
-  saveRegistryEntry(
-    teamName: string,
-    entry: BackupRegistryEntryPort,
-    strict?: boolean
-  ): Promise<void>;
-}
+export type { TeamPermanentDeletionCoordinatorPorts } from './TeamPermanentDeletionCoordinatorPorts';
 
 function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
@@ -84,19 +57,26 @@ function nowIso(): string {
 export class TeamPermanentDeletionCoordinator {
   readonly lock = new TeamPermanentDeletionLock();
   private readonly store = new TeamPermanentDeletionIntentStore(this.lock);
-  private readonly preBoundaryDeletionClaims = new Map<string, Map<symbol, string>>();
+  private readonly writerAuthority = new TeamWriterAuthorityRegistry({
+    withFence: this.withTeamIdentityFence.bind(this),
+    isFenced: this.isPermanentDeletionFenced.bind(this),
+    hasPreparedIntent: (name) => this.store.intents.get(name)?.phase === 'prepared',
+  });
   private readonly identity = new TeamPermanentDeletionIdentity((teamName, identityId) =>
     this.isIdentityClaimedForDeletion(teamName, identityId)
   );
 
   constructor(private readonly ports: TeamPermanentDeletionCoordinatorPorts) {}
-
   readonly workSyncIdentity = new TeamWorkSyncIdentityAccess({
     withFence: this.withTeamIdentityFence.bind(this),
-    isFenced: this.isPermanentDeletionFenced.bind(this),
+    isFenced: (name) => this.writerAuthority.isFencedForWriter(name),
     isRestoreReady: (name) => isTeamWorkSyncRestoreReady(name, this.ports),
     observePriorIdentity: (name) => observeTeamWorkSyncPriorIdentity(name, this.ports),
     claimMarker: (name, id) => this.identity.claimIdentityMarker(name, id, true),
+    withWriterWorkflowLease: (name, operation) =>
+      this.writerAuthority.withWorkflowLease(name, operation),
+    withRetainedRunLease: (name, assertGeneration, operation) =>
+      this.writerAuthority.withRetainedRunLease(name, assertGeneration, operation),
   });
 
   async initialize(): Promise<void> {
@@ -118,8 +98,10 @@ export class TeamPermanentDeletionCoordinator {
       ? this.getDeletionRequestIdentityOwner(teamName)
       : undefined;
     let claimToken = deletionOwnerIdentity
-      ? this.addPreBoundaryDeletionClaim(teamName, deletionOwnerIdentity)
+      ? this.writerAuthority.addDeletionClaim(teamName, deletionOwnerIdentity)
       : null;
+    let provisioningClaim: symbol | undefined;
+    let prepared = false;
     try {
       await this.ports.awaitInitialization();
       if (this.ports.isShuttingDown()) {
@@ -128,10 +110,12 @@ export class TeamPermanentDeletionCoordinator {
 
       deletionOwnerIdentity ??= this.getDeletionRequestIdentityOwner(teamName);
       claimToken ??= deletionOwnerIdentity
-        ? this.addPreBoundaryDeletionClaim(teamName, deletionOwnerIdentity)
+        ? this.writerAuthority.addDeletionClaim(teamName, deletionOwnerIdentity)
         : null;
 
-      return await this.withTeamIdentityFence(teamName, () =>
+      provisioningClaim = await this.writerAuthority.closeAndDrain(teamName);
+
+      const intent = await this.withTeamIdentityFence(teamName, () =>
         this.ports.withTeamMutex(teamName, async () => {
           const existing = this.store.intents.get(teamName);
           if (existing) {
@@ -176,8 +160,11 @@ export class TeamPermanentDeletionCoordinator {
           return intent;
         })
       );
+      prepared = intent.phase === 'prepared';
+      return intent;
     } finally {
-      this.removePreBoundaryDeletionClaim(teamName, claimToken);
+      if (!prepared) this.writerAuthority.reopen(teamName, provisioningClaim);
+      this.writerAuthority.removeDeletionClaim(teamName, claimToken);
     }
   }
 
@@ -185,7 +172,7 @@ export class TeamPermanentDeletionCoordinator {
     intent: TeamPermanentDeletionIntent
   ): Promise<TeamPermanentDeletionIntent> {
     await this.ports.awaitInitialization();
-    return this.withTeamIdentityFence(intent.teamName, () =>
+    const committed = await this.withTeamIdentityFence(intent.teamName, () =>
       this.ports.withTeamMutex(intent.teamName, async () => {
         const current = this.requireCurrentPermanentDeletionIntent(intent);
         if (current.phase === 'deleting' || current.phase === 'deleted') return current;
@@ -199,18 +186,20 @@ export class TeamPermanentDeletionCoordinator {
         return deletingIntent;
       })
     );
+    this.writerAuthority.reopen(intent.teamName);
+    return committed;
   }
 
   async abortPreparedPermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void> {
     await this.ports.awaitInitialization();
-    await this.withTeamIdentityFence(intent.teamName, () =>
+    const aborted = await this.withTeamIdentityFence(intent.teamName, () =>
       this.ports.withTeamMutex(intent.teamName, async () => {
         const current = this.store.intents.get(intent.teamName);
         if (
           current?.identityId !== intent.identityId ||
           current.transactionId !== intent.transactionId
         ) {
-          return;
+          return false;
         }
         if (current.phase !== 'prepared') {
           throw new Error(
@@ -218,8 +207,10 @@ export class TeamPermanentDeletionCoordinator {
           );
         }
         await this.store.removePermanentDeletionIntent(current);
+        return true;
       })
     );
+    if (aborted) this.writerAuthority.reopen(intent.teamName);
   }
 
   async listPendingPermanentDeletions(): Promise<TeamPermanentDeletionIntent[]> {
@@ -294,6 +285,32 @@ export class TeamPermanentDeletionCoordinator {
         }
         return {
           detachedPath: this.identity.getPermanentDeletionDetachedTargetPath(current, target),
+          assertWriterAdmission: () => this.lock.assertHeld(`team:${current.teamName}`),
+          onRemovalPrepared: async (targetPath, identity) => {
+            const expectedPath = this.identity.getPermanentDeletionTargetPath(
+              current.teamName,
+              target
+            );
+            if (
+              path.resolve(targetPath) !== path.resolve(expectedPath) ||
+              !(await this.isDurablePermanentDeletionTargetCurrent(current, target))
+            ) {
+              throw new Error(
+                `operator_required: permanent deletion source is not current: ${target}`
+              );
+            }
+            const quarantine = this.identity.getPermanentDeletionDetachedTargetPath(
+              current,
+              target
+            );
+            current = await this.savePermanentDeletionTargetRemovalProof(
+              current,
+              target,
+              identity,
+              'authorized',
+              quarantine
+            );
+          },
           onDetachedValidated: async (detachedPath, identity) => {
             current = await this.savePermanentDeletionTargetRemovalProof(
               current,
@@ -317,7 +334,6 @@ export class TeamPermanentDeletionCoordinator {
       return operation(isTargetCurrent, getTargetProofHooks, isTargetCompleted);
     });
   }
-
   private getDeletionRequestIdentityOwner(teamName: string): string | undefined {
     const registryEntry = this.ports.registry()[teamName];
     if (registryEntry?.status === 'active') return registryEntry.identityId;
@@ -326,31 +342,12 @@ export class TeamPermanentDeletionCoordinator {
       ? intent.identityId
       : undefined;
   }
-
-  private addPreBoundaryDeletionClaim(teamName: string, identityId: string): symbol {
-    const token = Symbol(teamName);
-    const claims = this.preBoundaryDeletionClaims.get(teamName) ?? new Map<symbol, string>();
-    claims.set(token, identityId);
-    this.preBoundaryDeletionClaims.set(teamName, claims);
-    return token;
-  }
-
-  private removePreBoundaryDeletionClaim(teamName: string, token: symbol | null): void {
-    if (!token) return;
-    const claims = this.preBoundaryDeletionClaims.get(teamName);
-    if (!claims) return;
-    claims.delete(token);
-    if (claims.size === 0) this.preBoundaryDeletionClaims.delete(teamName);
-  }
-
   isIdentityClaimedForDeletion(teamName: string, identityId: string): boolean {
-    const inMemoryClaim = [...(this.preBoundaryDeletionClaims.get(teamName)?.values() ?? [])].some(
-      (claimedIdentityId) => claimedIdentityId === identityId
+    return (
+      this.writerAuthority.isIdentityClaimed(teamName, identityId) ||
+      this.store.intents.get(teamName)?.identityId === identityId
     );
-    if (inMemoryClaim) return true;
-    return this.store.intents.get(teamName)?.identityId === identityId;
   }
-
   private requireCurrentPermanentDeletionIntent(
     intent: TeamPermanentDeletionIntent
   ): TeamPermanentDeletionIntent {
@@ -363,7 +360,6 @@ export class TeamPermanentDeletionCoordinator {
     }
     return current;
   }
-
   private async resolveOrCreatePermanentDeletionIdentity(
     teamName: string,
     draft: boolean,
@@ -385,7 +381,6 @@ export class TeamPermanentDeletionCoordinator {
       if (typeof config._backupIdentityId === 'string' && config._backupIdentityId) {
         return config._backupIdentityId;
       }
-
       const identityId = crypto.randomUUID();
       const ownership = await this.identity.claimIdentityMarker(teamName, identityId, true);
       if (ownership.status === 'unavailable') {
@@ -396,7 +391,6 @@ export class TeamPermanentDeletionCoordinator {
       if (!isEnoent(error)) throw error;
       if (!draft) throw new Error(`Team not found: ${teamName}`);
     }
-
     const markerPath = this.identity.getDraftDeletionIdentityPath(teamName);
     try {
       const parsed = JSON.parse(await fs.promises.readFile(markerPath, 'utf8')) as {
@@ -408,7 +402,6 @@ export class TeamPermanentDeletionCoordinator {
     } catch (error) {
       if (!isEnoent(error)) throw error;
     }
-
     const identityId = crypto.randomUUID();
     await atomicWriteAsync(
       markerPath,
@@ -417,7 +410,6 @@ export class TeamPermanentDeletionCoordinator {
     );
     return identityId;
   }
-
   private async isPermanentDeletionTargetCurrentInternal(
     intent: TeamPermanentDeletionIntent
   ): Promise<boolean> {
@@ -431,7 +423,6 @@ export class TeamPermanentDeletionCoordinator {
     if (expected.status !== 'present') {
       return false;
     }
-
     let currentPath: string;
     if (
       observed.status === 'present' &&
@@ -457,14 +448,12 @@ export class TeamPermanentDeletionCoordinator {
       }
       currentPath = detachedPath;
     }
-
     const source = await this.identity.readPermanentDeletionSourceIdentity(
       intent.teamName,
       currentPath
     );
     return source.status === 'identified' && source.identityId === intent.identityId;
   }
-
   private async savePermanentDeletionTargetRemovalProof(
     intent: TeamPermanentDeletionIntent,
     target: PermanentDeletionTarget,
@@ -479,7 +468,6 @@ export class TeamPermanentDeletionCoordinator {
         `Permanent deletion has not crossed destructive boundary: ${intent.teamName}`
       );
     }
-
     const expected = current.targets[target];
     if (expected.status !== 'present' || !isExactDurablePathIdentity(identity, expected.identity)) {
       throw new Error(`Permanent deletion target identity changed: ${target}`);
@@ -491,7 +479,6 @@ export class TeamPermanentDeletionCoordinator {
     if (path.resolve(detachedPath) !== path.resolve(expectedDetachedPath)) {
       throw new Error(`Permanent deletion detached target path changed: ${target}`);
     }
-
     const existing = current.targetRemovalProofs[target];
     if (existing) {
       if (
@@ -501,12 +488,22 @@ export class TeamPermanentDeletionCoordinator {
       ) {
         throw new Error(`Permanent deletion target proof changed: ${target}`);
       }
-      if (existing.state === 'removed' || state === 'detached') return current;
-    } else if (state === 'removed') {
-      throw new Error(`Permanent deletion target was not durably detached: ${target}`);
+      if (existing.state === 'removed' || existing.state === state) return current;
+      if (state === 'authorized' || (state === 'removed' && existing.state !== 'detached')) {
+        throw new Error(
+          `operator_required: permanent deletion proof transition is invalid: ${target}`
+        );
+      }
+    } else if (state !== 'authorized') {
+      throw new Error(
+        `operator_required: permanent deletion target lacks pre-detach authority: ${target}`
+      );
     }
-
-    if (state === 'detached') {
+    if (state === 'authorized') {
+      if (!(await this.isDurablePermanentDeletionTargetCurrent(current, target))) {
+        throw new Error(`Permanent deletion public target is not current: ${target}`);
+      }
+    } else if (state === 'detached') {
       if (!(await this.isDurablePermanentDeletionTargetCurrent(current, target, detachedPath))) {
         throw new Error(`Permanent deletion detached target is not current: ${target}`);
       }
@@ -563,13 +560,13 @@ export class TeamPermanentDeletionCoordinator {
   private async reconcilePermanentDeletionProgressInternal(
     intent: TeamPermanentDeletionIntent
   ): Promise<TeamPermanentDeletionIntent> {
-    let current = this.requireCurrentPermanentDeletionIntent(intent);
+    const current = this.requireCurrentPermanentDeletionIntent(intent);
     if (current.phase !== 'deleting' || current.cleanupCompleted) return current;
 
     for (const target of PERMANENT_DELETION_TARGETS) {
       const expected = current.targets[target];
       const proof = current.targetRemovalProofs[target];
-      if (expected.status !== 'present' || proof?.state !== 'detached') {
+      if (expected.status !== 'present' || proof?.state === 'removed') {
         continue;
       }
 
@@ -588,18 +585,20 @@ export class TeamPermanentDeletionCoordinator {
       );
       if (detachedObservation.status === 'present') {
         if (!isExactDurablePathIdentity(detachedObservation.identity, expected.identity)) {
-          throw new Error(`Permanent deletion detached target identity changed: ${target}`);
+          throw new Error(
+            `operator_required: permanent deletion detached target identity changed: ${target}`
+          );
+        }
+        if (!proof) {
+          throw new Error(
+            `operator_required: detached target has no pre-detach authority: ${target}`
+          );
         }
         continue;
       }
-
-      current = await this.savePermanentDeletionTargetRemovalProof(
-        current,
-        target,
-        expected.identity,
-        'removed',
-        this.identity.getPermanentDeletionDetachedTargetPath(current, target)
-      );
+      if (proof) {
+        throw new Error(`operator_required: permanent deletion receipt is missing: ${target}`);
+      }
     }
     return current;
   }

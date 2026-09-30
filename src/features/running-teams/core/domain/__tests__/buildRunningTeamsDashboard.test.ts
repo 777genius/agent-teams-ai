@@ -81,4 +81,26 @@ describe('buildRunningTeamsDashboard', () => {
       'idle-new',
     ]);
   });
+
+  it('preserves duplicate-name and invalid-date Desktop tie ordering', () => {
+    const result = buildRunningTeamsDashboard({
+      teams: [
+        candidate({
+          teamName: 'first',
+          displayName: 'Same',
+          status: 'idle',
+          lastActivity: 'invalid',
+        }),
+        candidate({ teamName: 'second', displayName: 'Same', status: 'idle', lastActivity: null }),
+        candidate({
+          teamName: 'third',
+          displayName: 'Same',
+          status: 'idle',
+          lastActivity: 'invalid',
+        }),
+      ],
+    });
+
+    expect(result.map((team) => team.teamName)).toEqual(['first', 'second', 'third']);
+  });
 });

@@ -1,5 +1,4 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { isElectronMode } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Newspaper } from 'lucide-react';
@@ -7,9 +6,13 @@ import { Newspaper } from 'lucide-react';
 import { openAnnouncementHistory } from './newsNavigation';
 
 /** Keep the global news action reachable on full-window work screens. */
-export const AnnouncementNewsButton = (): React.JSX.Element | null => {
+export const AnnouncementNewsButton = ({
+  visible,
+}: {
+  visible: boolean;
+}): React.JSX.Element | null => {
   const { t } = useAppTranslation('common');
-  if (!isElectronMode()) return null;
+  if (!visible) return null;
   return (
     <Tooltip>
       <TooltipTrigger asChild>

@@ -121,7 +121,7 @@ function basePorts(
     emitTeamProcessChange: () => undefined,
     consumeCancelledRuntimeAdapterRunId: () => false,
     getTeamsBasePath: () => TEAMS_BASE_PATH,
-    clearOpenCodeRuntimeLaneStorage: async () => true,
+    clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
     setSecondaryRuntimeRun: () => undefined,
     deleteSecondaryRuntimeRun: () => undefined,
     deliverOpenCodeLaunchPromptToLead: async () => {

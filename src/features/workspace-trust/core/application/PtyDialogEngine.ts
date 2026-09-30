@@ -45,10 +45,6 @@ export interface PtyDialogEngineInput {
   }) => Promise<{ action: 'continue' } | { action: 'stop'; reason: string }>;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export async function runPtyDialogEngine(
   input: PtyDialogEngineInput
 ): Promise<PtyDialogEngineResult> {
@@ -56,18 +52,28 @@ export async function runPtyDialogEngine(
   const pollIntervalMs = input.pollIntervalMs ?? 100;
   const settleDelayMs = input.settleDelayMs ?? 250;
   const maxActions = input.maxActions ?? 12;
-  const deadline = Date.now() + timeoutMs;
+  let remainingMs = Math.max(0, timeoutMs);
   const handledOnceRules = new Set<string>();
   const matchedRuleIds: string[] = [];
   const actions: string[] = [];
   let lastSnapshot: TerminalSnapshot | undefined;
+  let pendingSnapshot: TerminalSnapshot | null | undefined;
 
-  while (Date.now() <= deadline) {
+  const readAfter = async (requestedMs: number): Promise<TerminalSnapshot | null> => {
+    const waitMs = Math.min(Math.max(1, requestedMs), remainingMs);
+    if (waitMs <= 0) return null;
+    remainingMs -= waitMs;
+    return input.session.readSnapshot(waitMs);
+  };
+
+  while (remainingMs > 0 || pendingSnapshot !== undefined) {
     if (input.isCancelled()) {
       return { status: 'cancelled', matchedRuleIds, actions, lastSnapshot };
     }
 
-    const snapshot = await input.session.readSnapshot(pollIntervalMs);
+    const snapshot =
+      pendingSnapshot !== undefined ? pendingSnapshot : await readAfter(pollIntervalMs);
+    pendingSnapshot = undefined;
     if (!snapshot) {
       continue;
     }
@@ -81,7 +87,7 @@ export async function runPtyDialogEngine(
         matchedRuleIds.push(state.ruleId);
       }
       if (state.retryPolicy === 'once' && handledOnceRules.has(state.ruleId)) {
-        await sleep(pollIntervalMs);
+        pendingSnapshot = await readAfter(pollIntervalMs);
         continue;
       }
       if (actions.length + state.actions.length > maxActions) {
@@ -118,7 +124,7 @@ export async function runPtyDialogEngine(
           lastSnapshot,
         };
       }
-      await sleep(settleDelayMs);
+      pendingSnapshot = await readAfter(settleDelayMs);
       continue;
     }
 

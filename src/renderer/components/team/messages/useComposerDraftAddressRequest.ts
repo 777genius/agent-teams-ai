@@ -32,8 +32,7 @@ export function canOpenComposerDraftAddress(
   const { toMember, toTeam } = address.target;
   const available = targets.find((target) => target.teamName === toTeam);
   return Boolean(
-    available &&
-      (!toMember || available.members?.some((member) => member.name === toMember))
+    available && (!toMember || available.members?.some((member) => member.name === toMember))
   );
 }
 

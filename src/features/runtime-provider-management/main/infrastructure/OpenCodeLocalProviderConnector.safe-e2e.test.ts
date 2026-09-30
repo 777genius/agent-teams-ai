@@ -732,7 +732,8 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     await expect(fs.readFile(credentialPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it.skipIf(process.platform === 'win32')(
+  // Root bypasses directory mode bits, so chmod cannot force the config commit to fail.
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
     'keeps the active API key when the config commit fails during credential rotation',
     async () => {
       const projectPath = path.join(tempDir, 'failed-rotation-project');

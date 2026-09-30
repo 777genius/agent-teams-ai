@@ -2,8 +2,11 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const { currentPidNamespace, isForeignPidNamespace } = require('./pidNamespace.js');
+
 const ACQUIRE_TIMEOUT_MS = 5_000;
 const RETRY_INTERVAL_MS = 20;
+const FILE_LOCK_TIMEOUT_CODE = 'AGENT_TEAMS_FILE_LOCK_TIMEOUT';
 
 // PID/token publication must stay equivalent to src/main/services/team/fileLock.ts.
 // Directory policy intentionally differs: the controller retains its baseline
@@ -58,6 +61,16 @@ function isProcessAlive(pid) {
   }
 }
 
+function ownerNamespaceLine() {
+  const namespace = currentPidNamespace();
+  return namespace === null ? '' : `pidns:${namespace}\n`;
+}
+
+function isOwnerAlive(pid, namespace) {
+  // A foreign-namespace owner stays live like any owner whose death cannot be proven.
+  return isForeignPidNamespace(namespace) || isProcessAlive(pid);
+}
+
 function parsePid(value) {
   if (!/^[1-9][0-9]*$/.test(value)) return null;
   const pid = Number(value);
@@ -102,8 +115,11 @@ function recoverGate(gate) {
   const ownerPath = path.join(gate, entry);
   const stat = statOrMissing(ownerPath);
   if (!stat?.isFile()) return;
-  if (readOrMissing(ownerPath) !== `file-lock-transition-v2\n${pid}\n${match[2]}\n`) return;
-  if (isProcessAlive(pid)) return;
+  const prefix = `file-lock-transition-v2\n${pid}\n${match[2]}\n`;
+  const content = readOrMissing(ownerPath);
+  if (!content?.startsWith(prefix)) return;
+  const owner = /^(?:pidns:([1-9][0-9]*)\n)?$/.exec(content.slice(prefix.length));
+  if (!owner || isOwnerAlive(pid, owner[1])) return;
   // No claim on a claim: a delayed remover can address only this dead token.
   // Its rmdir cannot remove any nonempty successor, even after PID-probe pauses.
   unlinkOrMissing(ownerPath);
@@ -122,7 +138,7 @@ function acquireGate(gate, token) {
   try {
     writeComplete(
       path.join(candidate, entry),
-      `file-lock-transition-v2\n${process.pid}\n${token}\n`
+      `file-lock-transition-v2\n${process.pid}\n${token}\n${ownerNamespaceLine()}`
     );
     try {
       fs.renameSync(candidate, gate);
@@ -173,12 +189,15 @@ function recoverDataLock(lockPath) {
     return;
   }
   if (!observed.stat.isFile() || observed.content === null) return;
-  // Accept complete legacy PID/time records as well as PID/time/token records.
+  // Accept complete legacy PID/time records as well as PID/time/token records,
+  // optionally followed by the owner's PID namespace.
   // A partial numeric prefix is not evidence of the initializer's full PID.
-  const record = /^([1-9][0-9]*)\n[0-9]+\n(?:[^\n]+\n)?$/.exec(observed.content);
+  const record = /^([1-9][0-9]*)\n[0-9]+\n(?:[^\n]+\n(?:pidns:([1-9][0-9]*)\n)?)?$/.exec(
+    observed.content
+  );
   const pid = record ? parsePid(record[1]) : null;
   // Anonymous/malformed legacy files remain explicitly unknown, even if old.
-  if (pid === null || isProcessAlive(pid)) return;
+  if (pid === null || isOwnerAlive(pid, record?.[2])) return;
   if (sameLock(observed, readLockInfo(lockPath))) unlinkOrMissing(lockPath);
 }
 
@@ -200,7 +219,10 @@ function tryAcquire(lockPath, token) {
       if (statOrMissing(lockPath)) return false;
       const candidate = `${lockPath}.candidate-${process.pid}-${randomUUID()}`;
       try {
-        writeComplete(candidate, `${process.pid}\n${Date.now()}\n${token}\n`);
+        writeComplete(
+          candidate,
+          `${process.pid}\n${Date.now()}\n${token}\n${ownerNamespaceLine()}`
+        );
         try {
           // Hard link is no-replace publication of complete bytes, including on
           // Windows. Unsupported filesystems fail; never fall back to canonical wx.
@@ -248,7 +270,9 @@ function withFileLockSync(filePath, fn, options = {}) {
 
   while (!tryAcquire(lockPath, token)) {
     if (Date.now() >= deadline) {
-      throw new Error(`File lock timeout: ${filePath}`);
+      throw Object.assign(new Error(`File lock timeout: ${filePath}`), {
+        code: FILE_LOCK_TIMEOUT_CODE,
+      });
     }
     sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
   }
@@ -260,4 +284,4 @@ function withFileLockSync(filePath, fn, options = {}) {
   }
 }
 
-module.exports = { withFileLockSync };
+module.exports = { FILE_LOCK_TIMEOUT_CODE, withFileLockSync };

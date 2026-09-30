@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-s1",
+  "packetRevision": "phase-01-s1-foundations-r1",
+  "baseSha": "50db3d6537abf5342162cd8f5cc12bbab6d38067",
+  "phaseStartSha": "50db3d6537abf5342162cd8f5cc12bbab6d38067",
+  "resultCommitSha": null,
+  "status": "characterized",
+  "toolVersions": "pnpm 10.33.4; Vitest 3.2.6; ESLint 9.39.4; TypeScript 7.0.2; Prettier 3.8.1; Git 2.43.0",
+  "evidence": [
+    {
+      "id": "P1.1A.KERNEL",
+      "path": "src/shared/contracts/hosted/index.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.1A.VERSION",
+      "path": "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-01-p1-1a.json",
+    "src/shared/contracts/hosted/app-error.ts",
+    "src/shared/contracts/hosted/identifiers.ts",
+    "src/shared/contracts/hosted/index.ts",
+    "src/shared/contracts/hosted/query-context.ts",
+    "src/shared/contracts/hosted/revision.ts",
+    "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+    "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+    "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+    "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+    "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+    "test/architecture/hosted-web/phase-1/contracts/revision.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/shared/contracts/hosted/app-error.ts src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts src/shared/contracts/hosted/query-context.ts src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-1/contracts/query-context.test.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "inherited Phase 0 test-tree errors; no P1.S1 path reported"
+    },
+    {
+      "command": "pnpm exec prettier --check .codex-handoff/phase-01-p1-1a.json src/shared/contracts/hosted/app-error.ts src/shared/contracts/hosted/identifiers.ts src/shared/contracts/hosted/index.ts src/shared/contracts/hosted/query-context.ts src/shared/contracts/hosted/revision.ts test/architecture/hosted-web/phase-1/contracts/app-error.test.ts test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts test/architecture/hosted-web/phase-1/contracts/query-context.test.ts test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      "exitCode": 0
+    },
+    { "command": "git diff --check", "exitCode": 0 },
+    { "command": "git status --short", "exitCode": 0 }
+  ],
+  "deliberateNegativeResult": {
+    "id": "P1.NEG.SCHEMA_VERSION",
+    "diagnostic": "phase1-schema-version-invalid-or-unsupported",
+    "result": "passed"
+  },
+  "unverifiedClaims": ["production hosted behavior", "production identity mapping"],
+  "blockers": ["base_failure: pnpm typecheck reports only inherited Phase 0 test-tree diagnostics"],
+  "adrRecommendations": [],
+  "estimateBuckets": [{ "id": "P1.1A", "actual": 299, "unit": "gross owned lines" }],
+  "nextAction": "Controller reviews P1.S1, classifies the inherited typecheck baseline, then applies and commits this worktree diff; P1.S2 remains unauthorized."
+}

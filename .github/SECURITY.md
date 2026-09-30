@@ -11,14 +11,14 @@ Official Electron releases include limited pseudonymous telemetry. It is enabled
 
 Telemetry uses a pseudonymous app installation identifier rather than an account name or email. Development and self-built packages without the build-time Sentry DSN and PostHog key do not send this telemetry.
 
-| Network activity | When | Mode | User-controlled |
-|---|---|---|---|
-| GitHub Releases API (auto-updater) | App launch | Electron only | Automatic; controlled by update settings |
-| Sentry crash and performance telemetry | Telemetry enabled and an event occurs | Official Electron releases | Yes; can be disabled in Privacy settings |
+| Network activity                       | When                                                 | Mode                       | User-controlled                          |
+| -------------------------------------- | ---------------------------------------------------- | -------------------------- | ---------------------------------------- |
+| GitHub Releases API (auto-updater)     | App launch                                           | Electron only              | Automatic; controlled by update settings |
+| Sentry crash and performance telemetry | Telemetry enabled and an event occurs                | Official Electron releases | Yes; can be disabled in Privacy settings |
 | PostHog coarse product-usage telemetry | Telemetry enabled and a defined product event occurs | Official Electron releases | Yes; can be disabled in Privacy settings |
-| Agent provider CLI/API traffic | A user launches or interacts with an agent runtime | Runtime-dependent | Yes |
-| SSH connections | Settings > SSH | Electron only | Yes |
-| HTTP server (`127.0.0.1` or `0.0.0.0`) | When enabled | Both | Yes |
+| Agent provider CLI/API traffic         | A user launches or interacts with an agent runtime   | Runtime-dependent          | Yes                                      |
+| SSH connections                        | Settings > SSH                                       | Electron only              | Yes                                      |
+| HTTP server (`127.0.0.1` or `0.0.0.0`) | When enabled                                         | Both                       | Yes                                      |
 
 ### Standalone / Docker mode
 
@@ -59,6 +59,7 @@ Only the latest release is supported with security fixes.
 Please report vulnerabilities privately and do not open public issues for undisclosed security problems.
 
 Include:
+
 - affected version/commit
 - vulnerability description
 - impact assessment

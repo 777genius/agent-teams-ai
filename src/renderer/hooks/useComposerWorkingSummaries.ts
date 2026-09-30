@@ -67,10 +67,7 @@ export function useComposerWorkingSummaries(
   const byTargetKey = useMemo(
     () =>
       new Map(
-        state.summaries.map((summary) => [
-          composerDraftTargetKey(summary.address.target),
-          summary,
-        ])
+        state.summaries.map((summary) => [composerDraftTargetKey(summary.address.target), summary])
       ),
     [state.summaries]
   );

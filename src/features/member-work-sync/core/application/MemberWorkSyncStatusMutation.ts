@@ -41,7 +41,7 @@ export async function runMemberWorkSyncStatusMutation<T>(
         throw error;
       if (attempt >= MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS)
         throw new MemberWorkSyncStatusMutationError(error.reason, error.mutationId, true);
-      await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+      await deps.clock.delay?.(20 * (attempt + 1));
     }
   }
 }

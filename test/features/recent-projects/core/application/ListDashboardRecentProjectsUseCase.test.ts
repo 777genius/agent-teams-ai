@@ -1,7 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
-
 import { ListDashboardRecentProjectsUseCase } from '@features/recent-projects/core/application/use-cases/ListDashboardRecentProjectsUseCase';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ListDashboardRecentProjectsResponse } from '@features/recent-projects/core/application/models/ListDashboardRecentProjectsResponse';
 import type { ListDashboardRecentProjectsOutputPort } from '@features/recent-projects/core/application/ports/ListDashboardRecentProjectsOutputPort';
@@ -9,6 +7,7 @@ import type { LoggerPort } from '@features/recent-projects/core/application/port
 import type { RecentProjectsCachePort } from '@features/recent-projects/core/application/ports/RecentProjectsCachePort';
 import type { RecentProjectsSourcePort } from '@features/recent-projects/core/application/ports/RecentProjectsSourcePort';
 import type { RecentProjectCandidate } from '@features/recent-projects/core/domain/models/RecentProjectCandidate';
+import type { Mock } from 'vitest';
 
 interface TestViewModel {
   ids: string[];
@@ -227,6 +226,12 @@ describe('ListDashboardRecentProjectsUseCase', () => {
         cache,
         output,
         clock: { now: () => 2_000 },
+        deadline: {
+          schedule(delayMs, onDeadline) {
+            const handle = setTimeout(onDeadline, delayMs);
+            return () => clearTimeout(handle);
+          },
+        },
         logger,
       });
 
@@ -250,6 +255,48 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('degrades a hung source with the production-safe default deadline', async () => {
+    const cache: RecentProjectsCachePort<TestViewModel> = {
+      get: vi.fn().mockResolvedValue(null),
+      getStale: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
+      present: vi.fn((response: ListDashboardRecentProjectsResponse) => ({
+        ids: response.projects.map((project) => project.identity),
+        sources: response.projects.map((project) => project.source),
+      })),
+    };
+    const hungSource: RecentProjectsSourcePort = {
+      sourceId: 'hung',
+      timeoutMs: 5,
+      list: vi.fn(() => new Promise<RecentProjectCandidate[]>(() => undefined)),
+    };
+    const logger = createLogger();
+    const useCase = new ListDashboardRecentProjectsUseCase({
+      sources: [hungSource],
+      cache,
+      output,
+      clock: { now: () => 2_000 },
+      logger,
+    });
+
+    await expect(useCase.execute('recent-projects:hung')).resolves.toEqual({
+      ids: [],
+      sources: [],
+    });
+    expect(logger.warn).toHaveBeenCalledWith('recent-projects source timed out', {
+      sourceId: 'hung',
+      sourceIndex: 0,
+      timeoutMs: 5,
+    });
+    expect(cache.set).toHaveBeenCalledWith(
+      'recent-projects:hung',
+      { ids: [], sources: [] },
+      30_000
+    );
   });
 
   it('prefers fresh healthy-source results over stale cache when degraded sources still leave usable projects', async () => {

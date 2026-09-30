@@ -5,16 +5,17 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AnnouncementMarkdown } from '../../../../src/features/announcements/renderer/AnnouncementMarkdown';
 import { announcementUrl } from '../../../../src/features/announcements/renderer/markdownPolicy';
+
+import type { AnnouncementsApi } from '../../../../src/features/announcements/contracts';
+
 const external = vi.hoisted(() => vi.fn());
 const loadAsset = vi.hoisted(() => vi.fn());
 const cancelAsset = vi.hoisted(() => vi.fn(async () => undefined));
-vi.mock('@renderer/api', () => ({
-  api: { announcements: { loadAsset, cancelAsset }, openExternal: external },
-}));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 const base = 'https://agentteams.live/announcements/content/release/abcdef/body.md';
+const client = { loadAsset, cancelAsset } as unknown as AnnouncementsApi;
 describe('remote Markdown boundary', () => {
   it('only loads same-bundle publisher assets and HTTPS external links', () => {
     expect(announcementUrl('assets/demo.gif', base, true)).toBe(
@@ -58,6 +59,8 @@ describe('remote Markdown boundary', () => {
             markdown={markdown}
             bodyUrl={base}
             heroImagePath="/announcements/content/release/abcdef/assets/demo.gif"
+            client={client}
+            openExternal={external}
           />
         </React.StrictMode>
       )

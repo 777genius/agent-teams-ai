@@ -1,10 +1,13 @@
 // @vitest-environment node
 
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamDataService } from '@main/services/team/TeamDataService';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -14,13 +17,13 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
-  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
   TeamRuntimeControlCompatibilityApi,
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamHttpMemberDiagnosticsApi } from '@main/services/team/contracts/TeamHttpMemberDiagnosticsApi';
 import type {
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -164,10 +167,12 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  resumeTeamCalls: string[];
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
   const createTeamCalls: TeamCreateRequest[] = [];
+  const resumeTeamCalls: string[] = [];
   const aliveTeams = new Set<string>();
   const progressByRunId = new Map<string, TeamProvisioningProgress>();
   const runIdByTeam = new Map<string, string>();
@@ -305,7 +310,7 @@ function createServices(claudeRoot: string): {
     recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
     answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
-      Promise.resolve(runtimeAck('accepted')),
+      Promise.resolve(runtimeAck('recorded')),
   } satisfies TeamRuntimeControlCompatibilityApi;
 
   const teamMemberDiagnosticsApi = {
@@ -315,8 +320,36 @@ function createServices(claudeRoot: string): {
       Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
   } satisfies TeamHttpMemberDiagnosticsApi;
 
+  const teamApis = {
+    provisioningStart: teamProvisioningStartApi,
+    provisioningStatus: teamProvisioningStatusApi,
+    taskActivity: teamTaskActivityRepairApi,
+    runtime: teamRuntimeApi,
+    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
+  } satisfies TeamHttpHandlerApis;
+  const teamApplicationHost = new TeamApplicationHost({
+    configPresence: {
+      hasConfig: async (teamName) => {
+        try {
+          await access(path.join(claudeRoot, 'teams', teamName, 'config.json'));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    },
+    listInvalidation: { invalidate: () => TeamConfigReader.invalidateListTeamsCache() },
+    data: teamDataService,
+    provisioningStart: teamApis.provisioningStart,
+    provisioningStatus: teamApis.provisioningStatus,
+    runtimeIngress: teamApis.runtimeIngress,
+    taskActivity: teamApis.taskActivity,
+    resume: { resumeTeam: (teamName) => resumeTeamCalls.push(teamName) },
+  });
+
   return {
     createTeamCalls,
+    resumeTeamCalls,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
       sessionParser: {} as HttpServices['sessionParser'],
@@ -325,15 +358,15 @@ function createServices(claudeRoot: string): {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
+      memberWorkSyncFeature: {
+        resumeTeam: (teamName: string) => {
+          resumeTeamCalls.push(teamName);
+        },
+      } as unknown as HttpServices['memberWorkSyncFeature'],
       teamDataApi: teamDataService,
-      teamApis: {
-        provisioningStart: teamProvisioningStartApi,
-        provisioningStatus: teamProvisioningStatusApi,
-        taskActivity: teamTaskActivityRepairApi,
-        runtime: teamRuntimeApi,
-        runtimeControl: teamRuntimeControlApi,
-        memberDiagnostics: teamMemberDiagnosticsApi,
-      } satisfies TeamHttpHandlerApis,
+      teamApis,
+      teamApplicationHost,
+      teamMemberDiagnosticsApi,
     },
   };
 }
@@ -353,7 +386,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(claudeRoot);
 
     const app = Fastify();
-    const { createTeamCalls, services } = createServices(claudeRoot);
+    const { createTeamCalls, resumeTeamCalls, services } = createServices(claudeRoot);
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control.test';
@@ -495,6 +528,7 @@ describe('MCP team tools over the local REST control API', () => {
           },
         ],
       });
+      expect(resumeTeamCalls).toEqual(['mcp-e2e-team', 'mcp-e2e-team']);
 
       const restRuntime = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team/runtime');
       expect(restRuntime.status).toBe(200);

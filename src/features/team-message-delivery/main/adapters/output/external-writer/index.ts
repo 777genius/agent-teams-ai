@@ -1,0 +1,15 @@
+export {
+  HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
+  type HostedMessageExternalWriterActor,
+  type HostedMessageExternalWriterAuthority,
+  type HostedMessageExternalWriterCommittedChange,
+  type HostedMessageExternalWriterDocument,
+  type HostedMessageExternalWriterEffect,
+  type HostedMessageExternalWriterMessage,
+  type HostedMessageExternalWriterObservation,
+  HostedMessageExternalWriterReconciler,
+  type HostedMessageExternalWriterReconciliationCommit,
+  type HostedMessageExternalWriterSelfWrite,
+  type HostedMessageExternalWriterTarget,
+  type HostedMessageExternalWriterTaskRef,
+} from './HostedMessageExternalWriterReconciler';

@@ -19,7 +19,7 @@ import { sanitizeRuntimeProviderDiagnostics } from '../../../../src/features/run
 
 const execCli = vi.hoisted(() => vi.fn());
 vi.mock('@main/utils/childProcess', () => ({ execCli }));
-import { probeOpenCodeBinaryVersion } from '../../../../src/features/runtime-provider-management/main/infrastructure/openCodeVersionDiagnostics';
+import { probeOpenCodeBinaryVersion } from '../../../../src/main/services/infrastructure/openCodeVersionDiagnostics';
 
 describe('OpenCode diagnostic transport', () => {
   it('preserves useful platform paths and correlation IDs in opt-in support reports', () => {

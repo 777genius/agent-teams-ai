@@ -27,6 +27,7 @@ import {
 } from './OpenCodeRuntimeStopRecovery';
 import { assertStopDomainResult } from './OpenCodeStopOutcomeRecovery';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandLease,
   OpenCodeBridgeCommandLeaseStore,
@@ -46,6 +47,7 @@ export interface OpenCodeBridgeCommandExecutor {
       requestId?: string;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
+      projectDirectoryLease?: ProjectDirectoryLease;
     }
   ): Promise<OpenCodeBridgeResult<TData>>;
 }
@@ -62,6 +64,7 @@ export interface OpenCodeBridgeHandshakePort {
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     laneId?: string | null;
+    projectDirectoryLease?: ProjectDirectoryLease;
   }): Promise<OpenCodeBridgeHandshake>;
 }
 
@@ -146,6 +149,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     body: TBody;
     cwd: string;
     timeoutMs: number;
+    projectDirectoryLease?: ProjectDirectoryLease;
   }): Promise<OpenCodeBridgeResult<TData>> {
     assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
     const normalizedLaneId = input.laneId ?? null;
@@ -201,6 +205,7 @@ export class OpenCodeStateChangingBridgeCommandService {
             bridge: this.bridge,
             ledger: this.ledger,
             timeoutMs: input.timeoutMs,
+            projectDirectoryLease: input.projectDirectoryLease,
           });
         } finally {
           await this.leaseStore.release(lease.leaseId);
@@ -215,6 +220,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       cwd: input.cwd,
       teamId: input.teamName,
       laneId: normalizedLaneId,
+      projectDirectoryLease: input.projectDirectoryLease,
       ...(isRecord(commandBody) && commandBody.allowEmptyLaneStop === true
         ? { allowEmptyLaneStop: true }
         : {}),
@@ -354,6 +360,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
           requestId: commandRequestId,
+          projectDirectoryLease: input.projectDirectoryLease,
         }
       );
 

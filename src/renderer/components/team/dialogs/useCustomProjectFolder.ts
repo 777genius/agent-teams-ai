@@ -4,6 +4,7 @@ import {
   type ProjectFolderController,
   useProjectFolderState,
 } from '@features/project-folder/renderer';
+import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
 import type { TeamProviderId } from '@shared/types';
@@ -24,7 +25,11 @@ export function useCustomProjectFolder(input: {
   invalidatePrepareProvider: (providerId: TeamProviderId) => void;
 }): CustomProjectFolderModel {
   const { createsMissingOnSubmit, providerIds, invalidatePrepareProvider } = input;
-  const folder = useProjectFolderState({ enabled: input.enabled, path: input.path });
+  const folder = useProjectFolderState({
+    enabled: input.enabled,
+    path: input.path,
+    projectFolder: api.projectFolder,
+  });
   const invalidateCliProviderModelCatalog = useStore(
     (state) => state.invalidateCliProviderModelCatalog
   );
