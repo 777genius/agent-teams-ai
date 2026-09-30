@@ -194,6 +194,8 @@ function authorizationUnavailableResult() {
   });
 }
 
+class TeamConfigurationAuthorizationDenied extends Error {}
+
 /** Wires durable use cases to hosted HTTP without adding transport-owned team behavior. */
 export function createHostedTeamConfigurationComposition(
   dependencies: CreateHostedTeamConfigurationCompositionDependencies
@@ -216,15 +218,18 @@ export function createHostedTeamConfigurationComposition(
       if (
         !fresh ||
         fresh.principal.userId !== principal.principal.userId ||
-        fresh.authenticatedSessionId !== principal.authenticatedSessionId ||
-        (await dependencies.authentication.isTeamConfigurationScopeAuthorized(
-          request,
-          { workspaceId },
-          mutations.get(context) === true
-        )) !== 'authorized'
+        fresh.authenticatedSessionId !== principal.authenticatedSessionId
       ) {
-        throw new Error('draft-publication-authorization-changed');
+        throw new TeamConfigurationAuthorizationDenied();
       }
+      const decision = await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+        request,
+        { workspaceId },
+        mutations.get(context) === true
+      );
+      if (decision === 'denied') throw new TeamConfigurationAuthorizationDenied();
+      if (decision === 'unavailable')
+        throw new Error('draft-publication-authorization-unavailable');
     };
     await authorizeWorkspace();
     const fence = await publication.captureWorkspace(
@@ -291,8 +296,8 @@ export function createHostedTeamConfigurationComposition(
             MUTATIONS.has(operation)
           );
         }
-      } catch {
-        decision = 'unavailable';
+      } catch (error) {
+        decision = error instanceof TeamConfigurationAuthorizationDenied ? 'denied' : 'unavailable';
       }
       if (decision === 'authorized') {
         return Object.freeze({

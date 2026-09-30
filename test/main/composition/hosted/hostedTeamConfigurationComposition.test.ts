@@ -104,7 +104,10 @@ function storage(): HostedTeamConfigurationStorageGateway {
   };
 }
 
-function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'identity_changed' | 'owner_transport' | 'owner_rejected' | 'after_owner' | 'topology' | 'success') {
+function promotionFixture(
+  failure: 'publish' | 'fence' | 'session_changed' | 'identity_changed' | 'owner_transport' | 'owner_rejected' | 'after_owner' | 'topology' | 'success',
+  authorizationDecision: 'authorized' | 'denied' | 'unavailable' | 'revoked' = 'authorized'
+) {
   const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
   const createOperationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
   const directoryFingerprint = parseDirectoryFingerprint('e'.repeat(64));
@@ -112,6 +115,7 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
   let published = false;
   let admitted = false;
   let identityReads = 0;
+  let authorizationChecks = 0;
   const publication = {
     journal: {
       readTeamDraftPublication: async (scope: unknown) => ({
@@ -137,7 +141,7 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
         };
       },
     },
-    captureWorkspace: async () => ({
+    captureWorkspace: vi.fn(async () => ({
       runtimeWorkspaceId, bindingGeneration: 1,
       grantRevision: 'a'.repeat(64), grantGeneration: 1,
       assertCurrent: async () => {
@@ -145,7 +149,7 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
           throw new Error('/secret/team/path and private plan content');
         }
       },
-    }),
+    })),
     publishPromotionPlan: vi.fn(async () => {
       published = true;
       if (failure === 'publish') throw new Error('/secret/team/path and private plan content');
@@ -183,7 +187,12 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
         failure === 'session_changed' && published
           ? { ...principal(), authenticatedSessionId: parseHostedSessionId('session_changed') }
           : principal(),
-      isTeamConfigurationScopeAuthorized: async () => 'authorized',
+      isTeamConfigurationScopeAuthorized: async () => {
+        authorizationChecks += 1;
+        return authorizationDecision === 'revoked'
+          ? authorizationChecks === 1 ? 'authorized' : 'denied'
+          : authorizationDecision;
+      },
     },
     storage: storage(), publication, restoreGeneration: 1,
     promotions, promotionWorkspaceRoot: '/private/root', admitPromotionPlan,
@@ -192,10 +201,40 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
   });
   const app = Fastify();
   composition.register(app);
-  return { app, publication, admitPromotionPlan };
+  return { app, publication, promotions, admitPromotionPlan };
 }
 
 describe('hosted team-configuration production composition', () => {
+  it.each([
+    ['denied', 403, 'forbidden', 'promotion_forbidden', false, 0],
+    ['revoked', 403, 'forbidden', 'promotion_forbidden', false, 1],
+    ['unavailable', 503, 'unavailable', 'team_configuration_unavailable', true, 0],
+  ] as const)(
+    'preserves %s workspace authorization during published-draft promotion',
+    async (decision, status, code, reason, retryable, captureCount) => {
+      const { app, publication, promotions, admitPromotionPlan } = promotionFixture('success', decision);
+      try {
+        const response = await app.inject({
+          method: 'POST', url: HOSTED_PROMOTION_ROUTE,
+          payload: {
+            schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+            expectedRevision: 'revision_saved-draft',
+            idempotencyKey: 'idempotency_published-draft-0001',
+          },
+        });
+        expect(response.statusCode).toBe(status);
+        expect(response.json()).toEqual({
+          schemaVersion: 1, kind: 'error', error: { code, reason }, retryable,
+        });
+        expect(publication.captureWorkspace).toHaveBeenCalledTimes(captureCount);
+        expect(promotions.begin).not.toHaveBeenCalled();
+        expect(admitPromotionPlan).not.toHaveBeenCalled();
+      } finally {
+        await app.close();
+      }
+    }
+  );
+
   it('passes a server-captured published-draft grant and identity fence to signed Owner admission', async () => {
     const { app, admitPromotionPlan } = promotionFixture('success');
     try {
