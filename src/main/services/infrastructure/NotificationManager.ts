@@ -57,6 +57,11 @@ import {
   type StoredNotification,
   writeNotificationsFileAtomically,
 } from './notificationHistoryFile';
+import {
+  type NotificationClass,
+  type NotificationInstance,
+  sendTestNotification,
+} from './sendTestNotification';
 
 // Re-export DetectedError for backward compatibility
 export type { DetectedError };
@@ -126,18 +131,6 @@ interface TeamNotificationAvatarMember {
   name: string;
   removedAt?: number | string | null;
   agentType?: string;
-}
-
-type NotificationEventName = 'click' | 'close' | 'show' | 'failed';
-
-interface NotificationInstance {
-  on(event: NotificationEventName, listener: (...args: unknown[]) => void): void;
-  show(): void;
-}
-
-interface NotificationClass {
-  new (options: NotificationConstructorOptions): NotificationInstance;
-  isSupported(): boolean;
 }
 
 function getNotificationClass(): NotificationClass | null {
@@ -1075,44 +1068,10 @@ export class NotificationManager extends EventEmitter {
    * Sends a test notification to verify that native notifications work.
    * Returns a result object indicating success or failure reason.
    */
-  sendTestNotification(): { success: boolean; error?: string } {
-    const NotificationClass = getNotificationClass();
-    if (!NotificationClass || !this.isNativeNotificationSupported()) {
-      logger.warn('[test-notification] native notifications not supported');
-      return { success: false, error: 'Native notifications are not supported on this platform' };
-    }
-
-    const isMac = process.platform === 'darwin';
-    const iconPath = isMac ? undefined : getAppIconPath();
-    logger.debug(`[test-notification] creating Notification (platform=${process.platform})`);
-    const notification = new NotificationClass({
-      title: 'Test Notification',
-      ...(isMac ? { subtitle: 'Agent Teams AI' } : {}),
-      body: isMac
-        ? 'Notifications are working correctly!'
-        : 'Agent Teams AI\nNotifications are working correctly!',
-      ...(iconPath ? { icon: iconPath } : {}),
-    });
-
-    // Hold a strong reference to prevent GC
-    this.activeNotifications.add(notification);
-    const cleanup = (): void => {
-      this.activeNotifications.delete(notification);
-    };
-
-    notification.on('click', cleanup);
-    notification.on('close', cleanup);
-
-    notification.on('show', () => {
-      logger.debug('[notification] test notification shown successfully');
-    });
-    notification.on('failed', (_, error) => {
-      logger.warn(`[notification] test notification failed: ${String(error)}`);
-      cleanup();
-    });
-
-    notification.show();
-    return { success: true };
+  async sendTestNotification(): Promise<{ success: boolean; error?: string }> {
+    return sendTestNotification(this.activeNotifications, getNotificationClass, () =>
+      this.isNativeNotificationSupported()
+    );
   }
 
   // ===========================================================================

@@ -135,8 +135,11 @@ export const changeReviewFileDecisionStatePort = createChangeReviewFileDecisionS
   reportError: (applyError) => useStore.setState({ applyError }),
 });
 export const changeReviewFileDecisionPolicy: ChangeReviewFileDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    resolveChangeReviewFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
+  getHunkCount: (file, state) => {
+    const key =
+      file.changeKey && file.changeKey in state.fileChunkCounts ? file.changeKey : file.filePath;
+    return resolveChangeReviewFileHunkCount(key, file.snippets.length, state.fileChunkCounts);
+  },
   getFileDecision: (file, state) =>
     state.fileDecisions[getFileReviewKey(file)] ?? state.fileDecisions[file.filePath],
   resolveModifiedContent: getResolvedReviewModifiedContent,
@@ -160,8 +163,11 @@ export const changeReviewHunkDecisionStatePort = createChangeReviewHunkDecisionS
   useStore.getState
 );
 export const changeReviewHunkDecisionPolicy: ChangeReviewHunkDecisionPolicy = {
-  getHunkCount: (file, state) =>
-    resolveChangeReviewFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts),
+  getHunkCount: (file, state) => {
+    const key =
+      file.changeKey && file.changeKey in state.fileChunkCounts ? file.changeKey : file.filePath;
+    return resolveChangeReviewFileHunkCount(key, file.snippets.length, state.fileChunkCounts);
+  },
   resolveFileIsNew: resolveReviewFileIsNew,
   shouldDeleteWhenUndoingReject: shouldDeleteFileWhenUndoingReject,
   shouldCreateWhenUndoingReject: shouldCreateFileWhenUndoingReject,

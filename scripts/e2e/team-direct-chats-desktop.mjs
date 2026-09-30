@@ -60,9 +60,46 @@ async function assertRuntimeAudit(fixture) {
     .filter(Boolean)
     .map((line) => JSON.parse(line));
   assert(
-    invocations.every(
-      ({ args }) => Array.isArray(args) && args.length === 1 && args[0] === '--version'
-    ),
+    invocations.every(({ args, outcome, bridgeCommand }) => {
+      if (!Array.isArray(args)) return false;
+      if (args.length === 1 && args[0] === '--version') return outcome === 'version';
+      if (outcome !== 'denied') return false;
+      if (
+        args.length === 11 &&
+        args[0] === 'runtime' &&
+        args[1] === 'providers' &&
+        args[2] === 'directory' &&
+        args[3] === '--runtime' &&
+        args[4] === 'opencode' &&
+        args[5] === '--json' &&
+        args[6] === '--summary' &&
+        args[7] === '--filter' &&
+        args[8] === 'all' &&
+        args[9] === '--limit' &&
+        args[10] === '100'
+      )
+        return true;
+      if (
+        args.length === 6 &&
+        args[0] === 'runtime' &&
+        args[1] === 'status' &&
+        args[2] === '--json' &&
+        args[3] === '--provider' &&
+        ['anthropic', 'opencode', 'codex'].includes(args[4]) &&
+        args[5] === '--summary'
+      )
+        return true;
+      return (
+        args.length === 7 &&
+        args[0] === 'runtime' &&
+        args[1] === 'opencode-command' &&
+        args[2] === '--json' &&
+        args[3] === '--input' &&
+        args[5] === '--output' &&
+        args[6] === `${args[4]}.output.json` &&
+        ['opencode.cleanupHosts', 'opencode.cleanupStartupHosts'].includes(bridgeCommand)
+      );
+    }),
     `fixture runtime received a forbidden command: ${JSON.stringify(invocations)}`
   );
 }
@@ -109,6 +146,34 @@ async function pressKey(client, key, code = key) {
     windowsVirtualKeyCode: keyCode,
     nativeVirtualKeyCode: keyCode,
   });
+}
+
+async function waitForDesktopStartup(client, label, timeoutMs = 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastTransientError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (
+        await client.evaluate(
+          '(async () => Boolean((await window.electronAPI?.startup?.getStatus?.())?.ready))()'
+        )
+      )
+        return;
+      lastTransientError = null;
+    } catch (error) {
+      if (
+        !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
+          String(error)
+        )
+      )
+        throw error;
+      lastTransientError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(
+    `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`
+  );
 }
 
 function rememberAppLog(chunk, stream) {
@@ -182,9 +247,14 @@ async function seedFixture() {
   await writeFile(
     fixture.runtimeWrapperPath,
     `#!${nodeBinary}\n'use strict';\n` +
-      `const { appendFileSync } = require('node:fs');\n` +
+      `const { appendFileSync, readFileSync } = require('node:fs');\n` +
       `const args = process.argv.slice(2);\n` +
-      `appendFileSync(${JSON.stringify(fixture.runtimeAuditPath)}, JSON.stringify({ args }) + '\\n');\n` +
+      `const version = args.length === 1 && args[0] === '--version';\n` +
+      `let bridgeCommand;\n` +
+      `if (args[0] === 'runtime' && args[1] === 'opencode-command' && args[3] === '--input') {\n` +
+      `  try { bridgeCommand = JSON.parse(readFileSync(args[4], 'utf8')).command; } catch {}\n` +
+      `}\n` +
+      `appendFileSync(${JSON.stringify(fixture.runtimeAuditPath)}, JSON.stringify({ args, outcome: version ? 'version' : 'denied', bridgeCommand }) + '\\n');\n` +
       `if (args.length === 1 && args[0] === '--version') {\n` +
       `  process.stdout.write(${JSON.stringify(`${runtimeLock.version}\n`)});\n` +
       `  process.exit(0);\n` +
@@ -538,6 +608,7 @@ async function main() {
       'native API and dev store',
       60_000
     );
+    await waitForDesktopStartup(cdp, 'desktop startup completed');
     await cdp.waitFor(
       `(() => { const state = window.__agentTeamsDevStore?.getState(); return Boolean(
         state?.paneLayout?.focusedPaneId && !state?.teamsLoading &&
@@ -545,6 +616,7 @@ async function main() {
       'hydrated fixture team',
       60_000
     );
+    const fixtureDocumentId = await cdp.evaluate('performance.timeOrigin');
     await cdp.evaluate(`window.__agentTeamsDevStore.getState().openTeamsTab()`);
     await cdp.waitFor(
       `Boolean(Array.from(document.querySelectorAll('[role="button"]')).find((element) =>
@@ -555,7 +627,7 @@ async function main() {
     await cdp.evaluate(`(async () => {
       const state = window.__agentTeamsDevStore.getState();
       state.openTeamTab(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(fixture.projectPath)});
-      await state.selectTeam(${JSON.stringify(fixture.teamName)});
+      await state.selectTeam(${JSON.stringify(fixture.teamName)}, { skipProjectAutoSelect: true });
     })()`);
     await cdp.waitFor(
       `(() => {
@@ -580,12 +652,38 @@ async function main() {
     await cdp.evaluate(`window.__agentTeamsDevStore.getState().setMessagesPanelMode('sidebar')`);
     await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
       button.getAttribute('aria-label') === 'Back to chats')?.click()`);
-    await cdp.waitFor(
-      `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
-        (button.getAttribute('aria-label') ?? '').includes('Group chat')))`,
-      'chat list Group chat row',
-      60_000
-    );
+    const groupChatRow = `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
+      (button.getAttribute('aria-label') ?? '').includes('Group chat')))`;
+    try {
+      await cdp.waitFor(groupChatRow, 'chat list Group chat row', 10_000);
+    } catch (error) {
+      // Vite can reload the first renderer after dependency optimization. Retry
+      // the same selection once only if a new document actually replaced it.
+      if ((await cdp.evaluate('performance.timeOrigin')) === fixtureDocumentId) throw error;
+      await waitForDesktopStartup(cdp, 'reloaded desktop startup');
+      await cdp.waitFor(
+        `window.__agentTeamsDevStore?.getState()?.teams?.some((team) =>
+          team.teamName === ${JSON.stringify(fixture.teamName)})`,
+        'reloaded fixture team',
+        60_000
+      );
+      await cdp.evaluate(`(async () => {
+        const state = window.__agentTeamsDevStore.getState();
+        state.openTeamsTab();
+        state.openTeamTab(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(fixture.projectPath)});
+        await state.selectTeam(${JSON.stringify(fixture.teamName)}, { skipProjectAutoSelect: true });
+        state.setMessagesPanelMode('sidebar');
+      })()`);
+      await cdp.waitFor(
+        `window.__agentTeamsDevStore?.getState()?.selectedTeamData?.teamName ===
+          ${JSON.stringify(fixture.teamName)}`,
+        'reloaded fixture team data',
+        60_000
+      );
+      await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
+        button.getAttribute('aria-label') === 'Back to chats')?.click()`);
+      await cdp.waitFor(groupChatRow, 'chat list Group chat row after renderer reload', 60_000);
+    }
     if (!attachPort) {
       await clickPoint(
         cdp,
@@ -679,6 +777,12 @@ async function main() {
         10_000
       );
       await pressKey(cdp, 'Escape', 'Escape');
+      await cdp.waitFor(
+        `!Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).some((item) =>
+          item.textContent?.includes('Sort by new messages'))`,
+        'message panel actions closed after sorting',
+        10_000
+      );
     }
     await cdp.screenshot(path.join(shotDir, 'chat-list.png'));
     if (attachPort) {
@@ -711,7 +815,6 @@ async function main() {
         hasComposer: Boolean(document.querySelector('textarea')),
         hasLockedAlice: Boolean(document.querySelector('.message-composer-target-selectors')?.textContent?.includes('alice')),
         hasPicker: Boolean(document.querySelector('.message-composer-target-selectors button')),
-        recipientArrows: document.querySelectorAll('.lucide-move-right').length,
         hasDm: body.includes('Need you to review the chat list'),
         titleHasAlice: body.includes('alice'),
       };
@@ -745,7 +848,23 @@ async function main() {
     assert.equal(threadUi.hasComposer, true);
     assert.equal(threadUi.hasLockedAlice, true);
     assert.equal(threadUi.hasPicker, false);
-    assert.equal(threadUi.recipientArrows, 0);
+    const expectedDirectRoutes = [
+      ['dm-oscar-alice', 'true'],
+      ['dm-alice-user', 'false'],
+      ['dm-user-alice-threshold', 'false'],
+    ];
+    await cdp.waitFor(
+      `(${JSON.stringify(expectedDirectRoutes)}).every(([id]) =>
+        Boolean(document.querySelector('[data-timeline-row-key="' + id + '"] article')))`,
+      'direct message route rows',
+      15_000
+    );
+    const directRoutes = await cdp.evaluate(
+      `(${JSON.stringify(expectedDirectRoutes)}).map(([id]) => [id,
+        document.querySelector('[data-timeline-row-key="' + id + '"] article')
+          ?.getAttribute('data-has-recipient-route')])`
+    );
+    assert.deepEqual(directRoutes, expectedDirectRoutes);
     assert.equal(threadUi.hasDm, true);
     if (attachPort) {
       await cdp.evaluate(`(() => {
@@ -931,7 +1050,7 @@ async function main() {
       compact: true,
       inBottomRightCorner: true,
       aboveComposer: true,
-      accessibleName: 'To latest',
+      accessibleName: 'To latest (1)',
     });
     await clickPoint(
       cdp,
@@ -1056,10 +1175,12 @@ async function main() {
       const agentRowRect = agentRow.getBoundingClientRect();
       const agentAvatar = agent.querySelector('.wide-chat-message-header img');
       const agentBody = agent.querySelector('.wide-chat-message-body');
-      const otherAgent = Array.from(
-        root.querySelectorAll('[data-message-presentation="ordinary-agent"]')
-      ).find((message) => message.getAttribute('aria-label')?.startsWith('oscar,'));
-      const otherAgentAvatar = otherAgent?.querySelector('.wide-chat-message-header img');
+      const otherAgent = root.querySelector(
+        '[data-timeline-row-key="dm-oscar-alice"] [data-message-presentation="ordinary-agent"]'
+      );
+      const otherAgentAvatar = otherAgent?.querySelector(
+        '.wide-chat-message-header [data-chat-sender="true"] img'
+      );
       const shortUserMessageTruncated = Array.from(
         root.querySelectorAll('[data-message-presentation="ordinary-user"]')
       ).some((message) => {
@@ -1182,11 +1303,11 @@ async function main() {
         footerShadowless:
           footerShadow === 'none' ||
           !footerShadow.replaceAll('rgba(0, 0, 0, 0)', '').includes('rgb'),
-        underMessage: footerRect.top >= articleRect.bottom - 3,
+        aboveMessage: footerRect.bottom <= articleRect.top + 3,
         rowStable: Math.abs(row.getBoundingClientRect().height - ${JSON.stringify(hoverPoint.rowHeight)}) <= 0.5,
         articleStable: Math.abs(articleRect.height - ${JSON.stringify(hoverPoint.articleHeight)}) <= 0.5,
-        timeBelowBubble:
-          timestampRect.right <= footerRect.right && timestampRect.top >= articleRect.bottom - 3,
+        timeAboveBubble:
+          timestampRect.right <= footerRect.right && timestampRect.bottom <= articleRect.top + 3,
         timeReadable:
           getComputedStyle(timestamp).visibility === 'visible' &&
           getComputedStyle(timestamp).color !== getComputedStyle(timestamp).backgroundColor,
@@ -1200,14 +1321,14 @@ async function main() {
       portaled: true,
       bubbleShadow: 'none',
       footerShadowless: true,
-      underMessage: true,
+      aboveMessage: true,
       rowStable: true,
       articleStable: true,
-      timeBelowBubble: true,
+      timeAboveBubble: true,
       timeReadable: true,
       timeVisible: true,
       interactive: true,
-      side: 'bottom',
+      side: 'top',
     });
     await cdp.screenshot(path.join(shotDir, 'direct-thread-full-screen-hover.png'));
     const focusedWideArticle = await cdp.evaluate(`(() => {
@@ -1333,11 +1454,23 @@ async function main() {
       aliceInboxPath,
       directFixtureInbox.filter((message) => message.messageId !== 'dm-oscar-alice')
     );
+    const groupUserInboxPath = path.join(
+      fixture.claudeRoot,
+      'teams',
+      fixture.teamName,
+      'inboxes',
+      'user.json'
+    );
+    const groupUserInbox = JSON.parse(await readFile(groupUserInboxPath, 'utf8'));
+    await json(
+      groupUserInboxPath,
+      groupUserInbox.filter((message) => message.messageId !== 'dm-live-append')
+    );
     await cdp.waitFor(
       `window.__agentTeamsDevStore.getState()
         .teamMessagesByName[${JSON.stringify(fixture.teamName)}]
-        ?.canonicalMessages?.some((message) => message.messageId === 'dm-oscar-alice') !== true`,
-      'direct-only third-party fixture removed before group chat',
+        ?.canonicalMessages?.some((message) => ['dm-oscar-alice', 'dm-live-append'].includes(message.messageId)) !== true`,
+      'direct-only fixtures removed before group chat avatar checks',
       30_000
     );
     await toggleFullScreen(true, 'list opens Group chat', 'composer');
@@ -1680,14 +1813,34 @@ async function main() {
         updatedAt: Date.now(),
       };
       await writeKeyval(cdp, groupWorkingKey, futureWorking);
+      await cdp.evaluate('window.__teamDirectChatsReloadPending = true');
       await cdp.send('Page.reload', { ignoreCache: true });
+      await cdp.waitFor(
+        '!window.__teamDirectChatsReloadPending && window.__agentTeamsDevStore?.getState()?.teams?.length > 0',
+        'fixture team after storage reload',
+        60_000
+      );
+      await cdp.evaluate(`(async () => {
+        const state = window.__agentTeamsDevStore.getState();
+        state.openTeamTab(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(fixture.projectPath)});
+        await state.selectTeam(${JSON.stringify(fixture.teamName)}, { skipProjectAutoSelect: true });
+        state.setMessagesPanelMode('sidebar');
+      })()`);
+      await cdp.waitFor(
+        `Boolean(Array.from(document.querySelectorAll('button')).find((button) =>
+          (button.getAttribute('aria-label') ?? '').includes('Group chat'))) || Boolean(document.querySelector('textarea'))`,
+        'group conversation after storage reload',
+        30_000
+      );
+      await cdp.evaluate(`Array.from(document.querySelectorAll('button')).find((button) =>
+        (button.getAttribute('aria-label') ?? '').includes('Group chat'))?.click()`);
       await cdp.waitFor(
         `window.electronAPI?.teams && window.__agentTeamsDevStore && document.querySelector('textarea')`,
         'fixture app after storage reload',
         60_000
       );
       await cdp.waitFor(
-        `document.body.textContent.includes('The saved draft uses an unsupported schema and was left untouched.')`,
+        `Boolean(document.body?.textContent?.includes('The saved draft uses an unsupported schema and was left untouched.'))`,
         'future draft hydration warning',
         10_000
       );
@@ -1725,9 +1878,10 @@ async function main() {
         futureWorking,
         'UI autosave must not overwrite unsupported future working data'
       );
+      await cdp.evaluate('window.__teamDirectChatsReloadPending = true');
       await cdp.send('Page.reload', { ignoreCache: true });
       await cdp.waitFor(
-        'window.electronAPI?.teams && window.__agentTeamsDevStore',
+        '!window.__teamDirectChatsReloadPending && window.electronAPI?.teams && window.__agentTeamsDevStore',
         'second storage reload',
         60_000
       );

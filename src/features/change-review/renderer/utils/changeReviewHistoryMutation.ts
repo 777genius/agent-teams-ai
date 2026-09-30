@@ -1,4 +1,4 @@
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { normalizeReviewPathForIdentity } from '@renderer/utils/reviewKey';
 
 import type {
   FileChangeSummary,
@@ -109,11 +109,11 @@ export function getReviewActionsAffectedPaths(
   const affectedPaths: string[] = [];
   for (const action of actions) {
     for (const filePath of getReviewActionAffectedPaths(action, files)) {
-      const normalizedPath = normalizePathForComparison(filePath);
+      const normalizedPath = normalizeReviewPathForIdentity(filePath);
       if (seenPaths.has(normalizedPath)) continue;
       seenPaths.add(normalizedPath);
       const currentFile = files.find(
-        (file) => normalizePathForComparison(file.filePath) === normalizedPath
+        (file) => normalizeReviewPathForIdentity(file.filePath) === normalizedPath
       );
       affectedPaths.push(currentFile?.filePath ?? filePath);
     }
@@ -123,11 +123,24 @@ export function getReviewActionsAffectedPaths(
 
 export function resolveReviewFile(
   files: readonly FileChangeSummary[],
-  filePath: string
+  filePath: string,
+  action?: ReviewUndoAction
 ): FileChangeSummary | null {
-  const normalizedPath = normalizePathForComparison(filePath);
-  return (
-    files.find((candidate) => normalizePathForComparison(candidate.filePath) === normalizedPath) ??
-    null
+  const path = normalizeReviewPathForIdentity(filePath);
+  const candidates = files.filter(
+    (candidate) => normalizeReviewPathForIdentity(candidate.filePath) === path
   );
+  if (action?.kind === 'disk') {
+    const persisted = [action.action.file, action.action.snapshot.file].filter(
+      (file): file is FileChangeSummary => file !== undefined
+    );
+    if (persisted.some((file) => normalizeReviewPathForIdentity(file.filePath) !== path)) {
+      return null;
+    }
+    const keys = new Set(persisted.flatMap((file) => (file.changeKey ? [file.changeKey] : [])));
+    if (keys.size > 1) return null;
+    const key = [...keys][0];
+    if (key) return candidates.filter((file) => file.changeKey === key).at(0) ?? null;
+  }
+  return candidates.length === 1 ? candidates[0] : null;
 }

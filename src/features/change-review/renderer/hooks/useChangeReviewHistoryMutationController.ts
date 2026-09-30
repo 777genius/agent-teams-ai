@@ -9,6 +9,7 @@ import {
   buildUndoDiskMutationSteps,
   getReviewActionDiskSnapshots,
 } from '@features/review-mutations';
+import { getReviewEntryKey, normalizeReviewPathForIdentity } from '@renderer/utils/reviewKey';
 
 import {
   classifyReviewHistoryRecovery,
@@ -114,6 +115,19 @@ export function useChangeReviewHistoryMutationController({
   blockForExternalChange,
   getPersistenceStatus,
 }: UseChangeReviewHistoryMutationControllerInput): ChangeReviewHistoryMutationController {
+  const fetchPhysicalFileEntries = useCallback(
+    (filePath: string): void => {
+      const normalizedPath = normalizeReviewPathForIdentity(filePath);
+      const entries = files.filter(
+        (file) => normalizeReviewPathForIdentity(file.filePath) === normalizedPath
+      );
+      for (const entry of entries) {
+        viewPort.fetchFileContent(teamName, memberName, getReviewEntryKey(files, entry));
+      }
+      if (entries.length === 0) viewPort.fetchFileContent(teamName, memberName, filePath);
+    },
+    [files, memberName, teamName, viewPort]
+  );
   const executeWithPreparedExpectations = useCallback(
     async <T>(
       operationScope: ReviewOperationScopeToken,
@@ -155,11 +169,11 @@ export function useChangeReviewHistoryMutationController({
         }
         statePort.clearExternalChange(snapshot.filePath);
         statePort.invalidateResolvedFileContent(snapshot.filePath);
-        viewPort.fetchFileContent(teamName, memberName, snapshot.filePath);
+        fetchPhysicalFileEntries(snapshot.filePath);
       }
       viewPort.incrementDiscardCounters(affectedPaths);
     },
-    [memberName, statePort, teamName, viewPort]
+    [fetchPhysicalFileEntries, statePort, viewPort]
   );
 
   const refreshAfterRedo = useCallback(
@@ -168,11 +182,11 @@ export function useChangeReviewHistoryMutationController({
       for (const snapshot of snapshots) {
         statePort.clearExternalChange(snapshot.filePath);
         statePort.invalidateResolvedFileContent(snapshot.filePath);
-        viewPort.fetchFileContent(teamName, memberName, snapshot.filePath);
+        fetchPhysicalFileEntries(snapshot.filePath);
       }
       viewPort.incrementDiscardCounters(getReviewActionAffectedPaths(action, files));
     },
-    [files, memberName, statePort, teamName, viewPort]
+    [fetchPhysicalFileEntries, files, statePort, viewPort]
   );
 
   const applyCommittedState = useCallback(
@@ -228,11 +242,11 @@ export function useChangeReviewHistoryMutationController({
       for (const filePath of affectedPaths) {
         statePort.clearExternalChange(filePath);
         statePort.invalidateResolvedFileContent(filePath);
-        viewPort.fetchFileContent(teamName, memberName, filePath);
+        fetchPhysicalFileEntries(filePath);
       }
       viewPort.incrementDiscardCounters(affectedPaths);
     },
-    [applyCommittedState, files, memberName, statePort, teamName, viewPort]
+    [applyCommittedState, fetchPhysicalFileEntries, files, statePort, viewPort]
   );
 
   const buildCurrentRestorePlan = useCallback(
@@ -247,7 +261,7 @@ export function useChangeReviewHistoryMutationController({
           reviewRedoHistory: history.getRedoHistory(),
         },
         target,
-        (filePath) => resolveReviewFile(files, filePath)
+        (filePath, action) => resolveReviewFile(files, filePath, action)
       );
       return { state, plan };
     },
@@ -282,8 +296,8 @@ export function useChangeReviewHistoryMutationController({
     const operationScope = captureOperationScope();
     if (!operationScope) return;
     const state = statePort.getSnapshot();
-    const decisionState = buildReviewUndoDecisionState(action, state, (filePath) =>
-      resolveReviewFile(files, filePath)
+    const decisionState = buildReviewUndoDecisionState(action, state, (filePath, undoAction) =>
+      resolveReviewFile(files, filePath, undoAction)
     );
     if (!decisionState) {
       statePort.reportError('Reviewed file is unavailable for Undo.');

@@ -1,7 +1,12 @@
 import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
-import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import {
+  buildHunkDecisionKey,
+  findReviewFileByPath,
+  getFileReviewKey,
+  getReviewEntryKey,
+  normalizeReviewPathForIdentity,
+} from '@renderer/utils/reviewKey';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 
 import { resolveChangeReviewFileHunkCount } from '../../core/domain/reviewHunkCountPolicy';
@@ -65,7 +70,7 @@ export function buildReviewFileLabels(
 ): ReadonlyMap<string, string> {
   return new Map(
     files.map((file) => [
-      normalizePathForComparison(file.filePath),
+      normalizeReviewPathForIdentity(file.filePath),
       file.relativePath || file.filePath,
     ])
   );
@@ -75,7 +80,7 @@ export function resolveReviewFileLabel(
   labels: ReadonlyMap<string, string>,
   filePath: string
 ): string {
-  return labels.get(normalizePathForComparison(filePath)) ?? filePath;
+  return labels.get(normalizeReviewPathForIdentity(filePath)) ?? filePath;
 }
 
 export function buildWatchedReviewFilePathsKey(files: readonly FileChangeSummary[]): string {
@@ -88,17 +93,21 @@ export function buildGlobalDiffLoadingState(input: {
   fileContentsLoading: Readonly<Record<string, boolean>>;
   fileContents: Readonly<Record<string, unknown>>;
 }): GlobalDiffLoadingState | null {
-  const loadingFiles = input.files.filter((file) => input.fileContentsLoading[file.filePath]);
+  const loadingFiles = input.files.filter(
+    (file) => input.fileContentsLoading[getReviewEntryKey(input.files, file)]
+  );
   if (loadingFiles.length === 0) return null;
 
   const preferredFile =
     (input.activeFilePath
-      ? loadingFiles.find((file) => file.filePath === input.activeFilePath)
+      ? loadingFiles.find((file) => getReviewEntryKey(input.files, file) === input.activeFilePath)
       : undefined) ?? loadingFiles[0];
 
   return {
     totalFilesCount: input.files.length,
-    readyFilesCount: input.files.filter((file) => file.filePath in input.fileContents).length,
+    readyFilesCount: input.files.filter(
+      (file) => getReviewEntryKey(input.files, file) in input.fileContents
+    ).length,
     loadingFilesCount: loadingFiles.length,
     snippetCount: loadingFiles.reduce(
       (sum, file) => sum + file.snippets.filter((snippet) => !snippet.isError).length,
@@ -121,7 +130,7 @@ export function buildReviewStats(input: {
     const reviewKey = getFileReviewKey(file);
     const fileDecision = input.fileDecisions[reviewKey] ?? input.fileDecisions[file.filePath];
     const count = resolveChangeReviewFileHunkCount(
-      file.filePath,
+      getReviewEntryKey(input.changeSet.files, file),
       file.snippets.length,
       input.fileChunkCounts
     );
@@ -173,7 +182,7 @@ export function findActiveReviewFile(
   activeFilePath: string | null
 ): FileChangeSummary | null {
   if (!changeSet || !activeFilePath) return null;
-  return changeSet.files.find((file) => file.filePath === activeFilePath) ?? null;
+  return findReviewFileByPath(changeSet.files, activeFilePath) ?? null;
 }
 
 export function buildChangeReviewTitle(input: {

@@ -180,14 +180,18 @@ describe('useChangeReviewDecisionActions', () => {
       await Promise.resolve();
     });
 
-    expect(latest).toEqual({
-      acceptAll: decisionMocks.acceptAll,
-      rejectAll: decisionMocks.rejectAll,
-      acceptFile: decisionMocks.acceptFile,
-      rejectFile: decisionMocks.rejectFile,
-      acceptHunk: decisionMocks.acceptHunk,
-      rejectHunk: decisionMocks.rejectHunk,
+    expect(latest?.acceptFile).toBe(decisionMocks.acceptFile);
+    expect(latest?.rejectFile).toBe(decisionMocks.rejectFile);
+    await act(async () => {
+      latest?.acceptAll();
+      await latest?.rejectAll();
+      latest?.acceptHunk(file.filePath, 0);
+      latest?.rejectHunk(file.filePath, 0, 'before', 'after');
     });
+    expect(decisionMocks.acceptAll).toHaveBeenCalledOnce();
+    expect(decisionMocks.rejectAll).toHaveBeenCalledOnce();
+    expect(decisionMocks.acceptHunk).toHaveBeenCalledWith(file.filePath, 0);
+    expect(decisionMocks.rejectHunk).toHaveBeenCalledWith(file.filePath, 0, 'before', 'after');
     expect(decisionMocks.useBulkController).toHaveBeenCalledWith(
       expect.objectContaining({
         active: true,

@@ -115,7 +115,7 @@ function createHarness(options: {
   const loadStates = [...(options.loadStates ?? [])];
   const authorization = {
     roots: [{ lexicalPath: '/sandbox', realPath: '/sandbox' }],
-    reviewedFiles: new Map([[FILE_PATH, file]]),
+    reviewedFiles: new Map([[FILE_PATH, [file]]]),
     resolutionMemberName: 'worker',
   };
   const applyReviewDecisions: ReviewDecisionCommandDependencies['applier']['applyReviewDecisions'] =
@@ -256,7 +256,8 @@ describe('ReviewDecisionCommandApplication', () => {
       SCOPE.teamName,
       FILE_PATH,
       createFile().snippets,
-      createContent('displayed-before\n', 'displayed-after\n')
+      createContent('displayed-before\n', 'displayed-after\n'),
+      REVIEW_KEY
     );
 
     await harness.application.applyDecisions(createDecisionRequest(displayed.reviewSnapshotToken!));
@@ -326,7 +327,8 @@ describe('ReviewDecisionCommandApplication', () => {
       SCOPE.teamName,
       FILE_PATH,
       createFile().snippets,
-      createContent('after\n', 'before\n')
+      createContent('after\n', 'before\n'),
+      REVIEW_KEY
     );
 
     const result = await harness.application.applyDecisions(
@@ -390,7 +392,8 @@ describe('ReviewDecisionCommandApplication', () => {
       SCOPE.teamName,
       FILE_PATH,
       createFile().snippets,
-      createContent('after\n', 'before\n')
+      createContent('after\n', 'before\n'),
+      REVIEW_KEY
     );
     vi.mocked(harness.applyDisk).mockImplementationOnce((_record, _onResult, onPostimages) => {
       onPostimages?.([{ filePath: FILE_PATH, content: null }]);

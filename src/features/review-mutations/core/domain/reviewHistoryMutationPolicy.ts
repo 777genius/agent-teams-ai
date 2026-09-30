@@ -24,7 +24,8 @@ export interface ReviewHistoryDecisionState extends ReviewPersistedStateSnapshot
 }
 
 export interface ReviewHistoryMutationPolicyContext {
-  resolveFile(filePath: string): FileChangeSummary;
+  resolveFile(filePath: string, action?: ReviewUndoAction): FileChangeSummary;
+  resolvePhysicalFiles(filePath: string): FileChangeSummary[];
   normalizePath(filePath: string): string;
   hashContent(content: string): string;
 }
@@ -102,8 +103,8 @@ export function assertExactReviewHistoryTransition(
     if (typeof request.externalFilePath !== 'string' || request.diskSteps.length !== 0) {
       throw new Error('External review reload requires one reviewed file and no disk mutation');
     }
-    const file = context.resolveFile(request.externalFilePath);
-    const expected = buildReviewExternalReloadState(file, {
+    const files = context.resolvePhysicalFiles(request.externalFilePath);
+    const expected = buildReviewExternalReloadState(files, {
       hunkDecisions: current?.hunkDecisions ?? {},
       fileDecisions: current?.fileDecisions ?? {},
       hunkContextHashesByFile: current?.hunkContextHashesByFile ?? {},
@@ -125,7 +126,7 @@ export function assertExactReviewHistoryTransition(
       (snapshot?.renameExpectation ? 'restore-rejected-rename' : 'content');
     const isRenameSnapshot =
       restoreMode === 'restore-rejected-rename' || restoreMode === 'reapply-rejected-rename';
-    const authoritativeFile = snapshot ? context.resolveFile(snapshot.filePath) : null;
+    const authoritativeFile = snapshot ? context.resolveFile(snapshot.filePath, action) : null;
     const expectedDecisions = authoritativeFile
       ? buildReviewRestoreDecisionState(authoritativeFile, {
           hunkDecisions: current?.hunkDecisions ?? {},
@@ -185,7 +186,7 @@ export function assertExactReviewHistoryTransition(
     const expectedDecisions = buildReviewUndoDecisionState(
       action,
       { hunkDecisions: current.hunkDecisions, fileDecisions: current.fileDecisions },
-      (filePath) => context.resolveFile(filePath)
+      (filePath, source) => context.resolveFile(filePath, source)
     );
     const transitionMatches =
       expectedDecisions !== null &&

@@ -1,5 +1,4 @@
 import { createLogger } from '@shared/utils/logger';
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 import {
   createTaskChangeDiagnosticFromWarning,
   mergeTaskChangeReviewDiagnostics,
@@ -921,9 +920,9 @@ export class TaskChangeLedgerReader {
       files: [...bundle.files]
         .map((file) => ({
           changeKey: this.normalizeSummaryChangeKey(file),
-          filePath: normalizePathForComparison(file.filePath),
-          relativePath: normalizePathForComparison(file.relativePath),
-          displayPath: file.displayPath ? normalizePathForComparison(file.displayPath) : undefined,
+          filePath: file.filePath.replace(/\\/g, '/'),
+          relativePath: file.relativePath.replace(/\\/g, '/'),
+          displayPath: file.displayPath?.replace(/\\/g, '/'),
           linesAdded: file.linesAdded,
           linesRemoved: file.linesRemoved,
           diffStatKnown: file.diffStatKnown,
@@ -941,16 +940,14 @@ export class TaskChangeLedgerReader {
           relation: file.relation
             ? {
                 kind: file.relation.kind,
-                oldPath: normalizePathForComparison(file.relation.oldPath),
-                newPath: normalizePathForComparison(file.relation.newPath),
+                oldPath: file.relation.oldPath.replace(/\\/g, '/'),
+                newPath: file.relation.newPath.replace(/\\/g, '/'),
               }
             : undefined,
-          worktreePath: file.worktreePath
-            ? normalizePathForComparison(file.worktreePath)
-            : undefined,
+          worktreePath: file.worktreePath ? file.worktreePath.replace(/\\/g, '/') : undefined,
           worktreeBranch: file.worktreeBranch,
           baseWorkspaceRoot: file.baseWorkspaceRoot
-            ? normalizePathForComparison(file.baseWorkspaceRoot)
+            ? file.baseWorkspaceRoot.replace(/\\/g, '/')
             : undefined,
         }))
         .sort(
@@ -1364,7 +1361,7 @@ export class TaskChangeLedgerReader {
     const slashNormalized = file.changeKey.replace(/\\/g, '/');
     const pathKeyMatch = /^(path|create|delete):(.+)$/.exec(slashNormalized);
     if (pathKeyMatch) {
-      return `${pathKeyMatch[1]}:${normalizePathForComparison(pathKeyMatch[2] ?? '')}`;
+      return `${pathKeyMatch[1]}:${pathKeyMatch[2]}`;
     }
     return slashNormalized;
   }
@@ -1711,7 +1708,7 @@ export class TaskChangeLedgerReader {
             : isCreatedLifecycle),
         changeKey: relation
           ? this.relationChangeKey(relation, worktreeLedger?.worktreePath)
-          : `path:${normalizePathForComparison(displayPath)}`,
+          : `path:${displayPath.replace(/\\/g, '/')}`,
         diffStatKnown: true,
         ledgerSummary: {
           ...(relation ? { relation } : {}),
@@ -2028,13 +2025,13 @@ export class TaskChangeLedgerReader {
     if (relation) {
       return this.relationChangeKey(relation, worktreePath);
     }
-    return `path:${normalizePathForComparison(filePath)}`;
+    return `path:${filePath.replace(/\\/g, '/')}`;
   }
 
   private relationChangeKey(relation: LedgerChangeRelation, worktreePath?: string): string {
-    const pathPart = `${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`;
+    const pathPart = `${relation.oldPath.replace(/\\/g, '/')}->${relation.newPath.replace(/\\/g, '/')}`;
     return worktreePath
-      ? `${relation.kind}:${normalizePathForComparison(worktreePath)}:${pathPart}`
+      ? `${relation.kind}:${worktreePath.replace(/\\/g, '/')}:${pathPart}`
       : `${relation.kind}:${pathPart}`;
   }
 
@@ -2072,13 +2069,8 @@ export class TaskChangeLedgerReader {
   }
 
   private pathMatchesRelationPath(filePath: string, relationPath: string): boolean {
-    const caseInsensitive =
-      this.isWindowsReviewPath(filePath) || this.isWindowsReviewPath(relationPath);
-    const normalizedFilePath = this.normalizeRelationComparisonPath(filePath, caseInsensitive);
-    const normalizedRelationPath = this.normalizeRelationComparisonPath(
-      relationPath,
-      caseInsensitive
-    );
+    const normalizedFilePath = filePath.replace(/\\/g, '/');
+    const normalizedRelationPath = relationPath.replace(/\\/g, '/');
     return (
       normalizedFilePath === normalizedRelationPath ||
       normalizedFilePath.endsWith(`/${normalizedRelationPath}`)
@@ -2092,29 +2084,13 @@ export class TaskChangeLedgerReader {
   ): string | null {
     const slashAnchor = anchorPath.replace(/\\/g, '/');
     const slashAnchorRelation = anchorRelationPath.replace(/\\/g, '/');
-    const caseInsensitive =
-      this.isWindowsReviewPath(anchorPath) || this.isWindowsReviewPath(anchorRelationPath);
-    const normalizedAnchor = this.normalizeRelationComparisonPath(anchorPath, caseInsensitive);
-    const normalizedAnchorRelation = this.normalizeRelationComparisonPath(
-      anchorRelationPath,
-      caseInsensitive
-    );
-    if (!this.matchesRelationSuffix(normalizedAnchor, normalizedAnchorRelation)) {
+    if (!this.matchesRelationSuffix(slashAnchor, slashAnchorRelation)) {
       return null;
     }
 
     return this.normalizeLedgerFilePath(
       `${slashAnchor.slice(0, slashAnchor.length - slashAnchorRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`
     );
-  }
-
-  private normalizeRelationComparisonPath(filePath: string, caseInsensitive: boolean): string {
-    const normalized = normalizePathForComparison(filePath);
-    return caseInsensitive ? normalized.toLowerCase() : normalized;
-  }
-
-  private isWindowsReviewPath(filePath: string): boolean {
-    return isWindowsishPath(filePath) || filePath.includes('\\');
   }
 
   private matchesRelationSuffix(normalizedPath: string, normalizedRelationPath: string): boolean {
@@ -2143,15 +2119,7 @@ export class TaskChangeLedgerReader {
     }
     const normalizedFilePath = filePath.replace(/\\/g, '/');
     const normalizedProjectPath = projectPath?.replace(/\\/g, '/');
-    const comparableFilePath = normalizePathForComparison(normalizedFilePath);
-    const comparableProjectPath = normalizedProjectPath
-      ? normalizePathForComparison(normalizedProjectPath)
-      : undefined;
-    if (
-      normalizedProjectPath &&
-      comparableProjectPath &&
-      comparableFilePath.startsWith(`${comparableProjectPath}/`)
-    ) {
+    if (normalizedProjectPath && normalizedFilePath.startsWith(`${normalizedProjectPath}/`)) {
       return normalizedFilePath.slice(normalizedProjectPath.length + 1);
     }
     return normalizedFilePath.split('/').slice(-3).join('/');

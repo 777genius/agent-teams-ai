@@ -24,8 +24,9 @@ import type {
 
 export interface ReviewMutationPathAuthorization {
   roots: { lexicalPath: string; realPath: string }[];
-  reviewedFiles: Map<string, FileChangeSummary> | null;
+  reviewedFiles: Map<string, FileChangeSummary[]> | null;
   resolutionMemberName: string;
+  selectedReviewKeys?: ReadonlyMap<string, string>;
 }
 
 export interface LoadedReviewMutationDecisions extends ReviewPersistedStateSnapshot {
@@ -55,7 +56,8 @@ export interface ReviewMutationScopePort {
   resolveAuthoritativeContent(
     scope: ReviewFileScope,
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    authoritativeFile?: FileChangeSummary
   ): Promise<FileChangeWithContent>;
   assertExpectedRename(
     content: FileChangeWithContent,
@@ -66,7 +68,8 @@ export interface ReviewMutationScopePort {
   assertSnippetShapes(value: unknown): asserts value is SnippetDiff[];
   getAuthoritativeFile(
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    reviewKey?: string
   ): FileChangeSummary;
   normalizeIdentityPath(filePath: string): string;
   normalizeFilesystemPath(filePath: string): string;
@@ -259,7 +262,8 @@ export interface ReviewDirectMutationDiskPort {
   normalize(
     steps: readonly ReviewDirectDiskMutationStep[],
     scope: ReviewFileScope,
-    authorization: ReviewMutationPathAuthorization
+    authorization: ReviewMutationPathAuthorization,
+    history: Pick<ReviewPersistedStateSnapshot, 'reviewActionHistory' | 'reviewRedoHistory'>
   ): Promise<ReviewMutationJournalDiskStep[]>;
   buildPostimages(
     steps: readonly ReviewMutationJournalDiskStep[]
@@ -279,5 +283,10 @@ export interface ReviewMutationRecoveryDependencies {
   coordinator: ReviewMutationCoordinatorPort;
   disk: ReviewDirectMutationDiskPort;
   applyDecisionBatchDisk(record: ReviewMutationJournalRecord): Promise<ReviewMutationJournalRecord>;
+  assertRecoveryContent(
+    decision: FileReviewDecision,
+    saved: FileChangeWithContent,
+    alreadyApplied: boolean
+  ): void;
   logger: ReviewMutationLoggerPort;
 }

@@ -395,6 +395,7 @@ export const ChangeReviewDialogView = ({
               >
                 <ContinuousScrollView
                   files={sortedFiles}
+                  sourceFiles={activeChangeSet.files}
                   fileContents={fileContents}
                   fileContentsLoading={fileContentsLoading}
                   globalDiffLoadingState={globalDiffLoadingState}

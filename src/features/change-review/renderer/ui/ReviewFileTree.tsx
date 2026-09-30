@@ -5,7 +5,11 @@ import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { buildTree, sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
-import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
+import {
+  buildHunkDecisionKey,
+  getFileReviewKey,
+  getReviewEntryKey,
+} from '@renderer/utils/reviewKey';
 import {
   Check,
   ChevronRight,
@@ -52,7 +56,8 @@ function getFileStatus(
   file: FileChangeSummary,
   hunkDecisions: Record<string, HunkDecision>,
   fileDecisions: Record<string, HunkDecision>,
-  fileChunkCounts: Record<string, number>
+  fileChunkCounts: Record<string, number>,
+  entryKey = file.filePath
 ): FileStatus {
   // File-level decision takes priority (set by Accept All / Reject All)
   const reviewKey = getFileReviewKey(file);
@@ -60,11 +65,7 @@ function getFileStatus(
   if (fileDec === 'accepted') return 'accepted';
   if (fileDec === 'rejected') return 'rejected';
 
-  const count = resolveChangeReviewFileHunkCount(
-    file.filePath,
-    file.snippets.length,
-    fileChunkCounts
-  );
+  const count = resolveChangeReviewFileHunkCount(entryKey, file.snippets.length, fileChunkCounts);
   if (count === 0) return 'pending';
 
   const decisions: HunkDecision[] = [];
@@ -117,6 +118,7 @@ const FileStatusIcon = ({ status }: { status: FileStatus }): JSX.Element => {
 
 const TreeItem = ({
   node,
+  files,
   selectedFilePath,
   activeFilePath,
   onSelectFile,
@@ -130,6 +132,7 @@ const TreeItem = ({
   pathChangeLabels,
 }: {
   node: TreeNode<FileChangeSummary>;
+  files: FileChangeSummary[];
   selectedFilePath: string | null;
   activeFilePath?: string;
   onSelectFile: (filePath: string) => void;
@@ -144,14 +147,21 @@ const TreeItem = ({
 }): JSX.Element => {
   const { t } = useAppTranslation('team');
   if (node.isFile && node.data) {
-    const isSelected = node.data.filePath === selectedFilePath;
-    const isActive = node.data.filePath === activeFilePath && !isSelected;
-    const status = getFileStatus(node.data, hunkDecisions, fileDecisions, fileChunkCounts);
+    const entryKey = getReviewEntryKey(files, node.data);
+    const isSelected = entryKey === selectedFilePath;
+    const isActive = entryKey === activeFilePath && !isSelected;
+    const status = getFileStatus(
+      node.data,
+      hunkDecisions,
+      fileDecisions,
+      fileChunkCounts,
+      entryKey
+    );
     const label = pathChangeLabels?.[node.data.filePath];
     return (
       <button
-        data-tree-file={node.data.filePath}
-        onClick={() => onSelectFile(node.data!.filePath)}
+        data-tree-file={entryKey}
+        onClick={() => onSelectFile(entryKey)}
         className={cn(
           'flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors',
           isSelected
@@ -237,6 +247,7 @@ const TreeItem = ({
           <TreeItem
             key={child.fullPath}
             node={child}
+            files={files}
             selectedFilePath={selectedFilePath}
             activeFilePath={activeFilePath}
             onSelectFile={onSelectFile}
@@ -264,12 +275,16 @@ function applyExpandAncestors(prev: Set<string>, ancestors: string[]): Set<strin
   return next;
 }
 
-function getAncestorFolderPaths(tree: TreeNode<FileChangeSummary>[], filePath: string): string[] {
+function getAncestorFolderPaths(
+  tree: TreeNode<FileChangeSummary>[],
+  files: FileChangeSummary[],
+  filePath: string
+): string[] {
   const paths: string[] = [];
 
   function walk(nodes: TreeNode<FileChangeSummary>[], ancestors: string[]): boolean {
     for (const node of nodes) {
-      if (node.isFile && node.data?.filePath === filePath) {
+      if (node.isFile && node.data && getReviewEntryKey(files, node.data) === filePath) {
         paths.push(...ancestors);
         return true;
       }
@@ -322,7 +337,7 @@ export const ReviewFileTree = ({
         return true;
       }
       const count = resolveChangeReviewFileHunkCount(
-        f.filePath,
+        getReviewEntryKey(files, f),
         f.snippets.length,
         fileChunkCounts
       );
@@ -343,7 +358,13 @@ export const ReviewFileTree = ({
       if (filterNew && !f.isNewFile) return false;
 
       if (filterUnresolved) {
-        const status = getFileStatus(f, hunkDecisions, fileDecisions, fileChunkCounts);
+        const status = getFileStatus(
+          f,
+          hunkDecisions,
+          fileDecisions,
+          fileChunkCounts,
+          getReviewEntryKey(files, f)
+        );
         if (!(status === 'pending' || status === 'mixed')) return false;
       }
 
@@ -382,13 +403,13 @@ export const ReviewFileTree = ({
     const targetPath = selectedFilePath ?? activeFilePath;
     if (!targetPath) return;
 
-    const ancestors = getAncestorFolderPaths(tree, targetPath);
+    const ancestors = getAncestorFolderPaths(tree, files, targetPath);
     if (ancestors.length === 0) return;
 
     queueMicrotask(() => {
       setCollapsedFolders((prev) => applyExpandAncestors(prev, ancestors));
     });
-  }, [selectedFilePath, activeFilePath, tree]);
+  }, [selectedFilePath, activeFilePath, tree, files]);
 
   // Auto-scroll tree to active file when scroll-spy updates
   useEffect(() => {
@@ -487,6 +508,7 @@ export const ReviewFileTree = ({
             <TreeItem
               key={node.fullPath}
               node={node}
+              files={files}
               selectedFilePath={selectedFilePath}
               activeFilePath={activeFilePath}
               onSelectFile={onSelectFile}

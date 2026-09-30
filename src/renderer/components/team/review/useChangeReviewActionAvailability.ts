@@ -1,7 +1,11 @@
 import { useMemo } from 'react';
 
 import { resolveChangeReviewFileHunkCount } from '@features/change-review';
-import { getFileReviewKey } from '@renderer/utils/reviewKey';
+import {
+  getFileReviewKey,
+  getReviewEntryKey,
+  hasDuplicateReviewFilePaths,
+} from '@renderer/utils/reviewKey';
 
 import { isReviewFileFullyRejected } from './reviewActionState';
 import {
@@ -43,21 +47,23 @@ export function useChangeReviewActionAvailability({
         const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath] ?? 'pending';
         if (fileDecision !== 'pending' || file.filePath in editedContents) return false;
         const count = resolveChangeReviewFileHunkCount(
-          file.filePath,
+          getReviewEntryKey(files, file),
           file.snippets.length,
           fileChunkCounts
         );
         if (isReviewFileFullyRejected(file, count, { hunkDecisions, fileDecisions })) return false;
-        return isReviewRejectable(file, fileContents[file.filePath] ?? null);
+        return isReviewRejectable(file, fileContents[getReviewEntryKey(files, file)] ?? null);
       }),
     [editedContents, fileChunkCounts, fileContents, fileDecisions, files, hunkDecisions]
   );
   const canAcceptAll = useMemo(
     () =>
       files.length > 0 &&
+      !hasDuplicateReviewFilePaths(files) &&
       files.every((file) => {
-        if (!(file.filePath in fileContents) || file.filePath in editedContents) return false;
-        const content = fileContents[file.filePath] ?? null;
+        const entryKey = getReviewEntryKey(files, file);
+        if (!(entryKey in fileContents) || file.filePath in editedContents) return false;
+        const content = fileContents[entryKey] ?? null;
         const reviewKey = getFileReviewKey(file);
         const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
         return !isReviewAcceptDisabled({
@@ -73,6 +79,6 @@ export function useChangeReviewActionAvailability({
   return {
     rejectableFiles,
     canAcceptAll,
-    canRejectAll: rejectableFiles.length > 0,
+    canRejectAll: rejectableFiles.length > 0 && !hasDuplicateReviewFilePaths(files),
   };
 }

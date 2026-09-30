@@ -1,5 +1,7 @@
 import { assertOptionalString, assertSnippetShapes } from '../../core/domain/reviewScopePolicy';
 
+import { getDisplayedReviewedFile } from './authoritativeReviewFiles';
+
 import type { ReviewQueryDependencies, ReviewQueryGitLogEntry } from './ReviewQueryPorts';
 import type {
   AgentChangeSet,
@@ -66,7 +68,14 @@ export class ReviewQueryApplication {
       filePath,
       snippetsValue
     );
-    return this.dependencies.snapshots.register(scope.teamName, filePath, snippetsValue, content);
+    const file = getDisplayedReviewedFile(authorization.reviewedFiles, filePath, snippetsValue);
+    return this.dependencies.snapshots.register(
+      scope.teamName,
+      filePath,
+      snippetsValue,
+      content,
+      file?.changeKey ?? file?.filePath ?? filePath
+    );
   }
 
   getGitFileLog(projectPath: string, filePath: string): Promise<ReviewQueryGitLogEntry[]> {

@@ -221,11 +221,13 @@ async function handleGetUnreadCount(_event: IpcMainInvokeEvent): Promise<number>
  * Handler for 'notifications:testNotification' IPC call.
  * Sends a test notification to verify that native OS notifications are delivered.
  */
-function handleTestNotification(_event: IpcMainInvokeEvent): { success: boolean; error?: string } {
+async function handleTestNotification(
+  _event: IpcMainInvokeEvent
+): Promise<{ success: boolean; error?: string }> {
   try {
     logger.debug('Handling notifications:testNotification request');
     const manager = NotificationManager.getInstance();
-    const result = manager.sendTestNotification();
+    const result = await manager.sendTestNotification();
     logger.debug(`notifications:testNotification result: success=${String(result.success)}`);
     return result;
   } catch (error) {

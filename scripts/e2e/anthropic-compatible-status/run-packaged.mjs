@@ -324,13 +324,22 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await cdp.wait('Boolean(window.electronAPI?.cliInstaller && document.body)', 'app preload');
+  await cdp.wait(
+    'Boolean(window.electronAPI?.startup?.getStatus && window.electronAPI?.cliInstaller && document.body)',
+    'app preload'
+  );
   const startup = await cdp.wait(
-    'window.electronAPI.startup.getStatus().then(status => status.ready || status.error ? status : null)',
+    `window.electronAPI.startup.getStatus().then(status =>
+      (status.ready || status.error || status.phase === 'failed') && status)`,
     'app services ready',
     120000
   );
-  assert(!startup.error, `Packaged app startup failed: ${redact(startup.error)}`);
+  record('startup-status', startup);
+  assert(
+    startup.ready && !startup.error,
+    `App startup failed: ${redact(startup.error ?? startup.phase)}`
+  );
+  record('startup-ready');
   const discovery = await cdp.probe(
     'discovery',
     'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"defer"})'
@@ -413,10 +422,7 @@ try {
   const selectedModelExpression = `[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')]
     .some(b => b.textContent.trim() === ${JSON.stringify(model)} && b.getAttribute('aria-pressed') === 'true')`;
   await cdp.clickText(model, 'document.querySelector("[data-role=lead-row]")');
-  await cdp.wait(
-    selectedModelExpression,
-    'selected compatible model'
-  );
+  await cdp.wait(selectedModelExpression, 'selected compatible model');
   const readSelection = `(() => ({
     leadLabel: document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? null,
     storedModel: localStorage.getItem('createTeam:lastSelectedModel:anthropic'),
@@ -436,7 +442,9 @@ try {
     await pause(400);
   }
   assert(
-    evidence.requests.some((request) => request.method === 'POST' && request.path === '/v1/messages'),
+    evidence.requests.some(
+      (request) => request.method === 'POST' && request.path === '/v1/messages'
+    ),
     'The existing direct-credential diagnostic did not finish'
   );
   await cdp.wait(
@@ -486,12 +494,14 @@ try {
   evidence.error = redact(error?.stack ?? error);
   if (cdp) {
     try {
-      evidence.failureUi = (await cdp.evaluate(`(() =>
+      evidence.failureUi = (
+        await cdp.evaluate(`(() =>
         (document.querySelector('[role=dialog]')?.innerText ?? '')
           .split('\\n').map((line) => line.trim())
           .filter((line) => /selected provider|selected model|issue684-compatible-model|checking|preflight|anthropic/i.test(line))
           .slice(-24)
-      )()`)).map(redact);
+      )()`)
+      ).map(redact);
     } catch {
       // The renderer may have exited before diagnostics are collected.
     }

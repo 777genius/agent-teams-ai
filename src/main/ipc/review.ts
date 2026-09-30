@@ -33,6 +33,7 @@ import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import { ReviewMutationJournalStore } from '@main/services/team/ReviewMutationJournalStore';
 import * as reviewPersistenceLocks from '@main/services/team/ReviewPersistenceScopeLock';
+import { assertReviewRecoveryContent } from '@main/services/team/reviewReplayEvidence';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { inspectReviewFileTransaction } from '@main/utils/atomicWrite';
 import {
@@ -174,20 +175,27 @@ function validateAuthorizedReviewFilePath(
 
 function getAuthoritativeReviewedFile(
   authorization: ReviewPathAuthorization,
-  filePath: string
+  filePath: string,
+  reviewKey?: string
 ): FileChangeSummary {
-  return reviewScopeAuthorizationFeature.getAuthoritativeReviewedFile(authorization, filePath);
+  return reviewScopeAuthorizationFeature.getAuthoritativeReviewedFile(
+    authorization,
+    filePath,
+    reviewKey
+  );
 }
 
 function resolveAuthoritativeFileContent(
   scope: ReviewFileScope,
   authorization: ReviewPathAuthorization,
-  filePath: string
+  filePath: string,
+  authoritativeFile?: FileChangeSummary
 ): Promise<FileChangeWithContent> {
   return reviewScopeAuthorizationFeature.resolveAuthoritativeFileContent(
     scope,
     authorization,
-    filePath
+    filePath,
+    authoritativeFile
   );
 }
 
@@ -558,6 +566,7 @@ const reviewMutationRecoveryFeature = createReviewMutationRecoveryFeature({
     invalidateFile: (filePath) => getContentResolver().invalidateFile(filePath),
   },
   applyDecisionBatchDisk: (record) => reviewDecisionBatchFeature.applyDisk(record),
+  assertRecoveryContent: assertReviewRecoveryContent,
   logger: {
     warn: (message, error) => logger.warn(message, error),
     error: (message, error) => logger.error(message, error),

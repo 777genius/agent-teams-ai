@@ -13,7 +13,7 @@ export interface ReviewDecisionCommandCurrentState extends ReviewPersistedStateS
 }
 
 export interface ReviewDecisionCommandPolicyContext {
-  resolveFile(filePath: string): FileChangeSummary;
+  resolveFile(filePath: string, reviewKey: string): FileChangeSummary;
   normalizePath(filePath: string): string;
 }
 
@@ -53,7 +53,7 @@ export function assertExactApplyReviewHistoryTransition(
 
   const filesByPath = new Map(
     decisions.map((decision) => {
-      const file = context.resolveFile(decision.filePath);
+      const file = context.resolveFile(decision.filePath, decision.reviewKey);
       const canonicalKey = file.changeKey ?? file.filePath;
       if (decision.reviewKey !== canonicalKey) {
         throw new Error('Durable reviewKey does not match the authoritative review identity');

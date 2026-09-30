@@ -1,3 +1,5 @@
+import { getAuthoritativeReviewedActionFile } from '@features/change-review/main';
+
 import { isDurableReviewEqual } from '../../core/domain/durableReviewValue';
 import { buildReviewHistoryRestorePlan } from '../../core/domain/reviewHistoryDecisions';
 import { buildReviewHistoryRestoreDiskSteps } from '../../core/domain/reviewHistoryDiskSteps';
@@ -64,7 +66,8 @@ export class ReviewMutationRecoveryApplication {
       const diskSteps = await this.dependencies.disk.normalize(
         request.diskSteps,
         scope,
-        authorization
+        authorization,
+        persistedState
       );
       const diskPostimages = await this.dependencies.disk.buildPostimages(diskSteps);
       await this.dependencies.disk.assertPreimages(diskSteps);
@@ -125,8 +128,8 @@ export class ReviewMutationRecoveryApplication {
       const current = await this.dependencies.decisions.load(scope.teamName, persistenceScope);
       if (!current) throw new Error('Review history is unavailable');
       const currentState = this.toPersistedState(current);
-      const plan = buildReviewHistoryRestorePlan(currentState, target, (filePath) =>
-        this.dependencies.scope.getAuthoritativeFile(authorization, filePath)
+      const plan = buildReviewHistoryRestorePlan(currentState, target, (filePath, action) =>
+        getAuthoritativeReviewedActionFile(authorization, filePath, action)
       );
       if (plan.actionCount === 0) {
         return {
@@ -151,7 +154,8 @@ export class ReviewMutationRecoveryApplication {
       const diskSteps = await this.dependencies.disk.normalize(
         plannedDiskSteps,
         scope,
-        authorization
+        authorization,
+        plan.persistedState
       );
       const diskPostimages = await this.dependencies.disk.buildPostimages(diskSteps);
       await this.dependencies.disk.assertPreimages(diskSteps);
@@ -270,7 +274,8 @@ export class ReviewMutationRecoveryApplication {
           const normalizedSteps = await this.dependencies.disk.normalize(
             expectedRestore.diskSteps,
             scope,
-            authorization
+            authorization,
+            expectedRestore.persistedState
           );
           const postimageStates = await Promise.all(
             normalizedSteps.map((step) => this.dependencies.disk.classify(step))
@@ -362,6 +367,11 @@ export class ReviewMutationRecoveryApplication {
             ) {
               throw new Error('Review mutation recovery file mismatch');
             }
+            this.dependencies.assertRecoveryContent(
+              savedDecision,
+              savedContent,
+              current.decisionStatuses?.[index] === 'applied'
+            );
           }
           return this.dependencies.applyDecisionBatchDisk(current);
         },

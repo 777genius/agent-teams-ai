@@ -1,5 +1,3 @@
-import { normalizePathForComparison } from '@shared/utils/platformPath';
-
 import type {
   FileChangeSummary,
   HunkDecision,
@@ -74,17 +72,17 @@ export function partitionReviewFilesByApplyErrors(
   errorPaths: readonly string[] | null
 ): { successful: FileChangeSummary[]; failed: FileChangeSummary[] } {
   if (errorPaths === null) return { successful: [], failed: [...files] };
-  const normalizedErrors = new Set(errorPaths.map(normalizePathForComparison));
-  const requestedPaths = new Set(files.map((file) => normalizePathForComparison(file.filePath)));
+  // Disk transitions can contain case-distinct siblings, even in Windows-style paths.
+  const normalizePath = (filePath: string): string => filePath.replaceAll('\\', '/');
+  const normalizedErrors = new Set(errorPaths.map(normalizePath));
+  const requestedPaths = new Set(files.map((file) => normalizePath(file.filePath)));
   const hasUnknownError = [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
   if (hasUnknownError) {
     return { successful: [], failed: [...files] };
   }
   return {
-    successful: files.filter(
-      (file) => !normalizedErrors.has(normalizePathForComparison(file.filePath))
-    ),
-    failed: files.filter((file) => normalizedErrors.has(normalizePathForComparison(file.filePath))),
+    successful: files.filter((file) => !normalizedErrors.has(normalizePath(file.filePath))),
+    failed: files.filter((file) => normalizedErrors.has(normalizePath(file.filePath))),
   };
 }
 
@@ -124,7 +122,7 @@ export function buildReviewRestoreDecisionState(
 export function buildReviewUndoDecisionState(
   action: ReviewUndoAction,
   current: ReviewDecisionRecords,
-  resolveFile: (filePath: string) => FileChangeSummary | null
+  resolveFile: (filePath: string, action: ReviewUndoAction) => FileChangeSummary | null
 ): ReviewDecisionSnapshot | null {
   if (action.kind === 'bulk') {
     return {
@@ -135,7 +133,7 @@ export function buildReviewUndoDecisionState(
 
   const filePath =
     action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
-  const file = resolveFile(filePath);
+  const file = resolveFile(filePath, action);
   if (!file) return null;
 
   const originalIndex = action.action.originalIndex;
@@ -176,7 +174,7 @@ function assertUniqueReviewHistoryIds(current: ReviewPersistedStateSnapshot): vo
 export function buildReviewHistoryRestorePlan(
   current: ReviewPersistedStateSnapshot,
   target: ReviewHistoryRestoreTarget,
-  resolveFile: (filePath: string) => FileChangeSummary | null
+  resolveFile: (filePath: string, action: ReviewUndoAction) => FileChangeSummary | null
 ): ReviewHistoryRestorePlan {
   assertUniqueReviewHistoryIds(current);
   const undoHistory = current.reviewActionHistory.map((action) => structuredClone(action));
@@ -258,7 +256,8 @@ function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): bo
   if (action.kind === 'bulk') return true;
   const actionPath =
     action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
-  return normalizePathForComparison(actionPath) === normalizePathForComparison(filePath);
+  // Preserve case so reloading one file cannot discard a sibling's durable Undo.
+  return actionPath.replaceAll('\\', '/') === filePath.replaceAll('\\', '/');
 }
 
 /**
@@ -267,10 +266,20 @@ function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): bo
  * bulk action cannot be split safely. Independent per-file Undo actions are retained.
  */
 export function buildReviewExternalReloadState(
-  file: FileChangeSummary,
+  fileOrFiles: FileChangeSummary | readonly FileChangeSummary[],
   current: ReviewPersistedStateSnapshot
 ): ReviewPersistedStateSnapshot {
-  const decisions = restoreReviewDecisionRecordsForFile(file, current, {
+  const files = 'filePath' in fileOrFiles ? [fileOrFiles] : fileOrFiles;
+  const filePath = files[0]?.filePath;
+  const physicalPath = filePath?.replaceAll('\\', '/');
+  if (
+    !physicalPath ||
+    files.some((file) => file.filePath.replaceAll('\\', '/') !== physicalPath) ||
+    new Set(files.map(getFileReviewKey)).size !== files.length
+  ) {
+    throw new Error('External review reload requires distinct identities of one physical file');
+  }
+  const decisions = restoreReviewDecisionRecordsForFiles(files, current, {
     hunkDecisions: {},
     fileDecisions: {},
   });
@@ -279,12 +288,10 @@ export function buildReviewExternalReloadState(
     current.reviewRedoHistory.some((entry) => entry.action.kind === 'bulk');
   const reviewActionHistory = hasBulkHistory
     ? []
-    : current.reviewActionHistory.filter(
-        (action) => !reviewActionTouchesFile(action, file.filePath)
-      );
+    : current.reviewActionHistory.filter((action) => !reviewActionTouchesFile(action, filePath));
   const hunkContextHashesByFile = { ...(current.hunkContextHashesByFile ?? {}) };
-  delete hunkContextHashesByFile[getFileReviewKey(file)];
-  delete hunkContextHashesByFile[file.filePath];
+  for (const file of files) delete hunkContextHashesByFile[getFileReviewKey(file)];
+  delete hunkContextHashesByFile[filePath];
 
   return {
     ...decisions,

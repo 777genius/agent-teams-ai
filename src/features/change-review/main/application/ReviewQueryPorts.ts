@@ -53,7 +53,8 @@ export interface ReviewQuerySnapshotPort {
     teamName: string,
     filePath: string,
     snippets: SnippetDiff[],
-    content: FileChangeWithContent
+    content: FileChangeWithContent,
+    reviewKey: string
   ): FileChangeWithContent;
 }
 

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import { buildReviewExternalReloadState } from '@features/review-mutations';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { getReviewEntryKey, normalizeReviewPathForIdentity } from '@renderer/utils/reviewKey';
 
 import type {
   ChangeReviewFileDraftActionHistoryPort,
@@ -76,17 +76,21 @@ export function useChangeReviewFileDraftController({
 }: UseChangeReviewFileDraftControllerInput): ChangeReviewFileDraftController {
   const contentChanged = useCallback(
     (filePath: string, content: string, previousContent?: string): void => {
-      const baselineKey = normalizePathForComparison(filePath);
+      const baselineKey = normalizeReviewPathForIdentity(filePath);
       draftHistory.unsuppressFile(baselineKey);
       if (!draftHistory.hasBaseline(baselineKey)) {
-        const fileContent = fileContents[filePath] ?? null;
+        const file = files.findLast(
+          (candidate) => normalizeReviewPathForIdentity(candidate.filePath) === baselineKey
+        );
+        const entryKey = file ? getReviewEntryKey(files, file) : filePath;
+        const fileContent = fileContents[entryKey] ?? null;
         if (isFileMissingOnDisk(fileContent)) {
           draftHistory.setBaseline(baselineKey, null);
         } else {
           const baseline =
             previousContent ??
             resolveModifiedContent(
-              files.find((file) => file.filePath === filePath) ?? {
+              file ?? {
                 filePath,
                 relativePath: filePath,
                 snippets: [],
@@ -119,7 +123,7 @@ export function useChangeReviewFileDraftController({
         statePort.reportError('Choose Reload from disk or Keep my draft before saving this file.');
         return;
       }
-      const baselineKey = normalizePathForComparison(filePath);
+      const baselineKey = normalizeReviewPathForIdentity(filePath);
       if (!draftHistory.hasBaseline(baselineKey)) {
         statePort.reportError(
           'The draft disk baseline is unavailable. Reload the file before saving.'
@@ -190,7 +194,7 @@ export function useChangeReviewFileDraftController({
       const operationEpoch = statePort.getSnapshot().changeSetEpoch;
       const operationScope = captureOperationScope();
       if (!operationScope) return;
-      const baselineKey = normalizePathForComparison(filePath);
+      const baselineKey = normalizeReviewPathForIdentity(filePath);
       statusPort.beginFileMutation(filePath);
       draftHistory.setBaseline(baselineKey, null);
       writeEvidencePort.markExpectedWrite(filePath, content);
@@ -272,13 +276,12 @@ export function useChangeReviewFileDraftController({
             throw new Error('Unable to finish saving the previous review state. Retry Reload.');
           }
           const state = statePort.getSnapshot();
-          const file = state.activeFiles.find(
-            (candidate) =>
-              normalizePathForComparison(candidate.filePath) ===
-              normalizePathForComparison(filePath)
+          const physicalPath = normalizeReviewPathForIdentity(filePath);
+          const entries = state.activeFiles.filter(
+            (candidate) => normalizeReviewPathForIdentity(candidate.filePath) === physicalPath
           );
-          if (!file) throw new Error('Reviewed file is unavailable for Reload.');
-          const next = buildReviewExternalReloadState(file, {
+          if (entries.length === 0) throw new Error('Reviewed file is unavailable for Reload.');
+          const next = buildReviewExternalReloadState(entries, {
             hunkDecisions: state.hunkDecisions,
             fileDecisions: state.fileDecisions,
             hunkContextHashesByFile: state.hunkContextHashesByFile,
@@ -311,7 +314,13 @@ export function useChangeReviewFileDraftController({
           }
           statePort.reloadFileFromDisk(filePath);
           statusPort.incrementDiscardCounter(filePath);
-          commandPort.fetchFileContent(teamName, memberName, filePath);
+          for (const entry of entries) {
+            commandPort.fetchFileContent(
+              teamName,
+              memberName,
+              getReviewEntryKey(state.activeFiles, entry)
+            );
+          }
         } catch (error) {
           if (
             isCurrentOperationScope(operationScope) &&
@@ -350,7 +359,7 @@ export function useChangeReviewFileDraftController({
   const keepDraft = useCallback(
     (filePath: string): void => {
       if (hasActionInFlight()) return;
-      const baselineKey = normalizePathForComparison(filePath);
+      const baselineKey = normalizeReviewPathForIdentity(filePath);
       if (!draftHistory.hasBaseline(baselineKey)) {
         statePort.reportError(
           'The draft disk baseline is unavailable. Reload the file before continuing.'

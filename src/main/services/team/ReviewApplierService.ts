@@ -4,16 +4,19 @@ import {
   finalizePreparedReviewFileTransaction,
   finalizeReviewFileTransaction,
   inspectReviewFileTransaction,
+  isOwnedReviewFileTransactionHardlink,
   prepareReviewFileTransaction,
   resumePreparedReviewFileTransaction,
 } from '@main/utils/atomicWrite';
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
+import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { buildReviewChunkContextHashes, rejectReviewChunks } from '@shared/utils/reviewChunks';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AsyncLocalStorage } from 'async_hooks';
 import { createHash } from 'crypto';
-import { lstat, mkdir, readFile } from 'fs/promises';
-import { dirname } from 'path';
+import { lstat, mkdir, readdir, readFile } from 'fs/promises';
+import { basename, dirname } from 'path';
+
+import { assertReviewReplayEvidence } from './reviewReplayEvidence';
 
 import type {
   ApplyReviewDiskTransition,
@@ -176,9 +179,8 @@ export class ReviewApplierService {
   }
 
   /**
-   * Classify both sides of a ledger rename without mutating either path. The
-   * intermediate states are exact crash states understood by the idempotent
-   * rename recovery methods below.
+   * Classify both sides of a ledger rename. The intermediate states are exact
+   * crash states understood by the idempotent rename recovery methods below.
    */
   async classifyRejectedRenameTransition(
     filePath: string,
@@ -191,22 +193,11 @@ export class ReviewApplierService {
     if (relation?.kind !== 'rename') {
       throw new Error('Review file is not a ledger rename.');
     }
-    const oldSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-    const newSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-    const oldFilePath =
-      oldSnippet?.filePath ??
-      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-    const newFilePath = newSnippet?.filePath;
+    const endpoints = this.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+    const oldSnippet = endpoints?.oldSnippet;
+    const newSnippet = endpoints?.newSnippet;
+    const oldFilePath = endpoints?.oldFilePath;
+    const newFilePath = endpoints?.newFilePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
     const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
     if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
@@ -225,29 +216,55 @@ export class ReviewApplierService {
     return withFileMutationLocks(
       this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
       async () => {
+        const resumedTransaction = await resumePreparedReviewFileTransaction({
+          kind: 'move',
+          sourcePath: oldFilePath,
+          targetPath: newFilePath,
+          expectedContent: oldContent,
+          nextContent: newContent,
+        });
+        const ownsPublishedTarget = resumedTransaction
+          ? (await inspectReviewFileTransaction(resumedTransaction)) === 'published'
+          : false;
+        if (resumedTransaction && !ownsPublishedTarget) {
+          throw new Error('Review file transaction evidence is unavailable or conflicted');
+        }
         const oldCurrent = await this.readCurrentText(oldFilePath);
         const oldError = getCurrentTextReadError(oldCurrent);
         if (oldError) throw new Error(oldError);
         const newCurrent = await this.readCurrentText(newFilePath);
         const newError = getCurrentTextReadError(newCurrent);
         if (newError) throw new Error(newError);
-        if (!oldCurrent.missing) {
-          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content);
-        }
-        if (!newCurrent.missing) {
-          await this.assertSafeExpectedFile(newFilePath, newCurrent.content);
-        }
-
         const aliased =
           !oldCurrent.missing &&
           !newCurrent.missing &&
           (await this.pathsReferToSameFile(oldFilePath, newFilePath));
-        const accepted = aliased
-          ? newCurrent.content === newContent
-          : oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
-        const rejected = aliased
-          ? oldCurrent.content === oldContent
-          : !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
+        if (!oldCurrent.missing) {
+          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content, aliased);
+        }
+        if (!newCurrent.missing) {
+          await this.assertSafeExpectedFile(
+            newFilePath,
+            newCurrent.content,
+            aliased || ownsPublishedTarget
+          );
+        }
+        if (aliased) {
+          const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);
+          const content = oldCurrent.content;
+          if (spelling === 'new') {
+            if (content === newContent) return 'accepted';
+            if (content === oldContent) return 'restoring';
+          } else {
+            if (content === oldContent) return 'rejected';
+            if (content === newContent) return 'reapplying';
+          }
+          throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+        }
+        const accepted =
+          oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
+        const rejected =
+          !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
         if (accepted && rejected) return 'both';
         if (accepted) return 'accepted';
         if (rejected) return 'rejected';
@@ -348,22 +365,11 @@ export class ReviewApplierService {
     if (relation?.kind !== 'rename') {
       throw new Error('Review file is not a ledger rename.');
     }
-    const oldSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-    const newSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-    const oldFilePath =
-      oldSnippet?.filePath ??
-      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-    const newFilePath = newSnippet?.filePath;
+    const endpoints = this.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+    const oldSnippet = endpoints?.oldSnippet;
+    const newSnippet = endpoints?.newSnippet;
+    const oldFilePath = endpoints?.oldFilePath;
+    const newFilePath = endpoints?.newFilePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
     const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
     if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
@@ -636,6 +642,38 @@ export class ReviewApplierService {
       ),
     };
     return reviewApplyMutationContext.run(context, async () => {
+      assertReviewReplayEvidence(request, fileContents, hooks?.initialDiskTransitions ?? []);
+      if (hooks?.initialDiskTransitions?.length) {
+        const renameEndpoints: { oldFilePath: string; newFilePath: string }[] = [];
+        for (const change of fileContents.values()) {
+          const ledgerSnippets = change.snippets.filter(
+            (snippet) => snippet.ledger && !snippet.isError
+          );
+          const relation = this.resolveLedgerRelation(ledgerSnippets);
+          if (relation?.kind === 'rename') {
+            const endpoints = this.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+            if (!endpoints) throw new Error('Ledger rename recovery metadata is incomplete.');
+            renameEndpoints.push(endpoints);
+          }
+        }
+        for (const transition of hooks.initialDiskTransitions) {
+          if (transition.operation !== 'move') continue;
+          const source = this.normalizeRelationComparisonPath(transition.filePath);
+          const target = this.normalizeRelationComparisonPath(transition.relatedFilePath ?? '');
+          if (
+            !renameEndpoints.some((endpoints) => {
+              const oldPath = this.normalizeRelationComparisonPath(endpoints.oldFilePath);
+              const newPath = this.normalizeRelationComparisonPath(endpoints.newFilePath);
+              return (
+                (source === newPath && target === oldPath) ||
+                (source === oldPath && target === newPath)
+              );
+            })
+          ) {
+            throw new Error('Review replay evidence path does not match ledger rename');
+          }
+        }
+      }
       await this.resumeInitialReviewFileTransactions(context);
       const result = await this.applyReviewDecisionsInContext(request, fileContents);
       const diskTransitions = new Map(context.plannedTransitions);
@@ -665,7 +703,6 @@ export class ReviewApplierService {
         continue;
       }
 
-      // Skip files where all hunks are accepted (nothing to reject)
       if (decision.fileDecision === 'accepted') {
         skipped++;
         continue;
@@ -681,18 +718,6 @@ export class ReviewApplierService {
       const allHunksRejected =
         Object.keys(decision.hunkDecisions).length > 0 &&
         Object.values(decision.hunkDecisions).every((d) => d === 'rejected');
-      const hasNewFileSnippet = fileContent.snippets.some(
-        (s) => s.type === 'write-new' || s.ledger?.operation === 'create'
-      );
-
-      // Special case: rejecting an entirely new file should remove it from disk.
-      // IMPORTANT: Do NOT delete on partial reject — users may want to keep parts of the new file.
-      const shouldDeleteNewFile =
-        fileContent.isNewFile &&
-        hasNewFileSnippet &&
-        original === '' &&
-        (decision.fileDecision === 'rejected' || allHunksRejected);
-
       const ledgerOutcome = await this.tryApplyLedgerDecision(
         decision.filePath,
         original,
@@ -719,92 +744,13 @@ export class ReviewApplierService {
         continue;
       }
 
-      if (shouldDeleteNewFile) {
-        const outcome = await withFileMutationLock(decision.filePath, () =>
-          this.rejectNonLedgerNewFile(decision.filePath, modified)
-        );
-        if (outcome.status === 'applied') {
-          applied++;
-        } else {
-          if (outcome.status === 'conflict') conflicts++;
-          errors.push({
-            filePath: decision.filePath,
-            error: outcome.error,
-            code: outcome.code,
-          });
-        }
-        continue;
-      }
-
-      if (original === null || modified === null) {
-        errors.push({
-          filePath: decision.filePath,
-          error: 'Содержимое файла недоступно для применения review',
-          code: 'unavailable',
-        });
-        continue;
-      }
-
-      try {
-        if (decision.fileDecision === 'rejected') {
-          // Reject entire file
-          const result = await this.rejectFile(
-            request.teamName,
-            decision.filePath,
-            original,
-            modified
-          );
-          if (result.success) {
-            applied++;
-          } else {
-            if (result.hadConflicts) conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: result.conflictDescription || 'Не удалось применить reject',
-            });
-          }
-        } else {
-          // Partial reject — only specific hunks
-          if (rejectedHunkIndices.length === 0) {
-            skipped++;
-            continue;
-          }
-          if (!decision.hunkContextHashes) {
-            conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: 'Partial reject requires stable hunk context hashes.',
-              code: 'conflict',
-            });
-            continue;
-          }
-
-          const result = await this.rejectHunks(
-            request.teamName,
-            decision.filePath,
-            original,
-            modified,
-            rejectedHunkIndices,
-            fileContent.snippets,
-            decision.hunkContextHashes
-          );
-
-          if (result.success) {
-            applied++;
-          } else {
-            if (result.hadConflicts) conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: result.conflictDescription || 'Не удалось применить reject',
-            });
-          }
-        }
-      } catch (err) {
-        errors.push({
-          filePath: decision.filePath,
-          error: `Неожиданная ошибка: ${String(err)}`,
-        });
-      }
+      // Native snippets have no task-time filesystem identity. Current bytes
+      // cannot justify deleting or restoring a file through a mutable path.
+      errors.push({
+        filePath: decision.filePath,
+        error: 'Исходное состояние файла не подтверждено для reject',
+        code: 'unavailable',
+      });
     }
 
     return { applied, skipped, conflicts, errors };
@@ -895,56 +841,6 @@ export class ReviewApplierService {
   }
 
   // ── Private: Rejection strategies ──
-
-  private async rejectNonLedgerNewFile(
-    filePath: string,
-    modified: string | null
-  ): Promise<
-    { status: 'applied' } | { status: 'conflict' | 'error'; error: string; code: ApplyErrorCode }
-  > {
-    if (modified === null) {
-      const current = await this.readCurrentText(filePath);
-      if (current.missing) return { status: 'applied' };
-      const currentError = getCurrentTextReadError(current);
-      return {
-        status: 'error',
-        error: currentError ?? 'Cannot delete new file: expected modified content is unavailable.',
-        code: currentError ? 'io-error' : 'unavailable',
-      };
-    }
-
-    const current = await this.readCurrentText(filePath);
-    if (current.missing) return { status: 'applied' };
-    const currentError = getCurrentTextReadError(current);
-    if (currentError) {
-      return { status: 'error', error: currentError, code: 'io-error' };
-    }
-    if (current.content !== modified) {
-      return {
-        status: 'conflict',
-        error:
-          'File was modified since review was computed; refusing to delete new file automatically.',
-        code: 'conflict',
-      };
-    }
-
-    try {
-      await this.deleteExpectedTextFile(filePath, current.content);
-      return { status: 'applied' };
-    } catch (err) {
-      const code =
-        err && typeof err === 'object' && 'code' in err
-          ? String((err as { code?: unknown }).code)
-          : '';
-      return code === 'ENOENT'
-        ? { status: 'applied' }
-        : {
-            status: 'error',
-            error: `Failed to delete new file: ${String(err)}`,
-            code: 'io-error',
-          };
-    }
-  }
 
   private async tryApplyLedgerDecision(
     filePath: string,
@@ -1271,6 +1167,49 @@ export class ReviewApplierService {
     return snippets.find((snippet) => snippet.ledger?.relation)?.ledger?.relation;
   }
 
+  private resolveLedgerRenameEndpoints(
+    snippets: SnippetDiff[],
+    relation: LedgerChangeRelation
+  ): {
+    oldSnippet: SnippetDiff | undefined;
+    newSnippet: SnippetDiff;
+    oldFilePath: string;
+    newFilePath: string;
+  } | null {
+    if (relation.kind !== 'rename' || !snippets.length) return null;
+    const sameRelation = (snippet: SnippetDiff): boolean => {
+      const candidate = snippet.ledger?.relation;
+      return (
+        candidate?.kind === 'rename' &&
+        this.normalizeRelationComparisonPath(candidate.oldPath) ===
+          this.normalizeRelationComparisonPath(relation.oldPath) &&
+        this.normalizeRelationComparisonPath(candidate.newPath) ===
+          this.normalizeRelationComparisonPath(relation.newPath)
+      );
+    };
+    if (!snippets.every(sameRelation)) return null;
+    const oldCandidates = snippets.filter((snippet) => snippet.ledger?.operation === 'delete');
+    const newCandidates = snippets.filter((snippet) => snippet.ledger?.operation === 'create');
+    if (
+      newCandidates.length !== 1 ||
+      oldCandidates.length > 1 ||
+      oldCandidates.length + newCandidates.length !== snippets.length
+    )
+      return null;
+    const newSnippet = newCandidates[0];
+    const oldSnippet = oldCandidates[0];
+    if (
+      !this.pathMatchesRelationPath(newSnippet.filePath, relation.newPath) ||
+      (oldSnippet && !this.pathMatchesRelationPath(oldSnippet.filePath, relation.oldPath))
+    )
+      return null;
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet.filePath, relation.newPath, relation.oldPath);
+    if (!oldFilePath) return null;
+    return { oldSnippet, newSnippet, oldFilePath, newFilePath: newSnippet.filePath };
+  }
+
   private resolveLedgerMutationPaths(filePath: string, snippets: SnippetDiff[]): string[] {
     const paths = new Set<string>([filePath]);
     for (const snippet of snippets) {
@@ -1279,23 +1218,8 @@ export class ReviewApplierService {
 
     const relation = this.resolveLedgerRelation(snippets);
     if (relation?.kind === 'rename') {
-      const newSnippet = snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      );
-      const oldSnippet = snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      );
-      const inferredOldPath = this.resolveRelatedLedgerPath(
-        newSnippet?.filePath,
-        relation.newPath,
-        relation.oldPath
-      );
-      if (oldSnippet?.filePath) paths.add(oldSnippet.filePath);
-      if (inferredOldPath) paths.add(inferredOldPath);
+      const endpoints = this.resolveLedgerRenameEndpoints(snippets, relation);
+      if (endpoints) paths.add(endpoints.oldFilePath);
     }
 
     return [...paths];
@@ -1307,22 +1231,11 @@ export class ReviewApplierService {
     original: string | null,
     hasUnavailableState: boolean
   ): Promise<LedgerApplyOutcome> {
-    const oldSnippet =
-      snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'delete');
-    const newSnippet =
-      snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'create');
-    const oldFilePath =
-      oldSnippet?.filePath ??
-      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-    const newFilePath = newSnippet?.filePath;
+    const endpoints = this.resolveLedgerRenameEndpoints(snippets, relation);
+    const oldSnippet = endpoints?.oldSnippet;
+    const newSnippet = endpoints?.newSnippet;
+    const oldFilePath = endpoints?.oldFilePath;
+    const newFilePath = endpoints?.newFilePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
     const authoritativeNewContent = newSnippet?.ledger?.modifiedFullContent;
     const newHash = newSnippet?.ledger?.afterState?.sha256 ?? newSnippet?.ledger?.afterHash;
@@ -1387,6 +1300,12 @@ export class ReviewApplierService {
           code: 'conflict',
           error: 'Case-only rename content changed; refusing ledger reject.',
         };
+      }
+      if (
+        oldMatchesExpected &&
+        (await this.caseOnlyRenameEntry(oldFilePath, newFilePath)) === 'old'
+      ) {
+        return { handled: true, status: 'applied' };
       }
       const currentContent = newMatchesExpected ? newCurrent.content : oldCurrent.content;
       try {
@@ -1475,22 +1394,11 @@ export class ReviewApplierService {
     original: string | null,
     modified: string | null
   ): Promise<void> {
-    const oldSnippet =
-      snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'delete');
-    const newSnippet =
-      snippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'create');
-    const oldFilePath =
-      oldSnippet?.filePath ??
-      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-    const newFilePath = newSnippet?.filePath;
+    const endpoints = this.resolveLedgerRenameEndpoints(snippets, relation);
+    const oldSnippet = endpoints?.oldSnippet;
+    const newSnippet = endpoints?.newSnippet;
+    const oldFilePath = endpoints?.oldFilePath;
+    const newFilePath = endpoints?.newFilePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
     const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
 
@@ -1527,12 +1435,15 @@ export class ReviewApplierService {
       (await this.pathsReferToSameFile(oldFilePath, newFilePath));
 
     if (aliased) {
-      if (newCurrent.content === newContent) return;
-      if (newCurrent.content !== oldContent) {
+      const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);
+      if (newCurrent.content === newContent && spelling === 'new') {
+        return;
+      }
+      if (newCurrent.content !== oldContent && newCurrent.content !== newContent) {
         throw new Error('Case-only rename content changed after rejection; refusing Undo.');
       }
       try {
-        await this.moveExpectedTextFile(oldFilePath, newFilePath, oldContent, newContent);
+        await this.moveExpectedTextFile(oldFilePath, newFilePath, newCurrent.content, newContent);
         return;
       } catch (error) {
         throw new Error(`Failed to restore case-only ledger rename: ${String(error)}`);
@@ -1563,16 +1474,9 @@ export class ReviewApplierService {
   }
 
   private pathMatchesRelationPath(filePath: string, relationPath: string): boolean {
-    const caseInsensitive =
-      this.isWindowsReviewPath(filePath) || this.isWindowsReviewPath(relationPath);
-    const normalizedFilePath = this.normalizeRelationComparisonPath(filePath, caseInsensitive);
-    const normalizedRelationPath = this.normalizeRelationComparisonPath(
-      relationPath,
-      caseInsensitive
-    );
-    return (
-      normalizedFilePath === normalizedRelationPath ||
-      normalizedFilePath.endsWith(`/${normalizedRelationPath}`)
+    return this.matchesRelationSuffix(
+      this.normalizeRelationComparisonPath(filePath),
+      this.normalizeRelationComparisonPath(relationPath)
     );
   }
 
@@ -1586,26 +1490,16 @@ export class ReviewApplierService {
     }
     const slashAnchor = anchorPath.replace(/\\/g, '/');
     const slashRelation = anchorRelationPath.replace(/\\/g, '/');
-    const caseInsensitive =
-      this.isWindowsReviewPath(anchorPath) || this.isWindowsReviewPath(anchorRelationPath);
-    const normalizedAnchor = this.normalizeRelationComparisonPath(anchorPath, caseInsensitive);
-    const normalizedRelation = this.normalizeRelationComparisonPath(
-      anchorRelationPath,
-      caseInsensitive
-    );
+    const normalizedAnchor = this.normalizeRelationComparisonPath(anchorPath);
+    const normalizedRelation = this.normalizeRelationComparisonPath(anchorRelationPath);
     if (!this.matchesRelationSuffix(normalizedAnchor, normalizedRelation)) {
       return null;
     }
     return `${slashAnchor.slice(0, slashAnchor.length - slashRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`;
   }
 
-  private normalizeRelationComparisonPath(filePath: string, caseInsensitive: boolean): string {
-    const normalized = normalizePathForComparison(filePath);
-    return caseInsensitive ? normalized.toLowerCase() : normalized;
-  }
-
-  private isWindowsReviewPath(filePath: string): boolean {
-    return isWindowsishPath(filePath) || filePath.includes('\\');
+  private normalizeRelationComparisonPath(filePath: string): string {
+    return filePath.replace(/\\/g, '/');
   }
 
   private matchesRelationSuffix(normalizedPath: string, normalizedRelationPath: string): boolean {
@@ -1776,25 +1670,16 @@ export class ReviewApplierService {
     const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
     const relation = this.resolveLedgerRelation(ledgerSnippets);
     if (relation?.kind !== 'rename') return;
-    const oldSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'delete' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-    const newSnippet =
-      ledgerSnippets.find(
-        (snippet) =>
-          snippet.ledger?.operation === 'create' &&
-          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-    const oldFilePath =
-      oldSnippet?.filePath ??
-      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-    const newFilePath = newSnippet?.filePath ?? filePath;
+    const endpoints = this.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+    const oldSnippet = endpoints?.oldSnippet;
+    const newSnippet = endpoints?.newSnippet;
+    const oldFilePath = endpoints?.oldFilePath;
+    const newFilePath = endpoints?.newFilePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
     const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
-    if (!oldFilePath || oldContent === null || newContent === null) return;
+    if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+      throw new Error('Ledger rename recovery metadata is incomplete.');
+    }
     const sourcePath = direction === 'restore' ? oldFilePath : newFilePath;
     const targetPath = direction === 'restore' ? newFilePath : oldFilePath;
     const expectedContent = direction === 'restore' ? oldContent : newContent;
@@ -1910,7 +1795,8 @@ export class ReviewApplierService {
 
   private async assertSafeExpectedFile(
     filePath: string,
-    expectedCurrentContent: string
+    expectedCurrentContent: string,
+    allowOwnedPublishedAlias = false
   ): Promise<{ dev: number; ino: number; mode: number }> {
     let stats;
     try {
@@ -1924,7 +1810,12 @@ export class ReviewApplierService {
       }
       throw error;
     }
-    if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink > 1) {
+    if (
+      stats.isSymbolicLink() ||
+      !stats.isFile() ||
+      (stats.nlink > 1 &&
+        (!allowOwnedPublishedAlias || !(await isOwnedReviewFileTransactionHardlink(filePath))))
+    ) {
       throw new Error('Review mutation refuses symbolic or multiply-linked files');
     }
     const current = await this.readCurrentText(filePath);
@@ -1975,6 +1866,22 @@ export class ReviewApplierService {
     } catch {
       return false;
     }
+  }
+
+  private async caseOnlyRenameEntry(
+    oldFilePath: string,
+    newFilePath: string
+  ): Promise<'old' | 'new'> {
+    if (dirname(oldFilePath) !== dirname(newFilePath)) {
+      throw new Error('Ledger rename directory spelling is ambiguous');
+    }
+    const entries = await readdir(dirname(oldFilePath));
+    const hasOld = entries.includes(basename(oldFilePath));
+    const hasNew = entries.includes(basename(newFilePath));
+    if (hasOld === hasNew) {
+      throw new Error('Ledger rename directory spelling is ambiguous');
+    }
+    return hasOld ? 'old' : 'new';
   }
 
   private hashText(content: string): string {

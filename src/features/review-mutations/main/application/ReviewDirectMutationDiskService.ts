@@ -1,3 +1,5 @@
+import { getAuthoritativeRenameStepFile } from '@features/change-review/main';
+
 import type {
   ReviewMutationJournalDiskStep,
   ReviewMutationJournalRecord,
@@ -12,6 +14,7 @@ import type {
   ReviewDirectDiskMutationStep,
   ReviewFileScope,
   ReviewMutationDiskPostimage,
+  ReviewPersistedStateSnapshot,
 } from '@shared/types/review';
 
 export class ReviewDirectMutationDiskService implements ReviewDirectMutationDiskPort {
@@ -20,10 +23,15 @@ export class ReviewDirectMutationDiskService implements ReviewDirectMutationDisk
   async normalize(
     steps: readonly ReviewDirectDiskMutationStep[],
     scope: ReviewFileScope,
-    authorization: ReviewMutationPathAuthorization
+    authorization: ReviewMutationPathAuthorization,
+    history: Pick<ReviewPersistedStateSnapshot, 'reviewActionHistory' | 'reviewRedoHistory'>
   ): Promise<ReviewMutationJournalDiskStep[]> {
     const ids = new Set<string>();
     const normalized: ReviewMutationJournalDiskStep[] = [];
+    const actions = [
+      ...history.reviewActionHistory,
+      ...history.reviewRedoHistory.map((entry) => entry.action),
+    ];
     for (const step of steps) {
       if (
         !step ||
@@ -64,7 +72,8 @@ export class ReviewDirectMutationDiskService implements ReviewDirectMutationDisk
       const authoritativeContent = await this.dependencies.scope.resolveAuthoritativeContent(
         scope,
         authorization,
-        filePath
+        filePath,
+        getAuthoritativeRenameStepFile(authorization, step, actions)
       );
       await this.dependencies.scope.validateSnippets(authorization, authoritativeContent.snippets, {
         requireReviewedFile: true,

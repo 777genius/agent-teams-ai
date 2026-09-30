@@ -8,6 +8,13 @@ import {
   parseReviewRenameRecoveryExpectation,
 } from '../../core/domain/reviewScopePolicy';
 
+import {
+  type AuthoritativeReviewFiles,
+  collectAuthoritativeReviewedFiles,
+  getAuthoritativeReviewedFile,
+  normalizeReviewPathForIdentity,
+} from './authoritativeReviewFiles';
+
 import type {
   AuthorizedReviewRoot,
   ReviewPathAuthorization,
@@ -37,7 +44,7 @@ export class ReviewScopeAuthorizationApplication {
   }
 
   normalizeReviewPathForIdentity(filePath: string): string {
-    return this.dependencies.paths.normalizeIdentity(filePath);
+    return normalizeReviewPathForIdentity(filePath);
   }
 
   async resolveReviewPathAuthorization(
@@ -65,14 +72,14 @@ export class ReviewScopeAuthorizationApplication {
       throw new Error('Review project/worktree root is unavailable');
     }
 
-    let reviewedFiles: Map<string, FileChangeSummary> | null = null;
+    let reviewedFiles: AuthoritativeReviewFiles | null = null;
     let resolutionMemberName = scope.memberName ?? '';
     if (scope.taskId) {
       const changeSet = await this.dependencies.changes.getTaskChanges(
         scope.teamName,
         scope.taskId
       );
-      reviewedFiles = this.collectAuthoritativeReviewedFiles(changeSet.files);
+      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
       const authoritativeMemberName = normalizeReviewIdentity(changeSet.scope?.memberName);
       if (
         scope.memberName &&
@@ -87,7 +94,7 @@ export class ReviewScopeAuthorizationApplication {
         scope.teamName,
         scope.memberName
       );
-      reviewedFiles = this.collectAuthoritativeReviewedFiles(changeSet.files);
+      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
     }
 
     return { scope, authorization: { roots, reviewedFiles, resolutionMemberName } };
@@ -172,7 +179,11 @@ export class ReviewScopeAuthorizationApplication {
       const ownedReviewTransactionLink =
         targetStat.kind !== 'symbolic-link' &&
         resolvedStat.linkCount > 1 &&
-        (await this.dependencies.files.isOwnedTransactionHardlink(normalizedPath));
+        (await this.dependencies.files.isOwnedTransactionHardlink(
+          normalizedPath,
+          [...(authorization.reviewedFiles?.keys() ?? [])],
+          authorization.roots.map((root) => root.realPath)
+        ));
       if (resolvedStat.linkCount > 1 && !ownedReviewTransactionLink) {
         throw new Error('Review mutation refuses symbolic or multiply-linked files');
       }
@@ -182,21 +193,18 @@ export class ReviewScopeAuthorizationApplication {
 
   getAuthoritativeReviewedFile(
     authorization: ReviewPathAuthorization,
-    filePath: string
+    filePath: string,
+    reviewKey?: string
   ): FileChangeSummary {
-    const file = authorization.reviewedFiles?.get(this.normalizeReviewPathForIdentity(filePath));
-    if (!file) {
-      throw new Error('File is not part of the reviewed scope');
-    }
-    return file;
+    return getAuthoritativeReviewedFile(authorization, filePath, reviewKey);
   }
 
   async resolveAuthoritativeFileContent(
     scope: ReviewFileScope,
     authorization: ReviewPathAuthorization,
-    filePath: string
+    filePath: string,
+    authoritativeFile = this.getAuthoritativeReviewedFile(authorization, filePath)
   ): Promise<FileChangeWithContent> {
-    const authoritativeFile = this.getAuthoritativeReviewedFile(authorization, filePath);
     assertSnippetShapes(authoritativeFile.snippets);
     await this.validateSnippetPaths(authorization, authoritativeFile.snippets, {
       requireReviewedFile: true,
@@ -315,24 +323,6 @@ export class ReviewScopeAuthorizationApplication {
     return { kind: 'unanchored' };
   }
 
-  private collectAuthoritativeReviewedFiles(
-    files: FileChangeSummary[]
-  ): Map<string, FileChangeSummary> {
-    const reviewedFiles = new Map<string, FileChangeSummary>();
-    const add = (filePath: string | null, owner: FileChangeSummary): void => {
-      if (filePath && this.dependencies.paths.isAbsolute(filePath)) {
-        reviewedFiles.set(this.normalizeReviewPathForIdentity(filePath), owner);
-      }
-    };
-    for (const file of files) {
-      add(file.filePath, file);
-      for (const snippet of file.snippets) {
-        add(snippet.filePath, file);
-      }
-    }
-    return reviewedFiles;
-  }
-
   private async resolveAuthorizedReviewRoot(
     rootPath: string
   ): Promise<AuthorizedReviewRoot | null> {
@@ -384,7 +374,7 @@ export class ReviewScopeAuthorizationApplication {
       (root) =>
         (this.dependencies.paths.isWithinRoot(normalizedPath, root.lexicalPath) ||
           this.dependencies.paths.isWithinRoot(normalizedPath, root.realPath)) &&
-        this.dependencies.paths.isWithinRoot(targetRealPath, root.realPath)
+        this.dependencies.paths.isWithinRoot(targetRealPath, root.realPath, { preserveCase: true })
     );
   }
 

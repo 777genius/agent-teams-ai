@@ -12,6 +12,7 @@ import {
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
+import { findReviewFileByPath, hasDuplicateReviewFilePaths } from '@renderer/utils/reviewKey';
 
 import {
   changeReviewBulkDecisionStatePort,
@@ -26,6 +27,8 @@ import {
   shouldDeleteFileWhenUndoingReject,
 } from './reviewActionState';
 import { getResolvedReviewModifiedContent } from './reviewContentPreview';
+import { canMutateReviewHunk } from './reviewEntryNavigation';
+import { selectReviewRestoreSnapshots } from './reviewRestoreSnapshotSelection';
 
 import type { EditorView } from '@codemirror/view';
 import type {
@@ -248,6 +251,7 @@ export function useChangeReviewDecisionActions({
     blockForExternalChange: externalChange.blockReviewMutationForExternalChange,
     captureOperationScope: operation.captureReviewOperationScope,
     isCurrentOperationScope: operation.isCurrentReviewOperationScope,
+    selectRestoreSnapshots: selectReviewRestoreSnapshots,
   });
 
   const hunkCommandPort = useMemo(
@@ -297,11 +301,25 @@ export function useChangeReviewDecisionActions({
   });
 
   return {
-    acceptAll: bulk.acceptAll,
-    rejectAll: bulk.rejectAll,
+    acceptAll: () => {
+      if (!hasDuplicateReviewFilePaths(activeChangeSet?.files ?? [])) bulk.acceptAll();
+    },
+    rejectAll: async () => {
+      if (!hasDuplicateReviewFilePaths(activeChangeSet?.files ?? [])) await bulk.rejectAll();
+    },
     acceptFile: file.acceptFile,
     rejectFile: file.rejectFile,
-    acceptHunk: hunk.acceptHunk,
-    rejectHunk: hunk.rejectHunk,
+    acceptHunk: (entryKey, index) => {
+      const diskPath = findReviewFileByPath(activeChangeSet?.files, entryKey)?.filePath;
+      return diskPath && canMutateReviewHunk(activeChangeSet?.files ?? [], diskPath)
+        ? hunk.acceptHunk(diskPath, index)
+        : false;
+    },
+    rejectHunk: (entryKey, index, before, after) => {
+      const diskPath = findReviewFileByPath(activeChangeSet?.files, entryKey)?.filePath;
+      return diskPath && canMutateReviewHunk(activeChangeSet?.files ?? [], diskPath)
+        ? hunk.rejectHunk(diskPath, index, before, after)
+        : false;
+    },
   };
 }

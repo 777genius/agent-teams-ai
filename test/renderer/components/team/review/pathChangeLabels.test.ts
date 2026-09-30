@@ -84,7 +84,7 @@ describe('buildPathChangeLabels', () => {
     expect(buildPathChangeLabels([file], { [file.filePath]: content })).toEqual({});
   });
 
-  it('matches relative ledger relation paths case-insensitively against Windows drive paths', () => {
+  it('matches relative ledger relation paths with the same case against Windows drive paths', () => {
     const oldFile: FileChangeSummary = {
       filePath: 'C:\\Repo\\SRC\\Old.ts',
       relativePath: 'SRC\\Old.ts',
@@ -96,8 +96,8 @@ describe('buildPathChangeLabels', () => {
         latestOperation: 'delete',
         relation: {
           kind: 'rename',
-          oldPath: 'src\\old.ts',
-          newPath: 'src\\new.ts',
+          oldPath: 'SRC\\Old.ts',
+          newPath: 'src\\New.ts',
         },
       },
     };
@@ -112,8 +112,8 @@ describe('buildPathChangeLabels', () => {
         latestOperation: 'create',
         relation: {
           kind: 'rename',
-          oldPath: 'src\\old.ts',
-          newPath: 'src\\new.ts',
+          oldPath: 'SRC\\Old.ts',
+          newPath: 'src\\New.ts',
         },
       },
     };
@@ -122,17 +122,17 @@ describe('buildPathChangeLabels', () => {
       [oldFile.filePath]: {
         kind: 'renamed',
         direction: 'to',
-        otherPath: 'src\\new.ts',
+        otherPath: 'src\\New.ts',
       },
       [newFile.filePath]: {
         kind: 'renamed',
         direction: 'from',
-        otherPath: 'src\\old.ts',
+        otherPath: 'SRC\\Old.ts',
       },
     });
   });
 
-  it('matches relative Windows relation paths case-insensitively when only backslash paths are available', () => {
+  it('matches relative Windows relation paths by exact case when only backslash paths are available', () => {
     const file: FileChangeSummary = {
       filePath: 'SRC\\New.ts',
       relativePath: 'SRC\\New.ts',
@@ -145,7 +145,7 @@ describe('buildPathChangeLabels', () => {
         relation: {
           kind: 'rename',
           oldPath: 'src\\old.ts',
-          newPath: 'src\\new.ts',
+          newPath: 'SRC\\New.ts',
         },
       },
     };

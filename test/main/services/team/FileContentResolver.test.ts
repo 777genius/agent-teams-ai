@@ -22,7 +22,7 @@ describe('FileContentResolver', () => {
     vi.useRealTimers();
   });
 
-  it('treats explicit metadata creation as valid for write-new reconstruction', async () => {
+  it('does not trust metadata-only creation without a captured postimage', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     readFile.mockResolvedValue('');
@@ -51,9 +51,69 @@ describe('FileContentResolver', () => {
 
     const content = await resolver.getFileContent('team', 'member', '/tmp/empty-new.txt', snippets);
     expect(content.isNewFile).toBe(true);
-    expect(content.originalFullContent).toBe('');
+    expect(content.originalFullContent).toBeNull();
     expect(content.modifiedFullContent).toBe('');
-    expect(content.contentSource).toBe('snippet-reconstruction');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('shows a captured creation through an IPC-normalized dot path without trusting its baseline', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('created\n');
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/new.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'native-add',
+        filePath: '/tmp/./new.txt',
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'created\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'created\n',
+      contentSource: 'disk-current',
+    });
+  });
+
+  it('keeps a native add preview only when a symlink and parent segment can alias another path', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('created\n');
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn() } as never);
+    const filePath = '/tmp/test-review/new.txt';
+
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'native-add-through-alias',
+        filePath: '/tmp/test-review/link/../new.txt',
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'created\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'created\n',
+      contentSource: 'disk-current',
+    });
+    expect(readFile).toHaveBeenCalledWith(filePath, 'utf8');
   });
 
   it('does not trust a stale first-seen Write label as creation evidence', async () => {
@@ -87,7 +147,211 @@ describe('FileContentResolver', () => {
     expect(content.originalFullContent).toBeNull();
     expect(content.modifiedFullContent).toBe('replacement\n');
     expect(content.contentSource).toBe('disk-current');
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invent a baseline when an edit postimage occurs more than once', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nafter\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/repeated-postimage.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'edit-repeated',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('after\nafter\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('does not reverse a replace-all without knowing which postimages predated the edit', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nafter\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/replace-all-ambiguous.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'replace-all-ambiguous',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: true,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('after\nafter\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('does not use a committed Git version as the task baseline after ambiguous replacement', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nuser note\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const gitFallback = {
+      isGitRepo: vi.fn().mockResolvedValue(true),
+      findCommitNearTimestamp: vi.fn().mockResolvedValue('commit-before-task'),
+      getFileAtCommit: vi.fn().mockResolvedValue('before\ncommitted note\n'),
+    };
+    const resolver = new FileContentResolver(
+      { findMemberLogPaths: vi.fn().mockResolvedValue([]) } as never,
+      gitFallback as never
+    );
+    const filePath = '/tmp/task-replace-all.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'replace-all',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: true,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.contentSource).toBe('disk-current');
+    expect(gitFallback.getFileAtCommit).not.toHaveBeenCalled();
+  });
+
+  it('keeps a metadata-only edit baseline unavailable instead of treating it as a no-op', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('modified\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/metadata-only-edit.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'metadata-only',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: '',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('modified\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('does not delete a pre-existing path that was deleted and recreated during the task', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('replacement\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/delete-then-recreate.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'delete-original',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'original\n',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+      {
+        toolUseId: 'recreate',
+        filePath,
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'replacement\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:01:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.isNewFile).toBe(false);
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('replacement\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('does not infer creation from a tied timestamp with conflicting lifecycle events', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('replacement\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/tied-lifecycle.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'a-recreate',
+        filePath,
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'replacement\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+      {
+        toolUseId: 'z-delete',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'original\n',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      isNewFile: false,
+      originalFullContent: null,
+      modifiedFullContent: 'replacement\n',
+    });
   });
 
   it('sanitizes stale aggregate isNewFile state without creation evidence', async () => {
@@ -301,121 +565,6 @@ describe('FileContentResolver', () => {
     expect(readFile).not.toHaveBeenCalled();
   });
 
-  it('reuses cached content only when disk bytes and snippets are unchanged', async () => {
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('alpha');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
-    };
-
-    const resolver = new FileContentResolver(logsFinder as never);
-
-    await resolver.resolveFileContent('team', 'member', '/tmp/cache-hit.txt', []);
-    await resolver.resolveFileContent('team', 'member', '/tmp/cache-hit.txt', []);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(1);
-  });
-
-  it('misses cache when disk content changes even if snippets stay the same', async () => {
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValueOnce('alpha').mockResolvedValueOnce('beta');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
-    };
-
-    const resolver = new FileContentResolver(logsFinder as never);
-
-    await resolver.resolveFileContent('team', 'member', '/tmp/disk-change.txt', []);
-    await resolver.resolveFileContent('team', 'member', '/tmp/disk-change.txt', []);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
-  });
-
-  it('misses cache when snippet fingerprint changes even if disk bytes stay the same', async () => {
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('alpha');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
-    };
-
-    const resolver = new FileContentResolver(logsFinder as never);
-    const firstSnippets: SnippetDiff[] = [];
-    const secondSnippets: SnippetDiff[] = [
-      {
-        toolUseId: 't-edit',
-        filePath: '/tmp/snippet-change.txt',
-        toolName: 'Edit',
-        type: 'edit',
-        oldString: 'before',
-        newString: 'after',
-        replaceAll: false,
-        timestamp: '2026-03-01T10:00:00.000Z',
-        isError: false,
-      },
-    ];
-
-    await resolver.resolveFileContent('team', 'member', '/tmp/snippet-change.txt', firstSnippets);
-    await resolver.resolveFileContent('team', 'member', '/tmp/snippet-change.txt', secondSnippets);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
-  });
-
-  it('misses cache when snippet order changes even if snippet content stays the same', async () => {
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('alpha');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
-    };
-
-    const resolver = new FileContentResolver(logsFinder as never);
-    const firstSnippets: SnippetDiff[] = [
-      {
-        toolUseId: 't-1',
-        filePath: '/tmp/snippet-order.txt',
-        toolName: 'Edit',
-        type: 'edit',
-        oldString: 'a',
-        newString: 'b',
-        replaceAll: false,
-        timestamp: '2026-03-01T10:00:00.000Z',
-        isError: false,
-      },
-      {
-        toolUseId: 't-2',
-        filePath: '/tmp/snippet-order.txt',
-        toolName: 'Edit',
-        type: 'edit',
-        oldString: 'c',
-        newString: 'd',
-        replaceAll: false,
-        timestamp: '2026-03-01T10:01:00.000Z',
-        isError: false,
-      },
-    ];
-    const reversedSnippets = [...firstSnippets].reverse();
-
-    await resolver.resolveFileContent('team', 'member', '/tmp/snippet-order.txt', firstSnippets);
-    await resolver.resolveFileContent('team', 'member', '/tmp/snippet-order.txt', reversedSnippets);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
-  });
-
   it('distinguishes missing-file fingerprints from empty-file fingerprints', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
@@ -444,64 +593,35 @@ describe('FileContentResolver', () => {
 
     expect(missing.source).toBe('unavailable');
     expect(empty.source).toBe('disk-current');
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
   });
 
-  it('uses the same provisional TTL for all content sources in this pass', async () => {
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+  it('refreshes a cached preview when current disk content changes', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValueOnce('created\n').mockResolvedValueOnce('updated\n');
 
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
     const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn() } as never);
-    const getCacheTtlForSource = (
-      resolver as unknown as {
-        getCacheTtlForSource: (source: string) => number;
-      }
-    ).getCacheTtlForSource.bind(resolver);
-
-    expect(getCacheTtlForSource('file-history')).toBe(5_000);
-    expect(getCacheTtlForSource('snippet-reconstruction')).toBe(5_000);
-    expect(getCacheTtlForSource('git-fallback')).toBe(5_000);
-    expect(getCacheTtlForSource('disk-current')).toBe(5_000);
-    expect(getCacheTtlForSource('unavailable')).toBe(5_000);
-  });
-
-  it('expires provisional cache entries after the short TTL window', async () => {
-    vi.useFakeTimers();
-
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('alpha');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    const snippet: SnippetDiff = {
+      toolUseId: 'add-1',
+      filePath: '/tmp/cache-creation.txt',
+      toolName: 'Edit',
+      type: 'write-new',
+      oldString: '',
+      newString: 'created\n',
+      replaceAll: false,
+      timestamp: '2026-03-01T10:00:00.000Z',
+      isError: false,
     };
 
-    const resolver = new FileContentResolver(logsFinder as never);
+    const captured = await resolver.resolveFileContent('team', 'member', snippet.filePath, [
+      snippet,
+    ]);
+    const updated = await resolver.resolveFileContent('team', 'member', snippet.filePath, [
+      snippet,
+    ]);
 
-    await resolver.resolveFileContent('team', 'member', '/tmp/ttl-expiry.txt', []);
-    vi.advanceTimersByTime(5_001);
-    await resolver.resolveFileContent('team', 'member', '/tmp/ttl-expiry.txt', []);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
-  });
-
-  it('invalidates cached Windows content across slash and case path variants', async () => {
-    const fsPromises = await import('fs/promises');
-    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('same content');
-
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
-
-    const logsFinder = {
-      findMemberLogPaths: vi.fn().mockResolvedValue([]),
-    };
-    const resolver = new FileContentResolver(logsFinder as never);
-
-    await resolver.resolveFileContent('team', 'member', 'C:\\Repo\\SRC\\file.ts', []);
-    resolver.invalidateFile('c:/repo/src/file.ts');
-    await resolver.resolveFileContent('team', 'member', 'C:\\Repo\\SRC\\file.ts', []);
-
-    expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(2);
+    expect(captured).toEqual({ original: null, modified: 'created\n', source: 'disk-current' });
+    expect(updated).toEqual({ original: null, modified: 'updated\n', source: 'disk-current' });
   });
 });

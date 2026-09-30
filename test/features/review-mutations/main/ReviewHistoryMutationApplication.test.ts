@@ -47,7 +47,7 @@ function createContent(filePath: string): FileChangeWithContent {
 function createAuthorization(file: FileChangeSummary): ReviewMutationPathAuthorization {
   return {
     roots: [],
-    reviewedFiles: new Map([[file.filePath, file]]),
+    reviewedFiles: new Map([[file.filePath, [file]]]),
     resolutionMemberName: 'worker',
   };
 }

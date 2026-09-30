@@ -3,7 +3,7 @@
   "type": "module",
   "version": "2.1.2",
   "dynamicFlags": {
-    "showSponsorFluxion": false
+    "showSponsorFluxion": true
   },
   "description": "Desktop app for managing AI agent teams, reviews, runtime logs, and provider-aware workflows",
   "license": "AGPL-3.0",
@@ -20,7 +20,7 @@
     "url": "https://github.com/777genius/agent-teams-ai/issues"
   },
   "engines": {
-    "node": ">=24.15.0 <25"
+    "node": ">=24.15.0 <25 || >=26 <27"
   },
   "main": "dist-electron/main/index.cjs",
   "scripts": {
@@ -121,7 +121,7 @@
     "standalone:build": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.hosted-renderer.config.ts && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts && node scripts/hosted-web/phase-10/state-compatibility/generate-built-manifest.mjs",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
-    "postinstall": "electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3 || echo 'native Electron rebuild failed (terminal/ssh/sqlite features may be degraded)'; node ./scripts/ensure-electron-install.cjs"
+    "postinstall": "node ./scripts/postinstall-electron.cjs"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -259,7 +259,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
+    "@electron/rebuild": "^4.2.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
     "@eslint/js": "^9.39.2",
     "@playwright/test": "1.62.1",
@@ -279,7 +279,7 @@
     "@vitest/coverage-v8": "^3.2.5",
     "autoprefixer": "^10.4.17",
     "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
-    "electron": "^41.10.6",
+    "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
@@ -305,7 +305,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
     "vite": "^6.4.3",
@@ -381,7 +381,7 @@
     "mac": {
       "artifactName": "Agent.Teams.AI-${version}-${arch}-mac.${ext}",
       "category": "public.app-category.developer-tools",
-      "minimumSystemVersion": "12.0",
+      "minimumSystemVersion": "13.0",
       "target": [
         "dmg",
         "zip"

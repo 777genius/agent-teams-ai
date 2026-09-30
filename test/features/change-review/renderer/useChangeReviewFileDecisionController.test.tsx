@@ -5,6 +5,7 @@ import {
   createReviewOperationScopeToken,
   useChangeReviewFileDecisionController,
 } from '@features/change-review/renderer';
+import { selectReviewRestoreSnapshots } from '@renderer/components/team/review/reviewRestoreSnapshotSelection';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -284,6 +285,7 @@ function Probe({ harness }: { readonly harness: Harness }): React.JSX.Element {
     blockForExternalChange: () => false,
     captureOperationScope: () => createReviewOperationScopeToken('scope'),
     isCurrentOperationScope: () => harness.current,
+    selectRestoreSnapshots: selectReviewRestoreSnapshots,
   });
   return <div />;
 }

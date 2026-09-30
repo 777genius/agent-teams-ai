@@ -186,6 +186,13 @@ describe('RuntimeProviderManagementPanelView', () => {
   });
 
   afterEach(async () => {
+    if (document.querySelector('[data-testid="runtime-provider-model-virtual-list"]')) {
+      // TanStack Virtual debounces scroll notifications for 150 ms and does not
+      // cancel that timer on unmount. Let it settle while the DOM still exists.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 160));
+      });
+    }
     await act(async () => {
       for (const root of mountedRoots) root.unmount();
     });

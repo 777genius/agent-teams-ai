@@ -43,12 +43,14 @@ export interface ReviewDecisionCommandScopePort {
   assertSnippetShapes(value: unknown): asserts value is SnippetDiff[];
   getAuthoritativeFile(
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    reviewKey?: string
   ): FileChangeSummary;
   resolveAuthoritativeContent(
     scope: ReviewFileScope,
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    authoritativeFile?: FileChangeSummary
   ): Promise<FileChangeWithContent>;
   normalizeIdentityPath(filePath: string): string;
 }

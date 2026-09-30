@@ -1,5 +1,4 @@
 import { countLineChanges } from '@shared/utils/lineDiffStats';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
 import type {
@@ -212,7 +211,8 @@ export function buildReviewHistoryRestoreDiskSteps(
 
   const byPath = new Map<string, { filePath: string; steps: ReviewDirectDiskMutationStep[] }>();
   for (const step of logicalSteps) {
-    const key = normalizePathForComparison(step.filePath);
+    // Durable history must distinguish case-sensitive siblings even on Windows paths.
+    const key = step.filePath.replaceAll('\\', '/');
     const existing = byPath.get(key) ?? { filePath: step.filePath, steps: [] };
     existing.steps.push(step);
     byPath.set(key, existing);

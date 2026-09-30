@@ -19,7 +19,7 @@ function createHarness() {
   } satisfies FileChangeSummary;
   const authorization = {
     roots: [],
-    reviewedFiles: new Map([[REVIEWED_PATH, reviewedFile]]),
+    reviewedFiles: new Map([[REVIEWED_PATH, [reviewedFile]]]),
     resolutionMemberName: 'worker',
   };
   const dependencies = {

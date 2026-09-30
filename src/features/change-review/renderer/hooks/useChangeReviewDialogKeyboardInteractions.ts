@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
+import { findReviewFileByPath, getReviewEntryKey } from '@renderer/utils/reviewKey';
 
 import { useChangeReviewHistoryKeyboardShortcuts } from './useChangeReviewHistoryKeyboardShortcuts';
 
@@ -84,8 +85,14 @@ export function useChangeReviewDialogKeyboardInteractions({
   );
   const handleSaveActiveFile = useCallback((): void => {
     if (!activeFilePath || hasActionInFlight()) return;
-    void saveFile(activeFilePath);
-  }, [activeFilePath, hasActionInFlight, saveFile]);
+    const diskPath = findReviewFileByPath(sortedFiles, activeFilePath)?.filePath;
+    if (diskPath) void saveFile(diskPath);
+  }, [activeFilePath, hasActionInFlight, saveFile, sortedFiles]);
+
+  const navigationFiles = useMemo(
+    () => sortedFiles.map((file) => ({ ...file, filePath: getReviewEntryKey(sortedFiles, file) })),
+    [sortedFiles]
+  );
 
   const continuousOptions = useMemo(
     () => ({
@@ -98,7 +105,7 @@ export function useChangeReviewDialogKeyboardInteractions({
   );
 
   const diffNav = useDiffNavigation(
-    sortedFiles,
+    navigationFiles,
     activeFilePath,
     scrollToFile,
     activeEditorViewRef,
@@ -115,8 +122,9 @@ export function useChangeReviewDialogKeyboardInteractions({
     const offsets: Record<string, number> = {};
     let total = 0;
     for (const file of sortedFiles) {
-      offsets[file.filePath] = total;
-      total += getHunkCount(file.filePath, file.snippets.length);
+      const entryKey = getReviewEntryKey(sortedFiles, file);
+      offsets[entryKey] = total;
+      total += getHunkCount(entryKey, file.snippets.length);
     }
     return { offsets, total };
   }, [getHunkCount, sortedFiles]);
@@ -126,10 +134,12 @@ export function useChangeReviewDialogKeyboardInteractions({
       const filePath = getEditorFilePathForTarget(target);
       return {
         editor: filePath ? (editorViewMapRef.current.get(filePath) ?? null) : null,
-        hasDraft: filePath ? hasDraft(filePath) : false,
+        hasDraft: filePath
+          ? hasDraft(findReviewFileByPath(sortedFiles, filePath)?.filePath ?? filePath)
+          : false,
       };
     },
-    [editorViewMapRef, getEditorFilePathForTarget, hasDraft]
+    [editorViewMapRef, getEditorFilePathForTarget, hasDraft, sortedFiles]
   );
   const getUndoCount = useCallback((): number => getUndoHistory().length, [getUndoHistory]);
   const getRedoCount = useCallback((): number => getRedoHistory().length, [getRedoHistory]);

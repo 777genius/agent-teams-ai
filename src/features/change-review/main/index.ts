@@ -17,6 +17,18 @@ export {
   MAX_REVIEW_HUNK_DECISIONS_PER_FILE,
   MAX_REVIEW_SNIPPETS_PER_FILE,
 } from '../core/domain/reviewScopePolicy';
+export {
+  type AuthoritativeReviewFiles,
+  collectAuthoritativeReviewedFiles,
+  findLatestRestorableReviewSnapshot,
+  getAuthoritativePersistedReviewFile,
+  getAuthoritativeRenameStepFile,
+  getAuthoritativeReviewedActionFile,
+  getAuthoritativeReviewedFile,
+  getAuthoritativeReviewedPhysicalFiles,
+  getDisplayedReviewedFile,
+  normalizeReviewPathForIdentity,
+} from './application/authoritativeReviewFiles';
 export { ReviewDecisionPersistenceApplication } from './application/ReviewDecisionPersistenceApplication';
 export type {
   ReviewDecisionHistoryScopeAuthorization,

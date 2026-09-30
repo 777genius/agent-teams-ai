@@ -20,6 +20,7 @@ export interface ReviewMutationRecoveryFeatureDependencies {
   applier: ReviewMutationDiskApplierPort;
   cache: ReviewMutationContentCachePort;
   applyDecisionBatchDisk: ReviewMutationRecoveryDependencies['applyDecisionBatchDisk'];
+  assertRecoveryContent: ReviewMutationRecoveryDependencies['assertRecoveryContent'];
   logger: ReviewMutationLoggerPort;
 }
 
@@ -40,6 +41,7 @@ export function createReviewMutationRecoveryFeature(
     coordinator: dependencies.coordinator,
     disk,
     applyDecisionBatchDisk: dependencies.applyDecisionBatchDisk,
+    assertRecoveryContent: dependencies.assertRecoveryContent,
     logger: dependencies.logger,
   });
 }

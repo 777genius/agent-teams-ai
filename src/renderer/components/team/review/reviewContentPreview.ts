@@ -100,7 +100,7 @@ export function requiresManualLedgerReview(file: Pick<FileChangeSummary, 'snippe
 }
 
 export function getReviewRejectBlockReason(
-  file: Pick<FileChangeSummary, 'snippets' | 'isNewFile'>,
+  file: Pick<FileChangeSummary, 'filePath' | 'snippets' | 'isNewFile'>,
   fileContent: ReviewContentAvailability | null
 ): ReviewRejectBlockReason | null {
   if (isReviewFileMissingOnDisk(fileContent)) return 'missing-on-disk';
@@ -113,12 +113,20 @@ export function getReviewRejectBlockReason(
 
   const modified = getResolvedReviewModifiedContent(file, fileContent);
   if (modified == null) return 'baseline-unavailable';
-  if (file.isNewFile) return fileContent.originalFullContent === '' ? null : 'baseline-unavailable';
-  return fileContent.originalFullContent == null ? 'baseline-unavailable' : null;
+  if (
+    fileContent.contentSource === 'ledger-exact' ||
+    fileContent.contentSource === 'ledger-snapshot'
+  ) {
+    return fileContent.originalFullContent != null &&
+      file.snippets.some((snippet) => !snippet.isError && snippet.ledger)
+      ? null
+      : 'baseline-unavailable';
+  }
+  return 'baseline-unavailable';
 }
 
 export function isReviewRejectable(
-  file: Pick<FileChangeSummary, 'snippets' | 'isNewFile'>,
+  file: Pick<FileChangeSummary, 'filePath' | 'snippets' | 'isNewFile'>,
   fileContent: ReviewContentAvailability | null
 ): boolean {
   return getReviewRejectBlockReason(file, fileContent) === null;
@@ -138,7 +146,7 @@ export function isReviewAcceptDisabled(input: {
 }
 
 export function shouldRenderCurrentDiskContextPreview(
-  file: Pick<FileChangeSummary, 'snippets' | 'isNewFile'>,
+  file: Pick<FileChangeSummary, 'filePath' | 'snippets' | 'isNewFile'>,
   fileContent: ReviewContentAvailability | null
 ): boolean {
   return (

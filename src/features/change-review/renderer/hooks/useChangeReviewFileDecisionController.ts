@@ -5,6 +5,7 @@ import {
   buildForwardDiskMutationSteps,
   isLedgerRenameReviewFile,
 } from '@features/review-mutations';
+import { findReviewFileByPath, getReviewEntryKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
@@ -26,7 +27,6 @@ import type {
   ReviewDiskUndoAction,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,
-  ReviewUndoAction,
 } from '@shared/types';
 
 interface UseChangeReviewFileDecisionControllerInput {
@@ -53,36 +53,19 @@ interface UseChangeReviewFileDecisionControllerInput {
   blockForExternalChange: (filePath: string) => boolean;
   captureOperationScope: () => ReviewOperationScopeToken | null;
   isCurrentOperationScope: (scope: ReviewOperationScopeToken | null) => boolean;
+  selectRestoreSnapshots: (
+    files: readonly FileChangeSummary[],
+    file: FileChangeSummary,
+    history: readonly ReviewDiskUndoAction[]
+  ) => {
+    latestDiskSnapshot: ReviewDiskUndoSnapshot | undefined;
+    sessionSnapshot: ReviewDiskUndoSnapshot | undefined;
+  };
 }
 
 export interface ChangeReviewFileDecisionController {
   acceptFile: (filePath: string) => void;
   rejectFile: (filePath: string) => Promise<void>;
-}
-
-function findLatestDiskSnapshots(
-  history: readonly ReviewUndoAction[],
-  filePath: string
-): {
-  latest: ReviewDiskUndoSnapshot | undefined;
-  session: ReviewDiskUndoSnapshot | undefined;
-} {
-  const normalizedFilePath = normalizePathForComparison(filePath);
-  const diskHistory = history.flatMap((action): ReviewDiskUndoAction[] =>
-    action.kind === 'disk'
-      ? [action.action]
-      : action.kind === 'bulk'
-        ? action.diskSnapshots.map((snapshot) => ({ snapshot }))
-        : []
-  );
-  const matchesFile = (action: ReviewDiskUndoAction): boolean =>
-    normalizePathForComparison(action.snapshot.filePath) === normalizedFilePath;
-  return {
-    latest: [...diskHistory].reverse().find(matchesFile)?.snapshot,
-    session: [...diskHistory]
-      .reverse()
-      .find((action) => action.originalIndex === undefined && matchesFile(action))?.snapshot,
-  };
 }
 
 function hasApplyErrorForFile(
@@ -120,22 +103,34 @@ export function useChangeReviewFileDecisionController({
   blockForExternalChange,
   captureOperationScope,
   isCurrentOperationScope,
+  selectRestoreSnapshots,
 }: UseChangeReviewFileDecisionControllerInput): ChangeReviewFileDecisionController {
   const restoreRejectedFileAsAccepted = useCallback(
-    async (filePath: string): Promise<void> => {
+    async (entryKey: string): Promise<void> => {
+      const file = findReviewFileByPath(files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (hasDraft(filePath) || hasActionInFlight() || blockForExternalChange(filePath)) {
         return;
       }
       const operationEpoch = changeSetEpoch;
       const operationScope = captureOperationScope();
       if (!operationScope) return;
-      const file = files.find((candidate) => candidate.filePath === filePath);
-      if (!file) return;
-      const content = fileContents[filePath] ?? null;
+      const content = fileContents[entryKey] ?? null;
       const isExpectedDeletion = policy.isExpectedDeletion(file);
-      const { latest: latestDiskSnapshot, session: sessionSnapshot } = findLatestDiskSnapshots(
-        history.getUndoHistory(),
-        filePath
+      const diskHistory = history
+        .getUndoHistory()
+        .flatMap((action): ReviewDiskUndoAction[] =>
+          action.kind === 'disk'
+            ? [action.action]
+            : action.kind === 'bulk'
+              ? action.diskSnapshots.map((snapshot) => ({ snapshot }))
+              : []
+        );
+      const { latestDiskSnapshot, sessionSnapshot } = selectRestoreSnapshots(
+        files,
+        file,
+        diskHistory
       );
       const hasAuthoritativeAgentContent =
         content?.contentSource === 'ledger-exact' || content?.contentSource === 'ledger-snapshot';
@@ -307,7 +302,7 @@ export function useChangeReviewFileDecisionController({
         statePort.clearExternalChange(filePath);
         statePort.invalidateResolvedFileContent(filePath);
         statusPort.incrementDiscardCounter(filePath);
-        commandPort.fetchFileContent(teamName, memberName, filePath);
+        commandPort.fetchFileContent(teamName, memberName, entryKey);
       } catch (error) {
         if (
           isCurrentOperationScope(operationScope) &&
@@ -318,7 +313,7 @@ export function useChangeReviewFileDecisionController({
           );
           statePort.invalidateResolvedFileContent(filePath);
           statusPort.incrementDiscardCounter(filePath);
-          commandPort.fetchFileContent(teamName, memberName, filePath);
+          commandPort.fetchFileContent(teamName, memberName, entryKey);
         }
       } finally {
         if (
@@ -344,6 +339,7 @@ export function useChangeReviewFileDecisionController({
       persistenceScope,
       policy,
       reviewScope,
+      selectRestoreSnapshots,
       statePort,
       statusPort,
       teamName,
@@ -352,14 +348,15 @@ export function useChangeReviewFileDecisionController({
   );
 
   const acceptFile = useCallback(
-    (filePath: string): void => {
+    (entryKey: string): void => {
+      const file = findReviewFileByPath(files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (hasDraft(filePath) || hasActionInFlight() || blockForExternalChange(filePath)) {
         return;
       }
-      const file = files.find((candidate) => candidate.filePath === filePath);
-      if (!file) return;
       const state = statePort.getSnapshot();
-      const content = state.fileContents[file.filePath];
+      const content = state.fileContents[entryKey];
       const currentFileDecision = policy.getFileDecision(file, state);
       if (!content || policy.isAcceptDisabled(file, content, currentFileDecision)) return;
       const count = policy.getHunkCount(file, state);
@@ -368,14 +365,14 @@ export function useChangeReviewFileDecisionController({
         fileDecisions: state.fileDecisions,
       };
       if (policy.hasFileRejections(file, count, decisions)) {
-        void restoreRejectedFileAsAccepted(filePath);
+        void restoreRejectedFileAsAccepted(entryKey);
         return;
       }
       const decisionSnapshot: ReviewDecisionSnapshot = {
         hunkDecisions: { ...state.hunkDecisions },
         fileDecisions: { ...state.fileDecisions },
       };
-      if (!statePort.acceptAllFile(filePath)) return;
+      if (!statePort.acceptAllFile(entryKey)) return;
       history.pushUndoAction({
         kind: 'bulk',
         descriptor: { intent: 'accept-file', filePath },
@@ -386,7 +383,7 @@ export function useChangeReviewFileDecisionController({
       const operationScope = captureOperationScope();
       editorPort.scheduleEditorSync(() => {
         if (!operationScope || isCurrentOperationScope(operationScope)) {
-          editorPort.acceptAllEditorChunks(filePath);
+          editorPort.acceptAllEditorChunks(entryKey);
         }
       });
     },
@@ -407,7 +404,10 @@ export function useChangeReviewFileDecisionController({
   );
 
   const rejectFile = useCallback(
-    async (filePath: string): Promise<void> => {
+    async (entryKey: string): Promise<void> => {
+      const file = findReviewFileByPath(files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (hasDraft(filePath) || hasActionInFlight() || blockForExternalChange(filePath)) {
         return;
       }
@@ -419,10 +419,8 @@ export function useChangeReviewFileDecisionController({
         return;
       }
       try {
-        const file = files.find((candidate) => candidate.filePath === filePath);
-        if (!file) return;
         const state = statePort.getSnapshot();
-        if (!policy.isRejectable(file, state.fileContents[file.filePath] ?? null)) return;
+        if (!policy.isRejectable(file, state.fileContents[entryKey] ?? null)) return;
         const count = policy.getHunkCount(file, state);
         const decisions = {
           hunkDecisions: state.hunkDecisions,
@@ -433,7 +431,7 @@ export function useChangeReviewFileDecisionController({
           hunkDecisions: { ...state.hunkDecisions },
           fileDecisions: { ...state.fileDecisions },
         };
-        const content = fileContents[filePath] ?? null;
+        const content = fileContents[entryKey] ?? null;
         const isNew = policy.resolveFileIsNew(file, content);
         const shouldDeleteOnUndo = policy.shouldDeleteWhenUndoingReject(
           file,
@@ -441,7 +439,7 @@ export function useChangeReviewFileDecisionController({
           decisionSnapshot
         );
         const beforeContent =
-          editorPort.getCurrentContent(filePath) ?? policy.resolveModifiedContent(file, content);
+          editorPort.getCurrentContent(entryKey) ?? policy.resolveModifiedContent(file, content);
         const afterContent = isNew ? null : (content?.originalFullContent ?? null);
         const restoreContent = beforeContent ?? policy.resolveModifiedContent(file, content);
         if (restoreContent === null || (!isNew && afterContent === null)) {
@@ -458,15 +456,15 @@ export function useChangeReviewFileDecisionController({
           fileIndex: isNew
             ? Math.max(
                 0,
-                files.findIndex((candidate) => candidate.filePath === filePath)
+                files.findIndex((candidate) => getReviewEntryKey(files, candidate) === entryKey)
               )
             : undefined,
           restoreMode: isNew ? 'create-file' : shouldDeleteOnUndo ? 'delete-file' : undefined,
           renameExpectation: policy.getRenameRecoveryExpectation(file) ?? undefined,
         };
 
-        statePort.rejectAllFile(filePath);
-        editorPort.rejectAllEditorChunks(filePath);
+        statePort.rejectAllFile(entryKey);
+        editorPort.rejectAllEditorChunks(entryKey);
         const preparedAction = history.pushUndoAction({
           kind: 'disk',
           descriptor: { intent: 'reject-file', filePath },
@@ -480,7 +478,7 @@ export function useChangeReviewFileDecisionController({
         );
         if (!ensureDurableScope()) {
           statePort.restoreFileDecisions(file, decisionSnapshot);
-          editorPort.rollbackEditorContent(filePath, restoreContent);
+          editorPort.rollbackEditorContent(entryKey, restoreContent);
           history.discardLatestAction(preparedAction);
           return;
         }
@@ -502,16 +500,16 @@ export function useChangeReviewFileDecisionController({
         if (hasApplyErrorForFile(filePath, result)) {
           history.discardLatestAction(preparedAction);
           statePort.restoreFileDecisions(file, decisionSnapshot);
-          editorPort.rollbackEditorContent(filePath, restoreContent);
+          editorPort.rollbackEditorContent(entryKey, restoreContent);
           statePort.invalidateResolvedFileContent(filePath);
           statusPort.incrementDiscardCounter(filePath);
-          commandPort.fetchFileContent(teamName, memberName, filePath);
+          commandPort.fetchFileContent(teamName, memberName, entryKey);
           return;
         }
         if (isNew) {
           writeEvidencePort.markExpectedWrite(filePath, null);
           statePort.invalidateResolvedFileContent(filePath);
-          commandPort.fetchFileContent(teamName, memberName, filePath);
+          commandPort.fetchFileContent(teamName, memberName, entryKey);
           return;
         }
         if (beforeContent !== null && afterContent !== null) {

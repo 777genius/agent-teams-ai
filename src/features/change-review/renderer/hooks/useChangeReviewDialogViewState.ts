@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
+import { getReviewEntryKey } from '@renderer/utils/reviewKey';
 
 import {
   buildGlobalDiffLoadingState,
@@ -277,7 +278,9 @@ export function useChangeReviewDialogViewState({
 
   useEffect(() => {
     if (!activeChangeSet) return;
-    const allowed = new Set(activeChangeSet.files.map((file) => file.filePath));
+    const allowed = new Set(
+      activeChangeSet.files.map((file) => getReviewEntryKey(activeChangeSet.files, file))
+    );
     setCollapsedFiles((previous) => {
       const next = new Set<string>();
       for (const filePath of previous) {

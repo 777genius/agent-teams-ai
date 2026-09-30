@@ -1,3 +1,5 @@
+import { spawn, spawnSync } from 'node:child_process';
+
 import * as fs from 'fs';
 import Module from 'module';
 import * as os from 'os';
@@ -61,6 +63,7 @@ vi.mock('@main/utils/shellEnv', async (importOriginal) => {
   };
 });
 
+import { assertSupportedMcpNodeRuntime } from '@main/services/team/McpNodeRuntimeProbe';
 import {
   clearResolvedNodePathForTests,
   resolveAgentTeamsMcpLaunchSpec,
@@ -575,7 +578,7 @@ describe('TeamMcpConfigBuilder', () => {
 
     try {
       await expect(resolveAgentTeamsMcpLaunchSpec()).rejects.toThrow(
-        'Agent Teams MCP requires Node.js 24.x'
+        'Agent Teams MCP requires Node.js 24.x or 26.x'
       );
 
       const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
@@ -861,7 +864,7 @@ describe('TeamMcpConfigBuilder', () => {
     }
   });
 
-  it('skips PATH Node 26.x and uses a later Node 24.x binary', async () => {
+  it('uses PATH Node 26.x when Node 24.x is also available later', async () => {
     mockBuiltWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;
     const previousNpmNodeExecPath = process.env.npm_node_execpath;
@@ -892,7 +895,7 @@ describe('TeamMcpConfigBuilder', () => {
       const builder = new TeamMcpConfigBuilder();
       const configPath = await builder.writeConfigFile();
       createdPaths.push(configPath);
-      expect(readGeneratedServer(configPath)?.command).toBe(node24);
+      expect(readGeneratedServer(configPath)?.command).toBe(node26);
     } finally {
       if (previousNodeBinary === undefined) {
         delete process.env.NODE_BINARY;
@@ -911,6 +914,144 @@ describe('TeamMcpConfigBuilder', () => {
       }
     }
   });
+
+  it('accepts Node 24 and 26 for MCP while rejecting Node 22 and 25', () => {
+    expect(() =>
+      assertSupportedMcpNodeRuntime('/node24', { path: '/node24', version: '24.18.0' })
+    ).not.toThrow();
+    expect(() =>
+      assertSupportedMcpNodeRuntime('/node26', { path: '/node26', version: '26.10.0' })
+    ).not.toThrow();
+    for (const version of ['22.18.0', '25.1.0']) {
+      expect(() =>
+        assertSupportedMcpNodeRuntime('/unsupported-node', {
+          path: '/unsupported-node',
+          version,
+        })
+      ).toThrow('Agent Teams MCP requires Node.js 24.x or 26.x');
+    }
+  });
+
+  it('launches the generated MCP config with the selected real Node runtime in a test profile', async () => {
+    const previousNodeBinary = process.env.NODE_BINARY;
+    const claudeDir = path.join(tempAppData, 'claude');
+    fs.mkdirSync(claudeDir, { recursive: true });
+    setClaudeBasePathOverride(claudeDir);
+    process.env.NODE_BINARY = process.execPath;
+    hoisted.execCliMock.mockImplementation((command, args, options) => {
+      const result = spawnSync(command ?? '', args, {
+        encoding: 'utf8',
+        env: options?.env,
+        timeout: options?.timeout,
+      });
+      if (result.error || result.status !== 0) {
+        throw result.error ?? new Error(result.stderr);
+      }
+      return Promise.resolve({ stdout: result.stdout, stderr: result.stderr });
+    });
+
+    let child: ReturnType<typeof spawn> | undefined;
+    let childClosed: Promise<void> | undefined;
+    try {
+      const configPath = await new TeamMcpConfigBuilder().writeConfigFile(tempAppData);
+      createdPaths.push(configPath);
+      const server = readGeneratedServer(configPath);
+      expect(server?.command).toBe(process.execPath);
+      expect(server?.args?.length).toBeGreaterThan(0);
+      if (!server?.command || !server.args)
+        throw new Error('Generated MCP launch command is incomplete');
+      const selectedVersion = spawnSync(server.command, ['-p', 'process.versions.node'], {
+        encoding: 'utf8',
+      });
+      expect(selectedVersion.status).toBe(0);
+      expect(selectedVersion.stdout.trim()).toBe(process.versions.node);
+
+      child = spawn(server.command, server.args, {
+        cwd: tempAppData,
+        env: { ...process.env, ...server.env, HOME: tempAppData },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      childClosed = new Promise((resolve) => child!.once('close', () => resolve()));
+      let output = '';
+      let stderr = '';
+      child.stderr?.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+      const pending = new Map<number, (response: unknown) => void>();
+      child.stdout?.on('data', (chunk: Buffer) => {
+        output += chunk.toString();
+        let newline = output.indexOf('\n');
+        while (newline >= 0) {
+          const line = output.slice(0, newline).trim();
+          output = output.slice(newline + 1);
+          if (line) {
+            const response = JSON.parse(line) as { id?: number };
+            if (response.id !== undefined) pending.get(response.id)?.(response);
+          }
+          newline = output.indexOf('\n');
+        }
+      });
+      const request = (id: number, method: string, params: Record<string, unknown>) =>
+        new Promise<unknown>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error(`MCP ${method} timed out: ${stderr}`)),
+            15_000
+          );
+          pending.set(id, (response) => {
+            clearTimeout(timer);
+            pending.delete(id);
+            resolve(response);
+          });
+          child!.stdin?.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+        });
+      expect(
+        await request(1, 'initialize', {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'node-runtime-test', version: '1.0.0' },
+        })
+      ).toHaveProperty('result');
+      child.stdin?.write(
+        `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`
+      );
+      const tools = (await request(2, 'tools/list', {})) as {
+        result?: { tools?: { name: string }[] };
+      };
+      expect(tools.result?.tools?.some((tool) => tool.name === 'task_list')).toBe(true);
+    } finally {
+      try {
+        if (child && childClosed) {
+          const closePromise = childClosed;
+          const waitForClose = async (timeoutMs: number): Promise<boolean> => {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              return await Promise.race([
+                closePromise.then(() => true),
+                new Promise<false>((resolve) => {
+                  timer = setTimeout(() => resolve(false), timeoutMs);
+                }),
+              ]);
+            } finally {
+              clearTimeout(timer);
+            }
+          };
+          child.stdin?.end();
+          if (!(await waitForClose(1_000))) {
+            child.kill('SIGTERM');
+            if (!(await waitForClose(2_000))) {
+              child.kill('SIGKILL');
+              expect(await waitForClose(2_000), 'MCP test child did not close after SIGKILL').toBe(
+                true
+              );
+            }
+          }
+        }
+      } finally {
+        if (previousNodeBinary === undefined) delete process.env.NODE_BINARY;
+        else process.env.NODE_BINARY = previousNodeBinary;
+      }
+    }
+  }, 45_000);
 
   it('fails fast when Node cannot be resolved instead of emitting a broken bare node command', async () => {
     mockBuiltWorkspaceEntryAvailable();

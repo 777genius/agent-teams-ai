@@ -90,7 +90,7 @@ export class ReviewDecisionPersistenceApplication {
   ): Promise<ReviewDecisionHistoryScopeAuthorization> {
     const authorization = await this.resolveHistoryAuthorization(teamName, scopeKey);
     return {
-      files: authorization.reviewedFiles ? [...authorization.reviewedFiles.values()] : null,
+      files: authorization.reviewedFiles ? [...authorization.reviewedFiles.values()].flat() : null,
       normalizePath: (filePath) => this.dependencies.scope.normalizeIdentityPath(filePath),
       resolveFile: (filePath) =>
         this.dependencies.scope.getAuthoritativeFile(authorization, filePath),

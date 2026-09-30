@@ -69,12 +69,32 @@ function normalizeForCompare(input: string, isWindows: boolean): string {
   return isWindows ? normalized.toLowerCase() : normalized;
 }
 
-export function isPathWithinRoot(targetPath: string, rootPath: string): boolean {
+export function isPathWithinRoot(
+  targetPath: string,
+  rootPath: string,
+  options?: { preserveCase?: boolean }
+): boolean {
+  if (options?.preserveCase) return isCasePreservingPathWithinRoot(targetPath, rootPath);
   const isWindows = process.platform === 'win32';
   const target = normalizeForCompare(targetPath, isWindows);
   const root = normalizeForCompare(rootPath, isWindows);
   const relative = path.relative(root, target);
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/** Use for real paths when distinct directory casing can name distinct files. */
+function isCasePreservingPathWithinRoot(targetPath: string, rootPath: string): boolean {
+  const canonical = (value: string): string => {
+    const resolved = path.resolve(path.normalize(value));
+    if (process.platform !== 'win32') return resolved;
+    const volumeRoot = path.parse(resolved).root;
+    return `${volumeRoot.toLowerCase()}${resolved.slice(volumeRoot.length)}`;
+  };
+  const target = canonical(targetPath);
+  const root = canonical(rootPath);
+  return (
+    target === root || target.startsWith(root.endsWith(path.sep) ? root : `${root}${path.sep}`)
+  );
 }
 
 function resolveRealPathIfExists(inputPath: string): string | null {

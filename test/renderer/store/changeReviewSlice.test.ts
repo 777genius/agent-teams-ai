@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
+import { isReviewRejectable } from '../../../src/renderer/components/team/review/reviewContentPreview';
 import { createChangeReviewSlice } from '../../../src/renderer/store/slices/changeReviewSlice';
 import { buildTaskChangePresenceKey } from '../../../src/renderer/utils/taskChangeRequest';
 
@@ -78,7 +79,7 @@ function makeSnippet(
   overrides: Partial<{
     toolUseId: string;
     filePath: string;
-    toolName: string;
+    toolName: 'Edit';
     type: 'edit' | 'multi-edit' | 'write-new' | 'write-update';
     oldString: string;
     newString: string;
@@ -91,7 +92,7 @@ function makeSnippet(
   return {
     toolUseId: 'tool-1',
     filePath: '/repo/file.ts',
-    toolName: 'Edit',
+    toolName: 'Edit' as const,
     type: 'edit' as const,
     oldString: 'before',
     newString: 'after',
@@ -1126,7 +1127,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContents['/repo/file.ts']?.modifiedFullContent).toBe('after-v2');
   });
 
-  it('uses canonical relative Windows file paths when fetching content by slash/case variant', async () => {
+  it('uses canonical relative Windows file paths when fetching content by slash variant', async () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
     const data = makeAgentChangeSet(filePath);
@@ -1143,7 +1144,7 @@ describe('changeReviewSlice task changes', () => {
       fileContentVersionByPath: {},
     });
 
-    await store.getState().fetchFileContent('team-a', 'alice', 'src/file.ts');
+    await store.getState().fetchFileContent('team-a', 'alice', 'SRC/File.ts');
 
     expect(hoisted.getFileContent).toHaveBeenCalledWith(
       'team-a',
@@ -1152,7 +1153,77 @@ describe('changeReviewSlice task changes', () => {
       data.files[0]?.snippets ?? []
     );
     expect(store.getState().fileContents[filePath]?.modifiedFullContent).toBe('after');
-    expect(store.getState().fileContents['src/file.ts']).toBeUndefined();
+    expect(store.getState().fileContents['SRC/File.ts']).toBeUndefined();
+  });
+
+  it('loads and reviews rename then edit entries with the same destination path independently', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = {
+      ...makeFile(filePath, { oldString: 'old', newString: 'renamed' }),
+      changeKey: 'rename:/repo/old.ts->/repo/new.ts',
+    };
+    const edit = {
+      ...makeFile(filePath, { oldString: 'renamed', newString: 'edited' }),
+      changeKey: 'path:/repo/new.ts',
+    };
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      changeSetEpoch: 0,
+      fileContentVersionByPath: {},
+    });
+    hoisted.getFileContent
+      .mockResolvedValueOnce({
+        ...rename,
+        originalFullContent: 'old',
+        modifiedFullContent: 'renamed',
+        contentSource: 'snippet-reconstruction',
+      })
+      .mockResolvedValueOnce({
+        ...edit,
+        originalFullContent: 'renamed',
+        modifiedFullContent: 'edited',
+        contentSource: 'snippet-reconstruction',
+      });
+
+    await store.getState().fetchFileContent('team-a', 'alice', rename.changeKey);
+    await store.getState().fetchFileContent('team-a', 'alice', edit.changeKey);
+    expect(hoisted.getFileContent).toHaveBeenNthCalledWith(
+      1,
+      'team-a',
+      'alice',
+      filePath,
+      rename.snippets
+    );
+    expect(hoisted.getFileContent).toHaveBeenNthCalledWith(
+      2,
+      'team-a',
+      'alice',
+      filePath,
+      edit.snippets
+    );
+    expect(store.getState().fileContents[rename.changeKey]?.originalFullContent).toBe('old');
+    expect(store.getState().fileContents[edit.changeKey]?.modifiedFullContent).toBe('edited');
+
+    expect(store.getState().acceptAllFile(rename.changeKey)).toBe(true);
+    store.getState().rejectAllFile(edit.changeKey);
+    expect(store.getState().fileDecisions).toEqual({
+      [rename.changeKey]: 'accepted',
+      [edit.changeKey]: 'rejected',
+    });
+    hoisted.applyDecisions.mockResolvedValueOnce({ errors: [], conflicts: 0 });
+    await store.getState().applySingleFileDecision('team-a', edit.changeKey, undefined, 'alice');
+    expect(hoisted.applyDecisions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisions: [
+          expect.objectContaining({
+            filePath,
+            reviewKey: edit.changeKey,
+            contentSnapshotToken: undefined,
+          }),
+        ],
+      })
+    );
   });
 
   it('ignores stale fetchFileContent responses after change-set replacement', async () => {
@@ -1303,7 +1374,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'accepted' });
   });
 
-  it('invalidates resolved file content without clearing draft or review decisions', async () => {
+  it('invalidates resolved file content without clearing draft or review decisions', () => {
     const store = createSliceStore();
 
     store.setState({
@@ -1384,7 +1455,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/new.ts']).toBe(1);
   });
 
-  it('reloadReviewFileFromDisk clears the draft but preserves review decisions', async () => {
+  it('reloadReviewFileFromDisk clears the draft but preserves review decisions', () => {
     const store = createSliceStore();
 
     store.setState({
@@ -1418,6 +1489,58 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
+  it('reloadReviewFileFromDisk invalidates every duplicate entry without touching a case-distinct path', () => {
+    const store = createSliceStore();
+    const path = '/repo/new.ts';
+    const rename = { ...makeFile(path), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(path), changeKey: 'path:/repo/new.ts' };
+    const other = { ...makeFile('/repo/New.ts'), changeKey: 'path:/repo/New.ts' };
+    const contents = (file: typeof rename) => ({
+      ...file,
+      originalFullContent: 'before',
+      modifiedFullContent: 'after',
+      contentSource: 'ledger-exact' as const,
+    });
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(path), files: [rename, edit, other] },
+      fileContents: {
+        [rename.changeKey]: contents(rename),
+        [edit.changeKey]: contents(edit),
+        [other.changeKey]: contents(other),
+      },
+      fileContentsLoading: { [rename.changeKey]: true, [edit.changeKey]: true },
+      fileChunkCounts: { [rename.changeKey]: 2, [edit.changeKey]: 3 },
+      hunkContextHashesByFile: {
+        [rename.changeKey]: { 0: 'rename' },
+        [edit.changeKey]: { 0: 'edit' },
+        [other.changeKey]: { 0: 'other' },
+      },
+      editedContents: { [path]: 'draft', [edit.changeKey]: 'old alias', [other.filePath]: 'other' },
+      reviewExternalChangesByFile: {
+        [path]: { type: 'change' },
+        [rename.changeKey]: { type: 'unlink' },
+        [other.filePath]: { type: 'change' },
+      },
+      hunkDecisions: { [`${edit.changeKey}:0`]: 'rejected' },
+      fileDecisions: { [rename.changeKey]: 'rejected' },
+    });
+
+    store.getState().reloadReviewFileFromDisk(path);
+
+    const state = store.getState();
+    expect(state.fileContents).toEqual({ [other.changeKey]: contents(other) });
+    expect(state.fileContentsLoading).toEqual({});
+    expect(state.fileChunkCounts).toEqual({});
+    expect(state.hunkContextHashesByFile).toEqual({ [other.changeKey]: { 0: 'other' } });
+    expect(state.editedContents).toEqual({ [other.filePath]: 'other' });
+    expect(state.reviewExternalChangesByFile).toEqual({ [other.filePath]: { type: 'change' } });
+    expect(state.fileContentVersionByPath[rename.changeKey]).toBe(1);
+    expect(state.fileContentVersionByPath[edit.changeKey]).toBe(1);
+    expect(state.fileContentVersionByPath[other.changeKey]).toBeUndefined();
+    expect(state.hunkDecisions).toEqual({ [`${edit.changeKey}:0`]: 'rejected' });
+    expect(state.fileDecisions).toEqual({ [rename.changeKey]: 'rejected' });
+  });
+
   it('ignores stale fetchFileContent responses after removing a review file', async () => {
     const store = createSliceStore();
     const pending = deferred<unknown>();
@@ -1448,7 +1571,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
-  it('removes relative Windows review files by slash/case variant without leaving stale state', async () => {
+  it('removes relative Windows review files by slash variant without leaving stale state', () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
 
@@ -1469,7 +1592,7 @@ describe('changeReviewSlice task changes', () => {
       fileContentVersionByPath: {},
     });
 
-    store.getState().removeReviewFile('src/file.ts');
+    store.getState().removeReviewFile('SRC/File.ts');
 
     expect(store.getState().activeChangeSet?.files).toEqual([]);
     expect(store.getState().selectedReviewFilePath).toBeNull();
@@ -1478,21 +1601,21 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath[filePath]).toBe(1);
   });
 
-  it('clears path-equivalent loading aliases when removing the canonical review file', async () => {
+  it('clears path-equivalent loading aliases when removing the canonical review file', () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
 
     store.setState({
       activeChangeSet: makeAgentChangeSet(filePath),
-      fileContentsLoading: { [filePath]: true, 'src/file.ts': true },
-      fileContentVersionByPath: { 'src/file.ts': 0 },
+      fileContentsLoading: { [filePath]: true, 'SRC/File.ts': true },
+      fileContentVersionByPath: { 'SRC/File.ts': 0 },
     });
 
     store.getState().removeReviewFile(filePath);
 
     expect(store.getState().fileContentsLoading).toEqual({});
     expect(store.getState().fileContentVersionByPath[filePath]).toBe(1);
-    expect(store.getState().fileContentVersionByPath['src/file.ts']).toBe(1);
+    expect(store.getState().fileContentVersionByPath['SRC/File.ts']).toBe(1);
   });
 
   it('keeps restored file content when a stale fetch resolves after remove and re-add', async () => {
@@ -1542,15 +1665,6 @@ describe('changeReviewSlice task changes', () => {
 
     store.setState({
       activeChangeSet: makeAgentChangeSet('/repo/file.ts'),
-      fileContents: {
-        '/repo/file.ts': {
-          ...makeFile('/repo/file.ts'),
-          originalFullContent: 'before',
-          modifiedFullContent: 'draft-before-save',
-          contentSource: 'snippet-reconstruction',
-        },
-      },
-      fileContentsLoading: { '/repo/file.ts': true },
       fileChunkCounts: { '/repo/file.ts': 3 },
       hunkContextHashesByFile: { '/repo/file.ts': { 0: 'ctx' } },
       editedContents: { '/repo/file.ts': 'saved-content' },
@@ -1560,6 +1674,17 @@ describe('changeReviewSlice task changes', () => {
 
     const fetchPromise = store.getState().fetchFileContent('team-a', 'alice', '/repo/file.ts');
     await flushAsyncWork();
+    expect(hoisted.getFileContent).toHaveBeenCalledTimes(1);
+    store.setState({
+      fileContents: {
+        '/repo/file.ts': {
+          ...makeFile('/repo/file.ts'),
+          originalFullContent: 'before',
+          modifiedFullContent: 'draft-before-save',
+          contentSource: 'snippet-reconstruction',
+        },
+      },
+    });
     const savePromise = store
       .getState()
       .saveEditedFile('/repo/file.ts', AGENT_REVIEW_SCOPE, 'draft-before-save');
@@ -1585,6 +1710,387 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileChunkCounts).toEqual({});
     expect(store.getState().hunkContextHashesByFile).toEqual({});
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
+  });
+
+  it('keeps saved content in both cached entries sharing a disk path', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = {
+      ...makeFile(filePath),
+      changeKey: 'rename:/repo/old.ts->/repo/new.ts',
+    };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [rename.changeKey]: {
+          ...rename,
+          originalFullContent: 'old',
+          modifiedFullContent: 'renamed',
+          contentSource: 'ledger-exact',
+        },
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'renamed',
+          modifiedFullContent: 'edited',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+
+    expect(hoisted.saveEditedFile).toHaveBeenCalledWith(
+      AGENT_REVIEW_SCOPE,
+      filePath,
+      'saved-content',
+      'edited'
+    );
+    expect(store.getState().editedContents).toEqual({});
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: 'old',
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(store.getState().fileContents[edit.changeKey]).toMatchObject({
+      originalFullContent: 'renamed',
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(store.getState().fileContentVersionByPath[rename.changeKey]).toBe(1);
+    expect(store.getState().fileContentVersionByPath[edit.changeKey]).toBe(1);
+  });
+
+  it('ignores a pending sibling fetch after saving a duplicate-path entry', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = { ...makeFile(filePath), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    const fetchPending = deferred<unknown>();
+    hoisted.getFileContent.mockReturnValueOnce(fetchPending.promise);
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'renamed',
+          modifiedFullContent: 'edited',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    const fetchPromise = store.getState().fetchFileContent('team-a', 'alice', rename.changeKey);
+    await flushAsyncWork();
+    expect(hoisted.getFileContent).toHaveBeenCalledTimes(1);
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(isReviewRejectable(rename, store.getState().fileContents[rename.changeKey])).toBe(false);
+    fetchPending.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'stale',
+      contentSource: 'ledger-exact',
+    });
+    await fetchPromise;
+
+    expect(store.getState().fileContents[edit.changeKey]?.modifiedFullContent).toBe(
+      'saved-content'
+    );
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: 'old',
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(isReviewRejectable(rename, store.getState().fileContents[rename.changeKey])).toBe(false);
+    expect(store.getState().fileContentsLoading[rename.changeKey]).toBe(false);
+    expect(store.getState().fileContentVersionByPath[rename.changeKey]).toBe(1);
+    expect(hoisted.getFileContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('hydrates the original of a never-fetched sibling after Save', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = {
+      ...makeFile(filePath, { oldString: 'old', newString: 'renamed' }),
+      changeKey: 'rename:/repo/old.ts->/repo/new.ts',
+    };
+    const edit = {
+      ...makeFile(filePath, { oldString: 'renamed', newString: 'edited' }),
+      changeKey: 'path:/repo/new.ts',
+    };
+    const hydration = deferred<unknown>();
+    hoisted.getFileContent.mockReturnValueOnce(hydration.promise);
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'renamed',
+          modifiedFullContent: 'edited',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+
+    expect(hoisted.getFileContent).toHaveBeenCalledOnce();
+    expect(hoisted.getFileContent).toHaveBeenCalledWith(
+      'team-a',
+      'alice',
+      filePath,
+      rename.snippets
+    );
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    hydration.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'renamed',
+      contentSource: 'ledger-exact',
+    });
+    await flushAsyncWork();
+
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: 'old',
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(isReviewRejectable(rename, store.getState().fileContents[rename.changeKey])).toBe(false);
+    expect(hoisted.getFileContent).toHaveBeenCalledOnce();
+  });
+
+  it('hydrates after Save when the earlier sibling response arrived during Save', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = { ...makeFile(filePath), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    const earlier = deferred<unknown>();
+    const hydration = deferred<unknown>();
+    const save = deferred<void>();
+    hoisted.getFileContent
+      .mockReturnValueOnce(earlier.promise)
+      .mockReturnValueOnce(hydration.promise);
+    hoisted.saveEditedFile.mockReturnValueOnce(save.promise);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'before',
+          modifiedFullContent: 'after',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    const fetchPromise = store.getState().fetchFileContent('team-a', 'alice', rename.changeKey);
+    await flushAsyncWork();
+    const savePromise = store
+      .getState()
+      .saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+    earlier.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'stale',
+      contentSource: 'ledger-exact',
+    });
+    await fetchPromise;
+    expect(store.getState().fileContents[rename.changeKey]).toBeUndefined();
+    save.resolve();
+    await savePromise;
+    expect(hoisted.getFileContent).toHaveBeenCalledTimes(2);
+    expect(store.getState().fileContents[rename.changeKey]?.originalFullContent).toBeNull();
+
+    hydration.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'stale',
+      contentSource: 'ledger-exact',
+    });
+    await flushAsyncWork();
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: 'old',
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+  });
+
+  it('does not hydrate a saved sibling from a response for replaced snippets', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = { ...makeFile(filePath), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    const pending = deferred<unknown>();
+    hoisted.getFileContent.mockReturnValueOnce(pending.promise);
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    const fetchPromise = store.getState().fetchFileContent('team-a', 'alice', rename.changeKey);
+    await flushAsyncWork();
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+    store.setState({
+      activeChangeSet: {
+        ...store.getState().activeChangeSet,
+        files: [{ ...rename, snippets: [...rename.snippets] }, edit],
+      },
+    });
+    pending.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'stale',
+      contentSource: 'ledger-exact',
+    });
+    await fetchPromise;
+
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+  });
+
+  it('does not hydrate a saved sibling from another entry on the same disk path', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = {
+      ...makeFile(filePath, { oldString: 'old', newString: 'renamed' }),
+      changeKey: 'rename:/repo/old.ts->/repo/new.ts',
+    };
+    const edit = {
+      ...makeFile(filePath, { oldString: 'renamed', newString: 'edited' }),
+      changeKey: 'path:/repo/new.ts',
+    };
+    const pending = deferred<unknown>();
+    hoisted.getFileContent.mockReturnValueOnce(pending.promise);
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'renamed',
+          modifiedFullContent: 'edited',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+    expect(hoisted.getFileContent).toHaveBeenCalledOnce();
+    pending.resolve({
+      ...edit,
+      originalFullContent: 'renamed',
+      modifiedFullContent: 'edited',
+      contentSource: 'ledger-exact',
+    });
+    await flushAsyncWork();
+
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+  });
+
+  it('does not hydrate a saved sibling after the review scope changes', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = { ...makeFile(filePath), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    const pending = deferred<unknown>();
+    hoisted.getFileContent.mockReturnValueOnce(pending.promise);
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'before',
+          modifiedFullContent: 'after',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+    store.setState({ changeSetEpoch: store.getState().changeSetEpoch + 1 });
+    pending.resolve({
+      ...rename,
+      originalFullContent: 'old',
+      modifiedFullContent: 'stale',
+      contentSource: 'ledger-exact',
+    });
+    await flushAsyncWork();
+
+    expect(store.getState().fileContents[rename.changeKey]).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'saved-content',
+      contentSource: 'disk-current',
+    });
+    expect(hoisted.getFileContent).toHaveBeenCalledOnce();
+  });
+
+  it('preserves duplicate-path drafts and caches when saving fails', async () => {
+    const store = createSliceStore();
+    const filePath = '/repo/new.ts';
+    const rename = { ...makeFile(filePath), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(filePath), changeKey: 'path:/repo/new.ts' };
+    hoisted.saveEditedFile.mockRejectedValueOnce(new Error('conflict'));
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(filePath), files: [rename, edit] },
+      fileContents: {
+        [rename.changeKey]: {
+          ...rename,
+          originalFullContent: 'old',
+          modifiedFullContent: 'renamed',
+          contentSource: 'ledger-exact',
+        },
+        [edit.changeKey]: {
+          ...edit,
+          originalFullContent: 'renamed',
+          modifiedFullContent: 'edited',
+          contentSource: 'ledger-exact',
+        },
+      },
+      editedContents: { [edit.changeKey]: 'draft' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile(edit.changeKey, AGENT_REVIEW_SCOPE, 'edited');
+
+    expect(store.getState().editedContents).toEqual({ [edit.changeKey]: 'draft' });
+    expect(store.getState().fileContents[rename.changeKey]?.modifiedFullContent).toBe('renamed');
+    expect(store.getState().fileContents[edit.changeKey]?.modifiedFullContent).toBe('edited');
+    expect(store.getState().applying).toBe(false);
+    expect(store.getState().applyError).toBe('File has been modified since agent changes.');
   });
 
   it('clears review-key hunk hashes after saveEditedFile for grouped ledger files', async () => {
@@ -1665,7 +2171,7 @@ describe('changeReviewSlice task changes', () => {
   it('saves edited content through canonical Windows ledger paths and clears aliases', async () => {
     const store = createSliceStore();
     const canonicalPath = 'SRC\\File.ts';
-    const aliasPath = 'src/file.ts';
+    const aliasPath = 'SRC/File.ts';
     const ledgerFile = makeFile(canonicalPath);
     hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
 
@@ -2298,8 +2804,8 @@ describe('changeReviewSlice task changes', () => {
     await store.getState().loadDecisionsFromDisk('team-a', 'agent-alice', 'redo-scope');
     expect(store.getState().reviewRedoHistory).toEqual(redoHistory);
     store.getState().persistDecisions('team-a', 'agent-alice', 'redo-scope');
-    redoHistory[0]!.decisionSnapshot.hunkDecisions['/repo/file.ts:0'] = 'rejected';
-    redoHistory[0]!.hunkContextHashesByFile!['/repo/file.ts']![0] = 'changed';
+    redoHistory[0].decisionSnapshot.hunkDecisions['/repo/file.ts:0'] = 'rejected';
+    redoHistory[0].hunkContextHashesByFile!['/repo/file.ts'][0] = 'changed';
     await expect(
       store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'redo-scope')
     ).resolves.toBe(true);
@@ -2625,7 +3131,7 @@ describe('changeReviewSlice task changes', () => {
     ];
     store.setState({ activeChangeSet: makeAgentChangeSet(), reviewActionHistory: history });
     store.getState().persistDecisions('team-a', 'agent-alice', 'clone-scope');
-    history[0]!.action.snapshot.afterContent = 'mutated-after-queue\n';
+    history[0].action.snapshot.afterContent = 'mutated-after-queue\n';
 
     await store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'clone-scope');
 
@@ -2922,6 +3428,65 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().acceptAllFile('/repo/file.ts')).toBe(true);
     expect(store.getState().hunkDecisions).toEqual({});
     expect(store.getState().fileDecisions).toEqual({ '/repo/file.ts': 'accepted' });
+  });
+
+  it('accepts both case-distinct Windows files independently', () => {
+    const store = createSliceStore();
+    const upperPath = 'C:\\Sensitive\\Foo.ts';
+    const lowerPath = 'C:\\Sensitive\\foo.ts';
+    const changeSet = {
+      ...makeAgentChangeSet(upperPath),
+      files: [
+        { ...makeFile(upperPath), changeKey: 'path:C:/Sensitive/Foo.ts' },
+        { ...makeFile(lowerPath), changeKey: 'path:C:/Sensitive/foo.ts' },
+      ],
+    };
+    store.setState({
+      activeChangeSet: changeSet,
+      fileChunkCounts: {},
+      hunkDecisions: {},
+      fileDecisions: {},
+    });
+
+    expect(store.getState().acceptAllFile('C:/Sensitive/Foo.ts')).toBe(true);
+    expect(store.getState().acceptAllFile('C:/Sensitive/foo.ts')).toBe(true);
+    expect(store.getState().hunkDecisions).toEqual({
+      'path:C:/Sensitive/Foo.ts:0': 'accepted',
+      'path:C:/Sensitive/foo.ts:0': 'accepted',
+    });
+    expect(store.getState().fileDecisions).toEqual({
+      'path:C:/Sensitive/Foo.ts': 'accepted',
+      'path:C:/Sensitive/foo.ts': 'accepted',
+    });
+  });
+
+  it('adds and removes case-distinct Windows review files without changing the sibling', () => {
+    const store = createSliceStore();
+    const upperPath = 'C:\\Sensitive\\Foo.ts';
+    const lowerPath = 'C:\\Sensitive\\foo.ts';
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(upperPath),
+      fileContentsLoading: { [upperPath]: true, [lowerPath]: true },
+    });
+
+    store.getState().addReviewFile(makeFile(lowerPath));
+    expect(
+      store.getState().activeChangeSet.files.map((file: { filePath: string }) => file.filePath)
+    ).toEqual([upperPath, lowerPath]);
+
+    store.getState().removeReviewFile(lowerPath);
+    expect(
+      store.getState().activeChangeSet.files.map((file: { filePath: string }) => file.filePath)
+    ).toEqual([upperPath]);
+    expect(store.getState().fileContentsLoading).toEqual({ [upperPath]: true });
+  });
+
+  it('does not accept a Windows file through a different-case path', () => {
+    const store = createSliceStore();
+    store.setState({ activeChangeSet: makeAgentChangeSet('C:\\Sensitive\\Foo.ts') });
+
+    expect(store.getState().acceptAllFile('C:/Sensitive/foo.ts')).toBe(false);
+    expect(store.getState().fileDecisions).toEqual({});
   });
 
   it('preserves legacy path-keyed rejection when a ledger changeKey is present', () => {

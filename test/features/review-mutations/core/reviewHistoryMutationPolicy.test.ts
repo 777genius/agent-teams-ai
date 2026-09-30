@@ -76,6 +76,7 @@ function createUndoRequest(): ExecuteReviewMutationRequest {
 
 const context = {
   resolveFile: () => file,
+  resolvePhysicalFiles: () => [file],
   normalizePath: (filePath: string) => filePath,
   hashContent,
 };

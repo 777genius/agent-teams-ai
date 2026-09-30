@@ -367,7 +367,7 @@ describe('useChangeReviewHistoryMutationController', () => {
 
   it('remounts only the canonical accepted-file path during mixed Restore', async () => {
     const acceptedFile = fileBulkAction('file-1', 'c:/repo/accepted.ts');
-    const disk = diskAction('disk-1', 'C:\\Repo\\Accepted.ts');
+    const disk = diskAction('disk-1', 'c:\\repo\\accepted.ts');
     const harness = createHarness({ undo: [acceptedFile, disk] });
     vi.mocked(harness.commandPort.restoreHistory).mockResolvedValue({
       decisionRevision: 5,

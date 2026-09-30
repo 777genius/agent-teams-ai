@@ -17,12 +17,14 @@ export interface ReviewHistoryMutationScopePort {
   ): Promise<string>;
   getAuthoritativeFile(
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    reviewKey?: string
   ): FileChangeSummary;
   resolveAuthoritativeContent(
     scope: ReviewFileScope,
     authorization: ReviewMutationPathAuthorization,
-    filePath: string
+    filePath: string,
+    authoritativeFile?: FileChangeSummary
   ): Promise<FileChangeWithContent>;
   parseRenameExpectation(value: unknown): ReviewRenameRecoveryExpectation;
   assertExpectedRename(

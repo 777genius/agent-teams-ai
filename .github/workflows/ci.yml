@@ -409,7 +409,7 @@ jobs:
           test/main/utils/processKill.test.ts
 
       - name: Test startup cleanup deadline and late-response lifecycle
-        run: node --experimental-transform-types --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
+        run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
       - name: Test delayed provider summaries through real subprocesses
         run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts

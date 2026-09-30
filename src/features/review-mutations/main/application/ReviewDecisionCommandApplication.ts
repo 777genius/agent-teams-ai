@@ -24,6 +24,7 @@ import type {
 interface DisplayedReviewSnapshot {
   teamName: string;
   filePath: string;
+  reviewKey: string;
   snippetFingerprint: string;
   content: FileChangeWithContent;
   expiresAt: number;
@@ -41,7 +42,8 @@ export class ReviewDecisionCommandApplication {
     teamName: string,
     filePath: string,
     snippets: SnippetDiff[],
-    content: FileChangeWithContent
+    content: FileChangeWithContent,
+    reviewKey: string = filePath
   ): FileChangeWithContent {
     const now = this.dependencies.snapshots.now();
     for (const [token, snapshot] of this.displayedReviewSnapshots) {
@@ -58,6 +60,7 @@ export class ReviewDecisionCommandApplication {
     this.displayedReviewSnapshots.set(token, {
       teamName,
       filePath: this.dependencies.scope.normalizeIdentityPath(filePath),
+      reviewKey,
       snippetFingerprint: this.dependencies.snapshots.fingerprintSnippets(snippets),
       content: snapshotContent,
       expiresAt: now + REVIEW_SNAPSHOT_TTL_MS,
@@ -165,7 +168,8 @@ export class ReviewDecisionCommandApplication {
       );
       const authoritativeFile = this.dependencies.scope.getAuthoritativeFile(
         authorization,
-        filePath
+        filePath,
+        decision.reviewKey
       );
       const authoritativeReviewKey = authoritativeFile.changeKey ?? authoritativeFile.filePath;
       const normalizedDecisionPath = this.dependencies.scope.normalizeIdentityPath(filePath);
@@ -194,13 +198,15 @@ export class ReviewDecisionCommandApplication {
           ? await this.dependencies.scope.resolveAuthoritativeContent(
               scope,
               authorization,
-              filePath
+              filePath,
+              authoritativeFile
             )
           : this.resolveDisplayedReviewSnapshot(
               decision.contentSnapshotToken,
               scope.teamName,
               filePath,
-              authoritativeFile.snippets
+              authoritativeFile.snippets,
+              authoritativeReviewKey
             )
       );
       validatedDecisions.push({
@@ -267,7 +273,8 @@ export class ReviewDecisionCommandApplication {
     token: string | undefined,
     teamName: string,
     filePath: string,
-    authoritativeSnippets: SnippetDiff[]
+    authoritativeSnippets: SnippetDiff[],
+    reviewKey: string
   ): FileChangeWithContent {
     if (!token) {
       throw new Error('Displayed review snapshot is unavailable; reload Changes before rejecting.');
@@ -278,6 +285,7 @@ export class ReviewDecisionCommandApplication {
       snapshot.expiresAt <= this.dependencies.snapshots.now() ||
       snapshot.teamName !== teamName ||
       snapshot.filePath !== this.dependencies.scope.normalizeIdentityPath(filePath) ||
+      snapshot.reviewKey !== reviewKey ||
       snapshot.snippetFingerprint !==
         this.dependencies.snapshots.fingerprintSnippets(authoritativeSnippets)
     ) {
@@ -329,15 +337,20 @@ export class ReviewDecisionCommandApplication {
         const current = await this.dependencies.persistence.load(scope.teamName, persistenceScope);
         assertCurrentReviewDecisionRevision(current, expectedDecisionRevision);
         assertExactApplyReviewHistoryTransition(persistedState, current, decisions, {
-          resolveFile: (filePath) =>
-            this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
+          resolveFile: (filePath, reviewKey) =>
+            this.dependencies.scope.getAuthoritativeFile(authorization, filePath, reviewKey),
           normalizePath,
         });
         const boundPersistedState = await this.dependencies.history.bindNewHistorySnapshots(
           persistedState,
           current,
           scope,
-          authorization
+          {
+            ...authorization,
+            selectedReviewKeys: new Map(
+              decisions.map((decision) => [normalizePath(decision.filePath), decision.reviewKey])
+            ),
+          }
         );
         let result: ApplyReviewResult | null = null;
         await this.dependencies.coordinator.execute(

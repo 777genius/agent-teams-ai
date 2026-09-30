@@ -1,10 +1,8 @@
-import { readJsonlLines } from '@main/utils/jsonlLineReader';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { createHash } from 'crypto';
 import { diffLines } from 'diff';
-import { access, readFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import * as path from 'path';
 
 import type { GitDiffFallback } from './GitDiffFallback';
@@ -25,18 +23,21 @@ interface ContentCacheEntry {
 /**
  * Resolves full file contents (original + modified) for CodeMirror diff view.
  *
- * Uses three-level resolution strategy:
- * 1. File-history backup (most accurate)
- * 2. Snippet reconstruction (reverse-apply edits from current disk state)
- * 3. Fallback to current file on disk
+ * Uses these resolution strategies:
+ * 1. Exact ledger content
+ * 2. Current disk content with an unavailable baseline
  */
 export class FileContentResolver {
   private cache = new Map<string, ContentCacheEntry>();
   private readonly provisionalCacheTtl = 5 * 1000;
 
   constructor(
-    private readonly logsFinder: TeamMemberLogsFinder,
-    private readonly gitFallback?: GitDiffFallback
+    // Retained for existing callers. Historical backups lack a task-bound
+    // postimage and cannot safely drive rejection.
+    _logsFinder: TeamMemberLogsFinder,
+    // Retained for existing callers; a commit cannot prove the task's pre-edit
+    // state when the user had uncommitted changes.
+    _gitFallback?: GitDiffFallback
   ) {}
 
   /** Invalidate cached content for a file (e.g. after user saves edits) */
@@ -91,59 +92,9 @@ export class FileContentResolver {
       return { original: cached.original, modified: cached.modified, source: cached.source };
     }
 
-    // Fast path only for creation backed by explicit lifecycle evidence. Older legacy
-    // summaries may label the first observed Write as write-new even when it overwrote
-    // an existing file, so that label alone must never synthesize an empty baseline.
-    const hasProvenCreation = this.isNetNewFile(snippets);
-    if (hasProvenCreation && currentContent !== null) {
-      const result = {
-        original: '',
-        modified: currentContent,
-        source: 'snippet-reconstruction' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // Strategy 1: Try file-history backup
-    const historyResult = await this.tryFileHistoryBackup(teamName, memberName, filePath);
-    if (historyResult !== null) {
-      const result = {
-        original: historyResult,
-        modified: currentContent,
-        source: 'file-history' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // Strategy 2: Try snippet reconstruction
-    const reconstructed = this.trySnippetReconstruction(currentContent, snippets);
-    if (reconstructed !== null) {
-      const result = {
-        original: reconstructed,
-        modified: currentContent,
-        source: 'snippet-reconstruction' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // Strategy 3 (Phase 4): Git fallback
-    if (this.gitFallback) {
-      const gitResult = await this.tryGitFallback(filePath, currentContent, snippets);
-      if (gitResult !== null) {
-        const result = {
-          original: gitResult,
-          modified: currentContent,
-          source: 'git-fallback' as const,
-        };
-        this.cacheResult(cacheKey, validationFingerprint, result);
-        return result;
-      }
-    }
-
-    // Strategy 4: Fallback — only current file on disk
+    // A native add and today's file bytes do not prove the path's identity at
+    // task time. A symlink can change after the transcript was written.
+    // Keep the snippet diff for preview, but require exact ledger evidence for rejection.
     if (currentContent !== null) {
       const result = {
         original: null,
@@ -316,219 +267,7 @@ export class FileContentResolver {
     };
   }
 
-  /**
-   * Strategy 1: Read original content from Claude's file-history backup.
-   *
-   * Claude saves file snapshots at `~/.claude/file-history/{sessionId}/{backupFileName}`.
-   * The mapping is stored as `type: "file-history-snapshot"` entries in JSONL.
-   */
-  private async tryFileHistoryBackup(
-    teamName: string,
-    memberName: string,
-    filePath: string
-  ): Promise<string | null> {
-    let logPaths: string[];
-    try {
-      logPaths = await this.logsFinder.findMemberLogPaths(teamName, memberName);
-    } catch {
-      return null;
-    }
-
-    if (logPaths.length === 0) return null;
-
-    for (const logPath of logPaths) {
-      const sessionId = this.extractSessionId(logPath);
-      if (!sessionId) continue;
-
-      const backupFileName = await this.findFileHistoryBackup(logPath, filePath);
-      if (!backupFileName) continue;
-
-      // Construct the file-history path
-      const historyPath = path.join(
-        getHomeDir(),
-        '.claude',
-        'file-history',
-        sessionId,
-        backupFileName
-      );
-
-      try {
-        await access(historyPath);
-        const content = await readFile(historyPath, 'utf8');
-        logger.debug(`File-history backup найден: ${historyPath}`);
-        return content;
-      } catch {
-        // Backup file doesn't exist, try next log
-        continue;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Extract sessionId from a JSONL log path.
-   *
-   * Paths can be:
-   * - `~/.claude/projects/{encodedPath}/{sessionId}.jsonl` (lead session)
-   * - `~/.claude/projects/{encodedPath}/{sessionId}/subagents/agent-{id}.jsonl` (subagent)
-   *
-   * For lead sessions, sessionId = filename without extension.
-   * For subagents, sessionId = the parent directory's parent name.
-   */
-  private extractSessionId(logPath: string): string | null {
-    const parts = path
-      .normalize(logPath)
-      .split(/[/\\]+/)
-      .filter(Boolean);
-
-    // Check if it's a subagent path: .../{sessionId}/subagents/agent-xxx.jsonl
-    const subagentsIdx = parts.indexOf('subagents');
-    if (subagentsIdx > 0) {
-      return parts[subagentsIdx - 1] || null;
-    }
-
-    // Lead session: .../{sessionId}.jsonl
-    const fileName = parts[parts.length - 1];
-    if (fileName?.endsWith('.jsonl')) {
-      return fileName.replace('.jsonl', '');
-    }
-
-    return null;
-  }
-
-  /**
-   * Stream a JSONL file looking for file-history-snapshot entries that reference the target file.
-   * Returns the backup file name if found.
-   */
-  private async findFileHistoryBackup(
-    logPath: string,
-    targetFilePath: string
-  ): Promise<string | null> {
-    try {
-      for await (const line of readJsonlLines(logPath)) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        // Quick check before JSON parse
-        if (!trimmed.includes('file-history-snapshot')) continue;
-
-        try {
-          const entry = JSON.parse(trimmed) as Record<string, unknown>;
-          if (entry.type !== 'file-history-snapshot') continue;
-
-          const snapshot = entry.snapshot as Record<string, unknown> | undefined;
-          if (!snapshot) continue;
-
-          const trackedFileBackups = snapshot.trackedFileBackups as
-            | Record<string, string>
-            | undefined;
-          if (!trackedFileBackups) continue;
-
-          const backupFileName = trackedFileBackups[targetFilePath];
-          if (backupFileName) {
-            return backupFileName;
-          }
-        } catch {
-          // Skip malformed JSON
-        }
-      }
-    } catch {
-      logger.debug(`Не удалось прочитать JSONL для file-history: ${logPath}`);
-    }
-
-    return null;
-  }
-
-  /**
-   * Strategy 2: Reconstruct original content by reverse-applying snippets.
-   *
-   * Algorithm:
-   * 1. Start with current file content from disk (= modified state)
-   * 2. Sort snippets by timestamp DESCENDING (newest first)
-   * 3. For each snippet, reverse the edit operation
-   * 4. Result = original content before any agent changes
-   *
-   * Returns null if reconstruction is not possible (chain broken).
-   */
-  private trySnippetReconstruction(
-    currentContent: string | null,
-    snippets: SnippetDiff[]
-  ): string | null {
-    // `readFile()` can legitimately return an empty string for empty files.
-    // Only treat `null` as "missing on disk".
-    if (currentContent === null) return null;
-    if (snippets.length === 0) return null;
-
-    // Filter out errored snippets
-    const validSnippets = snippets.filter((s) => !s.isError);
-    if (validSnippets.length === 0) return null;
-
-    // Sort by timestamp descending (reverse order to undo newest first)
-    const sorted = [...validSnippets].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    let content = currentContent;
-
-    for (const snippet of sorted) {
-      switch (snippet.type) {
-        case 'write-new': {
-          // Legacy caches may contain first-seen Write events misclassified as creation.
-          // Only explicit lifecycle evidence makes an empty baseline safe.
-          if (this.isProvenCreationSnippet(snippet)) return '';
-          return null;
-        }
-
-        case 'write-update': {
-          // Full file overwrite — can't reconstruct previous content from snippets alone
-          return null;
-        }
-
-        case 'notebook-edit':
-        case 'shell-snapshot':
-        case 'hook-snapshot': {
-          // Snapshot/full-file changes are only safe when ledger content is available.
-          return null;
-        }
-
-        case 'edit':
-        case 'multi-edit': {
-          // Guard: empty newString means deletion — can't find position to reverse
-          if (!snippet.newString) return null;
-
-          if (snippet.replaceAll) {
-            // Reverse replaceAll: replace all occurrences of newString -> oldString
-            if (!content.includes(snippet.newString)) {
-              // Chain broken — newString not in current content
-              return null;
-            }
-            content = content.split(snippet.newString).join(snippet.oldString);
-          } else {
-            // Reverse single edit: replace first occurrence of newString -> oldString
-            const idx = content.indexOf(snippet.newString);
-            if (idx === -1) {
-              // Chain broken — can't find the new string to reverse
-              return null;
-            }
-            content =
-              content.substring(0, idx) +
-              snippet.oldString +
-              content.substring(idx + snippet.newString.length);
-          }
-          break;
-        }
-      }
-    }
-
-    return content;
-  }
-
   // ── Private: Lifecycle evidence ──
-
-  private hasProvenCreationEvidence(snippets: SnippetDiff[]): boolean {
-    return snippets.some((snippet) => !snippet.isError && this.isProvenCreationSnippet(snippet));
-  }
 
   /**
    * Whether the reviewed path is absent before the first ledger event and present
@@ -547,7 +286,20 @@ export class FileContentResolver {
         return first.beforeState.exists === false && last.afterState.exists === true;
       }
     }
-    return this.hasProvenCreationEvidence(snippets);
+    const successful = snippets.filter((snippet) => !snippet.isError);
+    const timestamps = successful.map((snippet) => Date.parse(snippet.timestamp));
+    if (timestamps.length === 0 || timestamps.some((timestamp) => !Number.isFinite(timestamp))) {
+      return false;
+    }
+    const earliest = timestamps.reduce(
+      (minimum, timestamp) => Math.min(minimum, timestamp),
+      Infinity
+    );
+    // Identical timestamps across transcripts cannot establish which event came
+    // first. A pre-existing path may have been deleted before a later add.
+    return successful.every(
+      (snippet, index) => timestamps[index] !== earliest || this.isProvenCreationSnippet(snippet)
+    );
   }
 
   private isProvenCreationSnippet(snippet: SnippetDiff): boolean {
@@ -556,89 +308,6 @@ export class FileContentResolver {
     // TaskChangeComputer emits write-new for explicit metadata `kind: add` using
     // the Edit tool name. A bare legacy Write has no pre-task existence evidence.
     return snippet.type === 'write-new' && snippet.toolName === 'Edit';
-  }
-
-  // ── Private: Git fallback (Phase 4) ──
-
-  /**
-   * Strategy 3 (Phase 4): Git fallback — find original content from git history.
-   * Uses the timestamp of the first snippet to locate a commit before changes.
-   */
-  private async tryGitFallback(
-    filePath: string,
-    _currentContent: string | null,
-    snippets: SnippetDiff[]
-  ): Promise<string | null> {
-    if (!this.gitFallback) return null;
-
-    // Determine project path from file path (heuristic: find .git parent)
-    const projectPath = await this.guessProjectPath(filePath);
-    if (!projectPath) return null;
-
-    const isGit = await this.gitFallback.isGitRepo(projectPath);
-    if (!isGit) return null;
-
-    // Use earliest snippet timestamp to find the "before" state
-    const timestamps = snippets
-      .filter((s) => !s.isError && s.timestamp)
-      .map((s) => s.timestamp)
-      .sort((a, b) => a.localeCompare(b));
-    const firstTimestamp = timestamps[0];
-    if (!firstTimestamp) return null;
-
-    const commitHash = await this.gitFallback.findCommitNearTimestamp(
-      projectPath,
-      filePath,
-      firstTimestamp
-    );
-    if (!commitHash) return null;
-
-    const original = await this.gitFallback.getFileAtCommit(projectPath, filePath, commitHash);
-    return original;
-  }
-
-  /**
-   * Guess the project root path from a file path.
-   * Simple heuristic: look for common markers (package.json, .git directory).
-   */
-  private async guessProjectPath(filePath: string): Promise<string | null> {
-    const normalized = path.normalize(filePath);
-    let dir = path.dirname(normalized);
-    const parsed = path.parse(dir);
-    const root = parsed.root;
-
-    const markers = ['.git', 'package.json', 'pyproject.toml', 'go.mod', 'Cargo.toml'] as const;
-
-    const hasMarker = async (candidateDir: string): Promise<boolean> => {
-      for (const marker of markers) {
-        try {
-          await access(path.join(candidateDir, marker));
-          return true;
-        } catch {
-          // ignore
-        }
-      }
-      return false;
-    };
-
-    // Walk up from file directory; prefer stable "real" roots over string heuristics.
-    // This keeps git fallback working on Windows (\\ separators) and with mixed separators.
-    const MAX_UP = 30;
-    for (let i = 0; i < MAX_UP; i++) {
-      const base = path.basename(dir);
-      const candidate = base === 'src' || base === 'lib' ? path.dirname(dir) : dir;
-      if (await hasMarker(candidate)) return candidate;
-
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-
-    // Safety: if we can't confidently find a project root, don't guess.
-    // Returning null avoids running git in the wrong directory.
-    // (The resolver will still fall back to other content strategies.)
-    if (!root) return null;
-    return null;
   }
 
   private getDisplayRelativePath(filePath: string, segmentCount: number): string {
@@ -673,6 +342,8 @@ export class FileContentResolver {
       hash.update(this.normalizeResolverPath(snippet.filePath));
       hash.update('\u0000');
       hash.update(snippet.toolUseId);
+      hash.update('\u0000');
+      hash.update(snippet.toolName);
       hash.update('\u0000');
       hash.update(snippet.type);
       hash.update('\u0000');

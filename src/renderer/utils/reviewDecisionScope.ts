@@ -1,5 +1,3 @@
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
-
 import type { AgentChangeSet, SnippetDiff, TaskChangeSet, TaskChangeSetV2 } from '@shared/types';
 
 export type ReviewChangeSetLike = AgentChangeSet | TaskChangeSet | TaskChangeSetV2;
@@ -23,10 +21,7 @@ function encodeFingerprintField(value: string): string {
 }
 
 function normalizeReviewFingerprintPath(filePath: string): string {
-  const normalized = normalizePathForComparison(filePath);
-  return isWindowsishPath(filePath) || filePath.includes('\\')
-    ? normalized.toLowerCase()
-    : normalized;
+  return filePath.replace(/\\/g, '/');
 }
 
 function fingerprintSnippet(snippet: SnippetDiff): string {

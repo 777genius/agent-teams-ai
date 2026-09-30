@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto';
 
+import {
+  findLatestRestorableReviewSnapshot,
+  getAuthoritativePersistedReviewFile,
+  getAuthoritativeReviewedActionFile,
+  getAuthoritativeReviewedPhysicalFiles,
+} from '@features/change-review/main';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 
 import {
   assertAuthoritativelyBoundReviewAction,
   assertExactReviewHistoryTransition,
-  findLatestRestorableDiskSnapshot,
+  isAuthoritativelyBoundReviewSnapshot,
   isAuthoritativeReviewDeletion,
   rebindReviewActionDescriptorPath,
 } from '../../core/domain/reviewHistoryMutationPolicy';
@@ -17,6 +23,7 @@ import type {
 import type { ReviewMutationPathAuthorization } from './ReviewMutationRecoveryPorts';
 import type {
   ExecuteReviewMutationRequest,
+  FileChangeSummary,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,
   ReviewPersistedStateSnapshot,
@@ -39,8 +46,12 @@ export class ReviewHistoryMutationApplication {
     authorization: ReviewMutationPathAuthorization
   ): void {
     assertExactReviewHistoryTransition(request, current, {
-      resolveFile: (filePath) =>
-        this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
+      resolveFile: (filePath, action) =>
+        action
+          ? getAuthoritativeReviewedActionFile(authorization, filePath, action)
+          : this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
+      resolvePhysicalFiles: (filePath) =>
+        getAuthoritativeReviewedPhysicalFiles(authorization, filePath),
       normalizePath: (filePath) => this.dependencies.scope.normalizeIdentityPath(filePath),
       hashContent: (content) => this.hashContent(content),
     });
@@ -101,9 +112,10 @@ export class ReviewHistoryMutationApplication {
         rejectHardlinks: true,
       }
     );
-    const authoritativeFile = this.dependencies.scope.getAuthoritativeFile(
+    const authoritativeFile = getAuthoritativeReviewedActionFile(
       authorization,
-      snapshot.filePath
+      snapshot.filePath,
+      action
     );
     const restoreMode =
       snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
@@ -112,7 +124,12 @@ export class ReviewHistoryMutationApplication {
       if (restoreMode !== 'reapply-rejected-rename' || !snapshot.renameExpectation) {
         throw new Error('Review Rename mode does not match authoritative rename recovery');
       }
-      const boundSnapshot = await this.bindNewDiskSnapshot(snapshot, scope, authorization);
+      const boundSnapshot = await this.bindNewDiskSnapshot(
+        snapshot,
+        scope,
+        authorization,
+        action.action.file
+      );
       return {
         ...request.persistedState,
         reviewActionHistory: [
@@ -132,13 +149,19 @@ export class ReviewHistoryMutationApplication {
     const authoritativeContent = await this.dependencies.scope.resolveAuthoritativeContent(
       scope,
       authorization,
-      filePath
+      filePath,
+      authoritativeFile
     );
-    const previous = findLatestRestorableDiskSnapshot(current, filePath, {
-      normalizePath: (candidatePath) =>
-        this.dependencies.scope.normalizeIdentityPath(candidatePath),
-      hashContent: (content) => this.hashContent(content),
-    });
+    const previous = current
+      ? findLatestRestorableReviewSnapshot(
+          current.reviewActionHistory,
+          filePath,
+          authoritativeFile,
+          authorization,
+          (candidate) =>
+            isAuthoritativelyBoundReviewSnapshot(candidate, (content) => this.hashContent(content))
+        )
+      : null;
     const observedBeforeContent = await this.readDiskContent(filePath);
 
     let expectedAfterContent: string | null;
@@ -249,7 +272,12 @@ export class ReviewHistoryMutationApplication {
     if (!scope || !authorization) {
       throw new Error('Review scope is unavailable for a new disk history action');
     }
-    const snapshot = await this.bindNewDiskSnapshot(action.action.snapshot, scope, authorization);
+    const snapshot = await this.bindNewDiskSnapshot(
+      action.action.snapshot,
+      scope,
+      authorization,
+      action.action.file
+    );
     return {
       ...action,
       descriptor: rebindReviewActionDescriptorPath(action, snapshot.filePath),
@@ -265,7 +293,8 @@ export class ReviewHistoryMutationApplication {
   private async bindNewDiskSnapshot(
     snapshot: ReviewDiskUndoSnapshot,
     scope: ReviewFileScope,
-    authorization: ReviewMutationPathAuthorization
+    authorization: ReviewMutationPathAuthorization,
+    actionFile?: FileChangeSummary
   ): Promise<ReviewDiskUndoSnapshot> {
     const filePath = await this.dependencies.scope.validateFilePath(
       authorization,
@@ -275,7 +304,10 @@ export class ReviewHistoryMutationApplication {
         rejectHardlinks: true,
       }
     );
-    const file = this.dependencies.scope.getAuthoritativeFile(authorization, filePath);
+    const file = getAuthoritativePersistedReviewFile(authorization, filePath, [
+      snapshot.file,
+      actionFile,
+    ]);
     const restoreMode =
       snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
     const isRenameMode =
@@ -291,7 +323,8 @@ export class ReviewHistoryMutationApplication {
       const authoritativeContent = await this.dependencies.scope.resolveAuthoritativeContent(
         scope,
         authorization,
-        filePath
+        filePath,
+        file
       );
       this.dependencies.scope.assertExpectedRename(authoritativeContent, expectation);
       return {
@@ -314,7 +347,8 @@ export class ReviewHistoryMutationApplication {
     const authoritativeContent = await this.dependencies.scope.resolveAuthoritativeContent(
       scope,
       authorization,
-      filePath
+      filePath,
+      file
     );
     if (restoreMode === 'create-file' && !authoritativeContent.isNewFile) {
       throw new Error('Create-file review history does not match an authoritative new file');

@@ -186,10 +186,33 @@ describe('ChangeReviewDialog interaction guards', () => {
           '/repo/b.ts': 'keep-b',
           'C:\\Repo\\C.ts': 'stale-c',
         },
-        ['/repo/a.ts', 'c:/repo/c.ts'],
+        ['/repo/a.ts', 'C:/Repo/C.ts'],
         { '/repo/a.ts': 'saved-a' }
       )
     ).toEqual({ '/repo/a.ts': 'saved-a', '/repo/b.ts': 'keep-b' });
+  });
+
+  it('replaces only the exact-cased Windows scoped draft', () => {
+    expect(
+      replaceReviewScopedRecord(
+        { 'C:\\Sensitive\\Foo.ts': 'keep-upper', 'C:\\Sensitive\\foo.ts': 'stale-lower' },
+        ['C:/Sensitive/foo.ts'],
+        { 'C:/Sensitive/foo.ts': 'saved-lower' }
+      )
+    ).toEqual({
+      'C:\\Sensitive\\Foo.ts': 'keep-upper',
+      'C:/Sensitive/foo.ts': 'saved-lower',
+    });
+  });
+
+  it('attributes a bulk apply error only to the exact-cased Windows file', () => {
+    const upper = makeFile('C:\\Sensitive\\Foo.ts');
+    const lower = makeFile('C:\\Sensitive\\foo.ts');
+
+    expect(partitionReviewFilesByApplyErrors([upper, lower], ['C:/Sensitive/foo.ts'])).toEqual({
+      successful: [upper],
+      failed: [lower],
+    });
   });
 
   it('distinguishes pending, ready, and failed persisted-decision hydration', () => {

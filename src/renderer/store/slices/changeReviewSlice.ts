@@ -14,8 +14,12 @@ import {
 } from '@renderer/utils/reviewDecisionScope';
 import {
   buildHunkDecisionKey,
+  collectReviewPathAliases,
+  findReviewFileByPath,
   getFileReviewKey,
+  getReviewEntryKey,
   getReviewKeyForFilePath,
+  hasDuplicateReviewFilePaths,
   normalizePersistedReviewState,
 } from '@renderer/utils/reviewKey';
 import {
@@ -29,8 +33,15 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { createLogger } from '@shared/utils/logger';
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
+
+import {
+  collectSavedReviewAliases,
+  hydrateSavedReviewOriginal,
+  invalidateSavedReviewFileRequests,
+  prepareSavedReviewCache,
+  requestSavedReviewOriginalsAfterSave,
+} from './changeReviewSaveCache';
 
 /** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
 const taskChangesCheckInFlight = new Set<string>();
@@ -145,27 +156,7 @@ function buildReviewPersistedStateSnapshot(
 }
 
 function reviewPathsEqual(left: string, right: string): boolean {
-  const caseInsensitive = isWindowsReviewPath(left) || isWindowsReviewPath(right);
-  return (
-    normalizeReviewPathForComparison(left, caseInsensitive) ===
-    normalizeReviewPathForComparison(right, caseInsensitive)
-  );
-}
-
-function normalizeReviewPathForComparison(filePath: string, caseInsensitive: boolean): string {
-  const normalized = normalizePathForComparison(filePath);
-  return caseInsensitive ? normalized.toLowerCase() : normalized;
-}
-
-function isWindowsReviewPath(filePath: string): boolean {
-  return isWindowsishPath(filePath) || filePath.includes('\\');
-}
-
-function findReviewFileByPath(
-  files: readonly FileChangeSummary[] | null | undefined,
-  filePath: string
-): FileChangeSummary | undefined {
-  return files?.find((file) => reviewPathsEqual(file.filePath, filePath));
+  return left.replace(/\\/g, '/') === right.replace(/\\/g, '/');
 }
 
 /** Snapshot of review decisions for undo support */
@@ -300,7 +291,6 @@ function syncTaskChangeNegativeCache(
 }
 
 export interface ChangeReviewSlice {
-  // Phase 1 state
   activeChangeSet: AgentChangeSet | TaskChangeSet | TaskChangeSetV2 | null;
   activeTaskChangeRequestOptions: TaskChangeRequestOptions | null;
   changeSetLoading: boolean;
@@ -308,7 +298,6 @@ export interface ChangeReviewSlice {
   selectedReviewFilePath: string | null;
   changeStatsCache: Record<string, ChangeStats>;
 
-  // Phase 2 state
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
   /** Actual CodeMirror chunk count per file (may differ from snippets.length) */
@@ -333,13 +322,11 @@ export interface ChangeReviewSlice {
   decisionHydrationStatus: 'idle' | 'loading' | 'loaded' | 'error';
   decisionRevision: number;
 
-  // Editable diff state
   editedContents: Record<string, string>;
 
   /** Cache: "teamName:taskId:signature" → resolved task change presence */
   taskChangePresenceByKey: Record<string, Exclude<TaskChangePresenceState, 'unknown'>>;
 
-  // Phase 1 actions
   fetchAgentChanges: (teamName: string, memberName: string) => Promise<void>;
   fetchTaskChanges: (
     teamName: string,
@@ -366,7 +353,6 @@ export interface ChangeReviewSlice {
   resetAllReviewState: () => void;
   fetchChangeStats: (teamName: string, memberName: string) => Promise<void>;
 
-  // Decision persistence actions
   loadDecisionsFromDisk: (teamName: string, scopeKey: string, scopeToken: string) => Promise<void>;
   persistDecisions: (teamName: string, scopeKey: string, scopeToken: string) => void;
   flushDecisionsToDisk: (
@@ -392,7 +378,6 @@ export interface ChangeReviewSlice {
     revision: number
   ) => void;
 
-  // Phase 2 actions
   /**
    * Set decision for a hunk at the current (visible) CM index.
    * Returns the stable/original hunk index used as the decision key.
@@ -446,7 +431,6 @@ export interface ChangeReviewSlice {
   reloadReviewFileFromDisk: (filePath: string) => void;
   invalidateChangeStats: (teamName: string) => void;
 
-  // Editable diff actions
   updateEditedContent: (filePath: string, content: string) => void;
   discardFileEdits: (filePath: string) => void;
   discardAllEdits: () => void;
@@ -456,7 +440,6 @@ export interface ChangeReviewSlice {
     expectedCurrentContent: string | null
   ) => Promise<SaveEditedReviewFileResult>;
 
-  // Task change availability
   checkTaskHasChanges: (
     teamName: string,
     taskId: string,
@@ -536,19 +519,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   set,
   get
 ) => {
-  const addMatchingReviewPathAliases = (
-    aliases: Set<string>,
-    filePath: string,
-    canonicalFilePath: string,
-    record: Record<string, unknown>
-  ): void => {
-    for (const key of Object.keys(record)) {
-      if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, canonicalFilePath)) {
-        aliases.add(key);
-      }
-    }
-  };
-
   const buildResolvedFileInvalidation = (
     s: ChangeReviewSlice,
     filePath: string
@@ -562,11 +532,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   > => {
     const existing = findReviewFileByPath(s.activeChangeSet?.files, filePath);
     const canonicalFilePath = existing?.filePath ?? filePath;
-    const aliases = new Set([filePath, canonicalFilePath]);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentsLoading);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentVersionByPath);
+    const { aliases } = collectSavedReviewAliases(
+      s.activeChangeSet?.files,
+      filePath,
+      canonicalFilePath,
+      [s.fileChunkCounts, s.fileContents, s.fileContentsLoading, s.fileContentVersionByPath]
+    );
     const nextFileChunkCounts = { ...s.fileChunkCounts };
     for (const alias of aliases) delete nextFileChunkCounts[alias];
 
@@ -602,7 +573,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     set((s) => ({
       activeChangeSet: data,
       changeSetLoading: false,
-      selectedReviewFilePath: data.files[0]?.filePath ?? null,
+      selectedReviewFilePath: data.files[0] ? getReviewEntryKey(data.files, data.files[0]) : null,
       hunkDecisions: {},
       fileDecisions: {},
       fileContents: {},
@@ -633,7 +604,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       activeChangeSet: fresh,
       applying: false,
       applyError,
-      selectedReviewFilePath: fresh.files[0]?.filePath ?? null,
+      selectedReviewFilePath: fresh.files[0]
+        ? getReviewEntryKey(fresh.files, fresh.files[0])
+        : null,
       hunkDecisions: {},
       fileDecisions: {},
       fileChunkCounts: {},
@@ -691,7 +664,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   };
 
   return {
-    // Phase 1 initial state
     activeChangeSet: null,
     activeTaskChangeRequestOptions: null,
     changeSetLoading: false,
@@ -699,7 +671,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     selectedReviewFilePath: null,
     changeStatsCache: {},
 
-    // Phase 2 initial state
     hunkDecisions: {},
     fileDecisions: {},
     fileChunkCounts: {},
@@ -719,7 +690,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     decisionHydrationStatus: 'idle',
     decisionRevision: 0,
 
-    // Editable diff initial state
     editedContents: {},
 
     taskChangePresenceByKey: {},
@@ -1281,7 +1251,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const file = findReviewFileByPath(state.activeChangeSet?.files, filePath);
       if (!file) return false;
 
-      const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+      const entryKey = getReviewEntryKey(state.activeChangeSet!.files, file);
+      const count = getFileHunkCount(entryKey, file.snippets.length, state.fileChunkCounts);
       const newHunkDecisions = { ...state.hunkDecisions };
       const reviewKey = getFileReviewKey(file);
       const fileDecision =
@@ -1331,7 +1302,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const file = findReviewFileByPath(state.activeChangeSet?.files, filePath);
       if (!file) return;
 
-      const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+      const entryKey = getReviewEntryKey(state.activeChangeSet!.files, file);
+      const count = getFileHunkCount(entryKey, file.snippets.length, state.fileChunkCounts);
       const newHunkDecisions = { ...state.hunkDecisions };
       const reviewKey = getFileReviewKey(file);
       for (let i = 0; i < count; i++) {
@@ -1346,6 +1318,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     acceptAll: () => {
       const state = get();
       if (!state.activeChangeSet) return;
+      if (hasDuplicateReviewFilePaths(state.activeChangeSet.files)) {
+        set({ applyError: 'Review files share a disk path. Review each change separately.' });
+        return;
+      }
 
       const newHunkDecisions: Record<string, HunkDecision> = {};
       const newFileDecisions: Record<string, HunkDecision> = {};
@@ -1353,7 +1329,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       for (const file of state.activeChangeSet.files) {
         const reviewKey = getFileReviewKey(file);
         newFileDecisions[reviewKey] = 'accepted';
-        const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+        const count = getFileHunkCount(
+          getReviewEntryKey(state.activeChangeSet.files, file),
+          file.snippets.length,
+          state.fileChunkCounts
+        );
         for (let i = 0; i < count; i++) {
           newHunkDecisions[buildHunkDecisionKey(reviewKey, i)] = 'accepted';
         }
@@ -1364,6 +1344,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     rejectAll: () => {
       const state = get();
       if (!state.activeChangeSet) return;
+      if (hasDuplicateReviewFilePaths(state.activeChangeSet.files)) {
+        set({ applyError: 'Review files share a disk path. Review each change separately.' });
+        return;
+      }
 
       const newHunkDecisions: Record<string, HunkDecision> = {};
       const newFileDecisions: Record<string, HunkDecision> = {};
@@ -1371,7 +1355,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       for (const file of state.activeChangeSet.files) {
         const reviewKey = getFileReviewKey(file);
         newFileDecisions[reviewKey] = 'rejected';
-        const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+        const count = getFileHunkCount(
+          getReviewEntryKey(state.activeChangeSet.files, file),
+          file.snippets.length,
+          state.fileChunkCounts
+        );
         for (let i = 0; i < count; i++) {
           newHunkDecisions[buildHunkDecisionKey(reviewKey, i)] = 'rejected';
         }
@@ -1391,23 +1379,23 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const state = get();
       const fileEntry = findReviewFileByPath(state.activeChangeSet?.files, filePath);
       const canonicalFilePath = fileEntry?.filePath ?? filePath;
+      const contentKey =
+        fileEntry && state.activeChangeSet
+          ? getReviewEntryKey(state.activeChangeSet.files, fileEntry)
+          : canonicalFilePath;
       // Skip if already loaded or loading
-      if (
-        state.fileContents[filePath] ||
-        state.fileContents[canonicalFilePath] ||
-        state.fileContentsLoading[filePath] ||
-        state.fileContentsLoading[canonicalFilePath]
-      )
-        return;
+      if (state.fileContents[contentKey] || state.fileContentsLoading[contentKey]) return;
       const changeSetEpoch = state.changeSetEpoch;
+      const changeSetIdentity = getReviewChangeSetIdentityToken(state.activeChangeSet);
+      const hydrationRequest = { changeSetEpoch, changeSetIdentity, fileEntry, contentKey };
       const fileVersion = state.fileContentVersionByPath[filePath] ?? 0;
-      const canonicalFileVersion = state.fileContentVersionByPath[canonicalFilePath] ?? 0;
+      const canonicalFileVersion = state.fileContentVersionByPath[contentKey] ?? 0;
 
       set((s) => ({
         fileContentsLoading: {
           ...s.fileContentsLoading,
           [filePath]: true,
-          [canonicalFilePath]: true,
+          [contentKey]: true,
         },
       }));
 
@@ -1422,12 +1410,16 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         );
         const latest = get();
         if (changeSetEpoch !== latest.changeSetEpoch) return;
-        if ((latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion) return;
-        if ((latest.fileContentVersionByPath[canonicalFilePath] ?? 0) !== canonicalFileVersion)
+        if (
+          (latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion ||
+          (latest.fileContentVersionByPath[contentKey] ?? 0) !== canonicalFileVersion
+        ) {
+          set((s) => hydrateSavedReviewOriginal(s, hydrationRequest, content) ?? s);
           return;
+        }
         set((s) => {
-          const nextFileContents = { ...s.fileContents, [canonicalFilePath]: content };
-          if (canonicalFilePath !== filePath) {
+          const nextFileContents = { ...s.fileContents, [contentKey]: content };
+          if (contentKey !== filePath) {
             delete nextFileContents[filePath];
           }
           const result: Partial<ChangeReviewSlice> = {
@@ -1435,7 +1427,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             fileContentsLoading: {
               ...s.fileContentsLoading,
               [filePath]: false,
-              [canonicalFilePath]: false,
+              [contentKey]: false,
             },
           };
 
@@ -1443,10 +1435,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           if (
             content.contentSource !== 'unavailable' &&
             content.contentSource !== 'disk-current' &&
-            s.activeChangeSet
+            s.activeChangeSet &&
+            fileEntry
           ) {
             const updatedFiles = s.activeChangeSet.files.map((f) =>
-              reviewPathsEqual(f.filePath, canonicalFilePath)
+              getFileReviewKey(f) === getFileReviewKey(fileEntry)
                 ? { ...f, linesAdded: content.linesAdded, linesRemoved: content.linesRemoved }
                 : f
             );
@@ -1466,14 +1459,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const latest = get();
         if (changeSetEpoch !== latest.changeSetEpoch) return;
         if ((latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion) return;
-        if ((latest.fileContentVersionByPath[canonicalFilePath] ?? 0) !== canonicalFileVersion)
-          return;
+        if ((latest.fileContentVersionByPath[contentKey] ?? 0) !== canonicalFileVersion) return;
         logger.error('fetchFileContent error:', error);
         set((s) => ({
           fileContentsLoading: {
             ...s.fileContentsLoading,
             [filePath]: false,
-            [canonicalFilePath]: false,
+            [contentKey]: false,
           },
         }));
       }
@@ -1549,6 +1541,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           set({ applying: false });
           return null;
         }
+        if (hasDuplicateReviewFilePaths(activeChangeSet.files)) {
+          set({
+            applying: false,
+            applyError: 'Review files share a disk path. Apply each change separately.',
+          });
+          return null;
+        }
         applyFilesCount = activeChangeSet.files.length;
 
         const decisions: FileReviewDecision[] = [];
@@ -1561,7 +1560,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const fileDecision = fileDecisions[reviewKey] ?? 'pending';
           const hunkDecs: Record<number, HunkDecision> = {};
 
-          const baseCount = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+          const entryKey = getReviewEntryKey(activeChangeSet.files, file);
+          const baseCount = getFileHunkCount(entryKey, file.snippets.length, fileChunkCounts);
           const maxIdx = getMaxDecisionIndexForFile(reviewKey, hunkDecisions);
           const count = Math.max(baseCount, maxIdx + 1);
           for (let i = 0; i < count; i++) {
@@ -1592,7 +1592,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
               return null;
             }
             requestChangesCount++;
-            const content = fileContents[file.filePath];
+            const content = fileContents[entryKey];
             const hunkContextHashes =
               maxIdx < baseCount
                 ? buildHunkContextHashesForFile(
@@ -1774,9 +1774,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       };
 
       const reviewKey = getFileReviewKey(file);
+      const entryKey = getReviewEntryKey(activeChangeSet.files, file);
       const fileDecision = fileDecisions[reviewKey] ?? 'pending';
       const hunkDecs: Record<number, HunkDecision> = {};
-      const baseCount = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+      const baseCount = getFileHunkCount(entryKey, file.snippets.length, fileChunkCounts);
       const maxIdx = getMaxDecisionIndexForFile(reviewKey, hunkDecisions);
       const count = Math.max(baseCount, maxIdx + 1);
       for (let i = 0; i < count; i++) {
@@ -1799,12 +1800,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           : Object.values(hunkDecs).filter((decision) => decision === 'rejected').length;
 
       try {
-        const content = fileContents[file.filePath] ?? fileContents[filePath];
-        const innerBaseCount = getFileHunkCount(
-          file.filePath,
-          file.snippets.length,
-          fileChunkCounts
-        );
+        const content = fileContents[entryKey];
+        const innerBaseCount = getFileHunkCount(entryKey, file.snippets.length, fileChunkCounts);
         const innerMaxIdx = getMaxDecisionIndexForFile(reviewKey, hunkDecisions);
         const hunkContextHashes =
           innerMaxIdx < innerBaseCount
@@ -1903,6 +1900,15 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         if (!s.activeChangeSet) return s;
         const existing = findReviewFileByPath(s.activeChangeSet.files, filePath);
         if (!existing) return s;
+        if (
+          s.activeChangeSet.files.filter((file) =>
+            reviewPathsEqual(file.filePath, existing.filePath)
+          ).length > 1
+        ) {
+          return {
+            applyError: 'Review files share a disk path. Reload Changes before removing an entry.',
+          };
+        }
 
         const nextFiles = s.activeChangeSet.files.filter(
           (f) => !reviewPathsEqual(f.filePath, existing.filePath)
@@ -1910,20 +1916,19 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const totalLinesAdded = nextFiles.reduce((sum, f) => sum + f.linesAdded, 0);
         const totalLinesRemoved = nextFiles.reduce((sum, f) => sum + f.linesRemoved, 0);
 
-        const aliases = new Set([filePath, existing.filePath]);
-        const addMatchingAliases = (record: Record<string, unknown>): void => {
-          for (const key of Object.keys(record)) {
-            if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, existing.filePath)) {
-              aliases.add(key);
-            }
-          }
-        };
-        addMatchingAliases(s.fileChunkCounts);
-        addMatchingAliases(s.fileContents);
-        addMatchingAliases(s.fileContentsLoading);
-        addMatchingAliases(s.editedContents);
-        addMatchingAliases(s.reviewExternalChangesByFile);
-        addMatchingAliases(s.fileContentVersionByPath);
+        const aliases = collectReviewPathAliases(
+          s.activeChangeSet.files,
+          filePath,
+          existing.filePath,
+          [
+            s.fileChunkCounts,
+            s.fileContents,
+            s.fileContentsLoading,
+            s.editedContents,
+            s.reviewExternalChangesByFile,
+            s.fileContentVersionByPath,
+          ]
+        );
 
         const nextHunkDecisions = { ...s.hunkDecisions };
         const reviewKey = getReviewKeyForFilePath(s.activeChangeSet.files, filePath);
@@ -1960,8 +1965,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         }
 
         const nextSelected =
-          s.selectedReviewFilePath && reviewPathsEqual(s.selectedReviewFilePath, existing.filePath)
-            ? (nextFiles[0]?.filePath ?? null)
+          s.selectedReviewFilePath &&
+          findReviewFileByPath(s.activeChangeSet.files, s.selectedReviewFilePath)?.filePath ===
+            existing.filePath
+            ? nextFiles[0]
+              ? getReviewEntryKey(nextFiles, nextFiles[0])
+              : null
             : s.selectedReviewFilePath;
 
         return {
@@ -1992,7 +2001,17 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     ) => {
       set((s) => {
         if (!s.activeChangeSet) return s;
-        if (findReviewFileByPath(s.activeChangeSet.files, file.filePath)) return s;
+        const samePath = s.activeChangeSet.files.find((existing) =>
+          reviewPathsEqual(existing.filePath, file.filePath)
+        );
+        if (samePath) {
+          return samePath.changeKey && file.changeKey && samePath.changeKey !== file.changeKey
+            ? {
+                applyError:
+                  'Review files share a disk path. Reload Changes before restoring an entry.',
+              }
+            : s;
+        }
 
         const idxRaw = options?.index;
         const idx =
@@ -2029,7 +2048,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             totalLinesAdded,
             totalLinesRemoved,
           },
-          selectedReviewFilePath: s.selectedReviewFilePath ?? file.filePath,
+          selectedReviewFilePath: s.selectedReviewFilePath ?? getReviewEntryKey(nextFiles, file),
           fileContents: nextFileContents,
           fileContentsLoading: nextFileContentsLoading,
           fileContentVersionByPath: nextFileContentVersionByPath,
@@ -2089,10 +2108,18 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     reloadReviewFileFromDisk: (filePath: string) => {
       set((s) => {
+        const { aliases } = collectSavedReviewAliases(
+          s.activeChangeSet?.files,
+          filePath,
+          filePath,
+          [s.editedContents, s.reviewExternalChangesByFile]
+        );
         const nextEditedContents = { ...s.editedContents };
-        delete nextEditedContents[filePath];
         const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
-        delete nextReviewExternalChangesByFile[filePath];
+        for (const alias of aliases) {
+          delete nextEditedContents[alias];
+          delete nextReviewExternalChangesByFile[alias];
+        }
         return {
           editedContents: nextEditedContents,
           reviewExternalChangesByFile: nextReviewExternalChangesByFile,
@@ -2137,18 +2164,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       if (!hasRequestedDraft && !hasCanonicalDraft)
         return { ok: false, error: 'The edited draft is no longer available.' };
       set((s) => ({
-        fileContentsLoading: {
-          ...s.fileContentsLoading,
-          [filePath]: false,
-          [canonicalFilePath]: false,
-        },
+        ...invalidateSavedReviewFileRequests(s, filePath, canonicalFilePath),
         applying: true,
         applyError: null,
-        fileContentVersionByPath: {
-          ...s.fileContentVersionByPath,
-          [filePath]: (s.fileContentVersionByPath[filePath] ?? 0) + 1,
-          [canonicalFilePath]: (s.fileContentVersionByPath[canonicalFilePath] ?? 0) + 1,
-        },
       }));
       try {
         await api.review.saveEditedFile(scope, canonicalFilePath, content, expectedCurrentContent);
@@ -2159,23 +2177,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           ) {
             return s;
           }
-          const aliases = new Set([filePath, canonicalFilePath]);
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.editedContents);
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
-          addMatchingReviewPathAliases(
-            aliases,
+          const { aliases, nextContents } = prepareSavedReviewCache(
+            s,
             filePath,
             canonicalFilePath,
-            s.hunkContextHashesByFile
+            content
           );
-          addMatchingReviewPathAliases(
-            aliases,
-            filePath,
-            canonicalFilePath,
-            s.reviewExternalChangesByFile
-          );
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
-
           const nextEdited = { ...s.editedContents };
           const currentDraft = s.editedContents[filePath] ?? s.editedContents[canonicalFilePath];
           const draftStillMatchesSavedContent = currentDraft === content;
@@ -2198,20 +2205,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           for (const alias of aliases) delete nextFileDecisions[alias];
           const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
           for (const alias of aliases) delete nextReviewExternalChangesByFile[alias];
-
-          const nextContents = { ...s.fileContents };
-          const existing = nextContents[canonicalFilePath] ?? nextContents[filePath];
-          for (const alias of aliases) {
-            if (alias !== canonicalFilePath) delete nextContents[alias];
-          }
-          if (existing) {
-            nextContents[canonicalFilePath] = {
-              ...existing,
-              filePath: canonicalFilePath,
-              modifiedFullContent: content,
-              contentSource: 'disk-current',
-            };
-          }
           return {
             editedContents: nextEdited,
             fileChunkCounts: nextFileChunkCounts,
@@ -2223,6 +2216,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             applying: false,
           };
         });
+        requestSavedReviewOriginalsAfterSave(
+          get(),
+          scope,
+          canonicalFilePath,
+          changeSetEpoch,
+          scopeFingerprint,
+          (request, resolved) => set((s) => hydrateSavedReviewOriginal(s, request, resolved) ?? s)
+        );
         return { ok: true };
       } catch (error) {
         const errorMessage = mapReviewError(error);
@@ -2236,7 +2237,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         return { ok: false, error: errorMessage };
       }
     },
-
     checkTaskHasChanges: async (
       teamName: string,
       taskId: string,
