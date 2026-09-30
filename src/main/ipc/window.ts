@@ -41,6 +41,39 @@ function getWindowForEvent(event: IpcMainInvokeEvent): BrowserWindow | null {
   return getMainWindow();
 }
 
+function toggleMaximized(win: BrowserWindow): Promise<void> {
+  const wasMaximized = win.isMaximized();
+  return new Promise((resolve, reject) => {
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      if (wasMaximized) win.removeListener('unmaximize', finish);
+      else win.removeListener('maximize', finish);
+      win.removeListener('closed', finish);
+    };
+    const finish = (): void => {
+      cleanup();
+      resolve();
+    };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Window manager did not acknowledge the maximize change'));
+    }, 5_000);
+    timeout.unref();
+    // Linux window managers acknowledge this asynchronously. The renderer must
+    // read isMaximized only after that acknowledgment, including on restore.
+    if (wasMaximized) win.once('unmaximize', finish);
+    else win.once('maximize', finish);
+    win.once('closed', finish);
+    try {
+      if (wasMaximized) win.unmaximize();
+      else win.maximize();
+    } catch (error) {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
+}
+
 export function registerWindowHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('window:minimize', (event) => {
     const win = getWindowForEvent(event);
@@ -50,8 +83,7 @@ export function registerWindowHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('window:maximize', (event) => {
     const win = getWindowForEvent(event);
     if (win && !win.isDestroyed()) {
-      if (win.isMaximized()) win.unmaximize();
-      else win.maximize();
+      return toggleMaximized(win);
     }
   });
 
