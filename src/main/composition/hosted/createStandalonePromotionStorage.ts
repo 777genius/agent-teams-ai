@@ -1,12 +1,9 @@
-import { createHash } from 'node:crypto';
-
 import { HOSTED_RUNTIME_ISOLATION } from '@features/hosted-access';
 import { getInternalStorageDatabasePath } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import { createHostedPromotionStorageBackend } from '@features/internal-storage/main/hosted';
 
-import { admitHostedReadRoot } from '../../standaloneHostedReadRoot';
-
+import { matchSignedWorkspaceRoot } from './admittedWorkspaceRootResolver';
 import { createHostedTeamMessageRouteFactory } from './hostedTeamMessageComposition';
 
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
@@ -22,15 +19,14 @@ export async function createStandalonePromotionStorage(options: {
 }) {
   const { runtimeInstance, mountBinding } = options;
   const promotionRoot =
-    runtimeInstance?.workspaceRoots.length === 1
-      ? admitHostedReadRoot(runtimeInstance.workspaceRoots[0].reference)
+    runtimeInstance && mountBinding?.bootId === runtimeInstance.bootId
+      ? matchSignedWorkspaceRoot(runtimeInstance, mountBinding.declaredRootHash)
       : null;
   // The signed mount is a boot identity. A remount requires stopping this process and its worker.
   if (
     !options.draftPublicationAvailable ||
     mountBinding?.health !== 'healthy' ||
     promotionRoot === null ||
-    createHash('sha256').update(promotionRoot).digest('hex') !== mountBinding.declaredRootHash ||
     runtimeInstance === null
   ) {
     return { promotionRoot, promotionStorage: null };
