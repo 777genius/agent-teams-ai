@@ -3,6 +3,10 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { useRecentProjectsSection } from '@features/recent-projects/renderer/hooks/useRecentProjectsSection';
 import {
+  getRecentProjectLastOpenedAt,
+  resetRecentProjectOpenHistoryForTests,
+} from '@features/recent-projects/renderer/utils/recentProjectOpenHistory';
+import {
   __resetRecentProjectsClientCacheForTests,
   loadRecentProjectsWithClientCache,
 } from '@features/recent-projects/renderer/utils/recentProjectsClientCache';
@@ -31,6 +35,8 @@ const apiMock = vi.hoisted(() => ({
   openPath: vi.fn(),
 }));
 
+const loggerHarness = vi.hoisted(() => ({ error: vi.fn() }));
+
 const aliveListReadHarness = vi.hoisted(() => ({
   listAliveTeams: vi.fn<() => Promise<string[]>>(),
 }));
@@ -58,6 +64,10 @@ const storeState = vi.hoisted(() => ({
 vi.mock('@renderer/api', () => ({
   api: apiMock,
   isElectronMode: () => true,
+}));
+
+vi.mock('@shared/utils/logger', () => ({
+  createLogger: () => ({ error: loggerHarness.error }),
 }));
 
 vi.mock('@renderer/composition/team/createTeamAliveListReadPort', () => ({
@@ -146,7 +156,7 @@ describe('useRecentProjectsSection', () => {
   let latest: ReturnType<typeof useRecentProjectsSection> | null;
 
   function Harness(): React.JSX.Element | null {
-    latest = useRecentProjectsSection('', 20);
+    latest = useRecentProjectsSection();
     return null;
   }
 
@@ -159,6 +169,7 @@ describe('useRecentProjectsSection', () => {
 
   beforeEach(() => {
     __resetRecentProjectsClientCacheForTests();
+    resetRecentProjectOpenHistoryForTests();
     resetContextScopedRequestEpochForTests();
     vi.clearAllMocks();
     latest = null;
@@ -188,6 +199,7 @@ describe('useRecentProjectsSection', () => {
     });
     host.remove();
     __resetRecentProjectsClientCacheForTests();
+    resetRecentProjectOpenHistoryForTests();
     resetContextScopedRequestEpochForTests();
   });
 
@@ -344,5 +356,55 @@ describe('useRecentProjectsSection', () => {
     );
     expect(storeState.fetchSessionsInitial).toHaveBeenCalledWith(encodedId);
     expect(storeState.openTeamsTab).toHaveBeenCalledWith(selectedPath);
+  });
+
+  it('rejects a delayed synthetic open after a context switch without adding or recording the path', async () => {
+    const selected = project('delayed', '/tmp/delayed-synthetic-fixture');
+    const lookup = deferred<void>();
+    apiMock.getDashboardRecentProjects.mockResolvedValue({ projects: [selected], degraded: false });
+    storeState.fetchRepositoryGroups.mockReturnValue(lookup.promise);
+    await renderHarness();
+
+    let outcome: Awaited<ReturnType<NonNullable<typeof latest>['openRecentProject']>> | undefined;
+    const opening = latest?.openRecentProject(selected).then((result) => { outcome = result; });
+    invalidateContextScopedRequestEpoch();
+    storeState.activeContextId = 'ssh-dev';
+    await act(async () => { lookup.resolve(); await opening; await flushPromises(); });
+
+    expect(outcome).toEqual({ kind: 'stale_target' });
+    expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+    expect(storeState.openTeamsTab).not.toHaveBeenCalled();
+    expect(getRecentProjectLastOpenedAt(selected)).toBe(0);
+  });
+
+  it('returns cancelled for a native picker dismissal without changing history', async () => {
+    apiMock.getDashboardRecentProjects.mockResolvedValue(payload('alpha'));
+    apiMock.config.selectFolders.mockResolvedValue([]);
+    await renderHarness();
+    let outcome: Awaited<ReturnType<NonNullable<typeof latest>['selectProjectFolder']>> | undefined;
+    await act(async () => { outcome = await latest?.selectProjectFolder(); });
+    expect(outcome).toEqual({ kind: 'cancelled' });
+    expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+    expect(getRecentProjectLastOpenedAt(project('alpha'))).toBe(0);
+  });
+
+  it('returns a failed outcome and leaves history untouched when a synthetic open fails', async () => {
+    const selected = project('failure-fixture');
+    apiMock.getDashboardRecentProjects.mockResolvedValue({ projects: [selected], degraded: false });
+    storeState.fetchRepositoryGroups.mockResolvedValue(undefined);
+    apiMock.config.addCustomProjectPath.mockRejectedValue(new Error('fixture failure'));
+    await renderHarness();
+
+    let outcome: Awaited<ReturnType<NonNullable<typeof latest>['openRecentProject']>> | undefined;
+    await act(async () => { outcome = await latest?.openRecentProject(selected); });
+
+    expect(outcome).toEqual({ kind: 'failed', message: expect.any(String) });
+    expect(storeState.openTeamsTab).not.toHaveBeenCalled();
+    expect(getRecentProjectLastOpenedAt(selected)).toBe(0);
+    expect(loggerHarness.error).toHaveBeenCalledWith('Recent project action failed', {
+      operation: 'project',
+      errorType: 'Error',
+    });
+    expect(JSON.stringify(loggerHarness.error.mock.calls)).not.toContain('/tmp/failure-fixture');
   });
 });

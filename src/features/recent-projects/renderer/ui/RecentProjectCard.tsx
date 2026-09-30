@@ -7,239 +7,235 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { cn } from '@renderer/lib/utils';
 import { FolderOpen, GitBranch, Terminal } from 'lucide-react';
 
-import type { RecentProjectCardModel } from '../view-models/recentProjectsSectionViewModel';
+import type { RecentProjectCardModel } from './recentProjectsModel';
 
 interface RecentProjectCardProps {
   card: RecentProjectCardModel;
+  pending?: boolean;
+  status?: string;
   onClick: () => void;
-  onOpenPath: () => void;
+  onOpenPath?: () => void;
 }
 
 export const RecentProjectCard = ({
   card,
+  pending = false,
+  status,
   onClick,
   onOpenPath,
 }: Readonly<RecentProjectCardProps>): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: tCommon } = useAppTranslation('common');
-  const isDeleted = card.filesystemState === 'deleted';
+  const canOpen = card.open.support === 'supported' && card.open.availability === 'available';
+  const canReveal = card.reveal.support === 'supported' && card.reveal.availability === 'available';
+  const unavailableAction =
+    card.open.support === 'supported' && card.open.availability === 'unavailable'
+      ? card.open
+      : null;
+  const deleted = unavailableAction?.cause === 'deleted';
+  const revealReason =
+    card.reveal.support === 'supported' && card.reveal.availability === 'unavailable'
+      ? card.reveal.reason
+      : tCommon('providerModelBadges.unavailable');
+  const staleActivity = card.activity.kind === 'known' && card.activity.value.freshness === 'stale';
+  const counts = card.taskCounts.kind === 'known' ? card.taskCounts.value : null;
+  const totalTasks = counts ? counts.pending + counts.inProgress + counts.completed : 0;
+  const activeTeams = card.activeTeams.kind === 'known' ? card.activeTeams.value : [];
 
   return (
-    <button
-      onClick={isDeleted ? undefined : onClick}
-      aria-disabled={isDeleted}
+    <div
       data-recent-project-cell="project"
       className={cn(
-        'project-row-zebra-card group relative flex min-h-[112px] flex-col overflow-hidden p-3.5 text-left transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis',
-        isDeleted && 'cursor-default bg-red-500/[0.03]'
+        'project-row-zebra-card group relative flex min-h-[112px] min-w-0 flex-col overflow-hidden transition-colors duration-200',
+        deleted && 'bg-red-500/[0.03]'
       )}
     >
-      {card.activeTeams && card.activeTeams.length > 0 && (
-        <ActivePulseIndicator className="absolute right-3 top-3" />
-      )}
-
-      <div className="mb-1 flex items-center">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <h3 className="min-w-0 truncate text-sm font-medium text-text transition-colors duration-200 group-hover:text-text">
-              {card.name}
-            </h3>
-            {isDeleted && (
-              <Tooltip>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!canOpen || pending}
+        aria-label={`${tCommon('actions.open')} ${card.name}`}
+        aria-busy={pending || undefined}
+        className="flex min-h-[112px] min-w-0 flex-1 flex-col p-3.5 pr-8 text-left focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis disabled:cursor-default"
+      >
+        {activeTeams.length > 0 && <ActivePulseIndicator className="absolute right-3 top-3" />}
+        <div className="mb-1 flex min-w-0 items-center gap-1.5 pr-5">
+          <h3 className="min-w-0 truncate text-sm font-medium text-text">{card.name}</h3>
+          {unavailableAction && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    'inline-flex shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                    deleted
+                      ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300'
+                      : 'border-border bg-surface-overlay text-text-muted'
+                  )}
+                >
+                  {deleted
+                    ? t('recentProjects.card.deleted')
+                    : tCommon('providerModelBadges.unavailable')}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{unavailableAction.reason}</TooltipContent>
+            </Tooltip>
+          )}
+          {card.pathBadge && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex shrink-0 rounded-full bg-surface-overlay px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
+                  {card.pathBadge.label}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-sm">
+                <p>{card.pathBadge.description}</p>
+                {card.desktopPathDetails?.map((detail) => (
+                  <p key={`${detail.label}:${detail.text}`} className="font-mono text-[11px]">
+                    {detail.label}: {detail.text}
+                  </p>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        {card.providers.kind === 'known' && card.providers.value.length > 0 && (
+          <div className="mb-1 flex items-center gap-1.5">
+            {card.providers.value.map((provider) => (
+              <Tooltip key={provider.id}>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-medium text-red-700 dark:text-red-300">
-                    {t('recentProjects.card.deleted')}
+                  <span
+                    className={cn(
+                      'bg-surface-overlay/80 inline-flex items-center rounded-full border border-border p-1',
+                      provider.freshness === 'stale' && 'opacity-50'
+                    )}
+                  >
+                    <ProviderBrandLogo providerId={provider.id} className="size-3.5" />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  {t('recentProjects.card.projectFolderMissing')}
+                  {provider.id}
+                  {provider.freshness === 'stale' ? ' - last known' : ''}
                 </TooltipContent>
               </Tooltip>
-            )}
-            {card.pathSummary && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-surface-overlay px-1.5 py-0.5 text-[9px] font-medium text-text-muted">
-                    {card.pathSummary.badgeLabel}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="max-w-sm">
-                  <div className="space-y-2">
-                    <p className="text-[11px] leading-relaxed text-text-secondary">
-                      {card.pathSummary.description}
-                    </p>
-                    <div className="space-y-1.5">
-                      {card.pathSummary.paths.map((pathItem) => (
-                        <div key={`${pathItem.label}:${pathItem.fullPath}`} className="space-y-0.5">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-text-muted">
-                            {pathItem.label}
-                          </p>
-                          <p className="font-mono text-[11px] text-text">{pathItem.fullPath}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+            ))}
+            {card.providers.value.some((provider) => provider.freshness === 'stale') && (
+              <span className="text-[10px] text-text-muted">Last known</span>
             )}
           </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            {card.providerIds.map((providerId) => (
+        )}
+        {card.subtitle && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="w-full min-w-0 truncate pr-6 font-mono text-[10px] text-text-muted">
+                {card.subtitle}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="start">
+              <p className="font-mono text-[11px]">
+                {card.desktopPathDetails?.[0]?.text ?? card.subtitle}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        {unavailableAction && !deleted && (
+          <span className="text-[10px] text-text-muted">{unavailableAction.reason}</span>
+        )}
+        {card.branch.kind === 'known' ? (
+          <span className="mb-auto mt-1 flex min-w-0 items-center gap-1.5 truncate text-[10px] text-text-secondary">
+            <GitBranch className="size-3 shrink-0 text-text-muted" />
+            {card.branch.value}
+          </span>
+        ) : (
+          <span className="mb-auto" />
+        )}
+        <span className="mt-3 flex flex-wrap items-center gap-2">
+          {counts && counts.inProgress > 0 && (
+            <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+              {t('recentProjects.card.taskCounts.active', { count: counts.inProgress })}
+            </span>
+          )}
+          {counts && counts.pending > 0 && (
+            <span className="rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] text-yellow-600 dark:text-yellow-400">
+              {t('recentProjects.card.taskCounts.pending', { count: counts.pending })}
+            </span>
+          )}
+          {counts && counts.completed > 0 && (
+            <span className="rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-600 dark:text-green-400">
+              {t('recentProjects.card.taskCounts.done', { count: counts.completed })}
+            </span>
+          )}
+          {card.activity.kind === 'known' && (
+            <span className="text-[10px] text-text-muted">
+              {card.activity.value.label}
+              {staleActivity ? ' (last known)' : ''}
+            </span>
+          )}
+        </span>
+        {card.tasksLoading ? (
+          <span className="mt-2 flex w-full items-center gap-2">
+            <span className="h-1.5 flex-1 animate-pulse rounded-full bg-surface-raised" />
+            <span className="h-2.5 w-6 animate-pulse rounded bg-surface-raised" />
+          </span>
+        ) : (
+          totalTasks > 0 &&
+          counts && (
+            <span className="mt-2 flex w-full items-center gap-2">
               <span
-                key={providerId}
-                className="bg-surface-overlay/80 inline-flex items-center rounded-full border border-border p-1"
-                title={providerId}
+                role="progressbar"
+                aria-valuenow={counts.completed}
+                aria-valuemin={0}
+                aria-valuemax={totalTasks}
+                aria-label={`Tasks ${counts.completed}/${totalTasks} completed`}
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-raised"
               >
-                <ProviderBrandLogo providerId={providerId} className="size-3.5" />
+                <span
+                  className="block h-full rounded-full bg-emerald-500"
+                  style={{ width: `${Math.round((counts.completed / totalTasks) * 100)}%` }}
+                />
+              </span>
+              <span className="text-[10px] text-text-muted">
+                {counts.completed}/{totalTasks}
+              </span>
+            </span>
+          )
+        )}
+        {activeTeams.length > 0 && (
+          <span className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+            <Terminal className="size-3 text-emerald-600 dark:text-emerald-400" />
+            {activeTeams.map((team) => (
+              <span
+                key={team.targetKey}
+                className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] text-emerald-600 dark:text-emerald-400"
+              >
+                {team.displayName}
               </span>
             ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex w-full min-w-0 items-center gap-1 font-mono text-[10px] text-text-muted">
+          </span>
+        )}
+      </button>
+      {status && (
+        <p role="alert" className="px-3.5 pb-2 text-[10px] text-red-700 dark:text-red-300">
+          {status}
+        </p>
+      )}
+      {card.reveal.support === 'supported' && onOpenPath && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (isDeleted) {
-                  return;
-                }
-                onOpenPath();
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (isDeleted) {
-                    return;
-                  }
-                  onOpenPath();
-                }
-              }}
-              className={cn(
-                'shrink-0 rounded p-0.5 transition-colors',
-                isDeleted
-                  ? 'cursor-not-allowed text-red-700/70 dark:text-red-300/70'
-                  : 'cursor-pointer hover:bg-black/5 hover:text-text-secondary dark:hover:bg-white/5'
-              )}
+            <button
+              type="button"
+              aria-label={tCommon('actions.reveal')}
+              onClick={onOpenPath}
+              disabled={!canReveal || pending}
+              className="absolute bottom-3 right-2 z-10 rounded p-1 text-text-muted hover:bg-surface-overlay hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-emphasis disabled:cursor-not-allowed"
             >
-              <FolderOpen className="size-3" />
-            </div>
+              <FolderOpen className="size-3.5" />
+            </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {isDeleted ? t('recentProjects.card.projectFolderMissing') : tCommon('actions.open')}
+            {canReveal ? tCommon('actions.reveal') : revealReason}
           </TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="truncate">{card.formattedPath}</span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="start">
-            <p className="font-mono text-[11px]">{card.project.primaryPath}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-
-      {card.primaryBranch ? (
-        <div className="mb-auto mt-1 flex items-center gap-1.5 truncate">
-          <GitBranch className="size-3 shrink-0 text-text-muted" />
-          <span className="truncate text-[10px] text-text-secondary">{card.primaryBranch}</span>
-        </div>
-      ) : (
-        <div className="mb-auto" />
       )}
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {card.taskCounts &&
-          (card.taskCounts.pending > 0 ||
-            card.taskCounts.inProgress > 0 ||
-            card.taskCounts.completed > 0) && (
-            <>
-              {card.taskCounts.inProgress > 0 && (
-                <span className="inline-flex items-center rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
-                  {t('recentProjects.card.taskCounts.active', {
-                    count: card.taskCounts.inProgress,
-                  })}
-                </span>
-              )}
-              {card.taskCounts.pending > 0 && (
-                <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
-                  {t('recentProjects.card.taskCounts.pending', {
-                    count: card.taskCounts.pending,
-                  })}
-                </span>
-              )}
-              {card.taskCounts.completed > 0 && (
-                <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-600 dark:text-green-400">
-                  {t('recentProjects.card.taskCounts.done', {
-                    count: card.taskCounts.completed,
-                  })}
-                </span>
-              )}
-              <span className="text-text-muted">·</span>
-            </>
-          )}
-        <span className="text-[10px] text-text-muted">{card.lastActivityLabel}</span>
-      </div>
-
-      {card.tasksLoading ? (
-        <div className="mt-2 w-full">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 flex-1 animate-pulse overflow-hidden rounded-full bg-[var(--color-surface-raised)]" />
-            <div className="h-2.5 w-6 animate-pulse rounded bg-[var(--color-surface-raised)]" />
-          </div>
-        </div>
-      ) : (
-        card.taskCounts &&
-        (() => {
-          const pending = card.taskCounts.pending ?? 0;
-          const inProgress = card.taskCounts.inProgress ?? 0;
-          const completed = card.taskCounts.completed ?? 0;
-          const totalTasks = pending + inProgress + completed;
-          if (totalTasks === 0) return null;
-          const progressPercent = Math.round((completed / totalTasks) * 100);
-          return (
-            <div className="mt-2 w-full space-y-1">
-              <div className="flex items-center gap-2">
-                <div
-                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]"
-                  role="progressbar"
-                  aria-valuenow={completed}
-                  aria-valuemin={0}
-                  aria-valuemax={totalTasks}
-                  aria-label={`Tasks ${completed}/${totalTasks} completed`}
-                >
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-200"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <span className="shrink-0 text-[10px] font-medium tracking-tight text-[var(--color-text-muted)]">
-                  {completed}/{totalTasks}
-                </span>
-              </div>
-            </div>
-          );
-        })()
-      )}
-
-      {card.activeTeams && card.activeTeams.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
-          <Terminal className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          {card.activeTeams.map((team) => (
-            <span
-              key={team.teamName}
-              className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400"
-            >
-              {team.displayName}
-            </span>
-          ))}
-        </div>
-      )}
-    </button>
+    </div>
   );
 };

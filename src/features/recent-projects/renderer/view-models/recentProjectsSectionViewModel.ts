@@ -138,9 +138,12 @@ export function buildRecentProjectsSectionViewModel({
     project,
     name: project.name,
     formattedPath: formatProjectPath(project.primaryPath),
-    lastActivityLabel: formatDistanceToNow(new Date(project.mostRecentActivity), {
-      addSuffix: true,
-    }),
+    lastActivityLabel:
+      Number.isFinite(project.mostRecentActivity) && project.mostRecentActivity >= 0
+        ? formatDistanceToNow(new Date(Math.min(project.mostRecentActivity, Date.now())), {
+            addSuffix: true,
+          })
+        : '',
     providerIds: sortDashboardProviderIds(project.providerIds),
     primaryBranch: project.primaryBranch,
     filesystemState: project.filesystemState,
