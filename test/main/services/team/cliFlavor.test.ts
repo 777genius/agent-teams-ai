@@ -3,28 +3,31 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('cliFlavor', () => {
   afterEach(() => {
-    delete process.env.CLAUDE_TEAM_CLI_FLAVOR;
+    vi.unstubAllEnvs();
     vi.resetModules();
     vi.clearAllMocks();
   });
 
   it('uses multimodel runtime by default', async () => {
+    vi.stubEnv('CLAUDE_TEAM_CLI_FLAVOR', undefined);
     const { getConfiguredCliFlavor } = await import('@main/services/team/cliFlavor');
 
     expect(getConfiguredCliFlavor()).toBe('agent_teams_orchestrator');
   });
 
-  it('ignores the legacy persisted multimodel flag', async () => {
-    const { getConfiguredCliFlavor } = await import('@main/services/team/cliFlavor');
+  it.each(['development', 'production', 'test'])(
+    'ignores every legacy flavor override in %s',
+    async (nodeEnv) => {
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      const { getConfiguredCliFlavor, getConfiguredCliCommandLabel } =
+        await import('@main/services/team/cliFlavor');
 
-    expect(getConfiguredCliFlavor()).toBe('agent_teams_orchestrator');
-  });
+      for (const flavor of ['claude', ' claude ', 'agent_teams_orchestrator', '', 'unknown']) {
+        vi.stubEnv('CLAUDE_TEAM_CLI_FLAVOR', flavor);
 
-  it('lets env override the default runtime', async () => {
-    process.env.CLAUDE_TEAM_CLI_FLAVOR = 'claude';
-
-    const { getConfiguredCliFlavor } = await import('@main/services/team/cliFlavor');
-
-    expect(getConfiguredCliFlavor()).toBe('claude');
-  });
+        expect(getConfiguredCliFlavor()).toBe('agent_teams_orchestrator');
+        expect(getConfiguredCliCommandLabel()).toBe('orchestrator-cli');
+      }
+    }
+  );
 });
