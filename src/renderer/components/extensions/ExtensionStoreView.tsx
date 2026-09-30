@@ -4,7 +4,7 @@
  * Global catalog data comes from Zustand store.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
@@ -221,6 +221,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
   const tabState = useExtensionsTabState();
   const [customMcpDialogOpen, setCustomMcpDialogOpen] = useState(false);
+  // A completed status may disagree with the UI mode; retry automatically only after a mode change.
+  const autoCliRefresh = useRef<{ mode: boolean; attempted: boolean } | null>(null);
   const resolvedProject = useMemo(
     () => resolveProjectPathById(extensionsTabProjectId, projects, repositoryGroups),
     [extensionsTabProjectId, projects, repositoryGroups]
@@ -263,14 +265,18 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   }, [fetchPluginCatalog, projectPath]);
 
   useEffect(() => {
+    if (autoCliRefresh.current?.mode !== multimodelEnabled) {
+      autoCliRefresh.current = { mode: multimodelEnabled, attempted: false };
+    }
     const cliStatusMatchesCurrentMode =
       cliStatus &&
       (multimodelEnabled
         ? cliStatus.flavor === 'agent_teams_orchestrator'
         : cliStatus.flavor !== 'agent_teams_orchestrator');
-    if (cliStatusLoading || cliStatusMatchesCurrentMode) {
+    if (cliStatusLoading || cliStatusMatchesCurrentMode || autoCliRefresh.current.attempted) {
       return;
     }
+    autoCliRefresh.current.attempted = true;
     void refreshCliStatusForCurrentMode({
       multimodelEnabled,
       providerStatusMode: 'defer',
@@ -291,6 +297,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
   // Refresh all data (plugins + MCP browse + installed + skills)
   const handleRefresh = useCallback(() => {
+    autoCliRefresh.current = { mode: multimodelEnabled, attempted: true };
     void refreshCliStatusForCurrentMode({
       multimodelEnabled,
       bootstrapCliStatus,
