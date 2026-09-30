@@ -10,3 +10,4 @@ export type {
   RunningTeamViewRow,
 } from './ui/RunningTeamsSectionView';
 export { RunningTeamsSectionView } from './ui/RunningTeamsSectionView';
+export { filterRunningTeamRows } from './view-models/filterRunningTeamRows';

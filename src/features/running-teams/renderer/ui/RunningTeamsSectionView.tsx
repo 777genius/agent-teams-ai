@@ -84,7 +84,11 @@ export const RunningTeamsSectionView = ({
         emptyMessage && <p className="text-xs text-text-muted">{emptyMessage}</p>}
       {rows.length > 0 && (
         <div
-          className={compact ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-3 gap-3 xl:grid-cols-4'}
+          className={
+            compact
+              ? 'grid grid-cols-1 gap-2'
+              : 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }
         >
           {rows.map((row) => (
             <Tooltip key={row.targetKey}>

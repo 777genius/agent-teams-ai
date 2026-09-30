@@ -65,7 +65,8 @@ interface HookProbeProps {
 }
 
 function HookProbe({ searchQuery, onValue }: HookProbeProps): React.JSX.Element | null {
-  const value = useRunningTeamsSection(searchQuery);
+  void searchQuery;
+  const value = useRunningTeamsSection();
   useEffect(() => {
     onValue(value);
   }, [onValue, value]);
@@ -145,10 +146,9 @@ describe('useRunningTeamsSection alive-team read port', () => {
     expect(observed.at(-1)?.rows).toEqual([
       expect.objectContaining({ teamName: 'team-beta', status: 'idle' }),
     ]);
-    expect(observed.at(-1)?.hidden).toBe(false);
   });
 
-  it('keeps alive reads best-effort and retries when the team list changes', async () => {
+  it('keeps alive reads independent of query and retries when the team list changes', async () => {
     storeState.teams = [team('team-alpha')];
     aliveListReadHarness.listAliveTeams
       .mockRejectedValueOnce(new Error('offline'))
@@ -163,8 +163,8 @@ describe('useRunningTeamsSection alive-team read port', () => {
       await flushPromises();
     });
 
-    expect(aliveListReadHarness.listAliveTeams).not.toHaveBeenCalled();
-    expect(observed.at(-1)?.hidden).toBe(true);
+    expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledOnce();
+    expect(observed.at(-1)?.readStatus).toEqual({ phase: 'error', stale: true });
 
     await act(async () => {
       root.render(<HookProbe searchQuery="" onValue={onValue} />);
@@ -173,7 +173,6 @@ describe('useRunningTeamsSection alive-team read port', () => {
 
     expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledOnce();
     expect(observed.at(-1)?.rows).toEqual([]);
-    expect(observed.at(-1)?.hidden).toBe(false);
     expect(observed.at(-1)?.readStatus).toEqual({ phase: 'error', stale: true });
 
     storeState.teams = [...storeState.teams, team('team-beta')];

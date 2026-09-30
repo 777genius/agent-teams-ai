@@ -21,9 +21,8 @@ import type {
 import type { RunningTeamRowModel } from '../view-models/runningTeamsSectionViewModel';
 import type { LeadActivityState, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
-interface RunningTeamsSectionState {
+export interface RunningTeamsSectionState {
   rows: RunningTeamRowModel[];
-  hidden: boolean;
   readStatus: { phase: 'ready' | 'loading' | 'error'; stale: boolean };
   retryAliveRead: () => void;
   openRunningTeam: (row: RunningTeamRowModel) => void;
@@ -68,7 +67,7 @@ function toCandidate(input: {
   };
 }
 
-export function useRunningTeamsSection(searchQuery: string): RunningTeamsSectionState {
+export function useRunningTeamsSection(): RunningTeamsSectionState {
   const { t } = useAppTranslation('team');
   const {
     teams,
@@ -100,7 +99,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   });
   const [retryNonce, setRetryNonce] = useState(0);
   const retryAliveRead = useCallback((): void => setRetryNonce((value) => value + 1), []);
-  const searchActive = searchQuery.trim().length > 0;
   const teamsOutcomeCurrent = teamsReadOutcome.snapshot === teams;
   const tasksOutcomeCurrent = globalTasksReadOutcome.snapshot === globalTasks;
   const teamsFresh = teamsOutcomeCurrent && teamsReadOutcome.lastAttempt === 'success';
@@ -144,10 +142,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   );
 
   useEffect(() => {
-    if (searchActive) {
-      return;
-    }
-
     let cancelled = false;
     setAliveRead((previous) => ({ ...previous, phase: 'loading' }));
     void teamAliveListReadPort
@@ -166,13 +160,9 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     return () => {
       cancelled = true;
     };
-  }, [provisioningTeamNamesKey, retryNonce, searchActive, teams]);
+  }, [provisioningTeamNamesKey, retryNonce, teams]);
 
   const rows = useMemo(() => {
-    if (searchActive) {
-      return [];
-    }
-
     const taskCountsByTeam = buildTaskCountsByTeam(tasksKnown ? globalTasks : []);
     const existingTeamNames = new Set(teams.map((team) => team.teamName));
     const syntheticProvisioningTeams = provisioningTeamNames
@@ -210,7 +200,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     provisioningSnapshotByTeam,
     provisioningState,
     provisioningTeamNames,
-    searchActive,
     teams,
     t,
   ]);
@@ -224,7 +213,6 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
 
   return {
     rows,
-    hidden: searchActive || (rows.length === 0 && readPhase === 'ready'),
     readStatus: {
       phase: readPhase,
       stale,
