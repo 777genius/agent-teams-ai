@@ -78,6 +78,7 @@ import {
   TeamLifecycleReadBootstrapSource,
 } from './composition/hosted/teamLifecycleReadBootstrapSource';
 import {
+  createBoundTeamLifecycleReadHosts,
   createMountBindingScopedTeamLifecycleReadPorts,
   createTeamLifecycleReadComposition,
   createTeamLifecycleReadHost,
@@ -297,6 +298,22 @@ async function start(): Promise<void> {
           composition,
           createTeamLifecycleReadQueryContext
         );
+        const boundReads = createBoundTeamLifecycleReadHosts({
+          snapshot: bootstrap.workspaceRegistrySnapshot,
+          currentSnapshot: () => workspaceRegistrySnapshot,
+          runtimeInstance: bootstrap.runtimeInstance,
+          actorId: bootstrap.actorId,
+          authorizedScope: bootstrap.authorizedScope,
+          ownerBinding: bootstrap.mountBinding,
+          ownerHost: teamLifecycleReadHost,
+          teamIdentities: liveTeamIdentityGateway,
+          nowMs: teamLifecycleReadNowMs,
+          createContext: createTeamLifecycleReadQueryContext,
+        });
+        teamLifecycleReadHost = Object.freeze({
+          listTeamLifecycle: teamLifecycleReadHost.listTeamLifecycle,
+          listForWorkspace: boundReads.listForWorkspace,
+        });
         hostedTeamMessageRouteDependencies = {
           runtimeInstance: bootstrap.runtimeInstance,
           mountBinding: bootstrap.mountBinding,

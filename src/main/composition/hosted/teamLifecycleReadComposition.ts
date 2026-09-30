@@ -40,10 +40,13 @@ import {
   parseAuthorizedScope,
   parseCursor,
   parseRevision,
+  parseWorkspaceId,
   type QueryContext,
   type Revision,
+  type WorkspaceId,
 } from '@shared/contracts/hosted';
 
+import { matchSignedWorkspaceRoot } from './admittedWorkspaceRootResolver';
 import {
   ExplicitRootReadOnlyTeamSummarySource,
   type HostedReadOnlyTeamSummarySource,
@@ -54,6 +57,8 @@ import {
   SnapshotRuntimeReadPort,
   TeamLifecycleReadSnapshotCoordinator,
 } from './teamLifecycleReadSnapshot';
+
+import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
 
 export type { HostedReadOnlyTeamSummarySource } from './teamLifecycleReadFileSource';
 export type {
@@ -109,6 +114,37 @@ export interface TeamLifecycleReadHost {
     request: unknown,
     requestSignal?: AbortSignal
   ): Promise<CanonicalListTeamLifecycleResult>;
+  /** Internal runtime-ID dispatch seam. HTTP must resolve and recheck its public grant first. */
+  readonly listForWorkspace?: BoundTeamLifecycleReadHosts['listForWorkspace'];
+}
+
+/** Server-only runtime IDs. The caller must resolve and recheck its live public grant. */
+export interface BoundTeamLifecycleReadHosts {
+  listForWorkspace(
+    workspaceId: WorkspaceId,
+    request: unknown,
+    requestSignal?: AbortSignal
+  ): Promise<CanonicalListTeamLifecycleResult>;
+}
+
+export interface BoundTeamLifecycleReadHostsInput {
+  readonly snapshot: WorkspaceRegistryStartupSnapshot;
+  /** Returns the currently admitted view; a missing or replaced binding fails closed. */
+  readonly currentSnapshot: () => WorkspaceRegistryStartupSnapshot | null;
+  readonly runtimeInstance: RuntimeInstanceContext;
+  readonly actorId: shared.TeamLifecycleReadAuthority['actorId'];
+  readonly authorizedScope: shared.TeamLifecycleReadAuthority['authorizedScope'];
+  readonly ownerBinding: WorkspaceMountBinding;
+  readonly ownerHost: TeamLifecycleReadHost;
+  readonly teamIdentities: TeamIdentityReadGateway;
+  readonly nowMs: () => number;
+  readonly pageSize?: number;
+  readonly createContext: (
+    authority: shared.TeamLifecycleReadAuthority,
+    requestSignal: AbortSignal
+  ) => QueryContext;
+  /** Focused test seam; production reads summaries from the explicit root. */
+  readonly teamSummarySource?: HostedReadOnlyTeamSummarySource;
 }
 
 class MountBindingScopedIdentityGateway implements TeamIdentityReadGateway {
@@ -593,6 +629,150 @@ export function createTeamLifecycleReadHost(
           'unexpected',
           shared.TEAM_LIFECYCLE_READ_DIAGNOSTIC_IDS.hostUnexpected
         );
+      }
+    },
+  });
+}
+
+/** Prepares one read-only host per usable current-boot binding. No HTTP route is registered here. */
+export function createBoundTeamLifecycleReadHosts(
+  input: BoundTeamLifecycleReadHostsInput
+): BoundTeamLifecycleReadHosts {
+  const runtimeInstance = createRuntimeInstanceContext(input.runtimeInstance);
+  const registrations = input.snapshot.registry.values();
+  if (input.snapshot.bindings.length > registrations.length) {
+    throw new TypeError('team-lifecycle-read-binding-roster-invalid');
+  }
+  const bindings = new Map<WorkspaceId, WorkspaceMountBinding>();
+  for (const binding of input.snapshot.bindings) {
+    const registration = input.snapshot.registry.getByWorkspaceId(binding.workspaceId);
+    if (
+      !(binding instanceof WorkspaceMountBinding) ||
+      !registration?.enabled ||
+      binding.bootId !== runtimeInstance.bootId ||
+      binding.declaredRootHash !== registration.declaredRootHash ||
+      bindings.has(binding.workspaceId)
+    ) {
+      throw new TypeError('team-lifecycle-read-binding-roster-invalid');
+    }
+    bindings.set(binding.workspaceId, binding);
+  }
+  const owner = bindings.get(input.ownerBinding.workspaceId);
+  if (owner !== input.ownerBinding || owner.health === 'unavailable') {
+    throw new TypeError('team-lifecycle-read-owner-binding-invalid');
+  }
+
+  const hosts = new Map<WorkspaceId, TeamLifecycleReadHost>();
+  hosts.set(owner.workspaceId, input.ownerHost);
+  for (const binding of bindings.values()) {
+    if (
+      binding === owner ||
+      binding.health === 'unavailable' ||
+      matchSignedWorkspaceRoot(runtimeInstance, binding.declaredRootHash) === null
+    )
+      continue;
+    const authority = createTeamLifecycleReadAuthority({
+      actorId: input.actorId,
+      authorizedScope: input.authorizedScope,
+      mountBinding: binding,
+      runtimeInstance,
+    });
+    const ports = createMountBindingScopedTeamLifecycleReadPorts({
+      authority,
+      mountBinding: binding,
+      runtimeInstance,
+      teamIdentities: input.teamIdentities,
+      nowMs: input.nowMs,
+      teamSummarySource: input.teamSummarySource,
+    });
+    hosts.set(
+      binding.workspaceId,
+      createTeamLifecycleReadHost(
+        createTeamLifecycleReadComposition({
+          authority,
+          ...ports,
+          nowMs: input.nowMs,
+          pageSize: input.pageSize,
+        }),
+        input.createContext
+      )
+    );
+  }
+
+  const currentBinding = (workspaceId: WorkspaceId): WorkspaceMountBinding | null => {
+    const admitted = bindings.get(workspaceId);
+    if (!admitted || admitted.health === 'unavailable') return null;
+    const current = input.currentSnapshot();
+    const registration = current?.registry.getByWorkspaceId(workspaceId);
+    const matches =
+      current?.bindings.filter((binding) => binding.workspaceId === workspaceId) ?? [];
+    const binding = matches[0];
+    if (
+      !registration?.enabled ||
+      registration.registrationRevision !==
+        input.snapshot.registry.getByWorkspaceId(workspaceId)?.registrationRevision ||
+      registration.declaredRootHash !== admitted.declaredRootHash ||
+      matches.length !== 1 ||
+      !(binding instanceof WorkspaceMountBinding) ||
+      binding !== admitted ||
+      binding.health === 'unavailable' ||
+      binding.bootId !== runtimeInstance.bootId ||
+      binding.mountGeneration !== admitted.mountGeneration ||
+      binding.declaredRootHash !== admitted.declaredRootHash
+    ) {
+      return null;
+    }
+    return binding;
+  };
+
+  return Object.freeze({
+    async listForWorkspace(
+      workspaceId: WorkspaceId,
+      request: unknown,
+      requestSignal?: AbortSignal
+    ) {
+      try {
+        const exactId = parseWorkspaceId(workspaceId);
+        const host = hosts.get(exactId);
+        const binding = currentBinding(exactId);
+        if (!host || !binding) return shared.dataUnavailable();
+        const signal = requestSignal ?? new AbortController().signal;
+        const authority = createTeamLifecycleReadAuthority({
+          actorId: input.actorId,
+          authorizedScope: input.authorizedScope,
+          mountBinding: binding,
+          runtimeInstance,
+        });
+        const context = input.createContext(authority, signal);
+        const assertActive = (): void => {
+          if (signal.aborted || input.nowMs() >= context.deadlineAtMs) {
+            throw new Error('team-lifecycle-read-request-expired');
+          }
+        };
+        assertActive();
+        const result = await host.listTeamLifecycle(request, signal);
+        assertActive();
+        if (!currentBinding(exactId)) return shared.dataUnavailable();
+        if (result.kind !== 'success') return result;
+        for (const item of result.items) {
+          assertActive();
+          if (item.workspaceId !== exactId) return shared.corruptIdentity();
+          const value = await input.teamIdentities.getTeamIdentity(item.teamId);
+          assertActive();
+          if (value === null) return shared.identityUnavailable();
+          const identity = parseTeamIdentityRecord(value);
+          if (
+            identity.teamId !== item.teamId ||
+            identity.workspaceBinding?.workspaceId !== exactId
+          ) {
+            return shared.corruptIdentity();
+          }
+        }
+        assertActive();
+        if (!currentBinding(exactId)) return shared.dataUnavailable();
+        return result;
+      } catch {
+        return shared.dataUnavailable();
       }
     },
   });

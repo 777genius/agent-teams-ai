@@ -118,6 +118,12 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).toContain('...readPorts');
     expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
+    expect(source).toContain('const boundReads = createBoundTeamLifecycleReadHosts({');
+    expect(source).toContain('snapshot: bootstrap.workspaceRegistrySnapshot');
+    expect(source).toContain('ownerBinding: bootstrap.mountBinding');
+    expect(source).toContain('ownerHost: teamLifecycleReadHost');
+    expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
+    expect(source).toContain('listForWorkspace: boundReads.listForWorkspace');
     expect(queryContextSource).toContain('requestSignal: AbortSignal');
     expect(queryContextSource).toContain('signal: requestSignal');
     expect(source).toContain('createTeamLifecycleReadQueryContext');

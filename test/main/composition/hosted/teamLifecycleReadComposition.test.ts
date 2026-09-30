@@ -13,8 +13,13 @@ import {
   type ListTeamLifecycleRequest,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
 } from '@features/team-lifecycle/contracts';
-import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import {
+  WorkspaceMountBinding,
+  WorkspaceRegistration,
+  WorkspaceRegistrationRegistry,
+} from '@features/workspace-registry';
+import {
+  createBoundTeamLifecycleReadHosts,
   createMountBindingScopedTeamLifecycleReadPorts,
   createTeamLifecycleReadAuthority,
   createTeamLifecycleReadComposition,
@@ -33,6 +38,8 @@ import {
 } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
+
 const NOW_MS = Date.parse('2026-07-18T10:00:00.000Z');
 const WORKSPACE_ID = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
 const FOREIGN_WORKSPACE_ID = parseWorkspaceId(`workspace_${'2'.repeat(32)}`);
@@ -44,6 +51,213 @@ afterEach(async () => {
   await Promise.all(
     filesystemRoots.splice(0).map((root) => fs.promises.rm(root, { recursive: true, force: true }))
   );
+});
+
+describe('current-boot per-binding team lifecycle reads', () => {
+  it('reads nonempty A and B separately, rejects an A cursor in B, and fails closed when B disappears', async () => {
+    const rootA = '/sandbox/bound-directory/a';
+    const rootB = '/sandbox/bound-directory/b';
+    const registrations = [
+      new WorkspaceRegistration({
+        schemaVersion: 1,
+        registrationKey: 'registration-bound-a',
+        workspaceId: WORKSPACE_ID,
+        displayName: 'Sandbox A',
+        registrationRevision: 1,
+        declaredRootHash: createHash('sha256').update(rootA).digest('hex'),
+        enabled: true,
+      }),
+      new WorkspaceRegistration({
+        schemaVersion: 1,
+        registrationKey: 'registration-bound-b',
+        workspaceId: FOREIGN_WORKSPACE_ID,
+        displayName: 'Sandbox B',
+        registrationRevision: 1,
+        declaredRootHash: createHash('sha256').update(rootB).digest('hex'),
+        enabled: true,
+      }),
+    ];
+    const bootId = parseBootId('boot_bound-directory-test');
+    const bindings = registrations.map(
+      (registration) =>
+        new WorkspaceMountBinding({
+          registration,
+          bootId,
+          mountGeneration: 1,
+          declaredRootHash: registration.declaredRootHash,
+          observedAt: NOW_MS,
+          health: 'read-only',
+          allowedOperations: [],
+        })
+    );
+    const registry = new WorkspaceRegistrationRegistry(registrations);
+    const snapshot: WorkspaceRegistryStartupSnapshot = { registry, bindings };
+    let currentSnapshot: WorkspaceRegistryStartupSnapshot = snapshot;
+    const runtimeInstance = createRuntimeInstanceContext({
+      deploymentId: 'deployment_bound-directory-test',
+      bootId,
+      claudeRoot: { kind: 'claude', reference: '/sandbox/bound-directory/claude' },
+      appDataRoot: { kind: 'app-data', reference: '/sandbox/bound-directory/app-data' },
+      workspaceRoots: [
+        { kind: 'workspace', reference: rootA },
+        { kind: 'workspace', reference: rootB },
+      ],
+      tempRoot: { kind: 'temp', reference: '/sandbox/bound-directory/temp' },
+      logsRoot: { kind: 'logs', reference: '/sandbox/bound-directory/logs' },
+    });
+    let identities = [
+      identity('a'),
+      identity('c'),
+      identity('b', 'active', { workspaceId: FOREIGN_WORKSPACE_ID, generation: 1 }),
+      identity('d', 'active', { workspaceId: FOREIGN_WORKSPACE_ID, generation: 1 }),
+    ];
+    const gateway: TeamIdentityReadGateway = {
+      listTeamIdentities: () => Promise.resolve(identities),
+      getTeamIdentity: (teamId) =>
+        Promise.resolve(identities.find((candidate) => candidate.teamId === teamId) ?? null),
+    };
+    let loseBindingDuringRead = false;
+    const summarySource = {
+      readTeamSummary: ({ identity: team }: { readonly identity: TeamIdentityRecord }) => {
+        if (loseBindingDuringRead && team.workspaceBinding?.workspaceId === FOREIGN_WORKSPACE_ID) {
+          currentSnapshot = { registry, bindings: [bindings[0]] };
+        }
+        return Promise.resolve({ teamName: team.legacyKey });
+      },
+    };
+    const ownerAuthority = createTeamLifecycleReadAuthority({
+      actorId: 'actor_bound-directory-test',
+      authorizedScope: 'scope_team-lifecycle.read',
+      mountBinding: bindings[0],
+      runtimeInstance,
+    });
+    const ownerPorts = createMountBindingScopedTeamLifecycleReadPorts({
+      authority: ownerAuthority,
+      mountBinding: bindings[0],
+      runtimeInstance,
+      teamIdentities: gateway,
+      nowMs: () => NOW_MS,
+      teamSummarySource: summarySource,
+    });
+    const ownerHost = createTeamLifecycleReadHost(
+      createTeamLifecycleReadComposition({
+        authority: ownerAuthority,
+        ...ownerPorts,
+        nowMs: () => NOW_MS,
+        pageSize: 1,
+      }),
+      boundaryContext
+    );
+    const bound = createBoundTeamLifecycleReadHosts({
+      snapshot,
+      currentSnapshot: () => currentSnapshot,
+      runtimeInstance,
+      actorId: ownerAuthority.actorId,
+      authorizedScope: ownerAuthority.authorizedScope,
+      ownerBinding: bindings[0],
+      ownerHost,
+      teamIdentities: gateway,
+      nowMs: () => NOW_MS,
+      pageSize: 1,
+      createContext: boundaryContext,
+      teamSummarySource: summarySource,
+    });
+
+    const a = await bound.listForWorkspace(WORKSPACE_ID, listRequest());
+    const b = await bound.listForWorkspace(FOREIGN_WORKSPACE_ID, listRequest());
+    expect(a).toMatchObject({ kind: 'success', items: [{ workspaceId: WORKSPACE_ID }] });
+    expect(b).toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: FOREIGN_WORKSPACE_ID }],
+    });
+    if (a.kind !== 'success' || b.kind !== 'success') throw new Error('fixture read failed');
+    expect(a.nextCursor).not.toBeNull();
+    expect(b.nextCursor).not.toBeNull();
+    const aborted = new AbortController();
+    const abortingBound = createBoundTeamLifecycleReadHosts({
+      snapshot,
+      currentSnapshot: () => currentSnapshot,
+      runtimeInstance,
+      actorId: ownerAuthority.actorId,
+      authorizedScope: ownerAuthority.authorizedScope,
+      ownerBinding: bindings[0],
+      ownerHost: { listTeamLifecycle: () => Promise.resolve(a) },
+      teamIdentities: {
+        listTeamIdentities: gateway.listTeamIdentities,
+        getTeamIdentity: (teamId) => {
+          aborted.abort();
+          return gateway.getTeamIdentity(teamId);
+        },
+      },
+      nowMs: () => NOW_MS,
+      createContext: boundaryContext,
+    });
+    await expect(
+      abortingBound.listForWorkspace(WORKSPACE_ID, listRequest(), aborted.signal)
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+    await expect(
+      bound.listForWorkspace(
+        FOREIGN_WORKSPACE_ID,
+        listRequest({ cursor: a.nextCursor, expectedRevision: b.snapshotRevision })
+      )
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'conflict' } });
+    await expect(
+      bound.listForWorkspace(
+        FOREIGN_WORKSPACE_ID,
+        listRequest({ cursor: b.nextCursor, expectedRevision: b.snapshotRevision })
+      )
+    ).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: FOREIGN_WORKSPACE_ID }],
+    });
+
+    identities = identities.map((candidate) =>
+      candidate.teamId === identity('b').teamId
+        ? identity('b', 'active', { workspaceId: WORKSPACE_ID, generation: 1 })
+        : candidate
+    );
+    await expect(bound.listForWorkspace(FOREIGN_WORKSPACE_ID, listRequest())).resolves.toMatchObject({
+      kind: 'failure',
+    });
+    identities = identities.map((candidate) =>
+      candidate.teamId === identity('b').teamId
+        ? identity('b', 'active', { workspaceId: FOREIGN_WORKSPACE_ID, generation: 1 })
+        : candidate
+    );
+
+    loseBindingDuringRead = true;
+    await expect(bound.listForWorkspace(FOREIGN_WORKSPACE_ID, listRequest())).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'unavailable' },
+    });
+    await expect(bound.listForWorkspace(FOREIGN_WORKSPACE_ID, listRequest())).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'unavailable' },
+    });
+    currentSnapshot = {
+      registry,
+      bindings: [
+        bindings[0],
+        new WorkspaceMountBinding({
+          registration: registrations[1],
+          bootId,
+          mountGeneration: 1,
+          declaredRootHash: registrations[1].declaredRootHash,
+          observedAt: NOW_MS,
+          health: 'unavailable',
+          allowedOperations: [],
+        }),
+      ],
+    };
+    await expect(bound.listForWorkspace(FOREIGN_WORKSPACE_ID, listRequest())).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'unavailable' },
+    });
+    await expect(bound.listForWorkspace(WORKSPACE_ID, listRequest())).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: WORKSPACE_ID }],
+    });
+  });
 });
 
 interface AuthorityOverrides {
