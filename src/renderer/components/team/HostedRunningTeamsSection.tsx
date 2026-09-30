@@ -6,11 +6,15 @@ import {
   RunningTeamsSectionView,
 } from '@features/running-teams/renderer/hosted';
 
-import type { RunningTeamFacts, RunningTeamViewRow } from '@features/running-teams/renderer/hosted';
+import type {
+  RunningTeamFacts,
+  RunningTeamsSectionViewProps,
+  RunningTeamViewRow,
+} from '@features/running-teams/renderer/hosted';
 import type { HostedTeamDirectoryReadState } from '@features/team-lifecycle/renderer';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
-interface HostedRunningTeamsSectionProps {
+export interface HostedRunningTeamsSectionProps {
   readonly workspaceId: WorkspaceId;
   readonly state: HostedTeamDirectoryReadState;
   readonly reload: () => Promise<void>;
@@ -18,12 +22,12 @@ interface HostedRunningTeamsSectionProps {
 }
 
 /** Hosted contributes only exact positive runtime evidence to the shared running view. */
-export const HostedRunningTeamsSection = ({
+export function useHostedRunningTeamsView({
   workspaceId,
   state,
   reload,
   onSelect,
-}: HostedRunningTeamsSectionProps): React.JSX.Element => {
+}: HostedRunningTeamsSectionProps): RunningTeamsSectionViewProps {
   const { t } = useAppTranslation('team');
   const rows = useMemo<RunningTeamViewRow[]>(() => {
     const facts: RunningTeamFacts[] = (state.snapshot?.items ?? []).map((item) => ({
@@ -55,30 +59,34 @@ export const HostedRunningTeamsSection = ({
     if (item) onSelect(item.teamId);
   };
 
-  return (
-    <RunningTeamsSectionView
-      title="Running teams"
-      compact
-      rows={rows}
-      onOpen={open}
-      emptyMessage="No running teams"
-      readState={{
-        phase:
-          state.freshness === 'failed' ? 'error' : state.snapshot === null ? 'loading' : 'ready',
-        stale: state.freshness === 'stale' || state.freshness === 'refreshing',
-        incomplete: state.runtime.phase === 'incomplete' || state.runtime.phase === 'reading',
-        message: state.failure
-          ? 'Running team data is unavailable.'
-          : state.freshness === 'refreshing'
-            ? 'Refreshing teams...'
-            : state.runtime.phase === 'incomplete'
-              ? 'Some runtime statuses are unavailable.'
-              : state.runtime.phase === 'reading'
-                ? 'Checking runtime statuses...'
-                : undefined,
-        onRetry: () => void reload(),
-        retryLabel: 'Refresh',
-      }}
-    />
-  );
+  return {
+    title: 'Running teams',
+    compact: true,
+    rows,
+    onOpen: open,
+    emptyMessage: 'No running teams',
+    readState: {
+      phase: state.freshness === 'failed' ? 'error' : state.snapshot === null ? 'loading' : 'ready',
+      stale: state.freshness === 'stale' || state.freshness === 'refreshing',
+      incomplete: state.runtime.phase === 'incomplete' || state.runtime.phase === 'reading',
+      message: state.failure
+        ? 'Running team data is unavailable.'
+        : state.freshness === 'refreshing'
+          ? 'Refreshing teams...'
+          : state.runtime.phase === 'incomplete'
+            ? 'Some runtime statuses are unavailable.'
+            : state.runtime.phase === 'reading'
+              ? 'Checking runtime statuses...'
+              : undefined,
+      onRetry: () => void reload(),
+      retryLabel: 'Refresh',
+    },
+  };
+}
+
+export const HostedRunningTeamsSection = (
+  props: HostedRunningTeamsSectionProps
+): React.JSX.Element => {
+  const model = useHostedRunningTeamsView(props);
+  return <RunningTeamsSectionView {...model} />;
 };

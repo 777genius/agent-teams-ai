@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHostedCoordinationEvents } from '@features/coordination-events/renderer';
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import { getHostedCsrfToken } from '@features/hosted-access/renderer';
+import { RunningTeamsSectionView } from '@features/running-teams/renderer/hosted';
 import {
   createHostedTeamConfigurationTransport,
   HostedTeamConfigurationPanel,
@@ -22,7 +23,8 @@ import {
 import { HostedTaskBoardPage } from '@features/team-task-board/renderer/hosted';
 import { Button } from '@renderer/components/ui/button';
 
-import { HostedRunningTeamsSection } from './HostedRunningTeamsSection';
+import { useHostedRunningTeamsView } from './HostedRunningTeamsSection';
+import { HostedTeamSyncError } from './HostedTeamSyncError';
 import { useHostedCreateTaskScope } from './useHostedCreateTaskScope';
 import { useHostedTaskBoardTransport } from './useHostedTaskBoardTransport';
 import { useHostedTeamMessageRecipients } from './useHostedTeamMessageRecipients';
@@ -38,6 +40,7 @@ import type {
   HostedCoordinationSnapshotResyncInput,
   HostedCoordinationSnapshotResyncPort,
 } from '@features/coordination-events/renderer';
+import type { RunningTeamsSectionViewProps } from '@features/running-teams/renderer/hosted';
 import type {
   HostedTeamConfigurationFetchPort,
   HostedTeamConfigurationPanelProps,
@@ -45,6 +48,7 @@ import type {
 } from '@features/team-configuration/renderer';
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
 import type {
+  HostedTeamDirectoryReadState,
   HostedTeamDirectoryReadTransport,
   HostedTeamLifecycleFetchPort,
   HostedTeamLifecycleTransport,
@@ -87,9 +91,14 @@ export interface HostedTeamWorkspaceProps {
   readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
   readonly operatorPanel?: ReactNode;
   readonly onLifecycleInvalidation?: () => void;
+  readonly onDashboardRunningTeams?: (model: RunningTeamsSectionViewProps) => void;
+  readonly onDashboardDirectory?: (state: HostedTeamDirectoryReadState) => void;
+  readonly workspaceCapabilities?: readonly string[];
+  readonly teamCapabilities?: readonly string[];
   readonly createRegistry?: HostedCreateTaskRegistry;
   readonly createAuthorityEpoch?: string;
   readonly authEffectsAvailable?: boolean;
+  readonly writeEffectsAvailable?: boolean;
   readonly onProtectedAuthFailure?: () => void;
   /** Injectable as one atomic pair so tests and alternate shells cannot split the C0/stream seam. */
   readonly coordinationEvents: HostedTeamCoordinationEventPorts;
@@ -218,9 +227,14 @@ export const HostedTeamWorkspace = ({
   onSelectedTeamIdChange,
   operatorPanel,
   onLifecycleInvalidation,
+  onDashboardRunningTeams,
+  onDashboardDirectory,
+  workspaceCapabilities,
+  teamCapabilities,
   createRegistry: providedCreateRegistry,
   createAuthorityEpoch,
   authEffectsAvailable = true,
+  writeEffectsAvailable = true,
   onProtectedAuthFailure,
   coordinationEvents,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
@@ -262,7 +276,10 @@ export const HostedTeamWorkspace = ({
       getCsrfToken,
       createScope,
       invalidationBus,
-      authEffectsAvailable,
+      authEffectsAvailable:
+        authEffectsAvailable &&
+        writeEffectsAvailable &&
+        Boolean(teamCapabilities?.includes('task.write')),
       onProtectedAuthFailure,
     });
   const coordinationBootstrapSequence = useRef(0);
@@ -443,9 +460,10 @@ export const HostedTeamWorkspace = ({
           return response;
         },
         getCsrfToken,
+        publicWorkspaceId: workspaceId,
       })
     );
-  }, [getCsrfToken, providedLifecycleTransport, reportProtectedAuthFailure]);
+  }, [getCsrfToken, providedLifecycleTransport, reportProtectedAuthFailure, workspaceId]);
   const directoryTransport = useMemo<HostedTeamDirectoryReadTransport>(
     () => ({
       listTeamLifecycle: (request, signal) => {
@@ -475,7 +493,22 @@ export const HostedTeamWorkspace = ({
     workspaceReadAdmitted
   );
   const directoryState = directory.state;
+  useEffect(() => {
+    onDashboardDirectory?.(directoryState);
+  }, [directoryState, onDashboardDirectory]);
   const reloadDirectory = directory.reload;
+  const runningTeams = useHostedRunningTeamsView({
+    workspaceId: workspaceId!,
+    state: directoryState,
+    reload: reloadDirectory,
+    onSelect: (teamId) => selectTeam(teamId),
+  });
+  const publishedDirectoryState = useRef<HostedTeamDirectoryReadState | null>(null);
+  useEffect(() => {
+    if (publishedDirectoryState.current === directoryState) return;
+    publishedDirectoryState.current = directoryState;
+    onDashboardRunningTeams?.(runningTeams);
+  }, [directoryState, onDashboardRunningTeams, runningTeams]);
   const selectionReconciliation = useHostedTeamSelectionReconciliation(
     directoryState,
     selectedTeamId,
@@ -572,15 +605,10 @@ export const HostedTeamWorkspace = ({
   );
 
   const teamSyncError = (
-    <>
-      <p role="alert">Live team data is temporarily unavailable.</p>
-      {coordinationState.retryScheduledInMs === null ? null : (
-        <p role="status">Retrying automatically.</p>
-      )}
-      <Button type="button" size="sm" variant="outline" onClick={coordinationState.retry}>
-        Retry team data
-      </Button>
-    </>
+    <HostedTeamSyncError
+      retryScheduledInMs={coordinationState.retryScheduledInMs}
+      retry={coordinationState.retry}
+    />
   );
 
   return (
@@ -615,12 +643,7 @@ export const HostedTeamWorkspace = ({
             <div className="flex size-full min-h-0 flex-col overflow-auto">
               {workspaceId === undefined ? null : (
                 <div className="border-b border-[var(--color-border)] p-4 pb-0">
-                  <HostedRunningTeamsSection
-                    workspaceId={workspaceId}
-                    state={directoryState}
-                    reload={reloadDirectory}
-                    onSelect={selectTeam}
-                  />
+                  <RunningTeamsSectionView {...runningTeams} />
                 </div>
               )}
               <div className="min-h-0 flex-1">
@@ -642,7 +665,9 @@ export const HostedTeamWorkspace = ({
         {workspaceId === undefined ||
         selectedTeamId === null ||
         lifecycleCommandTransport === null ||
-        !authEffectsAvailable ? null : (
+        !authEffectsAvailable ||
+        !writeEffectsAvailable ||
+        !teamCapabilities?.includes('lifecycle.command') ? null : (
           <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
             <HostedTeamLifecycleControls
               key={`${workspaceId}:${selectedTeamId}:lifecycle`}
@@ -654,13 +679,18 @@ export const HostedTeamWorkspace = ({
             />
           </div>
         )}
-        {workspaceId === undefined || !authEffectsAvailable ? null : (
+        {workspaceId === undefined ||
+        !(selectedTeamId === null
+          ? workspaceCapabilities?.includes('configuration.write')
+          : teamCapabilities?.includes('configuration.write')) ? null : (
           <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
             <HostedTeamConfigurationPanel
               key={`${workspaceId}:${selectedTeamId ?? 'create'}`}
               workspaceId={workspaceId}
               teamId={selectedTeamId}
               transport={configurationTransport}
+              promotionEnabled={Boolean(teamCapabilities?.includes('promotion.execute'))}
+              effectsEnabled={authEffectsAvailable && writeEffectsAvailable}
               createIdempotencyKey={createConfigurationIdempotencyKey}
               launchTopologyPolicy={launchTopologyPolicy}
               onTeamCreated={(teamId) => {
@@ -708,6 +738,10 @@ export const HostedTeamWorkspace = ({
                 )}
               </div>
             </div>
+          ) : !teamCapabilities?.includes('task.read') ? (
+            <p role="status" className="p-6 text-sm">
+              Task board is unavailable for this team.
+            </p>
           ) : (
             <>
               {coordinationState.status === 'error' ? (
@@ -724,7 +758,9 @@ export const HostedTeamWorkspace = ({
           )}
         </section>
 
-        {selectedTeamId === null || projectionTeamId !== selectedTeamId ? null : (
+        {selectedTeamId === null ||
+        projectionTeamId !== selectedTeamId ||
+        !teamCapabilities?.includes('message.read') ? null : (
           <aside
             aria-label="Selected team messages"
             className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:border-l xl:border-t-0"
@@ -733,7 +769,12 @@ export const HostedTeamWorkspace = ({
               key={selectedTeamId}
               createClientMessageId={createClientMessageId}
               recipients={messageRecipients}
-              sendEnabled={authEffectsAvailable && teamMessageSendEnabled}
+              sendEnabled={
+                authEffectsAvailable &&
+                writeEffectsAvailable &&
+                teamMessageSendEnabled &&
+                teamCapabilities?.includes('message.send')
+              }
               teamId={selectedTeamId}
               transport={messageTransport}
             />

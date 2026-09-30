@@ -59,6 +59,9 @@ export interface HostedTeamConfigurationPanelProps {
   readonly onTeamCreated: (teamId: TeamId) => void;
   readonly onTeamDeleted: (teamId: TeamId) => void;
   readonly onTeamPromoted?: (teamId: TeamId) => void;
+  readonly promotionEnabled?: boolean;
+  /** Retain local edits while authority is being checked, without offering stale effects. */
+  readonly effectsEnabled?: boolean;
   readonly createIdempotencyKey?: () => HostedTeamConfigurationIdempotencyKey;
   readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
   readonly launchTopologyPolicy?: HostedLaunchTopologyPolicy;
@@ -136,6 +139,8 @@ export const HostedTeamConfigurationPanel = ({
   onTeamCreated,
   onTeamDeleted,
   onTeamPromoted,
+  promotionEnabled = true,
+  effectsEnabled = true,
   createIdempotencyKey = defaultIdempotencyKey,
   lifecycleTransport = defaultLifecycleTransport,
   launchTopologyPolicy = HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
@@ -250,6 +255,7 @@ export const HostedTeamConfigurationPanel = ({
   }, [identityKey, load, teamId]);
 
   const createDraft = (): void => {
+    if (!effectsEnabled) return;
     const rosterResult = buildHostedRosterConfiguration(roster);
     if (!rosterResult.ok) {
       setRosterErrors(rosterResult.errors);
@@ -311,6 +317,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const updateDraft = (): void => {
+    if (!effectsEnabled) return;
     if (teamId === null || draft === null || !canEditDraft) return;
     const updates: {
       name?: string;
@@ -380,6 +387,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const deleteDraft = (): void => {
+    if (!effectsEnabled) return;
     if (teamId === null || draft === null || !canDiscardDraft) return;
     operation.current?.abort();
     const controller = new AbortController();
@@ -420,6 +428,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const promoteDraft = (): void => {
+    if (!promotionEnabled || !effectsEnabled) return;
     if (teamId === null || draft?.configuration?.toolApprovalMode !== 'auto') return;
     operation.current?.abort();
     const controller = new AbortController();
@@ -637,16 +646,18 @@ export const HostedTeamConfigurationPanel = ({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          disabled={busy || name.trim().length === 0 || (editing && savedReadOnly)}
+          disabled={
+            !effectsEnabled || busy || name.trim().length === 0 || (editing && savedReadOnly)
+          }
           onClick={editing ? updateDraft : createDraft}
         >
           {editing ? 'Save configuration' : 'Create draft'}
         </Button>
-        {editing && draft?.configuration?.toolApprovalMode === 'auto' ? (
+        {promotionEnabled && editing && draft?.configuration?.toolApprovalMode === 'auto' ? (
           <Button
             type="button"
             variant="outline"
-            disabled={busy || hasUnsavedChanges || launchNotice !== null}
+            disabled={!effectsEnabled || busy || hasUnsavedChanges || launchNotice !== null}
             onClick={promoteDraft}
           >
             Promote saved draft
@@ -655,7 +666,11 @@ export const HostedTeamConfigurationPanel = ({
         {editing && draft !== null ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={busy || !canDiscardDraft}>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={!effectsEnabled || busy || !canDiscardDraft}
+              >
                 Discard draft
               </Button>
             </AlertDialogTrigger>
@@ -668,7 +683,9 @@ export const HostedTeamConfigurationPanel = ({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Keep draft</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteDraft}>Discard draft</AlertDialogAction>
+                <AlertDialogAction disabled={!effectsEnabled} onClick={deleteDraft}>
+                  Discard draft
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

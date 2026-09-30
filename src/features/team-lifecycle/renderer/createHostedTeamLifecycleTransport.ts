@@ -2,6 +2,7 @@ import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
 import { createSafeAppError } from '@shared/contracts/hosted';
 
 import {
+  HOSTED_SCOPED_TEAM_LIFECYCLE_LIST_ROUTE,
   parseCanonicalListTeamLifecycleResult,
   parseListTeamLifecycleRequest,
   TEAM_LIFECYCLE_LIST_ROUTE,
@@ -38,6 +39,7 @@ import type {
   HostedLifecycleProgressRequest,
   HostedLifecycleProgressResult,
 } from '../contracts/hosted-lifecycle-commands';
+import type { WorkspaceId } from '@shared/contracts/hosted';
 
 export const HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS = 10_000;
 
@@ -67,6 +69,8 @@ export type HostedTeamLifecycleFetchPort = (
 export interface HostedTeamLifecycleTransportDependencies {
   readonly fetch: HostedTeamLifecycleFetchPort;
   readonly getCsrfToken: () => string | null;
+  /** Public workspace selected by the authenticated shell; never a filesystem path. */
+  readonly publicWorkspaceId?: WorkspaceId;
 }
 
 export interface HostedTeamLifecycleTransport extends TeamLifecycleReadTransportApi {
@@ -314,8 +318,14 @@ export function createHostedTeamLifecycleTransport(
       }
       const response = await postJson(
         dependencies,
-        TEAM_LIFECYCLE_LIST_ROUTE,
-        JSON.stringify(request.value),
+        dependencies.publicWorkspaceId
+          ? HOSTED_SCOPED_TEAM_LIFECYCLE_LIST_ROUTE
+          : TEAM_LIFECYCLE_LIST_ROUTE,
+        JSON.stringify(
+          dependencies.publicWorkspaceId
+            ? { ...request.value, publicWorkspaceId: dependencies.publicWorkspaceId }
+            : request.value
+        ),
         signal
       );
       if (response === null || response.status !== 200) return readUnavailable();
