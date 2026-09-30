@@ -1,4 +1,22 @@
 export const HOSTED_V1_BROWSER_SUITES = Object.freeze({
+  dashboard: Object.freeze({
+    testMatch: 'dashboard*.spec.ts',
+    authModes: ['personal'] as const,
+    cases: Object.freeze([
+      {
+        id: 'staged-active-rollback',
+        grep: 'Dashboard staged A-only, exact-image B activation, read-only B and rollback',
+      },
+      {
+        id: 'distinct-boot-rollback',
+        grep: 'Dashboard distinct signed boot admits B and rollback hides it',
+      },
+      {
+        id: 'forged-b-write',
+        grep: 'Dashboard forged B write attempts are fenced while A owner-bound draft write works',
+      },
+    ] as const),
+  }),
   core: Object.freeze({
     testMatch: 'hosted-v1.spec.ts',
     authModes: ['personal', 'oidc', 'oidc-viewer'] as const,
@@ -44,7 +62,7 @@ export type HostedV1BrowserSuite = keyof typeof HOSTED_V1_BROWSER_SUITES;
 export function parseHostedV1BrowserSuite(value: string | undefined): HostedV1BrowserSuite {
   const suite = value ?? 'core';
   if (!Object.hasOwn(HOSTED_V1_BROWSER_SUITES, suite)) {
-    throw new Error('HOSTED_E2E_SUITE must be core, phase-6, or phase-8');
+    throw new Error('HOSTED_E2E_SUITE must be core, dashboard, phase-6, or phase-8');
   }
   return suite as HostedV1BrowserSuite;
 }

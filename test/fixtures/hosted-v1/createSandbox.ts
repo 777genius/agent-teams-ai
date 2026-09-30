@@ -55,6 +55,10 @@ interface HostedV1BootstrapDocument {
   readonly issuedAtMs?: unknown;
   readonly expiresAtMs?: unknown;
   readonly bootId?: unknown;
+  readonly runtimeInstance?: {
+    readonly bootId?: unknown;
+    readonly [key: string]: unknown;
+  };
   readonly workspaceManifest?: {
     readonly registrations?: readonly HostedV1BootstrapRegistration[];
     readonly [key: string]: unknown;
@@ -67,6 +71,7 @@ export interface HostedV1Sandbox {
   readonly bootstrap: string;
   readonly caddyDataDir: string;
   readonly claudeDir: string;
+  readonly codexMetadataDir: string;
   readonly fakeRuntimeStateDir: string;
   readonly lifecycleHighWaterDir: string;
   readonly lifecycleLauncherDir: string;
@@ -220,10 +225,10 @@ async function replaceHostedV1MountGenerationState(
 function parseHostedV1BootstrapForMountAdvance(
   bootstrap: string,
   currentGeneration: number,
-  expectedBootId: string
+  baseBootId: string
 ): Readonly<{
   document: HostedV1BootstrapDocument;
-  registration: HostedV1BootstrapRegistration;
+  registrations: readonly HostedV1BootstrapRegistration[];
 }> {
   let value: unknown;
   try {
@@ -236,31 +241,32 @@ function parseHostedV1BootstrapForMountAdvance(
   }
   const document = value as HostedV1BootstrapDocument;
   const registrations = document.workspaceManifest?.registrations;
-  const registration = registrations?.length === 1 ? registrations[0] : undefined;
-  const mountBinding = registration?.mountBinding;
+  const expectedBootIds = new Set([baseBootId, `${baseBootId}-g${currentGeneration}`]);
   if (
     typeof document.bootId !== 'string' ||
-    !/^boot_hosted-v1-e2e-[0-9a-f]{48}$/u.test(document.bootId) ||
-    document.bootId !== expectedBootId ||
+    !expectedBootIds.has(document.bootId) ||
+    document.runtimeInstance?.bootId !== document.bootId ||
     !Number.isSafeInteger(document.issuedAtMs) ||
     !Number.isSafeInteger(document.expiresAtMs) ||
-    registration === undefined ||
-    mountBinding === undefined ||
-    mountBinding.bootId !== document.bootId ||
-    !Number.isSafeInteger(mountBinding.observedAt)
+    !registrations?.length ||
+    registrations.some(
+      (registration) =>
+        !registration.mountBinding ||
+        registration.mountBinding.bootId !== document.bootId ||
+        !Number.isSafeInteger(registration.mountBinding.observedAt)
+    )
   ) {
     throw new Error('hosted_e2e_mount_generation_bootstrap_invalid');
   }
-  if (mountBinding.mountGeneration !== currentGeneration) {
-    if (
-      Number.isSafeInteger(mountBinding.mountGeneration) &&
-      (mountBinding.mountGeneration as number) < currentGeneration
-    ) {
+  for (const registration of registrations) {
+    const mountGeneration = registration.mountBinding?.mountGeneration;
+    if (mountGeneration === currentGeneration) continue;
+    if (Number.isSafeInteger(mountGeneration) && (mountGeneration as number) < currentGeneration) {
       throw new Error('hosted_e2e_mount_generation_stale');
     }
     throw new Error('hosted_e2e_mount_generation_bootstrap_invalid');
   }
-  return Object.freeze({ document, registration });
+  return Object.freeze({ document, registrations });
 }
 
 async function acquireHostedV1MountGenerationLock(
@@ -306,11 +312,12 @@ async function acquireHostedV1MountGenerationLock(
  */
 export async function advanceHostedV1MountGeneration(input: {
   readonly bootstrap: string;
+  readonly distinctBoot?: boolean;
   readonly fakeRuntimeStateDir: string;
   readonly markerPath: string;
   readonly nowMs?: number;
   readonly root: string;
-}): Promise<Readonly<{ bootstrap: string; mountGeneration: number }>> {
+}): Promise<Readonly<{ bootstrap: string; bootId: string; mountGeneration: number }>> {
   if (
     input.markerPath !== join(input.root, '.agent-teams-hosted-v1-e2e-owner.json') ||
     input.fakeRuntimeStateDir !== join(input.root, 'fake-runtime')
@@ -332,7 +339,7 @@ export async function advanceHostedV1MountGeneration(input: {
   try {
     const statePath = join(input.fakeRuntimeStateDir, HOSTED_V1_MOUNT_GENERATION_STATE_FILE);
     const current = await readHostedV1MountGenerationState(statePath, markerDocument.marker);
-    const { document, registration } = parseHostedV1BootstrapForMountAdvance(
+    const { document, registrations } = parseHostedV1BootstrapForMountAdvance(
       input.bootstrap,
       current.generation,
       `${E2E_BOOT_ID_PREFIX}${markerDocument.marker}`
@@ -341,6 +348,9 @@ export async function advanceHostedV1MountGeneration(input: {
       throw new Error('hosted_e2e_mount_generation_exhausted');
     }
     const mountGeneration = current.generation + 1;
+    const bootId = input.distinctBoot
+      ? `${E2E_BOOT_ID_PREFIX}${markerDocument.marker}-g${mountGeneration}`
+      : (document.bootId as string);
     const nowMs = input.nowMs ?? Date.now();
     if (
       !Number.isSafeInteger(nowMs) ||
@@ -351,27 +361,28 @@ export async function advanceHostedV1MountGeneration(input: {
     }
     const bootstrap = JSON.stringify({
       ...document,
+      bootId,
       issuedAtMs: nowMs - 60_000,
       expiresAtMs: nowMs + 3_600_000,
+      runtimeInstance: { ...document.runtimeInstance, bootId },
       workspaceManifest: {
         ...document.workspaceManifest,
-        registrations: [
-          {
-            ...registration,
-            mountBinding: {
-              ...registration.mountBinding,
-              mountGeneration,
-              observedAt: nowMs - 30_000,
-            },
+        registrations: registrations.map((registration) => ({
+          ...registration,
+          mountBinding: {
+            ...registration.mountBinding,
+            bootId,
+            mountGeneration,
+            observedAt: nowMs - 30_000,
           },
-        ],
+        })),
       },
     });
     await replaceHostedV1MountGenerationState(statePath, {
       ...current,
       generation: mountGeneration,
     });
-    return Object.freeze({ bootstrap, mountGeneration });
+    return Object.freeze({ bootstrap, bootId, mountGeneration });
   } finally {
     await lock.release();
   }
@@ -383,6 +394,7 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
   const lifecycleTrustAnchor = randomBytes(32).toString('hex');
   const markerPath = join(root, '.agent-teams-hosted-v1-e2e-owner.json');
   const claudeDir = join(root, 'claude');
+  const codexMetadataDir = join(root, 'codex-metadata');
   const appDataDir = join(root, 'app-data');
   const oidcAppDataDir = join(root, 'oidc-app-data');
   const caddyDataDir = join(root, 'caddy-data');
@@ -407,6 +419,8 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     mkdir(teamDir, { recursive: true }),
     mkdir(tasksDir, { recursive: true }),
     mkdir(projectDir, { recursive: true }),
+    mkdir(join(codexMetadataDir, 'sessions'), { recursive: true }),
+    mkdir(join(codexMetadataDir, 'archived_sessions'), { recursive: true }),
     mkdir(storageDir, { recursive: true }),
     mkdir(join(appDataDir, 'logs'), { recursive: true }),
     mkdir(oidcStorageDir, { recursive: true }),
@@ -438,19 +452,35 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     cwd: workspaceDir,
   });
   await execFileAsync('git', ['add', 'README.md'], { cwd: workspaceDir });
+  const fixtureCommitEnvironment = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 'iliya',
+    GIT_AUTHOR_EMAIL: 'iliyazelenkog@gmail.com',
+    GIT_COMMITTER_NAME: 'iliya',
+    GIT_COMMITTER_EMAIL: 'iliyazelenkog@gmail.com',
+  };
+  for (const identity of ['GIT_AUTHOR_IDENT', 'GIT_COMMITTER_IDENT'] as const) {
+    const { stdout } = await execFileAsync('git', ['var', identity], {
+      cwd: workspaceDir,
+      env: fixtureCommitEnvironment,
+    });
+    if (!stdout.startsWith('iliya <iliyazelenkog@gmail.com> ')) {
+      throw new Error('hosted_e2e_fixture_git_identity_invalid');
+    }
+  }
   await execFileAsync(
     'git',
     [
       '-c',
-      'user.name=Hosted V1 E2E',
+      'user.name=iliya',
       '-c',
-      'user.email=hosted-v1-e2e.invalid',
+      'user.email=iliyazelenkog@gmail.com',
       'commit',
       '--quiet',
       '-m',
-      'Create marker-owned E2E workspace',
+      'test: create marker-owned E2E workspace',
     ],
-    { cwd: workspaceDir }
+    { cwd: workspaceDir, env: fixtureCommitEnvironment }
   );
 
   const identity = `${JSON.stringify(
@@ -613,6 +643,7 @@ export async function createHostedV1Sandbox(root: string): Promise<HostedV1Sandb
     bootstrap,
     caddyDataDir,
     claudeDir,
+    codexMetadataDir,
     fakeRuntimeStateDir,
     lifecycleHighWaterDir,
     lifecycleLauncherDir,

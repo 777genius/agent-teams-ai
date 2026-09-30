@@ -53,6 +53,7 @@ services:
         condition: service_healthy
     volumes:
       - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude:ro
+      - ${E2E_CODEX_METADATA_DIR:?Set marker-owned Codex metadata}:/data/codex-metadata:ro
       # Publish into canonical team and task subtrees; keep the Claude parent read-only.
       - type: bind
         source: ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}/teams
@@ -74,6 +75,7 @@ services:
       - agent-teams-lifecycle-trust:/run/agent-teams-lifecycle-trust:ro
       - ${E2E_LIFECYCLE_HIGH_WATER_DIR:?Set marker-owned lifecycle high-water state}:/var/lib/agent-teams/lifecycle-owner-high-water
       - ${E2E_WORKSPACE_DIR:?Set marker-owned workspace}:/workspaces/sandbox
+      - ${E2E_DASHBOARD_B_DIR:?Set marker-owned dashboard B workspace}:/workspaces/dashboard-b:ro
     extra_hosts:
       - '${OIDC_DOMAIN}:${E2E_CADDY_IP}'
     tmpfs:
@@ -89,7 +91,10 @@ services:
       AUTH_DEPLOYMENT_ID: deployment_hosted-v1-e2e
       AUTH_RESTORE_GENERATION: '0'
       AUTH_DATA_DIR: /data/.agent-teams/data
-      HOSTED_WORKSPACE_IDS: ${E2E_RUNTIME_WORKSPACE_ID},${E2E_TEAM_RUNTIME_WORKSPACE_ID}
+      HOSTED_WORKSPACE_IDS: ${E2E_HOSTED_WORKSPACE_IDS:?Set exact marker-owned workspace IDs}
+      HOSTED_CODEX_SESSIONS_ROOT: /data/codex-metadata/sessions
+      HOSTED_CODEX_ARCHIVED_SESSIONS_ROOT: /data/codex-metadata/archived_sessions
+      HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE: ${E2E_DASHBOARD_MULTI_ROOT_ACTIVE:-false}
       HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS: ${HOSTED_E2E_RETENTION_INTERVAL_MS:-60000}
       HOSTED_COORDINATION_EVENT_RETENTION_MAX_EVENTS: ${HOSTED_E2E_RETENTION_MAX_EVENTS:-10000}
       PAIRING_CODE_FILE: /run/agent-teams/pairing.json

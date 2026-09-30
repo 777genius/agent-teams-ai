@@ -32,6 +32,13 @@ const PUBLIC_WORKSPACE_ID = `workspace_${'c'.repeat(32)}`;
 const RUNTIME_WORKSPACE_ID = `workspace_${'b'.repeat(32)}`;
 const LEGACY_RUNTIME_WORKSPACE_ID = '-workspaces-sandbox';
 const LEGACY_PUBLIC_WORKSPACE_ID = `workspace_${'d'.repeat(32)}`;
+const DASHBOARD_B_RUNTIME_WORKSPACE_ID = `workspace_${'f'.repeat(32)}`;
+const DASHBOARD_B_PUBLIC_WORKSPACE_ID = `workspace_${'6'.repeat(32)}`;
+const DASHBOARD_C_RUNTIME_WORKSPACE_ID = `workspace_${'8'.repeat(32)}`;
+const DASHBOARD_C_PUBLIC_WORKSPACE_ID = `workspace_${'7'.repeat(32)}`;
+const DASHBOARD_B_TEAM_ID = `team_${'6'.repeat(32)}`;
+const DASHBOARD_B_TEAM_NAME = `draft-${'6'.repeat(32)}`;
+const DASHBOARD_B_ADOPTION_ID = `adoption_${'6'.repeat(32)}`;
 const ADOPTION_ID = `adoption_${'b'.repeat(32)}`;
 const CREATED_AT = '2026-08-06T12:00:00.000Z';
 const PUBLISHED_AT = '2026-08-06T12:00:10.000Z';
@@ -954,8 +961,11 @@ interface FakeRuntimeOwnerGenerationState {
 }
 
 function fakeRuntimeOwnerMarker(bootId: string): string {
-  const match = /^boot_hosted-v1-e2e-([0-9a-f]{48})$/u.exec(bootId);
+  const match = /^boot_hosted-v1-e2e-([0-9a-f]{48})(?:-g([1-9][0-9]*))?$/u.exec(bootId);
   if (!match?.[1]) throw new Error('hosted_e2e_fake_runtime_boot_id_invalid');
+  if (match[2] && (!Number.isSafeInteger(Number(match[2])) || Number(match[2]) < 2)) {
+    throw new Error('hosted_e2e_fake_runtime_boot_id_invalid');
+  }
   return match[1];
 }
 
@@ -1194,6 +1204,46 @@ async function seedSandbox(): Promise<void> {
     }),
     { teamName: TEAM_NAME }
   );
+  const dashboardTeamDirectory = `${CLAUDE_ROOT}/teams/${DASHBOARD_B_TEAM_NAME}`;
+  const dashboardTeam =
+    process.env.E2E_SEED_DASHBOARD_WORKSPACES === 'true'
+      ? await (async () => {
+          const canonical = await realpath(dashboardTeamDirectory);
+          const stat = await lstat(canonical, { bigint: true });
+          if (
+            canonical !== dashboardTeamDirectory ||
+            !stat.isDirectory() ||
+            stat.isSymbolicLink()
+          ) {
+            throw new Error('hosted_dashboard_team_root_invalid');
+          }
+          const identityChecksum = sha256(
+            await readFile(`${canonical}/team.identity.json`, 'utf8')
+          );
+          const directoryFingerprint = sha256(
+            JSON.stringify({
+              schemaVersion: 1,
+              canonicalPath: `/data/.claude/teams/${DASHBOARD_B_TEAM_NAME}`,
+              device: stat.dev.toString(),
+              inode: stat.ino.toString(),
+            })
+          );
+          const intentChecksum = sha256(
+            JSON.stringify({
+              schemaVersion: 1,
+              intentId: DASHBOARD_B_ADOPTION_ID,
+              teamId: DASHBOARD_B_TEAM_ID,
+              legacyKey: DASHBOARD_B_TEAM_NAME,
+              directoryFingerprint,
+              workspaceId: DASHBOARD_B_RUNTIME_WORKSPACE_ID,
+              workspaceBindingGeneration: 1,
+              expectedIdentityChecksum: identityChecksum,
+              preparedAt: CREATED_AT,
+            })
+          );
+          return { identityChecksum, directoryFingerprint, intentChecksum };
+        })()
+      : null;
 
   await Promise.all([
     mkdir(`${APP_DATA_ROOT}/storage`, { recursive: true }),
@@ -1251,6 +1301,56 @@ async function seedSandbox(): Promise<void> {
         COMMITTED_AT,
         identityChecksum
       );
+    if (dashboardTeam !== null) {
+      database
+        .prepare(
+          `INSERT INTO team_identity_records (
+        team_id, state, legacy_key, directory_fingerprint, workspace_id,
+        workspace_binding_generation, adoption_intent_id, identity_checksum,
+        created_at, activated_at, tombstoned_at
+      ) VALUES (?, 'active', ?, ?, ?, 1, ?, ?, ?, ?, NULL)`
+        )
+        .run(
+          DASHBOARD_B_TEAM_ID,
+          DASHBOARD_B_TEAM_NAME,
+          dashboardTeam.directoryFingerprint,
+          DASHBOARD_B_RUNTIME_WORKSPACE_ID,
+          DASHBOARD_B_ADOPTION_ID,
+          dashboardTeam.identityChecksum,
+          CREATED_AT,
+          COMMITTED_AT
+        );
+      database
+        .prepare(
+          `INSERT INTO legacy_team_key_reservations (
+        legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+      ) VALUES (?, ?, 'active', ?, NULL, NULL)`
+        )
+        .run(DASHBOARD_B_TEAM_NAME, DASHBOARD_B_TEAM_ID, CREATED_AT);
+      database
+        .prepare(
+          `INSERT INTO team_adoption_intents (
+        intent_id, team_id, state, legacy_key, directory_fingerprint, workspace_id,
+        workspace_binding_generation, expected_identity_checksum, intent_checksum,
+        prepared_at, file_published_at, published_identity_checksum,
+        committed_at, committed_identity_checksum
+      ) VALUES (?, ?, 'committed', ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          DASHBOARD_B_ADOPTION_ID,
+          DASHBOARD_B_TEAM_ID,
+          DASHBOARD_B_TEAM_NAME,
+          dashboardTeam.directoryFingerprint,
+          DASHBOARD_B_RUNTIME_WORKSPACE_ID,
+          dashboardTeam.identityChecksum,
+          dashboardTeam.intentChecksum,
+          CREATED_AT,
+          PUBLISHED_AT,
+          dashboardTeam.identityChecksum,
+          COMMITTED_AT,
+          dashboardTeam.identityChecksum
+        );
+    }
   } finally {
     database.close();
   }
@@ -1264,6 +1364,12 @@ async function seedSandbox(): Promise<void> {
       directoryFingerprint,
       identityChecksum,
     });
+    if (dashboardTeam !== null) {
+      seedDashboardProductTeamIdentity(
+        new TeamIdentityStorageOps(() => authDatabase),
+        dashboardTeam
+      );
+    }
     seedFrozenLifecyclePromotion(authDatabase, {
       userId: hostedWorkspaceAccessSeedPlan(
         process.env.E2E_SEED_AUTH_MODE,
@@ -1351,6 +1457,36 @@ export function seedProductTeamIdentity(
   }
 }
 
+function seedDashboardProductTeamIdentity(
+  identities: Parameters<typeof seedProductTeamIdentity>[0],
+  input: { readonly directoryFingerprint: string; readonly identityChecksum: string }
+): void {
+  const association = {
+    teamId: DASHBOARD_B_TEAM_ID,
+    legacyKey: DASHBOARD_B_TEAM_NAME,
+    directoryFingerprint: input.directoryFingerprint,
+    workspaceBinding: { workspaceId: DASHBOARD_B_RUNTIME_WORKSPACE_ID, generation: 1 },
+  };
+  identities.reserveIdentity({ ...association, createdAt: CREATED_AT } as never);
+  const prepared = identities.prepareReservedAdoption({
+    ...association,
+    intentId: DASHBOARD_B_ADOPTION_ID,
+    expectedIdentityChecksum: input.identityChecksum,
+    preparedAt: CREATED_AT,
+  } as never);
+  const transition = {
+    teamId: DASHBOARD_B_TEAM_ID,
+    intentId: DASHBOARD_B_ADOPTION_ID,
+    intentChecksum: prepared.intent.intentChecksum,
+    identityChecksum: input.identityChecksum,
+  };
+  identities.recordIdentityFilePublished({ ...transition, filePublishedAt: PUBLISHED_AT } as never);
+  identities.commitAdoption({ ...transition, committedAt: COMMITTED_AT } as never);
+  if (identities.getIdentity(DASHBOARD_B_TEAM_ID as never)?.state !== 'active') {
+    throw new Error('hosted_dashboard_team_identity_seed_failed');
+  }
+}
+
 export function seedFrozenLifecyclePromotion(
   database: {
     prepare(sql: string): { run(...values: unknown[]): unknown };
@@ -1383,43 +1519,55 @@ export function seedFrozenLifecyclePromotion(
       },
     ],
   };
-  database.prepare(`INSERT INTO hosted_team_configuration_drafts
+  database
+    .prepare(
+      `INSERT INTO hosted_team_configuration_drafts
     (workspace_id, team_id, state, revision_ordinal, revision_token,
      metadata_json, members_json, created_at_ms, updated_at_ms)
-    VALUES (?, ?, 'active', 1, ?, ?, ?, ?, ?)`).run(
-    PUBLIC_WORKSPACE_ID,
-    TEAM_ID,
-    revision,
-    JSON.stringify({ name: TEAM_NAME }),
-    JSON.stringify({ schemaVersion: 1, members: [{ name: 'team-lead' }], configuration }),
-    Date.parse(CREATED_AT),
-    Date.parse(CREATED_AT)
-  );
-  database.prepare(`INSERT INTO hosted_team_configuration_create_keys
+    VALUES (?, ?, 'active', 1, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      PUBLIC_WORKSPACE_ID,
+      TEAM_ID,
+      revision,
+      JSON.stringify({ name: TEAM_NAME }),
+      JSON.stringify({ schemaVersion: 1, members: [{ name: 'team-lead' }], configuration }),
+      Date.parse(CREATED_AT),
+      Date.parse(CREATED_AT)
+    );
+  database
+    .prepare(
+      `INSERT INTO hosted_team_configuration_create_keys
     (workspace_id, idempotency_key, payload_hash, team_id, initial_revision, created_at_ms)
-    VALUES (?, ?, ?, ?, ?, ?)`).run(
-    PUBLIC_WORKSPACE_ID,
-    createKey,
-    sha256(createKey),
-    TEAM_ID,
-    revision,
-    Date.parse(CREATED_AT)
-  );
-  database.prepare(`INSERT INTO hosted_team_configuration_publications
+    VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      PUBLIC_WORKSPACE_ID,
+      createKey,
+      sha256(createKey),
+      TEAM_ID,
+      revision,
+      Date.parse(CREATED_AT)
+    );
+  database
+    .prepare(
+      `INSERT INTO hosted_team_configuration_publications
     (operation_id, workspace_id, team_id, actor_id, deployment_id, runtime_workspace_id,
      binding_generation, legacy_key, created_at, initial_revision, directory_fingerprint, state)
-    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'published')`).run(
-    ADOPTION_ID,
-    PUBLIC_WORKSPACE_ID,
-    TEAM_ID,
-    actorId,
-    DEPLOYMENT_ID,
-    RUNTIME_WORKSPACE_ID,
-    TEAM_NAME,
-    CREATED_AT,
-    revision,
-    input.directoryFingerprint
-  );
+    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'published')`
+    )
+    .run(
+      ADOPTION_ID,
+      PUBLIC_WORKSPACE_ID,
+      TEAM_ID,
+      actorId,
+      DEPLOYMENT_ID,
+      RUNTIME_WORKSPACE_ID,
+      TEAM_NAME,
+      CREATED_AT,
+      revision,
+      input.directoryFingerprint
+    );
   // The fixture has no live browser session yet. Freeze through the production snapshot writer
   // with a seed-only capability; the live reservation still checks the current SQLite grant.
   const frozen = input.freezePromotion({
@@ -1572,6 +1720,16 @@ function seedHostedWorkspaceAccess(database: {
         )
         .run(plan.userId, workspace.runtimeWorkspaceId, workspace.grantRevision, seededAt);
     }
+    if (process.env.E2E_SEED_DASHBOARD_WORKSPACES === 'true') {
+      // C is registered and mounted inside A, but deliberately has no user grant.
+      database
+        .prepare(
+          `INSERT INTO hosted_workspaces
+           (runtime_workspace_id, public_workspace_id, display_name, status, registered_at, registered_by)
+         VALUES (?, ?, 'Denied nested C', 'active', ?, NULL)`
+        )
+        .run(DASHBOARD_C_RUNTIME_WORKSPACE_ID, DASHBOARD_C_PUBLIC_WORKSPACE_ID, seededAt);
+    }
   })();
 }
 
@@ -1604,6 +1762,16 @@ export function hostedWorkspaceAccessSeedPlan(
         displayName: 'Hosted v1 E2E sandbox',
         grantRevision: hostedWorkspaceGrantRevision(userId, RUNTIME_WORKSPACE_ID),
       }),
+      ...(process.env.E2E_SEED_DASHBOARD_WORKSPACES === 'true'
+        ? [
+            Object.freeze({
+              runtimeWorkspaceId: DASHBOARD_B_RUNTIME_WORKSPACE_ID,
+              publicWorkspaceId: DASHBOARD_B_PUBLIC_WORKSPACE_ID,
+              displayName: 'Dashboard B',
+              grantRevision: hostedWorkspaceGrantRevision(userId, DASHBOARD_B_RUNTIME_WORKSPACE_ID),
+            }),
+          ]
+        : []),
     ]),
   });
 }
@@ -2148,8 +2316,8 @@ function fakeRuntimeLifecycleExecutionRunId(
   durableCommand: FakeRuntimeLifecycleDurableCommand
 ): string {
   return command.action === 'launch'
-    ? durableCommand.resource.runId ??
-        fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest)
+    ? (durableCommand.resource.runId ??
+        fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest))
     : String(command.runId);
 }
 
@@ -6488,7 +6656,10 @@ async function serveFakeRuntime(): Promise<void> {
                 throw new Error('fake_runtime_message_persist_invalid');
               }
               // The sandbox roster has only a lead. Explicit recipients are never active here.
-              if (request.operation === 'message_send' && Object.hasOwn(messagePayload, 'recipient')) {
+              if (
+                request.operation === 'message_send' &&
+                Object.hasOwn(messagePayload, 'recipient')
+              ) {
                 respondMessage({ schemaVersion: 2, kind: 'invalid_recipient' });
                 return;
               }

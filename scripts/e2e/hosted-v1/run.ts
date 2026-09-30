@@ -38,6 +38,12 @@ import {
   parseHostedV1BrowserSuite,
   selectHostedV1BrowserCases,
 } from '../../../test/fixtures/hosted-v1/browserSuites';
+import {
+  createHostedDashboardSandbox,
+  DASHBOARD_B_RUNTIME_WORKSPACE_ID,
+  DASHBOARD_C_RUNTIME_WORKSPACE_ID,
+  type HostedDashboardSandbox,
+} from '../../../test/fixtures/hosted-v1/dashboardSandbox';
 import { createHostedV1SharedAppImageLifecycle, removeHostedV1AppImage } from './appImageCleanup';
 import { runHostedV1ForegroundSubprocess } from './foregroundSubprocess';
 
@@ -4140,7 +4146,10 @@ async function runHostedV1Main(
   await access(composeFile);
 
   const root = await mkdtemp(join(await realpath(tmpdir()), 'agent-teams-hosted-v1-e2e-'));
-  const sandbox = await createMarkerOwnedHostedV1ScenarioSandbox(root);
+  const sandbox = await createMarkerOwnedHostedV1ScenarioSandbox(
+    root,
+    browserSuite === 'dashboard' ? createHostedDashboardSandbox : createHostedV1Sandbox
+  );
 
   const artifactOwner = invokingSudoOwner();
   let artifactDirectory: string;
@@ -4184,7 +4193,10 @@ async function runHostedV1Main(
         )
       );
       registeredScenarioRoots.add(scenarioRoot);
-      sandboxes.push(await createMarkerOwnedHostedV1ScenarioSandbox(scenarioRoot));
+      sandboxes.push(await createMarkerOwnedHostedV1ScenarioSandbox(
+        scenarioRoot,
+        browserSuite === 'dashboard' ? createHostedDashboardSandbox : createHostedV1Sandbox
+      ));
     }
     const caddyPublishedPorts = allocateHostedV1CaddyPublishedPorts(
       sandboxes.map((scenarioSandbox) => scenarioSandbox.marker)
@@ -4272,6 +4284,7 @@ async function runHostedV1Main(
             : {}),
           E2E_FAKE_RUNTIME_STATE_ROOT: scenarioSandbox.fakeRuntimeStateDir,
           E2E_SEED_MARKER_PATH: scenarioSandbox.markerPath,
+          ...(browserSuite === 'dashboard' ? { E2E_SEED_DASHBOARD_WORKSPACES: 'true' } : {}),
           E2E_SEED_OIDC_ISSUER: expectedOidcIssuer,
         },
       });
@@ -4295,6 +4308,7 @@ async function runHostedV1Main(
         [
           scenarioSandbox.caddyDataDir,
           scenarioSandbox.claudeDir,
+          scenarioSandbox.codexMetadataDir,
           scenarioSandbox.fakeRuntimeStateDir,
           scenarioSandbox.lifecycleHighWaterDir,
           scenarioSandbox.lifecycleLauncherDir,
@@ -4302,6 +4316,9 @@ async function runHostedV1Main(
           scenarioSandbox.lifecycleTrustDir,
           scenarioSandbox.runDir,
           scenarioSandbox.workspaceDir,
+          ...(browserSuite === 'dashboard'
+            ? [(scenarioSandbox as HostedDashboardSandbox).workspaceBDir]
+            : []),
         ].map((path) => chownTree(path, appUid, appGid))
       );
       const baseComposeEnv: NodeJS.ProcessEnv = {
@@ -4317,6 +4334,7 @@ async function runHostedV1Main(
         E2E_CADDY_IP: network.caddy,
         E2E_CADDY_PUBLISHED_PORT: String(caddyPublishedPort),
         E2E_CLAUDE_DIR: scenarioSandbox.claudeDir,
+        E2E_CODEX_METADATA_DIR: scenarioSandbox.codexMetadataDir,
         E2E_BOOT_ID: `boot_hosted-v1-e2e-${scenarioSandbox.marker}`,
         E2E_FAKE_RUNTIME_STATE_DIR: scenarioSandbox.fakeRuntimeStateDir,
         E2E_LIFECYCLE_BOOTSTRAP: scenarioSandbox.bootstrap,
@@ -4335,6 +4353,17 @@ async function runHostedV1Main(
         E2E_TEAM_RUNTIME_WORKSPACE_ID,
         E2E_TEAM_ID,
         E2E_WORKSPACE_DIR: scenarioSandbox.workspaceDir,
+        E2E_DASHBOARD_B_DIR: browserSuite === 'dashboard'
+          ? (scenarioSandbox as HostedDashboardSandbox).workspaceBDir
+          : scenarioSandbox.workspaceDir,
+        E2E_DASHBOARD_MULTI_ROOT_ACTIVE: 'false',
+        E2E_HOSTED_WORKSPACE_IDS: [
+          E2E_RUNTIME_WORKSPACE_ID,
+          E2E_TEAM_RUNTIME_WORKSPACE_ID,
+          ...(browserSuite === 'dashboard'
+            ? [DASHBOARD_B_RUNTIME_WORKSPACE_ID, DASHBOARD_C_RUNTIME_WORKSPACE_ID]
+            : []),
+        ].join(','),
         HOSTED_E2E_RETENTION_INTERVAL_MS: browserCase.id === 'retention-resync' ? '100' : '60000',
         HOSTED_E2E_RETENTION_MAX_EVENTS:
           browserCase.id === 'retention-resync'
