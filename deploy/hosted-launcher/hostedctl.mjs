@@ -12,6 +12,7 @@ import { installProduct, readProductRecord, writeProductRecord } from './lib/pro
 import { initialState, liveLockHolder, readState, stateExists, withStateLock, writeState } from './lib/state.mjs';
 import { runSupervisor, SUPERVISOR_PID_FILE } from './lib/supervisor.mjs';
 import { listPublishedTeams, resolvePublishedTeam } from './lib/teams.mjs';
+import { prepareWorkspacesForInit } from './lib/workspace-registrations.mjs';
 
 const USAGE = `usage: hostedctl [--config PATH] <command>
   init [--deployment-id ID]           create launcher key, state and directories (once)
@@ -65,7 +66,7 @@ async function init(config, args) {
   await ensureDirectory(config.installRoot, { mode: 0o755 });
   await ensureDirectory(config.runDir, { mode: 0o755 });
   await ensureDirectory(config.claudeRoot, agent);
-  await ensureDirectory(config.workspaceRoot, agent);
+  const registrations = await prepareWorkspacesForInit(config);
   const home = await lstat(config.agent.home);
   if (!home.isDirectory() || home.uid !== config.agent.uid) throw new Error('hostedctl-agent-home-invalid');
   const key = await pathExists(config.launcherKeyFile)
@@ -76,7 +77,8 @@ async function init(config, args) {
       if (deploymentId && existing.deploymentId !== deploymentId) throw new Error('hostedctl-state-exists-with-other-deployment');
       return existing;
     }
-    return writeState(config.stateDir, initialState(deploymentId ? { deploymentId } : {}));
+    return writeState(config.stateDir, initialState({ ...(deploymentId ? { deploymentId } : {}),
+      ...registrations }));
   });
   log('initialized', { deploymentId: state.deploymentId, workspaceId: state.workspaceId,
     launcherKeyId: key.keyId });

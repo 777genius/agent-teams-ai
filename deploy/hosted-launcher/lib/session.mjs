@@ -7,7 +7,7 @@ import { readOwnerRecord, verifyInstalledOwner } from './owner-artifact.mjs';
 import { spawnOwner, waitForOwnerSocket, waitForPathRemoval } from './owner-process.mjs';
 import { readProductRecord, verifyInstalledProduct } from './product-artifact.mjs';
 import { assertNativeProviders } from './native-providers.mjs';
-import { activeTeam, allocateSession, readState, withStateLock, writeState } from './state.mjs';
+import { activeTeam, allocateSession, readState, reconcileWorkspaces, withStateLock, writeState } from './state.mjs';
 import { readPublishedTeam } from './teams.mjs';
 
 export const SOCKET_NAME = 'orchestrator-lifecycle.sock';
@@ -79,8 +79,11 @@ export async function startPair({ config, key, compose, providerValues, opencode
   await verifyInstalledProduct(product, config.agent);
 
   await compose.stopProduct();
-  const state = await withStateLock(config.stateDir, async () =>
-    writeState(config.stateDir, allocateSession(await readState(config.stateDir))));
+  const state = await withStateLock(config.stateDir, async () => {
+    const registered = await reconcileWorkspaces(config.stateDir, config,
+      await readState(config.stateDir), key);
+    return writeState(config.stateDir, allocateSession(registered));
+  });
   const team = await selectTeam(config, state);
   if (config.agent.runtimeDir) {
     const agentDir = { uid: config.agent.uid, gid: config.agent.gid, mode: 0o700 };

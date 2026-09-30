@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash, generateKeyPairSync } from 'node:crypto';
+import { chmod, mkdir, mkdtemp, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
-import { createSessionIdentity, ownerHeader } from '../lib/admission.mjs';
+import { createSessionIdentity, ownerHeader, signedAdmission } from '../lib/admission.mjs';
+import { parseConfig } from '../lib/config.mjs';
+import { launcherComposeValues, renderEnvFile } from '../lib/compose.mjs';
 import { parseNativeProviders } from '../lib/native-providers.mjs';
 import { OWNER_INSTALL_FORMAT, verifyInstalledOwner } from '../lib/owner-artifact.mjs';
 import { ownerEnvironment, stopPair } from '../lib/session.mjs';
-import { activeTeam, allocateSession, initialState, readState, writeState } from '../lib/state.mjs';
+import { activeTeam, allocateSession, initialState, readState, reconcileWorkspaces,
+  STATE_FORMAT_V2, writeState } from '../lib/state.mjs';
 import { runSupervisor } from '../lib/supervisor.mjs';
 import { resolvePublishedTeam } from '../lib/teams.mjs';
+import { pinnedV1Root, prepareWorkspacesForInit, rootHash } from '../lib/workspace-registrations.mjs';
 
 const directories = [];
 async function scratch() {
@@ -54,6 +58,233 @@ test('persisted state never moves a generation backwards or swaps identities', a
   await assert.rejects(writeState(directory, { ...stale, ownerGeneration: 9, mountGeneration: 9 }),
     /state-regression-refused/);
   assert.equal((await readState(directory)).ownerGeneration, 2);
+});
+
+async function registrationFixture() {
+  const base = await scratch();
+  const paths = Object.fromEntries(['state', 'run', 'a', 'b', 'c'].map(name => [name, join(base, name)]));
+  for (const path of Object.values(paths)) await mkdir(path, { mode: 0o700 });
+  const config = { stateDir: paths.state, runDir: paths.run, workspaceRoot: paths.a,
+    agent: { uid: process.getuid() } };
+  return { paths, config };
+}
+
+async function v1SessionEvidence(config, state) {
+  const identity = createSessionIdentity({ state, team: state.idleTeam, workspaceRoot: config.workspaceRoot,
+    installed: { artifactDigest: `sha256:${'a'.repeat(64)}` } });
+  const values = launcherComposeValues({ ...config, composeProject: 'fixture', claudeRoot: '/tmp/claude',
+    secretsDir: '/tmp/secrets', opencode: null }, state,
+  { runDirectory: join(config.runDir, `owner-g${state.ownerGeneration}`), bootstrap: identity.bootstrap });
+  await writeFile(join(config.stateDir, 'session.env'), renderEnvFile(values), { mode: 0o600 });
+  identity.secret.fill(0);
+}
+
+test('fresh deployment pins a custom owner key directly in v2 and reconciles without v1 migration', async () => {
+  const { config, paths } = await registrationFixture();
+  const explicit = { ...config, workspaceRoot: paths.b, ownerRegistrationKey: 'owner.custom',
+    workspaces: [{ registrationKey: 'extra.a', root: paths.a },
+      { registrationKey: 'owner.custom', root: paths.b }] };
+  const registrations = await prepareWorkspacesForInit(explicit);
+  const first = await writeState(config.stateDir, initialState(registrations));
+  assert.equal(first.format, STATE_FORMAT_V2);
+  assert.equal(first.ownerRegistrationKey, 'owner.custom');
+  assert.equal(first.registrations.find(row => row.registrationKey === 'owner.custom').workspaceId,
+    first.workspaceId);
+  assert.equal(first.registrations.find(row => row.registrationKey === 'owner.custom').canonicalRoot, paths.b);
+  const reconciled = await reconcileWorkspaces(config.stateDir, explicit, first);
+  assert.deepEqual(reconciled, first);
+  assert.equal((await readState(config.stateDir)).ownerRegistrationKey, 'owner.custom');
+  await assert.rejects(stat(join(config.stateDir, 'workspace-root-pin.json')), { code: 'ENOENT' });
+});
+
+test('explicit roots are validated without changing owner mode; legacy root is provisioned', async () => {
+  const { config, paths } = await registrationFixture();
+  await chmod(paths.b, 0o750);
+  const explicit = { ...config, workspaceRoot: paths.b, ownerRegistrationKey: 'owner.custom',
+    workspaces: [{ registrationKey: 'owner.custom', root: paths.b }],
+    provisionLegacyWorkspaceRoot: false };
+  const before = await stat(paths.b);
+  await prepareWorkspacesForInit(explicit);
+  const after = await stat(paths.b);
+  assert.equal(after.uid, before.uid);
+  assert.equal(after.gid, before.gid);
+  assert.equal(after.mode & 0o777, 0o750);
+  const absent = join(await scratch(), 'missing');
+  await assert.rejects(prepareWorkspacesForInit({ ...explicit, workspaceRoot: absent,
+    workspaces: [{ registrationKey: 'owner.custom', root: absent }] }), { code: 'ENOENT' });
+  const legacy = join(await scratch(), 'legacy');
+  await prepareWorkspacesForInit({ ...config, workspaceRoot: legacy,
+    workspaces: [{ registrationKey: 'personal.main', root: legacy }],
+    ownerRegistrationKey: 'personal.main', provisionLegacyWorkspaceRoot: true,
+    agent: { uid: process.getuid(), gid: process.getgid() } });
+  assert.equal((await stat(legacy)).mode & 0o777, 0o700);
+});
+
+test('v1 stop and reboot migration preserves personal ID using durable issued evidence', async () => {
+  const { config } = await registrationFixture();
+  const first = allocateSession(initialState());
+  await writeState(config.stateDir, first);
+  await v1SessionEvidence(config, first); // session.env survives stop; /run is empty
+  const reserved = await writeState(config.stateDir, allocateSession(allocateSession(first)));
+  const migrated = await reconcileWorkspaces(config.stateDir, config, reserved);
+  assert.equal(migrated.format, STATE_FORMAT_V2);
+  assert.equal(migrated.workspaceId, first.workspaceId);
+  assert.equal(migrated.registrations[0].workspaceId, first.workspaceId);
+  assert.equal(migrated.registrations[0].mountGeneration, 3);
+  const boot = await writeState(config.stateDir, allocateSession(migrated));
+  assert.equal(boot.mountGeneration, 4);
+  const issuer = createSessionIdentity({ state: boot, team: boot.idleTeam,
+    workspaceRoot: config.workspaceRoot, installed: { artifactDigest: `sha256:${'a'.repeat(64)}` } });
+  assert.equal(JSON.parse(issuer.bootstrap).workspaceManifest.registrations[0].workspaceId, first.workspaceId);
+  issuer.secret.fill(0);
+  assert.equal((await readState(config.stateDir)).format, STATE_FORMAT_V2);
+  await assert.rejects(writeState(config.stateDir, reserved), /state-regression-refused/);
+});
+
+test('registrations survive reorder, tombstone, re-add and replacement without ID reuse', async () => {
+  const { config, paths } = await registrationFixture();
+  await chmod(paths.b, 0o750);
+  const initial = await writeState(config.stateDir, initialState());
+  const both = { ...config, ownerRegistrationKey: 'personal.main', workspaces: [
+    { registrationKey: 'personal.main', root: paths.a }, { registrationKey: 'extra.b', root: paths.b }] };
+  let state = await reconcileWorkspaces(config.stateDir, both, initial);
+  const a = state.registrations.find(row => row.registrationKey === 'personal.main');
+  const b = state.registrations.find(row => row.registrationKey === 'extra.b');
+  assert.equal((await stat(paths.b)).mode & 0o777, 0o750);
+  assert.equal(a.workspaceId, initial.workspaceId);
+  state = await reconcileWorkspaces(config.stateDir, { ...both, workspaces: [...both.workspaces].reverse() }, state);
+  assert.deepEqual(state.registrations.find(row => row.registrationKey === 'extra.b'), b);
+  state = await reconcileWorkspaces(config.stateDir,
+    { ...both, workspaces: [both.workspaces[0]] }, state);
+  const tombstone = state.registrations.find(row => row.registrationKey === 'extra.b');
+  assert.equal(tombstone.enabled, false);
+  assert.ok(tombstone.registrationRevision > b.registrationRevision);
+  await assert.rejects(reconcileWorkspaces(config.stateDir, { ...both, workspaces: [
+    both.workspaces[0], { registrationKey: 'extra.copied', root: paths.b }] }, state),
+  /state-registration-invalid/);
+  state = await reconcileWorkspaces(config.stateDir, both, state);
+  const restored = state.registrations.find(row => row.registrationKey === 'extra.b');
+  assert.equal(restored.workspaceId, b.workspaceId);
+  assert.ok(restored.mountGeneration > tombstone.mountGeneration);
+  await assert.rejects(reconcileWorkspaces(config.stateDir,
+    { ...both, workspaces: [both.workspaces[0], { registrationKey: 'extra.b', root: paths.c }] }, state),
+  /workspace-key-retarget-refused/);
+  const replacement = await reconcileWorkspaces(config.stateDir, { ...both, workspaces: [
+    both.workspaces[0], { registrationKey: 'extra.c', root: paths.c }] }, state);
+  assert.equal(replacement.registrations.find(row => row.registrationKey === 'extra.b').enabled, false);
+  assert.notEqual(replacement.registrations.find(row => row.registrationKey === 'extra.c').workspaceId, b.workspaceId);
+  await assert.rejects(writeState(config.stateDir, { ...replacement,
+    ownerGeneration: replacement.ownerGeneration + 1, mountGeneration: replacement.mountGeneration + 1 }),
+  /enabled-mount-generation-invalid/);
+  await assert.rejects(writeState(config.stateDir, { ...replacement, registrations: replacement.registrations
+    .filter(row => row.registrationKey !== 'extra.b') }), /registration-retarget-refused/);
+});
+
+test('mixed-case registration keys persist in stable code-unit order', async () => {
+  const { config, paths } = await registrationFixture();
+  const initial = await writeState(config.stateDir, initialState());
+  const next = await reconcileWorkspaces(config.stateDir, { ...config,
+    ownerRegistrationKey: 'personal.main', workspaces: [
+      { registrationKey: 'personal.main', root: paths.a },
+      { registrationKey: 'B', root: paths.b },
+      { registrationKey: 'b', root: paths.c },
+    ] }, initial);
+  assert.deepEqual(next.registrations.map(row => row.registrationKey), ['B', 'b', 'personal.main']);
+});
+
+test('v1 missing or stale evidence after issued generations fails closed; zero pins current root', async () => {
+  const { config, paths } = await registrationFixture();
+  const initial = await writeState(config.stateDir, initialState());
+  const pinned = await reconcileWorkspaces(config.stateDir, config, initial);
+  assert.equal(pinned.registrations[0].canonicalRoot, paths.a);
+  const other = await registrationFixture();
+  const started = await writeState(other.config.stateDir, allocateSession(initialState()));
+  await assert.rejects(reconcileWorkspaces(other.config.stateDir, other.config, started),
+    /root-evidence-missing:restore-matching-state-and-session-env-backup/);
+  await v1SessionEvidence(other.config, started);
+  await assert.rejects(reconcileWorkspaces(other.config.stateDir,
+    { ...other.config, workspaceRoot: other.paths.b }, started), /root-evidence-mismatch/);
+  await writeFile(join(other.config.stateDir, 'session.env'), 'broken\n', { mode: 0o600 });
+  await assert.rejects(reconcileWorkspaces(other.config.stateDir, other.config, started),
+    /root-evidence-session-corrupt/);
+  assert.equal((await readState(other.config.stateDir)).format, initial.format);
+});
+
+test('a durable root pin completes migration after interruption before v2 write', async () => {
+  const { config } = await registrationFixture();
+  const started = await writeState(config.stateDir, allocateSession(initialState()));
+  await v1SessionEvidence(config, started);
+  const pin = await pinnedV1Root(config.stateDir, config, started);
+  await rm(join(config.stateDir, 'session.env'));
+  const migrated = await reconcileWorkspaces(config.stateDir, config, started);
+  assert.equal(migrated.registrations[0].declaredRootHash, pin.declaredRootHash);
+  assert.equal(migrated.registrations[0].workspaceId, started.workspaceId);
+});
+
+test('available signed admission must match durable v1 bootstrap', async () => {
+  const { config } = await registrationFixture();
+  const started = await writeState(config.stateDir, allocateSession(initialState()));
+  const installed = { artifactDigest: `sha256:${'a'.repeat(64)}` };
+  const identity = createSessionIdentity({ state: started, team: started.idleTeam,
+    workspaceRoot: config.workspaceRoot, installed });
+  const runDirectory = join(config.runDir, `owner-g${started.ownerGeneration}`);
+  await mkdir(runDirectory, { mode: 0o700 });
+  const values = launcherComposeValues({ ...config, composeProject: 'fixture', claudeRoot: '/tmp/claude',
+    secretsDir: '/tmp/secrets', opencode: null }, started,
+  { runDirectory, bootstrap: identity.bootstrap });
+  await writeFile(join(config.stateDir, 'session.env'), renderEnvFile(values), { mode: 0o600 });
+  await assert.rejects(reconcileWorkspaces(config.stateDir, config, started),
+    /root-evidence-admission-missing/);
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const x = publicKey.export({ format: 'jwk' }).x;
+  const key = { privateKey, publicKey: x, keyId: sha(Buffer.from(x, 'base64url')) };
+  const admissionPath = join(runDirectory, 'lifecycle-owner-admission.json');
+  const signed = signedAdmission(identity, installed, { uid: process.getuid() }, key);
+  await writeFile(admissionPath, signed.replace(identity.bootstrapBinding.bootstrapDigest, '0'.repeat(64)),
+    { mode: 0o400 });
+  await assert.rejects(reconcileWorkspaces(config.stateDir, config, started, key),
+    /root-evidence-admission-mismatch/);
+  await chmod(admissionPath, 0o600);
+  await writeFile(admissionPath, signed, { mode: 0o400 });
+  await chmod(admissionPath, 0o400);
+  const migrated = await reconcileWorkspaces(config.stateDir, config, started, key);
+  assert.equal(migrated.registrations[0].workspaceId, started.workspaceId);
+  identity.secret.fill(0);
+});
+
+test('single-root config remains compatible while explicit registrations are bounded', () => {
+  const raw = { productRepo: '/srv/product', stateDir: '/srv/state', installRoot: '/srv/install',
+    runDir: '/srv/run', logDir: '/srv/log', launcherKeyFile: '/srv/state/key', secretsDir: '/srv/secrets',
+    composeProject: 'fixture', composeEnvFile: '/srv/compose.env', claudeRoot: '/srv/claude',
+    workspaceRoot: '/srv/a', agent: { uid: 1000, gid: 1000, home: '/home/agent', user: 'agent' } };
+  assert.deepEqual(parseConfig(raw).workspaces, [{ registrationKey: 'personal.main', root: '/srv/a' }]);
+  assert.equal(parseConfig(raw).provisionLegacyWorkspaceRoot, true);
+  assert.equal(parseConfig({ ...raw, workspaceRoot: undefined, ownerRegistrationKey: 'personal.main',
+    workspaces: [{ registrationKey: 'personal.main', root: '/srv/a' }] }).workspaceRoot, '/srv/a');
+  assert.equal(parseConfig({ ...raw, ownerRegistrationKey: 'personal.main',
+    workspaces: [{ registrationKey: 'personal.main', root: '/srv/a' }] }).provisionLegacyWorkspaceRoot, false);
+  assert.throws(() => parseConfig({ ...raw, workspaces: [{ registrationKey: 'personal.main', root: '/srv/a' }] }),
+    /owner-registration-key-required/);
+  assert.throws(() => parseConfig({ ...raw, ownerRegistrationKey: 'personal.main', workspaces: Array(17)
+    .fill({ registrationKey: 'personal.main', root: '/srv/a' }) }), /workspaces-invalid/);
+});
+
+test('maximum registration state remains readable above the former 16 KiB cap', async () => {
+  const { config } = await registrationFixture();
+  const v1 = initialState();
+  const longRoot = `/${Array(12).fill('r'.repeat(160)).join('/')}`;
+  const registrations = Array.from({ length: 16 }, (_, index) => {
+    const canonicalRoot = index === 0 ? config.workspaceRoot : `${longRoot}/${index}`;
+    return { registrationKey: index === 0 ? 'personal.main' : `extra.${String(index).padStart(2, '0')}`,
+      workspaceId: index === 0 ? v1.workspaceId : `workspace_${index.toString(16).padStart(32, '0')}`,
+      canonicalRoot, declaredRootHash: rootHash(canonicalRoot), enabled: true,
+      registrationRevision: index + 1, mountGeneration: 0 };
+  }).sort((a, b) => a.registrationKey.localeCompare(b.registrationKey));
+  const state = { ...v1, format: STATE_FORMAT_V2, ownerRegistrationKey: 'personal.main',
+    registrationRevision: 16, registrations };
+  await writeState(config.stateDir, state);
+  assert.equal((await readState(config.stateDir)).registrations.length, 16);
+  assert.ok(Buffer.byteLength(JSON.stringify(state)) > 16_384);
 });
 
 function fakeSession(calls, { closeResult = { helperCode: 0, ownerCode: 0 } } = {}) {

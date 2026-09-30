@@ -2,13 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertAbsolute } from './fsutil.mjs';
 import { parseNativeProviders } from './native-providers.mjs';
+import { configuredWorkspaces } from './workspace-registrations.mjs';
 
 export const DEFAULT_CONFIG_PATH = '/etc/agent-teams/hosted-launcher.json';
 const COMPOSE_PROJECT = /^[a-z0-9][a-z0-9_-]{0,62}$/u;
 const OPENCODE_MODE = /^official-v[0-9]+\.[0-9]+\.[0-9]+$/u;
 const CONFIG_KEYS = new Set(['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir',
   'launcherKeyFile', 'secretsDir', 'composeProject', 'composeEnvFile', 'providerEnvFile',
-  'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'nativeProviders', 'timeouts']);
+  'agent', 'claudeRoot', 'workspaceRoot', 'workspaces', 'ownerRegistrationKey',
+  'opencode', 'nativeProviders', 'timeouts']);
 const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user', 'runtimeDir']);
 
 /** Values the launcher owns. The operator's compose env file may not set them. */
@@ -53,8 +55,11 @@ export function parseConfig(raw) {
     positiveInteger(value, `timeout-${name}`);
   }
   const paths = ['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir', 'launcherKeyFile',
-    'secretsDir', 'composeEnvFile', 'claudeRoot', 'workspaceRoot'];
+    'secretsDir', 'composeEnvFile', 'claudeRoot'];
   for (const name of paths) assertAbsolute(raw[name], `config-${name}`);
+  if (raw.workspaceRoot !== undefined) assertAbsolute(raw.workspaceRoot, 'config-workspaceRoot');
+  const { ownerRegistrationKey, workspaces } = configuredWorkspaces(raw);
+  const workspaceRoot = workspaces.find(item => item.registrationKey === ownerRegistrationKey).root;
   assertAbsolute(agent.home, 'config-agent-home');
   if (agent.runtimeDir !== undefined) assertAbsolute(agent.runtimeDir, 'config-agent-runtimeDir');
   if (raw.providerEnvFile !== undefined) assertAbsolute(raw.providerEnvFile, 'config-providerEnvFile');
@@ -62,14 +67,17 @@ export function parseConfig(raw) {
   if (opencode?.configFile !== undefined) assertAbsolute(opencode.configFile, 'config-opencode-configFile');
   // Product binds the Claude root read-only into an internet-facing container. Provider
   // credentials and the agent home must never live below it.
-  for (const path of [agent.home, raw.workspaceRoot, ...(agent.runtimeDir ? [agent.runtimeDir] : [])]) {
+  for (const path of [agent.home, ...workspaces.map(item => item.root),
+    ...(agent.runtimeDir ? [agent.runtimeDir] : [])]) {
     if (path === raw.claudeRoot || path.startsWith(`${raw.claudeRoot}/`) ||
         raw.claudeRoot.startsWith(`${path}/`)) {
       throw new Error('hostedctl-config-claude-root-must-be-separate');
     }
   }
   return Object.freeze({
-    ...raw, agent: Object.freeze({ ...agent }), opencode, timeouts: Object.freeze(timeouts),
+    ...raw, workspaceRoot, provisionLegacyWorkspaceRoot: raw.workspaces === undefined,
+    agent: Object.freeze({ ...agent }), opencode, timeouts: Object.freeze(timeouts),
+    ownerRegistrationKey, workspaces: Object.freeze(workspaces.map(item => Object.freeze({ ...item }))),
     nativeProviders: parseNativeProviders(raw.nativeProviders, raw.claudeRoot),
     composeFiles: Object.freeze([join(raw.productRepo, 'docker', 'docker-compose.yml'),
       join(raw.productRepo, 'deploy', 'hosted-launcher', 'compose.personal-host.yml')]),
