@@ -503,8 +503,8 @@ function formatNonJsonCliOutputError(input: {
     : 'The runtime command printed logs, help text, or a crash message instead of JSON.';
   const hints = likelyWrongBinary
     ? [
-        'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
-        'Those environment variables must not point to opencode.',
+        'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
+        'This environment variable must not point to opencode.',
         'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
       ]
     : [
@@ -562,8 +562,8 @@ function formatWrongRuntimeBinaryError(
 ): RuntimeProviderCommandFailure {
   const likelyCause = 'The app resolved the OpenCode CLI itself as the Agent Teams runtime binary.';
   const hints = [
-    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
-    'Those environment variables must not point to opencode.',
+    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
+    'This environment variable must not point to opencode.',
     'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
   ];
   const lines = [
@@ -702,7 +702,7 @@ function formatMissingRuntimeBinaryError(
   const likelyCause =
     'The Agent Teams runtime/orchestrator CLI could not be resolved from the current environment.';
   const hints = [
-    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
+    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
     'If you are developing locally, start the desktop app from a shell that can resolve the orchestrator CLI.',
     'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
   ];

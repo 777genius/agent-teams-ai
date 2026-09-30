@@ -1809,7 +1809,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.stdoutPreview).toBeNull();
     expect(response.error?.diagnostics?.stderrPreview).toBeNull();
     expect(response.error?.diagnostics?.hints).toContain(
-      'Those environment variables must not point to opencode.'
+      'This environment variable must not point to opencode.'
     );
   });
 
@@ -1953,7 +1953,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.projectPath).toBe('/Users/test/My Project');
     expect(response.error?.diagnostics?.likelyCause).toContain('OpenCode CLI itself');
     expect(response.error?.diagnostics?.hints).toContain(
-      'Those environment variables must not point to opencode.'
+      'This environment variable must not point to opencode.'
     );
     expect(response.error?.diagnostics?.stdoutPreview).toContain('api_key: ...redacted');
     expect(response.error?.diagnostics?.stdoutPreview).not.toContain('sk-secret-value-123456');
