@@ -388,7 +388,8 @@ test('Dashboard staged A-only, exact-image B activation, read-only B and rollbac
   await expect(rolledBackPalette).toBeVisible();
   await expect(rolledBackPalette.getByRole('button', { name: 'Workspace 2' })).toHaveCount(0);
   await expect(rolledBackPalette.getByRole('button', { name: 'Workspace 1' })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await rolledBackPalette.getByRole('button', { name: 'Close' }).click();
+  await expect(rolledBackPalette).toHaveCount(0);
   const rolledBackB = await query(
     page,
     '/api/hosted/v1/workspaces/select',
