@@ -208,7 +208,7 @@
     "drizzle-orm": "^0.45.2",
     "electron-updater": "^6.8.9",
     "fast-json-stringify": "^6.4.0",
-    "fastify": "^5.10.0",
+    "fastify": "^5.12.5",
     "highlight.js": "^11.11.1",
     "i18next": "26.2.0",
     "idb-keyval": "^6.2.2",
