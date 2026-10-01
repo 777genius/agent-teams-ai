@@ -1652,18 +1652,23 @@ git checkout dev
 git tag "v$RUNTIME_VERSION"
 git push origin "v$RUNTIME_VERSION"
 
-gh run list \
-  --repo 777genius/agent_teams_orchestrator \
-  --workflow release-runtime.yml \
-  --branch "v$RUNTIME_VERSION" \
-  --limit 1
+gh api --paginate \
+  'repos/777genius/agent_teams_orchestrator/actions/workflows/release-runtime.yml/runs?per_page=100' \
+  --jq ".workflow_runs[] |
+    select(.head_branch == \"v${RUNTIME_VERSION}\" or
+      (.display_title | startswith(\"runtime ${RUNTIME_VERSION} -> \")) or
+      (.display_title | startswith(\"runtime v${RUNTIME_VERSION} -> \"))) |
+    {id, event, status, conclusion, html_url}"
 ```
 
 Pushing the runtime tag automatically starts the draft build in
 `release-runtime.yml`. Do not dispatch another build while that run is active:
 the runs can race and replace target assets. A manual draft build is recovery
 only when no tag-triggered run exists; first confirm there is no active or
-successful draft build for the same tag.
+successful draft build for the same tag. Inspect the complete paginated run
+list above, including tag-triggered and manual runs; the latest run alone is
+not enough to establish this. If a tag-triggered run already exists, retry its
+failed jobs instead of creating a competing draft build.
 
 Watch the returned run until it succeeds:
 
