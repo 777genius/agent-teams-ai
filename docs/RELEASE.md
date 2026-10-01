@@ -29,6 +29,75 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.17.2 (2026-10-01)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.104`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.2 -->
+Claude models can start without outdated client-version errors, and provider checks finish instead of leaving the dashboard loading indefinitely.
+
+### Fixes
+
+- Ignore stale Claude CLI settings that broke sign-in and team creation.
+- Keep task Changes available after relaunch, including Codex edits, renamed files, and interrupted recovery.
+- Stop provider cards from returning to loading after checks finish.
+- Keep maximize controls in sync with the actual window state.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+  <br />
+  <sub>Requires macOS 13 or later.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI.Setup.2.17.2.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI.Setup.2.17.2-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai_2.17.2_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai-2.17.2.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai-2.17.2.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.17.2 -->
+
 ## v2.17.1 (2026-09-28)
 
 Target branch: `main`.
@@ -1493,7 +1562,7 @@ Format: `MAJOR.MINOR.PATCH`
 A stable release is complete only when all of these are true:
 
 - The final `release.yml` run used `publish_release=true`.
-- Its `upload-stable-links` job succeeded rather than being skipped.
+- Its publication job succeeded: `promote-existing-draft` for reviewed draft reuse, or `upload-stable-links` for a full rebuild.
 - The release is public, non-prerelease, and selected as GitHub's latest release.
 - The release assets contain `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 - All three `/releases/latest/download/latest*.yml` URLs return successfully.
@@ -1583,18 +1652,23 @@ git checkout dev
 git tag "v$RUNTIME_VERSION"
 git push origin "v$RUNTIME_VERSION"
 
-gh run list \
-  --repo 777genius/agent_teams_orchestrator \
-  --workflow release-runtime.yml \
-  --branch "v$RUNTIME_VERSION" \
-  --limit 1
+gh api --paginate \
+  'repos/777genius/agent_teams_orchestrator/actions/workflows/release-runtime.yml/runs?per_page=100' \
+  --jq ".workflow_runs[] |
+    select(.head_branch == \"v${RUNTIME_VERSION}\" or
+      (.display_title | startswith(\"runtime ${RUNTIME_VERSION} -> \")) or
+      (.display_title | startswith(\"runtime v${RUNTIME_VERSION} -> \"))) |
+    {id, event, status, conclusion, html_url}"
 ```
 
-Pushing the runtime tag automatically starts `release-runtime.yml`. Do not also
-dispatch the workflow manually after pushing the tag: the two runs can race and
-create duplicate target releases. Use `gh workflow run` only as recovery when no
-tag-triggered run exists, and first confirm that there is no active or successful
-run for the same runtime tag.
+Pushing the runtime tag automatically starts the draft build in
+`release-runtime.yml`. Do not dispatch another build while that run is active:
+the runs can race and replace target assets. A manual draft build is recovery
+only when no tag-triggered run exists; first confirm there is no active or
+successful draft build for the same tag. Inspect the complete paginated run
+list above, including tag-triggered and manual runs; the latest run alone is
+not enough to establish this. If a tag-triggered run already exists, retry its
+failed jobs instead of creating a competing draft build.
 
 Watch the returned run until it succeeds:
 
@@ -1602,7 +1676,25 @@ Watch the returned run until it succeeds:
 gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 ```
 
-After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
+After the draft build succeeds and the owner authorizes publication, run the
+supported publication mode on the same immutable source tag:
+
+```bash
+gh workflow run release-runtime.yml \
+  --repo 777genius/agent_teams_orchestrator \
+  --ref "v$RUNTIME_VERSION" \
+  -f source_ref="v$RUNTIME_VERSION" \
+  -f runtime_version="$RUNTIME_VERSION" \
+  -f publish_release=true \
+  -f target_release_repo=777genius/agent_teams_orchestrator_binaries \
+  -f target_release_tag="runtime-v$RUNTIME_VERSION"
+```
+
+The current publication workflow rebuilds the platform archives and verifies
+public downloads. Wait for it to succeed before pinning checksums: the published
+manifest, rather than the earlier draft, is authoritative.
+
+After publication succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
 - `cliVersion`: the exact first token of the released binary's `--version` output,
@@ -1735,9 +1827,9 @@ be rebuilt before publication. The full build path runs the same promotion
 script after packaging succeeds.
 
 Do not use GitHub's **Publish release** button, `gh release edit --draft=false`,
-or any other direct draft-to-public action. Those paths bypass the
-`upload-stable-links` job. That job uploads the stable aliases and canonical
-updater feeds before making the release public.
+or any other direct draft-to-public action. Those paths bypass the publication job (`promote-existing-draft` or
+`upload-stable-links`), which uploads the stable aliases and canonical updater
+feeds before making the release public.
 
 After the publish workflow finishes, run this required fail-fast gate. Replace
 `v<VERSION>` with the exact tag that was published:
@@ -1793,7 +1885,7 @@ Do not publish or call a release finished until this is true:
 - The asset names in the notes match the assets uploaded by `release.yml`.
 - For a draft handoff, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
 - For final publication, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is public, has current notes, targets the intended commit, and has the expected installer assets.
-- The successful final `release.yml` run used `publish_release=true`, including a successful `upload-stable-links` job.
+- The successful final `release.yml` run used `publish_release=true`, including a successful `promote-existing-draft` job for draft reuse or `upload-stable-links` job for a full rebuild.
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 
 If a draft was published before notes were written, immediately edit the public release body with `gh release edit`; do not leave a release with only generated notes.
