@@ -14,8 +14,8 @@ const siteUrl =
   "https://777genius.github.io/agent-teams-ai";
 const githubRepo = process.env.NUXT_PUBLIC_GITHUB_REPO || "777genius/agent-teams-ai";
 const githubReleasesUrl = `https://github.com/${githubRepo}/releases`;
-const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "qyeNuDjFqoDALK8eB02jMTOWUz006BdIhiqiAip3U00x7I";
-const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || muxPlaybackId;
+const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "XTe00IekIDsI01CCJvnxaUgsDAFcDVGmniUJAHSrFsd6I";
+const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || "qyeNuDjFqoDALK8eB02jMTOWUz006BdIhiqiAip3U00x7I";
 const docsSiteUrl =
   process.env.AGENT_TEAMS_DOCS_SITE_URL || process.env.NUXT_PUBLIC_DOCS_SITE_URL || "";
 
