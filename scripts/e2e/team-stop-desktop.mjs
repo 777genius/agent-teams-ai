@@ -1143,7 +1143,9 @@ async function run() {
     };
     const freshList = async (mode) => {
       await reloadFixture(mode);
+      await cdp.waitFor("!document.getElementById('splash')", 'reload splash dismissed', 60_000);
       await openList();
+      await cdp.waitFor(visible(listStop(fixture.teamName)), 'rehydrated Team List Stop control');
     };
     const freshDetails = async (mode) => {
       await freshList(mode);

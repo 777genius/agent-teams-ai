@@ -33,7 +33,7 @@ overrides:
   '@tiptap/react>@tiptap/extension-bubble-menu': '3.30.5'
   '@tiptap/react>@tiptap/extension-floating-menu': '3.30.5'
   '@xmldom/xmldom': '0.8.15'
-  'axios': '1.18.1'
+  'axios': '1.20.0'
   'body-parser': '2.3.0'
   'browserslist': '4.28.8'
   'brace-expansion@1': '5.0.12'

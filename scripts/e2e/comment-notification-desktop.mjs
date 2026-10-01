@@ -536,6 +536,20 @@ try {
   assert(
     evidence.blockedRuntimeCalls.every(
       (args) =>
+        JSON.stringify(args) ===
+          JSON.stringify([
+            'runtime',
+            'providers',
+            'directory',
+            '--runtime',
+            'opencode',
+            '--json',
+            '--summary',
+            '--filter',
+            'all',
+            '--limit',
+            '100',
+          ]) ||
         (args[0] === 'runtime' &&
           (args[1] === 'opencode-command' ||
             (args[1] === 'status' && args.includes('--summary')))) ||

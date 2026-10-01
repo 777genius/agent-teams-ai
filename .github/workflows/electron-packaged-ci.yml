@@ -11,6 +11,7 @@ on:
       - 'scripts/ensure-electron-install.cjs'
       - 'scripts/prepare-cpu-features-rebuild.cjs'
       - 'scripts/postinstall-electron.cjs'
+      - 'src/main/ipc/window.ts'
 
 permissions:
   contents: read
