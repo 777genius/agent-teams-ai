@@ -6,7 +6,7 @@
     "node": ">=24.15.0 <25 || >=26 <27"
   },
   "scripts": {
-    "postinstall": "node ./scripts/patch-minimatch-brace-expansion.mjs",
+    "postinstall": "node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/node-forge-security.mjs --apply",
     "test:postinstall": "node --test ./scripts/patch-minimatch-brace-expansion.test.mjs",
     "dev": "nuxt dev",
     "build": "node ../scripts/announcements/generate.mjs && nuxt build",
@@ -70,6 +70,7 @@
     "svgo": "4.1.0",
     "tar": "7.5.22",
     "axios": "1.18.1",
-    "nanoid@3": "3.3.18"
+    "nanoid@3": "3.3.18",
+    "devalue": "5.9.4"
   }
 }

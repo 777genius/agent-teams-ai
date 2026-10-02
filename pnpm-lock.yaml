@@ -94,6 +94,7 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
   brace-expansion@5.0.12: 3ae36edc21bd38f2596d0a98e3d223dc194dd5a639b7cba945ba690dfff4e8a3
   fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
+  node-forge@1.4.0: 7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c
 
 importers:
 
@@ -20388,7 +20389,7 @@ snapshots:
       http-shutdown: 1.2.2
       jiti: 2.7.0
       mlly: 1.8.2
-      node-forge: 1.4.0
+      node-forge: 1.4.0(patch_hash=7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c)
       pathe: 2.0.3
       std-env: 4.1.0
       tinyclip: 0.1.12
@@ -21268,7 +21269,7 @@ snapshots:
     optionalDependencies:
       encoding: 0.1.13
 
-  node-forge@1.4.0: {}
+  node-forge@1.4.0(patch_hash=7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c): {}
 
   node-gyp-build@4.8.4: {}
 
