@@ -930,11 +930,25 @@ export default interface Resources {
       "replaceAll": "(replace all)"
     },
     "updateDialog": {
+      "checking": "Checking for updates",
       "closeDialog": "Close dialog",
       "download": "Download",
+      "errorDetails": "Technical details",
+      "errorTitle": "Update could not be completed",
+      "keepData": "Keep your app data and project folders. You do not need to uninstall the app or delete any data.",
       "later": "Later",
+      "manualDownload": "Download from website",
+      "manualMac": "Download the latest macOS installer from our website. Quit Agent Teams, open the downloaded DMG, and drag Agent Teams into Applications. Replace the existing app, then open it again.",
+      "manualOther": "Download the latest installer for your operating system from our website. Quit Agent Teams, install the update, then open the app again.",
       "noReleaseNotes": "No release notes available.",
+      "openLinkFailed": "Could not open your browser. Open this address manually:",
+      "recovery": {
+        "generic": "The automatic update failed. You can install the latest version manually from our official website.",
+        "network": "The update failed because of a connection or temporary server problem. Check your connection and try again, or install the latest version manually.",
+        "signature": "The automatic update could not verify the app signature. Install the latest version manually from our official website."
+      },
       "restartNow": "Restart now",
+      "retry": "Try again",
       "updateAvailable": "Update available",
       "updateReady": "Update Ready",
       "viewOnGitHub": "View on GitHub"
@@ -945,6 +959,7 @@ export default interface Resources {
       "restartNow": "Restart now",
       "restartToUpdate": "Restart to update",
       "updateApp": "Update app",
+      "updateFailed": "Update failed",
       "updateReady": "Update ready",
       "updatingApp": "Updating app"
     },

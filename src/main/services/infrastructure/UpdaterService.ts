@@ -17,6 +17,7 @@ import {
   formatUpdaterReleaseNotes,
   getUpdaterReleaseNoteForVersion,
 } from '@shared/utils/releaseNotes';
+import { classifyUpdaterFailure } from '@shared/utils/updaterRecovery';
 import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { app, net } from 'electron';
 import electronUpdater from 'electron-updater';
@@ -92,10 +93,17 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+interface UpdaterOperationContext {
+  operation: NonNullable<UpdaterStatus['operation']>;
+  reportedError: string | null;
+}
+
 export class UpdaterService {
   private mainWindow: BrowserWindow | null = null;
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
   private downloadedVersion: string | null = null;
+  private activeOperation: UpdaterOperationContext | null = null;
+  private lastOperation: UpdaterOperationContext | null = null;
   private beforeQuitAndInstall: (() => Promise<void>) | null = null;
 
   constructor() {
@@ -121,15 +129,18 @@ export class UpdaterService {
    * Check for available updates.
    */
   async checkForUpdates(): Promise<void> {
-    if (shouldSkipDevUpdateCheck()) {
+    if (shouldSkipDevUpdateCheck() || this.activeOperation) {
       return;
     }
 
+    const context = this.beginOperation('check');
     try {
       await autoUpdater.checkForUpdates();
     } catch (error) {
       logger.error('Check for updates failed:', getErrorMessage(error));
-      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
+      this.reportError(error, context);
+    } finally {
+      this.finishOperation(context);
     }
   }
 
@@ -137,11 +148,14 @@ export class UpdaterService {
    * Download the available update.
    */
   async downloadUpdate(): Promise<void> {
+    const context = this.beginOperation('download');
     try {
       await autoUpdater.downloadUpdate();
     } catch (error) {
       logger.error('Download update failed:', getErrorMessage(error));
-      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
+      this.reportError(error, context);
+    } finally {
+      this.finishOperation(context);
     }
   }
 
@@ -151,19 +165,25 @@ export class UpdaterService {
    * isForceRunAfter=true launches the app after install. Other platforms ignore these.
    */
   async quitAndInstall(): Promise<void> {
+    const context = this.beginOperation('install');
     if (!this.downloadedVersion || !this.isNewerThanCurrent(this.downloadedVersion)) {
       logger.warn(
         `Refusing to install non-newer update. current=${app.getVersion()} downloaded=${this.downloadedVersion ?? 'unknown'}`
       );
-      this.sendStatus({
-        type: 'error',
-        error: 'Refused to install a non-newer app version.',
-      });
+      this.reportError(new Error('Refused to install a non-newer app version.'), context);
+      this.finishOperation(context);
       return;
     }
 
-    await this.beforeQuitAndInstall?.();
-    autoUpdater.quitAndInstall(true, true);
+    try {
+      await this.beforeQuitAndInstall?.();
+      // Installation can report a native error after this void call returns.
+      autoUpdater.quitAndInstall(true, true);
+    } catch (error) {
+      logger.error('Install update failed:', getErrorMessage(error));
+      this.reportError(error, context);
+      this.finishOperation(context);
+    }
   }
 
   /**
@@ -185,6 +205,28 @@ export class UpdaterService {
       clearInterval(this.periodicTimer);
       this.periodicTimer = null;
     }
+  }
+
+  private beginOperation(operation: UpdaterOperationContext['operation']): UpdaterOperationContext {
+    const context = { operation, reportedError: null };
+    this.activeOperation = context;
+    this.lastOperation = context;
+    return context;
+  }
+
+  private finishOperation(context: UpdaterOperationContext): void {
+    if (this.activeOperation === context) this.activeOperation = null;
+  }
+
+  private reportError(error: unknown, context: UpdaterOperationContext): void {
+    const message = getErrorMessage(error);
+    if (context.reportedError === message) return;
+    context.reportedError = message;
+    if (context.operation !== 'check' || classifyUpdaterFailure(message) === 'signature') {
+      this.downloadedVersion = null;
+    }
+    this.sendStatus({ type: 'error', operation: context.operation, error: message });
+    if (context.operation === 'install') this.finishOperation(context);
   }
 
   private sendStatus(status: UpdaterStatus): void {
@@ -293,7 +335,7 @@ export class UpdaterService {
   private bindEvents(): void {
     autoUpdater.on('checking-for-update', () => {
       logger.info('Checking for update...');
-      this.sendStatus({ type: 'checking' });
+      this.sendStatus({ type: 'checking', operation: 'check' });
     });
 
     autoUpdater.on('update-available', (info) => {
@@ -335,10 +377,9 @@ export class UpdaterService {
 
     autoUpdater.on('error', (error) => {
       logger.error('Updater error:', getErrorMessage(error));
-      this.sendStatus({
-        type: 'error',
-        error: getErrorMessage(error),
-      });
+      const context = this.activeOperation ??
+        this.lastOperation ?? { operation: 'check', reportedError: null };
+      this.reportError(error, context);
     });
   }
 }

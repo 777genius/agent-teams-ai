@@ -43,10 +43,10 @@ export const AdvancedSection = ({
     }))
   );
 
-  // Auto-revert "not-available" / "error" status back to idle after a brief display
+  // Auto-revert a successful check with no update after a brief display.
   const revertTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    if (updateStatus === 'not-available' || updateStatus === 'error') {
+    if (updateStatus === 'not-available') {
       revertTimerRef.current = setTimeout(() => {
         useStore.setState({ updateStatus: 'idle' });
       }, 3000);

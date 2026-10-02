@@ -351,6 +351,8 @@ export interface ClaudeMdFileInfo {
  * Status payload sent from the main process updater to the renderer.
  */
 export interface UpdaterStatus {
+  /** The operation that produced this status, including background checks. */
+  operation?: 'check' | 'download' | 'install';
   type: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
   version?: string;
   releaseNotes?: string;

@@ -55,6 +55,7 @@ async function handleCheck(_event: IpcMainInvokeEvent): Promise<void> {
     await updaterService.checkForUpdates();
   } catch (error) {
     logger.error('Error in updater:check:', getErrorMessage(error));
+    throw error;
   }
 }
 
@@ -63,6 +64,7 @@ async function handleDownload(_event: IpcMainInvokeEvent): Promise<void> {
     await updaterService.downloadUpdate();
   } catch (error) {
     logger.error('Error in updater:download:', getErrorMessage(error));
+    throw error;
   }
 }
 
@@ -71,5 +73,6 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<void> {
     await updaterService.quitAndInstall();
   } catch (error) {
     logger.error('Error in updater:install:', getErrorMessage(error));
+    throw error;
   }
 }
