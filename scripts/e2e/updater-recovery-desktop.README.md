@@ -33,6 +33,11 @@ both checking and downloading. A pending main IPC response makes immediate
 error/progress reset observable. Unrelated periodic checking followed by a
 no-update or same-version result must preserve recovery.
 
+Each renderer reload waits for the actual `#splash` removal and an unobscured
+app frame. Recovery buttons must pass viewport hit testing, and normal screenshots
+wait for two animation frames after those assertions. A failure screenshot may
+intentionally show a blocking startup overlay for diagnosis.
+
 By default, `navigator.platform` is set to `MacIntel` only in the renderer to
 verify macOS manual installation instructions on Linux CI. This is a UI fixture,
 not proof of a native macOS installer. Pass `--renderer-platform Linux` to cover

@@ -172,7 +172,16 @@ async function mainRequest(route, body) {
 const inspect = (expression) => cdp.inspect(expression);
 const waitUi = (expression, label) => waitFor(() => inspect(expression), label);
 const dialog = 'document.querySelector("[data-testid=update-dialog]")';
-const visible = (selector) => `(() => { const e=document.querySelector(${JSON.stringify(selector)}); const r=e?.getBoundingClientRect(); return Boolean(r?.width && r?.height && !e.disabled); })()`;
+const visible = (selector) => `(() => {
+  if (document.getElementById('splash')) return false;
+  const e=document.querySelector(${JSON.stringify(selector)});
+  const r=e?.getBoundingClientRect();
+  if (!r?.width || !r?.height || e.disabled) return false;
+  const style=getComputedStyle(e);
+  if (style.visibility !== 'visible' || style.display === 'none' || Number(style.opacity) === 0) return false;
+  const top=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+  return Boolean(top && e.contains(top));
+})()`;
 
 async function send(status) {
   const receivedBefore = await inspect('window.__updaterE2EReceived.length');
@@ -183,11 +192,20 @@ async function send(status) {
   );
 }
 async function screenshot(name) {
+  if (name !== 'failure') {
+    assert.equal(await inspect('Boolean(document.getElementById("splash"))'), false, `${name}: startup splash obscures screenshot`);
+    if (await inspect('Boolean(document.querySelector("[data-testid=update-error]"))')) {
+      await waitUi(visible('[data-testid=update-manual-download]'), `${name}: recovery is unobscured before screenshot`);
+    }
+    // Wait for two painted frames after the asserted state, not a fixed delay.
+    await inspect('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  }
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
   await writeFile(path.join(output, `${name}.png`), Buffer.from(screenshot.data, 'base64'));
 }
 async function snapshot(name) {
-  const ui = await inspect(`({ text: (${dialog})?.innerText ?? '', body: document.body.innerText, received: window.__updaterE2EReceived, overflow: document.documentElement.scrollWidth > innerWidth, dialogs: document.querySelectorAll('[role=dialog]').length })`);
+  const ui = await inspect(`({ text: (${dialog})?.innerText ?? '', body: document.body.innerText, received: window.__updaterE2EReceived, splashPresent: Boolean(document.getElementById('splash')), overflow: document.documentElement.scrollWidth > innerWidth, dialogs: document.querySelectorAll('[role=dialog]').length })`);
+  assert.equal(ui.splashPresent, false, `${name}: startup splash remains over rendered UI`);
   assert.equal(ui.overflow, false, `${name}: horizontal viewport overflow`);
   evidence.checks.push({ name, ui, main: await mainRequest('/state') });
   await screenshot(name);
@@ -197,6 +215,10 @@ async function freshRenderer() {
   await waitUi('Boolean(window.electronAPI?.updater?.onStatus && document.body && document.querySelector("#root")?.childElementCount)', 'real preload and rendered app');
   const startup = await waitUi('window.electronAPI.startup.getStatus().then(s => (s.ready || s.error || s.phase === "failed") && s)', 'app startup');
   assert(startup.ready && !startup.error, `Sandbox startup failed: ${JSON.stringify(startup)}`);
+  // Main readiness precedes App.tsx's animated splash dismissal. DOM content
+  // behind that overlay does not prove the recovery is visible to the user.
+  await waitUi('!document.getElementById("splash")', 'frontend startup splash removed');
+  await waitUi(visible('[aria-label="More actions"]'), 'frontend app frame rendered and unobscured');
   await inspect(`(() => { window.__updaterE2EReceived=[]; window.electronAPI.updater.onStatus((_event,status)=>window.__updaterE2EReceived.push(status)); })()`);
   await waitUi('!document.querySelector("[data-testid=update-manual-download]")', 'fresh update state');
 }
