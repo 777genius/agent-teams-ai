@@ -1,3 +1,11 @@
+import {
+  classifyNativeVersion,
+  isLegacyOpenCodeVersionSupported,
+  MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
+} from '@features/opencode-compatibility';
+
+export { MINIMUM_AGENT_TEAMS_OPENCODE_VERSION } from '@features/opencode-compatibility';
+
 /**
  * Extract semver-like version from strings such as "v1.2.3" or "1.2.3 (beta)".
  */
@@ -32,13 +40,6 @@ export function isVersionOlder(installed: string, latest: string): boolean {
   return compareVersions(installed, latest) < 0;
 }
 
-/**
- * OpenCode 1.16 introduced the session storage schema used by the current
- * Agent Teams integration. Older binaries can read parts of a newer profile
- * and then fail writes, which makes catalogs appear transiently available.
- */
-export const MINIMUM_AGENT_TEAMS_OPENCODE_VERSION = '1.16.0';
-
 /** Minimum reported by OpenCode for its built-in free-tier model routes. */
 export const MINIMUM_OPENCODE_FREE_TIER_VERSION = '1.18.0';
 
@@ -51,16 +52,26 @@ export function isOpenCodeFreeTierVersionOutdated(version: string | null | undef
 }
 
 export function isAgentTeamsOpenCodeVersionSupported(version: string | null | undefined): boolean {
-  if (!version || !/\d{1,10}\.\d{1,10}\.\d{1,10}/.test(version)) {
-    return false;
-  }
-  return !isVersionOlder(version, MINIMUM_AGENT_TEAMS_OPENCODE_VERSION);
+  return isLegacyOpenCodeVersionSupported(version);
 }
 
 export function getUnsupportedAgentTeamsOpenCodeVersionMessage(
   version: string | null | undefined
 ): string {
   const detected = version?.trim() || 'unknown';
+  const classification = classifyNativeVersion(detected);
+  if (classification.kind === 'recognized' && classification.generation === 'v2') {
+    return `OpenCode ${detected} is not yet qualified for team launch. Select OpenCode V1 until V2 runtime compatibility is verified.`;
+  }
+  if (classification.kind === 'blocked' && classification.reason !== 'too_old') {
+    const reason =
+      classification.reason === 'invalid'
+        ? 'has an invalid version'
+        : classification.reason === 'prerelease'
+          ? 'is a prerelease'
+          : 'has an unsupported native generation';
+    return `OpenCode ${detected} ${reason}. Select a supported stable OpenCode V1 version before loading providers, models, or launching teammates.`;
+  }
   return (
     `OpenCode ${detected} is below the supported minimum ` +
     `${MINIMUM_AGENT_TEAMS_OPENCODE_VERSION}. Update OpenCode before loading providers, ` +
