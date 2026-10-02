@@ -148,6 +148,47 @@ describe('current public OpenCode policy consumers', () => {
     }
   );
 
+  // Actual independently measured native --version stdout, not normalized DTO versions.
+  it.each(['2.0.0', '2.0.21'])('recognizes native CLI output for %s without launching V2', (version) => {
+    const stdout = `opencode v${version}\n`;
+    expect(classifyNativeVersion(stdout)).toEqual({
+      kind: 'recognized',
+      generation: 'v2',
+      apiDialect: `v2-${version}`,
+      version,
+      productionEligible: false,
+    });
+    let reads = 0;
+    const decision = evaluateOpenCodeSupport({
+      version: stdout,
+      get capabilities(): OpenCodeApiCapabilities {
+        reads++;
+        throw new Error('V1 evidence cannot qualify native V2');
+      },
+    });
+    expect(decision.supported).toBe(false);
+    expect(decision.supportLevel).toBe('supported_capabilities_pending');
+    expect(decision.semver).toEqual({ major: 2, minor: 0, patch: Number(version.split('.')[2]), prerelease: [] });
+    expect(reads).toBe(0);
+    expect(isAgentTeamsOpenCodeVersionSupported(stdout)).toBe(false);
+    expect(negotiateOpenCodeProtocol({ version: stdout }).kind).toBe('blocked');
+    expect(getUnsupportedAgentTeamsOpenCodeVersionMessage(stdout)).toContain('not yet qualified');
+  });
+
+  it.each([
+    'opencode v1.18.34',
+    'OpenCode v2.0.0',
+    'diagnostic: opencode v2.0.0',
+    'opencode v2.0.0\n2.0.21',
+    '\u001b[32mopencode v2.0.0\u001b[0m',
+    'opencode v2.0.0+build.7',
+    'opencode v2.0.0-beta.1',
+    'opencode v2.0.22',
+  ])('keeps unqualified CLI text %s blocked', (stdout) => {
+    expect(classifyNativeVersion(stdout).kind).toBe('blocked');
+    expect(isAgentTeamsOpenCodeVersionSupported(stdout)).toBe(false);
+  });
+
   it('keeps generic version helpers permissive for other products', () => {
     expect(normalizeVersion('2.1.34 (Claude Code)\n')).toBe('2.1.34');
     expect(compareVersions('v3.0.0 (Other)', '2.1.0')).toBe(1);
