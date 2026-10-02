@@ -6,7 +6,7 @@
     "node": ">=24.15.0 <25 || >=26 <27"
   },
   "scripts": {
-    "postinstall": "node ./scripts/patch-minimatch-brace-expansion.mjs",
+    "postinstall": "node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/node-forge-security.mjs --apply",
     "test:postinstall": "node --test ./scripts/patch-minimatch-brace-expansion.test.mjs",
     "dev": "nuxt dev",
     "build": "node ../scripts/announcements/generate.mjs && nuxt build",

@@ -7,6 +7,7 @@ const config = useRuntimeConfig();
 const muxAccentColor = '#00f0ff';
 const muxPrimaryColor = '#e6fbff';
 const muxSecondaryColor = '#020617';
+const muxThumbnailTime = '2.5';
 
 const muxPlaybackId = computed(() => String(config.public.muxPlaybackId || '').trim());
 const videoTitle = computed(() => t('hero.demoVideoTitle'));
@@ -18,6 +19,7 @@ const muxPlayerUrl = computed(() => {
   url.searchParams.set('accent-color', muxAccentColor);
   url.searchParams.set('primary-color', muxPrimaryColor);
   url.searchParams.set('secondary-color', muxSecondaryColor);
+  url.searchParams.set('thumbnail-time', muxThumbnailTime);
   url.searchParams.set('metadata-video-id', 'agent-teams-demo');
   url.searchParams.set('metadata-video-title', muxVideoTitle.value);
   url.searchParams.set('metadata-player-name', 'Landing hero');
@@ -31,7 +33,7 @@ const muxPosterUrl = computed(() => {
   const url = new URL(
     `https://image.mux.com/${encodeURIComponent(muxPlaybackId.value)}/thumbnail.webp`,
   );
-  url.searchParams.set('time', '0.1');
+  url.searchParams.set('time', muxThumbnailTime);
   url.searchParams.set('width', '900');
   url.searchParams.set('fit_mode', 'preserve');
   return url.toString();

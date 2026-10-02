@@ -3,9 +3,27 @@ name: Deploy Landing to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
+    paths:
+      - landing/**
+      - scripts/announcements/**
+      - scripts/ci/node-forge-security*
+      - scripts/ci/audit-dependencies.mjs
+      - patches/node-forge@1.4.0.patch
+      - pnpm-workspace.yaml
+      - package.json
+      - pnpm-lock.yaml
+      - .github/workflows/landing.yml
   pull_request:
-    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
+    paths:
+      - landing/**
+      - scripts/announcements/**
+      - scripts/ci/node-forge-security*
+      - scripts/ci/audit-dependencies.mjs
+      - patches/node-forge@1.4.0.patch
+      - pnpm-workspace.yaml
+      - package.json
+      - pnpm-lock.yaml
+      - .github/workflows/landing.yml
   workflow_dispatch:
 
 permissions:
@@ -45,7 +63,7 @@ jobs:
 
       - name: Audit dependencies
         working-directory: landing
-        run: npm audit --audit-level high
+        run: node ../scripts/ci/audit-dependencies.mjs --npm
 
       - name: Generate static site
         working-directory: landing
