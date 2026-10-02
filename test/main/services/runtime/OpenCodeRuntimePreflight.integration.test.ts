@@ -130,7 +130,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
       [
         '#!/bin/sh',
         'if [ "$1" = "--version" ]; then',
-        '  echo "opencode 9.9.9"',
+        '  echo "1.18.34"',
         '  exit 0',
         'fi',
         'echo "unexpected opencode args: $*" >&2',
@@ -167,10 +167,9 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
     process.env.FAKE_OPENCODE_BIN_DIR = binDir;
     await writeFile(
       shellPath,
-      [
-        '#!/bin/sh',
-        'printf "%s\\0" "PATH=$FAKE_OPENCODE_BIN_DIR" "HOME=$HOME" "SHELL=$0"',
-      ].join('\n'),
+      ['#!/bin/sh', 'printf "%s\\0" "PATH=$FAKE_OPENCODE_BIN_DIR" "HOME=$HOME" "SHELL=$0"'].join(
+        '\n'
+      ),
       'utf8'
     );
     await chmod(shellPath, 0o755);
@@ -229,7 +228,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
       timeout: 2_000,
       windowsHide: true,
     });
-    expect(version.stdout.trim()).toBe('opencode 9.9.9');
+    expect(version.stdout.trim()).toBe('1.18.34');
   });
 
   it('resolves the Agent Teams MCP command to shell Node when GUI PATH is empty', async () => {
