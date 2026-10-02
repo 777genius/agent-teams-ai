@@ -119,7 +119,7 @@ test('missing additional npm or pnpm instance cannot be silently ignored', () =>
   try {
     const installed = join(sandbox, 'node_modules/node-forge');
     mkdirSync(installed, { recursive: true });
-    assert.deepEqual(installedForgePackages(sandbox), [realpathSync(installed)]);
+    assert.deepEqual(installedForgePackages(sandbox, { npm: true }), [realpathSync(installed)]);
     writeFileSync(
       join(sandbox, 'package-lock.json'),
       JSON.stringify({
@@ -129,11 +129,56 @@ test('missing additional npm or pnpm instance cannot be silently ignored', () =>
         },
       })
     );
-    assert.throws(() => installedForgePackages(sandbox), /Missing installed node-forge package/);
+    assert.throws(
+      () => installedForgePackages(sandbox, { npm: true }),
+      /Missing installed node-forge package/
+    );
     rmSync(join(sandbox, 'package-lock.json'));
     mkdirSync(join(sandbox, 'node_modules/.pnpm/node-forge@1.3.1'), { recursive: true });
-    assert.throws(() => installedForgePackages(sandbox), /Missing installed node-forge package/);
+    assert.throws(
+      () => installedForgePackages(sandbox, { npm: false }),
+      /Missing installed node-forge package/
+    );
   } finally {
+    rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('landing pnpm lifecycle discovers workspace store; npm mode still verifies landing paths', () => {
+  const sandbox = mkdtempSync(join(tmpdir(), 'node-forge-workspace-'));
+  const previousUserAgent = process.env.npm_config_user_agent;
+  try {
+    const landing = join(sandbox, 'landing');
+    const installed = join(sandbox, 'node_modules/.pnpm/node-forge@1.4.0/node_modules/node-forge');
+    mkdirSync(installed, { recursive: true });
+    mkdirSync(landing);
+    writeFileSync(join(sandbox, 'pnpm-workspace.yaml'), 'packages:\n  - landing\n');
+    writeFileSync(join(sandbox, 'node_modules/.modules.yaml'), 'packageManager: pnpm@11.4.0\n');
+    writeFileSync(
+      join(landing, 'package-lock.json'),
+      JSON.stringify({
+        packages: {
+          'node_modules/node-forge': { version: '1.4.0' },
+        },
+      })
+    );
+    process.env.npm_config_user_agent = 'pnpm/11.4.0';
+    assert.deepEqual(installedForgePackages(landing), [realpathSync(installed)]);
+    delete process.env.npm_config_user_agent;
+    assert.deepEqual(installedForgePackages(landing), [realpathSync(installed)]);
+    assert.throws(
+      () => installedForgePackages(landing, { npm: true }),
+      /Missing installed node-forge package/
+    );
+    process.env.npm_config_user_agent = 'npm/11.4.0';
+    assert.throws(() => installedForgePackages(landing), /Missing installed node-forge package/);
+    const npmInstalled = join(landing, 'node_modules/node-forge');
+    mkdirSync(npmInstalled, { recursive: true });
+    assert.deepEqual(installedForgePackages(landing, { npm: true }), [realpathSync(npmInstalled)]);
+    assert.deepEqual(installedForgePackages(landing, { npm: false }), [realpathSync(installed)]);
+  } finally {
+    if (previousUserAgent === undefined) delete process.env.npm_config_user_agent;
+    else process.env.npm_config_user_agent = previousUserAgent;
     rmSync(sandbox, { recursive: true, force: true });
   }
 });
@@ -149,53 +194,44 @@ if (!packageRoot) {
 
 // Runs against the real npm package in a disposable copy, never modifies the installed store.
 // CI installs node-forge; source-only checkouts can supply NODE_FORGE_TEST_PACKAGE.
-test(
-  'real RSA regression: baseline accepts forgery, backport rejects it and accepts valid signatures',
-  {
-    skip:
-      !packageRoot &&
-      !process.env.CI &&
-      'Install dependencies or set NODE_FORGE_TEST_PACKAGE to the node-forge 1.4.0 package',
-  },
-  () => {
-    assert.ok(packageRoot, 'CI must install node-forge or provide NODE_FORGE_TEST_PACKAGE');
-    const sandbox = mkdtempSync(join(tmpdir(), 'node-forge-security-'));
-    const target = join(sandbox, 'node_modules/node-forge');
-    try {
-      cpSync(packageRoot, target, { recursive: true });
-      const rsa = join(target, 'lib/rsa.js');
-      const source = readFileSync(rsa, 'utf8');
-      // Reconstruct the exact published baseline if CI installed the backport already.
-      writeFileSync(
-        rsa,
-        source
-          .replace(
-            '          // validate DigestInfo structure and element counts (outer DigestInfo\n' +
-              '          // and nested DigestAlgorithm). asn1.validate ignores extra children,\n' +
-              '          // so length must be checked explicitly at each nesting level to\n' +
-              '          // prevent low-exponent PKCS#1 v1.5 signature forgery (CVE-2026-85393).\n',
-            '          // validate DigestInfo structure and element count\n'
-          )
-          .replace(
-            "obj.value.length !== 2 ||\n            obj.value[0].value.length !==\n              (('parameters' in capture) ? 2 : 1)) {",
-            'obj.value.length !== 2) {'
-          )
-      );
-      assert.throws(() => verifyRsaBehavior(target), /accepted the forged/);
-      assert.throws(() => verifyForgePackage(target), /Missing or unexpected/);
-      assert.equal(applyForgePatch(target), true);
-      verifyForgePackage(target);
-      assert.equal(applyForgePatch(target), false);
-      writeFileSync(rsa, readFileSync(rsa, 'utf8') + '\n// unexpected source mutation\n');
-      assert.throws(() => applyForgePatch(target), /Unexpected node-forge source/);
-      assert.throws(() => verifyForgePackage(target), /Missing or unexpected/);
-      const manifest = join(target, 'package.json');
-      const metadata = JSON.parse(readFileSync(manifest, 'utf8'));
-      writeFileSync(manifest, JSON.stringify({ ...metadata, version: '1.3.1' }));
-      assert.throws(() => applyForgePatch(target), /Unsupported node-forge package/);
-      assert.throws(() => verifyForgePackage(target), /Unsupported node-forge package/);
-    } finally {
-      rmSync(sandbox, { recursive: true, force: true });
-    }
+test('real RSA regression: baseline accepts forgery, backport rejects it and accepts valid signatures', () => {
+  assert.ok(packageRoot, 'CI must install node-forge or provide NODE_FORGE_TEST_PACKAGE');
+  const sandbox = mkdtempSync(join(tmpdir(), 'node-forge-security-'));
+  const target = join(sandbox, 'node_modules/node-forge');
+  try {
+    cpSync(packageRoot, target, { recursive: true });
+    const rsa = join(target, 'lib/rsa.js');
+    const source = readFileSync(rsa, 'utf8');
+    // Reconstruct the exact published baseline if CI installed the backport already.
+    writeFileSync(
+      rsa,
+      source
+        .replace(
+          '          // validate DigestInfo structure and element counts (outer DigestInfo\n' +
+            '          // and nested DigestAlgorithm). asn1.validate ignores extra children,\n' +
+            '          // so length must be checked explicitly at each nesting level to\n' +
+            '          // prevent low-exponent PKCS#1 v1.5 signature forgery (CVE-2026-85393).\n',
+          '          // validate DigestInfo structure and element count\n'
+        )
+        .replace(
+          "obj.value.length !== 2 ||\n            obj.value[0].value.length !==\n              (('parameters' in capture) ? 2 : 1)) {",
+          'obj.value.length !== 2) {'
+        )
+    );
+    assert.throws(() => verifyRsaBehavior(target), /accepted the forged/);
+    assert.throws(() => verifyForgePackage(target), /Missing or unexpected/);
+    assert.equal(applyForgePatch(target), true);
+    verifyForgePackage(target);
+    assert.equal(applyForgePatch(target), false);
+    writeFileSync(rsa, readFileSync(rsa, 'utf8') + '\n// unexpected source mutation\n');
+    assert.throws(() => applyForgePatch(target), /Unexpected node-forge source/);
+    assert.throws(() => verifyForgePackage(target), /Missing or unexpected/);
+    const manifest = join(target, 'package.json');
+    const metadata = JSON.parse(readFileSync(manifest, 'utf8'));
+    writeFileSync(manifest, JSON.stringify({ ...metadata, version: '1.3.1' }));
+    assert.throws(() => applyForgePatch(target), /Unsupported node-forge package/);
+    assert.throws(() => verifyForgePackage(target), /Unsupported node-forge package/);
+  } finally {
+    rmSync(sandbox, { recursive: true, force: true });
   }
-);
+});

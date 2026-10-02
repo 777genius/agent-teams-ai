@@ -119,7 +119,7 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     throw new Error('Audit exit status disagrees with vulnerability report');
   let patched = false;
   if (original.blocked.length > 0) {
-    const targets = installedForgePackages(cwd);
+    const targets = installedForgePackages(cwd, { npm });
     for (const target of targets) verifyForgePackage(target);
     // npm may report nested copies beyond the hoisted package.
     if (npm) {

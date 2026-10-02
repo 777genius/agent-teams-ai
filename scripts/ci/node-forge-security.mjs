@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -110,22 +110,42 @@ export function applyForgePatch(packageRoot) {
   return true;
 }
 
-export function installedForgePackages(cwd) {
+function nearestPnpmWorkspace(cwd) {
+  let current = resolve(cwd);
+  while (!existsSync(join(current, 'pnpm-workspace.yaml'))) {
+    const parent = dirname(current);
+    if (parent === current) return resolve(cwd);
+    current = parent;
+  }
+  return current;
+}
+
+export function installedForgePackages(cwd, { npm } = {}) {
+  const userAgent = process.env.npm_config_user_agent ?? '';
+  const workspace =
+    npm === true || (npm === undefined && userAgent.startsWith('npm/'))
+      ? resolve(cwd)
+      : nearestPnpmWorkspace(cwd);
+  const pnpm =
+    npm === undefined
+      ? userAgent.startsWith('pnpm/') ||
+        (!userAgent.startsWith('npm/') && existsSync(join(workspace, 'node_modules/.modules.yaml')))
+      : !npm;
   const targets = new Set();
   const add = (candidate, required = false) => {
     if (existsSync(candidate)) targets.add(realpathSync(candidate));
     else if (required) throw new Error(`Missing installed node-forge package at ${candidate}`);
   };
-  add(join(cwd, 'node_modules/node-forge'));
+  add(join(pnpm ? workspace : cwd, 'node_modules/node-forge'));
   // pnpm's transitive packages are not necessarily resolvable from the workspace root.
-  for (const store of [join(cwd, 'node_modules/.pnpm'), join(cwd, 'node_modules/.store')]) {
-    if (!existsSync(store)) continue;
+  const store = join(pnpm ? workspace : cwd, pnpm ? 'node_modules/.pnpm' : 'node_modules/.store');
+  if (existsSync(store)) {
     for (const entry of readdirSync(store)) {
       if (entry.startsWith('node-forge@')) add(join(store, entry, 'node_modules/node-forge'), true);
     }
   }
   const lock = join(cwd, 'package-lock.json');
-  if (existsSync(lock)) {
+  if (!pnpm && existsSync(lock)) {
     for (const path of Object.keys(JSON.parse(readFileSync(lock, 'utf8')).packages ?? {})) {
       if (path.endsWith('node_modules/node-forge')) add(join(cwd, path), true);
     }
