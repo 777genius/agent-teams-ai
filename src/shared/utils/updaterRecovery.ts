@@ -12,21 +12,22 @@ export function classifyUpdaterFailure(error: string): UpdaterFailureKind {
     return 'signature';
   }
 
+  // A specific HTTP response takes precedence over generic network wording.
+  const httpStatus = /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*(\d{3})\b/i;
+  const separatedHttpStatus =
+    /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*[:=]\s*(\d{3})\b/i;
+  const leadingHttpStatus = /^(\d{3}) [a-z]/i;
+  const httpMatch =
+    httpStatus.exec(error) ?? separatedHttpStatus.exec(error) ?? leadingHttpStatus.exec(error);
+  if (httpMatch) {
+    const statusCode = Number(httpMatch[1]);
+    return statusCode === 429 || (statusCode >= 500 && statusCode < 600) ? 'network' : 'generic';
+  }
+
   const networkCode =
     /\b(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|ERR_NETWORK|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_RESET|ERR_CONNECTION_TIMED_OUT)\b/i;
   const networkMessage = /network (?:error|failure)|(?:request|connection) timed out/i;
-  const httpStatus = /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*(?:429|5\d\d)\b/i;
-  const separatedHttpStatus =
-    /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*[:=]\s*(?:429|5\d\d)\b/i;
-  const leadingHttpStatus = /^(?:429|5\d\d) [a-z]/i;
-
-  if (
-    networkCode.test(error) ||
-    networkMessage.test(error) ||
-    httpStatus.test(error) ||
-    separatedHttpStatus.test(error) ||
-    leadingHttpStatus.test(error)
-  ) {
+  if (networkCode.test(error) || networkMessage.test(error)) {
     return 'network';
   }
 
