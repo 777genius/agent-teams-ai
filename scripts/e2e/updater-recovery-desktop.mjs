@@ -24,11 +24,17 @@ if (args.includes('--help')) {
   console.log('Build first, then: node scripts/e2e/updater-recovery-desktop.mjs [--output DIR] [--renderer-platform MacIntel|Linux] [--no-sandbox]');
   process.exit(0);
 }
+const rendererPlatform = option('--renderer-platform', 'MacIntel');
+const rendererPlatformSources = new Map([
+  ['MacIntel', "Object.defineProperty(navigator,'platform',{get:()=> 'MacIntel'}); Object.defineProperty(navigator,'language',{get:()=> 'en-US'}); Object.defineProperty(navigator,'languages',{get:()=> ['en-US']});"],
+  ['Linux', "Object.defineProperty(navigator,'platform',{get:()=> 'Linux'}); Object.defineProperty(navigator,'language',{get:()=> 'en-US'}); Object.defineProperty(navigator,'languages',{get:()=> ['en-US']});"],
+]);
+const rendererPlatformSource = rendererPlatformSources.get(rendererPlatform);
+assert(rendererPlatformSource !== undefined, 'Unsupported --renderer-platform: use MacIntel or Linux');
 const require = createRequire(import.meta.url);
 const mainEntry = path.join(repoRoot, 'dist-electron/main/index.cjs');
 const root = await mkdtemp(path.join(os.tmpdir(), 'updater-recovery-desktop-e2e-'));
 const output = path.resolve(option('--output', path.join(root, 'evidence')));
-const rendererPlatform = option('--renderer-platform', 'MacIntel');
 const token = randomBytes(24).toString('hex');
 const config = {
   root,
@@ -328,7 +334,7 @@ try {
   await cdp.send('Page.enable');
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
-    source: `Object.defineProperty(navigator,'platform',{get:()=>${JSON.stringify(rendererPlatform)}}); Object.defineProperty(navigator,'language',{get:()=> 'en-US'}); Object.defineProperty(navigator,'languages',{get:()=> ['en-US']});`,
+    source: rendererPlatformSource,
   });
   await freshRenderer();
   // Unknown version must still expose a usable recovery path and exact details.

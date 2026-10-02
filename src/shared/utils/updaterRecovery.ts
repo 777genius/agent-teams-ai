@@ -12,10 +12,20 @@ export function classifyUpdaterFailure(error: string): UpdaterFailureKind {
     return 'signature';
   }
 
+  const networkCode =
+    /\b(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|ERR_NETWORK|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_RESET|ERR_CONNECTION_TIMED_OUT)\b/i;
+  const networkMessage = /network (?:error|failure)|(?:request|connection) timed out/i;
+  const httpStatus = /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*(?:429|5\d\d)\b/i;
+  const separatedHttpStatus =
+    /(?:HTTP(?: status)?|status(?: code)?|server returned)\s*[:=]\s*(?:429|5\d\d)\b/i;
+  const leadingHttpStatus = /^(?:429|5\d\d) [a-z]/i;
+
   if (
-    /\b(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|ERR_NETWORK|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_RESET|ERR_CONNECTION_TIMED_OUT)\b|network (?:error|failure)|(?:request|connection) timed out|(?:HTTP(?: status)?|status(?: code)?|server returned)\s*[:=]?\s*(?:429|5\d\d)\b|^(?:429|5\d\d) [A-Za-z]/i.test(
-      error
-    )
+    networkCode.test(error) ||
+    networkMessage.test(error) ||
+    httpStatus.test(error) ||
+    separatedHttpStatus.test(error) ||
+    leadingHttpStatus.test(error)
   ) {
     return 'network';
   }

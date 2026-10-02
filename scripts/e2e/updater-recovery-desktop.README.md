@@ -48,7 +48,9 @@ intentionally show a blocking startup overlay for diagnosis.
 By default, `navigator.platform` is set to `MacIntel` only in the renderer to
 verify macOS manual installation instructions on Linux CI. This is a UI fixture,
 not proof of a native macOS installer. Pass `--renderer-platform Linux` to cover
-the other installation copy. Actual host and fixture platforms are recorded.
+the other installation copy. Only `MacIntel` and `Linux` fixtures are accepted,
+each mapped to a static initialization script; unsupported values fail before
+sandbox creation or Electron launch. Actual host and fixture platforms are recorded.
 
 `evidence.json`, screenshots, and `desktop.log` are written to `--output`.
 The sandbox is retained for diagnosis; the harness stops only its own Electron
