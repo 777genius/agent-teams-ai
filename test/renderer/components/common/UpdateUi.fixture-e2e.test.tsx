@@ -165,8 +165,9 @@ describe('app update UI fixture-e2e', () => {
     );
     await clickButton('updates.restartToUpdate');
     expect(document.body.textContent).toContain('updateDialog.restartNow');
+    const diagnostic = 'ENOSPC: <script>unexpected()</script>';
     await act(async () =>
-      useStore.getState().handleUpdaterStatus({ type: 'error', error: 'ENOSPC' })
+      useStore.getState().handleUpdaterStatus({ type: 'error', error: diagnostic })
     );
     expect(document.body.textContent).not.toContain('updateDialog.restartNow');
     expect(document.body.textContent).not.toContain('updates.restartToUpdate');
@@ -174,7 +175,15 @@ describe('app update UI fixture-e2e', () => {
       'updateDialog.recovery.generic'
     );
     expect(document.querySelector('[data-testid="update-retry"]')).toBeNull();
-    expect(document.querySelector('details pre')?.textContent).toBe('ENOSPC');
+    const detailsToggle = document.querySelector('[data-testid="update-error-details-toggle"]');
+    expect(detailsToggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('[data-testid="update-error-details"] pre')).toBeNull();
+    await clickButton('updateDialog.errorDetails');
+    expect(detailsToggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('[data-testid="update-error-details"] pre')?.textContent).toBe(
+      diagnostic
+    );
+    expect(document.querySelector('[data-testid="update-error-details"] script')).toBeNull();
   });
 
   it('shows an actionable error if the external browser cannot be opened', async () => {

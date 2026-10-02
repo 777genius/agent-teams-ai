@@ -260,8 +260,10 @@ async function recovery(error, name, retry, { operation, manualOpen = false } = 
     await clickButton('Update failed');
   }
   await waitUi(visible('[data-testid=update-manual-download]'), `${name}: manual download button`);
-  await cdp.click('[data-testid=update-error] summary');
-  await waitUi('document.querySelector("[data-testid=update-error] details")?.open', `${name}: expanded original error details`);
+  await waitUi(visible('[data-testid=update-error-details-toggle]'), `${name}: unobscured error details trigger`);
+  await cdp.click('[data-testid=update-error-details-toggle]');
+  await waitUi('document.querySelector("[data-testid=update-error-details-toggle]")?.getAttribute("aria-expanded") === "true"', `${name}: expanded original error details`);
+  await waitUi(visible('[data-testid=update-error-details]'), `${name}: original error details visible`);
   const text = await inspect(`(${dialog})?.innerText ?? ''`);
   assert(text.includes('Update could not be completed'), `${name}: recovery heading absent`);
   assert(text.includes(error), `${name}: original error details absent`);

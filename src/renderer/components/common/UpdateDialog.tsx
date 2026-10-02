@@ -5,6 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -121,12 +127,22 @@ export const UpdateDialog = (): React.JSX.Element | null => {
             <p>{t(`updateDialog.recovery.${failureKind}`)}</p>
             <p>{t(isMac ? 'updateDialog.manualMac' : 'updateDialog.manualOther')}</p>
             <p>{t('updateDialog.keepData')}</p>
-            <details className="rounded border border-[var(--color-border)] p-3 text-xs">
-              <summary className="cursor-pointer">{t('updateDialog.errorDetails')}</summary>
-              <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words">
-                {updateError}
-              </pre>
-            </details>
+            <Collapsible className="rounded border border-[var(--color-border)] p-3 text-xs">
+              <CollapsibleTrigger asChild data-testid="update-error-details-toggle">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto w-full justify-start p-0 text-[var(--color-text-secondary)] hover:bg-transparent"
+                >
+                  {t('updateDialog.errorDetails')}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent data-testid="update-error-details">
+                <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words">
+                  {updateError}
+                </pre>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         ) : (
           <div
@@ -160,51 +176,60 @@ export const UpdateDialog = (): React.JSX.Element | null => {
         )}
         <div className="flex flex-wrap items-center gap-2">
           {releaseUrl && !isError && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => void openLink(releaseUrl)}
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-[var(--color-text-muted)] transition-colors hover:bg-white/5"
             >
               <ExternalLink className="size-3" />
               {t('updateDialog.viewOnGitHub')}
-            </button>
+            </Button>
           )}
           <div className="flex-1" />
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={isError ? closeUpdateDialog : dismissUpdateDialog}
             className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-white/5"
           >
             {isError ? t('actions.close') : t('updateDialog.later')}
-          </button>
+          </Button>
           {isError ? (
             <>
               {failureKind === 'network' && (
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   data-testid="update-retry"
                   onClick={retryUpdate}
                   className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)]"
                 >
                   {t('updateDialog.retry')}
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                size="sm"
                 data-testid="update-manual-download"
                 onClick={() => void openLink(APP_DOWNLOAD_URL)}
                 className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
               >
                 <ExternalLink className="size-3.5" />
                 {t('updateDialog.manualDownload')}
-              </button>
+              </Button>
             </>
           ) : isDownloaded ? (
-            <button
+            <Button
+              size="sm"
               onClick={installUpdate}
               disabled={updateOperation === 'install'}
               className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:opacity-50"
             >
               {t('updateDialog.restartNow')}
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              size="sm"
               onClick={downloadUpdate}
               disabled={isBusy || updateStatus !== 'available' || !availableVersion}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
@@ -214,7 +239,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
                 : updateStatus === 'checking'
                   ? t('updateDialog.checking')
                   : t('updateDialog.download')}
-            </button>
+            </Button>
           )}
         </div>
       </DialogContent>
