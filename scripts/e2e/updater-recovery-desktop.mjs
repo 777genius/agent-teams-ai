@@ -183,9 +183,10 @@ const visible = (selector) => `(() => {
   return Boolean(top && e.contains(top));
 })()`;
 
-async function buttonPoint(label) {
+async function buttonPoint(label, scopeSelector) {
   return waitUi(`(() => {
-    const button=[...document.querySelectorAll('button')].find(b => {
+    const root=${scopeSelector ? `document.querySelector(${JSON.stringify(scopeSelector)})` : 'document'};
+    const button=[...(root?.querySelectorAll('button') ?? [])].find(b => {
       const matches=b.textContent.trim() === ${JSON.stringify(label)} || b.querySelector('span')?.textContent.trim() === ${JSON.stringify(label)};
       return matches && !b.disabled;
     });
@@ -197,8 +198,8 @@ async function buttonPoint(label) {
     return rect.width && rect.height && top && button.contains(top) ? point : null;
   })()`, `unobscured ${label} button`);
 }
-async function clickButton(label) {
-  const point = await buttonPoint(label);
+async function clickButton(label, scopeSelector) {
+  const point = await buttonPoint(label, scopeSelector);
   for (const type of ['mousePressed', 'mouseReleased']) {
     await cdp.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
   }
@@ -354,11 +355,11 @@ try {
   assert.equal(await inspect(`Boolean(${dialog})`), false, 'Background network check opened a modal over a ready update');
   await snapshot('downloaded-background-network-retained');
   await clickButton('Restart to update');
-  await buttonPoint('Restart now');
+  await buttonPoint('Restart now', '[data-testid=update-dialog]');
   const readyText = await inspect(`(${dialog}).innerText`);
   assert(/Update ready/i.test(readyText) && !readyText.includes('Update could not be completed'), 'Verified downloaded artifact lost ready UI');
   const installsBefore = (await mainRequest('/state')).installs;
-  await clickButton('Restart now');
+  await clickButton('Restart now', '[data-testid=update-dialog]');
   await waitFor(async () => (await mainRequest('/state')).installs === installsBefore + 1, 'Ready artifact remains installable through main IPC');
   await snapshot('downloaded-background-network-install-action');
 
