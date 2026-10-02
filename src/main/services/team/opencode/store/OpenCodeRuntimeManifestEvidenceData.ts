@@ -2,9 +2,11 @@ import { readFile } from 'node:fs/promises';
 
 import {
   createDefaultRuntimeStoreManifest,
+  OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION,
   type RuntimeStoreManifest,
   validateRuntimeStoreManifest,
 } from './RuntimeStoreManifest';
+import { VersionedJsonStoreError } from './VersionedJsonStore';
 
 export async function readRuntimeStoreManifestEvidenceData(
   manifestPath: string,
@@ -26,9 +28,23 @@ export async function readRuntimeStoreManifestEvidenceData(
     parsed && typeof parsed === 'object' && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : null;
-  const manifestData =
-    maybeRecord && Object.prototype.hasOwnProperty.call(maybeRecord, 'data')
-      ? maybeRecord.data
-      : parsed;
-  return validateRuntimeStoreManifest(manifestData);
+  if (!maybeRecord || !Object.prototype.hasOwnProperty.call(maybeRecord, 'data')) {
+    return validateRuntimeStoreManifest(parsed);
+  }
+  const version = maybeRecord.schemaVersion;
+  if (typeof version === 'number' && version > OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION) {
+    throw new VersionedJsonStoreError(
+      `Future manifest envelope schema ${version}`,
+      'future_schema',
+      null
+    );
+  }
+  if (
+    version !== OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION ||
+    typeof maybeRecord.updatedAt !== 'string' ||
+    !maybeRecord.updatedAt.trim()
+  ) {
+    throw new VersionedJsonStoreError('Invalid manifest envelope', 'invalid_envelope', null);
+  }
+  return validateRuntimeStoreManifest(maybeRecord.data);
 }
