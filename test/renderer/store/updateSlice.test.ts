@@ -217,4 +217,84 @@ describe('updateSlice', () => {
     expect(store.getState()).toMatchObject({ updateStatus: 'available', updateError: null });
     vi.unstubAllGlobals();
   });
+  it('preserves a verified downloaded update and restart after an hourly check failure', () => {
+    const install = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('electronAPI', { updater: { install } });
+    store.getState().handleUpdaterStatus({ type: 'downloaded', version: AVAILABLE_VERSION });
+    store.getState().handleUpdaterStatus({ type: 'checking', operation: 'check' });
+    store.getState().handleUpdaterStatus({ type: 'error', operation: 'check', error: 'HTTP 503' });
+    expect(store.getState()).toMatchObject({
+      updateStatus: 'downloaded',
+      updateError: null,
+      downloadProgress: 100,
+      showUpdateDialog: false,
+    });
+    store.getState().installUpdate();
+    expect(install).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps background check failures nonintrusive but available for manual opening', () => {
+    store.getState().handleUpdaterStatus({ type: 'checking', operation: 'check' });
+    store.getState().handleUpdaterStatus({ type: 'error', operation: 'check', error: 'HTTP 503' });
+    expect(store.getState()).toMatchObject({
+      updateStatus: 'error',
+      updateError: 'HTTP 503',
+      showUpdateDialog: false,
+      showUpdateBanner: true,
+    });
+    store.getState().openUpdateDialog();
+    expect(store.getState().showUpdateDialog).toBe(true);
+  });
+
+  it('opens recovery for an explicit check and ignores its duplicate IPC rejection', async () => {
+    let reject!: (error: Error) => void;
+    vi.stubGlobal('electronAPI', {
+      updater: {
+        check: vi.fn().mockImplementation(
+          () =>
+            new Promise<void>((_resolve, rejectPromise) => {
+              reject = rejectPromise;
+            })
+        ),
+      },
+    });
+    store.getState().checkForUpdates();
+    store.getState().handleUpdaterStatus({ type: 'error', operation: 'check', error: 'HTTP 503' });
+    expect(store.getState().showUpdateDialog).toBe(true);
+    store.getState().closeUpdateDialog();
+    reject(new Error('HTTP 503'));
+    await Promise.resolve();
+    expect(store.getState().showUpdateDialog).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('still invalidates a downloaded artifact on signature failure during a check', () => {
+    store.getState().handleUpdaterStatus({ type: 'downloaded', version: AVAILABLE_VERSION });
+    store.getState().handleUpdaterStatus({
+      type: 'error',
+      operation: 'check',
+      error: 'The update is improperly signed',
+    });
+    expect(store.getState()).toMatchObject({
+      updateStatus: 'error',
+      updateError: 'The update is improperly signed',
+      showUpdateDialog: true,
+    });
+  });
+
+  it('does not replace active update recovery with an unrelated background check error', () => {
+    store.getState().handleUpdaterStatus({
+      type: 'error',
+      operation: 'download',
+      error: 'The update is improperly signed',
+    });
+    store.getState().closeUpdateDialog();
+    store.getState().handleUpdaterStatus({ type: 'error', operation: 'check', error: 'HTTP 503' });
+    expect(store.getState()).toMatchObject({
+      updateError: 'The update is improperly signed',
+      updateOperation: 'download',
+      showUpdateDialog: false,
+    });
+  });
 });

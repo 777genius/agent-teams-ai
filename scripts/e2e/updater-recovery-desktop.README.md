@@ -33,6 +33,13 @@ both checking and downloading. A pending main IPC response makes immediate
 error/progress reset observable. Unrelated periodic checking followed by a
 no-update or same-version result must preserve recovery.
 
+Operation-tagged background check failures show a header/banner without opening
+a modal; the test opens recovery with a real header click. Retrying that check
+records explicit user intent, and a subsequent failure reopens a closed dialog.
+A network failure during a background check preserves an already downloaded
+artifact and its actual restart/install IPC action. Only that explicit action
+may reach the test install stub; signature failures still remove restart.
+
 Each renderer reload waits for the actual `#splash` removal and an unobscured
 app frame. Recovery buttons must pass viewport hit testing, and normal screenshots
 wait for two animation frames after those assertions. A failure screenshot may

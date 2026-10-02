@@ -58,11 +58,13 @@ export interface UpdateSlice {
 
 export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (set, get) => {
   let attempt = 0;
+  let userOperation: UpdaterStatus['operation'] | null = null;
 
   const fail = (error: unknown, operation: number): void => {
     if (operation !== attempt) return;
     get().handleUpdaterStatus({
       type: 'error',
+      operation: userOperation ?? undefined,
       error: error instanceof Error ? error.message : String(error),
     });
   };
@@ -83,6 +85,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
       const current = get().updateStatus;
       if (current === 'downloading' || current === 'downloaded') return;
       const operation = ++attempt;
+      userOperation = 'check';
       set({ updateStatus: 'checking', updateError: null, updateOperation: 'check' });
       void api.updater.check().catch((error: unknown) => {
         logger.error('Failed to check for updates:', error);
@@ -94,6 +97,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
       const current = get();
       if (!current.availableVersion || current.updateStatus !== 'available') return;
       const operation = ++attempt;
+      userOperation = 'download';
       set({
         updateStatus: 'downloading',
         updateOperation: 'download',
@@ -117,6 +121,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
       )
         return;
       const operation = ++attempt;
+      userOperation = 'install';
       set({ updateOperation: 'install', updateError: null });
       void api.updater.install().catch((error: unknown) => {
         logger.error('Failed to install update:', error);
@@ -169,6 +174,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
             break;
           }
           attempt++;
+          userOperation = null;
           const isSameKnownVersion = current.availableVersion === nextVersion;
           set({
             updateStatus: 'available',
@@ -188,6 +194,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
           // An unrelated periodic result must not hide a recovery dialog.
           if (current.updateStatus === 'error') break;
           attempt++;
+          userOperation = null;
           if (current.availableVersion) {
             set({ updateStatus: 'available', updateError: null, updateOperation: null });
           } else {
@@ -220,6 +227,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
             break;
           }
           attempt++;
+          userOperation = null;
           set({
             updateStatus: 'downloaded',
             updateOperation: null,
@@ -233,11 +241,40 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
           break;
         }
         case 'error': {
+          const current = get();
+          const updateError = status.error || 'Unknown error';
+          const signatureFailure = classifyUpdaterFailure(updateError) === 'signature';
+          const backgroundCheck = status.operation === 'check' && userOperation !== 'check';
+          // Checking the feed cannot invalidate an already verified installer.
+          if (
+            backgroundCheck &&
+            (current.updateStatus === 'downloaded' || current.updateStatus === 'downloading') &&
+            !signatureFailure
+          )
+            break;
+          // Preserve recovery for the update that failed, including its retry operation.
+          if (
+            backgroundCheck &&
+            current.updateStatus === 'error' &&
+            (!signatureFailure || classifyUpdaterFailure(current.updateError ?? '') === 'signature')
+          )
+            break;
+          const operation = status.operation ?? current.updateOperation;
+          const showRecovery =
+            userOperation !== null ||
+            operation === 'download' ||
+            operation === 'install' ||
+            current.updateStatus === 'downloading' ||
+            current.updateStatus === 'downloaded' ||
+            status.operation === undefined;
+          attempt++;
+          userOperation = null;
           set({
             updateStatus: 'error',
-            updateError: status.error || 'Unknown error',
+            updateError,
+            updateOperation: operation ?? null,
             downloadProgress: 0,
-            showUpdateDialog: true,
+            showUpdateDialog: current.showUpdateDialog || showRecovery,
             showUpdateBanner: true,
           });
           break;

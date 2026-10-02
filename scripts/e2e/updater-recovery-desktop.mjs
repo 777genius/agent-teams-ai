@@ -183,6 +183,27 @@ const visible = (selector) => `(() => {
   return Boolean(top && e.contains(top));
 })()`;
 
+async function buttonPoint(label) {
+  return waitUi(`(() => {
+    const button=[...document.querySelectorAll('button')].find(b => {
+      const matches=b.textContent.trim() === ${JSON.stringify(label)} || b.querySelector('span')?.textContent.trim() === ${JSON.stringify(label)};
+      return matches && !b.disabled;
+    });
+    if (!button || document.getElementById('splash')) return null;
+    button.scrollIntoView({block:'center'});
+    const rect=button.getBoundingClientRect();
+    const point={x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+    const top=document.elementFromPoint(point.x,point.y);
+    return rect.width && rect.height && top && button.contains(top) ? point : null;
+  })()`, `unobscured ${label} button`);
+}
+async function clickButton(label) {
+  const point = await buttonPoint(label);
+  for (const type of ['mousePressed', 'mouseReleased']) {
+    await cdp.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
+  }
+}
+
 async function send(status) {
   const receivedBefore = await inspect('window.__updaterE2EReceived.length');
   await mainRequest('/command', { type: 'status', status });
@@ -222,8 +243,15 @@ async function freshRenderer() {
   await inspect(`(() => { window.__updaterE2EReceived=[]; window.electronAPI.updater.onStatus((_event,status)=>window.__updaterE2EReceived.push(status)); })()`);
   await waitUi('!document.querySelector("[data-testid=update-manual-download]")', 'fresh update state');
 }
-async function recovery(error, name, retry) {
-  await send({ type: 'error', error });
+async function recovery(error, name, retry, { operation, manualOpen = false } = {}) {
+  await send({ type: 'error', error, ...(operation ? { operation } : {}) });
+  if (manualOpen) {
+    await buttonPoint('Update failed');
+    await inspect('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+    assert.equal(await inspect(`Boolean(${dialog})`), false, `${name}: background check interrupted the user with a modal`);
+    await snapshot(`${name}-background-indicator`);
+    await clickButton('Update failed');
+  }
   await waitUi(visible('[data-testid=update-manual-download]'), `${name}: manual download button`);
   await cdp.click('[data-testid=update-error] summary');
   await waitUi('document.querySelector("[data-testid=update-error] details")?.open', `${name}: expanded original error details`);
@@ -304,7 +332,8 @@ try {
   await freshRenderer();
   // Unknown version must still expose a usable recovery path and exact details.
   const generic = 'Updater fixture: could not read release metadata <unsafe-marker>';
-  await recovery(generic, 'unknown-version-generic', false);
+  await send({ type: 'checking', operation: 'check' });
+  await recovery(generic, 'unknown-version-generic', false, { operation: 'check', manualOpen: true });
   assert.equal(await inspect(`(${dialog}).innerText.includes('v999.0.0')`), false);
   assert.equal(await inspect('Boolean(document.querySelector("unsafe-marker"))'), false, 'Error text interpreted as markup');
   await send({ type: 'checking' });
@@ -312,11 +341,32 @@ try {
   await waitUi(visible('[data-testid=update-manual-download]'), 'periodic checking/no-update retains unresolved recovery');
   await snapshot('unknown-version-periodic-recovery-retained');
 
+  // An unrelated polling failure must not invalidate a verified downloaded
+  // artifact. Restart is exercised through actual renderer/preload/main IPC;
+  // the sandbox main stub records it without performing a real installation.
+  await freshRenderer();
+  await send({ type: 'downloaded', version: '999.0.0' });
+  await buttonPoint('Restart to update');
+  await send({ type: 'checking', operation: 'check' });
+  await send({ type: 'error', operation: 'check', error: 'net::ERR_CONNECTION_RESET background updater fixture' });
+  await buttonPoint('Restart to update');
+  await inspect('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  assert.equal(await inspect(`Boolean(${dialog})`), false, 'Background network check opened a modal over a ready update');
+  await snapshot('downloaded-background-network-retained');
+  await clickButton('Restart to update');
+  await buttonPoint('Restart now');
+  const readyText = await inspect(`(${dialog}).innerText`);
+  assert(/Update ready/i.test(readyText) && !readyText.includes('Update could not be completed'), 'Verified downloaded artifact lost ready UI');
+  const installsBefore = (await mainRequest('/state')).installs;
+  await clickButton('Restart now');
+  await waitFor(async () => (await mainRequest('/state')).installs === installsBefore + 1, 'Ready artifact remains installable through main IPC');
+  await snapshot('downloaded-background-network-install-action');
+
   await freshRenderer();
   await send({ type: 'downloaded', version: '999.0.0' });
   await waitUi('Array.from(document.querySelectorAll("button")).some(b => /^Restart (now|to update)$/i.test(b.textContent.trim()))', 'downloaded fixture has restart action before failure');
   const signature = 'Code signature did not pass validation: code failed to satisfy specified code requirement(s)';
-  await recovery(signature, 'signature-after-downloaded', false);
+  await recovery(signature, 'signature-after-downloaded', false, { operation: 'install' });
   if (rendererPlatform.includes('Mac')) {
     const text = await inspect(`(${dialog}).innerText`);
     assert(text.includes('DMG') && text.includes('Applications') && text.includes('Replace the existing app'), 'Mac replacement instructions missing');
@@ -327,11 +377,21 @@ try {
   await waitUi(visible('[data-testid=update-manual-download]'), 'periodic checking/same-version retains signature recovery');
   assert.equal(await inspect('Array.from(document.querySelectorAll("button")).some(b => /^Restart (now|to update)$/i.test(b.textContent.trim()))'), false, 'Periodic status resurrected stale restart');
   await snapshot('signature-periodic-recovery-retained');
-  assert.equal((await mainRequest('/state')).installs, 0, 'Failure initiated an install');
+  assert.equal((await mainRequest('/state')).installs, 1, 'Signature failure initiated an additional install');
 
   await freshRenderer();
   const network = 'net::ERR_CONNECTION_RESET updater fixture';
-  await recovery(network, 'network-check-error', true);
+  await send({ type: 'checking', operation: 'check' });
+  await recovery(network, 'network-background-check-error', true, { operation: 'check', manualOpen: true });
+  const explicitChecksBefore = (await mainRequest('/state')).checks;
+  await cdp.click('[data-testid=update-retry]');
+  await waitFor(async () => (await mainRequest('/state')).checks === explicitChecksBefore + 1, 'user-requested retry check reached main IPC');
+  await waitUi('!document.querySelector("[data-testid=update-error]")', 'explicit check clears background error');
+  // Closing the pending check's dialog proves the next user-requested failure
+  // actively reopens recovery instead of inheriting an already open modal.
+  await cdp.key('Escape');
+  await waitUi(`!${dialog}`, 'user closed pending check dialog');
+  await recovery('net::ERR_CONNECTION_RESET explicit updater fixture', 'network-check-error', true, { operation: 'check' });
   const checksBefore = (await mainRequest('/state')).checks;
   await cdp.click('[data-testid=update-retry]');
   await waitFor(async () => (await mainRequest('/state')).checks === checksBefore + 1, 'retry check crossed preload and main IPC');
@@ -344,7 +404,7 @@ try {
   await send({ type: 'available', version: '999.0.0', releaseNotes: 'Updater sandbox release notes.' });
   await send({ type: 'downloading', progress: { percent: 77, transferred: 77, total: 100 } });
   await waitUi('Array.from(document.querySelectorAll("button")).some(b => b.textContent.trim() === "77%")', 'download fixture exposes nonzero progress');
-  await recovery('ETIMEDOUT updater fixture download', 'network-download-error', true);
+  await recovery('ETIMEDOUT updater fixture download', 'network-download-error', true, { operation: 'download' });
   const downloadsBefore = (await mainRequest('/state')).downloads;
   await cdp.click('[data-testid=update-retry]');
   await waitFor(async () => (await mainRequest('/state')).downloads === downloadsBefore + 1, 'retry download crossed preload and main IPC');
@@ -353,8 +413,8 @@ try {
   await mainRequest('/command', { type: 'release', status: { type: 'downloading', progress: { percent: 0, transferred: 0, total: 100 } } });
   await snapshot('network-download-retried');
   evidence.finalMain = await mainRequest('/state');
-  assert.equal(evidence.finalMain.installs, 0);
-  assert.deepEqual(evidence.finalMain.external, Array(4).fill('https://agentteams.live/#download'));
+  assert.equal(evidence.finalMain.installs, 1, 'Only explicitly requested retained-artifact installation is allowed');
+  assert.deepEqual(evidence.finalMain.external, Array(5).fill('https://agentteams.live/#download'));
   evidence.passed = true;
 } catch (error) {
   evidence.error = String(error.stack ?? error);
