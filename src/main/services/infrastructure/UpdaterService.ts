@@ -128,6 +128,7 @@ export class UpdaterService {
     try {
       await autoUpdater.checkForUpdates();
     } catch (error) {
+      this.downloadedVersion = null;
       logger.error('Check for updates failed:', getErrorMessage(error));
       this.sendStatus({ type: 'error', error: getErrorMessage(error) });
     }
@@ -140,6 +141,7 @@ export class UpdaterService {
     try {
       await autoUpdater.downloadUpdate();
     } catch (error) {
+      this.downloadedVersion = null;
       logger.error('Download update failed:', getErrorMessage(error));
       this.sendStatus({ type: 'error', error: getErrorMessage(error) });
     }
@@ -162,8 +164,14 @@ export class UpdaterService {
       return;
     }
 
-    await this.beforeQuitAndInstall?.();
-    autoUpdater.quitAndInstall(true, true);
+    try {
+      await this.beforeQuitAndInstall?.();
+      autoUpdater.quitAndInstall(true, true);
+    } catch (error) {
+      this.downloadedVersion = null;
+      logger.error('Install update failed:', getErrorMessage(error));
+      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
+    }
   }
 
   /**
@@ -334,6 +342,7 @@ export class UpdaterService {
     });
 
     autoUpdater.on('error', (error) => {
+      this.downloadedVersion = null;
       logger.error('Updater error:', getErrorMessage(error));
       this.sendStatus({
         type: 'error',

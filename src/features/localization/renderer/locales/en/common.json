@@ -675,7 +675,21 @@
     "viewOnGitHub": "View on GitHub",
     "later": "Later",
     "restartNow": "Restart now",
-    "download": "Download"
+    "download": "Download",
+    "errorTitle": "Update could not be completed",
+    "manualDownload": "Download from website",
+    "retry": "Try again",
+    "checking": "Checking for updates",
+    "errorDetails": "Technical details",
+    "openLinkFailed": "Could not open your browser. Open this address manually:",
+    "manualMac": "Download the latest macOS installer from our website. Quit Agent Teams, open the downloaded DMG, and drag Agent Teams into Applications. Replace the existing app, then open it again.",
+    "manualOther": "Download the latest installer for your operating system from our website. Quit Agent Teams, install the update, then open the app again.",
+    "keepData": "Keep your app data and project folders. You do not need to uninstall the app or delete any data.",
+    "recovery": {
+      "signature": "The automatic update could not verify the app signature. Install the latest version manually from our official website.",
+      "network": "The update failed because of a connection or temporary server problem. Check your connection and try again, or install the latest version manually.",
+      "generic": "The automatic update failed. You can install the latest version manually from our official website."
+    }
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -818,7 +832,8 @@
     "newVersionAvailable": "New version available",
     "updatingApp": "Updating app",
     "updateReady": "Update ready",
-    "restartNow": "Restart now"
+    "restartNow": "Restart now",
+    "updateFailed": "Update failed"
   },
   "layout": {
     "github": "GitHub",
