@@ -20,7 +20,6 @@ import {
   ChevronDown,
   Clock3,
   Database,
-  Flame,
   Gauge,
   Info,
   RefreshCw,
@@ -45,13 +44,13 @@ import {
   tokenUsageSnapshotRequestForDateRange,
 } from '../view-models/tokenUsageDateRange';
 
+import { ActivityHeatmapPanel } from './ActivityHeatmapPanel';
 import { BudgetAlertsPanel } from './BudgetAlertsPanel';
 import { MetricInfoTooltip } from './MetricInfoTooltip';
 import { ModelUsagePanel } from './ModelUsagePanel';
 import { SummaryMetricsPanel } from './SummaryMetricsPanel';
 
 import type {
-  TokenUsageActivityDayViewModel,
   TokenUsageBarChartItemViewModel,
   TokenUsageBillingSplitItemViewModel,
   TokenUsageBreakdownRowViewModel,
@@ -68,7 +67,6 @@ import type React from 'react';
 type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
 
 const DAY_PICKER_CLASS_NAMES = buildDayPickerClassNames();
-const DAY_MS = 24 * 60 * 60 * 1000;
 const PANEL_CLASS = 'usage-panel min-w-0';
 const TOKEN_USAGE_TAB_TRIGGER_CLASS =
   'usage-tab gap-1.5 rounded-md px-3 py-2 text-sm text-text-secondary shadow-none data-[state=active]:bg-surface-raised data-[state=active]:text-text data-[state=active]:shadow-none';
@@ -809,141 +807,6 @@ function billingSplitToneClass(tone: TokenUsageBillingSplitItemViewModel['tone']
   return 'bg-violet-500';
 }
 
-const ActivityHeatmapPanel = ({
-  days,
-  t,
-}: {
-  days: TokenUsageActivityDayViewModel[];
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  const years = useMemo(() => buildActivityHeatmapYears(days), [days]);
-  const streak = useMemo(() => buildActivityStreak(days), [days]);
-
-  return (
-    <section className={PANEL_CLASS}>
-      <PanelTitle
-        heading={t('tokenUsage.panels.activityByDay')}
-        action={<ActivityStreakBadge streak={streak} t={t} />}
-      />
-      <div className="p-4">
-        {days.length === 0 ? (
-          <EmptyRows label={t('tokenUsage.empty.noActivityData')} />
-        ) : (
-          <>
-            <div className="space-y-5">
-              {years.map((year) => (
-                <div key={year.year} className="min-w-0">
-                  <div className="mb-2 flex items-center justify-between gap-3 text-xs text-text-muted">
-                    <span className="font-medium text-text-secondary">{year.year}</span>
-                    <span className="truncate">
-                      {year.days[0]?.label} - {year.days[year.days.length - 1]?.label}
-                    </span>
-                  </div>
-                  <div className="flex min-w-0 gap-3">
-                    <div className="grid shrink-0 grid-rows-7 gap-1 text-[10px] text-text-muted">
-                      {[
-                        t('tokenUsage.weekdays.mon'),
-                        '',
-                        t('tokenUsage.weekdays.wed'),
-                        '',
-                        t('tokenUsage.weekdays.fri'),
-                        '',
-                        t('tokenUsage.weekdays.sun'),
-                      ].map((label, index) => (
-                        <div key={`${year.year}:${label}:${index}`} className="flex items-center">
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="min-w-0 flex-1 pb-1">
-                      <div
-                        className="usage-heatmap-grid grid min-w-0 grid-flow-col grid-rows-7 gap-1"
-                        style={{
-                          gridTemplateColumns: `repeat(${year.weekCount}, minmax(0, 1fr))`,
-                          maxWidth: `${year.weekCount * 26 - 4}px`,
-                        }}
-                      >
-                        {year.cells.map((day, index) =>
-                          day ? (
-                            <Tooltip key={day.id}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  aria-label={day.title}
-                                  className={cn(
-                                    'aspect-square min-w-0 cursor-help rounded-[3px] p-0',
-                                    heatmapToneClass(day.intensity)
-                                  )}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">{day.title}</TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <div
-                              key={`blank:${year.year}:${index}`}
-                              className="aspect-square min-w-0"
-                            />
-                          )
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-text-muted">
-              <span className="truncate">
-                {t('tokenUsage.labels.days', { count: days.length })}
-              </span>
-              <div className="flex shrink-0 items-center gap-1">
-                <span>{t('tokenUsage.labels.less')}</span>
-                {[0, 1, 2, 3, 4].map((intensity) => (
-                  <span
-                    key={intensity}
-                    className={cn(
-                      'size-4 rounded-[3px]',
-                      heatmapToneClass(intensity as TokenUsageActivityDayViewModel['intensity'])
-                    )}
-                  />
-                ))}
-                <span>{t('tokenUsage.labels.more')}</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-};
-
-const ActivityStreakBadge = ({
-  streak,
-  t,
-}: {
-  streak: number;
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  const fireCount = Math.floor(streak / 3);
-  const visibleFireCount = Math.min(fireCount, 5);
-  const hiddenFireCount = fireCount - visibleFireCount;
-
-  return (
-    <div className="usage-streak flex max-w-[50%] shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-medium">
-      <span className="truncate">{t('tokenUsage.labels.streakCount', { count: streak })}</span>
-      {visibleFireCount > 0 && (
-        <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
-          {Array.from({ length: visibleFireCount }, (_, index) => (
-            <Flame key={index} className="size-3" />
-          ))}
-          {hiddenFireCount > 0 && (
-            <span className="ml-0.5 text-[10px] text-text-secondary">+{hiddenFireCount}</span>
-          )}
-        </span>
-      )}
-    </div>
-  );
-};
-
 const TrendPanel = ({
   points,
   t,
@@ -1484,67 +1347,6 @@ function barToneClass(tone: TokenUsageBarChartItemViewModel['tone']): string {
   if (tone === 'model') return 'h-full bg-indigo-500';
   if (tone === 'agent') return 'h-full bg-emerald-500';
   return 'h-full bg-sky-500';
-}
-
-function heatmapToneClass(intensity: TokenUsageActivityDayViewModel['intensity']): string {
-  if (intensity === 4) return 'bg-emerald-400';
-  if (intensity === 3) return 'bg-emerald-500/80';
-  if (intensity === 2) return 'bg-emerald-600/60';
-  if (intensity === 1) return 'bg-emerald-700/40';
-  return 'border border-[var(--color-border-emphasis)] bg-surface/60';
-}
-
-interface ActivityHeatmapYear {
-  year: string;
-  days: TokenUsageActivityDayViewModel[];
-  cells: Array<TokenUsageActivityDayViewModel | null>;
-  weekCount: number;
-}
-
-function buildActivityHeatmapYears(days: TokenUsageActivityDayViewModel[]): ActivityHeatmapYear[] {
-  const byYear = new Map<string, TokenUsageActivityDayViewModel[]>();
-  for (const day of days) {
-    const year = day.id.slice(0, 4);
-    const current = byYear.get(year) ?? [];
-    current.push(day);
-    byYear.set(year, current);
-  }
-  return [...byYear.entries()].map(([year, yearDays]) => {
-    const cells = buildActivityHeatmapCells(yearDays);
-    return {
-      year,
-      days: yearDays,
-      cells,
-      weekCount: Math.max(1, Math.ceil(cells.length / 7)),
-    };
-  });
-}
-
-function buildActivityHeatmapCells(
-  days: TokenUsageActivityDayViewModel[]
-): Array<TokenUsageActivityDayViewModel | null> {
-  const firstDay = days[0]?.id;
-  if (!firstDay) return [];
-  const timestamp = Date.parse(`${firstDay}T00:00:00.000Z`);
-  if (!Number.isFinite(timestamp)) return days;
-  const mondayOffset = (new Date(timestamp).getUTCDay() + 6) % 7;
-  return [...Array<TokenUsageActivityDayViewModel | null>(mondayOffset).fill(null), ...days];
-}
-
-function buildActivityStreak(days: TokenUsageActivityDayViewModel[]): number {
-  const activeDayIds = new Set(days.filter((day) => day.tokenValue > 0).map((day) => day.id));
-  const latestActiveDayId = [...activeDayIds].sort().at(-1);
-  if (!latestActiveDayId) return 0;
-
-  const latestTimestamp = Date.parse(`${latestActiveDayId}T00:00:00.000Z`);
-  if (!Number.isFinite(latestTimestamp)) return 0;
-
-  let streak = 0;
-  for (let timestamp = latestTimestamp; ; timestamp -= DAY_MS) {
-    const dayId = new Date(timestamp).toISOString().slice(0, 10);
-    if (!activeDayIds.has(dayId)) return streak;
-    streak += 1;
-  }
 }
 
 function mergeTeamFilterOptions(
