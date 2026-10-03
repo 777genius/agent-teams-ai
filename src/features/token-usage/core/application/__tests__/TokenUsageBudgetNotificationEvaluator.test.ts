@@ -4,11 +4,11 @@ import { budgetCoverageKey } from '../../domain';
 import { TokenUsageBudgetNotificationEvaluator } from '../TokenUsageBudgetNotificationEvaluator';
 
 import type { TokenUsageBudgetStatusDto } from '../../../contracts';
-import type { TokenUsageBudgetNotificationEvaluatorDeps } from '../TokenUsageBudgetNotificationEvaluator';
 import type {
   TokenUsageBudgetNotificationEvent,
   TokenUsageBudgetNotificationRecord,
 } from '../ports';
+import type { TokenUsageBudgetNotificationEvaluatorDeps } from '../TokenUsageBudgetNotificationEvaluator';
 
 // Catches lost lower-threshold coverage, split toasts, retry duplicates and stale-month delivery.
 const initialTime = '2026-10-03T12:00:00.000Z';
