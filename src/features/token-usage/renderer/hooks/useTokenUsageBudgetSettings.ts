@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
+import type {
+  TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
+} from '../../contracts';
 
 export function useTokenUsageBudgetSettings({
   loadErrorMessage,
@@ -36,17 +40,17 @@ export function useTokenUsageBudgetSettings({
         api.tokenUsage.getBudgetSettings(),
         api.tokenUsage.getBudgetStatus(),
       ]);
-      if (!alive.current || version !== generation.current) return false;
+      if (!alive.current || version !== generation.current) return null;
       saved.current = settings;
       setBudgetConfig(settings);
       setLoaded(true);
       acceptStatus(status);
       setError(null);
-      return true;
+      return settings;
     } catch (error) {
       if (alive.current && version === generation.current)
         setError(error instanceof Error ? error.message : loadErrorMessage);
-      return false;
+      return null;
     }
   }, [acceptStatus, loadErrorMessage]);
 
@@ -64,13 +68,10 @@ export function useTokenUsageBudgetSettings({
   }, [acceptStatus, reloadBudgetConfig]);
 
   const saveBudgetConfig = useCallback(
-    async (settings: TokenUsageBudgetSettingsDto): Promise<void> => {
+    async (request: TokenUsageBudgetSettingsUpdateRequestDto): Promise<void> => {
       const version = ++generation.current;
       try {
-        const result = await api.tokenUsage.updateBudgetSettings({
-          settings,
-          expectedUpdatedAt: saved.current.updatedAt ?? null,
-        });
+        const result = await api.tokenUsage.updateBudgetSettings(request);
         if (!alive.current || version !== generation.current) return;
         saved.current = result;
         setBudgetConfig(result);

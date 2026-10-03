@@ -1293,6 +1293,7 @@ export default interface Resources {
           "newThreshold": "New threshold",
           "noThresholds": "No threshold notifications configured.",
           "notifications": "Budget notifications",
+          "reconciliationRequired": "Another client changed a scope you edited. Cancel and reopen the editor to reconcile your changes before saving.",
           "reload": "Load current settings",
           "removeThreshold": "Remove threshold {{index}}",
           "requiredLimit": "Set at least one limit. Use Delete to remove a budget.",

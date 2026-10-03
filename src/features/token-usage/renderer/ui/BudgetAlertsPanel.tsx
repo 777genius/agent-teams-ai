@@ -15,7 +15,11 @@ import { budgetTargetKey } from '../utils/budgetDraft';
 
 import { BudgetEditorDialog } from './BudgetEditorDialog';
 
-import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
+import type {
+  TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
+} from '../../contracts';
 import type { BudgetT } from './BudgetEditorDialog';
 import type React from 'react';
 
@@ -37,8 +41,8 @@ export const BudgetAlertsPanel = ({
   error: string | null;
   loaded: boolean;
   onBudgetTargetKeyChange: (key: string) => void;
-  onSave: (settings: TokenUsageBudgetSettingsDto) => Promise<void>;
-  onReload: () => Promise<boolean>;
+  onSave: (request: TokenUsageBudgetSettingsUpdateRequestDto) => Promise<void>;
+  onReload: () => Promise<TokenUsageBudgetSettingsDto | null>;
   onOpenNotificationSettings: () => void;
   t: BudgetT;
 }): React.JSX.Element => {

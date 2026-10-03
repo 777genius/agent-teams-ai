@@ -352,6 +352,7 @@
         "requiredLimit": "Set at least one limit. Use Delete to remove a budget.",
         "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
         "invalidDraft": "Check the limits and thresholds in your edited scopes.",
+        "reconciliationRequired": "Another client changed a scope you edited. Cancel and reopen the editor to reconcile your changes before saving.",
         "compareDraft": "Current settings loaded. Compare your draft before saving.",
         "reload": "Load current settings",
         "delete": "Delete budget",

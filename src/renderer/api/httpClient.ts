@@ -322,21 +322,24 @@ export class HttpAPIClient implements ElectronAPI {
     return value;
   }
 
-  private async parseJson<T>(res: Response): Promise<T> {
+  private async parseJson<T>(res: Response, reviveDates = true): Promise<T> {
     const text = await res.text();
     if (!res.ok) {
       const parsed = JSON.parse(text) as { error?: string };
       throw new Error(parsed.error ?? `HTTP ${res.status}`);
     }
-    return JSON.parse(text, (key, value) => HttpAPIClient.reviveDates(key, value)) as T;
+    return JSON.parse(
+      text,
+      reviveDates ? (key, value) => HttpAPIClient.reviveDates(key, value) : undefined
+    ) as T;
   }
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
-      return this.parseJson<T>(res);
+      return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
     }
@@ -374,7 +377,7 @@ export class HttpAPIClient implements ElectronAPI {
     }
   }
 
-  private async put<T>(path: string, body?: unknown): Promise<T> {
+  private async put<T>(path: string, body?: unknown, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
@@ -384,7 +387,7 @@ export class HttpAPIClient implements ElectronAPI {
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      return this.parseJson<T>(res);
+      return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
     }
@@ -530,15 +533,15 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<TokenUsageAnalyticsSnapshotDto> =>
       this.get<TokenUsageAnalyticsSnapshotDto>(buildTokenUsageSnapshotRoute(request)),
     getBudgetStatus: (): Promise<TokenUsageBudgetStatusDto> =>
-      this.get<TokenUsageBudgetStatusDto>(TOKEN_USAGE_BUDGET_STATUS_ROUTE),
+      this.get<TokenUsageBudgetStatusDto>(TOKEN_USAGE_BUDGET_STATUS_ROUTE, false),
     onBudgetStatusChanged: (callback): (() => void) =>
       this.addEventListener(TOKEN_USAGE_BUDGET_STATUS_CHANGED, callback),
     getBudgetSettings: (): Promise<TokenUsageBudgetSettingsDto> =>
-      this.get<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE),
+      this.get<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, false),
     updateBudgetSettings: (
       settings: TokenUsageBudgetSettingsUpdateRequestDto
     ): Promise<TokenUsageBudgetSettingsDto> =>
-      this.put<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, settings),
+      this.put<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, settings, false),
     onSnapshotChanged: (
       callback: (snapshot: TokenUsageAnalyticsSnapshotDto) => void
     ): (() => void) => this.addEventListener(TOKEN_USAGE_SNAPSHOT_CHANGED, callback),

@@ -81,13 +81,17 @@ describe('Budget saved state generation', () => {
       },
     };
   }
-  it('Save uses loaded CAS revision; status load failure keeps durable saved state and resolves', async () => {
+  it('Save uses the supplied draft CAS revision; status load failure keeps durable saved state and resolves', async () => {
     const harness = await mount();
     const saved = { ...settings, updatedAt: '2026-10-03T00:00:00.001Z' };
     calls.save.mockResolvedValue(saved);
     calls.getStatus.mockRejectedValueOnce(new Error('status unavailable'));
     try {
-      await act(async () => harness.current().saveBudgetConfig(settings));
+      await act(async () =>
+        harness
+          .current()
+          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null })
+      );
       expect(calls.save).toHaveBeenCalledWith({ settings, expectedUpdatedAt: settings.updatedAt });
       expect(harness.current().budgetConfig.updatedAt).toBe(saved.updatedAt);
       expect(harness.current().budgetConfigError).toBe('status unavailable');
@@ -100,17 +104,49 @@ describe('Budget saved state generation', () => {
       await harness.unmount();
     }
   });
-  it('failed Reload reports false and keeps the previously saved configuration', async () => {
+  it('failed Reload reports unavailable and keeps the previously saved configuration', async () => {
     const harness = await mount();
     calls.getSettings.mockRejectedValueOnce(new Error('settings unavailable'));
     try {
-      let result = true;
+      let result: TokenUsageBudgetSettingsDto | null = settings;
       await act(async () => {
         result = await harness.current().reloadBudgetConfig();
       });
-      expect(result).toBe(false);
+      expect(result).toBeNull();
       expect(harness.current().budgetConfig).toEqual(settings);
       expect(harness.current().budgetConfigError).toBe('settings unavailable');
+    } finally {
+      await harness.unmount();
+    }
+  });
+  it('a successful reload cannot promote the CAS revision of an unreconciled draft', async () => {
+    const harness = await mount();
+    const fresh = { ...settings, updatedAt: '2026-10-03T00:00:00.002Z' };
+    calls.getSettings.mockResolvedValue(fresh);
+    calls.save.mockRejectedValueOnce(new Error('Budget settings changed'));
+    try {
+      let result: TokenUsageBudgetSettingsDto | null = null;
+      await act(async () => {
+        result = await harness.current().reloadBudgetConfig();
+      });
+      expect(result).toEqual(fresh);
+      await act(async () => {
+        await expect(
+          harness.current().saveBudgetConfig({
+            settings: {
+              global: { monthlyTokenLimit: 250, thresholds: [], notificationsEnabled: true },
+            },
+            expectedUpdatedAt: settings.updatedAt ?? null,
+          })
+        ).rejects.toThrow('Budget settings changed');
+      });
+      expect(calls.save).toHaveBeenCalledWith({
+        settings: {
+          global: { monthlyTokenLimit: 250, thresholds: [], notificationsEnabled: true },
+        },
+        expectedUpdatedAt: settings.updatedAt,
+      });
+      expect(harness.current().budgetConfig).toEqual(fresh);
     } finally {
       await harness.unmount();
     }
@@ -123,7 +159,9 @@ describe('Budget saved state generation', () => {
     try {
       let saving!: Promise<void>;
       await act(async () => {
-        saving = harness.current().saveBudgetConfig(settings);
+        saving = harness
+          .current()
+          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null });
         await Promise.resolve();
       });
       calls.getSettings.mockResolvedValue({ ...settings, updatedAt: '2026-10-03T00:00:00.002Z' });

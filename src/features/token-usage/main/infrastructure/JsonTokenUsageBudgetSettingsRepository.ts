@@ -2,7 +2,12 @@ import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { mkdir, readFile, stat } from 'fs/promises';
 import { dirname } from 'path';
 
-import { BudgetConflictError, validateBudgetSettings, validateBudgetUpdate } from '../../contracts';
+import {
+  BudgetConflictError,
+  BudgetValidationError,
+  validateBudgetSettings,
+  validateBudgetUpdate,
+} from '../../contracts';
 import { SerialQueue } from '../../core/application/SerialQueue';
 
 import type {
@@ -42,7 +47,7 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
         Math.max(this.now().getTime(), Date.parse(previous.updatedAt ?? '') + 1 || 0)
       ).toISOString();
       const saved = { ...validated.settings, updatedAt };
-      await this.writeSettings(saved);
+      await this.writeSettings(saved, true);
       return saved;
     });
   }
@@ -113,11 +118,16 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
     return settings;
   }
 
-  private async writeSettings(settings: TokenUsageBudgetSettingsDto): Promise<void> {
+  private async writeSettings(
+    settings: TokenUsageBudgetSettingsDto,
+    fromSave = false
+  ): Promise<void> {
+    const serialized = `${JSON.stringify({ schemaVersion: 2, settings }, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_BUDGET_SETTINGS_BYTES) {
+      const message = 'Budget settings exceeds its size limit';
+      throw fromSave ? new BudgetValidationError(message) : new Error(message);
+    }
     await mkdir(dirname(this.filePath), { recursive: true });
-    await atomicWriteAsync(
-      this.filePath,
-      `${JSON.stringify({ schemaVersion: 2, settings }, null, 2)}\n`
-    );
+    await atomicWriteAsync(this.filePath, serialized);
   }
 }

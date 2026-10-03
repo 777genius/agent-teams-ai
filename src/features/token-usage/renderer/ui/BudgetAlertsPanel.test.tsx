@@ -6,7 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BudgetAlertsPanel } from './BudgetAlertsPanel';
 
-import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
+import type {
+  TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
+} from '../../contracts';
 import type { Root } from 'react-dom/client';
 
 vi.mock('@features/localization/renderer', () => ({
@@ -74,6 +78,7 @@ describe('Budget Save/Cancel and standalone status', () => {
   let root: Root;
   let selected: string;
   let save: ReturnType<typeof vi.fn>;
+  let reload: ReturnType<typeof vi.fn>;
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div');
@@ -81,6 +86,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     root = createRoot(container);
     selected = 'global:global';
     save = vi.fn(async () => undefined);
+    reload = vi.fn(async () => config);
   });
   afterEach(async () => {
     await act(async () => root.unmount());
@@ -101,7 +107,7 @@ describe('Budget Save/Cancel and standalone status', () => {
               selected = key;
             }}
             onSave={save}
-            onReload={async () => true}
+            onReload={reload}
             onOpenNotificationSettings={() => undefined}
             t={t}
           />
@@ -159,8 +165,11 @@ describe('Budget Save/Cancel and standalone status', () => {
     await button('tokenUsage.budgets.editor.save');
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0]).toMatchObject({
-      global: { monthlyTokenLimit: 250 },
-      projects: config.projects,
+      expectedUpdatedAt: config.updatedAt,
+      settings: {
+        global: { monthlyTokenLimit: 250 },
+        projects: config.projects,
+      },
     });
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
@@ -198,7 +207,7 @@ describe('Budget Save/Cancel and standalone status', () => {
         .click()
     );
     await button('tokenUsage.budgets.editor.save');
-    expect(save.mock.calls[0][0].global.thresholds).toEqual([]);
+    expect(save.mock.calls[0][0].settings.global.thresholds).toEqual([]);
   });
   it('multi-scope edits survive navigation; unconfigured initial scope does not create an empty budget', async () => {
     await render({ projects: config.projects });
@@ -210,11 +219,14 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('300');
     await button('tokenUsage.budgets.editor.save');
     expect(save.mock.calls[0][0]).toEqual({
-      projects: {
-        'project:outside:filters': {
-          monthlyTokenLimit: 300,
-          thresholds: [],
-          notificationsEnabled: false,
+      expectedUpdatedAt: null,
+      settings: {
+        projects: {
+          'project:outside:filters': {
+            monthlyTokenLimit: 300,
+            thresholds: [],
+            notificationsEnabled: false,
+          },
         },
       },
     });
@@ -225,8 +237,8 @@ describe('Budget Save/Cancel and standalone status', () => {
     await button('tokenUsage.budgets.editor.delete');
     expect(save).not.toHaveBeenCalled();
     await button('tokenUsage.budgets.editor.save');
-    expect(save.mock.calls[0][0].global).toBeUndefined();
-    expect(save.mock.calls[0][0].projects).toEqual(config.projects);
+    expect(save.mock.calls[0][0].settings.global).toBeUndefined();
+    expect(save.mock.calls[0][0].settings.projects).toEqual(config.projects);
   });
   it('in-flight blocks Save/close; failure preserves typed draft', async () => {
     let reject!: (error: Error) => void;
@@ -251,6 +263,99 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(document.body.textContent).toContain('Budget settings changed');
     expect(dialog.querySelector<HTMLInputElement>('input')!.value).toBe('400');
     expect(save).toHaveBeenCalledTimes(1);
+  });
+  // A stale whole-settings draft must not overwrite scopes edited by another client.
+  it('conflict Reload rebases untouched scopes and binds the retained edit to the fresh revision', async () => {
+    const initial = {
+      ...config,
+      teams: {
+        'concurrent-team': { monthlyTokenLimit: 200, thresholds: [], notificationsEnabled: true },
+      },
+    };
+    let server: TokenUsageBudgetSettingsDto = {
+      ...initial,
+      updatedAt: '2026-10-03T00:00:00.001Z',
+      teams: {
+        'concurrent-team': {
+          monthlyTokenLimit: 400,
+          thresholds: [75],
+          notificationsEnabled: false,
+        },
+      },
+      projects: undefined,
+    };
+    save.mockImplementation(async (request: TokenUsageBudgetSettingsUpdateRequestDto) => {
+      if (request.expectedUpdatedAt !== server.updatedAt)
+        throw new Error('Budget settings changed');
+      server = { ...request.settings, updatedAt: '2026-10-03T00:00:00.002Z' };
+    });
+    reload.mockImplementation(async () => server);
+    await render(initial);
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '250');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][0].expectedUpdatedAt).toBe(initial.updatedAt);
+    await button('tokenUsage.budgets.editor.reload');
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('250');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1][0].expectedUpdatedAt).toBe('2026-10-03T00:00:00.001Z');
+    expect(server.global?.monthlyTokenLimit).toBe(250);
+    expect(server.teams?.['concurrent-team']).toEqual({
+      monthlyTokenLimit: 400,
+      thresholds: [75],
+      notificationsEnabled: false,
+    });
+    expect(server.projects).toBeUndefined();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+  it('same-scope concurrent changes block Save until Cancel and reopen', async () => {
+    const latest: TokenUsageBudgetSettingsDto = {
+      ...config,
+      updatedAt: '2026-10-03T00:00:00.001Z',
+      global: { monthlyTokenLimit: 300, thresholds: [80], notificationsEnabled: false },
+    };
+    save.mockRejectedValueOnce(new Error('Budget settings changed'));
+    reload.mockResolvedValue(latest);
+    await render();
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '250');
+    await button('tokenUsage.budgets.editor.save');
+    await button('tokenUsage.budgets.editor.reload');
+    expect(document.body.textContent).toContain('tokenUsage.budgets.editor.reconciliationRequired');
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('250');
+    const saveButton = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'),
+    ].find((item) => item.textContent === 'tokenUsage.budgets.editor.save')!;
+    expect(saveButton.disabled).toBe(true);
+    await button('tokenUsage.budgets.editor.save');
+    await button('tokenUsage.budgets.editor.reload');
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+    await button('tokenUsage.budgets.editor.cancel');
+    await render(latest);
+    await open();
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('300');
+    await input('tokenUsage.budgets.tokenLimit', '350');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[1][0]).toMatchObject({
+      expectedUpdatedAt: latest.updatedAt,
+      settings: { global: { monthlyTokenLimit: 350 } },
+    });
+  });
+  it('failed conflict Reload keeps the original CAS basis and the edited draft', async () => {
+    save.mockRejectedValue(new Error('Budget settings changed'));
+    reload.mockResolvedValue(null);
+    await render();
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '250');
+    await button('tokenUsage.budgets.editor.save');
+    await button('tokenUsage.budgets.editor.reload');
+    expect(document.body.textContent).toContain('tokenUsage.budgets.loadFailed');
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('250');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[1][0].expectedUpdatedAt).toBe(config.updatedAt);
   });
   it('shows over100, zero outside filters, stale/degraded and pause without changing selected identity', async () => {
     await render();

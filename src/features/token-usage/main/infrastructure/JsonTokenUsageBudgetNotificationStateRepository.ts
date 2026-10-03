@@ -87,8 +87,11 @@ export class JsonTokenUsageBudgetNotificationStateRepository implements TokenUsa
   }
 
   private async writeState(state: State): Promise<void> {
+    const serialized = `${JSON.stringify(state, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_NOTIFICATION_STATE_BYTES)
+      throw new Error('Budget coverage exceeds its size limit');
     await mkdir(dirname(this.filePath), { recursive: true });
-    await atomicWriteAsync(this.filePath, `${JSON.stringify(state, null, 2)}\n`);
+    await atomicWriteAsync(this.filePath, serialized);
   }
 }
 
