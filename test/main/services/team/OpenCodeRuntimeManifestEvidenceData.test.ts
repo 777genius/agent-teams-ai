@@ -80,6 +80,34 @@ describe('OpenCode manifest preserve-only authority', () => {
       expect(await readFile(file, 'utf8')).toBe(raw);
     }
   );
+  it('fractional outer schema is invalid and cannot supply authority', async () => {
+    const data = createDefaultRuntimeStoreManifest('TEST-team', clock().toISOString());
+    const { root, file, raw } = await fixture({
+      schemaVersion: 2.5,
+      updatedAt: clock().toISOString(),
+      data,
+    });
+    await expect(
+      readRuntimeStoreManifestEvidenceData(file, 'TEST-team', clock)
+    ).rejects.toMatchObject({
+      reason: 'invalid_envelope',
+    });
+    const store = new VersionedJsonStore({
+      filePath: file,
+      schemaVersion: 1,
+      defaultData: () => data,
+      validate: (value) => value,
+      clock,
+    });
+    const outcome = await store.read();
+    expect(outcome).toMatchObject({ ok: false, reason: 'invalid_envelope' });
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('Invalid schema supplied authority');
+    expect(outcome.quarantinePath).not.toBeNull();
+    expect(await readFile(outcome.quarantinePath!, 'utf8')).toBe(raw);
+    expect(await readFile(file, 'utf8')).toBe(raw);
+    expect(await readdir(root)).toHaveLength(2);
+  });
   it('missing is distinct from a present incomplete envelope', async () => {
     const data = createDefaultRuntimeStoreManifest('TEST-team', clock().toISOString());
     const { root, file, raw } = await fixture({ schemaVersion: 1, data });

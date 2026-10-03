@@ -159,6 +159,7 @@ export class VersionedJsonStore<TData> {
     if (
       isRecord(parsed) &&
       typeof parsed.schemaVersion === 'number' &&
+      Number.isInteger(parsed.schemaVersion) &&
       parsed.schemaVersion > this.schemaVersion
     ) {
       return {

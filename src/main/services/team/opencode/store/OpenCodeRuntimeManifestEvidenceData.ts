@@ -32,7 +32,11 @@ export async function readRuntimeStoreManifestEvidenceData(
     return validateRuntimeStoreManifest(parsed);
   }
   const version = maybeRecord.schemaVersion;
-  if (typeof version === 'number' && version > OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION) {
+  if (
+    typeof version === 'number' &&
+    Number.isInteger(version) &&
+    version > OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION
+  ) {
     throw new VersionedJsonStoreError(
       `Future manifest envelope schema ${version}`,
       'future_schema',
