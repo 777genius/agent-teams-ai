@@ -93,7 +93,9 @@ patchedDependencies:
   '@radix-ui/react-switch@1.3.7': 7c271784b060c98aedf8f10ae0a0d051a9d7dd7020e50195c1b6e93927d11280
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
   brace-expansion@5.0.12: 3ae36edc21bd38f2596d0a98e3d223dc194dd5a639b7cba945ba690dfff4e8a3
+  braces@3.0.3: 06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985
   fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
+  http-cache-semantics@4.2.0: 39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7
   node-forge@1.4.0: 7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c
 
 importers:
@@ -17300,7 +17302,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.3
 
-  braces@3.0.3:
+  braces@3.0.3(patch_hash=06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985):
     dependencies:
       fill-range: 7.1.1
 
@@ -17416,7 +17418,7 @@ snapshots:
     dependencies:
       clone-response: 1.0.3
       get-stream: 5.2.0
-      http-cache-semantics: 4.2.0
+      http-cache-semantics: 4.2.0(patch_hash=39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7)
       keyv: 4.5.4
       lowercase-keys: 2.0.0
       normalize-url: 6.1.0
@@ -17494,7 +17496,7 @@ snapshots:
   chokidar@3.6.0:
     dependencies:
       anymatch: 3.1.3
-      braces: 3.0.3
+      braces: 3.0.3(patch_hash=06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985)
       glob-parent: 5.1.2
       is-binary-path: 2.1.0
       is-glob: 4.0.3
@@ -19726,7 +19728,7 @@ snapshots:
       deep-equal: 1.0.1
       http-errors: 1.8.1
 
-  http-cache-semantics@4.2.0: {}
+  http-cache-semantics@4.2.0(patch_hash=39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7): {}
 
   http-errors@1.8.1:
     dependencies:
@@ -21007,7 +21009,7 @@ snapshots:
 
   micromatch@4.0.8:
     dependencies:
-      braces: 3.0.3
+      braces: 3.0.3(patch_hash=06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985)
       picomatch: 2.3.2
 
   millify@6.1.0:
