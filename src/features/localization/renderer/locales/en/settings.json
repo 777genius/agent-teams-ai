@@ -373,7 +373,8 @@
       "warning": {
         "description": "Create a notification when a configured usage budget reaches 80%.",
         "label": "Notify at 80%"
-      }
+      },
+      "editorLink": "Configure thresholds in Usage / Budget"
     },
     "taskCompletion": {
       "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",

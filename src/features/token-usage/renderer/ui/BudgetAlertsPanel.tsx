@@ -1,3 +1,6 @@
+import { useState } from 'react';
+
+import { Button } from '@renderer/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -6,341 +9,202 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { cn } from '@renderer/lib/utils';
 import { Bell } from 'lucide-react';
 
-import type {
-  TokenUsageBudgetAlertViewModel,
-  TokenUsageBudgetLimits,
-  TokenUsageBudgetTargetOptionViewModel,
-} from '../view-models/tokenUsageViewModel';
+import { budgetTargetKey } from '../utils/budgetDraft';
+
+import { BudgetEditorDialog } from './BudgetEditorDialog';
+
+import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
+import type { BudgetT } from './BudgetEditorDialog';
 import type React from 'react';
 
-type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
-type TokenUsageStoredBudgetConfig = TokenUsageBudgetLimits;
-const PANEL_CLASS = 'min-w-0 rounded-lg border border-[var(--color-border)] bg-surface-raised';
-
 export const BudgetAlertsPanel = ({
-  alerts,
+  status,
   budgetConfig,
-  budgetTargetKey,
-  budgetTargetOptions,
+  budgetTargetKey: selected,
   error,
+  loaded,
   onBudgetTargetKeyChange,
-  onBudgetConfigChange,
+  onSave,
+  onReload,
   onOpenNotificationSettings,
   t,
 }: {
-  alerts: TokenUsageBudgetAlertViewModel[];
-  budgetConfig: TokenUsageStoredBudgetConfig;
+  status: TokenUsageBudgetStatusDto | null;
+  budgetConfig: TokenUsageBudgetSettingsDto;
   budgetTargetKey: string;
-  budgetTargetOptions: TokenUsageBudgetTargetOptionViewModel[];
   error: string | null;
+  loaded: boolean;
   onBudgetTargetKeyChange: (key: string) => void;
-  onBudgetConfigChange: React.Dispatch<React.SetStateAction<TokenUsageStoredBudgetConfig>>;
+  onSave: (settings: TokenUsageBudgetSettingsDto) => Promise<void>;
+  onReload: () => Promise<boolean>;
   onOpenNotificationSettings: () => void;
-  t: TokenUsageT;
+  t: BudgetT;
 }): React.JSX.Element => {
-  const target = budgetEditorTarget(budgetTargetKey, budgetTargetOptions, t);
-  const targetLimit = target ? budgetLimitForTarget(budgetConfig, target) : {};
-  // Snapshot filters must never change the persisted identity being edited.
-  const visibleOptions =
-    target && !budgetTargetOptions.some((option) => budgetOptionKey(option) === budgetTargetKey)
-      ? [...budgetTargetOptions, target]
-      : budgetTargetOptions;
-
+  const [editing, setEditing] = useState(false);
+  const options = status?.options ?? [
+    { scope: 'global' as const, id: 'global', label: t('tokenUsage.budgets.allTeams') },
+  ];
+  const target = status?.targets.find((item) => budgetTargetKey(item) === selected);
+  const chosen = options.find((item) => budgetTargetKey(item) === selected);
+  const value = (amount: number | null, metric: string): string =>
+    amount === null
+      ? t('tokenUsage.labels.notAvailable')
+      : metric === 'tokens'
+        ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(amount)
+        : `$${amount.toFixed(2)}`;
   return (
-    <section className={cn(PANEL_CLASS, 'usage-detail-panel')}>
-      <PanelTitle
-        heading={t('tokenUsage.panels.budgetAlerts')}
-        action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onOpenNotificationSettings}
-                className="inline-flex size-7 items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-surface hover:text-text"
-                aria-label={t('tokenUsage.budgets.notificationSettings')}
-              >
-                <Bell className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {t('tokenUsage.budgets.notificationSettings')}
-            </TooltipContent>
-          </Tooltip>
-        }
-      />
+    <section className="usage-detail-panel min-w-0 rounded-lg border border-[var(--color-border)] bg-surface-raised">
+      <div className="usage-panel-title flex min-h-12 items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
+        <h2 className="text-sm font-semibold text-text-secondary">
+          {t('tokenUsage.panels.budgetAlerts')}
+        </h2>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onOpenNotificationSettings}
+              aria-label={t('tokenUsage.budgets.notificationSettings')}
+            >
+              <Bell className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('tokenUsage.budgets.notificationSettings')}</TooltipContent>
+        </Tooltip>
+      </div>
       <div className="space-y-3 p-4">
         {error && (
-          <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-xs text-red-300">
-            {error}
+          <div
+            role="alert"
+            className="space-y-2 rounded border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-400"
+          >
+            <p>{error}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void onReload();
+              }}
+            >
+              {t('tokenUsage.budgets.editor.reload')}
+            </Button>
           </div>
         )}
-        <div className="bg-surface/60 rounded-sm border border-[var(--color-border)] p-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-xs font-medium text-text-secondary">
-              {t('tokenUsage.budgets.configureFor', { scope: target?.label ?? budgetTargetKey })}
-            </span>
-            <span className="shrink-0 text-[11px] text-text-muted">
-              {target ? budgetScopeLabel(target.scope, t) : ''}
-            </span>
+        <Select value={selected} onValueChange={onBudgetTargetKeyChange}>
+          <SelectTrigger className="h-8 text-xs" aria-label={t('tokenUsage.budgets.editor.scope')}>
+            <SelectValue>
+              {chosen
+                ? chosen.scope === 'global'
+                  ? t('tokenUsage.budgets.allTeams')
+                  : `${t(`tokenUsage.budgets.${chosen.scope}`)} / ${chosen.label}`
+                : selected}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={budgetTargetKey(option)} value={budgetTargetKey(option)}>
+                {t(`tokenUsage.budgets.${option.scope === 'global' ? 'allTeams' : option.scope}`)} /{' '}
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {status && (
+          <div className="space-y-1 text-[11px] text-text-muted">
+            <p>{status.period.key} UTC</p>
+            <p>
+              {t('tokenUsage.budgets.card.updated', {
+                time: status.usageUpdatedAt
+                  ? new Date(status.usageUpdatedAt).toLocaleString()
+                  : t('tokenUsage.labels.notAvailable'),
+              })}
+            </p>
+            {status.stale && <p className="text-amber-400">{t('tokenUsage.budgets.card.stale')}</p>}
+            {status.degraded && (
+              <p className="text-amber-400">{t('tokenUsage.budgets.card.degraded')}</p>
+            )}
+            {!status.notificationPolicy.enabled && <p>{t('tokenUsage.budgets.card.masterOff')}</p>}
+            {target && !target.notificationsEnabled && <p>{t('tokenUsage.budgets.card.paused')}</p>}
           </div>
-          <Select value={budgetTargetKey} onValueChange={onBudgetTargetKeyChange}>
-            <SelectTrigger className="mb-2 h-8 rounded-sm border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text shadow-none focus:border-fuchsia-500/60 focus:ring-0">
-              <SelectValue>
-                {target
-                  ? `${budgetScopeLabel(target.scope, t)} / ${target.label}`
-                  : budgetTargetKey}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {visibleOptions.map((option) => (
-                <SelectItem
-                  key={budgetOptionKey(option)}
-                  value={budgetOptionKey(option)}
-                  className="text-xs"
-                >
-                  {budgetScopeLabel(option.scope, t)} / {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
-            <BudgetLimitInput
-              label={t('tokenUsage.budgets.tokenLimit')}
-              disabled={!target}
-              value={targetLimit.monthlyTokenLimit}
-              onChange={(value) =>
-                target &&
-                onBudgetConfigChange((current) =>
-                  updateBudgetConfig(current, target, { monthlyTokenLimit: value })
-                )
-              }
-            />
-            <BudgetLimitInput
-              label={t('tokenUsage.budgets.costLimit')}
-              disabled={!target}
-              value={targetLimit.monthlyApiEquivalentCostLimitUsd}
-              onChange={(value) =>
-                target &&
-                onBudgetConfigChange((current) =>
-                  updateBudgetConfig(current, target, { monthlyApiEquivalentCostLimitUsd: value })
-                )
-              }
-            />
-          </div>
-        </div>
-
-        {alerts.length === 0 ? (
-          <EmptyRows label={t('tokenUsage.budgets.noBudgets')} />
-        ) : (
+        )}
+        {target ? (
           <div className="space-y-3">
-            {alerts.slice(0, 5).map((alert) => (
-              <div key={`${alert.scope}:${alert.id}`} className="min-w-0">
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <span className="min-w-0 truncate font-medium text-text-secondary">
-                    {alert.label}
+            {target.metrics.map((metric) => (
+              <div key={metric.metric} className="space-y-1 text-xs">
+                <div className="flex justify-between gap-2 text-text-secondary">
+                  <span>
+                    {t(
+                      `tokenUsage.budgets.${metric.metric === 'tokens' ? 'tokenLimit' : 'costLimit'}`
+                    )}
                   </span>
-                  <span
-                    className={cn('shrink-0 font-medium', budgetSeverityTextClass(alert.severity))}
-                  >
-                    {alert.severityLabel}
+                  <span>
+                    {metric.percent === null
+                      ? t('tokenUsage.labels.notAvailable')
+                      : `${metric.percent.toFixed(1)}%`}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-text-muted">
-                  <span className="min-w-0 truncate">{alert.detail}</span>
-                  <span>{formatPanelPercent(alert.percent)}</span>
+                <div className="text-text-muted">
+                  {value(metric.value, metric.metric)} / {value(metric.limit, metric.metric)}
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-surface">
+                <div className="h-1.5 overflow-hidden rounded bg-surface">
                   <div
-                    className={cn('h-full rounded-sm', budgetSeverityBarClass(alert.severity))}
-                    style={{ width: `${Math.min(100, alert.percent)}%` }}
+                    className={
+                      metric.percent !== null && metric.percent >= 100
+                        ? 'h-full bg-red-500'
+                        : 'h-full bg-fuchsia-500'
+                    }
+                    style={{ width: `${Math.max(0, Math.min(100, metric.percent ?? 0))}%` }}
                   />
                 </div>
+                <div className="text-text-muted">
+                  {metric.value !== null && metric.value > metric.limit
+                    ? t('tokenUsage.budgets.card.over', {
+                        value: value(metric.value - metric.limit, metric.metric),
+                      })
+                    : t('tokenUsage.budgets.card.remaining', {
+                        value: value(metric.remaining, metric.metric),
+                      })}
+                </div>
+                {metric.nextThreshold !== undefined && (
+                  <div className="text-text-muted">
+                    {t('tokenUsage.budgets.card.next', { threshold: metric.nextThreshold })}
+                  </div>
+                )}
+                {metric.incomplete && (
+                  <p className="text-amber-400">{t('tokenUsage.budgets.card.incomplete')}</p>
+                )}
               </div>
             ))}
           </div>
+        ) : (
+          <p className="text-xs text-text-muted">
+            {t(status ? 'tokenUsage.budgets.noBudgets' : 'tokenUsage.budgets.card.unavailable')}
+          </p>
         )}
+        <p className="text-[11px] text-text-muted">{t('tokenUsage.budgets.card.basis')}</p>
+        <Button
+          disabled={!loaded || !chosen}
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setEditing(true)}
+        >
+          {t('tokenUsage.budgets.editor.title')}
+        </Button>
       </div>
+      {editing && (
+        <BudgetEditorDialog
+          config={budgetConfig}
+          options={options}
+          selected={selected}
+          onSave={onSave}
+          onReload={onReload}
+          onClose={() => setEditing(false)}
+          t={t}
+        />
+      )}
     </section>
   );
 };
-
-const BudgetLimitInput = ({
-  label,
-  value,
-  onChange,
-  disabled,
-}: {
-  disabled: boolean;
-  label: string;
-  value: number | undefined;
-  onChange: (value: number | undefined) => void;
-}): React.JSX.Element => {
-  return (
-    <label className="min-w-0">
-      <span className="mb-1 block truncate text-[11px] text-text-muted">{label}</span>
-      <input
-        disabled={disabled}
-        type="number"
-        min={0}
-        step="any"
-        value={value ?? ''}
-        onChange={(event) => onChange(readPositiveNumberInput(event.target.value))}
-        className="h-8 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text outline-none focus:border-fuchsia-500/60"
-      />
-    </label>
-  );
-};
-
-interface BudgetEditorTarget {
-  scope: 'global' | 'team' | 'project';
-  id: string;
-  label: string;
-}
-
-function budgetEditorTarget(
-  selectedKey: string,
-  options: TokenUsageBudgetTargetOptionViewModel[],
-  t: TokenUsageT
-): BudgetEditorTarget | null {
-  const separator = selectedKey.indexOf(':');
-  const scope = selectedKey.slice(0, separator);
-  const id = selectedKey.slice(separator + 1);
-  if (
-    separator < 0 ||
-    !id.trim() ||
-    (scope !== 'global' && scope !== 'team' && scope !== 'project') ||
-    (scope === 'global' && id !== 'global')
-  ) {
-    return null;
-  }
-  const selected = options.find((option) => budgetOptionKey(option) === selectedKey);
-  return {
-    scope,
-    id,
-    label: selected?.label ?? (scope === 'global' ? t('tokenUsage.budgets.allTeams') : id),
-  };
-}
-
-function budgetLimitForTarget(
-  config: TokenUsageStoredBudgetConfig,
-  target: BudgetEditorTarget
-): NonNullable<TokenUsageStoredBudgetConfig['global']> {
-  if (target.scope === 'team') return config.teams?.[target.id] ?? {};
-  if (target.scope === 'project') return config.projects?.[target.id] ?? {};
-  return config.global ?? {};
-}
-
-function updateBudgetConfig(
-  current: TokenUsageStoredBudgetConfig,
-  target: BudgetEditorTarget,
-  patch: NonNullable<TokenUsageStoredBudgetConfig['global']>
-): TokenUsageStoredBudgetConfig {
-  if (target.scope === 'team') {
-    const currentLimit = current.teams?.[target.id] ?? {};
-    const nextLimit = pruneEmptyBudgetLimit({ ...currentLimit, ...patch });
-    const nextTeams = { ...(current.teams ?? {}) };
-    if (nextLimit) {
-      nextTeams[target.id] = nextLimit;
-    } else {
-      delete nextTeams[target.id];
-    }
-    return {
-      ...current,
-      teams: Object.keys(nextTeams).length > 0 ? nextTeams : undefined,
-    };
-  }
-
-  if (target.scope === 'project') {
-    const currentLimit = current.projects?.[target.id] ?? {};
-    const nextLimit = pruneEmptyBudgetLimit({ ...currentLimit, ...patch });
-    const nextProjects = { ...(current.projects ?? {}) };
-    if (nextLimit) {
-      nextProjects[target.id] = nextLimit;
-    } else {
-      delete nextProjects[target.id];
-    }
-    return {
-      ...current,
-      projects: Object.keys(nextProjects).length > 0 ? nextProjects : undefined,
-    };
-  }
-
-  return {
-    ...current,
-    global: pruneEmptyBudgetLimit({ ...(current.global ?? {}), ...patch }),
-  };
-}
-
-function budgetOptionKey(
-  option: Pick<TokenUsageBudgetTargetOptionViewModel, 'scope' | 'id'>
-): string {
-  return `${option.scope}:${option.id}`;
-}
-
-function budgetScopeLabel(
-  scope: TokenUsageBudgetTargetOptionViewModel['scope'],
-  t: TokenUsageT
-): string {
-  if (scope === 'team') return t('tokenUsage.budgets.team');
-  if (scope === 'project') return t('tokenUsage.budgets.project');
-  return t('tokenUsage.budgets.allTeams');
-}
-
-function pruneEmptyBudgetLimit(
-  limit: NonNullable<TokenUsageStoredBudgetConfig['global']>
-): NonNullable<TokenUsageStoredBudgetConfig['global']> | undefined {
-  const next: NonNullable<TokenUsageStoredBudgetConfig['global']> = {};
-  if (typeof limit.monthlyTokenLimit === 'number' && limit.monthlyTokenLimit > 0) {
-    next.monthlyTokenLimit = limit.monthlyTokenLimit;
-  }
-  if (
-    typeof limit.monthlyApiEquivalentCostLimitUsd === 'number' &&
-    limit.monthlyApiEquivalentCostLimitUsd > 0
-  ) {
-    next.monthlyApiEquivalentCostLimitUsd = limit.monthlyApiEquivalentCostLimitUsd;
-  }
-  return Object.keys(next).length > 0 ? next : undefined;
-}
-
-function readPositiveNumberInput(value: string): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function budgetSeverityTextClass(severity: TokenUsageBudgetAlertViewModel['severity']): string {
-  if (severity === 'critical') return 'text-red-300';
-  if (severity === 'warning') return 'text-amber-300';
-  return 'text-emerald-300';
-}
-
-function budgetSeverityBarClass(severity: TokenUsageBudgetAlertViewModel['severity']): string {
-  if (severity === 'critical') return 'bg-red-500';
-  if (severity === 'warning') return 'bg-amber-500';
-  return 'bg-emerald-500';
-}
-
-const PanelTitle = ({
-  heading,
-  action,
-}: {
-  heading: string;
-  action?: React.ReactNode;
-}): React.JSX.Element => {
-  return (
-    <div className="usage-panel-title flex min-h-12 items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
-      <h2 className="text-sm font-semibold text-text-secondary">{heading}</h2>
-      {action}
-    </div>
-  );
-};
-
-const EmptyRows = ({ label }: { label: string }): React.JSX.Element => {
-  return <div className="px-4 py-8 text-center text-sm text-text-muted">{label}</div>;
-};
-
-function formatPanelPercent(value: number): string {
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value)}%`;
-}

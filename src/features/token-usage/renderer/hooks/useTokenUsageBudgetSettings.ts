@@ -2,87 +2,102 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { TokenUsageBudgetLimits } from '../view-models/tokenUsageViewModel';
-import type React from 'react';
-
-export interface UseTokenUsageBudgetSettingsOptions {
-  loadErrorMessage: string;
-  saveErrorMessage: string;
-}
-
-export interface UseTokenUsageBudgetSettingsResult {
-  budgetConfig: TokenUsageBudgetLimits;
-  budgetConfigError: string | null;
-  updateBudgetConfig: React.Dispatch<React.SetStateAction<TokenUsageBudgetLimits>>;
-}
+import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
 
 export function useTokenUsageBudgetSettings({
   loadErrorMessage,
   saveErrorMessage,
-}: UseTokenUsageBudgetSettingsOptions): UseTokenUsageBudgetSettingsResult {
-  const [budgetConfig, setBudgetConfig] = useState<TokenUsageBudgetLimits>({});
-  const [budgetConfigError, setBudgetConfigError] = useState<string | null>(null);
-  const budgetConfigRef = useRef<TokenUsageBudgetLimits>({});
-  const saveVersionRef = useRef(0);
+}: {
+  loadErrorMessage: string;
+  saveErrorMessage: string;
+}) {
+  const [budgetConfig, setBudgetConfig] = useState<TokenUsageBudgetSettingsDto>({});
+  const [budgetStatus, setBudgetStatus] = useState<TokenUsageBudgetStatusDto | null>(null);
+  const [budgetConfigError, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const saved = useRef<TokenUsageBudgetSettingsDto>({});
+  const statusRef = useRef<TokenUsageBudgetStatusDto | null>(null);
+  const generation = useRef(0);
+  const alive = useRef(true);
+
+  const acceptStatus = useCallback((status: TokenUsageBudgetStatusDto) => {
+    if (!alive.current) return;
+    const revision = saved.current.updatedAt;
+    if (revision && (!status.settingsUpdatedAt || status.settingsUpdatedAt < revision)) return;
+    if (statusRef.current && status.computedAt < statusRef.current.computedAt) return;
+    statusRef.current = status;
+    setBudgetStatus(status);
+  }, []);
+
+  const reloadBudgetConfig = useCallback(async () => {
+    const version = ++generation.current;
+    try {
+      const [settings, status] = await Promise.all([
+        api.tokenUsage.getBudgetSettings(),
+        api.tokenUsage.getBudgetStatus(),
+      ]);
+      if (!alive.current || version !== generation.current) return false;
+      saved.current = settings;
+      setBudgetConfig(settings);
+      setLoaded(true);
+      acceptStatus(status);
+      setError(null);
+      return true;
+    } catch (error) {
+      if (alive.current && version === generation.current)
+        setError(error instanceof Error ? error.message : loadErrorMessage);
+      return false;
+    }
+  }, [acceptStatus, loadErrorMessage]);
 
   useEffect(() => {
-    let cancelled = false;
-    const getBudgetSettings = (api.tokenUsage as Partial<typeof api.tokenUsage>).getBudgetSettings;
-    if (typeof getBudgetSettings !== 'function') {
-      setBudgetConfigError(loadErrorMessage);
-      return () => {
-        cancelled = true;
-      };
-    }
-    void getBudgetSettings()
-      .then((settings) => {
-        if (cancelled) return;
-        budgetConfigRef.current = settings;
-        setBudgetConfig(settings);
-        setBudgetConfigError(null);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setBudgetConfigError(error instanceof Error ? error.message : loadErrorMessage);
-      });
+    const aliveRef = alive;
+    const generationRef = generation;
+    aliveRef.current = true;
+    void reloadBudgetConfig();
+    const unsubscribe = api.tokenUsage.onBudgetStatusChanged(acceptStatus);
     return () => {
-      cancelled = true;
+      aliveRef.current = false;
+      generationRef.current++;
+      unsubscribe();
     };
-  }, [loadErrorMessage]);
+  }, [acceptStatus, reloadBudgetConfig]);
 
-  const updateBudgetConfig = useCallback(
-    (action: React.SetStateAction<TokenUsageBudgetLimits>) => {
-      const next = typeof action === 'function' ? action(budgetConfigRef.current) : action;
-      budgetConfigRef.current = next;
-      setBudgetConfig(next);
-
-      const saveVersion = ++saveVersionRef.current;
-      const updateBudgetSettings = (api.tokenUsage as Partial<typeof api.tokenUsage>)
-        .updateBudgetSettings;
-      setBudgetConfigError(null);
-      if (typeof updateBudgetSettings !== 'function') {
-        setBudgetConfigError(saveErrorMessage);
-        return;
-      }
-      void updateBudgetSettings(next)
-        .then((settings) => {
-          if (saveVersion === saveVersionRef.current) {
-            budgetConfigRef.current = settings;
-            setBudgetConfig(settings);
-          }
-        })
-        .catch((error: unknown) => {
-          if (saveVersion === saveVersionRef.current) {
-            setBudgetConfigError(error instanceof Error ? error.message : saveErrorMessage);
-          }
+  const saveBudgetConfig = useCallback(
+    async (settings: TokenUsageBudgetSettingsDto): Promise<void> => {
+      const version = ++generation.current;
+      try {
+        const result = await api.tokenUsage.updateBudgetSettings({
+          settings,
+          expectedUpdatedAt: saved.current.updatedAt ?? null,
         });
+        if (!alive.current || version !== generation.current) return;
+        saved.current = result;
+        setBudgetConfig(result);
+        setLoaded(true);
+        setError(null);
+        try {
+          const status = await api.tokenUsage.getBudgetStatus();
+          if (alive.current && version === generation.current) acceptStatus(status);
+        } catch (error) {
+          if (alive.current && version === generation.current)
+            setError(error instanceof Error ? error.message : loadErrorMessage);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : saveErrorMessage;
+        if (alive.current && version === generation.current) setError(message);
+        throw error;
+      }
     },
-    [saveErrorMessage]
+    [acceptStatus, loadErrorMessage, saveErrorMessage]
   );
 
   return {
     budgetConfig,
+    budgetStatus,
     budgetConfigError,
-    updateBudgetConfig,
+    loaded,
+    saveBudgetConfig,
+    reloadBudgetConfig,
   };
 }

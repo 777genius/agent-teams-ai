@@ -184,6 +184,11 @@ function emptyLedger(): TokenUsageLedgerFile {
 export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositoryPort {
   constructor(private readonly filePath: string) {}
 
+  async readSnapshot(): Promise<{ runs: TokenUsageRunDto[]; events: TokenUsageEventDto[] }> {
+    const ledger = await this.readLedger();
+    return { runs: Object.values(ledger.runs), events: Object.values(ledger.events) };
+  }
+
   async listRuns(): Promise<TokenUsageRunDto[]> {
     const ledger = await this.readLedger();
     return Object.values(ledger.runs).sort((left, right) =>
@@ -243,28 +248,33 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
     try {
       const fileStat = await stat(this.filePath);
       if (!fileStat.isFile() || fileStat.size > MAX_LEDGER_BYTES) {
-        return emptyLedger();
+        throw new Error('Token usage ledger exceeds its size limit or is not a file');
       }
       const raw = await readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(raw) as unknown;
       const record = asRecord(parsed);
-      const runsRecord = asRecord(record?.runs) ?? {};
+      if (record?.schemaVersion !== 1 || !asRecord(record.runs) || !asRecord(record.events))
+        throw new Error('Invalid token usage ledger schema');
+      const runsRecord = asRecord(record.runs)!;
       const eventsRecord = asRecord(record?.events) ?? {};
       const runs: Record<string, TokenUsageRunDto> = {};
       const events: Record<string, TokenUsageEventDto> = {};
 
       for (const value of Object.values(runsRecord)) {
         const run = normalizeRun(value);
-        if (run) runs[run.appRunId] = run;
+        if (!run) throw new Error('Invalid token usage run entry');
+        runs[run.appRunId] = run;
       }
       for (const value of Object.values(eventsRecord)) {
         const event = normalizeEvent(value);
-        if (event) events[event.id] = event;
+        if (!event) throw new Error('Invalid token usage event entry');
+        events[event.id] = event;
       }
 
       return { schemaVersion: 1, runs, events };
-    } catch {
-      return emptyLedger();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return emptyLedger();
+      throw error;
     }
   }
 

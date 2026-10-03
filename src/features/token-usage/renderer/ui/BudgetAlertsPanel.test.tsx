@@ -6,146 +6,262 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BudgetAlertsPanel } from './BudgetAlertsPanel';
 
-import type {
-  TokenUsageBudgetLimits,
-  TokenUsageBudgetTargetOptionViewModel,
-} from '../view-models/tokenUsageViewModel';
+import type { TokenUsageBudgetSettingsDto, TokenUsageBudgetStatusDto } from '../../contracts';
 import type { Root } from 'react-dom/client';
 
-const globalOption: TokenUsageBudgetTargetOptionViewModel = {
-  scope: 'global',
-  id: 'global',
-  label: 'All teams',
-  tokens: '0',
-  cost: '$0',
-  tokenValue: 0,
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
+}));
+const t = (key: string, options?: Record<string, unknown>): string =>
+  `${key}${options?.value ? ` ${options.value}` : ''}`;
+const config: TokenUsageBudgetSettingsDto = {
+  updatedAt: '2026-10-03T00:00:00.000Z',
+  global: {
+    monthlyTokenLimit: 100,
+    monthlyApiEquivalentCostLimitUsd: 10,
+    thresholds: [50, 90],
+    notificationsEnabled: true,
+  },
+  projects: {
+    'project:outside:filters': {
+      monthlyTokenLimit: 200,
+      thresholds: [],
+      notificationsEnabled: false,
+    },
+  },
 };
-const translate = (key: string, options?: Record<string, unknown>): string =>
-  typeof options?.scope === 'string' ? `${key}: ${options.scope}` : key;
+const status: TokenUsageBudgetStatusDto = {
+  period: {
+    key: '2026-10',
+    from: '2026-10-01T00:00:00.000Z',
+    to: '2026-11-01T00:00:00.000Z',
+    timeZone: 'UTC',
+  },
+  computedAt: '2026-10-03T12:00:00.000Z',
+  stale: false,
+  degraded: false,
+  notificationPolicy: { enabled: true, nativeToasts: true },
+  options: [
+    { scope: 'global', id: 'global', label: 'All teams' },
+    { scope: 'project', id: 'project:outside:filters', label: 'Outside filters' },
+  ],
+  targets: [
+    {
+      scope: 'global',
+      id: 'global',
+      label: 'All teams',
+      thresholds: [50, 90],
+      notificationsEnabled: true,
+      metrics: [
+        { metric: 'tokens', value: 150, limit: 100, percent: 150, remaining: 0, incomplete: false },
+      ],
+    },
+    {
+      scope: 'project',
+      id: 'project:outside:filters',
+      label: 'Outside filters',
+      thresholds: [],
+      notificationsEnabled: false,
+      metrics: [
+        { metric: 'tokens', value: 0, limit: 200, percent: 0, remaining: 200, incomplete: false },
+      ],
+    },
+  ],
+};
 
-describe('BudgetAlertsPanel selected identity', () => {
+describe('Budget Save/Cancel and standalone status', () => {
   let container: HTMLDivElement;
   let root: Root;
-  let config: TokenUsageBudgetLimits;
-  let selectedKey: string;
-  let configChanges: ReturnType<typeof vi.fn>;
-
+  let selected: string;
+  let save: ReturnType<typeof vi.fn>;
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
-    config = { global: { monthlyTokenLimit: 100, monthlyApiEquivalentCostLimitUsd: 10 } };
-    selectedKey = 'global:global';
-    configChanges = vi.fn();
+    selected = 'global:global';
+    save = vi.fn(async () => undefined);
   });
-
   afterEach(async () => {
     await act(async () => root.unmount());
     container.remove();
     vi.unstubAllGlobals();
   });
-
-  const render = async (options: TokenUsageBudgetTargetOptionViewModel[]): Promise<void> => {
-    await act(async () => {
+  async function render(settings = config, data = status) {
+    await act(async () =>
       root.render(
         <TooltipProvider>
           <BudgetAlertsPanel
-            alerts={[]}
-            budgetConfig={config}
-            budgetTargetKey={selectedKey}
-            budgetTargetOptions={options}
+            status={data}
+            budgetConfig={settings}
+            budgetTargetKey={selected}
             error={null}
+            loaded
             onBudgetTargetKeyChange={(key) => {
-              selectedKey = key;
+              selected = key;
             }}
-            onBudgetConfigChange={(update) => {
-              config = typeof update === 'function' ? update(config) : update;
-              configChanges(config);
-            }}
+            onSave={save}
+            onReload={async () => true}
             onOpenNotificationSettings={() => undefined}
-            t={translate}
+            t={t}
           />
         </TooltipProvider>
+      )
+    );
+  }
+  async function button(key: string) {
+    const element = [...document.querySelectorAll('button')].find(
+      (item) => item.textContent === key
+    );
+    if (!element) throw new Error(`Missing ${key}`);
+    await act(async () => element.click());
+  }
+  async function input(label: string, text: string) {
+    const element = [...document.querySelectorAll('input')].find(
+      (item) =>
+        item.closest('label')?.textContent?.startsWith(label) ||
+        item.getAttribute('aria-label') === label
+    );
+    if (!element) throw new Error(`Missing input ${label}`);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        element,
+        text
       );
+      element.dispatchEvent(new Event('input', { bubbles: true }));
     });
-  };
-
-  const selectTarget = async (label: string): Promise<void> => {
-    const trigger = container.querySelector('[role="combobox"]');
-    if (!trigger) throw new Error('Missing budget selector');
-    await act(async () => {
-      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-    const option = [...document.querySelectorAll('[role="option"]')].find((item) =>
-      item.textContent?.endsWith(`/ ${label}`)
+  }
+  async function open() {
+    await button('tokenUsage.budgets.editor.title');
+  }
+  async function choose(label: string) {
+    const trigger = document.querySelector('[role="dialog"] [role="combobox"]')!;
+    await act(async () =>
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     );
-    if (!option) throw new Error(`Missing budget option ${label}`);
-    await act(async () => {
-      option.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-  };
-
-  const editLimit = async (value: string, index = 0): Promise<void> => {
-    const input = container.querySelectorAll<HTMLInputElement>('input[type="number"]')[index];
-    if (!input) throw new Error('Missing budget input');
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.bind(
-      input
+    const option = [...document.querySelectorAll('[role="option"]')].find(
+      (element) => element.textContent === label || element.textContent?.endsWith(`/ ${label}`)
+    )!;
+    await act(async () =>
+      option.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     );
-    if (!setter) throw new Error('Missing native input setter');
-    await act(async () => {
-      setter(value);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  // These assertions go red under the old autosave form even before touching disk.
+  it('typing and Cancel never write; Save writes once and preserves unedited identities', async () => {
+    await render();
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '250');
+    expect(save).not.toHaveBeenCalled();
+    await button('tokenUsage.budgets.editor.cancel');
+    await open();
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('100');
+    await input('tokenUsage.budgets.tokenLimit', '250');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][0]).toMatchObject({
+      global: { monthlyTokenLimit: 250 },
+      projects: config.projects,
     });
-  };
-
-  // A filtered snapshot previously redirected these edits to the global budget.
-  it.each([
-    { scope: 'team' as const, id: 'sandbox-team', label: 'Sandbox team' },
-    { scope: 'project' as const, id: '/sandbox/project:example', label: 'Sandbox project' },
-  ])('keeps editing the selected $scope after its option disappears', async (target) => {
-    const options = [globalOption, { ...target, tokens: '0', cost: '$0', tokenValue: 0 }];
-    await render(options);
-    await selectTarget(target.label);
-    expect(selectedKey).toBe(`${target.scope}:${target.id}`);
-    await render(options);
-    expect(container.querySelector('[role="combobox"]')?.textContent).toContain(target.label);
-
-    await render([globalOption]);
-    expect(container.querySelector('[role="combobox"]')?.textContent).toContain(target.id);
-    expect(container.textContent).toContain(`tokenUsage.budgets.configureFor: ${target.id}`);
-    await editLimit('250');
-    await editLimit('25.5', 1);
-
-    expect(config.global).toEqual({ monthlyTokenLimit: 100, monthlyApiEquivalentCostLimitUsd: 10 });
-    const limits = target.scope === 'team' ? config.teams : config.projects;
-    expect(limits).toEqual({
-      [target.id]: { monthlyTokenLimit: 250, monthlyApiEquivalentCostLimitUsd: 25.5 },
-    });
-    expect(target.scope === 'team' ? config.projects : config.teams).toBeUndefined();
-
-    await render([globalOption]);
-    await selectTarget(globalOption.label);
-    await render([globalOption]);
-    await editLimit('300');
-    expect(config.global?.monthlyTokenLimit).toBe(300);
-    expect(
-      (target.scope === 'team' ? config.teams : config.projects)?.[target.id]?.monthlyTokenLimit
-    ).toBe(250);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
-
-  it.each(['unknown:sandbox', 'team:', 'project:', 'global:other', 'global'])(
-    'disables editing for an invalid target %s',
-    async (key) => {
-      selectedKey = key;
-      await render([globalOption]);
-      expect(container.querySelector('[role="combobox"]')?.textContent).toContain(key);
-      const inputs = [...container.querySelectorAll<HTMLInputElement>('input[type="number"]')];
-      expect(inputs).toHaveLength(2);
-      expect(inputs.every((input) => input.disabled)).toBe(true);
-      await editLimit('999');
-      expect(configChanges).not.toHaveBeenCalled();
-      expect(config.global?.monthlyTokenLimit).toBe(100);
-    }
-  );
+  it('invalid limits and duplicate chips prevent Save; empty thresholds remain valid', async () => {
+    await render();
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '0');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('tokenUsage.budgets.editor.invalidLimit');
+    await input('tokenUsage.budgets.tokenLimit', '100');
+    const chips = [
+      ...document.querySelectorAll('input[aria-label="tokenUsage.budgets.editor.threshold"]'),
+    ];
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        chips[1],
+        '50'
+      );
+      chips[1].dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await button('tokenUsage.budgets.editor.save');
+    expect(save).not.toHaveBeenCalled();
+    const removals = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label="tokenUsage.budgets.editor.removeThreshold"]'
+      ),
+    ];
+    await act(async () => removals[1].click());
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="tokenUsage.budgets.editor.removeThreshold"]'
+        )!
+        .click()
+    );
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[0][0].global.thresholds).toEqual([]);
+  });
+  it('multi-scope edits survive navigation; unconfigured initial scope does not create an empty budget', async () => {
+    await render({ projects: config.projects });
+    await open();
+    await choose('Outside filters');
+    await input('tokenUsage.budgets.tokenLimit', '300');
+    await choose('tokenUsage.budgets.allTeams');
+    await choose('Outside filters');
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('300');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[0][0]).toEqual({
+      projects: {
+        'project:outside:filters': {
+          monthlyTokenLimit: 300,
+          thresholds: [],
+          notificationsEnabled: false,
+        },
+      },
+    });
+  });
+  it('delete is draft-only and Save applies it', async () => {
+    await render();
+    await open();
+    await button('tokenUsage.budgets.editor.delete');
+    expect(save).not.toHaveBeenCalled();
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[0][0].global).toBeUndefined();
+    expect(save.mock.calls[0][0].projects).toEqual(config.projects);
+  });
+  it('in-flight blocks Save/close; failure preserves typed draft', async () => {
+    let reject!: (error: Error) => void;
+    save.mockImplementation(
+      () =>
+        new Promise<void>((_resolve, fail) => {
+          reject = fail;
+        })
+    );
+    await render();
+    await open();
+    await input('tokenUsage.budgets.tokenLimit', '400');
+    await button('tokenUsage.budgets.editor.save');
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.querySelector('button[aria-disabled="true"]')).not.toBeNull();
+    expect(
+      [...dialog.querySelectorAll('button')].find(
+        (item) => item.textContent === 'tokenUsage.budgets.editor.cancel'
+      )?.disabled
+    ).toBe(true);
+    await act(async () => reject(new Error('Budget settings changed')));
+    expect(document.body.textContent).toContain('Budget settings changed');
+    expect(dialog.querySelector<HTMLInputElement>('input')!.value).toBe('400');
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+  it('shows over100, zero outside filters, stale/degraded and pause without changing selected identity', async () => {
+    await render();
+    expect(container.textContent).toContain('150.0%');
+    expect(container.querySelector<HTMLElement>('.bg-red-500')?.style.width).toBe('100%');
+    selected = 'project:project:outside:filters';
+    await render(config, { ...status, stale: true, degraded: true });
+    expect(container.textContent).toContain('0.0%');
+    expect(container.textContent).toContain('tokenUsage.budgets.card.stale');
+    expect(container.textContent).toContain('tokenUsage.budgets.card.degraded');
+    expect(container.textContent).toContain('tokenUsage.budgets.card.paused');
+    expect(container.textContent).toContain('Outside filters');
+  });
 });

@@ -17,6 +17,8 @@ import { TeamLaunchRunSourceDiscovery } from '../infrastructure/TeamLaunchRunSou
 import type {
   TokenUsageAnalyticsSnapshotDto,
   TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
@@ -37,7 +39,11 @@ export interface TokenUsageFeatureFacade {
   recordRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
   ingestEvents(events: readonly TokenUsageEventDto[]): Promise<void>;
   getBudgetSettings(): Promise<TokenUsageBudgetSettingsDto>;
-  updateBudgetSettings(settings: TokenUsageBudgetSettingsDto): Promise<TokenUsageBudgetSettingsDto>;
+  getBudgetStatus(): Promise<TokenUsageBudgetStatusDto>;
+  dispose(): void;
+  updateBudgetSettings(
+    settings: TokenUsageBudgetSettingsUpdateRequestDto
+  ): Promise<TokenUsageBudgetSettingsDto>;
 }
 
 export interface CreateTokenUsageFeatureDeps {
@@ -66,7 +72,10 @@ export function createTokenUsageFeature(
   deps: CreateTokenUsageFeatureDeps
 ): TokenUsageFeatureFacade {
   const budgetSettingsRepository = deps.budgetSettingsPath
-    ? new JsonTokenUsageBudgetSettingsRepository(deps.budgetSettingsPath)
+    ? new JsonTokenUsageBudgetSettingsRepository(
+        deps.budgetSettingsPath,
+        deps.budgetNotificationSettings
+      )
     : undefined;
   const budgetNotificationEvaluator =
     budgetSettingsRepository &&
@@ -74,7 +83,6 @@ export function createTokenUsageFeature(
     deps.budgetNotificationSink &&
     deps.budgetNotificationSettings
       ? new TokenUsageBudgetNotificationEvaluator({
-          budgets: budgetSettingsRepository,
           state: new JsonTokenUsageBudgetNotificationStateRepository(
             deps.budgetNotificationStatePath
           ),
@@ -98,12 +106,24 @@ export function createTokenUsageFeature(
     clock: { now: () => new Date() },
     budgets: budgetSettingsRepository,
     budgetNotifications: budgetNotificationEvaluator,
+    budgetNotificationSettings: deps.budgetNotificationSettings,
     publisher: deps.publisher,
     taskAttributionSource: deps.taskAttributionSource,
     logger: deps.logger,
   });
 
+  const timer = setInterval(() => {
+    void service
+      .tick()
+      .catch((error: unknown) =>
+        deps.logger?.warn('Failed to update background budget status', error)
+      );
+  }, 60_000);
+  timer.unref?.();
+
   return {
+    dispose: () => clearInterval(timer),
+    getBudgetStatus: () => service.getBudgetStatus(),
     getSnapshot: (request) => service.getSnapshot(request),
     refreshSnapshot: (request) => service.refreshSnapshot(request),
     recordRuns: (runs) => service.recordRuns(runs),

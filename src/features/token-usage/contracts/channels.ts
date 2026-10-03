@@ -6,3 +6,7 @@ export const TOKEN_USAGE_SNAPSHOT_CHANGED = 'token-usage:snapshot-changed';
 
 export const TOKEN_USAGE_SNAPSHOT_ROUTE = '/api/token-usage/snapshot';
 export const TOKEN_USAGE_BUDGET_SETTINGS_ROUTE = '/api/token-usage/budget-settings';
+
+export const TOKEN_USAGE_GET_BUDGET_STATUS = 'token-usage:get-budget-status';
+export const TOKEN_USAGE_BUDGET_STATUS_CHANGED = 'token-usage:budget-status-changed';
+export const TOKEN_USAGE_BUDGET_STATUS_ROUTE = '/api/token-usage/budget-status';

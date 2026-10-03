@@ -4,6 +4,7 @@ import { TokenUsageAnalyticsService } from '../TokenUsageAnalyticsService';
 
 import type {
   TokenUsageAnalyticsSnapshotDto,
+  TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
   TokenUsageRunDto,
 } from '../../../contracts';
@@ -74,7 +75,7 @@ describe('TokenUsageAnalyticsService', () => {
     expect(filtered.byTask.map((item) => item.id)).toEqual(['task:alpha:1']);
     expect(published[0]?.summary.totalTokens).toBe(300);
     expect(published[0]?.byTask.map((item) => item.id)).toEqual(['task:beta:2', 'task:alpha:1']);
-    expect(evaluator.snapshots[0]?.summary.totalTokens).toBe(300);
+    expect(evaluator.snapshots[0]?.period.key).toBe('2026-06');
   });
 });
 
@@ -155,6 +156,10 @@ class MemoryLedgerRepository implements TokenUsageLedgerRepositoryPort {
   private runs: TokenUsageRunDto[] = [];
   private events: TokenUsageEventDto[] = [];
 
+  async readSnapshot(): Promise<{ runs: TokenUsageRunDto[]; events: TokenUsageEventDto[] }> {
+    return { runs: [...this.runs], events: [...this.events] };
+  }
+
   async listRuns(): Promise<TokenUsageRunDto[]> {
     return [...this.runs];
   }
@@ -185,9 +190,9 @@ class MemoryLedgerRepository implements TokenUsageLedgerRepositoryPort {
 }
 
 class CapturingBudgetEvaluator implements TokenUsageBudgetNotificationEvaluatorPort {
-  readonly snapshots: TokenUsageAnalyticsSnapshotDto[] = [];
+  readonly snapshots: TokenUsageBudgetStatusDto[] = [];
 
-  async evaluate(snapshot: TokenUsageAnalyticsSnapshotDto): Promise<void> {
+  async evaluate(snapshot: TokenUsageBudgetStatusDto): Promise<void> {
     this.snapshots.push(snapshot);
   }
 }

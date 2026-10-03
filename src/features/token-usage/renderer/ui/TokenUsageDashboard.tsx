@@ -27,10 +27,8 @@ import {
   Users,
 } from 'lucide-react';
 
-import { useOpenTokenUsageNotificationSettings } from '../hooks/useOpenTokenUsageNotificationSettings';
 import { useOpenTokenUsageTask } from '../hooks/useOpenTokenUsageTask';
 import { useOpenTokenUsageTeam } from '../hooks/useOpenTokenUsageTeam';
-import { useTokenUsageBudgetSettings } from '../hooks/useTokenUsageBudgetSettings';
 import { useTokenUsageSnapshot } from '../hooks/useTokenUsageSnapshot';
 import {
   createCustomTokenUsageDateRange,
@@ -45,7 +43,7 @@ import {
 } from '../view-models/tokenUsageDateRange';
 
 import { ActivityHeatmapPanel } from './ActivityHeatmapPanel';
-import { BudgetAlertsPanel } from './BudgetAlertsPanel';
+import { BudgetSection } from './BudgetSection';
 import { MetricInfoTooltip } from './MetricInfoTooltip';
 import { ModelUsagePanel } from './ModelUsagePanel';
 import { SummaryMetricsPanel } from './SummaryMetricsPanel';
@@ -88,7 +86,6 @@ export const TokenUsageDashboard = ({
   );
   const openTeamTab = useOpenTokenUsageTeam();
   const openTaskDetail = useOpenTokenUsageTask();
-  const openNotificationSettings = useOpenTokenUsageNotificationSettings();
   const [dateRange, setDateRange] = useState<TokenUsageDateRangeValue>(() =>
     createDefaultTokenUsageDateRange()
   );
@@ -97,19 +94,13 @@ export const TokenUsageDashboard = ({
   );
   const [includeCacheTokens, setIncludeCacheTokens] = useState(false);
   const [activeDashboardTab, setActiveDashboardTab] = useState<TokenUsageDashboardTab>('overview');
-  const { budgetConfig, budgetConfigError, updateBudgetConfig } = useTokenUsageBudgetSettings({
-    loadErrorMessage: tokenUsageT('tokenUsage.budgets.loadFailed'),
-    saveErrorMessage: tokenUsageT('tokenUsage.budgets.saveFailed'),
-  });
-  const [budgetTargetKey, setBudgetTargetKey] = useState('global:global');
   const viewModelOptions = useMemo<TokenUsageDashboardViewModelOptions>(
     () => ({
-      budgetLimits: budgetConfig,
       includeCacheTokens,
       locale: resolvedLanguage,
       text: createTokenUsageViewModelText(tokenUsageT),
     }),
-    [budgetConfig, includeCacheTokens, resolvedLanguage, tokenUsageT]
+    [includeCacheTokens, resolvedLanguage, tokenUsageT]
   );
   const snapshotRequest = useMemo(() => {
     const request = tokenUsageSnapshotRequestForDateRange(dateRange) ?? {};
@@ -201,8 +192,6 @@ export const TokenUsageDashboard = ({
 
           {loading && viewModel.empty ? (
             <LoadingPanel />
-          ) : viewModel.empty ? (
-            <EmptyPanel t={tokenUsageT} />
           ) : (
             <Tabs
               value={activeDashboardTab}
@@ -235,6 +224,7 @@ export const TokenUsageDashboard = ({
               </div>
 
               <TabsContent value="overview" className="mt-5 space-y-5">
+                {viewModel.empty && <EmptyPanel t={tokenUsageT} />}
                 <ModelUsagePanel
                   modelSegments={viewModel.modelUsage}
                   modelBars={viewModel.modelBars}
@@ -244,17 +234,7 @@ export const TokenUsageDashboard = ({
                 <section className="usage-overview-details">
                   <BillingSplitPanel items={viewModel.billingSplit} t={tokenUsageT} />
                   <BurnRatePanel burnRate={viewModel.burnRate} t={tokenUsageT} />
-                  <BudgetAlertsPanel
-                    alerts={viewModel.budgetAlerts}
-                    budgetConfig={budgetConfig}
-                    budgetTargetKey={budgetTargetKey}
-                    budgetTargetOptions={viewModel.budgetTargetOptions}
-                    error={budgetConfigError}
-                    onBudgetTargetKeyChange={setBudgetTargetKey}
-                    onBudgetConfigChange={updateBudgetConfig}
-                    onOpenNotificationSettings={openNotificationSettings}
-                    t={tokenUsageT}
-                  />
+                  <BudgetSection t={tokenUsageT} />
                 </section>
               </TabsContent>
 
@@ -378,15 +358,8 @@ function createTokenUsageViewModelText(t: TokenUsageT): TokenUsageViewModelText 
     billableApiRequests: (count) => t('tokenUsage.metrics.billableApiRequests', { count }),
     billing: t('tokenUsage.metrics.billing'),
     billingHelp: t('tokenUsage.metrics.billingHelp'),
-    budgetAllTeams: t('tokenUsage.budgets.allTeams'),
-    budgetCritical: t('tokenUsage.budgets.critical'),
-    budgetOk: t('tokenUsage.budgets.ok'),
-    budgetProject: t('tokenUsage.budgets.project'),
-    budgetTeam: t('tokenUsage.budgets.team'),
-    budgetWarning: t('tokenUsage.budgets.warning'),
     burnRateBasis: (days) => t('tokenUsage.burnRate.basis', { days }),
     costEstimated: t('tokenUsage.sources.costEstimated'),
-    costLimitDetail: (cost, limit) => t('tokenUsage.budgets.costLimitDetail', { cost, limit }),
     dailyCost: t('tokenUsage.burnRate.dailyCost'),
     dailyTokens: t('tokenUsage.burnRate.dailyTokens'),
     estimatedRequests: (pricedCount, totalCount) =>
@@ -419,8 +392,6 @@ function createTokenUsageViewModelText(t: TokenUsageT): TokenUsageViewModelText 
     sourceEventCount: (count) => t('tokenUsage.labels.eventCount', { count }),
     subscriptionUsage: t('tokenUsage.metrics.subscriptionUsage'),
     subscriptionUsageHelp: t('tokenUsage.billingSplit.subscriptionUsageHelp'),
-    tokenLimitDetail: (tokens, limit) =>
-      t('tokenUsage.budgets.tokenLimitDetail', { tokens, limit }),
     totalTokens: t('tokenUsage.metrics.totalTokens'),
     totalTokensDetail: (input, output) =>
       t('tokenUsage.metrics.totalTokensDetail', { input, output }),

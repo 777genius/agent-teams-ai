@@ -105,7 +105,10 @@ import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
-import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  TOKEN_USAGE_SNAPSHOT_CHANGED,
+  TOKEN_USAGE_BUDGET_STATUS_CHANGED,
+} from '@features/token-usage/contracts';
 import {
   createApplicationCommandLedgerFeature,
   NodeApplicationCommandHasher,
@@ -187,10 +190,7 @@ import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/servi
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
-import {
-  formatTokenUsageBudgetMetricLabel,
-  formatTokenUsageBudgetValue,
-} from '@main/utils/tokenUsageBudgetNotificationText';
+import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -2400,23 +2400,12 @@ async function initializeServices(): Promise<void> {
         };
       },
     },
-    budgetNotificationSink: {
-      notifyBudgetThreshold: async (event) => {
-        await notificationManager.addTeamNotification({
-          teamEventType:
-            event.severity === 'critical' ? 'usage_budget_exceeded' : 'usage_budget_warning',
-          teamName: 'token-usage',
-          teamDisplayName: 'Usage budgets',
-          from: 'Usage',
-          summary: `${event.label} reached ${Math.round(event.percent)}% of ${formatTokenUsageBudgetMetricLabel(event.metric)} budget`,
-          body: `${formatTokenUsageBudgetValue(event.value, event.metric)} used of ${formatTokenUsageBudgetValue(event.limit, event.metric)} ${event.metric === 'apiEquivalentCostUsd' ? 'API-equivalent estimate' : 'limit'}.`,
-          dedupeKey: event.dedupeKey,
-          target: { kind: 'token_usage', focus: 'budgets' },
-          suppressToast: event.suppressToast,
-        });
-      },
-    },
+    budgetNotificationSink: createBudgetNotificationSink(notificationManager),
     publisher: {
+      publishBudgetStatus: (status) => {
+        safeSendToRenderer(mainWindow, TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+        httpServer?.broadcast(TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+      },
       publishSnapshot: (snapshot) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
         httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
@@ -3705,6 +3694,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', (event) => {
   if (shutdownComplete) {
+    tokenUsageFeature?.dispose();
     return;
   }
 
