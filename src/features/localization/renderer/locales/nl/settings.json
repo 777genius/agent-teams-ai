@@ -340,9 +340,9 @@
       "selectDuration": "Duur selecteren..."
     },
     "taskCompletion": {
-      "description": "Krijg native OS-meldingen wanneer Claude taken voltooit - geluiden, banners en Dock-/taakbalkbadges. Werkt op macOS, Linux en Windows.",
-      "installPlugin": "claude-notifications-go-plugin installeren",
-      "title": "Meldingen bij taakvoltooiing"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

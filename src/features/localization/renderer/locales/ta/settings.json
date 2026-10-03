@@ -355,9 +355,9 @@
       "selectDuration": "கால அளவைத் தேர்ந்தெடு..."
     },
     "taskCompletion": {
-      "description": "Claude tasks ஐ முடிக்கும்போது native OS அறிவிப்புகளைப் பெறுங்கள் - ஒலிகள், banners மற்றும் Dock/taskbar badges. macOS, Linux மற்றும் Windows இல் வேலை செய்கிறது.",
-      "installPlugin": "claude-notifications-go plugin ஐ நிறுவு",
-      "title": "Task நிறைவு அறிவிப்புகள்"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

@@ -340,9 +340,9 @@
       "selectDuration": "...مدة مختارة"
     },
     "taskCompletion": {
-      "description": "الحصول على الإخطارات المحلية عندما ينهي كلود المهام - الأصوات، واللافتات، وشارات غرق/تاسكوبار. يعمل على ماكوس، لينكس، وويندوز.",
-      "installPlugin": "Install claude-notifications-go plugin",
-      "title": "الإخطارات بإنجاز المهام"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

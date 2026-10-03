@@ -339,7 +339,7 @@
       "project": "Project",
       "editor": {
         "title": "Configure budget",
-        "description": "Calendar month in UTC. USD is an API-equivalent estimate, not a provider invoice.",
+        "description": "USD is an API-equivalent estimate, not a provider invoice.",
         "scope": "Budget scope",
         "notifications": "Budget notifications",
         "thresholds": "Notification thresholds",

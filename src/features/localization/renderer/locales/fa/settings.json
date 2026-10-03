@@ -340,9 +340,9 @@
       "selectDuration": "انتخاب مدت..."
     },
     "taskCompletion": {
-      "description": "هنگامی که Claude وظایف را به پایان می‌رساند، اعلان‌های بومی سیستم‌عامل دریافت کنید - صداها، بنرها و نشان‌های Dock/نوار وظیفه. روی macOS، Linux و Windows کار می‌کند.",
-      "installPlugin": "نصب پلاگین claude-notifications-go",
-      "title": "اعلان‌های تکمیل وظیفه"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

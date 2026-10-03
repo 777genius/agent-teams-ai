@@ -340,9 +340,9 @@
       "selectDuration": "Pilih tempoh..."
     },
     "taskCompletion": {
-      "description": "Dapatkan pemberitahuan OS natif apabila Claude menyelesaikan tugasan - bunyi, sepanduk, dan lencana Dock/bar tugas. Berfungsi pada macOS, Linux, dan Windows.",
-      "installPlugin": "Pasang plugin claude-notifications-go",
-      "title": "Pemberitahuan Penyelesaian Tugasan"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

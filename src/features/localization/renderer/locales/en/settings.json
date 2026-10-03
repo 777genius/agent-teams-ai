@@ -377,9 +377,9 @@
       "editorLink": "Configure thresholds in Usage / Budget"
     },
     "taskCompletion": {
-      "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",
-      "installPlugin": "Install claude-notifications-go plugin",
-      "title": "Task Completion Notifications"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

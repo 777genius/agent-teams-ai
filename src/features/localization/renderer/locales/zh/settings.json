@@ -340,9 +340,9 @@
       "selectDuration": "选择持续时间…"
     },
     "taskCompletion": {
-      "description": "当 Claude 完成任务时接收原生操作系统通知 - 声音、横幅和 Dock/任务栏徽章。适用于 macOS、Linux 和 Windows。",
-      "installPlugin": "安装 claude-notifications-go 插件",
-      "title": "任务完成通知"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

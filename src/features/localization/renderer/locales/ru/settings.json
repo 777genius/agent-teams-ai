@@ -377,9 +377,9 @@
       "editorLink": "Настроить пороги в Расход / Бюджет"
     },
     "taskCompletion": {
-      "description": "Получайте системные уведомления, когда Claude завершает задачи: звуки, баннеры и бейджи Dock/панели задач. Работает на macOS, Linux и Windows.",
-      "installPlugin": "Установить плагин claude-notifications-go",
-      "title": "Уведомления о завершении задач"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

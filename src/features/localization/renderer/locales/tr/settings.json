@@ -340,9 +340,9 @@
       "selectDuration": "Süre seç..."
     },
     "taskCompletion": {
-      "description": "Claude görevleri bitirdiğinde yerel işletim sistemi bildirimleri alın - sesler, başlıklar ve Dock/görev çubuğu rozetleri. macOS, Linux ve Windows'ta çalışır.",
-      "installPlugin": "claude-notifications-go eklentisini kur",
-      "title": "Görev Tamamlama Bildirimleri"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

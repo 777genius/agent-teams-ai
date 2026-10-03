@@ -340,9 +340,9 @@
       "selectDuration": "সময়কাল নির্বাচন করুন..."
     },
     "taskCompletion": {
-      "description": "স্থানীয় ওএস-এর বিজ্ঞপ্তি পাওয়া যাবে, যখন ক্লড কাজ শেষ হবে- শব্দ, ব্যানার এবং ডক/ডবার ব্যাজ। ম্যাককোনস, লিনাক্স এবং উইন্ডোজে কাজ করে।",
-      "installPlugin": "Dublay- notifications প্লাগ-ইন ইনস্টল করুন",
-      "title": "কর্ম সমাপ্তির সূচনা"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

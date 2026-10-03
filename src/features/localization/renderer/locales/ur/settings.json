@@ -340,9 +340,9 @@
       "selectDuration": "مدت منتخب کریں..."
     },
     "taskCompletion": {
-      "description": "اُس وقت مقامی لوگ اِس بات کی اطلاعات حاصل کریں گے کہ اُن کی آواز سنائی دیتی ہے ۔ میکوز، لینکس اور ونڈوز پر کام.",
-      "installPlugin": "کلاگ-n-go پلگ ان انسٹال کریں",
-      "title": "معجزے مکمل کریں"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

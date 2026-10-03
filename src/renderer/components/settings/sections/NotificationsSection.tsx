@@ -641,7 +641,7 @@ export const NotificationsSection = ({
         dropUp
       />
 
-      {/* Task Completion Notifications */}
+      {/* Agent Notifications */}
       <SettingsSectionHeader
         title={t('notifications.taskCompletion.title')}
         icon={<PartyPopper className="size-3.5" />}
@@ -657,9 +657,7 @@ export const NotificationsSection = ({
           {t('notifications.taskCompletion.description')}
         </p>
         <button
-          onClick={() =>
-            void api.openExternal('https://github.com/777genius/claude-notifications-go')
-          }
+          onClick={() => void api.openExternal('https://github.com/777genius/agent-notifications')}
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:brightness-125"
           style={{
             backgroundColor: 'var(--color-border-emphasis)',

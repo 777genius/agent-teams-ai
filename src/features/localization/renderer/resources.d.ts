@@ -1286,7 +1286,7 @@ export default interface Resources {
           "compareDraft": "Current settings loaded. Compare your draft before saving.",
           "delete": "Delete budget",
           "deletePending": "Budget will be deleted when you Save. Editing restores it.",
-          "description": "Calendar month in UTC. USD is an API-equivalent estimate, not a provider invoice.",
+          "description": "USD is an API-equivalent estimate, not a provider invoice.",
           "invalidDraft": "Check the limits and thresholds in your edited scopes.",
           "invalidLimit": "Enter a finite positive number.",
           "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
@@ -2820,9 +2820,9 @@ export default interface Resources {
         "selectDuration": "Select duration..."
       },
       "taskCompletion": {
-        "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",
-        "installPlugin": "Install claude-notifications-go plugin",
-        "title": "Task Completion Notifications"
+        "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+        "installPlugin": "Agent Notifications",
+        "title": "Agent Notifications"
       },
       "team": {
         "allTasksCompleted": {
