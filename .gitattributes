@@ -1,2 +1,4 @@
 # Keep the security backport byte-identical for pnpm patching and source verification.
 patches/node-forge@1.4.0.patch text eol=lf
+patches/braces@3.0.3.patch text eol=lf
+patches/http-cache-semantics@4.2.0.patch text eol=lf
