@@ -5,6 +5,7 @@ export type Screenshot = {
   ruAlt?: string;
   width: number;
   height: number;
+  version?: string;
 };
 
 /**
@@ -34,8 +35,9 @@ export const screenshots: Screenshot[] = [
     previewPath: 'screenshots/previews/14.webp',
     alt: 'Token usage, costs, runs, and budget analytics',
     ruAlt: 'Аналитика токенов, расходов, запусков и бюджетов',
-    width: 1854,
-    height: 1156,
+    width: 1312,
+    height: 900,
+    version: '1cff3f1128ca',
   },
   {
     path: 'screenshots/15.png',

@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADVISORY, installedForgePackages, verifyForgePackage } from './node-forge-security.mjs';
+import { BACKPORTS, installedBackportPackages, verifyBackport } from './transitive-security.ts';
 
 const severities = ['info', 'low', 'moderate', 'high', 'critical'];
 const severe = (severity) => severity === 'high' || severity === 'critical';
@@ -25,8 +26,8 @@ function advisoryId(value) {
   return fromUrl;
 }
 
-// The only exception requires the exact advisory AND independently verified installed code.
-export function assessAuditReport(report, { npm = false, patched = false } = {}) {
+// Exceptions require exact advisories/packages AND independently verified installed code.
+export function assessAuditReport(report, { npm = false, patched = false, backported = [] } = {}) {
   assert(object(report) && !report.error && !report.errors, 'error or missing report');
   const entries = npm ? report.vulnerabilities : report.advisories;
   assert(object(entries), 'missing vulnerability map');
@@ -73,22 +74,31 @@ export function assessAuditReport(report, { npm = false, patched = false } = {})
       const visit = (key) => {
         if (seen.has(key)) return;
         seen.add(key);
-        for (const via of entries[key].via)
-          typeof via === 'string' ? visit(via) : concrete.push(via);
+        for (const via of entries[key].via) {
+          if (typeof via === 'string') visit(via);
+          else concrete.push(via);
+        }
       };
       visit(name);
     } else concrete.push(entry);
     const high = concrete.filter((item) => severe(item.severity));
     const allowed =
-      patched &&
       high.length > 0 &&
-      high.every(
-        (item) =>
-          advisoryId(item) === ADVISORY &&
-          (npm
+      high.every((item) => {
+        if (advisoryId(item) === ADVISORY && patched)
+          return npm
             ? item.name === 'node-forge' && item.dependency === 'node-forge'
-            : item.module_name === 'node-forge')
-      );
+            : item.module_name === 'node-forge';
+        const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
+        if (!spec || !backported.includes(spec.name)) return false;
+        if (npm) return item.name === spec.name && item.dependency === spec.name;
+        return (
+          item.module_name === spec.name &&
+          Array.isArray(item.findings) &&
+          item.findings.length > 0 &&
+          item.findings.every((finding) => finding.version === spec.version)
+        );
+      });
     (allowed ? excepted : blocked).push(name);
   }
   return { blocked, excepted };
@@ -138,11 +148,34 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     }
     patched = true;
   }
-  const assessed = assessAuditReport(report, { npm, patched });
+  const backported = [];
+  for (const spec of BACKPORTS) {
+    const reported = npm
+      ? report.vulnerabilities[spec.name]?.via?.some(
+          (item) => object(item) && advisoryId(item) === spec.advisory
+        )
+      : Object.values(report.advisories).some((item) => advisoryId(item) === spec.advisory);
+    if (!reported) continue;
+    const nodes = npm ? report.vulnerabilities[spec.name].nodes : [];
+    assert(
+      Array.isArray(nodes) &&
+        nodes.every(
+          (node) => typeof node === 'string' && node.endsWith(`node_modules/${spec.name}`)
+        ),
+      'invalid backport install paths'
+    );
+    const targets = installedBackportPackages(spec.name, cwd, { npm, nodes });
+    if (targets.length === 0) throw new Error(`No installed ${spec.name} package found in ${cwd}`);
+    for (const target of targets) verifyBackport(spec.name, target);
+    backported.push(spec.name);
+  }
+  const assessed = assessAuditReport(report, { npm, patched, backported });
   // Retain the full raw report so advisories below the chosen threshold remain visible.
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (assessed.excepted.length)
-    console.log(`Verified local security backport: ${ADVISORY} (${assessed.excepted.join(', ')})`);
+    console.log(
+      `Verified local security backports: ${[...(patched ? [ADVISORY] : []), ...BACKPORTS.filter((spec) => backported.includes(spec.name)).map((spec) => spec.advisory)].join(', ')} (${assessed.excepted.join(', ')})`
+    );
   if (assessed.blocked.length)
     throw new Error(`Unresolved HIGH/CRITICAL vulnerabilities: ${assessed.blocked.join(', ')}`);
   return assessed;

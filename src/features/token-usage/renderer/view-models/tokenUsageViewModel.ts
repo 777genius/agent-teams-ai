@@ -1107,6 +1107,17 @@ function toActivityDays(
   text: TokenUsageViewModelText,
   locale: string | undefined
 ): TokenUsageActivityDayViewModel[] {
+  const labelFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+  const fullLabelFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
   const maxTokens = Math.max(
     0,
     ...points.map((point) => visibleTokenTotal(point.summary, includeCacheTokens))
@@ -1114,8 +1125,11 @@ function toActivityDays(
   return points.map((point) => {
     const tokens = visibleTokenTotal(point.summary, includeCacheTokens);
     const intensity = activityIntensity(tokens, maxTokens);
-    const label = formatDate(point.startedAt, text, locale);
-    const fullLabel = formatDateWithYear(point.startedAt, text, locale);
+    const timestamp = Date.parse(`${point.id}T00:00:00.000Z`);
+    const label = Number.isFinite(timestamp) ? labelFormatter.format(timestamp) : text.notAvailable;
+    const fullLabel = Number.isFinite(timestamp)
+      ? fullLabelFormatter.format(timestamp)
+      : text.notAvailable;
     const formattedTokens = formatCompactNumber(tokens, locale);
     const formattedCost = formatUsd(point.summary.apiEquivalentCostUsd, locale);
     return {
@@ -1403,35 +1417,6 @@ function formatDateTime(
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(timestamp);
-}
-
-function formatDate(
-  iso: string | undefined,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): string {
-  if (!iso) return text.notAvailable;
-  const timestamp = Date.parse(iso);
-  if (!Number.isFinite(timestamp)) return text.notAvailable;
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    day: 'numeric',
-  }).format(timestamp);
-}
-
-function formatDateWithYear(
-  iso: string | undefined,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): string {
-  if (!iso) return text.notAvailable;
-  const timestamp = Date.parse(iso);
-  if (!Number.isFinite(timestamp)) return text.notAvailable;
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
   }).format(timestamp);
 }
 

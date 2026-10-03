@@ -499,6 +499,15 @@ describe('toTokenUsageDashboardViewModel', () => {
     expect(viewModel.unmappedEventCount).toBe(3);
   });
 
+  it('labels UTC heatmap days consistently with their calendar IDs in every viewer timezone', () => {
+    const viewModel = toTokenUsageDashboardViewModel(snapshot(), { locale: 'en-US' });
+    expect(viewModel.activityDays.map((day) => ({ id: day.id, label: day.label }))).toEqual([
+      { id: '2026-06-29', label: 'Jun 29' },
+      { id: '2026-06-30', label: 'Jun 30' },
+    ]);
+    expect(viewModel.activityDays[0].title).toContain('Jun 29, 2026');
+  });
+
   it('excludes cache tokens from dashboard token statistics by default', () => {
     const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
       budgetLimits: {

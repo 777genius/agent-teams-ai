@@ -1,0 +1,71 @@
+[
+  {
+    "name": "braces",
+    "version": "3.0.3",
+    "main": "index.js",
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "patch": "patches/braces@3.0.3.patch",
+    "provenance": [
+      "https://github.com/micromatch/braces/pull/72",
+      "28d440b5dd449dbf1fe6f3506cf94ecca4d02660"
+    ],
+    "license": "MIT",
+    "files": [
+      {
+        "path": "index.js",
+        "original": "332ea07c7b006361aad12aa994ca75dc1db8e8382b884909e2f38f10b85c88a4",
+        "patched": "332ea07c7b006361aad12aa994ca75dc1db8e8382b884909e2f38f10b85c88a4"
+      },
+      {
+        "path": "lib/compile.js",
+        "original": "dc98f22eee3d511785d92a00758d5f0d48efed5f5813bdecc2de430c529b5c9f",
+        "patched": "b651f7715e6db8942ce61d3394357b4d81c8ece88240aa31a458ea1165edd195"
+      },
+      {
+        "path": "lib/constants.js",
+        "original": "c18ac5adb57308f1ce42a28552da3a31f5d83709743ebd9a636336813a744d4b",
+        "patched": "f9fb688959232eee3e6ad7906a5b0e3234815db49ee857ef86983d65b917dc7c"
+      },
+      {
+        "path": "lib/expand.js",
+        "original": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7",
+        "patched": "7ea3e14c2b2b256ef244fd3d83b8fcaa20aa2232b4e6d768c3bb6ab567f66cf5"
+      },
+      {
+        "path": "lib/parse.js",
+        "original": "e572166565f15fa6ad9865ae49d678218e32aabfd1b3720f6d0d43d39800d310",
+        "patched": "72aabaadaa555cdfbd07fbd7c7f743373e4dc8eec04a97550cc57bbeec30eb6c"
+      },
+      {
+        "path": "lib/stringify.js",
+        "original": "379f22d77bfa1478341ccd49c5e4267464aabcbba03558bab332aac23fc6f23a",
+        "patched": "49dc2d8bafa74f34715a18a845bcb82ce66caaf3bab4cf117998e06b1f9a50a9"
+      },
+      {
+        "path": "lib/utils.js",
+        "original": "b5a7596aa67730412b3c029ef09e84e6b67b8e445cffd35d1d295549c89066c7",
+        "patched": "b5a7596aa67730412b3c029ef09e84e6b67b8e445cffd35d1d295549c89066c7"
+      }
+    ]
+  },
+  {
+    "name": "http-cache-semantics",
+    "version": "4.2.0",
+    "main": "index.js",
+    "advisory": "GHSA-ch52-4w7c-c8xp",
+    "patch": "patches/http-cache-semantics@4.2.0.patch",
+    "provenance": [
+      "https://github.com/kornelski/http-cache-semantics/pull/60",
+      "11fb104275349bbd84bf21eafd40b18220c29c46",
+      "9fb520be70eff3ff502fe965d9c3265ca2c64e26"
+    ],
+    "license": "BSD-2-Clause",
+    "files": [
+      {
+        "path": "index.js",
+        "original": "01b7d66c854b2fe53ac05c98feb6e0d64722ab8898a778e2d2426a8b468d178f",
+        "patched": "7e9f2231d0a955704a70a434c6e8bdfbc6e5a9b5cc68238aba0c1546b51e191f"
+      }
+    ]
+  }
+]

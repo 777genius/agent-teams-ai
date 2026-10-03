@@ -9,7 +9,8 @@ const { baseURL } = useRuntimeConfig().app;
 
 register();
 
-const publicPath = (path: string) => `${baseURL}${path.replace(/^\//, '')}`;
+const publicPath = (path: string, version?: string) =>
+  `${baseURL}${path.replace(/^\//, '')}${version ? `?v=${encodeURIComponent(version)}` : ''}`;
 
 type SwiperApi = {
   slidePrev: () => void;
@@ -24,8 +25,8 @@ type SwiperContainerElement = HTMLElement & {
 
 const screenshots = computed(() =>
   screenshotData.map((s) => ({
-    src: publicPath(s.path),
-    previewSrc: publicPath(s.previewPath),
+    src: publicPath(s.path, s.version),
+    previewSrc: publicPath(s.previewPath, s.version),
     alt: locale.value === 'ru' ? (s.ruAlt ?? s.alt) : s.alt,
     width: s.width,
     height: s.height,
