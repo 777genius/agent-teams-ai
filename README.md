@@ -50,8 +50,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/14.png">
-    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  <a href="docs/screenshots/14.png?v=1cff3f1128ca">
+    <img src="docs/screenshots/previews/14.webp?v=1cff3f1128ca" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">

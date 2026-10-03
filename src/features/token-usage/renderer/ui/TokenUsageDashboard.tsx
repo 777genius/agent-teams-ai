@@ -1,17 +1,13 @@
+import './tokenUsageDashboard.css';
+
 import { useEffect, useMemo, useState } from 'react';
 
 import { type ClassNames, type DateRange, DayPicker, getDefaultClassNames } from '@daypicker/react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
@@ -19,13 +15,12 @@ import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
-  BarChart3,
-  Bell,
   CalendarDays,
   Check,
   ChevronDown,
   Clock3,
   Database,
+  Flame,
   Gauge,
   Info,
   RefreshCw,
@@ -50,18 +45,18 @@ import {
   tokenUsageSnapshotRequestForDateRange,
 } from '../view-models/tokenUsageDateRange';
 
+import { BudgetAlertsPanel } from './BudgetAlertsPanel';
+import { MetricInfoTooltip } from './MetricInfoTooltip';
+import { ModelUsagePanel } from './ModelUsagePanel';
+import { SummaryMetricsPanel } from './SummaryMetricsPanel';
+
 import type {
   TokenUsageActivityDayViewModel,
   TokenUsageBarChartItemViewModel,
   TokenUsageBillingSplitItemViewModel,
   TokenUsageBreakdownRowViewModel,
-  TokenUsageBudgetAlertViewModel,
-  TokenUsageBudgetLimits,
-  TokenUsageBudgetTargetOptionViewModel,
   TokenUsageBurnRateViewModel,
   TokenUsageDashboardViewModelOptions,
-  TokenUsageMetricViewModel,
-  TokenUsageModelSegmentViewModel,
   TokenUsageRunRowViewModel,
   TokenUsageSourceQualityViewModel,
   TokenUsageTeamFilterOptionViewModel,
@@ -74,18 +69,11 @@ type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
 
 const DAY_PICKER_CLASS_NAMES = buildDayPickerClassNames();
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PANEL_CLASS =
-  'min-w-0 rounded-sm border border-[var(--color-border-emphasis)] bg-surface-raised';
-const MODEL_DONUT_SIZE = 160;
-const MODEL_DONUT_CENTER = MODEL_DONUT_SIZE / 2;
-const MODEL_DONUT_RADIUS = 63;
-const MODEL_DONUT_STROKE_WIDTH = 30;
-const MODEL_DONUT_CIRCUMFERENCE = 2 * Math.PI * MODEL_DONUT_RADIUS;
+const PANEL_CLASS = 'usage-panel min-w-0';
 const TOKEN_USAGE_TAB_TRIGGER_CLASS =
-  'gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2 text-sm text-text-muted shadow-none data-[state=active]:border-fuchsia-400 data-[state=active]:bg-transparent data-[state=active]:text-text data-[state=active]:shadow-none';
+  'usage-tab gap-1.5 rounded-md px-3 py-2 text-sm text-text-secondary shadow-none data-[state=active]:bg-surface-raised data-[state=active]:text-text data-[state=active]:shadow-none';
 const TOKEN_USAGE_DASHBOARD_TABS = ['overview', 'activity', 'breakdowns', 'runs'] as const;
 
-type TokenUsageStoredBudgetConfig = TokenUsageBudgetLimits;
 type TokenUsageDashboardTab = (typeof TOKEN_USAGE_DASHBOARD_TABS)[number];
 
 interface TokenUsageDashboardProps {
@@ -147,15 +135,19 @@ export const TokenUsageDashboard = ({
   }, [viewModel.teamFilterOptions]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-surface text-text">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--color-border)] px-6 py-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Gauge className="size-4 text-text-muted" />
-            <h1 className="truncate text-base font-semibold">{tokenUsageT('tokenUsage.title')}</h1>
+    <div className="token-usage-dashboard flex min-w-0 flex-1 flex-col overflow-hidden bg-surface text-text">
+      <header className="usage-header flex shrink-0 flex-col gap-4 px-4 py-5 sm:px-6">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <span className="usage-header-mark">
+              <Gauge className="size-5" />
+            </span>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {tokenUsageT('tokenUsage.title')}
+            </h1>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-text-muted">
-            <span>{viewModel.updatedAtLabel}</span>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+            <span className="tabular-nums">{viewModel.updatedAtLabel}</span>
             {viewModel.degraded && (
               <span className="inline-flex items-center gap-1 text-amber-500">
                 <AlertTriangle className="size-3" />
@@ -164,48 +156,50 @@ export const TokenUsageDashboard = ({
             )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <TokenUsageCacheTokenToggle
-            checked={includeCacheTokens}
-            onChange={setIncludeCacheTokens}
-            t={tokenUsageT}
-          />
+        <div className="usage-toolbar">
+          <DateRangeSelector value={dateRange} onChange={setDateRange} t={tokenUsageT} />
           <TeamFilterSelector
             options={teamOptions}
             selectedTeamNames={selectedTeamNames}
             onChange={setSelectedTeamNames}
             t={tokenUsageT}
           />
-          <DateRangeSelector value={dateRange} onChange={setDateRange} t={tokenUsageT} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                onClick={refresh}
-                disabled={refreshing}
-                variant="outline"
-                size="icon"
-                aria-label={tokenUsageT('tokenUsage.actions.refresh')}
-              >
-                <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {tokenUsageT('tokenUsage.actions.refresh')}
-            </TooltipContent>
-          </Tooltip>
+          <div className="usage-toolbar-actions">
+            <TokenUsageCacheTokenToggle
+              checked={includeCacheTokens}
+              onChange={setIncludeCacheTokens}
+              t={tokenUsageT}
+            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  onClick={refresh}
+                  disabled={refreshing}
+                  variant="outline"
+                  size="icon"
+                  aria-label={tokenUsageT('tokenUsage.actions.refresh')}
+                >
+                  <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {tokenUsageT('tokenUsage.actions.refresh')}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 overflow-auto">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6">
+        <div className="usage-content mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
           {error && (
             <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
               {error}
             </div>
           )}
 
-          <SummaryMetricsPanel metrics={viewModel.metrics} />
+          <SummaryMetricsPanel metrics={viewModel.metrics} tokenMix={viewModel.tokenMix} />
 
           {loading && viewModel.empty ? (
             <LoadingPanel />
@@ -221,7 +215,7 @@ export const TokenUsageDashboard = ({
               }}
               className="min-w-0"
             >
-              <div className="-mb-1 overflow-x-auto border-b border-[var(--color-border)]">
+              <div className="usage-tabs overflow-x-auto">
                 <TabsList className="h-auto min-w-max justify-start gap-1 rounded-none bg-transparent p-0">
                   <TabsTrigger value="overview" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
                     <Gauge className="size-3.5" />
@@ -243,7 +237,13 @@ export const TokenUsageDashboard = ({
               </div>
 
               <TabsContent value="overview" className="mt-5 space-y-5">
-                <section className="grid gap-5 lg:grid-cols-3">
+                <ModelUsagePanel
+                  modelSegments={viewModel.modelUsage}
+                  modelBars={viewModel.modelBars}
+                  t={tokenUsageT}
+                  locale={resolvedLanguage}
+                />
+                <section className="usage-overview-details">
                   <BillingSplitPanel items={viewModel.billingSplit} t={tokenUsageT} />
                   <BurnRatePanel burnRate={viewModel.burnRate} t={tokenUsageT} />
                   <BudgetAlertsPanel
@@ -258,18 +258,13 @@ export const TokenUsageDashboard = ({
                     t={tokenUsageT}
                   />
                 </section>
-                <UsageOverviewPanel
-                  modelSegments={viewModel.modelUsage}
-                  modelBars={viewModel.modelBars}
-                  t={tokenUsageT}
-                />
               </TabsContent>
 
               <TabsContent value="activity" className="mt-5 space-y-5">
                 <ActivityHeatmapPanel days={viewModel.activityDays} t={tokenUsageT} />
-                <section className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+                <section className="usage-activity-layout">
                   <TrendPanel points={viewModel.trendPoints} t={tokenUsageT} />
-                  <div className="grid min-w-0 gap-5 md:grid-cols-2 2xl:grid-cols-1">
+                  <div className="usage-activity-secondary">
                     <HorizontalBarsPanel
                       heading={tokenUsageT('tokenUsage.panels.commandSpend')}
                       items={viewModel.commandSpendBars}
@@ -292,7 +287,7 @@ export const TokenUsageDashboard = ({
               </TabsContent>
 
               <TabsContent value="breakdowns" className="mt-5 space-y-5">
-                <section className="grid gap-5 xl:grid-cols-2">
+                <section className="usage-panel-grid">
                   <BreakdownPanel
                     heading={tokenUsageT('tokenUsage.panels.teams')}
                     teamPanel
@@ -309,7 +304,7 @@ export const TokenUsageDashboard = ({
                   />
                 </section>
 
-                <section className="grid gap-5 xl:grid-cols-2">
+                <section className="usage-panel-grid">
                   <BreakdownPanel
                     heading={tokenUsageT('tokenUsage.panels.tasks')}
                     rows={viewModel.taskRows}
@@ -324,7 +319,7 @@ export const TokenUsageDashboard = ({
                   />
                 </section>
 
-                <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                <section className="usage-panel-grid usage-panel-grid-sources">
                   <BreakdownPanel
                     heading={tokenUsageT('tokenUsage.panels.sessions')}
                     rows={viewModel.sessionBreakdownRows}
@@ -340,7 +335,7 @@ export const TokenUsageDashboard = ({
               </TabsContent>
 
               <TabsContent value="runs" className="mt-5 space-y-5">
-                <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                <section className="usage-panel-grid usage-panel-grid-primary">
                   <RunsPanel
                     heading={tokenUsageT('tokenUsage.panels.commandPeriods')}
                     rows={viewModel.commandRuns}
@@ -354,7 +349,7 @@ export const TokenUsageDashboard = ({
                   />
                 </section>
 
-                <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+                <section className="usage-panel-grid">
                   <RunsPanel
                     heading={tokenUsageT('tokenUsage.panels.recentRuns')}
                     rows={viewModel.recentRuns}
@@ -697,88 +692,6 @@ const DateRangeSelector = ({
   );
 };
 
-const SummaryMetricsPanel = ({
-  metrics,
-}: {
-  metrics: TokenUsageMetricViewModel[];
-}): React.JSX.Element => {
-  return (
-    <section
-      className={cn(
-        PANEL_CLASS,
-        'grid overflow-hidden sm:grid-cols-2 min-[960px]:grid-cols-[1fr_1.4fr_0.9fr_0.9fr]'
-      )}
-    >
-      {metrics.map((metric, index) => (
-        <SummaryMetricCell key={metric.id} metric={metric} index={index} />
-      ))}
-    </section>
-  );
-};
-
-const SummaryMetricCell = ({
-  metric,
-  index,
-}: {
-  metric: TokenUsageMetricViewModel;
-  index: number;
-}): React.JSX.Element => {
-  return (
-    <div className={cn('min-w-0 p-4', summaryMetricCellBorderClass(index))}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 text-xs font-medium uppercase tracking-wide text-text-muted">
-          {metric.label}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {metric.help && <MetricInfoTooltip label={metric.label} help={metric.help} />}
-          <MetricIcon metricId={metric.id} />
-        </div>
-      </div>
-      <div className="mt-3 text-2xl font-semibold text-text">{metric.value}</div>
-      <div className="mt-1 truncate text-xs text-text-muted">{metric.detail}</div>
-      {metric.rows && metric.rows.length > 0 && (
-        <div className="mt-3 space-y-1.5 border-t border-[var(--color-border)] pt-2">
-          {metric.rows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3 text-xs">
-              <span className="min-w-0 truncate text-text-muted">{row.label}</span>
-              <span className="flex shrink-0 items-center gap-2 text-text-secondary">
-                <span>{row.value}</span>
-                {row.detail && <span className="text-text-muted">{row.detail}</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      {metric.note && (
-        <div className="mt-2 line-clamp-2 text-[11px] text-text-muted">{metric.note}</div>
-      )}
-    </div>
-  );
-};
-
-const MetricInfoTooltip = ({ label, help }: { label: string; help: string }): React.JSX.Element => {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className="hover:bg-surface-hover inline-flex size-5 items-center justify-center rounded-sm text-text-muted transition-colors hover:text-text"
-          aria-label={`${label} info`}
-        >
-          <Info className="size-3.5" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="end"
-        className="max-w-80 text-pretty text-xs leading-relaxed"
-      >
-        {help}
-      </TooltipContent>
-    </Tooltip>
-  );
-};
-
 const TokenUsageCacheTokenToggle = ({
   checked,
   onChange,
@@ -790,35 +703,15 @@ const TokenUsageCacheTokenToggle = ({
 }): React.JSX.Element => {
   const label = t('tokenUsage.controls.includeCacheTokens');
   return (
-    <label className="flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-3 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text">
-      <input
-        type="checkbox"
+    <label className="flex min-h-9 cursor-pointer items-center gap-2 rounded-sm px-2 text-xs text-text-secondary transition-colors hover:bg-surface-raised hover:text-text">
+      <Checkbox
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="size-3.5 rounded-sm border border-[var(--color-border-emphasis)] bg-surface accent-fuchsia-500"
+        onCheckedChange={(value) => onChange(value === true)}
         aria-label={label}
       />
       <span className="whitespace-nowrap">{label}</span>
     </label>
   );
-};
-
-function summaryMetricCellBorderClass(index: number): string {
-  return cn(
-    index > 0 && 'border-t border-[var(--color-border)]',
-    index % 2 === 1 && 'sm:border-l sm:border-t-0',
-    index >= 2 && 'sm:border-t',
-    index > 0 && 'min-[960px]:border-l min-[960px]:border-t-0'
-  );
-}
-
-const MetricIcon = ({ metricId }: { metricId: string }): React.JSX.Element => {
-  if (metricId === 'billing') {
-    return <Gauge className="size-4 shrink-0 text-text-muted" />;
-  }
-  if (metricId === 'runs') return <Activity className="size-4 shrink-0 text-text-muted" />;
-  if (metricId === 'requests') return <Rows3 className="size-4 shrink-0 text-text-muted" />;
-  return <BarChart3 className="size-4 shrink-0 text-text-muted" />;
 };
 
 const BillingSplitPanel = ({
@@ -829,7 +722,7 @@ const BillingSplitPanel = ({
   t: TokenUsageT;
 }): React.JSX.Element => {
   return (
-    <section className={PANEL_CLASS}>
+    <section className={cn(PANEL_CLASS, 'usage-detail-panel')}>
       <PanelTitle heading={t('tokenUsage.panels.billingSplit')} />
       <div className="space-y-3 p-4">
         {items.map((item) => (
@@ -888,7 +781,7 @@ const BurnRatePanel = ({
     },
   ];
   return (
-    <section className={PANEL_CLASS}>
+    <section className={cn(PANEL_CLASS, 'usage-detail-panel')}>
       <PanelTitle heading={t('tokenUsage.panels.burnRate')} />
       <div className="space-y-3 p-4">
         {rows.map((row) => (
@@ -908,164 +801,6 @@ const BurnRatePanel = ({
   );
 };
 
-const BudgetAlertsPanel = ({
-  alerts,
-  budgetConfig,
-  budgetTargetKey,
-  budgetTargetOptions,
-  error,
-  onBudgetTargetKeyChange,
-  onBudgetConfigChange,
-  onOpenNotificationSettings,
-  t,
-}: {
-  alerts: TokenUsageBudgetAlertViewModel[];
-  budgetConfig: TokenUsageStoredBudgetConfig;
-  budgetTargetKey: string;
-  budgetTargetOptions: TokenUsageBudgetTargetOptionViewModel[];
-  error: string | null;
-  onBudgetTargetKeyChange: (key: string) => void;
-  onBudgetConfigChange: React.Dispatch<React.SetStateAction<TokenUsageStoredBudgetConfig>>;
-  onOpenNotificationSettings: () => void;
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  const target = budgetEditorTarget(budgetTargetKey, budgetTargetOptions, t);
-  const targetLimit = budgetLimitForTarget(budgetConfig, target);
-
-  return (
-    <section className={PANEL_CLASS}>
-      <PanelTitle
-        heading={t('tokenUsage.panels.budgetAlerts')}
-        action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onOpenNotificationSettings}
-                className="inline-flex size-7 items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-surface hover:text-text"
-                aria-label={t('tokenUsage.budgets.notificationSettings')}
-              >
-                <Bell className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {t('tokenUsage.budgets.notificationSettings')}
-            </TooltipContent>
-          </Tooltip>
-        }
-      />
-      <div className="space-y-3 p-4">
-        {error && (
-          <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-xs text-red-300">
-            {error}
-          </div>
-        )}
-        <div className="bg-surface/60 rounded-sm border border-[var(--color-border)] p-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-xs font-medium text-text-secondary">
-              {t('tokenUsage.budgets.configureFor', { scope: target.label })}
-            </span>
-            <span className="shrink-0 text-[11px] text-text-muted">
-              {budgetScopeLabel(target.scope, t)}
-            </span>
-          </div>
-          <Select value={budgetTargetKey} onValueChange={onBudgetTargetKeyChange}>
-            <SelectTrigger className="mb-2 h-8 rounded-sm border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text shadow-none focus:border-fuchsia-500/60 focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {budgetTargetOptions.map((option) => (
-                <SelectItem
-                  key={budgetOptionKey(option)}
-                  value={budgetOptionKey(option)}
-                  className="text-xs"
-                >
-                  {budgetScopeLabel(option.scope, t)} / {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
-            <BudgetLimitInput
-              label={t('tokenUsage.budgets.tokenLimit')}
-              value={targetLimit.monthlyTokenLimit}
-              onChange={(value) =>
-                onBudgetConfigChange((current) =>
-                  updateBudgetConfig(current, target, { monthlyTokenLimit: value })
-                )
-              }
-            />
-            <BudgetLimitInput
-              label={t('tokenUsage.budgets.costLimit')}
-              value={targetLimit.monthlyApiEquivalentCostLimitUsd}
-              onChange={(value) =>
-                onBudgetConfigChange((current) =>
-                  updateBudgetConfig(current, target, { monthlyApiEquivalentCostLimitUsd: value })
-                )
-              }
-            />
-          </div>
-        </div>
-
-        {alerts.length === 0 ? (
-          <EmptyRows label={t('tokenUsage.budgets.noBudgets')} />
-        ) : (
-          <div className="space-y-3">
-            {alerts.slice(0, 5).map((alert) => (
-              <div key={`${alert.scope}:${alert.id}`} className="min-w-0">
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <span className="min-w-0 truncate font-medium text-text-secondary">
-                    {alert.label}
-                  </span>
-                  <span
-                    className={cn('shrink-0 font-medium', budgetSeverityTextClass(alert.severity))}
-                  >
-                    {alert.severityLabel}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-text-muted">
-                  <span className="min-w-0 truncate">{alert.detail}</span>
-                  <span>{formatPanelPercent(alert.percent)}</span>
-                </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-surface">
-                  <div
-                    className={cn('h-full rounded-sm', budgetSeverityBarClass(alert.severity))}
-                    style={{ width: `${Math.min(100, alert.percent)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-};
-
-const BudgetLimitInput = ({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number | undefined;
-  onChange: (value: number | undefined) => void;
-}): React.JSX.Element => {
-  return (
-    <label className="min-w-0">
-      <span className="mb-1 block truncate text-[11px] text-text-muted">{label}</span>
-      <input
-        type="number"
-        min={0}
-        step="any"
-        value={value ?? ''}
-        onChange={(event) => onChange(readPositiveNumberInput(event.target.value))}
-        className="h-8 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-2 text-xs text-text outline-none focus:border-fuchsia-500/60"
-      />
-    </label>
-  );
-};
-
 function billingSplitToneClass(tone: TokenUsageBillingSplitItemViewModel['tone']): string {
   if (tone === 'api') return 'bg-blue-500';
   if (tone === 'subscription') return 'bg-emerald-500';
@@ -1073,282 +808,6 @@ function billingSplitToneClass(tone: TokenUsageBillingSplitItemViewModel['tone']
   if (tone === 'legacy') return 'bg-slate-500';
   return 'bg-violet-500';
 }
-
-interface BudgetEditorTarget {
-  scope: 'global' | 'team' | 'project';
-  id: string;
-  label: string;
-}
-
-function budgetEditorTarget(
-  selectedKey: string,
-  options: TokenUsageBudgetTargetOptionViewModel[],
-  t: TokenUsageT
-): BudgetEditorTarget {
-  const selected = options.find((option) => budgetOptionKey(option) === selectedKey);
-  if (selected) return { scope: selected.scope, id: selected.id, label: selected.label };
-  return { scope: 'global', id: 'global', label: t('tokenUsage.budgets.allTeams') };
-}
-
-function budgetLimitForTarget(
-  config: TokenUsageStoredBudgetConfig,
-  target: BudgetEditorTarget
-): NonNullable<TokenUsageStoredBudgetConfig['global']> {
-  if (target.scope === 'team') return config.teams?.[target.id] ?? {};
-  if (target.scope === 'project') return config.projects?.[target.id] ?? {};
-  return config.global ?? {};
-}
-
-function updateBudgetConfig(
-  current: TokenUsageStoredBudgetConfig,
-  target: BudgetEditorTarget,
-  patch: NonNullable<TokenUsageStoredBudgetConfig['global']>
-): TokenUsageStoredBudgetConfig {
-  if (target.scope === 'team') {
-    const currentLimit = current.teams?.[target.id] ?? {};
-    const nextLimit = pruneEmptyBudgetLimit({ ...currentLimit, ...patch });
-    const nextTeams = { ...(current.teams ?? {}) };
-    if (nextLimit) {
-      nextTeams[target.id] = nextLimit;
-    } else {
-      delete nextTeams[target.id];
-    }
-    return {
-      ...current,
-      teams: Object.keys(nextTeams).length > 0 ? nextTeams : undefined,
-    };
-  }
-
-  if (target.scope === 'project') {
-    const currentLimit = current.projects?.[target.id] ?? {};
-    const nextLimit = pruneEmptyBudgetLimit({ ...currentLimit, ...patch });
-    const nextProjects = { ...(current.projects ?? {}) };
-    if (nextLimit) {
-      nextProjects[target.id] = nextLimit;
-    } else {
-      delete nextProjects[target.id];
-    }
-    return {
-      ...current,
-      projects: Object.keys(nextProjects).length > 0 ? nextProjects : undefined,
-    };
-  }
-
-  return {
-    ...current,
-    global: pruneEmptyBudgetLimit({ ...(current.global ?? {}), ...patch }),
-  };
-}
-
-function budgetOptionKey(
-  option: Pick<TokenUsageBudgetTargetOptionViewModel, 'scope' | 'id'>
-): string {
-  return `${option.scope}:${option.id}`;
-}
-
-function budgetScopeLabel(
-  scope: TokenUsageBudgetTargetOptionViewModel['scope'],
-  t: TokenUsageT
-): string {
-  if (scope === 'team') return t('tokenUsage.budgets.team');
-  if (scope === 'project') return t('tokenUsage.budgets.project');
-  return t('tokenUsage.budgets.allTeams');
-}
-
-function pruneEmptyBudgetLimit(
-  limit: NonNullable<TokenUsageStoredBudgetConfig['global']>
-): NonNullable<TokenUsageStoredBudgetConfig['global']> | undefined {
-  const next: NonNullable<TokenUsageStoredBudgetConfig['global']> = {};
-  if (typeof limit.monthlyTokenLimit === 'number' && limit.monthlyTokenLimit > 0) {
-    next.monthlyTokenLimit = limit.monthlyTokenLimit;
-  }
-  if (
-    typeof limit.monthlyApiEquivalentCostLimitUsd === 'number' &&
-    limit.monthlyApiEquivalentCostLimitUsd > 0
-  ) {
-    next.monthlyApiEquivalentCostLimitUsd = limit.monthlyApiEquivalentCostLimitUsd;
-  }
-  return Object.keys(next).length > 0 ? next : undefined;
-}
-
-function readPositiveNumberInput(value: string): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function budgetSeverityTextClass(severity: TokenUsageBudgetAlertViewModel['severity']): string {
-  if (severity === 'critical') return 'text-red-300';
-  if (severity === 'warning') return 'text-amber-300';
-  return 'text-emerald-300';
-}
-
-function budgetSeverityBarClass(severity: TokenUsageBudgetAlertViewModel['severity']): string {
-  if (severity === 'critical') return 'bg-red-500';
-  if (severity === 'warning') return 'bg-amber-500';
-  return 'bg-emerald-500';
-}
-
-const UsageOverviewPanel = ({
-  modelSegments,
-  modelBars,
-  t,
-}: {
-  modelSegments: TokenUsageModelSegmentViewModel[];
-  modelBars: TokenUsageBarChartItemViewModel[];
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  return (
-    <section className={PANEL_CLASS}>
-      <PanelTitle heading={t('tokenUsage.panels.modelUsage')} />
-      <div className="grid items-start gap-5 p-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <ModelUsageDonut segments={modelSegments} t={t} />
-        <ModelUsageBreakdown items={modelBars} t={t} />
-      </div>
-    </section>
-  );
-};
-
-const ModelUsageDonut = ({
-  segments,
-  t,
-}: {
-  segments: TokenUsageModelSegmentViewModel[];
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  const largestSegment = [...segments].sort((left, right) => right.percent - left.percent)[0];
-  const arcs = useMemo(() => buildModelUsageDonutArcs(segments), [segments]);
-
-  return (
-    <div className="flex min-w-0 items-center justify-center">
-      <div className="relative size-40 shrink-0" aria-label={t('tokenUsage.panels.modelUsage')}>
-        <svg
-          className="absolute inset-0 size-full -rotate-90"
-          viewBox={`0 0 ${MODEL_DONUT_SIZE} ${MODEL_DONUT_SIZE}`}
-          role="img"
-          aria-label={t('tokenUsage.aria.modelUsageBySegment')}
-        >
-          <circle
-            cx={MODEL_DONUT_CENTER}
-            cy={MODEL_DONUT_CENTER}
-            r={MODEL_DONUT_RADIUS}
-            fill="none"
-            stroke="var(--color-surface)"
-            strokeWidth={MODEL_DONUT_STROKE_WIDTH}
-          />
-          {arcs.map((arc, index) => {
-            const tooltip = modelSegmentTooltip(arc.segment, t);
-            return (
-              <Tooltip key={arc.segment.id}>
-                <TooltipTrigger asChild>
-                  <circle
-                    cx={MODEL_DONUT_CENTER}
-                    cy={MODEL_DONUT_CENTER}
-                    r={MODEL_DONUT_RADIUS}
-                    fill="none"
-                    stroke={arc.segment.color}
-                    strokeDasharray={arc.dashArray}
-                    strokeDashoffset={arc.dashOffset}
-                    strokeLinecap="butt"
-                    strokeWidth={MODEL_DONUT_STROKE_WIDTH}
-                    className="cursor-help transition-opacity hover:opacity-80 focus:opacity-80"
-                    data-model-segment-index={index}
-                    data-model-segment-label={arc.segment.label}
-                    aria-label={tooltip}
-                    tabIndex={0}
-                    style={{ pointerEvents: 'stroke' }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-64">
-                  <ModelSegmentTooltipContent segment={arc.segment} t={t} />
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </svg>
-        <div className="pointer-events-none absolute inset-[22%] flex flex-col items-center justify-center rounded-full border border-[var(--color-border-emphasis)] bg-surface-raised text-center">
-          <div className="text-xl font-semibold text-text">
-            {formatPanelPercent(largestSegment?.percent ?? 0)}
-          </div>
-          <div className="mt-1 text-[11px] font-medium uppercase text-text-muted">
-            {largestSegment?.label ?? t('tokenUsage.panels.models')}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ModelSegmentTooltipContent = ({
-  segment,
-  t,
-}: {
-  segment: TokenUsageModelSegmentViewModel;
-  t: TokenUsageT;
-}): React.JSX.Element => (
-  <div className="min-w-44 text-xs">
-    <div className="flex items-center gap-2">
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: segment.color }} />
-      <span className="min-w-0 truncate font-medium">{segment.label}</span>
-    </div>
-    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-muted">
-      <span>{t('tokenUsage.labels.tokens')}</span>
-      <span className="text-right text-text-secondary">{segment.tokens}</span>
-      <span>{t('tokenUsage.labels.cost')}</span>
-      <span className="text-right text-text-secondary">{segment.cost}</span>
-      <span>{t('tokenUsage.labels.share')}</span>
-      <span className="text-right text-text-secondary">{formatPanelPercent(segment.percent)}</span>
-    </div>
-  </div>
-);
-
-const ModelUsageBreakdown = ({
-  items,
-  t,
-}: {
-  items: TokenUsageBarChartItemViewModel[];
-  t: TokenUsageT;
-}): React.JSX.Element => {
-  return (
-    <div className="min-w-0 space-y-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-text-muted">
-        {t('tokenUsage.panels.models')}
-      </div>
-      {items.length === 0 ? (
-        <EmptyRows label={t('tokenUsage.empty.noModelData')} />
-      ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="block w-full min-w-0 cursor-help bg-transparent p-0 text-left"
-                  aria-label={item.tooltip}
-                >
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="flex min-w-0 items-baseline gap-2">
-                      <span className="min-w-0 truncate font-medium text-text">{item.label}</span>
-                      <span className="shrink-0 text-xs text-text-muted">{item.cost}</span>
-                      <span className="shrink-0 text-xs text-text-muted">/ {item.requests}</span>
-                    </span>
-                    <span className="shrink-0 text-text-secondary">{item.value}</span>
-                  </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-sm bg-surface">
-                    <div
-                      className={barToneClass(item.tone)}
-                      style={{ width: `${item.percent}%` }}
-                    />
-                  </div>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{item.tooltip}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const ActivityHeatmapPanel = ({
   days,
@@ -1381,7 +840,7 @@ const ActivityHeatmapPanel = ({
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-3">
-                    <div className="grid shrink-0 grid-rows-7 gap-[clamp(2px,0.28vw,6px)] text-[10px] text-text-muted">
+                    <div className="grid shrink-0 grid-rows-7 gap-1 text-[10px] text-text-muted">
                       {[
                         t('tokenUsage.weekdays.mon'),
                         '',
@@ -1398,9 +857,10 @@ const ActivityHeatmapPanel = ({
                     </div>
                     <div className="min-w-0 flex-1 pb-1">
                       <div
-                        className="grid min-w-0 grid-flow-col grid-rows-7 gap-[clamp(2px,0.28vw,6px)]"
+                        className="usage-heatmap-grid grid min-w-0 grid-flow-col grid-rows-7 gap-1"
                         style={{
                           gridTemplateColumns: `repeat(${year.weekCount}, minmax(0, 1fr))`,
+                          maxWidth: `${year.weekCount * 26 - 4}px`,
                         }}
                       >
                         {year.cells.map((day, index) =>
@@ -1468,15 +928,15 @@ const ActivityStreakBadge = ({
   const hiddenFireCount = fireCount - visibleFireCount;
 
   return (
-    <div className="flex max-w-[50%] shrink-0 items-center gap-1 rounded-sm border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
+    <div className="usage-streak flex max-w-[50%] shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-medium">
       <span className="truncate">{t('tokenUsage.labels.streakCount', { count: streak })}</span>
       {visibleFireCount > 0 && (
-        <span className="shrink-0 whitespace-nowrap" aria-hidden="true">
+        <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
           {Array.from({ length: visibleFireCount }, (_, index) => (
-            <span key={index}>🔥</span>
+            <Flame key={index} className="size-3" />
           ))}
           {hiddenFireCount > 0 && (
-            <span className="ml-0.5 text-[10px] text-amber-200/80">+{hiddenFireCount}</span>
+            <span className="ml-0.5 text-[10px] text-text-secondary">+{hiddenFireCount}</span>
           )}
         </span>
       )}
@@ -1501,9 +961,16 @@ const TrendPanel = ({
           <>
             <div className="grid h-48 grid-cols-[auto_minmax(0,1fr)] gap-3">
               <div className="flex flex-col justify-between text-right text-[11px] text-text-muted">
-                <span>{points[points.length - 1]?.tokens}</span>
+                <span>
+                  {
+                    points.reduce(
+                      (max, point) => (point.tokenValue > max.tokenValue ? point : max),
+                      points[0]
+                    ).tokens
+                  }
+                </span>
                 <span>{t('tokenUsage.labels.tokens')}</span>
-                <span>$</span>
+                <span>0</span>
               </div>
               <div className="flex min-w-0 items-end gap-2 border-b border-l border-[var(--color-border-emphasis)] px-2 pt-2">
                 {points.map((point) => (
@@ -1539,14 +1006,23 @@ const TrendPanel = ({
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-text-muted">
-              <ChartLegendItem label={t('tokenUsage.segments.input')} className="bg-sky-500" />
-              <ChartLegendItem label={t('tokenUsage.segments.output')} className="bg-emerald-500" />
+              <ChartLegendItem
+                label={t('tokenUsage.segments.input')}
+                className="usage-category-input"
+              />
+              <ChartLegendItem
+                label={t('tokenUsage.segments.output')}
+                className="usage-category-output"
+              />
               {points.some((point) => point.segments.some((segment) => segment.id === 'cache')) && (
-                <ChartLegendItem label={t('tokenUsage.segments.cache')} className="bg-violet-500" />
+                <ChartLegendItem
+                  label={t('tokenUsage.segments.cache')}
+                  className="usage-category-cache"
+                />
               )}
               <ChartLegendItem
                 label={t('tokenUsage.segments.reasoning')}
-                className="bg-amber-500"
+                className="usage-category-reasoning"
               />
             </div>
           </>
@@ -1598,10 +1074,7 @@ function trendPointAriaLabel(point: TokenUsageTrendPointViewModel, t: TokenUsage
 function trendSegmentClass(
   segmentId: TokenUsageTrendPointViewModel['segments'][number]['id']
 ): string {
-  if (segmentId === 'input') return 'bg-sky-500';
-  if (segmentId === 'output') return 'bg-emerald-500';
-  if (segmentId === 'cache') return 'bg-violet-500';
-  return 'bg-amber-500';
+  return `usage-category-${segmentId}`;
 }
 
 const HorizontalBarsPanel = ({
@@ -1679,7 +1152,7 @@ const HorizontalBarsPanel = ({
                       onOpenTeam?.(targetTeamName);
                     }}
                     aria-label={actionLabel}
-                    className="group -mx-2 block w-[calc(100%+1rem)] min-w-0 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-surface focus:bg-surface focus:outline-none"
+                    className="usage-bar-row group -mx-2 block w-[calc(100%+1rem)] min-w-0 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-surface"
                   >
                     {itemContent}
                   </button>
@@ -1691,7 +1164,7 @@ const HorizontalBarsPanel = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="block w-full min-w-0 cursor-help bg-transparent p-0 text-left"
+                    className="usage-bar-row block w-full min-w-0 cursor-help bg-transparent p-0 text-left"
                     aria-label={item.tooltip}
                   >
                     {itemContent}
@@ -1744,9 +1217,8 @@ const BreakdownPanel = ({
               ? t('tokenUsage.actions.openTask', { task: row.label })
               : t('tokenUsage.actions.openTeam', { team: targetTeamName });
             const rowClassName = cn(
-              'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto]',
-              clickable &&
-                'group cursor-pointer transition-colors hover:bg-surface focus:bg-surface focus:outline-none'
+              'usage-data-row w-full text-left text-sm',
+              clickable && 'group cursor-pointer transition-colors hover:bg-surface'
             );
             const rowContent = (
               <>
@@ -1760,9 +1232,6 @@ const BreakdownPanel = ({
                         disableHoverCard={!targetTeamName}
                       />
                     ) : (
-                      <div className="truncate font-medium text-text">{row.label}</div>
-                    )}
-                    {showMemberBadge && !row.agentName && (
                       <div className="truncate font-medium text-text">{row.label}</div>
                     )}
                     {clickable &&
@@ -1784,13 +1253,13 @@ const BreakdownPanel = ({
                     <div className="h-full bg-blue-500" style={{ width: `${row.percent}%` }} />
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="usage-row-tokens text-right tabular-nums">
                   <div className="font-medium text-text">{row.tokens}</div>
                   <div className="mt-0.5 text-xs text-text-muted">
                     {t('tokenUsage.labels.reqCount', { count: row.requests })}
                   </div>
                 </div>
-                <div className="hidden min-w-16 text-right font-medium text-text-secondary sm:block">
+                <div className="usage-row-cost min-w-0 text-right font-medium tabular-nums text-text-secondary">
                   <div>{row.cost}</div>
                   {row.kiroCredits ? (
                     <div className="mt-0.5 text-xs font-medium text-violet-300">
@@ -1893,16 +1362,13 @@ const RunsPanel = ({
           <EmptyRows label={t('tokenUsage.empty.noRuns')} />
         ) : (
           rows.slice(0, primary ? 10 : 8).map((row) => (
-            <div
-              key={row.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-            >
+            <div key={row.id} className="usage-data-row text-sm">
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
-                  <div className="truncate font-medium text-text">{row.title}</div>
+                  <div className="min-w-0 break-words font-medium text-text">{row.title}</div>
                   <RunStatusPill status={row.status} label={row.statusLabel} />
                 </div>
-                <div className="mt-0.5 truncate text-xs text-text-muted">{row.meta}</div>
+                <div className="mt-0.5 break-words text-xs text-text-secondary">{row.meta}</div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="size-3" />
@@ -1911,11 +1377,11 @@ const RunsPanel = ({
                   <span>{row.duration}</span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="usage-row-tokens text-right tabular-nums">
                 <div className="font-medium text-text">{row.tokens}</div>
                 <div className="mt-0.5 text-xs text-text-muted">{row.badge}</div>
               </div>
-              <div className="hidden min-w-16 text-right sm:block">
+              <div className="usage-row-cost min-w-0 text-right tabular-nums">
                 <div className="font-medium text-text-secondary">{row.cost}</div>
                 {row.kiroCredits ? (
                   <div className="mt-0.5 text-xs font-medium text-violet-300">
@@ -1939,8 +1405,8 @@ const PanelTitle = ({
   action?: React.ReactNode;
 }): React.JSX.Element => {
   return (
-    <div className="flex h-10 items-center justify-between border-b border-[var(--color-border)] px-4">
-      <h2 className="text-xs font-medium uppercase tracking-wide text-text-muted">{heading}</h2>
+    <div className="usage-panel-title flex min-h-12 items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
+      <h2 className="text-sm font-semibold text-text-secondary">{heading}</h2>
       {action}
     </div>
   );
@@ -2005,39 +1471,6 @@ function sourceToneClass(tone: TokenUsageSourceQualityViewModel['tone']): string
   if (tone === 'exact') return 'bg-emerald-500';
   if (tone === 'parsed') return 'bg-blue-500';
   return 'bg-amber-500';
-}
-
-interface ModelUsageDonutArc {
-  segment: TokenUsageModelSegmentViewModel;
-  dashArray: string;
-  dashOffset: number;
-}
-
-function buildModelUsageDonutArcs(
-  segments: TokenUsageModelSegmentViewModel[]
-): ModelUsageDonutArc[] {
-  let cursor = 0;
-  return segments
-    .filter((segment) => segment.percent > 0)
-    .map((segment) => {
-      const length = (segment.percent / 100) * MODEL_DONUT_CIRCUMFERENCE;
-      const arc: ModelUsageDonutArc = {
-        segment,
-        dashArray: `${length} ${MODEL_DONUT_CIRCUMFERENCE - length}`,
-        dashOffset: -cursor,
-      };
-      cursor += length;
-      return arc;
-    });
-}
-
-function modelSegmentTooltip(segment: TokenUsageModelSegmentViewModel, t: TokenUsageT): string {
-  return t('tokenUsage.tooltips.modelSegment', {
-    label: segment.label,
-    tokens: segment.tokens,
-    cost: segment.cost,
-    percent: formatPanelPercent(segment.percent),
-  });
 }
 
 function formatPanelPercent(value: number): string {
