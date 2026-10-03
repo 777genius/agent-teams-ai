@@ -89,7 +89,9 @@ describe('BudgetAlertsPanel selected identity', () => {
   const editLimit = async (value: string, index = 0): Promise<void> => {
     const input = container.querySelectorAll<HTMLInputElement>('input[type="number"]')[index];
     if (!input) throw new Error('Missing budget input');
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.bind(input);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.bind(
+      input
+    );
     if (!setter) throw new Error('Missing native input setter');
     await act(async () => {
       setter(value);
