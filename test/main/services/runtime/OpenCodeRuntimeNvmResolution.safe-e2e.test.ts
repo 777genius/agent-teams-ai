@@ -1,6 +1,6 @@
 // @vitest-environment node
 /* eslint-disable security/detect-non-literal-fs-filename */
-import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -79,7 +79,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       source: 'path',
       state: 'ready',
       binaryPath,
-      version: 'opencode 1.18.3',
+      version: '1.18.3',
     });
 
     const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
@@ -98,7 +98,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
       timeout: 2_000,
       windowsHide: true,
     });
-    expect(version.stdout.trim()).toBe('opencode 1.18.3');
+    expect(version.stdout.trim()).toBe('1.18.3');
     expect(versionWarnings).toHaveBeenCalledTimes(1);
     expect(versionWarnings).toHaveBeenCalledWith(
       expect.stringContaining('OpenCode version probe failed, report oc-'),
@@ -126,7 +126,7 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
         : [
             '#!/bin/sh',
             'if [ "$1" = "--version" ]; then',
-            '  echo "opencode 1.18.3"',
+            '  echo "1.18.3"',
             '  exit 0',
             'fi',
             'echo "unexpected opencode args: $*" >&2',
@@ -192,7 +192,40 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
     );
     await mkdir(path.dirname(nativeBinaryPath), { recursive: true });
     await writeFile(shimPath, '@echo off\r\nexit /b 1\r\n', 'utf8');
-    await copyFile(process.execPath, nativeBinaryPath);
+    const sourcePath = path.join(tempDir!, 'test-opencode.cs');
+    await writeFile(
+      sourcePath,
+      [
+        'using System;',
+        'class TestOpenCode {',
+        '  static int Main(string[] args) {',
+        '    if (args.Length == 1 && args[0] == "--version") {',
+        '      Console.WriteLine("1.18.3");',
+        '      return 0;',
+        '    }',
+        '    Console.Error.WriteLine("unexpected test OpenCode args");',
+        '    return 2;',
+        '  }',
+        '}',
+      ].join('\n'),
+      'utf8'
+    );
+    // Compile a real Windows process fixture: copying Node would report Node's version.
+    const compilerPath = path.join(
+      process.env.WINDIR ?? process.env.SystemRoot ?? 'C:\\Windows',
+      'Microsoft.NET',
+      'Framework',
+      'v4.0.30319',
+      'csc.exe'
+    );
+    await execCli(
+      compilerPath,
+      ['/nologo', '/target:exe', `/out:${nativeBinaryPath}`, sourcePath],
+      {
+        timeout: 15_000,
+        windowsHide: true,
+      }
+    );
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
       nativeBinaryPath
@@ -204,6 +237,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       source: 'path',
       state: 'ready',
       binaryPath: nativeBinaryPath,
+      version: '1.18.3',
     });
 
     const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
@@ -220,7 +254,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       timeout: 2_000,
       windowsHide: true,
     });
-    expect(version.stdout.trim()).toMatch(/^v\d+\./);
+    expect(version.stdout.trim()).toBe('1.18.3');
   });
 });
 
