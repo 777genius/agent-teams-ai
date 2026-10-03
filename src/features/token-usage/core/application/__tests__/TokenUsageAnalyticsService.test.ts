@@ -77,6 +77,88 @@ describe('TokenUsageAnalyticsService', () => {
     expect(published[0]?.byTask.map((item) => item.id)).toEqual(['task:beta:2', 'task:alpha:1']);
     expect(evaluator.snapshots[0]?.period.key).toBe('2026-06');
   });
+  it.each([false, true])(
+    'same-month clock rollback refreshes after a future attempt (failed=%s)',
+    async (failed) => {
+      let now = new Date('2026-06-30T12:00:00.000Z');
+      let attempts = 0;
+      const ledger = new MemoryLedgerRepository();
+      const evaluator = new CapturingBudgetEvaluator();
+      const settings = {
+        global: { monthlyTokenLimit: 1000, thresholds: [50], notificationsEnabled: true },
+      };
+      const service = new TokenUsageAnalyticsService({
+        ledger,
+        discovery: {
+          discoverAppRuns: async () => {
+            attempts++;
+            if (failed && attempts === 1) throw new Error('discovery unavailable');
+            return [run()];
+          },
+        },
+        importers: [{ importUsage: async () => [event()] }],
+        clock: { now: () => now },
+        budgets: {
+          getSettings: async () => settings,
+          updateSettings: async () => settings,
+        },
+        budgetNotificationSettings: {
+          getSettings: () => ({
+            enabled: true,
+            nativeToasts: false,
+            notifyAtWarning: false,
+            notifyAtCritical: false,
+          }),
+        },
+        budgetNotifications: evaluator,
+      });
+      await service.refreshSnapshot();
+      now = new Date('2026-06-30T11:00:00.000Z');
+      expect((await service.getBudgetStatus()).stale).toBe(true);
+      await service.tick();
+      expect(attempts).toBe(2);
+      const recovered = await service.getBudgetStatus();
+      expect(recovered).toMatchObject({
+        stale: false,
+        degraded: false,
+        usageUpdatedAt: now.toISOString(),
+        period: { key: '2026-06' },
+      });
+      expect(evaluator.snapshots.at(-1)).toMatchObject({ stale: false, degraded: false });
+      await service.tick();
+      expect(attempts).toBe(2);
+    }
+  );
+  it('orders GET and published budget projections monotonically across clock rollback', async () => {
+    let now = new Date('2026-06-30T12:00:00.000Z');
+    const published: TokenUsageBudgetStatusDto[] = [];
+    const service = new TokenUsageAnalyticsService({
+      ledger: new MemoryLedgerRepository(),
+      discovery: { discoverAppRuns: async () => [run()] },
+      importers: [{ importUsage: async () => [event()] }],
+      clock: { now: () => now },
+      statusEpoch: 'sandbox-service-epoch',
+      publisher: {
+        publishSnapshot: () => undefined,
+        publishBudgetStatus: (status) => published.push(status),
+      },
+    });
+    const before = await service.getBudgetStatus();
+    await service.refreshSnapshot();
+    now = new Date('2026-06-30T11:00:00.000Z');
+    const after = await service.getBudgetStatus();
+    await service.tick();
+    expect([before, published[0], after, published[1]].map((status) => status.statusOrder)).toEqual(
+      [
+        { epoch: 'sandbox-service-epoch', sequence: 1 },
+        { epoch: 'sandbox-service-epoch', sequence: 2 },
+        { epoch: 'sandbox-service-epoch', sequence: 3 },
+        { epoch: 'sandbox-service-epoch', sequence: 4 },
+      ]
+    );
+    expect(Date.parse(after.computedAt)).toBeLessThan(Date.parse(before.computedAt));
+    expect(published).toHaveLength(2);
+  });
 });
 
 function run(overrides: Partial<TokenUsageRunDto> = {}): TokenUsageRunDto {

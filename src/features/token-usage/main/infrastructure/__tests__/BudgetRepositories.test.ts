@@ -164,14 +164,14 @@ describe('strict Budget persistence', () => {
   });
   it('migrates sent 100 to exactly 100/80 using structural colon-containing identity', async () => {
     const file = await path('coverage.json');
-    await writeFile(
-      file,
-      JSON.stringify({ schemaVersion: 1, sent: { 'unparseable:legacy:key': record() } })
-    );
+    const raw = JSON.stringify({ schemaVersion: 1, sent: { 'unparseable:legacy:key': record() } });
+    await writeFile(file, raw);
     const repo = new JsonTokenUsageBudgetNotificationStateRepository(file);
     expect(await repo.hasSent(budgetCoverageKey(record()))).toBe(true);
     expect(await repo.hasSent(budgetCoverageKey(record({ threshold: 80 })))).toBe(true);
     expect(await repo.hasSent(budgetCoverageKey(record({ threshold: 70 })))).toBe(false);
+    expect(await readFile(file, 'utf8')).toBe(raw);
+    await repo.markCovered([]);
     expect(JSON.parse(await readFile(file, 'utf8')).schemaVersion).toBe(2);
   });
   it('serializes whole metric batches and prune without losing coverage', async () => {
@@ -221,22 +221,61 @@ describe('strict Budget persistence', () => {
     expect(await readFile(file, 'utf8')).toBe(raw);
   });
   // A writer must never replace readable state with an oversized file its own reader rejects.
-  it('preserves readable v1 settings when migration expands beyond the byte limit', async () => {
-    const file = await path();
-    const projects = Object.fromEntries(
-      Array.from({ length: 1500 }, (_, index) => [
-        `${'é'.repeat(100)}:${index}`,
-        { monthlyTokenLimit: 100 },
-      ])
-    );
-    const raw = JSON.stringify({ schemaVersion: 1, projects });
-    expect(Buffer.byteLength(raw, 'utf8')).toBeLessThan(512 * 1024);
-    await writeFile(file, raw);
-    await expect(new JsonTokenUsageBudgetSettingsRepository(file).getSettings()).rejects.toThrow(
-      'size limit'
-    );
-    expect(await readFile(file, 'utf8')).toBe(raw);
-  });
+  it.each([undefined, '2026-10-01T00:00:00.000Z'])(
+    'retains revision %s for oversized in-memory migration and a smaller CAS Save',
+    async (updatedAt) => {
+      const file = await path();
+      const projects = Object.fromEntries(
+        Array.from({ length: 1500 }, (_, index) => [
+          `${'é'.repeat(100)}:${index}`,
+          { monthlyTokenLimit: 100 },
+        ])
+      );
+      const raw = JSON.stringify({ schemaVersion: 1, projects, updatedAt });
+      expect(Buffer.byteLength(raw, 'utf8')).toBeLessThan(512 * 1024);
+      await writeFile(file, raw);
+      const repo = new JsonTokenUsageBudgetSettingsRepository(
+        file,
+        undefined,
+        () => new Date('2026-10-03T00:00:00.000Z')
+      );
+      const migrated = await repo.getSettings();
+      expect(Object.keys(migrated.projects ?? {})).toHaveLength(1500);
+      expect(migrated.projects?.[`${'é'.repeat(100)}:0`]).toEqual({
+        monthlyTokenLimit: 100,
+        thresholds: [80, 100],
+        notificationsEnabled: true,
+      });
+      expect(
+        Buffer.byteLength(JSON.stringify({ schemaVersion: 2, settings: migrated }, null, 2), 'utf8')
+      ).toBeGreaterThan(512 * 1024);
+      expect(migrated.updatedAt).toBe(updatedAt);
+      expect((await new JsonTokenUsageBudgetSettingsRepository(file).getSettings()).updatedAt).toBe(
+        updatedAt
+      );
+      expect(await readFile(file, 'utf8')).toBe(raw);
+      await expect(
+        repo.updateSettings({
+          settings: { global: limit },
+          expectedUpdatedAt: '2026-09-01T00:00:00.000Z',
+        })
+      ).rejects.toThrow('Budget settings changed');
+      expect(await readFile(file, 'utf8')).toBe(raw);
+      const saved = await repo.updateSettings({
+        settings: { global: limit },
+        expectedUpdatedAt: updatedAt ?? null,
+      });
+      expect(saved.updatedAt).toBe('2026-10-03T00:00:00.000Z');
+      expect(await new JsonTokenUsageBudgetSettingsRepository(file).getSettings()).toEqual(saved);
+      const savedRaw = await readFile(file, 'utf8');
+      expect(Buffer.byteLength(savedRaw, 'utf8')).toBeLessThan(512 * 1024);
+      expect(JSON.parse(savedRaw).schemaVersion).toBe(2);
+      await expect(
+        repo.updateSettings({ settings: {}, expectedUpdatedAt: updatedAt ?? null })
+      ).rejects.toThrow('Budget settings changed');
+      expect(await readFile(file, 'utf8')).toBe(savedRaw);
+    }
+  );
   it('rejects an oversized Save without replacing previously readable settings', async () => {
     const file = await path();
     const repo = new JsonTokenUsageBudgetSettingsRepository(file);
@@ -254,21 +293,38 @@ describe('strict Budget persistence', () => {
     expect(await readFile(file, 'utf8')).toBe(before);
     expect((await repo.getSettings()).updatedAt).toBe(saved.updatedAt);
   });
-  it('preserves readable legacy coverage when migration expands beyond the byte limit', async () => {
+  it('keeps expanded legacy coverage readable and allows prune to rescue durable state', async () => {
     const file = await path('coverage.json');
     const sent = Object.fromEntries(
       Array.from({ length: 550 }, (_, index) => [
         `legacy:${index}`,
-        record({ id: `${'é'.repeat(100)}:${index}` }),
+        record({ id: `${'é'.repeat(100)}:${index}`, periodKey: '2026-07' }),
       ])
     );
+    sent.current = record();
     const raw = JSON.stringify({ schemaVersion: 1, sent });
     expect(Buffer.byteLength(raw, 'utf8')).toBeLessThan(512 * 1024);
     await writeFile(file, raw);
-    await expect(
-      new JsonTokenUsageBudgetNotificationStateRepository(file).hasSent('key')
-    ).rejects.toThrow('size limit');
+    const repo = new JsonTokenUsageBudgetNotificationStateRepository(file);
+    const oldRecord = record({ id: `${'é'.repeat(100)}:0`, periodKey: '2026-07' });
+    expect(await repo.hasSent(budgetCoverageKey(oldRecord))).toBe(true);
+    expect(await repo.hasSent(budgetCoverageKey({ ...oldRecord, threshold: 80 }))).toBe(true);
+    expect(await repo.hasSent(budgetCoverageKey(record()))).toBe(true);
+    expect(await repo.hasSent('key')).toBe(false);
     expect(await readFile(file, 'utf8')).toBe(raw);
+    await expect(repo.markCovered([record({ id: 'new-project' })])).rejects.toThrow('size limit');
+    expect(await readFile(file, 'utf8')).toBe(raw);
+    await repo.pruneBeforePeriod('2026-08');
+    const savedRaw = await readFile(file, 'utf8');
+    const saved = JSON.parse(savedRaw);
+    expect(Buffer.byteLength(savedRaw, 'utf8')).toBeLessThan(512 * 1024);
+    expect(saved.schemaVersion).toBe(2);
+    expect(Object.keys(saved.sent)).toHaveLength(2);
+    const restarted = new JsonTokenUsageBudgetNotificationStateRepository(file);
+    expect(await restarted.hasSent(budgetCoverageKey(oldRecord))).toBe(false);
+    expect(await restarted.hasSent(budgetCoverageKey(record()))).toBe(true);
+    expect(await restarted.hasSent(budgetCoverageKey(record({ threshold: 80 })))).toBe(true);
+    expect(await restarted.hasSent(budgetCoverageKey(record({ id: 'new-project' })))).toBe(false);
   });
   it('rejects oversized coverage batches and retains prior dedupe state', async () => {
     const file = await path('coverage.json');

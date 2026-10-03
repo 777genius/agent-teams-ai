@@ -82,7 +82,7 @@ export class JsonTokenUsageBudgetNotificationStateRepository implements TokenUsa
         };
       }
     }
-    if (source.schemaVersion === 1) await this.writeState(state);
+    // Defer persistence until mutation so pruning can shrink expanded legacy coverage first.
     return state;
   }
 

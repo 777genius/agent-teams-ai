@@ -181,6 +181,14 @@ function emptyLedger(): TokenUsageLedgerFile {
   return { schemaVersion: 1, runs: {}, events: {} };
 }
 
+function normalizeRuns(runs: readonly TokenUsageRunDto[]): TokenUsageRunDto[] {
+  return runs.map((value) => {
+    const run = normalizeRun(value);
+    if (!run) throw new Error('Invalid token usage run entry');
+    return run;
+  });
+}
+
 export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositoryPort {
   constructor(private readonly filePath: string) {}
 
@@ -205,8 +213,9 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
 
   async upsertRuns(runs: readonly TokenUsageRunDto[]): Promise<void> {
     if (runs.length === 0) return;
+    const normalizedRuns = normalizeRuns(runs);
     const ledger = await this.readLedger();
-    for (const run of runs) {
+    for (const run of normalizedRuns) {
       const existing = ledger.runs[run.appRunId];
       ledger.runs[run.appRunId] = existing ? mergeRun(existing, run) : run;
     }
@@ -217,8 +226,12 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
     source: TokenUsageRunDto['source'],
     runs: readonly TokenUsageRunDto[]
   ): Promise<void> {
+    if (source !== 'app_launcher' && source !== 'team_launch_state' && source !== 'manual_import') {
+      throw new Error('Invalid token usage run source');
+    }
+    const normalizedRuns = normalizeRuns(runs);
     const ledger = await this.readLedger();
-    const nextRunIds = new Set(runs.map((run) => run.appRunId));
+    const nextRunIds = new Set(normalizedRuns.map((run) => run.appRunId));
     const eventRunIds = new Set(Object.values(ledger.events).map((event) => event.appRunId));
 
     for (const [appRunId, run] of Object.entries(ledger.runs)) {
@@ -228,7 +241,7 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
       delete ledger.runs[appRunId];
     }
 
-    for (const run of runs) {
+    for (const run of normalizedRuns) {
       const existing = ledger.runs[run.appRunId];
       ledger.runs[run.appRunId] = existing ? mergeRun(existing, run) : run;
     }
@@ -237,8 +250,13 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
 
   async upsertEvents(events: readonly TokenUsageEventDto[]): Promise<void> {
     if (events.length === 0) return;
+    const normalizedEvents = events.map((value) => {
+      const event = normalizeEvent(value);
+      if (!event) throw new Error('Invalid token usage event entry');
+      return event;
+    });
     const ledger = await this.readLedger();
-    for (const event of events) {
+    for (const event of normalizedEvents) {
       ledger.events[event.id] = event;
     }
     await this.writeLedger(ledger);
@@ -279,8 +297,12 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
   }
 
   private async writeLedger(ledger: TokenUsageLedgerFile): Promise<void> {
+    const serialized = `${JSON.stringify(ledger, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_LEDGER_BYTES) {
+      throw new Error('Token usage ledger exceeds its size limit');
+    }
     await mkdir(dirname(this.filePath), { recursive: true });
-    await atomicWriteAsync(this.filePath, `${JSON.stringify(ledger, null, 2)}\n`);
+    await atomicWriteAsync(this.filePath, serialized);
   }
 }
 

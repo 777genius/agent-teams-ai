@@ -31,6 +31,7 @@ export interface TokenUsageAnalyticsServiceDeps {
   discovery: TokenUsageRunSourceDiscoveryPort;
   importers: readonly TokenUsageImporterPort[];
   clock: TokenUsageClockPort;
+  readonly statusEpoch?: string;
   budgets?: TokenUsageBudgetSettingsRepositoryPort;
   budgetNotifications?: TokenUsageBudgetNotificationEvaluatorPort;
   budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
@@ -51,6 +52,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
   private usageUpdatedAt?: string;
   private refreshDegraded = false;
   private lastRefreshAttempt = -Infinity;
+  private statusSequence = 0;
   private periodKey: string;
   constructor(private readonly deps: TokenUsageAnalyticsServiceDeps) {
     this.periodKey = budgetPeriod(deps.clock.now()).key;
@@ -179,11 +181,11 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
           (target) =>
             target.notificationsEnabled && target.thresholds.length > 0 && target.metrics.length > 0
         );
-      const recentlyRefreshed =
-        this.usageUpdatedAt && now.getTime() - Date.parse(this.usageUpdatedAt) < 120_000;
+      const refreshAge = now.getTime() - Date.parse(this.usageUpdatedAt ?? '');
+      const recentlyRefreshed = refreshAge >= 0 && refreshAge < 120_000;
+      const attemptAge = now.getTime() - this.lastRefreshAttempt;
       return (
-        rollover ||
-        (active && !recentlyRefreshed && now.getTime() - this.lastRefreshAttempt >= 120_000)
+        rollover || (active && !recentlyRefreshed && (attemptAge < 0 || attemptAge >= 120_000))
       );
     });
     if (refreshNeeded) await this.refreshSnapshot();
@@ -219,6 +221,9 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
     });
     if (readFailed || rollover) status.stale = true;
+    if (this.deps.statusEpoch !== undefined) {
+      status.statusOrder = { epoch: this.deps.statusEpoch, sequence: ++this.statusSequence };
+    }
     return status;
   }
 

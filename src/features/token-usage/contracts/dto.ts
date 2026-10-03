@@ -57,6 +57,8 @@ export interface TokenUsageBudgetTargetStatusDto {
   metrics: TokenUsageBudgetMetricStatusDto[];
 }
 export interface TokenUsageBudgetStatusDto {
+  /** Orders projections independently of wall-clock changes and transport delay. */
+  statusOrder?: { epoch: string; sequence: number };
   period: { key: string; from: string; to: string; timeZone: 'UTC' };
   computedAt: string;
   usageUpdatedAt?: string;

@@ -105,8 +105,9 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
         ])
       );
     }
+    const migratedSettings = validateBudgetSettings(migrated);
     const settings = {
-      ...validateBudgetSettings(migrated),
+      ...migratedSettings,
       updatedAt: new Date(
         Math.max(
           this.now().getTime(),
@@ -114,6 +115,13 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
         )
       ).toISOString(),
     };
+    if (Buffer.byteLength(serializeSettings(settings), 'utf8') > MAX_BUDGET_SETTINGS_BYTES) {
+      // Retain the durable revision so a smaller Save can replace the readable v1 file.
+      return {
+        ...migratedSettings,
+        ...(typeof source.updatedAt === 'string' ? { updatedAt: source.updatedAt } : {}),
+      };
+    }
     await this.writeSettings(settings);
     return settings;
   }
@@ -122,7 +130,7 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
     settings: TokenUsageBudgetSettingsDto,
     fromSave = false
   ): Promise<void> {
-    const serialized = `${JSON.stringify({ schemaVersion: 2, settings }, null, 2)}\n`;
+    const serialized = serializeSettings(settings);
     if (Buffer.byteLength(serialized, 'utf8') > MAX_BUDGET_SETTINGS_BYTES) {
       const message = 'Budget settings exceeds its size limit';
       throw fromSave ? new BudgetValidationError(message) : new Error(message);
@@ -130,4 +138,8 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
     await mkdir(dirname(this.filePath), { recursive: true });
     await atomicWriteAsync(this.filePath, serialized);
   }
+}
+
+function serializeSettings(settings: TokenUsageBudgetSettingsDto): string {
+  return `${JSON.stringify({ schemaVersion: 2, settings }, null, 2)}\n`;
 }

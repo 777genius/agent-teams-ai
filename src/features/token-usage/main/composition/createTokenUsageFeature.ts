@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import {
   TokenUsageAnalyticsService,
   TokenUsageBudgetNotificationEvaluator,
@@ -100,6 +102,7 @@ export function createTokenUsageFeature(
       ])
     : teamLaunchDiscovery;
   const service: TokenUsageAnalyticsServicePort = new TokenUsageAnalyticsService({
+    statusEpoch: randomUUID(),
     ledger: new JsonTokenUsageLedgerRepository(deps.ledgerPath),
     discovery,
     importers: buildImporters(deps),

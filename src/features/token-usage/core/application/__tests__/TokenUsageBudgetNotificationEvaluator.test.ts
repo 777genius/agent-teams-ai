@@ -4,6 +4,7 @@ import { budgetCoverageKey } from '../../domain';
 import { TokenUsageBudgetNotificationEvaluator } from '../TokenUsageBudgetNotificationEvaluator';
 
 import type { TokenUsageBudgetStatusDto } from '../../../contracts';
+import type { TokenUsageBudgetNotificationEvaluatorDeps } from '../TokenUsageBudgetNotificationEvaluator';
 import type {
   TokenUsageBudgetNotificationEvent,
   TokenUsageBudgetNotificationRecord,
@@ -66,7 +67,7 @@ function fixture() {
       for (const item of records) covered.add(budgetCoverageKey(item));
     },
   };
-  const make = () =>
+  const make = (overrides: Partial<TokenUsageBudgetNotificationEvaluatorDeps> = {}) =>
     new TokenUsageBudgetNotificationEvaluator({
       state,
       clock: { now: () => now },
@@ -84,12 +85,14 @@ function fixture() {
           if (failSink) throw new Error('offline');
         },
       },
+      ...overrides,
     });
   return {
     make,
     calls,
     covered,
     batches,
+    state,
     advance: (ms = 30_000) => {
       now = new Date(now.getTime() + ms);
     },
@@ -103,6 +106,13 @@ function fixture() {
       enabled = v;
     },
   };
+}
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
 }
 describe('monthly aggregate budget notifications', () => {
   it('45 -> 92 sends one highest reason and covers every reached configured level', async () => {
@@ -255,5 +265,121 @@ describe('monthly aggregate budget notifications', () => {
     expect(f.calls[1].reasons[0].threshold).toBe(95);
     await e.evaluate(status(92), 'settings');
     expect(f.calls).toHaveLength(2);
+  });
+  it('clock rollback evaluates fresh snapshots without duplicating covered thresholds', async () => {
+    const f = fixture();
+    const e = f.make();
+    await e.evaluate(status(55), 'startup');
+    f.advance(-60 * 60 * 1000);
+    await e.evaluate(status(92), 'snapshot');
+    expect(f.calls.map((event) => event.reasons[0].threshold)).toEqual([50, 90]);
+    expect(f.batches.map((batch) => batch.map((item) => item.threshold))).toEqual([[50], [70, 90]]);
+    await e.evaluate(status(100), 'snapshot');
+    expect(f.calls).toHaveLength(2);
+    f.advance();
+    await e.evaluate(status(100), 'snapshot');
+    expect(f.calls).toHaveLength(3);
+    expect(f.covered.size).toBe(4);
+  });
+  it('clock rollback recovers a failed sink retry and starts a new bounded retry window', async () => {
+    const f = fixture();
+    const e = f.make();
+    f.sinkFails(true);
+    await e.evaluate(status(92), 'startup');
+    f.advance(-60 * 60 * 1000);
+    await e.evaluate(status(92), 'snapshot');
+    expect(f.calls).toHaveLength(2);
+    expect(f.calls[1].dedupeKey).toBe(f.calls[0].dedupeKey);
+    f.sinkFails(false);
+    f.advance(29_000);
+    await e.evaluate(status(92), 'settings');
+    expect(f.calls).toHaveLength(2);
+    f.advance(1000);
+    await e.evaluate(status(92), 'tick');
+    expect(f.calls).toHaveLength(3);
+    expect(f.batches).toHaveLength(1);
+    expect(f.covered.size).toBe(3);
+  });
+  it.each([true, false])(
+    'drains newer settings after an in-flight %s stale/throttled snapshot',
+    async (stale) => {
+      const f = fixture();
+      const entered = deferred();
+      const release = deferred();
+      let blockPersist = false;
+      const e = f.make({
+        state: {
+          ...f.state,
+          markCovered: async (records) => {
+            if (blockPersist) {
+              blockPersist = false;
+              entered.resolve();
+              await release.promise;
+            }
+            await f.state.markCovered(records);
+          },
+        },
+      });
+      f.persistFails(true);
+      await e.evaluate(status(55), 'startup');
+      f.persistFails(false);
+      f.advance(1000);
+      blockPersist = true;
+      const earlier = e.evaluate(status(60, { stale }), 'snapshot');
+      await entered.promise;
+      const newer = e.evaluate(status(92), 'settings');
+      release.resolve();
+      await Promise.all([earlier, newer]);
+      expect(f.calls.map((event) => event.reasons[0].threshold)).toEqual([50, 90]);
+      expect(f.batches.map((batch) => batch.map((item) => item.threshold))).toEqual([
+        [50],
+        [70, 90],
+      ]);
+      await e.evaluate(status(92), 'settings');
+      expect(f.calls).toHaveLength(2);
+      expect(f.covered.size).toBe(3);
+    }
+  );
+  it('a settings update arriving in the settlement microtask starts a new drain', async () => {
+    const f = fixture();
+    let queued: Promise<void> | undefined;
+    let first = true;
+    const e = f.make({
+      settings: {
+        getSettings: () => {
+          const enabled = !first;
+          if (first) {
+            first = false;
+            queueMicrotask(() => {
+              queued = e.evaluate(status(92), 'settings');
+            });
+          }
+          return {
+            enabled,
+            nativeToasts: false,
+            notifyAtWarning: false,
+            notifyAtCritical: false,
+          };
+        },
+      },
+    });
+    await e.evaluate(status(55), 'startup');
+    expect(queued).toBeDefined();
+    await queued;
+    expect(f.calls.map((event) => event.reasons[0].threshold)).toEqual([90]);
+    expect(f.covered.size).toBe(3);
+  });
+  it('coalesces repeated throttled snapshots and delivers the latest state on a trailing tick', async () => {
+    const f = fixture();
+    const e = f.make();
+    await e.evaluate(status(45), 'startup');
+    f.advance(1000);
+    await Promise.all([55, 70, 92, 100].map((percent) => e.evaluate(status(percent), 'snapshot')));
+    expect(f.calls).toHaveLength(0);
+    f.advance(29_000);
+    await e.evaluate(status(100), 'tick');
+    expect(f.calls.map((event) => event.reasons[0].threshold)).toEqual([100]);
+    expect(f.batches).toHaveLength(1);
+    expect(f.covered.size).toBe(4);
   });
 });

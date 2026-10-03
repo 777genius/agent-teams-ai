@@ -28,6 +28,22 @@ export function project(runs = [testRun()], events = [testEvent()]) {
 }
 
 describe('Budget monthly projection', () => {
+  it.each([
+    ['future after clock rollback', '2026-10-03T13:00:00.000Z', true],
+    ['current clock', '2026-10-03T12:00:00.000Z', false],
+    ['just inside freshness window', '2026-10-03T11:55:00.001Z', false],
+    ['at freshness deadline', '2026-10-03T11:55:00.000Z', true],
+  ] as const)('bounds freshness for %s', (_label, usageUpdatedAt, stale) => {
+    const status = buildBudgetStatus({
+      now,
+      settings: config,
+      ledger: { runs: [testRun()], events: [testEvent()] },
+      degraded: false,
+      usageUpdatedAt,
+      policy: { enabled: true, nativeToasts: false },
+    });
+    expect(status.stale).toBe(stale);
+  });
   // Old getSnapshot range drops old running/completed runs, includes exact `to`; all-time overcounts prior events.
   it('counts events in [from,to) with full run map, UTC offsets and canonical cache-inclusive total', () => {
     const events = [

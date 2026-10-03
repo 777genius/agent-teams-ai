@@ -28,22 +28,20 @@ export class TokenUsageBudgetNotificationEvaluator implements TokenUsageBudgetNo
     reason: TokenUsageBudgetNotificationReason;
   } | null = null;
   private lastEvaluationAt = -Infinity;
+  private lastClockAt = -Infinity;
   private readonly pending = new Map<string, TokenUsageBudgetNotificationRecord[]>();
   private readonly retryAt = new Map<string, number>();
   constructor(private readonly deps: TokenUsageBudgetNotificationEvaluatorDeps) {}
 
-  async evaluate(
+  evaluate(
     status: TokenUsageBudgetStatusDto,
     reason: TokenUsageBudgetNotificationReason
   ): Promise<void> {
     this.queued = { status, reason };
     if (this.running) return this.running;
-    this.running = this.drain();
-    try {
-      await this.running;
-    } finally {
-      this.running = null;
-    }
+    // Assign ownership before drain starts, including synchronous port callbacks.
+    this.running = Promise.resolve().then(() => this.drain());
+    return this.running;
   }
 
   async retryPending(): Promise<void> {
@@ -59,43 +57,55 @@ export class TokenUsageBudgetNotificationEvaluator implements TokenUsageBudgetNo
   }
 
   private async drain(): Promise<void> {
-    const current = this.queued;
-    this.queued = null;
-    if (!current) return;
-    await this.retryPending();
-    const now = this.deps.clock.now();
-    const { status, reason } = current;
-    const period = budgetPeriod(now);
-    if (
-      status.period.key !== period.key ||
-      status.period.from !== period.from ||
-      status.period.to !== period.to ||
-      status.period.timeZone !== 'UTC' ||
-      status.stale ||
-      status.degraded ||
-      !status.notificationPolicy.enabled ||
-      !this.deps.settings.getSettings().enabled
-    )
-      return;
-    const interval = this.deps.minEvaluationIntervalMs ?? 30_000;
-    if (reason === 'snapshot' && now.getTime() - this.lastEvaluationAt < interval) {
-      // A cheap main tick supplies the latest status and performs trailing evaluation.
-      this.queued ??= current;
-      return;
-    }
-    this.lastEvaluationAt = now.getTime();
-    const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1))
-      .toISOString()
-      .slice(0, 7);
-    await this.deps.state.pruneBeforePeriod(previous);
-    for (const target of status.targets) {
-      try {
-        await this.evaluateTarget(target, status, now, interval);
-      } catch (error) {
-        this.deps.logger?.warn('Failed to evaluate budget target', error);
+    try {
+      while (this.queued) {
+        const current = this.queued;
+        this.queued = null;
+        await this.retryPending();
+        const now = this.deps.clock.now();
+        if (now.getTime() < this.lastClockAt) {
+          this.lastEvaluationAt = -Infinity;
+          this.retryAt.clear();
+        }
+        this.lastClockAt = now.getTime();
+        const { status, reason } = current;
+        const period = budgetPeriod(now);
+        if (
+          status.period.key !== period.key ||
+          status.period.from !== period.from ||
+          status.period.to !== period.to ||
+          status.period.timeZone !== 'UTC' ||
+          status.stale ||
+          status.degraded ||
+          !status.notificationPolicy.enabled ||
+          !this.deps.settings.getSettings().enabled
+        )
+          continue;
+        const interval = this.deps.minEvaluationIntervalMs ?? 30_000;
+        if (reason === 'snapshot' && now.getTime() - this.lastEvaluationAt < interval) {
+          // Consume newer requests, but hold one trailing snapshot for the next tick.
+          if (this.queued) continue;
+          this.queued = current;
+          return;
+        }
+        this.lastEvaluationAt = now.getTime();
+        const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1))
+          .toISOString()
+          .slice(0, 7);
+        await this.deps.state.pruneBeforePeriod(previous);
+        for (const target of status.targets) {
+          try {
+            await this.evaluateTarget(target, status, now, interval);
+          } catch (error) {
+            this.deps.logger?.warn('Failed to evaluate budget target', error);
+          }
+        }
       }
+    } finally {
+      // Release ownership synchronously with the last queue check. A later microtask
+      // must start its own drain rather than queue behind an already settled run.
+      this.running = null;
     }
-    if (this.queued && this.queued !== current) await this.drain();
   }
 
   private async evaluateTarget(

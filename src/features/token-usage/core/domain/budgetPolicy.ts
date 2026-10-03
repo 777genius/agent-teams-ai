@@ -148,6 +148,7 @@ export function buildBudgetStatus(input: {
     stale:
       !Number.isFinite(refreshed) ||
       refreshed < Date.parse(period.from) ||
+      refreshed > input.now.getTime() ||
       input.now.getTime() - refreshed >= 300_000,
     degraded,
     notificationPolicy: input.policy,

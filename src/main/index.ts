@@ -3040,6 +3040,7 @@ async function shutdownServices(): Promise<void> {
     return shutdownPromise;
   }
 
+  tokenUsageFeature?.dispose();
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
@@ -3694,7 +3695,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', (event) => {
   if (shutdownComplete) {
-    tokenUsageFeature?.dispose();
     return;
   }
 
