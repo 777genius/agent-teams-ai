@@ -1,34 +1,18 @@
-import type {
-  TokenUsageAnalyticsSnapshotDto,
-  TokenUsageBudgetLimitDto,
-  TokenUsageBudgetSettingsDto,
-  TokenUsageSummaryDto,
-} from '../../contracts';
+import { budgetCoverageKey, budgetPeriod } from '../domain';
+
+import type { TokenUsageBudgetStatusDto, TokenUsageBudgetTargetStatusDto } from '../../contracts';
 import type {
   TokenUsageBudgetNotificationEvaluatorPort,
-  TokenUsageBudgetNotificationMetric,
   TokenUsageBudgetNotificationReason,
   TokenUsageBudgetNotificationRecord,
-  TokenUsageBudgetNotificationScope,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetNotificationSinkPort,
   TokenUsageBudgetNotificationStateRepositoryPort,
-  TokenUsageBudgetNotificationThreshold,
-  TokenUsageBudgetSettingsRepositoryPort,
   TokenUsageClockPort,
   TokenUsageLoggerPort,
 } from './ports';
 
-interface BudgetTarget {
-  scope: TokenUsageBudgetNotificationScope;
-  id: string;
-  label: string;
-  summary: TokenUsageSummaryDto;
-  limit: TokenUsageBudgetLimitDto;
-}
-
 export interface TokenUsageBudgetNotificationEvaluatorDeps {
-  budgets: TokenUsageBudgetSettingsRepositoryPort;
   state: TokenUsageBudgetNotificationStateRepositoryPort;
   sink: TokenUsageBudgetNotificationSinkPort;
   settings: TokenUsageBudgetNotificationSettingsPort;
@@ -37,231 +21,178 @@ export interface TokenUsageBudgetNotificationEvaluatorDeps {
   minEvaluationIntervalMs?: number;
 }
 
-const DEFAULT_MIN_EVALUATION_INTERVAL_MS = 30_000;
-
 export class TokenUsageBudgetNotificationEvaluator implements TokenUsageBudgetNotificationEvaluatorPort {
-  readonly #deps: TokenUsageBudgetNotificationEvaluatorDeps;
-  #lastEvaluationAtMs = 0;
-  #lastFingerprint: string | null = null;
-  #running: Promise<void> | null = null;
-  #queued: {
-    snapshot: TokenUsageAnalyticsSnapshotDto;
+  private running: Promise<void> | null = null;
+  private queued: {
+    status: TokenUsageBudgetStatusDto;
     reason: TokenUsageBudgetNotificationReason;
   } | null = null;
+  private lastEvaluationAt = -Infinity;
+  private lastClockAt = -Infinity;
+  private readonly pending = new Map<string, TokenUsageBudgetNotificationRecord[]>();
+  private readonly retryAt = new Map<string, number>();
+  constructor(private readonly deps: TokenUsageBudgetNotificationEvaluatorDeps) {}
 
-  constructor(deps: TokenUsageBudgetNotificationEvaluatorDeps) {
-    this.#deps = deps;
-  }
-
-  async evaluate(
-    snapshot: TokenUsageAnalyticsSnapshotDto,
+  evaluate(
+    status: TokenUsageBudgetStatusDto,
     reason: TokenUsageBudgetNotificationReason
   ): Promise<void> {
-    if (this.#running) {
-      this.#queued = { snapshot, reason };
-      await this.#running;
-      return;
+    this.queued = { status, reason };
+    if (this.running) return this.running;
+    // Assign ownership before drain starts, including synchronous port callbacks.
+    this.running = Promise.resolve().then(() => this.drain());
+    return this.running;
+  }
+
+  async retryPending(): Promise<void> {
+    // Pending accepted batches outlive stale data, pause and month rollover.
+    for (const [key, batch] of this.pending) {
+      try {
+        await this.deps.state.markCovered(batch);
+        this.pending.delete(key);
+      } catch (error) {
+        this.deps.logger?.warn('Failed to persist accepted budget coverage', error);
+      }
     }
-    this.#running = this.#drain(snapshot, reason);
-    await this.#running;
   }
 
-  async #drain(
-    snapshot: TokenUsageAnalyticsSnapshotDto,
-    reason: TokenUsageBudgetNotificationReason
-  ): Promise<void> {
+  private async drain(): Promise<void> {
     try {
-      let currentSnapshot = snapshot;
-      let currentReason = reason;
-      while (true) {
-        await this.#evaluateNow(currentSnapshot, currentReason);
-        const queued = this.#queued;
-        if (!queued) return;
-        this.#queued = null;
-        currentSnapshot = queued.snapshot;
-        currentReason = queued.reason;
+      while (this.queued) {
+        const current = this.queued;
+        this.queued = null;
+        await this.retryPending();
+        const now = this.deps.clock.now();
+        if (now.getTime() < this.lastClockAt) {
+          this.lastEvaluationAt = -Infinity;
+          this.retryAt.clear();
+        }
+        this.lastClockAt = now.getTime();
+        const { status, reason } = current;
+        const period = budgetPeriod(now);
+        if (
+          status.period.key !== period.key ||
+          status.period.from !== period.from ||
+          status.period.to !== period.to ||
+          status.period.timeZone !== 'UTC' ||
+          status.stale ||
+          status.degraded ||
+          !status.notificationPolicy.enabled ||
+          !this.deps.settings.getSettings().enabled
+        )
+          continue;
+        const interval = this.deps.minEvaluationIntervalMs ?? 30_000;
+        if (reason === 'snapshot' && now.getTime() - this.lastEvaluationAt < interval) {
+          // Consume newer requests, but hold one trailing snapshot for the next tick.
+          if (this.queued) continue;
+          this.queued = current;
+          return;
+        }
+        this.lastEvaluationAt = now.getTime();
+        const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1))
+          .toISOString()
+          .slice(0, 7);
+        await this.deps.state.pruneBeforePeriod(previous);
+        for (const target of status.targets) {
+          try {
+            await this.evaluateTarget(target, status, now, interval);
+          } catch (error) {
+            this.deps.logger?.warn('Failed to evaluate budget target', error);
+          }
+        }
       }
     } finally {
-      this.#running = null;
+      // Release ownership synchronously with the last queue check. A later microtask
+      // must start its own drain rather than queue behind an already settled run.
+      this.running = null;
     }
   }
 
-  async #evaluateNow(
-    snapshot: TokenUsageAnalyticsSnapshotDto,
-    reason: TokenUsageBudgetNotificationReason
+  private async evaluateTarget(
+    target: TokenUsageBudgetTargetStatusDto,
+    status: TokenUsageBudgetStatusDto,
+    now: Date,
+    interval: number
   ): Promise<void> {
-    if (snapshot.degraded || snapshot.stale) {
-      this.#deps.logger?.warn(
-        'Skipping token budget notification check for stale/degraded snapshot'
-      );
-      return;
-    }
-
-    const now = this.#deps.clock.now();
-    const settings = this.#deps.settings.getSettings();
-    if (!settings.enabled) return;
-
-    const budgets = await this.#deps.budgets.getSettings();
-    const fingerprint = JSON.stringify({
-      updatedAt: snapshot.updatedAt,
-      budgets,
-      settings,
-    });
-    if (fingerprint === this.#lastFingerprint) return;
-
-    const minInterval = this.#deps.minEvaluationIntervalMs ?? DEFAULT_MIN_EVALUATION_INTERVAL_MS;
-    const bypassThrottle = reason === 'settings' || reason === 'startup';
-    if (!bypassThrottle && now.getTime() - this.#lastEvaluationAtMs < minInterval) return;
-
-    this.#lastEvaluationAtMs = now.getTime();
-
-    const periodKey = periodKeyFor(snapshot.updatedAt);
-    await this.#deps.state.pruneBeforePeriod(monthKeyOffset(periodKey, -2));
-
-    for (const target of budgetTargets(snapshot, budgets)) {
-      await this.#evaluateTarget(target, periodKey, settings, now);
-    }
-    this.#lastFingerprint = fingerprint;
-  }
-
-  async #evaluateTarget(
-    target: BudgetTarget,
-    periodKey: string,
-    settings: ReturnType<TokenUsageBudgetNotificationSettingsPort['getSettings']>,
-    now: Date
-  ): Promise<void> {
-    const checks = budgetMetricChecks(target);
-    for (const check of checks) {
-      const percent = check.limit > 0 ? (check.value / check.limit) * 100 : 0;
-      const thresholds: TokenUsageBudgetNotificationThreshold[] = [];
-      if (settings.notifyAtCritical && percent >= 100) {
-        thresholds.push(100);
-      } else if (settings.notifyAtWarning && percent >= 80) {
-        thresholds.push(80);
-      }
-
-      for (const threshold of thresholds) {
-        const dedupeKey = [
-          'token-budget',
-          'monthly',
-          target.scope,
-          target.id,
-          check.metric,
-          String(threshold),
-          periodKey,
-        ].join(':');
-        if (await this.#deps.state.hasSent(dedupeKey)) continue;
-
+    if (!target.notificationsEnabled || target.thresholds.length === 0) return;
+    const reasons: TokenUsageBudgetNotificationRecord[] = [];
+    const coverage: TokenUsageBudgetNotificationRecord[] = [];
+    for (const metric of target.metrics) {
+      if (
+        metric.incomplete ||
+        metric.value === null ||
+        metric.percent === null ||
+        ![metric.value, metric.limit, metric.percent].every(Number.isFinite) ||
+        metric.limit <= 0 ||
+        metric.value < 0
+      )
+        continue;
+      const reached: TokenUsageBudgetNotificationRecord[] = [];
+      for (const threshold of target.thresholds) {
+        if (
+          !Number.isInteger(threshold) ||
+          threshold < 1 ||
+          threshold > 100 ||
+          metric.percent < threshold
+        )
+          continue;
         const record: TokenUsageBudgetNotificationRecord = {
-          dedupeKey,
-          sentAt: now.toISOString(),
-          periodKey,
           scope: target.scope,
           id: target.id,
-          metric: check.metric,
+          metric: metric.metric,
           threshold,
-          value: check.value,
-          limit: check.limit,
-          percent,
+          periodKey: status.period.key,
+          sentAt: now.toISOString(),
+          value: metric.value,
+          limit: metric.limit,
+          percent: metric.percent,
+          dedupeKey: '',
         };
-        await this.#deps.sink.notifyBudgetThreshold({
-          ...record,
-          label: target.label,
-          severity: threshold === 100 ? 'critical' : 'warning',
-          suppressToast: !settings.nativeToasts,
-        });
-        await this.#deps.state.markSent(record);
+        record.dedupeKey = budgetCoverageKey(record);
+        const pending = [...this.pending.values()].some((batch) =>
+          batch.some((item) => item.dedupeKey === record.dedupeKey)
+        );
+        if (!pending && !(await this.deps.state.hasSent(record.dedupeKey))) reached.push(record);
+      }
+      if (reached.length) {
+        reasons.push(reached.reduce((a, b) => (a.threshold > b.threshold ? a : b)));
+        coverage.push(...reached);
       }
     }
-  }
-}
-
-function budgetTargets(
-  snapshot: TokenUsageAnalyticsSnapshotDto,
-  budgets: TokenUsageBudgetSettingsDto
-): BudgetTarget[] {
-  const targets: BudgetTarget[] = [];
-  if (budgets.global && hasBudgetLimit(budgets.global)) {
-    targets.push({
-      scope: 'global',
-      id: 'global',
-      label: 'All teams',
-      summary: snapshot.summary,
-      limit: budgets.global,
+    if (!reasons.length) return;
+    reasons.sort((a, b) => a.metric.localeCompare(b.metric));
+    const dedupeKey = JSON.stringify([
+      'token-budget-notification',
+      status.period.key,
+      target.scope,
+      target.id,
+      reasons.map(({ metric, threshold }) => [metric, threshold]),
+    ]);
+    const retryKey = JSON.stringify([status.period.key, target.scope, target.id]);
+    if (this.pending.has(dedupeKey) || now.getTime() < (this.retryAt.get(retryKey) ?? -Infinity))
+      return;
+    const policy = this.deps.settings.getSettings();
+    if (!policy.enabled) return;
+    this.retryAt.set(retryKey, now.getTime() + interval);
+    await this.deps.sink.notifyBudgetThreshold({
+      dedupeKey,
+      periodKey: status.period.key,
+      scope: target.scope,
+      id: target.id,
+      label: target.label,
+      sentAt: now.toISOString(),
+      reasons,
+      severity: reasons.some((item) => item.threshold === 100) ? 'critical' : 'warning',
+      suppressToast: !policy.nativeToasts,
     });
-  }
-
-  for (const team of snapshot.byTeam) {
-    const limit = budgets.teams?.[team.id];
-    if (limit && hasBudgetLimit(limit)) {
-      targets.push({
-        scope: 'team',
-        id: team.id,
-        label: team.label,
-        summary: team.summary,
-        limit,
-      });
+    this.retryAt.delete(retryKey);
+    // NotificationManager acceptance (including null/dedup) is not a durable OS ACK.
+    this.pending.set(dedupeKey, coverage);
+    try {
+      await this.deps.state.markCovered(coverage);
+      this.pending.delete(dedupeKey);
+    } catch (error) {
+      this.deps.logger?.warn('Failed to persist accepted budget coverage', error);
     }
   }
-
-  for (const project of snapshot.byProject) {
-    const limit = budgets.projects?.[project.id];
-    if (limit && hasBudgetLimit(limit)) {
-      targets.push({
-        scope: 'project',
-        id: project.id,
-        label: project.label,
-        summary: project.summary,
-        limit,
-      });
-    }
-  }
-
-  return targets;
-}
-
-function hasBudgetLimit(limit: TokenUsageBudgetLimitDto): boolean {
-  return (
-    (typeof limit.monthlyTokenLimit === 'number' && limit.monthlyTokenLimit > 0) ||
-    (typeof limit.monthlyApiEquivalentCostLimitUsd === 'number' &&
-      limit.monthlyApiEquivalentCostLimitUsd > 0)
-  );
-}
-
-function budgetMetricChecks(target: BudgetTarget): {
-  metric: TokenUsageBudgetNotificationMetric;
-  value: number;
-  limit: number;
-}[] {
-  const checks: { metric: TokenUsageBudgetNotificationMetric; value: number; limit: number }[] = [];
-  if (target.limit.monthlyTokenLimit && target.limit.monthlyTokenLimit > 0) {
-    checks.push({
-      metric: 'tokens',
-      value: target.summary.totalTokens,
-      limit: target.limit.monthlyTokenLimit,
-    });
-  }
-  if (
-    target.limit.monthlyApiEquivalentCostLimitUsd &&
-    target.limit.monthlyApiEquivalentCostLimitUsd > 0
-  ) {
-    checks.push({
-      metric: 'apiEquivalentCostUsd',
-      value: target.summary.apiEquivalentCostUsd,
-      limit: target.limit.monthlyApiEquivalentCostLimitUsd,
-    });
-  }
-  return checks;
-}
-
-function periodKeyFor(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return new Date().toISOString().slice(0, 7);
-  return parsed.toISOString().slice(0, 7);
-}
-
-function monthKeyOffset(periodKey: string, offset: number): string {
-  const [year = '1970', month = '01'] = periodKey.split('-');
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1 + offset, 1));
-  return date.toISOString().slice(0, 7);
 }

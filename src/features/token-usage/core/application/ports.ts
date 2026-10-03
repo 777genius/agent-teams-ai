@@ -1,6 +1,8 @@
 import type {
   TokenUsageAnalyticsSnapshotDto,
   TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
@@ -8,6 +10,7 @@ import type {
 } from '../../contracts';
 
 export interface TokenUsageLedgerRepositoryPort {
+  readSnapshot(): Promise<{ runs: TokenUsageRunDto[]; events: TokenUsageEventDto[] }>;
   listRuns(): Promise<TokenUsageRunDto[]>;
   listEvents(): Promise<TokenUsageEventDto[]>;
   upsertRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
@@ -27,6 +30,7 @@ export interface TokenUsageImporterPort {
 }
 
 export interface TokenUsageRealtimePublisherPort {
+  publishBudgetStatus?(status: TokenUsageBudgetStatusDto): void;
   publishSnapshot(snapshot: TokenUsageAnalyticsSnapshotDto): void;
 }
 
@@ -44,10 +48,14 @@ export interface TokenUsageLoggerPort {
   error(message: string, error?: unknown): void;
 }
 
-export type TokenUsageBudgetNotificationReason = 'snapshot' | 'startup' | 'settings';
+export type TokenUsageBudgetNotificationReason =
+  | 'snapshot'
+  | 'startup'
+  | 'settings'
+  | 'month'
+  | 'tick';
 export type TokenUsageBudgetNotificationScope = 'global' | 'team' | 'project';
 export type TokenUsageBudgetNotificationMetric = 'tokens' | 'apiEquivalentCostUsd';
-export type TokenUsageBudgetNotificationThreshold = 80 | 100;
 
 export interface TokenUsageBudgetNotificationSettings {
   enabled: boolean;
@@ -63,13 +71,19 @@ export interface TokenUsageBudgetNotificationRecord {
   scope: TokenUsageBudgetNotificationScope;
   id: string;
   metric: TokenUsageBudgetNotificationMetric;
-  threshold: TokenUsageBudgetNotificationThreshold;
+  threshold: number;
   value: number;
   limit: number;
   percent: number;
 }
 
-export interface TokenUsageBudgetNotificationEvent extends TokenUsageBudgetNotificationRecord {
+export interface TokenUsageBudgetNotificationEvent {
+  dedupeKey: string;
+  sentAt: string;
+  periodKey: string;
+  scope: TokenUsageBudgetNotificationScope;
+  id: string;
+  reasons: TokenUsageBudgetNotificationRecord[];
   label: string;
   severity: 'warning' | 'critical';
   suppressToast: boolean;
@@ -77,12 +91,14 @@ export interface TokenUsageBudgetNotificationEvent extends TokenUsageBudgetNotif
 
 export interface TokenUsageBudgetSettingsRepositoryPort {
   getSettings(): Promise<TokenUsageBudgetSettingsDto>;
-  updateSettings(settings: TokenUsageBudgetSettingsDto): Promise<TokenUsageBudgetSettingsDto>;
+  updateSettings(
+    settings: TokenUsageBudgetSettingsUpdateRequestDto
+  ): Promise<TokenUsageBudgetSettingsDto>;
 }
 
 export interface TokenUsageBudgetNotificationStateRepositoryPort {
   hasSent(dedupeKey: string): Promise<boolean>;
-  markSent(record: TokenUsageBudgetNotificationRecord): Promise<void>;
+  markCovered(records: readonly TokenUsageBudgetNotificationRecord[]): Promise<void>;
   pruneBeforePeriod(periodKey: string): Promise<void>;
 }
 
@@ -95,8 +111,9 @@ export interface TokenUsageBudgetNotificationSettingsPort {
 }
 
 export interface TokenUsageBudgetNotificationEvaluatorPort {
+  retryPending?(): Promise<void>;
   evaluate(
-    snapshot: TokenUsageAnalyticsSnapshotDto,
+    snapshot: TokenUsageBudgetStatusDto,
     reason: TokenUsageBudgetNotificationReason
   ): Promise<void>;
 }
@@ -107,5 +124,9 @@ export interface TokenUsageAnalyticsServicePort {
   recordRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
   ingestEvents(events: readonly TokenUsageEventDto[]): Promise<void>;
   getBudgetSettings(): Promise<TokenUsageBudgetSettingsDto>;
-  updateBudgetSettings(settings: TokenUsageBudgetSettingsDto): Promise<TokenUsageBudgetSettingsDto>;
+  getBudgetStatus(): Promise<TokenUsageBudgetStatusDto>;
+  tick(): Promise<void>;
+  updateBudgetSettings(
+    settings: TokenUsageBudgetSettingsUpdateRequestDto
+  ): Promise<TokenUsageBudgetSettingsDto>;
 }

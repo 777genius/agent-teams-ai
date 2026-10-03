@@ -340,9 +340,9 @@
       "selectDuration": "เลือกระยะเวลา..."
     },
     "taskCompletion": {
-      "description": "รับการแจ้งเตือนระบบปฏิบัติการเมื่อ Claude ทำงานเสร็จ - เสียง, แบนเนอร์ และป้ายบน Dock/แถบงาน ใช้งานได้บน macOS, Linux และ Windows",
-      "installPlugin": "ติดตั้งปลั๊กอิน claude-notifications-go",
-      "title": "การแจ้งเตือนเมื่องานเสร็จ"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

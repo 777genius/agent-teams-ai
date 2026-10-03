@@ -355,9 +355,9 @@
       "selectDuration": "Selectează durata..."
     },
     "taskCompletion": {
-      "description": "Primește notificări native ale SO când Claude termină sarcini - sunete, bannere și insigne în Dock/bara de activități. Funcționează pe macOS, Linux și Windows.",
-      "installPlugin": "Instalează pluginul claude-notifications-go",
-      "title": "Notificări de finalizare a sarcinilor"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

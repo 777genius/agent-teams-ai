@@ -1,4 +1,5 @@
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
+import { runProjectKey, runTeamKey } from './budgetScopeKeys';
 import { addEventToSummary, addRunToSummary, ZERO_TOKEN_USAGE_SUMMARY } from './tokenUsageTotals';
 
 import type {
@@ -728,14 +729,6 @@ function buildSourceCounts(
   return counts;
 }
 
-function runTeamKey(run: TokenUsageRunDto): { id: string; label: string; teamName?: string } {
-  return {
-    id: run.teamName ?? 'unassigned',
-    label: run.teamName ?? 'Unassigned',
-    teamName: run.teamName,
-  };
-}
-
 function runAgentKey(run: TokenUsageRunDto): {
   id: string;
   label: string;
@@ -765,18 +758,6 @@ function runSessionKey(run: TokenUsageRunDto): { id: string; label: string; team
   const source = primaryRunSource(run);
   const id = source?.nativeSessionId ?? source?.nativeLogPath ?? run.appRunId;
   return { id, label: buildSessionLabel(run, id), teamName: run.teamName };
-}
-
-function runProjectKey(run: TokenUsageRunDto): { id: string; label: string; teamName?: string } {
-  const id = run.workspacePathHash ? `project:${run.workspacePathHash}` : 'unknown-project';
-  const label =
-    run.workspaceLabel ??
-    (run.workspacePathHash ? `Project ${shortId(run.workspacePathHash)}` : 'Unknown project');
-  return {
-    id,
-    label,
-    teamName: run.teamName,
-  };
 }
 
 function runRuntimeKey(run: TokenUsageRunDto): { id: string; label: string } {

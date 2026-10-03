@@ -355,9 +355,9 @@
       "selectDuration": "వ్యవధిని ఎంచుకోండి..."
     },
     "taskCompletion": {
-      "description": "Claude టాస్క్‌లను పూర్తి చేసినప్పుడు నేటివ్ OS నోటిఫికేషన్‌లను పొందండి - ధ్వనులు, బ్యానర్లు మరియు Dock/taskbar బ్యాడ్జ్‌లు. macOS, Linux మరియు Windows లో పనిచేస్తుంది.",
-      "installPlugin": "claude-notifications-go ప్లగిన్‌ను ఇన్‌స్టాల్ చేయి",
-      "title": "టాస్క్ పూర్తి నోటిఫికేషన్‌లు"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

@@ -340,9 +340,9 @@
       "selectDuration": "期間を選択してください..."
     },
     "taskCompletion": {
-      "description": "Claudeがタスクを終了したときにネイティブOS通知を取得する - 音、バナー、およびドック/タスクバーバッジ。 macOS、Linux、Windowsで動作します。",
-      "installPlugin": "claude-notifications-goプラグインをインストールする",
-      "title": "タスク完了通知"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

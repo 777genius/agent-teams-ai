@@ -340,9 +340,9 @@
       "selectDuration": "Selecionar duração..."
     },
     "taskCompletion": {
-      "description": "Receba notificações nativas do SO quando Claude terminar as tarefas - sons, banners e emblemas de Dock/taskbar. Funciona em macOS, Linux e Windows.",
-      "installPlugin": "Instalar o plugin claude- notifications- go",
-      "title": "Notificações de Completação de Tarefas"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

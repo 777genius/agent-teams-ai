@@ -340,9 +340,9 @@
       "selectDuration": "कालावधी निवडा..."
     },
     "taskCompletion": {
-      "description": "Claude टास्क पूर्ण करते तेव्हा नेटिव्ह OS सूचना मिळवा - आवाज, बॅनर्स आणि Dock/taskbar बॅजेस. macOS, Linux आणि Windows वर काम करते.",
-      "installPlugin": "claude-notifications-go प्लगइन इन्स्टॉल करा",
-      "title": "टास्क पूर्तता सूचना"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

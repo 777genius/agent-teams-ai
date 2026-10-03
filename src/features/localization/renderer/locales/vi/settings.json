@@ -340,9 +340,9 @@
       "selectDuration": "Chọn thời lượng..."
     },
     "taskCompletion": {
-      "description": "Nhận thông báo gốc của hệ điều hành khi Claude hoàn thành tác vụ - âm thanh, biểu ngữ và huy hiệu trên Dock/thanh tác vụ. Hoạt động trên macOS, Linux và Windows.",
-      "installPlugin": "Cài đặt plugin claude-notifications-go",
-      "title": "Thông báo hoàn thành tác vụ"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

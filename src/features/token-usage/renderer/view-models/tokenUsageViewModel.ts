@@ -1,8 +1,6 @@
 import type {
   TokenUsageAnalyticsSnapshotDto,
   TokenUsageBreakdownItemDto,
-  TokenUsageBudgetLimitDto,
-  TokenUsageBudgetSettingsDto,
   TokenUsageCommandRunDto,
   TokenUsageRecentRunDto,
   TokenUsageSessionRunDto,
@@ -103,23 +101,6 @@ export interface TokenUsageBurnRateViewModel {
   monthForecastCost: string;
 }
 
-export type TokenUsageBudgetLimit = TokenUsageBudgetLimitDto;
-export type TokenUsageBudgetLimits = TokenUsageBudgetSettingsDto;
-
-export interface TokenUsageBudgetAlertViewModel {
-  id: string;
-  label: string;
-  scope: 'global' | 'team' | 'project';
-  severity: 'ok' | 'warning' | 'critical';
-  severityLabel: string;
-  tokens: string;
-  tokenLimit?: string;
-  cost: string;
-  costLimit?: string;
-  percent: number;
-  detail: string;
-}
-
 export interface TokenUsageTrendPointViewModel {
   id: string;
   label: string;
@@ -172,15 +153,10 @@ export interface TokenUsageTeamFilterOptionViewModel {
   tokenValue: number;
 }
 
-export interface TokenUsageBudgetTargetOptionViewModel extends TokenUsageTeamFilterOptionViewModel {
-  scope: 'global' | 'team' | 'project';
-}
-
 export interface TokenUsageDashboardViewModel {
   metrics: TokenUsageMetricViewModel[];
   billingSplit: TokenUsageBillingSplitItemViewModel[];
   burnRate: TokenUsageBurnRateViewModel;
-  budgetAlerts: TokenUsageBudgetAlertViewModel[];
   tokenMix: TokenUsageMixSegmentViewModel[];
   modelUsage: TokenUsageModelSegmentViewModel[];
   trendPoints: TokenUsageTrendPointViewModel[];
@@ -190,7 +166,6 @@ export interface TokenUsageDashboardViewModel {
   runtimeBars: TokenUsageBarChartItemViewModel[];
   modelBars: TokenUsageBarChartItemViewModel[];
   teamFilterOptions: TokenUsageTeamFilterOptionViewModel[];
-  budgetTargetOptions: TokenUsageBudgetTargetOptionViewModel[];
   teamRows: TokenUsageBreakdownRowViewModel[];
   agentRows: TokenUsageBreakdownRowViewModel[];
   taskRows: TokenUsageBreakdownRowViewModel[];
@@ -213,7 +188,6 @@ export interface TokenUsageDashboardViewModel {
 export interface TokenUsageDashboardViewModelOptions {
   includeCacheTokens?: boolean;
   locale?: string;
-  budgetLimits?: TokenUsageBudgetLimits;
   text?: Partial<TokenUsageViewModelText>;
 }
 
@@ -226,16 +200,9 @@ export interface TokenUsageViewModelText {
   billableApiRequests: (count: string) => string;
   billing: string;
   billingHelp: string;
-  budgetAllTeams: string;
-  budgetCritical: string;
-  budgetOk: string;
-  budgetProject: string;
-  budgetTeam: string;
-  budgetWarning: string;
   burnRateBasis: (days: string) => string;
   cache: string;
   costEstimated: string;
-  costLimitDetail: (cost: string, limit: string) => string;
   dailyCost: string;
   dailyTokens: string;
   estimatedRequests: (pricedCount: string, totalCount: string) => string;
@@ -265,7 +232,6 @@ export interface TokenUsageViewModelText {
   sourceEventCount: (count: string) => string;
   subscriptionUsage: string;
   subscriptionUsageHelp: string;
-  tokenLimitDetail: (tokens: string, limit: string) => string;
   totalTokens: string;
   totalTokensDetail: (input: string, output: string) => string;
   tokenCostTooltip: (label: string, tokens: string, cost: string, requests: string) => string;
@@ -286,16 +252,9 @@ const DEFAULT_TEXT: TokenUsageViewModelText = {
   billing: 'Billing',
   billingHelp:
     'Billable shows actual provider or gateway API cost only. Subscription usage is counted when a run has billingMode=subscription. API-equivalent is a pricing-table shadow estimate for comparison, not a subscription bill.',
-  budgetAllTeams: 'All teams',
-  budgetCritical: 'Over budget',
-  budgetOk: 'On track',
-  budgetProject: 'Project',
-  budgetTeam: 'Team',
-  budgetWarning: 'Warning',
   burnRateBasis: (days) => `Based on the last ${days} visible days`,
   cache: 'Cache',
   costEstimated: 'Cost est.',
-  costLimitDetail: (cost, limit) => `${cost} of ${limit}`,
   dailyCost: 'Cost/day',
   dailyTokens: 'Tokens/day',
   estimatedRequests: (pricedCount, totalCount) => `${pricedCount} / ${totalCount} est. req`,
@@ -327,7 +286,6 @@ const DEFAULT_TEXT: TokenUsageViewModelText = {
   subscriptionUsage: 'Subscription usage',
   subscriptionUsageHelp:
     'Requests and tokens attributed to subscription mode. No billable API dollars are counted for this bucket.',
-  tokenLimitDetail: (tokens, limit) => `${tokens} of ${limit}`,
   totalTokens: 'Total tokens',
   totalTokensDetail: (input, output) => `${input} in / ${output} out`,
   tokenCostTooltip: (label, tokens, cost, requests) =>
@@ -416,7 +374,6 @@ export function toTokenUsageDashboardViewModel(
     metrics,
     billingSplit: toBillingSplit(summary, text, locale),
     burnRate: toBurnRate(snapshot, includeCacheTokens, text, locale),
-    budgetAlerts: toBudgetAlerts(snapshot, options.budgetLimits, includeCacheTokens, text, locale),
     tokenMix: toTokenMix(summary, includeCacheTokens, text, locale),
     modelUsage: toModelUsageSegments(snapshot?.byModel ?? [], includeCacheTokens, text, locale),
     trendPoints: toTrendPoints(snapshot?.tokenTrend ?? [], includeCacheTokens, text, locale),
@@ -459,7 +416,6 @@ export function toTokenUsageDashboardViewModel(
       text,
       locale
     ),
-    budgetTargetOptions: toBudgetTargetOptions(snapshot, includeCacheTokens, text, locale),
     teamRows: toBreakdownRows(snapshot?.byTeam ?? [], includeCacheTokens, text, locale),
     agentRows: toBreakdownRows(snapshot?.byAgent ?? [], includeCacheTokens, text, locale),
     taskRows: toBreakdownRows(snapshot?.byTask ?? [], includeCacheTokens, text, locale),
@@ -594,124 +550,6 @@ function toBurnRate(
   };
 }
 
-function toBudgetAlerts(
-  snapshot: TokenUsageAnalyticsSnapshotDto | null,
-  limits: TokenUsageBudgetLimits | undefined,
-  includeCacheTokens: boolean,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): TokenUsageBudgetAlertViewModel[] {
-  const alerts: TokenUsageBudgetAlertViewModel[] = [];
-  if (limits?.global && hasBudgetLimit(limits.global)) {
-    alerts.push(
-      toBudgetAlert(
-        'global',
-        text.budgetAllTeams,
-        'global',
-        snapshot?.summary ?? emptySummary(),
-        limits.global,
-        includeCacheTokens,
-        text,
-        locale
-      )
-    );
-  }
-
-  for (const team of snapshot?.byTeam ?? []) {
-    const teamLimit = limits?.teams?.[team.id];
-    if (!teamLimit || !hasBudgetLimit(teamLimit)) continue;
-    alerts.push(
-      toBudgetAlert(
-        team.id,
-        team.label,
-        'team',
-        team.summary,
-        teamLimit,
-        includeCacheTokens,
-        text,
-        locale
-      )
-    );
-  }
-
-  for (const project of snapshot?.byProject ?? []) {
-    const projectLimit = limits?.projects?.[project.id];
-    if (!projectLimit || !hasBudgetLimit(projectLimit)) continue;
-    alerts.push(
-      toBudgetAlert(
-        project.id,
-        project.label,
-        'project',
-        project.summary,
-        projectLimit,
-        includeCacheTokens,
-        text,
-        locale
-      )
-    );
-  }
-
-  return alerts.sort((left, right) => {
-    const severityOrder = { critical: 3, warning: 2, ok: 1 };
-    return (
-      severityOrder[right.severity] - severityOrder[left.severity] || right.percent - left.percent
-    );
-  });
-}
-
-function toBudgetAlert(
-  id: string,
-  label: string,
-  scope: TokenUsageBudgetAlertViewModel['scope'],
-  summary: TokenUsageSummaryDto,
-  limit: TokenUsageBudgetLimit,
-  includeCacheTokens: boolean,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): TokenUsageBudgetAlertViewModel {
-  const visibleTokens = visibleTokenTotal(summary, includeCacheTokens);
-  const tokenPercentValue =
-    limit.monthlyTokenLimit && limit.monthlyTokenLimit > 0
-      ? (visibleTokens / limit.monthlyTokenLimit) * 100
-      : 0;
-  const costPercentValue =
-    limit.monthlyApiEquivalentCostLimitUsd && limit.monthlyApiEquivalentCostLimitUsd > 0
-      ? (summary.apiEquivalentCostUsd / limit.monthlyApiEquivalentCostLimitUsd) * 100
-      : 0;
-  const percent = Math.max(tokenPercentValue, costPercentValue);
-  const severity = budgetSeverity(percent);
-  const tokens = formatCompactNumber(visibleTokens, locale);
-  const tokenLimit = limit.monthlyTokenLimit
-    ? formatCompactNumber(limit.monthlyTokenLimit, locale)
-    : undefined;
-  const cost = formatUsd(summary.apiEquivalentCostUsd, locale);
-  const costLimit = limit.monthlyApiEquivalentCostLimitUsd
-    ? formatUsd(limit.monthlyApiEquivalentCostLimitUsd, locale)
-    : undefined;
-  const detail =
-    tokenLimit && costLimit
-      ? `${text.tokenLimitDetail(tokens, tokenLimit)} / ${text.costLimitDetail(cost, costLimit)}`
-      : tokenLimit
-        ? text.tokenLimitDetail(tokens, tokenLimit)
-        : costLimit
-          ? text.costLimitDetail(cost, costLimit)
-          : '';
-
-  return {
-    id,
-    label,
-    scope,
-    severity,
-    severityLabel: budgetSeverityLabel(severity, text),
-    tokens,
-    tokenLimit,
-    cost,
-    costLimit,
-    percent: Math.max(0, percent),
-    detail,
-  };
-}
-
 function toBreakdownRows(
   items: readonly TokenUsageBreakdownItemDto[],
   includeCacheTokens: boolean,
@@ -739,56 +577,6 @@ function toTeamFilterOptions(
     .map((item) => {
       const visibleTokens = visibleTokenTotal(item.summary, includeCacheTokens);
       return {
-        id: item.id,
-        label: item.label,
-        tokens: formatCompactNumber(visibleTokens, locale),
-        cost: formatCostLabel(item.summary, text, locale),
-        tokenValue: visibleTokens,
-      };
-    });
-}
-
-function toBudgetTargetOptions(
-  snapshot: TokenUsageAnalyticsSnapshotDto | null,
-  includeCacheTokens: boolean,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): TokenUsageBudgetTargetOptionViewModel[] {
-  const summary = snapshot?.summary ?? emptySummary();
-  const visibleTokens = visibleTokenTotal(summary, includeCacheTokens);
-  return [
-    {
-      scope: 'global',
-      id: 'global',
-      label: text.budgetAllTeams,
-      tokens: formatCompactNumber(visibleTokens, locale),
-      cost: formatCostLabel(summary, text, locale),
-      tokenValue: visibleTokens,
-    },
-    ...toScopedBudgetOptions('team', snapshot?.byTeam ?? [], includeCacheTokens, text, locale),
-    ...toScopedBudgetOptions(
-      'project',
-      snapshot?.byProject ?? [],
-      includeCacheTokens,
-      text,
-      locale
-    ),
-  ];
-}
-
-function toScopedBudgetOptions(
-  scope: TokenUsageBudgetTargetOptionViewModel['scope'],
-  items: readonly TokenUsageBreakdownItemDto[],
-  includeCacheTokens: boolean,
-  text: TokenUsageViewModelText,
-  locale: string | undefined
-): TokenUsageBudgetTargetOptionViewModel[] {
-  return items
-    .filter((item) => item.id !== 'unassigned' && item.id !== 'unknown-project')
-    .map((item) => {
-      const visibleTokens = visibleTokenTotal(item.summary, includeCacheTokens);
-      return {
-        scope,
         id: item.id,
         label: item.label,
         tokens: formatCompactNumber(visibleTokens, locale),
@@ -1243,29 +1031,6 @@ function sortByVisibleTokens<T extends { label?: string; summary: TokenUsageSumm
     const leftTokens = visibleTokenTotal(left.summary, includeCacheTokens);
     return rightTokens - leftTokens || left.label?.localeCompare(right.label ?? '') || 0;
   });
-}
-
-function hasBudgetLimit(limit: TokenUsageBudgetLimit): boolean {
-  return (
-    (typeof limit.monthlyTokenLimit === 'number' && limit.monthlyTokenLimit > 0) ||
-    (typeof limit.monthlyApiEquivalentCostLimitUsd === 'number' &&
-      limit.monthlyApiEquivalentCostLimitUsd > 0)
-  );
-}
-
-function budgetSeverity(percent: number): TokenUsageBudgetAlertViewModel['severity'] {
-  if (percent >= 100) return 'critical';
-  if (percent >= 80) return 'warning';
-  return 'ok';
-}
-
-function budgetSeverityLabel(
-  severity: TokenUsageBudgetAlertViewModel['severity'],
-  text: TokenUsageViewModelText
-): string {
-  if (severity === 'critical') return text.budgetCritical;
-  if (severity === 'warning') return text.budgetWarning;
-  return text.budgetOk;
 }
 
 interface DailyUsagePoint {

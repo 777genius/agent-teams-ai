@@ -20433,6 +20433,7 @@ describe(
       await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await waitForLaunchStateQueueIdle(svc, teamName);
 
       await writeMixedTeamLaunchState({
         teamName,
@@ -20519,6 +20520,7 @@ describe(
       await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await waitForLaunchStateQueueIdle(svc, teamName);
 
       await writeMixedTeamLaunchState({
         teamName,
@@ -20642,6 +20644,7 @@ describe(
       await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await waitForLaunchStateQueueIdle(svc, teamName);
 
       await writeMixedTeamLaunchState({
         teamName,

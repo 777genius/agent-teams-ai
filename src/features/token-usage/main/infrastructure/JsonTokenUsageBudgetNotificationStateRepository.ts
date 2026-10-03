@@ -2,109 +2,119 @@ import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { mkdir, readFile, stat } from 'fs/promises';
 import { dirname } from 'path';
 
+import { SerialQueue } from '../../core/application/SerialQueue';
+import { budgetCoverageKey } from '../../core/domain';
+
 import type {
   TokenUsageBudgetNotificationRecord,
   TokenUsageBudgetNotificationStateRepositoryPort,
 } from '../../core/application';
 
-interface TokenUsageBudgetNotificationStateFile {
-  schemaVersion: 1;
+interface State {
+  schemaVersion: 2;
   sent: Record<string, TokenUsageBudgetNotificationRecord>;
 }
-
 const MAX_NOTIFICATION_STATE_BYTES = 512 * 1024;
 
 export class JsonTokenUsageBudgetNotificationStateRepository implements TokenUsageBudgetNotificationStateRepositoryPort {
+  private readonly queue = new SerialQueue();
   constructor(private readonly filePath: string) {}
 
-  async hasSent(dedupeKey: string): Promise<boolean> {
-    const state = await this.readState();
-    return Boolean(state.sent[dedupeKey]);
+  hasSent(dedupeKey: string): Promise<boolean> {
+    return this.queue.run(async () => Boolean((await this.readState()).sent[dedupeKey]));
   }
 
-  async markSent(record: TokenUsageBudgetNotificationRecord): Promise<void> {
-    const state = await this.readState();
-    state.sent[record.dedupeKey] = record;
-    await this.writeState(state);
-  }
-
-  async pruneBeforePeriod(periodKey: string): Promise<void> {
-    const state = await this.readState();
-    let changed = false;
-    for (const [key, record] of Object.entries(state.sent)) {
-      if (record.periodKey < periodKey) {
-        delete state.sent[key];
-        changed = true;
+  markCovered(records: readonly TokenUsageBudgetNotificationRecord[]): Promise<void> {
+    return this.queue.run(async () => {
+      const state = await this.readState();
+      for (const record of records) {
+        const validated = validateRecord(record);
+        state.sent[budgetCoverageKey(validated)] = validated;
       }
-    }
-    if (changed) await this.writeState(state);
+      await this.writeState(state);
+    });
   }
 
-  private async readState(): Promise<TokenUsageBudgetNotificationStateFile> {
+  pruneBeforePeriod(periodKey: string): Promise<void> {
+    return this.queue.run(async () => {
+      const state = await this.readState();
+      let changed = false;
+      for (const [key, record] of Object.entries(state.sent)) {
+        if (record.periodKey < periodKey) {
+          delete state.sent[key];
+          changed = true;
+        }
+      }
+      if (changed) await this.writeState(state);
+    });
+  }
+
+  private async readState(): Promise<State> {
+    let source: { schemaVersion?: unknown; sent?: unknown };
     try {
       const fileStat = await stat(this.filePath);
-      if (!fileStat.isFile() || fileStat.size > MAX_NOTIFICATION_STATE_BYTES) return emptyState();
-      const raw = await readFile(this.filePath, 'utf8');
-      return normalizeState(JSON.parse(raw) as unknown);
-    } catch {
-      return emptyState();
+      if (!fileStat.isFile() || fileStat.size > MAX_NOTIFICATION_STATE_BYTES)
+        throw new Error('Budget coverage exceeds its size limit or is not a file');
+      source = JSON.parse(await readFile(this.filePath, 'utf8')) as typeof source;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { schemaVersion: 2, sent: {} };
+      throw error;
     }
+    if (
+      !source ||
+      (source.schemaVersion !== 1 && source.schemaVersion !== 2) ||
+      !source.sent ||
+      typeof source.sent !== 'object' ||
+      Array.isArray(source.sent)
+    )
+      throw new Error('Invalid budget coverage schema');
+    const state: State = { schemaVersion: 2, sent: {} };
+    for (const item of Object.values(source.sent)) {
+      const record = validateRecord(item);
+      if (source.schemaVersion === 1 && record.threshold !== 80 && record.threshold !== 100)
+        throw new Error('Invalid legacy budget threshold');
+      state.sent[budgetCoverageKey(record)] = { ...record, dedupeKey: budgetCoverageKey(record) };
+      if (source.schemaVersion === 1 && record.threshold === 100) {
+        const warning = { ...record, threshold: 80 };
+        state.sent[budgetCoverageKey(warning)] = {
+          ...warning,
+          dedupeKey: budgetCoverageKey(warning),
+        };
+      }
+    }
+    // Defer persistence until mutation so pruning can shrink expanded legacy coverage first.
+    return state;
   }
 
-  private async writeState(state: TokenUsageBudgetNotificationStateFile): Promise<void> {
+  private async writeState(state: State): Promise<void> {
+    const serialized = `${JSON.stringify(state, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_NOTIFICATION_STATE_BYTES)
+      throw new Error('Budget coverage exceeds its size limit');
     await mkdir(dirname(this.filePath), { recursive: true });
-    await atomicWriteAsync(this.filePath, `${JSON.stringify(state, null, 2)}\n`);
+    await atomicWriteAsync(this.filePath, serialized);
   }
 }
 
-function emptyState(): TokenUsageBudgetNotificationStateFile {
-  return { schemaVersion: 1, sent: {} };
-}
-
-function normalizeState(value: unknown): TokenUsageBudgetNotificationStateFile {
-  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-  const sentRecord =
-    record.sent && typeof record.sent === 'object' && !Array.isArray(record.sent)
-      ? (record.sent as Record<string, unknown>)
-      : {};
-  const sent: Record<string, TokenUsageBudgetNotificationRecord> = {};
-  for (const [key, item] of Object.entries(sentRecord)) {
-    const normalized = normalizeRecord(key, item);
-    if (normalized) sent[key] = normalized;
-  }
-  return { schemaVersion: 1, sent };
-}
-
-function normalizeRecord(key: string, value: unknown): TokenUsageBudgetNotificationRecord | null {
-  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-  const scope = record.scope;
-  const metric = record.metric;
-  const threshold = record.threshold;
-  if (scope !== 'global' && scope !== 'team' && scope !== 'project') return null;
-  if (metric !== 'tokens' && metric !== 'apiEquivalentCostUsd') return null;
-  if (threshold !== 80 && threshold !== 100) return null;
-  const sentAt = readString(record.sentAt);
-  const periodKey = readString(record.periodKey);
-  const id = readString(record.id);
-  if (!sentAt || !periodKey || !id) return null;
-  return {
-    dedupeKey: readString(record.dedupeKey) ?? key,
-    sentAt,
-    periodKey,
-    scope,
-    id,
-    metric,
-    threshold,
-    value: readNumber(record.value),
-    limit: readNumber(record.limit),
-    percent: readNumber(record.percent),
-  };
-}
-
-function readString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function readNumber(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+function validateRecord(value: unknown): TokenUsageBudgetNotificationRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid budget coverage record');
+  const item = value as TokenUsageBudgetNotificationRecord;
+  if (
+    !['global', 'team', 'project'].includes(item.scope) ||
+    !['tokens', 'apiEquivalentCostUsd'].includes(item.metric) ||
+    !Number.isInteger(item.threshold) ||
+    item.threshold < 1 ||
+    item.threshold > 100 ||
+    typeof item.id !== 'string' ||
+    !item.id ||
+    typeof item.periodKey !== 'string' ||
+    !/^\d{4}-(0[1-9]|1[0-2])$/.test(item.periodKey) ||
+    !Number.isFinite(Date.parse(item.sentAt)) ||
+    ![item.value, item.limit, item.percent].every(Number.isFinite) ||
+    item.limit <= 0 ||
+    item.value < 0 ||
+    item.percent < 0
+  )
+    throw new Error('Invalid budget coverage record');
+  return { ...item, dedupeKey: budgetCoverageKey(item) };
 }

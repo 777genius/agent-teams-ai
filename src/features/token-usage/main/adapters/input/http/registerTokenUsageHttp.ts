@@ -4,10 +4,12 @@ import {
   normalizeTokenUsageBudgetSettings,
   normalizeTokenUsageSnapshot,
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
+  TOKEN_USAGE_BUDGET_STATUS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_ROUTE,
   type TokenUsageAnalyticsSnapshotDto,
-  type TokenUsageBudgetSettingsDto,
+  type TokenUsageBudgetSettingsUpdateRequestDto,
   type TokenUsageSnapshotRequest,
+  validateBudgetUpdate,
 } from '../../../../contracts';
 
 import type { TokenUsageFeatureFacade } from '../../../composition/createTokenUsageFeature';
@@ -82,25 +84,33 @@ export function registerTokenUsageHttp(
     }
   });
 
-  app.get(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, async (): Promise<TokenUsageBudgetSettingsDto> => {
+  app.get(TOKEN_USAGE_BUDGET_STATUS_ROUTE, async (_request, reply) => {
+    try {
+      return await feature.getBudgetStatus();
+    } catch (error) {
+      logger.error('Failed to load budget status', error);
+      return reply.code(503).send({ error: 'Budget status unavailable' });
+    }
+  });
+  app.get(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, async (_request, reply) => {
     try {
       return normalizeTokenUsageBudgetSettings(await feature.getBudgetSettings());
     } catch (error) {
-      logger.error('Failed to load token usage budget settings via HTTP', error);
-      return {};
+      logger.error('Failed to load budget settings', error);
+      return reply.code(503).send({ error: 'Budget settings unavailable' });
     }
   });
-
-  app.put<{ Body: TokenUsageBudgetSettingsDto }>(
+  app.put<{ Body: TokenUsageBudgetSettingsUpdateRequestDto }>(
     TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
-    async (request): Promise<TokenUsageBudgetSettingsDto> => {
+    async (request, reply) => {
       try {
-        return normalizeTokenUsageBudgetSettings(
-          await feature.updateBudgetSettings(normalizeTokenUsageBudgetSettings(request.body))
-        );
+        return await feature.updateBudgetSettings(validateBudgetUpdate(request.body));
       } catch (error) {
-        logger.error('Failed to update token usage budget settings via HTTP', error);
-        return normalizeTokenUsageBudgetSettings(request.body);
+        logger.error('Failed to save budget settings', error);
+        const code = (error as { code?: string }).code;
+        return reply
+          .code(code === 'BUDGET_VALIDATION' ? 400 : code === 'BUDGET_CONFLICT' ? 409 : 503)
+          .send({ error: error instanceof Error ? error.message : 'Budget settings unavailable' });
       }
     }
   );

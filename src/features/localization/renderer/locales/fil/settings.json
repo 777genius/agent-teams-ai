@@ -340,9 +340,9 @@
       "selectDuration": "Piliin ang tagal..."
     },
     "taskCompletion": {
-      "description": "Makakuha ng mga native OS notification kapag natapos ng Claude ang mga task - mga tunog, banner, at Dock/taskbar badge. Gumagana sa macOS, Linux, at Windows.",
-      "installPlugin": "I-install ang claude-notifications-go plugin",
-      "title": "Mga Notification sa Pagkatapos ng Task"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

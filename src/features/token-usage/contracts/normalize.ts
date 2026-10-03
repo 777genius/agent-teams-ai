@@ -342,7 +342,12 @@ export function normalizeTokenUsageBudgetLimit(
   value: unknown
 ): TokenUsageBudgetLimitDto | undefined {
   const record = isRecord(value) ? value : {};
-  const limit: TokenUsageBudgetLimitDto = {};
+  const limit: TokenUsageBudgetLimitDto = {
+    thresholds: Array.isArray(record.thresholds)
+      ? record.thresholds.filter((v): v is number => typeof v === 'number')
+      : [],
+    notificationsEnabled: record.notificationsEnabled !== false,
+  };
   const monthlyTokenLimit = readPositiveNumber(record.monthlyTokenLimit);
   const monthlyApiEquivalentCostLimitUsd = readPositiveNumber(
     record.monthlyApiEquivalentCostLimitUsd
@@ -351,7 +356,9 @@ export function normalizeTokenUsageBudgetLimit(
   if (monthlyApiEquivalentCostLimitUsd !== undefined) {
     limit.monthlyApiEquivalentCostLimitUsd = monthlyApiEquivalentCostLimitUsd;
   }
-  return Object.keys(limit).length > 0 ? limit : undefined;
+  return monthlyTokenLimit !== undefined || monthlyApiEquivalentCostLimitUsd !== undefined
+    ? limit
+    : undefined;
 }
 
 export function normalizeTokenUsageBudgetSettings(
@@ -372,7 +379,10 @@ export function normalizeTokenUsageBudgetSettings(
 
 function normalizeBudgetLimitRecord(value: unknown): Record<string, TokenUsageBudgetLimitDto> {
   const record = isRecord(value) ? value : {};
-  const result: Record<string, TokenUsageBudgetLimitDto> = {};
+  const result: Record<string, TokenUsageBudgetLimitDto> = Object.create(null) as Record<
+    string,
+    TokenUsageBudgetLimitDto
+  >;
   for (const [key, limit] of Object.entries(record)) {
     const id = key.trim();
     const normalized = normalizeTokenUsageBudgetLimit(limit);

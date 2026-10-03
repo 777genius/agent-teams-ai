@@ -24,6 +24,8 @@ export interface TokenUsageSnapshotRequest {
 }
 
 export interface TokenUsageBudgetLimitDto {
+  thresholds: number[];
+  notificationsEnabled: boolean;
   monthlyTokenLimit?: number;
   monthlyApiEquivalentCostLimitUsd?: number;
 }
@@ -33,6 +35,43 @@ export interface TokenUsageBudgetSettingsDto {
   teams?: Record<string, TokenUsageBudgetLimitDto>;
   projects?: Record<string, TokenUsageBudgetLimitDto>;
   updatedAt?: string;
+}
+
+export type TokenUsageBudgetScope = 'global' | 'team' | 'project';
+export type TokenUsageBudgetMetric = 'tokens' | 'apiEquivalentCostUsd';
+export interface TokenUsageBudgetMetricStatusDto {
+  metric: TokenUsageBudgetMetric;
+  value: number | null;
+  limit: number;
+  percent: number | null;
+  remaining: number | null;
+  nextThreshold?: number;
+  incomplete: boolean;
+}
+export interface TokenUsageBudgetTargetStatusDto {
+  scope: TokenUsageBudgetScope;
+  id: string;
+  label: string;
+  thresholds: number[];
+  notificationsEnabled: boolean;
+  metrics: TokenUsageBudgetMetricStatusDto[];
+}
+export interface TokenUsageBudgetStatusDto {
+  /** Orders projections independently of wall-clock changes and transport delay. */
+  statusOrder?: { epoch: string; sequence: number };
+  period: { key: string; from: string; to: string; timeZone: 'UTC' };
+  computedAt: string;
+  usageUpdatedAt?: string;
+  settingsUpdatedAt?: string;
+  stale: boolean;
+  degraded: boolean;
+  notificationPolicy: { enabled: boolean; nativeToasts: boolean };
+  targets: TokenUsageBudgetTargetStatusDto[];
+  options: { scope: TokenUsageBudgetScope; id: string; label: string }[];
+}
+export interface TokenUsageBudgetSettingsUpdateRequestDto {
+  settings: Omit<TokenUsageBudgetSettingsDto, 'updatedAt'>;
+  expectedUpdatedAt: string | null;
 }
 
 export interface TokenUsageTokenBreakdownDto {

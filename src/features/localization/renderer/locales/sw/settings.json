@@ -355,9 +355,9 @@
       "selectDuration": "Chagua muda..."
     },
     "taskCompletion": {
-      "description": "Pata arifa asili za OS Claude inapomaliza kazi - sauti, mabango, na beji za Dock/upau wa kazi. Hufanya kazi kwenye macOS, Linux, na Windows.",
-      "installPlugin": "Sakinisha programu-jalizi ya claude-notifications-go",
-      "title": "Arifa za Ukamilishaji wa Kazi"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

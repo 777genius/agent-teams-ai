@@ -340,9 +340,9 @@
       "selectDuration": "시간 선택..."
     },
     "taskCompletion": {
-      "description": "Claude가 작업을 완료할 때 기본 OS 알림 받기 - 소리, 배너 및 Dock/taskbar 배지. macOS, Linux 및 Windows에서 작동합니다.",
-      "installPlugin": "claude-notifications-go 플러그인 설치",
-      "title": "작업 완료 알림"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

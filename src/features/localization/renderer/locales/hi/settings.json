@@ -340,9 +340,9 @@
       "selectDuration": "चयन अवधि..."
     },
     "taskCompletion": {
-      "description": "जब क्लाउड कार्यों को समाप्त करता है तो मूल ओएस अधिसूचनाएं प्राप्त करें - ध्वनि, बैनर और डॉक / टस्कबार बैज। MacOS, Linux और Windows पर काम करता है।",
-      "installPlugin": "क्लाउड-notifications-go प्लगइन स्थापित करें",
-      "title": "कार्य समापन अधिसूचना"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

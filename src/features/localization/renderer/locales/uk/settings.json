@@ -376,9 +376,9 @@
       }
     },
     "taskCompletion": {
-      "description": "Отримуйте нативні сповіщення ОС, коли Claude завершує завдання — звуки, банери та значки в доку/панелі завдань. Працює на macOS, Linux та Windows.",
-      "installPlugin": "Встановити плагін claude-notifications-go",
-      "title": "Сповіщення про завершення завдань"
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "installPlugin": "Agent Notifications",
+      "title": "Agent Notifications"
     },
     "team": {
       "allTasksCompleted": {

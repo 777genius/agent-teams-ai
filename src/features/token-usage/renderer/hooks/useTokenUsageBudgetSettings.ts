@@ -2,87 +2,141 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { TokenUsageBudgetLimits } from '../view-models/tokenUsageViewModel';
-import type React from 'react';
-
-export interface UseTokenUsageBudgetSettingsOptions {
-  loadErrorMessage: string;
-  saveErrorMessage: string;
-}
-
-export interface UseTokenUsageBudgetSettingsResult {
-  budgetConfig: TokenUsageBudgetLimits;
-  budgetConfigError: string | null;
-  updateBudgetConfig: React.Dispatch<React.SetStateAction<TokenUsageBudgetLimits>>;
-}
+import type {
+  TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
+} from '../../contracts';
 
 export function useTokenUsageBudgetSettings({
   loadErrorMessage,
   saveErrorMessage,
-}: UseTokenUsageBudgetSettingsOptions): UseTokenUsageBudgetSettingsResult {
-  const [budgetConfig, setBudgetConfig] = useState<TokenUsageBudgetLimits>({});
-  const [budgetConfigError, setBudgetConfigError] = useState<string | null>(null);
-  const budgetConfigRef = useRef<TokenUsageBudgetLimits>({});
-  const saveVersionRef = useRef(0);
+}: {
+  loadErrorMessage: string;
+  saveErrorMessage: string;
+}) {
+  const [budgetConfig, setBudgetConfig] = useState<TokenUsageBudgetSettingsDto>({});
+  const [budgetStatus, setBudgetStatus] = useState<TokenUsageBudgetStatusDto | null>(null);
+  const [budgetConfigError, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const saved = useRef<TokenUsageBudgetSettingsDto>({});
+  const statusOrder = useRef<TokenUsageBudgetStatusDto['statusOrder']>(undefined);
+  const retiredStatusEpochs = useRef(new Set<string>());
+  const statusEventEpoch = useRef(0);
+  const generation = useRef(0);
+  const alive = useRef(true);
+
+  const acceptStatus = useCallback((status: TokenUsageBudgetStatusDto) => {
+    if (!alive.current) return false;
+    const revision = saved.current.updatedAt;
+    if (revision && (!status.settingsUpdatedAt || status.settingsUpdatedAt < revision))
+      return false;
+    const order = status.statusOrder;
+    const acceptedOrder = statusOrder.current;
+    if (!order && acceptedOrder) return false;
+    if (order) {
+      if (retiredStatusEpochs.current.has(order.epoch)) return false;
+      if (acceptedOrder) {
+        if (order.epoch === acceptedOrder.epoch && order.sequence <= acceptedOrder.sequence)
+          return false;
+        if (order.epoch !== acceptedOrder.epoch)
+          retiredStatusEpochs.current.add(acceptedOrder.epoch);
+      }
+      statusOrder.current = order;
+    }
+    setBudgetStatus(status);
+    return true;
+  }, []);
+
+  const acceptStatusEvent = useCallback(
+    (status: TokenUsageBudgetStatusDto) => {
+      // Fence legacy reads too; wall-clock timestamps may move backwards.
+      if (acceptStatus(status)) statusEventEpoch.current++;
+    },
+    [acceptStatus]
+  );
+
+  const acceptStatusRead = useCallback(
+    (status: TokenUsageBudgetStatusDto, eventEpoch: number) => {
+      // Same-instance sequence order resolves GET/event races in either direction.
+      if (
+        eventEpoch !== statusEventEpoch.current &&
+        (!status.statusOrder || status.statusOrder.epoch !== statusOrder.current?.epoch)
+      )
+        return;
+      acceptStatus(status);
+    },
+    [acceptStatus]
+  );
+
+  const reloadBudgetConfig = useCallback(async () => {
+    const version = ++generation.current;
+    const eventEpoch = statusEventEpoch.current;
+    try {
+      const [settings, status] = await Promise.all([
+        api.tokenUsage.getBudgetSettings(),
+        api.tokenUsage.getBudgetStatus(),
+      ]);
+      if (!alive.current || version !== generation.current) return null;
+      saved.current = settings;
+      setBudgetConfig(settings);
+      setLoaded(true);
+      acceptStatusRead(status, eventEpoch);
+      setError(null);
+      return settings;
+    } catch (error) {
+      if (alive.current && version === generation.current)
+        setError(error instanceof Error ? error.message : loadErrorMessage);
+      return null;
+    }
+  }, [acceptStatusRead, loadErrorMessage]);
 
   useEffect(() => {
-    let cancelled = false;
-    const getBudgetSettings = (api.tokenUsage as Partial<typeof api.tokenUsage>).getBudgetSettings;
-    if (typeof getBudgetSettings !== 'function') {
-      setBudgetConfigError(loadErrorMessage);
-      return () => {
-        cancelled = true;
-      };
-    }
-    void getBudgetSettings()
-      .then((settings) => {
-        if (cancelled) return;
-        budgetConfigRef.current = settings;
-        setBudgetConfig(settings);
-        setBudgetConfigError(null);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setBudgetConfigError(error instanceof Error ? error.message : loadErrorMessage);
-      });
+    const aliveRef = alive;
+    const generationRef = generation;
+    aliveRef.current = true;
+    void reloadBudgetConfig();
+    const unsubscribe = api.tokenUsage.onBudgetStatusChanged(acceptStatusEvent);
     return () => {
-      cancelled = true;
+      aliveRef.current = false;
+      generationRef.current++;
+      unsubscribe();
     };
-  }, [loadErrorMessage]);
+  }, [acceptStatusEvent, reloadBudgetConfig]);
 
-  const updateBudgetConfig = useCallback(
-    (action: React.SetStateAction<TokenUsageBudgetLimits>) => {
-      const next = typeof action === 'function' ? action(budgetConfigRef.current) : action;
-      budgetConfigRef.current = next;
-      setBudgetConfig(next);
-
-      const saveVersion = ++saveVersionRef.current;
-      const updateBudgetSettings = (api.tokenUsage as Partial<typeof api.tokenUsage>)
-        .updateBudgetSettings;
-      setBudgetConfigError(null);
-      if (typeof updateBudgetSettings !== 'function') {
-        setBudgetConfigError(saveErrorMessage);
-        return;
+  const saveBudgetConfig = useCallback(
+    async (request: TokenUsageBudgetSettingsUpdateRequestDto): Promise<void> => {
+      const version = ++generation.current;
+      try {
+        const result = await api.tokenUsage.updateBudgetSettings(request);
+        if (!alive.current || version !== generation.current) return;
+        saved.current = result;
+        setBudgetConfig(result);
+        setLoaded(true);
+        setError(null);
+        try {
+          const eventEpoch = statusEventEpoch.current;
+          const status = await api.tokenUsage.getBudgetStatus();
+          if (alive.current && version === generation.current) acceptStatusRead(status, eventEpoch);
+        } catch (error) {
+          if (alive.current && version === generation.current)
+            setError(error instanceof Error ? error.message : loadErrorMessage);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : saveErrorMessage;
+        if (alive.current && version === generation.current) setError(message);
+        throw error;
       }
-      void updateBudgetSettings(next)
-        .then((settings) => {
-          if (saveVersion === saveVersionRef.current) {
-            budgetConfigRef.current = settings;
-            setBudgetConfig(settings);
-          }
-        })
-        .catch((error: unknown) => {
-          if (saveVersion === saveVersionRef.current) {
-            setBudgetConfigError(error instanceof Error ? error.message : saveErrorMessage);
-          }
-        });
     },
-    [saveErrorMessage]
+    [acceptStatusRead, loadErrorMessage, saveErrorMessage]
   );
 
   return {
     budgetConfig,
+    budgetStatus,
     budgetConfigError,
-    updateBudgetConfig,
+    loaded,
+    saveBudgetConfig,
+    reloadBudgetConfig,
   };
 }
