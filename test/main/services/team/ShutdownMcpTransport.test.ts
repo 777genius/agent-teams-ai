@@ -148,6 +148,7 @@ describe('shutdown MCP transport authority', () => {
     };
     const finished = new Error('bounded shutdown completed MCP teardown');
     const stopStartupAdmission = vi.fn();
+    const disposeTokenUsage = vi.fn();
     const noOp = vi.fn();
     const teardown = vi.spyOn(server, 'stop').mockImplementation(() => {
       // Revocation must already hold on entry, even when server.stop is slow.
@@ -162,7 +163,12 @@ describe('shutdown MCP transport authority', () => {
       revokeMcpAppContext: revoke,
       logger: { info: noOp },
       announcementsLifecycle: { dispose: noOp },
-      runShutdownStep: async (_name: string, step: () => unknown) => await step(),
+      tokenUsageFeature: { dispose: disposeTokenUsage },
+      runShutdownStep: async (_name: string, step: () => unknown) => {
+        // Polling must stop before the first async cleanup can yield, and stay stopped.
+        expect(disposeTokenUsage).toHaveBeenCalledExactlyOnceWith();
+        return await step();
+      },
       clearStartupTimers: noOp,
       clearInboxNotifyTimers: noOp,
       stopPeriodicOpenCodeHostStartupLockPurge: null,
