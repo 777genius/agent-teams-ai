@@ -280,8 +280,34 @@
 }
 
 .usage-tabs {
-  padding-block-end: 0.5rem;
-  border-block-end: 1px solid var(--color-border);
+  background: linear-gradient(var(--color-border), var(--color-border)) bottom / 100% 1px no-repeat;
+}
+
+.usage-tabs .usage-tab {
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem 0.5rem 0 0;
+  transition:
+    color 150ms,
+    background-color 150ms,
+    border-color 150ms;
+}
+
+.usage-tabs .usage-tab[data-state='inactive']:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface-raised) 55%, transparent);
+}
+
+.usage-tabs .usage-tab[data-state='active'] {
+  border-color: var(--color-border);
+  border-block-end-color: var(--color-surface);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.usage-tabs .usage-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
 }
 
 .usage-tab[data-state='active'] svg {

@@ -69,7 +69,7 @@ type TokenUsageT = (key: string, options?: Record<string, unknown>) => string;
 const DAY_PICKER_CLASS_NAMES = buildDayPickerClassNames();
 const PANEL_CLASS = 'usage-panel min-w-0';
 const TOKEN_USAGE_TAB_TRIGGER_CLASS =
-  'usage-tab gap-1.5 rounded-md px-3 py-2 text-sm text-text-secondary shadow-none data-[state=active]:bg-surface-raised data-[state=active]:text-text data-[state=active]:shadow-none';
+  'usage-tab gap-1.5 rounded-none px-4 py-2.5 text-sm text-text-secondary shadow-none data-[state=active]:shadow-none';
 const TOKEN_USAGE_DASHBOARD_TABS = ['overview', 'activity', 'breakdowns', 'runs'] as const;
 
 type TokenUsageDashboardTab = (typeof TOKEN_USAGE_DASHBOARD_TABS)[number];
@@ -214,7 +214,7 @@ export const TokenUsageDashboard = ({
               className="min-w-0"
             >
               <div className="usage-tabs overflow-x-auto">
-                <TabsList className="h-auto min-w-max justify-start gap-1 rounded-none bg-transparent p-0">
+                <TabsList className="h-auto w-full min-w-max justify-start gap-1 rounded-none bg-transparent p-0">
                   <TabsTrigger value="overview" className={TOKEN_USAGE_TAB_TRIGGER_CLASS}>
                     <Gauge className="size-3.5" />
                     {tokenUsageT('tokenUsage.tabs.overview')}
