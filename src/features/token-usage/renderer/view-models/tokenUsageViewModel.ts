@@ -1,3 +1,5 @@
+import { ANONYMOUS_TEAM_ID } from '../../contracts';
+
 import type {
   TokenUsageAnalyticsSnapshotDto,
   TokenUsageBreakdownItemDto,
@@ -292,7 +294,7 @@ const DEFAULT_TEXT: TokenUsageViewModelText = {
     `${label}: ${tokens} tokens / ${cost} / ${requests}`,
   tokensCostTooltip: (label, tokens, cost) => `${label}: ${tokens} tokens / ${cost}`,
   tokenizerEstimated: 'Tokenizer est.',
-  unassigned: 'Unassigned',
+  unassigned: 'Anonymous runs',
   unknownAgent: 'Unknown agent',
 };
 
@@ -572,18 +574,16 @@ function toTeamFilterOptions(
   text: TokenUsageViewModelText,
   locale: string | undefined
 ): TokenUsageTeamFilterOptionViewModel[] {
-  return items
-    .filter((item) => item.id !== 'unassigned')
-    .map((item) => {
-      const visibleTokens = visibleTokenTotal(item.summary, includeCacheTokens);
-      return {
-        id: item.id,
-        label: item.label,
-        tokens: formatCompactNumber(visibleTokens, locale),
-        cost: formatCostLabel(item.summary, text, locale),
-        tokenValue: visibleTokens,
-      };
-    });
+  return items.map((item) => {
+    const visibleTokens = visibleTokenTotal(item.summary, includeCacheTokens);
+    return {
+      id: item.id,
+      label: item.id === ANONYMOUS_TEAM_ID ? text.unassigned : item.label,
+      tokens: formatCompactNumber(visibleTokens, locale),
+      cost: formatCostLabel(item.summary, text, locale),
+      tokenValue: visibleTokens,
+    };
+  });
 }
 
 function toBreakdownRow(

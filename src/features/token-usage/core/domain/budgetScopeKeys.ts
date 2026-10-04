@@ -1,3 +1,5 @@
+import { teamIdentityLabel,teamIdForName } from '../../contracts';
+
 import type { TokenUsageRunDto } from '../../contracts';
 
 export function runTeamKey(run: TokenUsageRunDto): {
@@ -6,8 +8,8 @@ export function runTeamKey(run: TokenUsageRunDto): {
   teamName?: string;
 } {
   return {
-    id: run.teamName ?? 'unassigned',
-    label: run.teamName ?? 'Unassigned',
+    id: teamIdForName(run.teamName),
+    label: teamIdentityLabel(teamIdForName(run.teamName)),
     teamName: run.teamName,
   };
 }

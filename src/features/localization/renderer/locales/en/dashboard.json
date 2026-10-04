@@ -356,6 +356,7 @@
         "compareDraft": "Current settings loaded. Compare your draft before saving.",
         "reload": "Load current settings",
         "delete": "Delete budget",
+        "legacyCombinedExplanation": "This migrated budget combines anonymous runs and the team named unassigned. It can be edited or deleted. Once deleted, it cannot be created again.",
         "deletePending": "Budget will be deleted when you Save. Editing restores it.",
         "cancel": "Cancel",
         "save": "Save",
@@ -425,7 +426,7 @@
       "tokens": "tokens",
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "Total",
-      "unassigned": "Unassigned",
+      "unassigned": "Anonymous runs",
       "unknownAgent": "Unknown agent",
       "eventCount": "{{count}} events",
       "streakCount": "{{count}} day streak"

@@ -165,6 +165,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     await button('tokenUsage.budgets.editor.save');
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0]).toMatchObject({
+      teamIdentityVersion: 1,
       expectedUpdatedAt: config.updatedAt,
       settings: {
         global: { monthlyTokenLimit: 250 },
@@ -219,6 +220,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')!.value).toBe('300');
     await button('tokenUsage.budgets.editor.save');
     expect(save.mock.calls[0][0]).toEqual({
+      teamIdentityVersion: 1,
       expectedUpdatedAt: null,
       settings: {
         projects: {
@@ -269,14 +271,18 @@ describe('Budget Save/Cancel and standalone status', () => {
     const initial = {
       ...config,
       teams: {
-        'concurrent-team': { monthlyTokenLimit: 200, thresholds: [], notificationsEnabled: true },
+        'team:concurrent-team': {
+          monthlyTokenLimit: 200,
+          thresholds: [],
+          notificationsEnabled: true,
+        },
       },
     };
     let server: TokenUsageBudgetSettingsDto = {
       ...initial,
       updatedAt: '2026-10-03T00:00:00.001Z',
       teams: {
-        'concurrent-team': {
+        'team:concurrent-team': {
           monthlyTokenLimit: 400,
           thresholds: [75],
           notificationsEnabled: false,
@@ -302,7 +308,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(save.mock.calls[1][0].expectedUpdatedAt).toBe('2026-10-03T00:00:00.001Z');
     expect(server.global?.monthlyTokenLimit).toBe(250);
-    expect(server.teams?.['concurrent-team']).toEqual({
+    expect(server.teams?.['team:concurrent-team']).toEqual({
       monthlyTokenLimit: 400,
       thresholds: [75],
       notificationsEnabled: false,
@@ -340,6 +346,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     await input('tokenUsage.budgets.tokenLimit', '350');
     await button('tokenUsage.budgets.editor.save');
     expect(save.mock.calls[1][0]).toMatchObject({
+      teamIdentityVersion: 1,
       expectedUpdatedAt: latest.updatedAt,
       settings: { global: { monthlyTokenLimit: 350 } },
     });
@@ -368,5 +375,39 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(container.textContent).toContain('tokenUsage.budgets.card.degraded');
     expect(container.textContent).toContain('tokenUsage.budgets.card.paused');
     expect(container.textContent).toContain('Outside filters');
+  });
+  // The migration option must remain understandable, editable and deletable.
+  it('explains the stored legacy combined target and saves edits/deletion with identity version', async () => {
+    const id = 'legacy:unassigned';
+    const legacyConfig = {
+      ...config,
+      teams: {
+        [id]: { monthlyTokenLimit: 100, thresholds: [80, 100], notificationsEnabled: true },
+      },
+    };
+    const legacyStatus = {
+      ...status,
+      options: [
+        ...status.options,
+        { scope: 'team' as const, id, label: 'Legacy combined: anonymous + unassigned' },
+      ],
+    };
+    selected = `team:${id}`;
+    await render(legacyConfig, legacyStatus);
+    await open();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+      'tokenUsage.budgets.editor.legacyCombinedExplanation'
+    );
+    await input('tokenUsage.budgets.tokenLimit', '200');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[0][0]).toMatchObject({
+      teamIdentityVersion: 1,
+      settings: { teams: { [id]: { monthlyTokenLimit: 200 } } },
+    });
+    await open();
+    await button('tokenUsage.budgets.editor.delete');
+    await button('tokenUsage.budgets.editor.save');
+    expect(save.mock.calls[1][0].teamIdentityVersion).toBe(1);
+    expect(save.mock.calls[1][0].settings.teams).toBeUndefined();
   });
 });

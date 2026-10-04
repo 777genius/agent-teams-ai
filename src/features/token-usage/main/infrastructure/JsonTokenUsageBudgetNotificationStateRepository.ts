@@ -2,6 +2,7 @@ import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { mkdir, readFile, stat } from 'fs/promises';
 import { dirname } from 'path';
 
+import { isCanonicalTeamId, migrateRawTeamId } from '../../contracts';
 import { SerialQueue } from '../../core/application/SerialQueue';
 import { budgetCoverageKey } from '../../core/domain';
 
@@ -11,7 +12,7 @@ import type {
 } from '../../core/application';
 
 interface State {
-  schemaVersion: 2;
+  schemaVersion: 3;
   sent: Record<string, TokenUsageBudgetNotificationRecord>;
 }
 const MAX_NOTIFICATION_STATE_BYTES = 512 * 1024;
@@ -57,20 +58,27 @@ export class JsonTokenUsageBudgetNotificationStateRepository implements TokenUsa
         throw new Error('Budget coverage exceeds its size limit or is not a file');
       source = JSON.parse(await readFile(this.filePath, 'utf8')) as typeof source;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { schemaVersion: 2, sent: {} };
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { schemaVersion: 3, sent: {} };
       throw error;
     }
     if (
       !source ||
-      (source.schemaVersion !== 1 && source.schemaVersion !== 2) ||
+      (source.schemaVersion !== 1 && source.schemaVersion !== 2 && source.schemaVersion !== 3) ||
       !source.sent ||
       typeof source.sent !== 'object' ||
       Array.isArray(source.sent)
     )
       throw new Error('Invalid budget coverage schema');
-    const state: State = { schemaVersion: 2, sent: {} };
+    const state: State = { schemaVersion: 3, sent: {} };
     for (const item of Object.values(source.sent)) {
-      const record = validateRecord(item);
+      const rawRecord = validateRecord(item, source.schemaVersion !== 3);
+      const record = {
+        ...rawRecord,
+        id:
+          source.schemaVersion !== 3 && rawRecord.scope === 'team'
+            ? migrateRawTeamId(rawRecord.id)
+            : rawRecord.id,
+      };
       if (source.schemaVersion === 1 && record.threshold !== 80 && record.threshold !== 100)
         throw new Error('Invalid legacy budget threshold');
       state.sent[budgetCoverageKey(record)] = { ...record, dedupeKey: budgetCoverageKey(record) };
@@ -95,7 +103,7 @@ export class JsonTokenUsageBudgetNotificationStateRepository implements TokenUsa
   }
 }
 
-function validateRecord(value: unknown): TokenUsageBudgetNotificationRecord {
+function validateRecord(value: unknown, rawIdentity = false): TokenUsageBudgetNotificationRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid budget coverage record');
   const item = value as TokenUsageBudgetNotificationRecord;
@@ -106,7 +114,8 @@ function validateRecord(value: unknown): TokenUsageBudgetNotificationRecord {
     item.threshold < 1 ||
     item.threshold > 100 ||
     typeof item.id !== 'string' ||
-    !item.id ||
+    item.id !== item.id?.trim() ||
+    (!rawIdentity && item.scope === 'team' && !isCanonicalTeamId(item.id)) ||
     typeof item.periodKey !== 'string' ||
     !/^\d{4}-(0[1-9]|1[0-2])$/.test(item.periodKey) ||
     !Number.isFinite(Date.parse(item.sentAt)) ||

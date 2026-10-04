@@ -13,6 +13,8 @@ export type TokenUsageBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TokenUsageRunStatus = 'running' | 'completed' | 'failed' | 'unknown';
 
 export interface TokenUsageSnapshotRequest {
+  /** Canonical identities take priority over legacy raw-name filters. */
+  teamIds?: string[];
   teamName?: string;
   teamNames?: string[];
   agentId?: string;
@@ -70,6 +72,8 @@ export interface TokenUsageBudgetStatusDto {
   options: { scope: TokenUsageBudgetScope; id: string; label: string }[];
 }
 export interface TokenUsageBudgetSettingsUpdateRequestDto {
+  /** Reject raw-name drafts from clients predating canonical team identities. */
+  teamIdentityVersion: 1;
   settings: Omit<TokenUsageBudgetSettingsDto, 'updatedAt'>;
   expectedUpdatedAt: string | null;
 }

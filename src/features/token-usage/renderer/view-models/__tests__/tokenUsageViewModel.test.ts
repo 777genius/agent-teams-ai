@@ -52,7 +52,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
     },
     byTeam: [
       {
-        id: 'alpha',
+        id: 'team:alpha',
         label: 'alpha',
         teamName: 'alpha',
         summary: {
@@ -483,7 +483,7 @@ describe('toTokenUsageDashboardViewModel', () => {
       expect.arrayContaining([expect.objectContaining({ label: 'Legacy unclassified' })])
     );
     expect(viewModel.runtimeBars[0]?.percent).toBe(100);
-    expect(viewModel.teamFilterOptions.map((option) => option.id)).toEqual(['alpha']);
+    expect(viewModel.teamFilterOptions.map((option) => option.id)).toEqual(['team:alpha']);
     expect(viewModel.agentRows[0]).toEqual(
       expect.objectContaining({ teamName: 'alpha', agentName: 'builder' })
     );
@@ -558,10 +558,10 @@ describe('toTokenUsageDashboardViewModel', () => {
     ]);
     expect(viewModel.activityDays.map((day) => day.tokenValue)).toEqual([75, 150]);
     expect(viewModel.teamRows[0]).toEqual(
-      expect.objectContaining({ id: 'alpha', tokenValue: 150 })
+      expect.objectContaining({ id: 'team:alpha', tokenValue: 150 })
     );
     expect(viewModel.teamFilterOptions[0]).toEqual(
-      expect.objectContaining({ id: 'alpha', tokens: '150', tokenValue: 150 })
+      expect.objectContaining({ id: 'team:alpha', tokens: '150', tokenValue: 150 })
     );
     expect(viewModel.commandRuns[0]?.tokens).toBe('75');
     expect(viewModel.sessionRuns[0]?.tokens).toBe('50');

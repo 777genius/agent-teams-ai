@@ -90,9 +90,17 @@ describe('Budget saved state generation', () => {
       await act(async () =>
         harness
           .current()
-          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null })
+          .saveBudgetConfig({
+            settings,
+            teamIdentityVersion: 1,
+            expectedUpdatedAt: settings.updatedAt ?? null,
+          })
       );
-      expect(calls.save).toHaveBeenCalledWith({ settings, expectedUpdatedAt: settings.updatedAt });
+      expect(calls.save).toHaveBeenCalledWith({
+        settings,
+        teamIdentityVersion: 1,
+        expectedUpdatedAt: settings.updatedAt,
+      });
       expect(harness.current().budgetConfig.updatedAt).toBe(saved.updatedAt);
       expect(harness.current().budgetConfigError).toBe('status unavailable');
       const listener = calls.onStatus.mock.calls[0][0] as (
@@ -316,7 +324,11 @@ describe('Budget saved state generation', () => {
               ? harness.current().reloadBudgetConfig()
               : harness
                   .current()
-                  .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null });
+                  .saveBudgetConfig({
+                    settings,
+                    teamIdentityVersion: 1,
+                    expectedUpdatedAt: settings.updatedAt ?? null,
+                  });
           await Promise.resolve();
         });
         expect(calls.getStatus).toHaveBeenCalledTimes(2);
@@ -382,7 +394,11 @@ describe('Budget saved state generation', () => {
       await act(async () =>
         harness
           .current()
-          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null })
+          .saveBudgetConfig({
+            settings,
+            teamIdentityVersion: 1,
+            expectedUpdatedAt: settings.updatedAt ?? null,
+          })
       );
       await act(async () =>
         listener({ ...status, computedAt: '2026-10-03T14:00:00.000Z', stale: false })
@@ -410,7 +426,11 @@ describe('Budget saved state generation', () => {
       await act(async () => {
         saving = harness
           .current()
-          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null });
+          .saveBudgetConfig({
+            settings,
+            teamIdentityVersion: 1,
+            expectedUpdatedAt: settings.updatedAt ?? null,
+          });
         await Promise.resolve();
       });
       expect(harness.current().budgetConfig).toEqual(saved);
@@ -456,6 +476,7 @@ describe('Budget saved state generation', () => {
             settings: {
               global: { monthlyTokenLimit: 250, thresholds: [], notificationsEnabled: true },
             },
+            teamIdentityVersion: 1,
             expectedUpdatedAt: settings.updatedAt ?? null,
           })
         ).rejects.toThrow('Budget settings changed');
@@ -464,6 +485,7 @@ describe('Budget saved state generation', () => {
         settings: {
           global: { monthlyTokenLimit: 250, thresholds: [], notificationsEnabled: true },
         },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: settings.updatedAt,
       });
       expect(harness.current().budgetConfig).toEqual(fresh);
@@ -481,7 +503,11 @@ describe('Budget saved state generation', () => {
       await act(async () => {
         saving = harness
           .current()
-          .saveBudgetConfig({ settings, expectedUpdatedAt: settings.updatedAt ?? null });
+          .saveBudgetConfig({
+            settings,
+            teamIdentityVersion: 1,
+            expectedUpdatedAt: settings.updatedAt ?? null,
+          });
         await Promise.resolve();
       });
       calls.getSettings.mockResolvedValue({ ...settings, updatedAt: '2026-10-03T00:00:00.002Z' });

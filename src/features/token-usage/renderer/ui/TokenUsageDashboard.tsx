@@ -27,6 +27,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { namedTeamId, teamIdentityLabel } from '../../contracts';
 import { useOpenTokenUsageTask } from '../hooks/useOpenTokenUsageTask';
 import { useOpenTokenUsageTeam } from '../hooks/useOpenTokenUsageTeam';
 import { useTokenUsageSnapshot } from '../hooks/useTokenUsageSnapshot';
@@ -89,8 +90,8 @@ export const TokenUsageDashboard = ({
   const [dateRange, setDateRange] = useState<TokenUsageDateRangeValue>(() =>
     createDefaultTokenUsageDateRange()
   );
-  const [selectedTeamNames, setSelectedTeamNames] = useState<string[]>(() =>
-    initialTeamName ? [initialTeamName] : []
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(() =>
+    initialTeamName ? [namedTeamId(initialTeamName)] : []
   );
   const [includeCacheTokens, setIncludeCacheTokens] = useState(false);
   const [activeDashboardTab, setActiveDashboardTab] = useState<TokenUsageDashboardTab>('overview');
@@ -104,11 +105,11 @@ export const TokenUsageDashboard = ({
   );
   const snapshotRequest = useMemo(() => {
     const request = tokenUsageSnapshotRequestForDateRange(dateRange) ?? {};
-    if (selectedTeamNames.length > 0) {
-      return { ...request, teamNames: selectedTeamNames };
+    if (selectedTeamIds.length > 0) {
+      return { ...request, teamIds: selectedTeamIds };
     }
     return Object.keys(request).length > 0 ? request : undefined;
-  }, [dateRange, selectedTeamNames]);
+  }, [dateRange, selectedTeamIds]);
   const { viewModel, loading, refreshing, error, refresh } = useTokenUsageSnapshot({
     request: snapshotRequest,
     viewModelOptions,
@@ -116,7 +117,7 @@ export const TokenUsageDashboard = ({
   const [teamOptions, setTeamOptions] = useState<TokenUsageTeamFilterOptionViewModel[]>([]);
 
   useEffect(() => {
-    setSelectedTeamNames(initialTeamName ? [initialTeamName] : []);
+    setSelectedTeamIds(initialTeamName ? [namedTeamId(initialTeamName)] : []);
   }, [initialTeamName]);
 
   useEffect(() => {
@@ -149,8 +150,8 @@ export const TokenUsageDashboard = ({
           <DateRangeSelector value={dateRange} onChange={setDateRange} t={tokenUsageT} />
           <TeamFilterSelector
             options={teamOptions}
-            selectedTeamNames={selectedTeamNames}
-            onChange={setSelectedTeamNames}
+            selectedTeamIds={selectedTeamIds}
+            onChange={setSelectedTeamIds}
             t={tokenUsageT}
           />
           <div className="usage-toolbar-actions">
@@ -268,7 +269,6 @@ export const TokenUsageDashboard = ({
                 <section className="usage-panel-grid">
                   <BreakdownPanel
                     heading={tokenUsageT('tokenUsage.panels.teams')}
-                    teamPanel
                     rows={viewModel.teamRows}
                     onOpenTeam={openTeamTab}
                     t={tokenUsageT}
@@ -426,18 +426,18 @@ function isTokenUsageDashboardTab(value: string): value is TokenUsageDashboardTa
 
 const TeamFilterSelector = ({
   options,
-  selectedTeamNames,
+  selectedTeamIds,
   onChange,
   t,
 }: {
   options: TokenUsageTeamFilterOptionViewModel[];
-  selectedTeamNames: string[];
+  selectedTeamIds: string[];
   onChange: (teamNames: string[]) => void;
   t: TokenUsageT;
 }): React.JSX.Element => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const selectedSet = useMemo(() => new Set(selectedTeamNames), [selectedTeamNames]);
+  const selectedSet = useMemo(() => new Set(selectedTeamIds), [selectedTeamIds]);
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return options;
@@ -446,18 +446,18 @@ const TeamFilterSelector = ({
 
   const toggleTeam = (teamName: string): void => {
     const next = selectedSet.has(teamName)
-      ? selectedTeamNames.filter((name) => name !== teamName)
-      : [...selectedTeamNames, teamName];
+      ? selectedTeamIds.filter((name) => name !== teamName)
+      : [...selectedTeamIds, teamName];
     onChange(next);
   };
 
   const label =
-    selectedTeamNames.length === 0
+    selectedTeamIds.length === 0
       ? t('tokenUsage.filters.allTeams')
-      : selectedTeamNames.length === 1
-        ? (options.find((option) => option.id === selectedTeamNames[0])?.label ??
-          selectedTeamNames[0])
-        : t('tokenUsage.filters.selectedTeams', { count: selectedTeamNames.length });
+      : selectedTeamIds.length === 1
+        ? (options.find((option) => option.id === selectedTeamIds[0])?.label ??
+          teamIdentityLabel(selectedTeamIds[0]))
+        : t('tokenUsage.filters.selectedTeams', { count: selectedTeamIds.length });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -480,11 +480,11 @@ const TeamFilterSelector = ({
             onClick={() => onChange([])}
             className={cn(
               'flex h-9 w-full items-center justify-between rounded-sm px-3 text-left text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text',
-              selectedTeamNames.length === 0 && 'bg-violet-500/15 text-fuchsia-300'
+              selectedTeamIds.length === 0 && 'bg-violet-500/15 text-fuchsia-300'
             )}
           >
             <span>{t('tokenUsage.filters.allTeams')}</span>
-            {selectedTeamNames.length === 0 && <Check className="size-3.5" />}
+            {selectedTeamIds.length === 0 && <Check className="size-3.5" />}
           </button>
           <input
             value={query}
@@ -934,13 +934,8 @@ const HorizontalBarsPanel = ({
           items.map((item) => {
             const targetTeamName = item.teamName;
             const taskClickable =
-              item.tone === 'task' &&
-              !!targetTeamName &&
-              targetTeamName !== 'unassigned' &&
-              !!item.taskId &&
-              !!onOpenTask;
-            const teamClickable =
-              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+              item.tone === 'task' && !!targetTeamName && !!item.taskId && !!onOpenTask;
+            const teamClickable = !taskClickable && !!targetTeamName && !!onOpenTeam;
             const clickable = taskClickable || teamClickable;
             const actionLabel = taskClickable
               ? t('tokenUsage.actions.openTask', { task: item.label })
@@ -1021,7 +1016,6 @@ const BreakdownPanel = ({
   onOpenTeam,
   onOpenTask,
   showMemberBadge = false,
-  teamPanel = false,
   t,
 }: {
   heading: string;
@@ -1030,7 +1024,6 @@ const BreakdownPanel = ({
   onOpenTeam?: (teamName: string) => void;
   onOpenTask?: (teamName: string, taskId: string) => void;
   showMemberBadge?: boolean;
-  teamPanel?: boolean;
   t: TokenUsageT;
 }): React.JSX.Element => {
   return (
@@ -1041,11 +1034,9 @@ const BreakdownPanel = ({
           <EmptyRows label={t('tokenUsage.empty.noRows')} />
         ) : (
           rows.slice(0, compact ? 6 : 8).map((row) => {
-            const targetTeamName = row.teamName ?? (teamPanel ? row.id : undefined);
-            const taskClickable =
-              !!targetTeamName && targetTeamName !== 'unassigned' && !!row.taskId && !!onOpenTask;
-            const teamClickable =
-              !taskClickable && !!targetTeamName && targetTeamName !== 'unassigned' && !!onOpenTeam;
+            const targetTeamName = row.teamName;
+            const taskClickable = !!targetTeamName && !!row.taskId && !!onOpenTask;
+            const teamClickable = !taskClickable && !!targetTeamName && !!onOpenTeam;
             const clickable = taskClickable || teamClickable;
             const actionLabel = taskClickable
               ? t('tokenUsage.actions.openTask', { task: row.label })

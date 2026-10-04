@@ -107,7 +107,7 @@ describe('buildTokenUsageSnapshot', () => {
     expect(snapshot.sourceCounts.log_parsed).toBe(1);
     expect(snapshot.byTeam).toEqual([
       expect.objectContaining({
-        id: 'alpha',
+        id: 'team:alpha',
         teamName: 'alpha',
         summary: expect.objectContaining({ totalTokens: 100 }),
       }),
@@ -287,7 +287,7 @@ describe('buildTokenUsageSnapshot', () => {
     });
 
     expect(snapshot.summary.runCount).toBe(1);
-    expect(snapshot.byTeam.map((item) => item.id)).toEqual(['beta']);
+    expect(snapshot.byTeam.map((item) => item.id)).toEqual(['team:beta']);
     expect(snapshot.byAgent.map((item) => item.id)).toEqual(['beta:reviewer']);
     expect(snapshot.byRuntime.map((item) => item.id)).toEqual(['codex']);
     expect(snapshot.byModel.map((item) => item.id)).toEqual(['gpt-5.4']);
@@ -584,7 +584,7 @@ describe('buildTokenUsageSnapshot', () => {
 
     expect(snapshot.summary.runCount).toBe(2);
     expect(snapshot.summary.totalTokens).toBe(200);
-    expect(snapshot.byTeam.map((item) => item.id)).toEqual(['alpha', 'gamma']);
+    expect(snapshot.byTeam.map((item) => item.id)).toEqual(['team:alpha', 'team:gamma']);
   });
 
   it('filters by command invocation and native session while keeping overlapping runs', () => {
@@ -757,5 +757,24 @@ describe('buildTokenUsageSnapshot', () => {
       '2026-06-30',
     ]);
     expect(snapshot.usageHeatmap.map((point) => point.summary.totalTokens)).toEqual([30, 0, 100]);
+  });
+  // Missing run metadata must never turn an orphan event into anonymous usage.
+  it('canonical anonymous filter excludes unmatched events and overrides raw names', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run({ appRunId: 'anonymous', teamName: undefined })],
+      events: [
+        event({ appRunId: 'anonymous', teamName: undefined }),
+        event({ id: 'orphan', appRunId: 'missing', teamName: undefined }),
+      ],
+      request: { teamIds: ['anonymous'], teamName: 'alpha' },
+      nowIso: NOW,
+    });
+    expect(snapshot.summary.totalTokens).toBe(event().tokens.totalTokens);
+    expect(snapshot.summary.requestCount).toBe(1);
+    expect(snapshot.byTeam.map((row) => row.id)).toEqual(['anonymous']);
+    expect(snapshot.unmappedEventCount).toBe(0);
+    expect(() =>
+      buildTokenUsageSnapshot({ runs: [], events: [], request: { teamIds: [''] }, nowIso: NOW })
+    ).toThrow('canonical team filter');
   });
 });

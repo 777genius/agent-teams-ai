@@ -90,7 +90,7 @@ describe('Budget monthly projection', () => {
       settings: {
         global: { monthlyTokenLimit: 500, thresholds: [50, 100], notificationsEnabled: true },
         teams: {
-          'sandbox-team': {
+          'team:sandbox-team': {
             monthlyTokenLimit: 250,
             thresholds: [50, 100],
             notificationsEnabled: true,
@@ -112,7 +112,7 @@ describe('Budget monthly projection', () => {
       status.targets.map((target) => [target.scope, target.id, target.metrics[0].percent])
     ).toEqual([
       ['global', 'global', 60],
-      ['team', 'sandbox-team', 120],
+      ['team', 'team:sandbox-team', 120],
       ['project', 'project:sandbox:hash', 300],
     ]);
     expect(status.targets.map((target) => target.metrics[0].value)).toEqual([300, 300, 300]);
@@ -139,7 +139,7 @@ describe('Budget monthly projection', () => {
         ]
       );
       expect(status.targets[0].metrics.map((metric) => metric.value)).toEqual([100, 2]);
-      expect(status.options.map((option) => option.id)).toContain('unassigned');
+      expect(status.options.map((option) => option.id)).toContain('anonymous');
     }
   );
   it('unknown cost is incomplete subtotal; invalid dates/unmapped month events degrade', () => {

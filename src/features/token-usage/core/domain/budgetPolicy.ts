@@ -1,3 +1,5 @@
+import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel } from '../../contracts';
+
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
 import { runProjectKey, runTeamKey } from './budgetScopeKeys';
 import { normalizeCostBreakdown, normalizeTokenBreakdown } from './tokenUsageTotals';
@@ -86,6 +88,9 @@ export function buildBudgetStatus(input: {
     for (const [scope, id] of [
       ['global', 'global'],
       ['team', team.id],
+      ...(run.teamName === undefined || run.teamName === 'unassigned'
+        ? [['team', LEGACY_COMBINED_TEAM_ID]]
+        : []),
       ['project', project.id],
     ]) {
       const idKey = key(scope, id);
@@ -108,7 +113,8 @@ export function buildBudgetStatus(input: {
     configs.push(['project', id, config]);
   const targets = configs.map(([scope, id, config]) => {
     const optionKey = key(scope, id);
-    if (!options.has(optionKey)) addOption(scope, id, id);
+    if (!options.has(optionKey))
+      addOption(scope, id, scope === 'team' ? teamIdentityLabel(id) : id);
     const total = totals.get(optionKey) ?? { tokens: 0, usd: 0, incomplete: false };
     const metrics: TokenUsageBudgetMetricStatusDto[] = [];
     for (const [metric, limit, amount] of [

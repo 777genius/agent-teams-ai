@@ -1,5 +1,8 @@
+import { teamIdForName } from '../../contracts';
+
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
 import { runProjectKey, runTeamKey } from './budgetScopeKeys';
+import { buildTeamFilter, matchesTeamFilter } from './snapshotTeamFilter';
 import { addEventToSummary, addRunToSummary, ZERO_TOKEN_USAGE_SUMMARY } from './tokenUsageTotals';
 
 import type {
@@ -50,7 +53,7 @@ interface NormalizedTaskWorkInterval {
 
 export function buildTokenUsageSnapshot(input: BuildSnapshotInput): TokenUsageAnalyticsSnapshotDto {
   const runs = filterRuns(input.runs, input.request);
-  const eventsForRequest = filterEvents(input.events, input.request);
+  const eventsForRequest = filterEvents(input.events, input.runs, input.request);
   const attribution = keepOnlyMappedUsageEvents({ runs, events: eventsForRequest });
   const events = attribution.attributed;
 
@@ -111,11 +114,14 @@ function filterRuns(
 
 function filterEvents(
   events: readonly TokenUsageEventDto[],
+  runs: readonly TokenUsageRunDto[],
   request: TokenUsageSnapshotRequest | undefined
 ): TokenUsageEventDto[] {
   const teamFilter = buildTeamFilter(request);
+  const runById = new Map(runs.map((run) => [run.appRunId, run]));
   return events.filter((event) => {
-    if (teamFilter && !matchesTeamFilter(event.teamName, teamFilter)) return false;
+    const run = runById.get(event.appRunId);
+    if (teamFilter && (!run || !matchesTeamFilter(run.teamName, teamFilter))) return false;
     if (request?.agentId && event.agentId !== request.agentId) return false;
     if (request?.commandId && event.commandId !== request.commandId) return false;
     if (request?.commandInvocationId && event.commandInvocationId !== request.commandInvocationId) {
@@ -126,20 +132,6 @@ function filterEvents(
     }
     return isWithinRange(event.occurredAt, request);
   });
-}
-
-function buildTeamFilter(
-  request: TokenUsageSnapshotRequest | undefined
-): ReadonlySet<string> | undefined {
-  const names = (request?.teamNames ?? [])
-    .map((teamName) => teamName.trim())
-    .filter((teamName, index, items) => teamName.length > 0 && items.indexOf(teamName) === index);
-  if (names.length > 0) return new Set(names);
-  return request?.teamName ? new Set([request.teamName]) : undefined;
-}
-
-function matchesTeamFilter(teamName: string | undefined, filter: ReadonlySet<string>): boolean {
-  return teamName !== undefined && filter.has(teamName);
 }
 
 function runOverlapsRange(
@@ -736,7 +728,7 @@ function runAgentKey(run: TokenUsageRunDto): {
   agentName?: string;
 } {
   return {
-    id: run.agentId ?? `${run.teamName ?? 'unassigned'}:${run.agentName ?? 'unknown'}`,
+    id: run.agentId ?? JSON.stringify([teamIdForName(run.teamName), run.agentName ?? 'unknown']),
     label: run.agentName ?? run.agentId ?? 'Unknown agent',
     teamName: run.teamName,
     agentName: run.agentName,

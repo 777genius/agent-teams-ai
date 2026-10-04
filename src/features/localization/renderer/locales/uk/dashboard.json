@@ -385,7 +385,7 @@
       "tokens": "токени",
       "tokensCost": "{{tokens}} токенів / {{cost}}",
       "total": "Усього",
-      "unassigned": "Без команди",
+      "unassigned": "Анонімні запуски",
       "unknownAgent": "Невідомий агент",
       "eventCount": "{{count}} подій",
       "streakCount": "{{count}} дн. поспіль"
