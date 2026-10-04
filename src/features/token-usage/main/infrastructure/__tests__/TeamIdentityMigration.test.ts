@@ -249,4 +249,52 @@ describe('durable canonical identity migration', () => {
       )
     ).toBe(false);
   });
+  // Empty legacy team IDs previously migrated to invalid team:; mutations could persist it
+  // and make the next restart reject all coverage. Empty v3 non-team IDs also slipped through.
+  it.each([
+    [1, 'team'],
+    [2, 'team'],
+    [3, 'global'],
+    [3, 'project'],
+  ] as const)(
+    'rejects empty v%s %s coverage before read, prune or save can change its JSON file',
+    async (schemaVersion, scope) => {
+      const path = await file('coverage.json');
+      const raw = JSON.stringify({ schemaVersion, sent: { corrupt: { ...coverage(''), scope } } });
+      await writeFile(path, raw);
+      const repo = new JsonTokenUsageBudgetNotificationStateRepository(path);
+      await expect(repo.hasSent('new-coverage')).rejects.toThrow('Invalid budget coverage record');
+      expect(await readFile(path, 'utf8')).toBe(raw);
+      await expect(repo.pruneBeforePeriod('2026-11')).rejects.toThrow(
+        'Invalid budget coverage record'
+      );
+      expect(await readFile(path, 'utf8')).toBe(raw);
+      await expect(repo.markCovered([coverage('team:valid')])).rejects.toThrow(
+        'Invalid budget coverage record'
+      );
+      expect(await readFile(path, 'utf8')).toBe(raw);
+      await expect(
+        new JsonTokenUsageBudgetNotificationStateRepository(path).hasSent('new-coverage')
+      ).rejects.toThrow('Invalid budget coverage record');
+    }
+  );
+  it.each(['global', 'project'] as const)(
+    'rejects newly submitted empty %s coverage without replacing healthy durable acceptance',
+    async (scope) => {
+      const path = await file('coverage.json');
+      const repo = new JsonTokenUsageBudgetNotificationStateRepository(path);
+      const accepted = coverage('team:valid');
+      await repo.markCovered([accepted]);
+      const raw = await readFile(path, 'utf8');
+      await expect(repo.markCovered([{ ...coverage(''), scope }])).rejects.toThrow(
+        'Invalid budget coverage record'
+      );
+      expect(await readFile(path, 'utf8')).toBe(raw);
+      expect(
+        await new JsonTokenUsageBudgetNotificationStateRepository(path).hasSent(
+          budgetCoverageKey(accepted)
+        )
+      ).toBe(true);
+    }
+  );
 });

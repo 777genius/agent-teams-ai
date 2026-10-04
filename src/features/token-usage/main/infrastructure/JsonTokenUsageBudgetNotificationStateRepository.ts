@@ -114,7 +114,8 @@ function validateRecord(value: unknown, rawIdentity = false): TokenUsageBudgetNo
     item.threshold < 1 ||
     item.threshold > 100 ||
     typeof item.id !== 'string' ||
-    item.id !== item.id?.trim() ||
+    !item.id.trim() ||
+    item.id !== item.id.trim() ||
     (!rawIdentity && item.scope === 'team' && !isCanonicalTeamId(item.id)) ||
     typeof item.periodKey !== 'string' ||
     !/^\d{4}-(0[1-9]|1[0-2])$/.test(item.periodKey) ||

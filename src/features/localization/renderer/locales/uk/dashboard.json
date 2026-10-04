@@ -333,7 +333,10 @@
       "tokenLimit": "Ліміт токенів",
       "tokenLimitDetail": "{{tokens}} з {{limit}}",
       "warning": "Попередження",
-      "project": "Проєкт"
+      "project": "Проєкт",
+      "editor": {
+        "legacyCombinedExplanation": "Цей перенесений бюджет об'єднує анонімні запуски та команду з назвою unassigned. Його можна змінити або видалити. Після видалення його неможливо створити знову."
+      }
     },
     "dateRange": {
       "allCollectedUsage": "Усе зібране використання застосунку",
