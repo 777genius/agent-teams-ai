@@ -47,7 +47,7 @@ describe('Budget HTTP and preload boundary', () => {
     const response = await app.inject({
       method: 'PUT',
       url: TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
-      payload: { settings: config, expectedUpdatedAt: null },
+      payload: { settings: config, teamIdentityVersion: 1, expectedUpdatedAt: null },
     });
     expect(response.statusCode).toBe(code);
     expect(response.json()).toEqual({ error: error.message });
@@ -69,6 +69,7 @@ describe('Budget HTTP and preload boundary', () => {
       url: TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
       payload: {
         settings: { global: { ...config.global, thresholds: [1, 1] } },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: null,
       },
     });
@@ -77,15 +78,8 @@ describe('Budget HTTP and preload boundary', () => {
     const status = await app.inject(TOKEN_USAGE_BUDGET_STATUS_ROUTE);
     expect(status.statusCode).toBe(503);
     expect(status.json()).not.toHaveProperty('targets');
-    expect(console.error).toHaveBeenCalledTimes(2);
-    expect(console.error).toHaveBeenNthCalledWith(
-      1,
-      '[Feature:TokenUsage:HTTP]',
-      'Failed to save budget settings',
-      expect.objectContaining({ code: 'BUDGET_VALIDATION' })
-    );
-    expect(console.error).toHaveBeenNthCalledWith(
-      2,
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
       '[Feature:TokenUsage:HTTP]',
       'Failed to load budget status',
       expect.objectContaining({ message: 'ledger unavailable' })
@@ -104,6 +98,7 @@ describe('Budget HTTP and preload boundary', () => {
       url: TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
       payload: {
         settings: { ...config, updatedAt: '2099-01-01T00:00:00.000Z' },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: null,
       },
     });
@@ -117,6 +112,16 @@ describe('Budget HTTP and preload boundary', () => {
     const removeListener = vi.fn();
     const bridge = createTokenUsageBridge({ invoke, on, removeListener } as unknown as IpcRenderer);
     await bridge.getBudgetStatus();
+    const canonicalRequest = { teamIds: ['anonymous', 'team:unassigned'] };
+    await bridge.getSnapshot(canonicalRequest);
+    expect(invoke).toHaveBeenLastCalledWith('token-usage:get-snapshot', canonicalRequest);
+    const canonicalSave = {
+      teamIdentityVersion: 1 as const,
+      settings: config,
+      expectedUpdatedAt: null,
+    };
+    await bridge.updateBudgetSettings(canonicalSave);
+    expect(invoke).toHaveBeenLastCalledWith('token-usage:update-budget-settings', canonicalSave);
     expect(invoke).toHaveBeenCalledWith(TOKEN_USAGE_GET_BUDGET_STATUS);
     const callback = vi.fn();
     const unsubscribe = bridge.onBudgetStatusChanged(callback);

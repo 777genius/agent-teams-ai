@@ -109,7 +109,11 @@ describe('Budget service lifecycle', () => {
     expect((await f.service.getBudgetStatus()).stale).toBe(true);
     const current = f.settings();
     current.teams = {
-      'outside-filters': { monthlyTokenLimit: 200, thresholds: [], notificationsEnabled: true },
+      'team:outside-filters': {
+        monthlyTokenLimit: 200,
+        thresholds: [],
+        notificationsEnabled: true,
+      },
     };
     const filtered = await f.service.refreshSnapshot({ teamNames: ['missing'] });
     expect(filtered.summary.totalTokens).toBe(0);
@@ -200,6 +204,7 @@ describe('Budget service lifecycle', () => {
     await Promise.resolve();
     await Promise.resolve();
     const saved = f.service.updateBudgetSettings({
+      teamIdentityVersion: 1,
       expectedUpdatedAt: f.settings().updatedAt!,
       settings: { global: { monthlyTokenLimit: 200, thresholds: [], notificationsEnabled: false } },
     });

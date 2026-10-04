@@ -1,3 +1,4 @@
+import { validateTeamIds } from '../../contracts';
 import { budgetPeriod, buildBudgetStatus, buildTokenUsageSnapshot } from '../domain';
 
 import { SerialQueue } from './SerialQueue';
@@ -59,6 +60,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
   }
 
   getSnapshot(request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto> {
+    validateTeamIds(request?.teamIds);
     return this.queue.run(async () => {
       const ledger = await this.deps.ledger.readSnapshot();
       return this.analytics(ledger, await this.listTaskAttributions(), request);
@@ -68,6 +70,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
   async refreshSnapshot(
     request?: TokenUsageSnapshotRequest
   ): Promise<TokenUsageAnalyticsSnapshotDto> {
+    validateTeamIds(request?.teamIds);
     if (!this.refreshInFlight) {
       this.refreshInFlight = this.queue.run(() => this.refresh());
       const inFlight = this.refreshInFlight;

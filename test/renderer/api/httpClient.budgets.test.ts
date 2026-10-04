@@ -73,6 +73,7 @@ describe('Budget HTTP and SSE timestamp parity', () => {
     expect(loaded.updatedAt).toBe(revision);
     const saved = await client.tokenUsage.updateBudgetSettings({
       settings: {},
+      teamIdentityVersion: 1,
       expectedUpdatedAt: loaded.updatedAt!,
     });
     expect(saved.updatedAt).toBe(revision);
@@ -80,8 +81,29 @@ describe('Budget HTTP and SSE timestamp parity', () => {
       expect.any(String),
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({ settings: {}, expectedUpdatedAt: revision }),
+        body: JSON.stringify({ settings: {}, teamIdentityVersion: 1, expectedUpdatedAt: revision }),
       })
     );
+  });
+  // Canonical filters must survive the actual client URL boundary and take priority.
+  it('serializes canonical IDs and preserves raw filters for older callers', async () => {
+    const fetchMock = vi.fn<(url: string, options?: RequestInit) => Promise<Response>>(() =>
+      Promise.resolve(new Response('{}'))
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    await client.tokenUsage.getSnapshot({
+      teamIds: ['anonymous', 'team:unassigned'],
+      teamName: 'ignored',
+    });
+    const canonical = new URL(fetchMock.mock.calls.at(-1)![0] as unknown as string);
+    expect(canonical.searchParams.getAll('teamIds')).toEqual(['anonymous', 'team:unassigned']);
+    expect(canonical.searchParams.has('teamName')).toBe(false);
+    await client.tokenUsage.getSnapshot({ teamIds: [], teamName: 'ignored' });
+    expect(new URL(fetchMock.mock.calls.at(-1)![0] as unknown as string).search).toBe('');
+    await client.tokenUsage.getSnapshot({ teamNames: ['unassigned', 'team:raw'] });
+    expect(
+      new URL(fetchMock.mock.calls.at(-1)![0] as unknown as string).searchParams.getAll('teamNames')
+    ).toEqual(['unassigned', 'team:raw']);
   });
 });

@@ -75,7 +75,7 @@ describe('OpenCode usage integration', () => {
     expect(snapshot.byModel[0]).toEqual(
       expect.objectContaining({ id: 'xai/grok-4.3', label: 'xai/grok-4.3' })
     );
-    expect(snapshot.byTeam[0]?.id).toBe('usage-opencode-test');
+    expect(snapshot.byTeam[0]?.id).toBe('team:usage-opencode-test');
   });
 
   it('merges launch-state and session-store evidence for the same OpenCode session', async () => {

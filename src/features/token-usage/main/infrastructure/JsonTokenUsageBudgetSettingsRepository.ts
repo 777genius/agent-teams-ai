@@ -5,6 +5,8 @@ import { dirname } from 'path';
 import {
   BudgetConflictError,
   BudgetValidationError,
+  LEGACY_COMBINED_TEAM_ID,
+  migrateRawTeamId,
   validateBudgetSettings,
   validateBudgetUpdate,
 } from '../../contracts';
@@ -43,9 +45,12 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
         throw new BudgetConflictError(
           'Budget settings changed. Load current settings and compare your draft.'
         );
-      const updatedAt = new Date(
-        Math.max(this.now().getTime(), Date.parse(previous.updatedAt ?? '') + 1 || 0)
-      ).toISOString();
+      if (
+        validated.settings.teams?.[LEGACY_COMBINED_TEAM_ID] &&
+        !previous.teams?.[LEGACY_COMBINED_TEAM_ID]
+      )
+        throw new BudgetValidationError('The legacy combined budget can only be edited or deleted');
+      const updatedAt = this.nextRevision(previous.updatedAt);
       const saved = { ...validated.settings, updatedAt };
       await this.writeSettings(saved, true);
       return saved;
@@ -63,67 +68,60 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {};
       throw error;
     }
-    if (!source || (source.schemaVersion !== 1 && source.schemaVersion !== 2))
+    if (!source || ![1, 2, 3].includes(source.schemaVersion as number))
       throw new Error('Unsupported budget settings schema');
-    if (source.schemaVersion === 2) {
-      const payload = source.settings as Record<string, unknown>;
-      if (
-        !payload ||
-        typeof payload !== 'object' ||
-        Array.isArray(payload) ||
-        typeof payload.updatedAt !== 'string' ||
-        !Number.isFinite(Date.parse(payload.updatedAt))
-      )
-        throw new Error('Invalid budget settings revision');
-      return { ...validateBudgetSettings(payload), updatedAt: payload.updatedAt };
-    }
+    const payload = source.schemaVersion === 1 ? source : source.settings;
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload))
+      throw new Error('Invalid budget settings');
+    const raw = payload as Record<string, unknown>;
     if (
-      source.updatedAt !== undefined &&
-      (typeof source.updatedAt !== 'string' || !Number.isFinite(Date.parse(source.updatedAt)))
+      (source.schemaVersion !== 1 || raw.updatedAt !== undefined) &&
+      (typeof raw.updatedAt !== 'string' || !Number.isFinite(Date.parse(raw.updatedAt)))
     )
       throw new Error('Invalid budget settings revision');
+    const durableRevision = typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined;
+    if (source.schemaVersion === 3)
+      return { ...validateBudgetSettings(raw), updatedAt: durableRevision };
+
     const flags = this.legacySettings?.getSettings();
     const thresholds = [
       ...(flags?.notifyAtWarning !== false ? [80] : []),
       ...(flags?.notifyAtCritical !== false ? [100] : []),
     ];
-    const migrate = (value: unknown): unknown => {
+    const migrateLimit = (value: unknown): unknown => {
+      if (source.schemaVersion === 2) return value;
       if (!value || typeof value !== 'object' || Array.isArray(value))
         throw new Error('Invalid legacy budget limit');
       return { ...value, thresholds, notificationsEnabled: true };
     };
     const migrated: Record<string, unknown> = {};
-    if (source.global !== undefined) migrated.global = migrate(source.global);
+    if (raw.global !== undefined) migrated.global = migrateLimit(raw.global);
     for (const scope of ['teams', 'projects']) {
-      if (source[scope] === undefined) continue;
-      if (!source[scope] || typeof source[scope] !== 'object' || Array.isArray(source[scope]))
+      if (raw[scope] === undefined) continue;
+      if (!raw[scope] || typeof raw[scope] !== 'object' || Array.isArray(raw[scope]))
         throw new Error('Invalid legacy budget scope');
       migrated[scope] = Object.fromEntries(
-        Object.entries(source[scope] as Record<string, unknown>).map(([id, value]) => [
-          id,
-          migrate(value),
-        ])
+        Object.entries(raw[scope] as Record<string, unknown>).map(([id, value]) => {
+          if (!id.trim() || id !== id.trim()) throw new Error('Invalid legacy budget identity');
+          return [scope === 'teams' ? migrateRawTeamId(id) : id, migrateLimit(value)];
+        })
       );
     }
     const migratedSettings = validateBudgetSettings(migrated);
-    const settings = {
-      ...migratedSettings,
-      updatedAt: new Date(
-        Math.max(
-          this.now().getTime(),
-          Date.parse(typeof source.updatedAt === 'string' ? source.updatedAt : '') + 1 || 0
-        )
-      ).toISOString(),
-    };
+    const settings = { ...migratedSettings, updatedAt: this.nextRevision(durableRevision) };
     if (Buffer.byteLength(serializeSettings(settings), 'utf8') > MAX_BUDGET_SETTINGS_BYTES) {
-      // Retain the durable revision so a smaller Save can replace the readable v1 file.
-      return {
-        ...migratedSettings,
-        ...(typeof source.updatedAt === 'string' ? { updatedAt: source.updatedAt } : {}),
-      };
+      // Retain the durable revision so a smaller canonical Save can rescue the old file.
+      // The required write-version marker fences old raw drafts even in this fallback.
+      return { ...migratedSettings, ...(durableRevision ? { updatedAt: durableRevision } : {}) };
     }
     await this.writeSettings(settings);
     return settings;
+  }
+
+  private nextRevision(previous: string | undefined): string {
+    return new Date(
+      Math.max(this.now().getTime(), Date.parse(previous ?? '') + 1 || 0)
+    ).toISOString();
   }
 
   private async writeSettings(
@@ -141,5 +139,5 @@ export class JsonTokenUsageBudgetSettingsRepository implements TokenUsageBudgetS
 }
 
 function serializeSettings(settings: TokenUsageBudgetSettingsDto): string {
-  return `${JSON.stringify({ schemaVersion: 2, settings }, null, 2)}\n`;
+  return `${JSON.stringify({ schemaVersion: 3, settings }, null, 2)}\n`;
 }

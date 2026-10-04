@@ -60,6 +60,7 @@ describe('strict Budget persistence', () => {
     );
     const first = await repo.updateSettings({
       settings: { global: limit },
+      teamIdentityVersion: 1,
       expectedUpdatedAt: null,
     });
     expect(first.global?.thresholds).toEqual([50, 90]);
@@ -69,10 +70,12 @@ describe('strict Budget persistence', () => {
     const writes = await Promise.allSettled([
       repo.updateSettings({
         settings: { global: { ...limit, monthlyTokenLimit: 200 } },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: first.updatedAt!,
       }),
       repo.updateSettings({
         settings: { global: { ...limit, monthlyTokenLimit: 300 } },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: first.updatedAt!,
       }),
     ]);
@@ -83,6 +86,7 @@ describe('strict Budget persistence', () => {
     expect(Date.parse(saved.updatedAt!)).toBe(Date.parse(first.updatedAt!) + 1);
     await repo.updateSettings({
       settings: { global: { ...limit, thresholds: [] } },
+      teamIdentityVersion: 1,
       expectedUpdatedAt: saved.updatedAt!,
     });
     expect(
@@ -114,7 +118,7 @@ describe('strict Budget persistence', () => {
         thresholds,
         notificationsEnabled: true,
       });
-      expect(JSON.parse(await readFile(file, 'utf8')).schemaVersion).toBe(2);
+      expect(JSON.parse(await readFile(file, 'utf8')).schemaVersion).toBe(3);
     }
   );
   it('migration failure retains v1 and can retry without alerts or empty fallback', async () => {
@@ -140,7 +144,11 @@ describe('strict Budget persistence', () => {
     const file = await path();
     const repo = new JsonTokenUsageBudgetSettingsRepository(file);
     await expect(
-      repo.updateSettings({ settings: { global: invalid }, expectedUpdatedAt: null })
+      repo.updateSettings({
+        settings: { global: invalid },
+        teamIdentityVersion: 1,
+        expectedUpdatedAt: null,
+      })
     ).rejects.toThrow();
     await expect(readFile(file)).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -149,17 +157,26 @@ describe('strict Budget persistence', () => {
     const repo = new JsonTokenUsageBudgetSettingsRepository(file);
     const saved = await repo.updateSettings({
       settings: { global: { ...limit, thresholds: [100, 1] } },
+      teamIdentityVersion: 1,
       expectedUpdatedAt: null,
     });
     const before = await readFile(file, 'utf8');
     fault.path = file;
     fault.enabled = true;
     await expect(
-      repo.updateSettings({ settings: {}, expectedUpdatedAt: saved.updatedAt! })
+      repo.updateSettings({
+        settings: {},
+        teamIdentityVersion: 1,
+        expectedUpdatedAt: saved.updatedAt!,
+      })
     ).rejects.toThrow('disk full');
     expect(await readFile(file, 'utf8')).toBe(before);
     fault.enabled = false;
-    await repo.updateSettings({ settings: {}, expectedUpdatedAt: saved.updatedAt! });
+    await repo.updateSettings({
+      settings: {},
+      teamIdentityVersion: 1,
+      expectedUpdatedAt: saved.updatedAt!,
+    });
     expect((await repo.getSettings()).global).toBeUndefined();
   });
   it('migrates sent 100 to exactly 100/80 using structural colon-containing identity', async () => {
@@ -172,7 +189,7 @@ describe('strict Budget persistence', () => {
     expect(await repo.hasSent(budgetCoverageKey(record({ threshold: 70 })))).toBe(false);
     expect(await readFile(file, 'utf8')).toBe(raw);
     await repo.markCovered([]);
-    expect(JSON.parse(await readFile(file, 'utf8')).schemaVersion).toBe(2);
+    expect(JSON.parse(await readFile(file, 'utf8')).schemaVersion).toBe(3);
   });
   it('serializes whole metric batches and prune without losing coverage', async () => {
     const file = await path('coverage.json');
@@ -247,7 +264,7 @@ describe('strict Budget persistence', () => {
         notificationsEnabled: true,
       });
       expect(
-        Buffer.byteLength(JSON.stringify({ schemaVersion: 2, settings: migrated }, null, 2), 'utf8')
+        Buffer.byteLength(JSON.stringify({ schemaVersion: 3, settings: migrated }, null, 2), 'utf8')
       ).toBeGreaterThan(512 * 1024);
       expect(migrated.updatedAt).toBe(updatedAt);
       expect((await new JsonTokenUsageBudgetSettingsRepository(file).getSettings()).updatedAt).toBe(
@@ -257,21 +274,27 @@ describe('strict Budget persistence', () => {
       await expect(
         repo.updateSettings({
           settings: { global: limit },
+          teamIdentityVersion: 1,
           expectedUpdatedAt: '2026-09-01T00:00:00.000Z',
         })
       ).rejects.toThrow('Budget settings changed');
       expect(await readFile(file, 'utf8')).toBe(raw);
       const saved = await repo.updateSettings({
         settings: { global: limit },
+        teamIdentityVersion: 1,
         expectedUpdatedAt: updatedAt ?? null,
       });
       expect(saved.updatedAt).toBe('2026-10-03T00:00:00.000Z');
       expect(await new JsonTokenUsageBudgetSettingsRepository(file).getSettings()).toEqual(saved);
       const savedRaw = await readFile(file, 'utf8');
       expect(Buffer.byteLength(savedRaw, 'utf8')).toBeLessThan(512 * 1024);
-      expect(JSON.parse(savedRaw).schemaVersion).toBe(2);
+      expect(JSON.parse(savedRaw).schemaVersion).toBe(3);
       await expect(
-        repo.updateSettings({ settings: {}, expectedUpdatedAt: updatedAt ?? null })
+        repo.updateSettings({
+          settings: {},
+          teamIdentityVersion: 1,
+          expectedUpdatedAt: updatedAt ?? null,
+        })
       ).rejects.toThrow('Budget settings changed');
       expect(await readFile(file, 'utf8')).toBe(savedRaw);
     }
@@ -281,6 +304,7 @@ describe('strict Budget persistence', () => {
     const repo = new JsonTokenUsageBudgetSettingsRepository(file);
     const saved = await repo.updateSettings({
       settings: { global: limit },
+      teamIdentityVersion: 1,
       expectedUpdatedAt: null,
     });
     const before = await readFile(file, 'utf8');
@@ -288,7 +312,11 @@ describe('strict Budget persistence', () => {
       Array.from({ length: 2000 }, (_, index) => [`${'é'.repeat(150)}:${index}`, limit])
     );
     await expect(
-      repo.updateSettings({ settings: { projects }, expectedUpdatedAt: saved.updatedAt! })
+      repo.updateSettings({
+        settings: { projects },
+        teamIdentityVersion: 1,
+        expectedUpdatedAt: saved.updatedAt!,
+      })
     ).rejects.toThrow('size limit');
     expect(await readFile(file, 'utf8')).toBe(before);
     expect((await repo.getSettings()).updatedAt).toBe(saved.updatedAt);
@@ -318,7 +346,7 @@ describe('strict Budget persistence', () => {
     const savedRaw = await readFile(file, 'utf8');
     const saved = JSON.parse(savedRaw);
     expect(Buffer.byteLength(savedRaw, 'utf8')).toBeLessThan(512 * 1024);
-    expect(saved.schemaVersion).toBe(2);
+    expect(saved.schemaVersion).toBe(3);
     expect(Object.keys(saved.sent)).toHaveLength(2);
     const restarted = new JsonTokenUsageBudgetNotificationStateRepository(file);
     expect(await restarted.hasSent(budgetCoverageKey(oldRecord))).toBe(false);

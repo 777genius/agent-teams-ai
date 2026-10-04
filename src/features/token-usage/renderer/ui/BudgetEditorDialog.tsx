@@ -19,6 +19,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Switch } from '@renderer/components/ui/switch';
 
+import { LEGACY_COMBINED_TEAM_ID, TEAM_IDENTITY_VERSION } from '../../contracts';
 import {
   budgetTargetKey,
   createBudgetDraft,
@@ -119,7 +120,11 @@ export const BudgetEditorDialog = ({
     setSaving(true);
     setError(null);
     try {
-      await onSave({ settings: settingsFromDraft(draft), expectedUpdatedAt: revision });
+      await onSave({
+        settings: settingsFromDraft(draft),
+        expectedUpdatedAt: revision,
+        teamIdentityVersion: TEAM_IDENTITY_VERSION,
+      });
       onClose();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t('tokenUsage.budgets.saveFailed'));
@@ -172,6 +177,11 @@ export const BudgetEditorDialog = ({
             ))}
           </SelectContent>
         </Select>
+        {targetKey === `team:${LEGACY_COMBINED_TEAM_ID}` && (
+          <p className="text-xs text-text-secondary">
+            {t('tokenUsage.budgets.editor.legacyCombinedExplanation')}
+          </p>
+        )}
         {draft[targetKey] === null && (
           <p className="text-xs text-amber-400">{t('tokenUsage.budgets.editor.deletePending')}</p>
         )}

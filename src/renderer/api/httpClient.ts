@@ -158,9 +158,11 @@ import type { TerminalAPI } from '@shared/types/terminal';
 
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
-  if (request?.teamName) query.set('teamName', request.teamName);
-  for (const teamName of request?.teamNames ?? []) {
-    query.append('teamNames', teamName);
+  if (request?.teamIds !== undefined) {
+    for (const teamId of request.teamIds) query.append('teamIds', teamId);
+  } else {
+    if (request?.teamName) query.set('teamName', request.teamName);
+    for (const teamName of request?.teamNames ?? []) query.append('teamNames', teamName);
   }
   if (request?.agentId) query.set('agentId', request.agentId);
   if (request?.commandId) query.set('commandId', request.commandId);

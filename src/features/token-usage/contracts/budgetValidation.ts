@@ -1,3 +1,5 @@
+import { isCanonicalTeamId, TEAM_IDENTITY_VERSION } from './teamIdentity';
+
 import type {
   TokenUsageBudgetLimitDto,
   TokenUsageBudgetSettingsDto,
@@ -60,7 +62,7 @@ export function validateBudgetSettings(value: unknown): TokenUsageBudgetSettings
     const entries = record(source[scope]);
     result[scope] = Object.fromEntries(
       Object.entries(entries).map(([id, limit]) => {
-        if (!id.trim() || id !== id.trim())
+        if (!id.trim() || id !== id.trim() || (scope === 'teams' && !isCanonicalTeamId(id)))
           throw new BudgetValidationError('Invalid budget identity');
         return [id, validateBudgetLimit(limit)];
       })
@@ -71,6 +73,10 @@ export function validateBudgetSettings(value: unknown): TokenUsageBudgetSettings
 
 export function validateBudgetUpdate(value: unknown): TokenUsageBudgetSettingsUpdateRequestDto {
   const source = record(value);
+  if (source.teamIdentityVersion !== TEAM_IDENTITY_VERSION)
+    throw new BudgetValidationError(
+      'Reload budget settings before saving: unsupported team identity version'
+    );
   if (
     source.expectedUpdatedAt !== null &&
     (typeof source.expectedUpdatedAt !== 'string' ||
@@ -78,6 +84,7 @@ export function validateBudgetUpdate(value: unknown): TokenUsageBudgetSettingsUp
   )
     throw new BudgetValidationError('Expected budget revision is required');
   return {
+    teamIdentityVersion: TEAM_IDENTITY_VERSION,
     settings: validateBudgetSettings(source.settings),
     expectedUpdatedAt: source.expectedUpdatedAt,
   };
