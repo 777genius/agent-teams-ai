@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '26.10.0'
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
@@ -111,7 +111,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '26.10.0'
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Require canonical typecheck and typed immutable-input tooling lint
         run: |
