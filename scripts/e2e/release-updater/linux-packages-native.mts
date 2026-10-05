@@ -20,14 +20,43 @@ import { Cdp, waitFor } from './cdp.mts';
 import { digest } from '../../ci/release/contract.ts';
 import { hashFile, repository } from './inputs.mts';
 import { captureNativeWindow, processIdentity } from './native-window.mts';
+import {
+  assertRuntimeSeal,
+  decodeProcCommand,
+  exactSealedCommand,
+  profileDisposition,
+  sealedKernelProof,
+} from './linux-packages-seal.mts';
 
 import type { PackageKind } from './linux-packages-inputs.mts';
+import type {
+  AutomaticLaunchSeal,
+  PackageLaunchSeal,
+  RuntimeLaunch,
+} from './linux-packages-seal.mts';
 
 const execute = promisify(execFile);
 export type Identity = NonNullable<Awaited<ReturnType<typeof processIdentity>>>;
 export interface OwnedPackageApp extends Identity {
   executable: string;
   command: string[];
+  provisional?: true;
+  kernelSealProof?: Awaited<ReturnType<typeof sealedKernelProof>>;
+}
+export interface PackageCandidateDiagnostic {
+  pid: number;
+  uid: number;
+  executable: string;
+  minimumStart: string;
+  identity: Identity | null;
+  parent: number | null;
+  session: number | null;
+  statStart: string | null;
+  uidFields: number[];
+  command: string[] | null;
+  markers?: { HOME?: string; AGENT_TEAMS_ELECTRON_USER_DATA_DIR?: string };
+  predicates: Record<string, boolean>;
+  outcome: string;
 }
 export interface WindowProcess {
   windowId: number;
@@ -211,52 +240,216 @@ async function exactCandidate(pid: number, executable: string, minimumStart: str
     return null;
   return { identity, executable: candidate };
 }
-async function processFile(pid: number, name: 'cmdline' | 'status') {
+async function processFile(pid: number, name: 'cmdline' | 'status' | 'stat') {
   return readFile(`/proc/${pid}/${name}`, 'utf8').catch((error) => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   });
 }
+async function describePackageCandidate(
+  pid: number,
+  executable: string,
+  minimumStart: string,
+  enabled: boolean
+): Promise<PackageCandidateDiagnostic | null> {
+  if (!enabled) return null;
+  const uid = (await stat(`/proc/${pid}`).catch(() => null))?.uid;
+  if (uid === undefined || uid !== process.getuid?.()) return null;
+  const actual = await readlink(`/proc/${pid}/exe`).catch((error) => {
+    if (['ENOENT', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) return null;
+    throw error;
+  });
+  if (actual !== executable && actual !== `${executable} (deleted)`) return null;
+  const identity = await processIdentity(pid);
+  const raw = await processFile(pid, 'stat');
+  const fields = raw?.slice(raw.lastIndexOf(')') + 2).split(' ');
+  const status = await processFile(pid, 'status');
+  const rawCommand = await processFile(pid, 'cmdline');
+  return {
+    pid,
+    uid,
+    executable: actual,
+    minimumStart,
+    identity,
+    parent: fields?.[1] ? Number(fields[1]) : null,
+    session: fields?.[3] ? Number(fields[3]) : null,
+    statStart: fields?.[19] ?? null,
+    uidFields:
+      status
+        ?.split('\n')
+        .find((line) => line.startsWith('Uid:'))
+        ?.slice(4)
+        .trim()
+        .split(/\s+/)
+        .map(Number) ?? [],
+    command: rawCommand === null ? null : decodeProcCommand(rawCommand),
+    predicates: {
+      normalUid: true,
+      exactExecutable: true,
+      alive: identity !== null && identity.state !== 'Z',
+      minimumStart: identity !== null && BigInt(identity.start) >= BigInt(minimumStart),
+      observedStatGeneration: identity !== null && fields?.[19] === identity.start,
+    },
+    outcome: 'prefix-rejected',
+  };
+}
+function updateCandidateDiagnostic(
+  diagnostic: PackageCandidateDiagnostic | null,
+  fields: Pick<Partial<PackageCandidateDiagnostic>, 'command' | 'markers'>,
+  predicates: Record<string, boolean>
+) {
+  if (!diagnostic) return;
+  Object.assign(diagnostic, fields);
+  Object.assign(diagnostic.predicates, predicates);
+}
+function recordCandidateDiagnostic(
+  diagnostic: PackageCandidateDiagnostic | null,
+  callback: ((candidate: PackageCandidateDiagnostic) => void) | undefined,
+  outcome: string
+) {
+  if (!diagnostic) return;
+  diagnostic.outcome = outcome;
+  callback?.(diagnostic);
+}
+function recordCandidateSandbox(
+  diagnostic: PackageCandidateDiagnostic | null,
+  callback: ((candidate: PackageCandidateDiagnostic) => void) | undefined,
+  command: string[]
+) {
+  const enabled = !command.some((argument) => /(?:^|\s)--no-sandbox(?:=|\s|$)/.test(argument));
+  updateCandidateDiagnostic(diagnostic, {}, { sandboxCommand: enabled });
+  if (!enabled) recordCandidateDiagnostic(diagnostic, callback, 'sandbox-command-rejected');
+}
+async function packageCandidate(
+  pid: number,
+  executable: string,
+  roots: { home: string; userData: string },
+  minimumStart: string,
+  onCandidate?: (candidate: PackageCandidateDiagnostic) => void,
+  automatic?: AutomaticLaunchSeal
+) {
+  const candidate = await exactCandidate(pid, executable, minimumStart);
+  const diagnostic = await describePackageCandidate(
+    pid,
+    executable,
+    minimumStart,
+    onCandidate !== undefined
+  );
+  const record = (outcome: string) => recordCandidateDiagnostic(diagnostic, onCandidate, outcome);
+  if (!candidate) {
+    record('prefix-rejected');
+    return null;
+  }
+  const identity = candidate.identity;
+  // Only exact installed TEST binary candidates are eligible for env reads.
+  const environment = await readFile(`/proc/${pid}/environ`, 'utf8').catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  if (environment === null) {
+    record('environment-unavailable');
+    return null;
+  }
+  const env = new Map(
+    environment.split('\0').map((item) => {
+      const index = item.indexOf('=');
+      return [item.slice(0, index), item.slice(index + 1)];
+    })
+  );
+  // Deliberately log only these two noncredential profile markers.
+  updateCandidateDiagnostic(
+    diagnostic,
+    {
+      markers: {
+        HOME: env.get('HOME'),
+        AGENT_TEAMS_ELECTRON_USER_DATA_DIR: env.get('AGENT_TEAMS_ELECTRON_USER_DATA_DIR'),
+      },
+    },
+    {
+      home: env.get('HOME') === roots.home,
+      userData: env.get('AGENT_TEAMS_ELECTRON_USER_DATA_DIR') === roots.userData,
+    }
+  );
+  const profile = profileDisposition(
+    {
+      HOME: env.get('HOME'),
+      AGENT_TEAMS_ELECTRON_USER_DATA_DIR: env.get('AGENT_TEAMS_ELECTRON_USER_DATA_DIR'),
+    },
+    roots
+  );
+  if (profile === 'conflict' || (profile === 'provisional' && !automatic)) {
+    record('profile-marker-rejected');
+    return null;
+  }
+  const rawCommand = await processFile(pid, 'cmdline');
+  if (rawCommand === null) {
+    record('command-unavailable');
+    return null;
+  }
+  const command = decodeProcCommand(rawCommand);
+  if (!command) {
+    record('command-terminator-rejected');
+    return null;
+  }
+  updateCandidateDiagnostic(
+    diagnostic,
+    { command },
+    {
+      mainCommand: !command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument)),
+    }
+  );
+  if (command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument))) {
+    record('child-role-rejected');
+    return null;
+  }
+  const current = await processIdentity(pid);
+  updateCandidateDiagnostic(
+    diagnostic,
+    {},
+    { generationStable: current?.start === identity.start }
+  );
+  if (current?.start !== identity.start) {
+    record('generation-changed');
+    return null;
+  }
+  recordCandidateSandbox(diagnostic, onCandidate, command);
+  assert(
+    !command.some((argument) => /(?:^|\s)--no-sandbox(?:=|\s|$)/.test(argument)),
+    'Actual package app disabled Chromium sandbox'
+  );
+  if (
+    automatic &&
+    (automatic.before.some((previous) => previous === pid) ||
+      !exactSealedCommand(command, automatic.launch))
+  ) {
+    record('automatic-seal-rejected');
+    return null;
+  }
+  const app: OwnedPackageApp = { ...current, executable: candidate.executable, command };
+  if (automatic) app.kernelSealProof = await sealedKernelProof(app, automatic);
+  if (profile === 'provisional') app.provisional = true;
+  record(app.provisional ? 'provisional-sealed-candidate' : 'selected');
+  return app;
+}
 export async function ownedPackageApps(
   executable: string,
   roots: { home: string; userData: string },
-  minimumStart: string
+  minimumStart: string,
+  onCandidate?: (candidate: PackageCandidateDiagnostic) => void,
+  automatic?: AutomaticLaunchSeal
 ) {
   const result: OwnedPackageApp[] = [];
   for (const name of await readdir('/proc')) {
     if (!/^\d+$/.test(name)) continue;
-    const pid = Number(name);
-    const candidate = await exactCandidate(pid, executable, minimumStart);
-    if (!candidate) continue;
-    const identity = candidate.identity;
-    // Only exact installed TEST binary candidates are eligible for env reads.
-    const environment = await readFile(`/proc/${pid}/environ`, 'utf8').catch((error) => {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    });
-    if (!environment) continue;
-    const env = new Map(
-      environment.split('\0').map((item) => {
-        const index = item.indexOf('=');
-        return [item.slice(0, index), item.slice(index + 1)];
-      })
+    const candidate = await packageCandidate(
+      Number(name),
+      executable,
+      roots,
+      minimumStart,
+      onCandidate,
+      automatic
     );
-    if (
-      env.get('HOME') !== roots.home ||
-      env.get('AGENT_TEAMS_ELECTRON_USER_DATA_DIR') !== roots.userData
-    )
-      continue;
-    const rawCommand = await processFile(pid, 'cmdline');
-    if (rawCommand === null) continue;
-    const command = rawCommand.split('\0').filter(Boolean);
-    if (command.some((argument) => argument.startsWith('--type='))) continue;
-    const current = await processIdentity(pid);
-    if (current?.start !== identity.start) continue;
-    assert(
-      !command.some((argument) => /^--no-sandbox(?:=|$)/.test(argument)),
-      'Actual package app disabled Chromium sandbox'
-    );
-    result.push({ ...current, executable: candidate.executable, command });
+    if (candidate) result.push(candidate);
   }
   return result;
 }
@@ -414,14 +607,15 @@ export async function lateWindowObservation(
     version: string;
     resources: string;
     userData: string;
+    seal?: PackageLaunchSeal;
   }
 ) {
   // Caller records automatic native paint/package/profile BEFORE this read.
   // This cannot restart the app or install hooks in its updater/provider.
   await unchangedMain(candidate, expected.executable);
-  const command = (await readFile(`/proc/${candidate.pid}/cmdline`, 'utf8'))
-    .split('\0')
-    .filter(Boolean);
+  const command =
+    expected.seal?.command ??
+    (await readFile(`/proc/${candidate.pid}/cmdline`, 'utf8')).split('\0').filter(Boolean);
   const retained = command.find((argument) => argument.startsWith('--inspect-brk='));
   let port = 9229;
   if (retained) {
@@ -485,17 +679,20 @@ export async function lateWindowObservation(
       candidate.pid,
       'Inspector belongs to another process'
     );
-    const expression = `(() => {const electron=process.mainModule.require('electron');return {pid:process.pid,version:electron.app.getVersion(),executable:process.execPath,resources:process.resourcesPath,userData:electron.app.getPath('userData'),entry:process.mainModule.filename,windows:electron.BrowserWindow.getAllWindows().map(window=>({windowId:window.id,contentsId:window.webContents.id,pid:window.webContents.getOSProcessId(),sandbox:window.webContents.getLastWebPreferences().sandbox}))};})()`;
-    const actual = await connection.evaluate<{
-      pid: number;
-      version: string;
-      executable: string;
-      resources: string;
-      userData: string;
-      entry: string;
-      windows: WindowProcess[];
-    }>(expression);
+    const expression = `(() => {const electron=process.mainModule.require('electron');return {pid:process.pid,argv:process.argv,execArgv:process.execArgv,home:process.env.HOME,profile:process.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,versions:{electron:process.versions.electron,chrome:process.versions.chrome,node:process.versions.node},version:electron.app.getVersion(),executable:process.execPath,resources:process.resourcesPath,userData:electron.app.getPath('userData'),entry:process.mainModule.filename,windows:electron.BrowserWindow.getAllWindows().map(window=>({windowId:window.id,contentsId:window.webContents.id,pid:window.webContents.getOSProcessId(),sandbox:window.webContents.getLastWebPreferences().sandbox}))};})()`;
+    const actual = await connection.evaluate<
+      {
+        pid: number;
+        version: string;
+        executable: string;
+        resources: string;
+        userData: string;
+        entry: string;
+        windows: WindowProcess[];
+      } & RuntimeLaunch
+    >(expression);
     assert.equal(actual.pid, candidate.pid, 'Inspector belongs to another process');
+    if (expected.seal) assertRuntimeSeal(actual, expected.seal, candidate.pid);
     for (const key of ['version', 'executable', 'resources', 'userData'] as const)
       assert.equal(actual[key], expected[key]);
     assert.equal(

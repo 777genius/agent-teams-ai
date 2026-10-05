@@ -27,6 +27,13 @@ import {
 } from './linux-packages-native.mts';
 import { processIdentity, stopOwnedGroup } from './native-window.mts';
 import { transportHook } from './transport.mts';
+import {
+  automaticLaunchSeal,
+  packageLaunchSeal,
+  packagePausedEntry as pausedEntry,
+  resumeSealedInspector,
+  sealedKernelProof,
+} from './linux-packages-seal.mts';
 
 import type {
   Identity,
@@ -35,14 +42,12 @@ import type {
 } from './linux-packages-native.mts';
 import type { TransportState } from './transport.mts';
 import type { ButtonScope } from './cdp-values.mts';
+import type { AutomaticLaunchSeal, RuntimeLaunch } from './linux-packages-seal.mts';
 
 interface Target {
   type: string;
   url: string;
   webSocketDebuggerUrl: string;
-}
-interface Pause {
-  callFrames: { callFrameId: string }[];
 }
 const args = process.argv.slice(2);
 function value(name: string) {
@@ -109,25 +114,6 @@ async function targets(endpoint: number) {
   } catch {
     return null;
   }
-}
-async function pausedEntry(connection: Cdp, pid: number) {
-  await connection.send('Debugger.enable');
-  await connection.send('Runtime.runIfWaitingForDebugger');
-  const pause = await waitFor(
-    () =>
-      Promise.resolve(
-        (connection.events.find((event) => event.method === 'Debugger.paused')?.params as
-          | Pause
-          | undefined) ?? null
-      ),
-    'original packaged app entry'
-  );
-  const frame = pause.callFrames[0];
-  assert(frame);
-  const entry = await connection.evaluate<string>('__filename', frame.callFrameId);
-  assert(entry.endsWith('/resources/app.asar/dist-electron/main/index.cjs'));
-  assert.equal(await connection.evaluate<number>('process.pid', frame.callFrameId), pid);
-  return { frame, entry };
 }
 async function state() {
   assert(main);
@@ -357,9 +343,10 @@ function releaseConnections() {
   main = undefined;
   renderer = undefined;
 }
-async function nativeDesktop(candidate: Identity, label: string) {
-  const group = owners.get(candidate.group);
-  assert(group, 'Native process belongs to an owned launch group');
+async function nativeDesktop(candidate: Identity, label: string, seal?: AutomaticLaunchSeal) {
+  const group = owners.get(candidate.group) ?? (seal ? candidate : undefined);
+  assert(group, 'Native capture requires owned launch or sealed read-only candidate');
+  if (seal) await sealedKernelProof(candidate, seal);
   const result = await desktopProof(group, path.join(output, label), candidate);
   assert.equal(
     result.identity.pid,
@@ -389,6 +376,7 @@ async function nativeDesktop(candidate: Identity, label: string) {
     version: targetVersion,
     resources: path.join(path.dirname(executable), 'resources'),
     userData,
+    seal: seal?.launch,
   });
   evidence.automaticReadOnlyInspector = read;
   return { ...result, sandbox: read.sandbox };
@@ -598,6 +586,32 @@ try {
       const before = new Set(
         (await ownedPackageApps(executable, { home, userData }, minimumStart)).map((app) => app.pid)
       );
+      assert(main);
+      const runtime = await main.evaluate<RuntimeLaunch>(
+        '({pid:process.pid,argv:process.argv,execArgv:process.execArgv,home:process.env.HOME,profile:process.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,versions:{electron:process.versions.electron,chrome:process.versions.chrome,node:process.versions.node}})'
+      );
+      const launchSeal = packageLaunchSeal(initial.process.command, runtime, {
+        executable,
+        home,
+        userData,
+        inspectorPort: initial.inspectorPort,
+        rendererPort: initial.rendererPort,
+      });
+      const seal = await automaticLaunchSeal(
+        initial.identity,
+        [...before],
+        launchSeal,
+        await hashFile(path.join(references, targetVersion, path.relative('/', executable)))
+      );
+      evidence.automaticLaunchSeal = seal;
+      const candidates: Record<string, unknown>[] = [];
+      const seenCandidates = new Set<string>();
+      evidence.automaticSelection = {
+        original: initial.identity,
+        minimumStart,
+        before: [...before],
+      };
+      evidence.automaticCandidates = candidates;
       evidence.installAttempted = true;
       evidence.installAction = await click('^Restart now$', dialog);
       releaseConnections();
@@ -605,16 +619,27 @@ try {
         async () => {
           assert(executable && minimumStart);
           return (
-            (await ownedPackageApps(executable, { home, userData }, minimumStart)).find(
-              (app) => !before.has(app.pid)
-            ) ?? null
+            (
+              await ownedPackageApps(
+                executable,
+                { home, userData },
+                minimumStart,
+                (candidate) => {
+                  const snapshot = { ...candidate, newPid: !before.has(candidate.pid) };
+                  const key = JSON.stringify(snapshot);
+                  if (!seenCandidates.has(key)) {
+                    seenCandidates.add(key);
+                    candidates.push({ observedAt: new Date().toISOString(), ...snapshot });
+                  }
+                },
+                seal
+              )
+            ).find((app) => !before.has(app.pid)) ?? null
           );
         },
         'updater-created automatic package successor',
         90_000
       );
-      if (successor.group === successor.pid) owners.set(successor.group, successor);
-      else assert(owners.has(successor.group), 'Automatic relaunch must remain in an owned group');
       assert.equal(
         await readlink(`/proc/${successor.pid}/ns/net`),
         await readlink('/proc/self/ns/net')
@@ -627,23 +652,7 @@ try {
       evidence.automaticProcess = successor;
       // Electron app.relaunch can preserve inspect-brk arguments. Resume only
       // this updater-created PID; never manually spawn it before native proof.
-      const inspect = successor.command.find((argument) => argument.startsWith('--inspect-brk='));
-      if (inspect) {
-        const endpoint = Number(inspect.split(':').at(-1));
-        assert(Number.isSafeInteger(endpoint));
-        const inspector = await waitFor(
-          async () =>
-            (await targets(endpoint))?.find((target) => target.webSocketDebuggerUrl) ?? null,
-          'automatic successor retained inspector'
-        );
-        const connection = await Cdp.connect(inspector.webSocketDebuggerUrl);
-        try {
-          evidence.automaticEntry = await pausedEntry(connection, successor.pid);
-          await connection.send('Debugger.resume');
-        } finally {
-          connection.close();
-        }
-      }
+      evidence.automaticEntry = await resumeSealedInspector(successor, seal);
       evidence.automaticPackage = await installedProof(
         kind,
         targetVersion,
@@ -661,10 +670,12 @@ try {
       };
       assert.equal((await config()).general.theme, 'light');
       evidence.profileAfterAutomatic = await config();
-      evidence.automaticDesktop = await nativeDesktop(successor, 'automatic-desktop');
+      evidence.automaticDesktop = await nativeDesktop(successor, 'automatic-desktop', seal);
+      evidence.automaticSealAfterPaint = await sealedKernelProof(successor, seal);
       const current = await processIdentity(successor.pid);
       assert.equal(current?.start, successor.start);
       assert.equal((await config()).general.theme, 'light');
+      owners.set(successor.group, successor);
       evidence.automaticSuccessorProved = true;
       evidence.automaticProofAt = new Date().toISOString();
       const groupOwner = owners.get(successor.group);
