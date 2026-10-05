@@ -11,6 +11,21 @@ on:
       - 'pnpm-lock.yaml'
       - 'eslint.fast.config.js'
   workflow_dispatch:
+    inputs:
+      target_mode:
+        description: '2.17.3 requires exact prepared stage; 2.17.2 is historical evidence only'
+        type: choice
+        options: [staged-2.17.3, historical-2.17.2]
+        default: staged-2.17.3
+      stage_artifact:
+        description: 'Prepared stage artifact name'
+        type: string
+      stage_run_id:
+        description: 'Exact producer run ID'
+        type: string
+      plan_sha256:
+        description: 'Expected SHA256 of its exact stage-plan.json'
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +37,7 @@ jobs:
     # in an input-only job; the native application runs in a separate read-only VM.
     permissions:
       contents: write
+      actions: read
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -37,18 +53,59 @@ jobs:
         run: mkdir -p .artifacts/TEST-updater-inputs .artifacts/TEST-updater-evidence
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
+      - name: Require explicit prepared artifact identity
+        if: inputs.target_mode == 'staged-2.17.3'
+        env:
+          TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
+          TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          test -n "$TEST_STAGE_NAME"
+          [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
+          [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
+      - name: Download immutable prepared stage
+        if: inputs.target_mode == 'staged-2.17.3'
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.stage_artifact }}
+          run-id: ${{ inputs.stage_run_id }}
+          github-token: ${{ github.token }}
+          path: .artifacts/TEST-updater-inputs/stage/
       - name: Read exact official predecessor and draft bytes
         env:
           GH_TOKEN: ${{ github.token }}
+          TEST_TARGET_MODE: ${{ inputs.target_mode || 'historical-2.17.2' }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
         run: |
           set -euo pipefail
           inputs=.artifacts/TEST-updater-inputs
-          gh api repos/777genius/agent-teams-ai/releases/tags/v2.17.1 > "$inputs/source-api.json"
-          gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+          gh api repos/777genius/agent-teams-ai/releases/398386033 > "$inputs/source-api.json"
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.1.AppImage --output "$inputs/old.AppImage"
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern agent-teams-ai_2.17.1_amd64.deb --output "$inputs/old.deb"
-          gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/target.AppImage"
-          node scripts/e2e/release-updater/inputs.mts --write-catalog "$inputs"
+          flags=(--historical-preview)
+          if test "$TEST_TARGET_MODE" = staged-2.17.3; then
+            node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
+            release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
+            target_asset=$(jq -er '.assets[0].id' "$inputs/target-download-identities.json")
+            readonly target_asset
+            gh api "repos/777genius/agent-teams-ai/releases/$release" > "$inputs/draft-api.json"
+            # Consume actual stage-draft upload bytes, rather than rebuilding
+            # its generated metadata inside the native harness.
+            node scripts/e2e/release-updater/inputs.mts --metadata-downloads "$inputs/stage" "$TEST_PLAN_SHA" "$inputs/draft-api.json" > "$inputs/staged-metadata-downloads.json"
+            jq -r '.[] | [.id,.name] | @tsv' "$inputs/staged-metadata-downloads.json" > "$inputs/staged-metadata.tsv"
+            while IFS=$'\t' read -r metadata_asset name; do
+              gh api "repos/777genius/agent-teams-ai/releases/assets/$metadata_asset" -H 'Accept: application/octet-stream' > "$inputs/stage/$name"
+            done < "$inputs/staged-metadata.tsv"
+            gh api "repos/777genius/agent-teams-ai/releases/assets/$target_asset" -H 'Accept: application/octet-stream' > "$inputs/target.AppImage"
+            flags=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
+          else
+            test "$TEST_TARGET_MODE" = historical-2.17.2
+            gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+            gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/target.AppImage"
+            node scripts/e2e/release-updater/inputs.mts --write-catalog "$inputs"
+          fi
+          node scripts/e2e/release-updater/inputs.mts --verify-appimage "$inputs" "${flags[@]}"
       - name: Hand verified bytes to the native VM
         uses: actions/upload-artifact@v7
         with:
@@ -94,12 +151,17 @@ jobs:
           # This runner is disposable; no root GUI or --no-sandbox is permitted.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Probe unmodified official AppImage with private authenticated Xvfb
+        env:
+          TEST_TARGET_MODE: ${{ inputs.target_mode || 'historical-2.17.2' }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
         run: |
           set -euo pipefail
+          flags=(--historical-preview)
+          if test "$TEST_TARGET_MODE" = staged-2.17.3; then flags=(--stage .artifacts/TEST-updater-inputs/stage --plan-sha256 "$TEST_PLAN_SHA"); fi
           xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' --error-file=.artifacts/TEST-updater-evidence/xvfb.log \
             node scripts/e2e/release-updater/linux-feasibility.mts \
               --inputs .artifacts/TEST-updater-inputs \
-              --evidence .artifacts/TEST-updater-evidence \
+              --evidence .artifacts/TEST-updater-evidence "${flags[@]}" \
             2>&1 | tee .artifacts/TEST-updater-evidence/probe.log
       - name: Preserve native evidence on success and failure
         if: always()
@@ -143,22 +205,34 @@ jobs:
           test -c /dev/fuse
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           unshare -Ur true
-      - name: Exercise the original updater through download, install and automatic desktop startup
+      - name: Exercise real OTA and separate fresh target desktop
+        env:
+          TEST_TARGET_MODE: ${{ inputs.target_mode || 'historical-2.17.2' }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
         run: |
           set -euo pipefail
           export TEST_NODE_BIN="$(command -v node)"
           export TEST_RUNNER_USER="$(id -un)"
           export TEST_WORKSPACE="$PWD"
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
-            sudo --preserve-env=DISPLAY,XAUTHORITY,TEST_NODE_BIN,TEST_RUNNER_USER,TEST_WORKSPACE \
-            unshare --net /bin/sh -c '
-              set -eu
-              ip link set lo up
-              runuser -u "$TEST_RUNNER_USER" -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
-                "$TEST_NODE_BIN" "$TEST_WORKSPACE/scripts/e2e/release-updater/linux-ota.mts" \
-                --inputs "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs" \
-                --evidence "$TEST_WORKSPACE/.artifacts/TEST-ota-evidence"
-            ' 2>&1 | tee .artifacts/TEST-ota-evidence/probe.log
+          result=0
+          for mode in ota fresh; do
+            mkdir -p ".artifacts/TEST-ota-evidence/$mode"
+            export TEST_CASE_MODE=$mode
+            xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+              sudo --preserve-env=DISPLAY,XAUTHORITY,TEST_NODE_BIN,TEST_RUNNER_USER,TEST_WORKSPACE,TEST_TARGET_MODE,TEST_PLAN_SHA,TEST_CASE_MODE \
+              unshare --net /bin/bash -c '
+                set -euo pipefail
+                ip link set lo up
+                flags=(--historical-preview)
+                if test "$TEST_TARGET_MODE" = staged-2.17.3; then flags=(--stage "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs/stage" --plan-sha256 "$TEST_PLAN_SHA"); fi
+                if test "$TEST_CASE_MODE" = fresh; then flags+=(--fresh); fi
+                runuser -u "$TEST_RUNNER_USER" -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+                  "$TEST_NODE_BIN" "$TEST_WORKSPACE/scripts/e2e/release-updater/linux-ota.mts" \
+                  --inputs "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs" \
+                  --evidence "$TEST_WORKSPACE/.artifacts/TEST-ota-evidence/$TEST_CASE_MODE" "${flags[@]}"
+              ' 2>&1 | tee ".artifacts/TEST-ota-evidence/$mode/probe.log" || result=1
+          done
+          exit "$result"
       - name: Preserve native OTA proof on success and failure
         if: always()
         uses: actions/upload-artifact@v7

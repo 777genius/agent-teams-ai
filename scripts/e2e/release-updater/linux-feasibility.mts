@@ -8,7 +8,7 @@ import path from 'node:path';
 
 import { captureSources, readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
-import { hashFile, loadInputs, pins } from './inputs.mts';
+import { hashFile, loadInputs, pins, stageArguments } from './inputs.mts';
 import { startMirror } from './mirror.mts';
 import { captureNativeWindow, processIdentity, stopOwnedGroup } from './native-window.mts';
 import { transportHook } from './transport.mts';
@@ -122,7 +122,15 @@ try {
   assert(process.getuid?.() !== 0, 'Electron must run unprivileged with its sandbox enabled');
   assert(process.env.DISPLAY && process.env.XAUTHORITY, 'Private authenticated Xvfb is required');
   await access('/dev/fuse');
-  const inputs = await loadInputs(input);
+  const inputs = await loadInputs(
+    input,
+    stageArguments(args),
+    args.includes('--historical-preview')
+  );
+  const targetVersion = inputs.targetVersion;
+  evidence.targetVersion = targetVersion;
+  evidence.binding = inputs.binding;
+  evidence.historicalPreview = !inputs.binding.manifestBound;
   const actualExecutable = await hashFile(executable);
   assert.equal(
     actualExecutable.sha256,
@@ -295,20 +303,20 @@ try {
   const available = await waitFor(async () => {
     const state = await transport();
     return state?.updater?.provider === 'GitHubProvider' &&
-      state.events.some((event) => event.type === 'available' && event.version === '2.17.2')
+      state.events.some((event) => event.type === 'available' && event.version === targetVersion)
       ? state
       : null;
-  }, 'genuine GitHubProvider available 2.17.2');
+  }, `genuine GitHubProvider available ${targetVersion}`);
   const details = await waitFor(
     () =>
       renderer!.evaluate<{ x: number; y: number } | true | null>(`(() => {
     if(document.querySelector('[role=dialog]')) return true;
     const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='View details' && !b.disabled);
-    if(!button || !button.parentElement.textContent.includes('2.17.2')) return null;
+    if(!button || !button.parentElement.textContent.includes(${JSON.stringify(targetVersion)})) return null;
     const r=button.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;
     return r.width && r.height && button.contains(document.elementFromPoint(x,y)) ? {x,y} : null;
   })()`),
-    'real 2.17.2 update banner'
+    `real ${targetVersion} update banner`
   );
   if (details !== true) {
     for (const type of ['mousePressed', 'mouseReleased'])
@@ -324,18 +332,18 @@ try {
       renderer!.evaluate<string | null>(`(() => {
     const dialog=document.querySelector('[role=dialog]');
     const download=dialog && [...dialog.querySelectorAll('button')].find(b=>b.textContent.trim()==='Download' && !b.disabled);
-    if(!dialog || !download || !dialog.textContent.includes('2.17.2')) return null;
+    if(!dialog || !download || !dialog.textContent.includes(${JSON.stringify(targetVersion)})) return null;
     const r=download.getBoundingClientRect();
     return r.width && r.height && download.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)) ? dialog.textContent.trim() : null;
   })()`),
-    'normal UI available 2.17.2 with actionable Download'
+    `normal UI available ${targetVersion} with actionable Download`
   );
   const required = [
     ['electron-updater', 'GET', '/releases.atom'],
     ['electron-updater', 'GET', '/releases/latest'],
     ['electron-updater', 'GET', '/latest-linux.yml'],
-    ['default', 'GET', '/releases/tags/v2.17.2'],
-    ['default', 'HEAD', '/Agent.Teams.AI-2.17.2.AppImage'],
+    ['default', 'GET', `/releases/tags/${inputs.targetTag}`],
+    ['default', 'HEAD', `/Agent.Teams.AI-${targetVersion}.AppImage`],
   ] as const;
   for (const [session, method, suffix] of required)
     assert(
