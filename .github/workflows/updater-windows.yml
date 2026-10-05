@@ -93,13 +93,27 @@ jobs:
         run: |
           pnpm typecheck
           if ($LASTEXITCODE -ne 0) { throw 'Canonical typecheck failed' }
-          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts scripts/e2e/release-updater/windows-powershell.mts
           if ($LASTEXITCODE -ne 0) { throw 'Windows harness lint failed' }
       - uses: actions/download-artifact@v8
         with:
           name: TEST-windows-updater-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-inputs/
-      - name: Diagnose PowerShell startup with exact minimal and TEST profile environments
+      - name: Pin the already-running installed PowerShell 7 native helper
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-evidence'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Native helper must be the already-running installed ProgramFiles/PowerShell pwsh.exe' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Compare legacy startup and require explicitly selected PowerShell 7
         run: |
           $ErrorActionPreference = 'Stop'
           node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-evidence

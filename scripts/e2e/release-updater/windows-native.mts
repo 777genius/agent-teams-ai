@@ -4,6 +4,12 @@ import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/pro
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import {
+  selectedWindowsPowerShell,
+  windowsShellCompilerReferences,
+  windowsShellTestEnvironment,
+} from './windows-powershell.mts';
+
 import type { ExecFileException } from 'node:child_process';
 
 const execute = promisify(execFile);
@@ -43,9 +49,13 @@ interface FirewallRule {
 // OS calls are intentionally limited to this disposable test's exact paths,
 // PIDs and Firewall rule group. There are no project, runtime or login actions.
 const powershell = String.raw`
-param([Parameter(Mandatory=$true)][string]$InputFile)
+param([Parameter(Mandatory=$true)][string]$InputFile, [Parameter(Mandatory=$true)][string]$TrustedModulePath)
+[IO.File]::AppendAllText($InputFile + '.progress.jsonl', '{"phase":"script-entry"}' + [Environment]::NewLine)
+[Environment]::SetEnvironmentVariable('PSModulePath', $TrustedModulePath, 'Process')
 $ErrorActionPreference = 'Stop'
 $data = Get-Content -LiteralPath $InputFile -Raw | ConvertFrom-Json
+if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'Explicit PowerShell 7 required' }
+if ($PSVersionTable.PSVersion.ToString() -ne $data.shell.version -or $PSHOME -ne $data.shell.psHome -or [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName -ne $data.shell.executable) { throw 'Selected shell identity changed' }
 $root = [IO.Path]::GetFullPath($data.root)
 if ((Split-Path -Leaf $root) -notlike 'TEST-updater-windows-*') { throw 'Not a TEST root' }
 if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($InputFile)) -ne $root) { throw 'Input outside TEST root' }
@@ -54,7 +64,7 @@ function Write-TestProgress([string]$phase) {
   $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
   [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
 }
-Write-TestProgress 'script-entry'
+Write-TestProgress 'after-input-and-shell-validation'
 function Test-OwnedPath([string]$file) {
   $full = [IO.Path]::GetFullPath($file)
   if (-not $full.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
@@ -70,7 +80,15 @@ function Read-Owned([string]$file) {
   })
 }
 Write-TestProgress 'before-system-drawing'
-Add-Type -AssemblyName System.Drawing
+$compilerReferences = [string[]]@($data.compilerReferences.assemblies | ForEach-Object {
+  $file = [IO.Path]::GetFullPath($_.file)
+  $directory = [IO.Path]::GetDirectoryName($file)
+  if (($directory -ne [IO.Path]::Combine($PSHOME, 'ref')) -and ($file -ne [IO.Path]::Combine($PSHOME, 'System.Drawing.Common.dll'))) { throw 'Compiler reference outside selected PSHOME' }
+  return $file
+})
+if ($compilerReferences.Count -lt 4 -or $data.compilerReferences.drawingCommon -ne [IO.Path]::Combine($PSHOME, 'System.Drawing.Common.dll')) { throw 'Installed compiler reference set required' }
+Add-Type -LiteralPath $data.compilerReferences.drawingCommon
+if ([Drawing.Bitmap].Assembly.Location -ne $data.compilerReferences.drawingCommon) { throw 'Drawing implementation outside selected PSHOME' }
 Write-TestProgress 'after-system-drawing'
 Write-TestProgress 'before-native-compile'
 Add-Type -TypeDefinition @'
@@ -124,7 +142,7 @@ public static class TestWindowsNative {
     return new int[] { (int)pid, width, height };
   }
 }
-'@ -ReferencedAssemblies System.dll,System.Drawing.dll
+'@ -ReferencedAssemblies $compilerReferences
 Write-TestProgress 'after-native-compile'
 Write-TestProgress 'operation-entry'
 $result = $null
@@ -191,32 +209,28 @@ ConvertTo-Json -InputObject $result -Depth 12 -Compress
 export async function windowsNative(root: string, evidence: string) {
   assert.equal(process.platform, 'win32');
   assert(path.basename(root).startsWith('TEST-updater-windows-'));
-  const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
-  assert(systemRoot);
-  const executable = path.join(
-    systemRoot,
-    'System32',
-    'WindowsPowerShell',
-    'v1.0',
-    'powershell.exe'
-  );
+  const shell = await selectedWindowsPowerShell();
+  const compilerReferences = await windowsShellCompilerReferences(shell);
+  const executable = shell.executable;
   const script = path.join(root, 'native.ps1');
   await writeFile(script, powershell);
   await mkdir(evidence, { recursive: true });
   const diagnostics = await mkdtemp(path.join(evidence, 'native-diagnostics-'));
   await copyFile(script, path.join(diagnostics, 'native.ps1'));
-  const env: NodeJS.ProcessEnv = {
-    SystemRoot: systemRoot,
-    WINDIR: systemRoot,
-    PATH: path.join(systemRoot, 'System32'),
-    TEMP: root,
-    TMP: root,
-  };
+  await writeFile(path.join(diagnostics, 'selected-shell.json'), JSON.stringify(shell, null, 2));
+  await writeFile(
+    path.join(diagnostics, 'compiler-references.json'),
+    JSON.stringify(compilerReferences, null, 2)
+  );
+  const env = await windowsShellTestEnvironment(root, shell);
   let sequence = 0;
   async function call<T>(operation: string, values: Record<string, unknown> = {}): Promise<T> {
     const commandSequence = ++sequence;
     const input = path.join(root, `native-${commandSequence}.json`);
-    await writeFile(input, JSON.stringify({ root, operation, ...values }));
+    await writeFile(
+      input,
+      JSON.stringify({ root, operation, ...values, shell, compilerReferences })
+    );
     await copyFile(input, path.join(diagnostics, path.basename(input)));
     const progress = `${input}.progress.jsonl`;
     await writeFile(progress, '');
@@ -235,6 +249,8 @@ export async function windowsNative(root: string, evidence: string) {
           script,
           '-InputFile',
           input,
+          '-TrustedModulePath',
+          shell.modules.join(path.delimiter),
         ],
         { env, timeout: 20_000, maxBuffer: 2_097_152 }
       );
@@ -248,6 +264,7 @@ export async function windowsNative(root: string, evidence: string) {
           : undefined;
       const record = {
         operation,
+        shell,
         script,
         input,
         elapsedMs: Date.now() - startedAt,
@@ -276,7 +293,7 @@ export async function windowsNative(root: string, evidence: string) {
     await writeFile(
       resultFile,
       JSON.stringify(
-        { operation, script, input, elapsedMs: Date.now() - startedAt, ...result },
+        { operation, shell, script, input, elapsedMs: Date.now() - startedAt, ...result },
         null,
         2
       )

@@ -4,9 +4,11 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { selectedWindowsPowerShell, windowsShellTestEnvironment } from './windows-powershell.mts';
+
 import type { ExecFileException } from 'node:child_process';
 
-// Compare Windows PowerShell startup only. Never launch the app, an installer,
+// Compare explicit shell startup only. Never launch the app, an installer,
 // an agent/runtime, or a fallback shell; this is not updater E2E evidence.
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only disposable GitHub Windows VMs are allowed');
@@ -31,7 +33,7 @@ const local = path.join(root, 'local');
 const cache = path.join(local, 'Microsoft', 'Windows', 'PowerShell');
 for (const directory of [home, roaming, local, cache]) await mkdir(directory, { recursive: true });
 
-// This baseline exactly reproduces windows-native.mts's current child env.
+// Preserve the exact Windows PowerShell 5.1 baseline from attempt 4.
 const minimal: NodeJS.ProcessEnv = {
   SystemRoot: systemRoot,
   WINDIR: systemRoot,
@@ -90,9 +92,19 @@ $json = ConvertTo-Json -InputObject $data -Compress
 [IO.File]::AppendAllText($Marker, 'complete' + [Environment]::NewLine)
 `;
 const scripts = { 'dotnet-file': dotnet, 'cmdlet-discovery': discovery };
+const selectedShell = await selectedWindowsPowerShell();
+const selectedEnvironment = await windowsShellTestEnvironment(root, selectedShell);
+const selectedIdentityCheck = `
+[Environment]::SetEnvironmentVariable('PSModulePath', '${selectedShell.modules.join(path.delimiter).replaceAll("'", "''")}', 'Process')
+if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 required' }
+if ($PSVersionTable.PSVersion.ToString() -ne '${selectedShell.version}' -or $PSHOME -ne '${selectedShell.psHome.replaceAll("'", "''")}' -or [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName -ne '${selectedShell.executable.replaceAll("'", "''")}') { throw 'Selected shell identity changed' }
+`;
 for (const [name, source] of Object.entries(scripts)) {
   await writeFile(path.join(root, `${name}.ps1`), source);
   await writeFile(path.join(evidence, `${name}.ps1`), source);
+  const selectedSource = source.replace(entry, `${entry}${selectedIdentityCheck}`);
+  await writeFile(path.join(root, `selected-${name}.ps1`), selectedSource);
+  await writeFile(path.join(evidence, `selected-${name}.ps1`), selectedSource);
 }
 
 interface Result {
@@ -111,9 +123,10 @@ interface Result {
 }
 const results: Result[] = [];
 const prefix = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass'];
-for (const [variant, env] of [
-  ['current-minimal', minimal],
-  ['test-profile', profile],
+for (const [variant, env, selectedExecutable] of [
+  ['current-minimal', minimal, executable],
+  ['test-profile', profile, executable],
+  ['selected-ps7', selectedEnvironment, selectedShell.executable],
 ] as const) {
   for (const probe of ['command-entry', 'dotnet-file', 'cmdlet-discovery'] as const) {
     const marker = path.join(root, `${variant}-${probe}.progress.txt`);
@@ -128,7 +141,7 @@ for (const [variant, env] of [
         : [
             ...prefix,
             '-File',
-            path.join(root, `${probe}.ps1`),
+            path.join(root, `${variant === 'selected-ps7' ? 'selected-' : ''}${probe}.ps1`),
             '-Marker',
             marker,
             '-InputFile',
@@ -138,7 +151,7 @@ for (const [variant, env] of [
     let pid: number | null = null;
     const result = await new Promise<Result>((resolve) => {
       const child = execFile(
-        executable,
+        selectedExecutable,
         args,
         { env, timeout: 20_000, maxBuffer: 2_097_152 },
         (error: ExecFileException | null, stdout, stderr) =>
@@ -191,15 +204,29 @@ await writeFile(
       diagnosticCompleted: true,
       appE2EProved: false,
       executable,
+      selectedShell,
+      selectedPs7Healthy: results
+        .filter((result) => result.variant === 'selected-ps7')
+        .every((result) => result.startupHealthy),
       root,
       architecture: process.arch,
       timeoutMsPerChild: 20_000,
-      environmentKeys: { minimal: Object.keys(minimal), testProfile: Object.keys(profile) },
+      environmentKeys: {
+        minimal: Object.keys(minimal),
+        testProfile: Object.keys(profile),
+        selectedPs7: Object.keys(selectedEnvironment),
+      },
       results,
     },
     null,
     2
   )
 );
-// Child failures are evidence, not permission to select a fallback or skip the
-// unchanged native updater gate that runs in the next workflow step.
+// Retain PS5.1 failures as evidence. The explicitly selected PS7 must succeed
+// before the independent native app gate; neither a fallback nor a skipped gate.
+const selectedResults = results.filter((result) => result.variant === 'selected-ps7');
+assert.equal(selectedResults.length, 3);
+assert(
+  selectedResults.every((result) => result.startupHealthy),
+  'Selected PowerShell 7 startup gate failed'
+);
