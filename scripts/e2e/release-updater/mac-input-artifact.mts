@@ -89,7 +89,7 @@ export function checkMacArtifactAuthority(
   assert.equal(value.run.id, expected.runId);
   assert.equal(value.run.run_attempt, expected.attempt);
   assert.equal(value.run.head_sha, expected.toolingSha);
-  assert.equal(value.run.path, expected.workflowPath);
+  assert.equal(value.run.path.split('@')[0], expected.workflowPath);
   assert.equal(value.run.event, 'workflow_dispatch');
   // The producer completes before the dependent native matrix. The overall run can remain active.
   assert(['in_progress', 'completed'].includes(value.run.status));
