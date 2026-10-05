@@ -16,6 +16,7 @@ import {
   selectTeamDataForName,
   selectTeamMessages,
 } from '../../../src/renderer/store/slices/teamSlice';
+import { invalidateTeamLocalStateEpoch } from '../../../src/renderer/store/team/teamLocalStateEpoch';
 import {
   __resetTeamRefreshFanoutDiagnosticsForTests,
   getTeamRefreshFanoutSnapshotForTests,
@@ -3014,90 +3015,380 @@ describe('teamSlice actions', () => {
     expect(nextEntry?.hasMore).toBe(true);
   });
 
-  it('keeps loaded older tail when head refresh updates only the visible top slice', async () => {
+  it('retains only explicitly requested older pages at the same source revision', async () => {
     const store = createSliceStore();
-    const existingMessages: InboxMessage[] = [
-      {
-        from: 'team-lead',
-        text: 'Head 2',
-        timestamp: '2026-03-20T08:00:03.000Z',
-        read: true,
-        source: 'lead_session',
-        messageId: 'msg-4',
-      },
-      {
+    const messages = Array.from(
+      { length: 4 },
+      (_, index): InboxMessage => ({
         from: 'alice',
-        text: 'Head 1',
-        timestamp: '2026-03-20T08:00:02.000Z',
+        to: 'user',
+        text: `message ${4 - index}`,
         read: true,
-        source: 'inbox',
-        messageId: 'msg-3',
-      },
-      {
-        from: 'bob',
-        text: 'Older 1',
-        timestamp: '2026-03-20T08:00:01.000Z',
-        read: true,
-        source: 'inbox',
-        messageId: 'msg-2',
-      },
-      {
-        from: 'carol',
-        text: 'Older 2',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        read: true,
-        source: 'inbox',
-        messageId: 'msg-1',
-      },
-    ];
+        messageId: `msg-${4 - index}`,
+        timestamp: new Date(10_000 - index * 1_000).toISOString(),
+      })
+    );
+    hoisted.getMessagesPage
+      .mockResolvedValueOnce({
+        messages: messages.slice(0, 2),
+        nextCursor: 'head-cursor',
+        hasMore: true,
+        feedRevision: 'revision',
+      })
+      .mockResolvedValueOnce({
+        messages: messages.slice(2),
+        nextCursor: 'older-cursor',
+        hasMore: true,
+        feedRevision: 'revision',
+      })
+      .mockResolvedValueOnce({
+        messages: messages.slice(0, 2).map((m) => ({ ...m, read: false })),
+        nextCursor: 'head-cursor',
+        hasMore: true,
+        feedRevision: 'revision',
+      });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    await store.getState().loadOlderTeamMessages('my-team');
+    await store.getState().refreshTeamMessagesHead('my-team');
+    const entry = store.getState().teamMessagesByName['my-team'];
+    expect(entry.canonicalMessages.map((m) => m.messageId)).toEqual([
+      'msg-4',
+      'msg-3',
+      'msg-2',
+      'msg-1',
+    ]);
+    expect(entry.canonicalMessages[0].read).toBe(false);
+    expect(entry.nextCursor).toBe('older-cursor');
+    expect(entry.provenance?.pages).toEqual([
+      expect.objectContaining({
+        inputCursor: 'head-cursor',
+        outputCursor: 'older-cursor',
+        sourceRevision: 'revision',
+        requestScope: expect.objectContaining({ contextId: 'local' }),
+      }),
+    ]);
+  });
 
+  // Old code promotes each message displaced from the poll head into permanent history.
+  it('keeps a 50-message head bounded across advancing polls without Load older', async () => {
+    const store = createSliceStore();
+    for (let newest = 50; newest <= 70; newest += 1) {
+      const messages = Array.from(
+        { length: 50 },
+        (_, index): InboxMessage => ({
+          from: 'alice',
+          to: 'user',
+          text: `message ${newest - index}`,
+          read: true,
+          messageId: `msg-${newest - index}`,
+          timestamp: new Date((newest - index) * 1_000).toISOString(),
+        })
+      );
+      hoisted.getMessagesPage.mockResolvedValueOnce({
+        messages,
+        nextCursor: `cursor-${newest - 49}`,
+        hasMore: true,
+        feedRevision: `rev-${newest}`,
+      });
+      await store.getState().refreshTeamMessagesHead('my-team');
+      expect(store.getState().teamMessagesByName['my-team'].canonicalMessages).toEqual(messages);
+      expect(selectTeamMessages(store.getState(), 'my-team')).toHaveLength(50);
+      expect(store.getState().teamMessagesByName['my-team'].provenance?.pages).toEqual([]);
+    }
+    expect(hoisted.getMessagesPage.mock.calls.every(([, params]) => !params.cursor)).toBe(true);
+  });
+
+  it('invalidates explicitly loaded history on a rewritten source and exposes explicit reload demand', async () => {
+    const store = createSliceStore();
+    const head: InboxMessage = {
+      from: 'alice',
+      to: 'user',
+      text: 'head',
+      read: true,
+      timestamp: new Date(2000).toISOString(),
+      messageId: 'head',
+    };
+    const older: InboxMessage = {
+      ...head,
+      text: 'older',
+      timestamp: new Date(1000).toISOString(),
+      messageId: 'older',
+    };
+    hoisted.getMessagesPage
+      .mockResolvedValueOnce({
+        messages: [head],
+        nextCursor: 'head-cursor',
+        hasMore: true,
+        feedRevision: 'rev-1',
+      })
+      .mockResolvedValueOnce({
+        messages: [older],
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: 'rev-1',
+      })
+      .mockResolvedValueOnce({
+        messages: [head],
+        nextCursor: 'fresh-head-cursor',
+        hasMore: true,
+        feedRevision: 'rev-2',
+      });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    await store.getState().loadOlderTeamMessages('my-team');
+    await store.getState().refreshTeamMessagesHead('my-team');
+    const entry = store.getState().teamMessagesByName['my-team'];
+    expect(entry.canonicalMessages).toEqual([head]);
+    expect(entry.historyReloadRequired).toBe(true);
+    expect(entry.messagesError).toContain('Load older');
+    expect(entry.hasMore).toBe(true);
+    expect(entry.nextCursor).toBe('fresh-head-cursor');
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(3);
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [{ ...older, text: 'rewritten older' }],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev-2',
+    });
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].canonicalMessages[1].text).toBe(
+      'rewritten older'
+    );
+    expect(store.getState().teamMessagesByName['my-team'].messagesError).toBeNull();
+  });
+
+  it('acknowledges optimistic messages found in an explicitly loaded older page', async () => {
+    const store = createSliceStore();
+    const message: InboxMessage = {
+      from: 'user',
+      to: 'alice',
+      text: 'task #1',
+      read: false,
+      timestamp: new Date(1000).toISOString(),
+      messageId: 'pending',
+      taskRefs: [{ teamName: 'my-team', taskId: '1', displayId: '1' }],
+    };
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [],
+      nextCursor: 'cursor',
+      hasMore: true,
+      feedRevision: 'rev',
+    });
+    await store.getState().refreshTeamMessagesHead('my-team');
     store.setState({
       teamMessagesByName: {
         'my-team': {
-          canonicalMessages: existingMessages,
-          optimisticMessages: [],
-          feedRevision: 'rev-1',
-          nextCursor: 'cursor-tail',
-          hasMore: true,
-          lastFetchedAt: 123,
-          loadingHead: false,
-          loadingOlder: false,
-          headHydrated: true,
+          ...store.getState().teamMessagesByName['my-team'],
+          optimisticMessages: [message],
         },
       },
     });
-
     hoisted.getMessagesPage.mockResolvedValueOnce({
-      messages: [
-        {
-          from: 'team-lead',
-          text: 'Fresh head',
-          timestamp: '2026-03-20T08:00:04.000Z',
-          read: true,
-          source: 'lead_session',
-          messageId: 'msg-5',
-        },
-        existingMessages[0],
-        existingMessages[1],
-      ],
-      nextCursor: 'cursor-head',
+      messages: [{ ...message, read: true }],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev',
+    });
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].optimisticMessages).toEqual([]);
+    expect(selectTeamMessages(store.getState(), 'my-team')).toEqual([{ ...message, read: true }]);
+  });
+
+  it('finishes stale paging before a queued head refresh without joining its own promise', async () => {
+    const store = createSliceStore();
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [],
+      nextCursor: 'cursor',
+      hasMore: true,
+      feedRevision: 'rev-1',
+    });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    const pendingPage = createDeferredPromise<{
+      messages: InboxMessage[];
+      nextCursor: string | null;
+      hasMore: boolean;
+      feedRevision: string;
+    }>();
+    hoisted.getMessagesPage.mockImplementationOnce(() => pendingPage.promise);
+    const older = store.getState().loadOlderTeamMessages('my-team');
+    const head = store.getState().refreshTeamMessagesHead('my-team');
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [],
+      nextCursor: 'fresh-cursor',
       hasMore: true,
       feedRevision: 'rev-2',
     });
-
-    const result = await store.getState().refreshTeamMessagesHead('my-team');
-    const nextEntry = store.getState().teamMessagesByName['my-team'];
-
-    expect(result).toEqual({
-      feedChanged: true,
-      headChanged: true,
+    pendingPage.resolve({
+      messages: [
+        {
+          from: 'alice',
+          text: 'obsolete page',
+          timestamp: new Date(1000).toISOString(),
+          read: true,
+          messageId: 'obsolete',
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
       feedRevision: 'rev-2',
     });
+    await Promise.all([older, head]);
+    expect(store.getState().teamMessagesByName['my-team']).toMatchObject({
+      canonicalMessages: [],
+      feedRevision: 'rev-2',
+      nextCursor: 'fresh-cursor',
+      loadingHead: false,
+      loadingOlder: false,
+    });
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(3);
+  });
+
+  it('rehydrates the current owner before paging from a retained prior-incarnation cache', async () => {
+    const store = createSliceStore();
+    const message: InboxMessage = {
+      from: 'alice',
+      to: 'user',
+      text: 'old head',
+      read: true,
+      timestamp: new Date(3000).toISOString(),
+      messageId: 'old-head',
+    };
+    hoisted.getMessagesPage
+      .mockResolvedValueOnce({
+        messages: [message],
+        nextCursor: 'old-head-cursor',
+        hasMore: true,
+        feedRevision: 'same-revision',
+      })
+      .mockResolvedValueOnce({
+        messages: [{ ...message, messageId: 'old-page', timestamp: new Date(2000).toISOString() }],
+        nextCursor: 'old-tail-cursor',
+        hasMore: true,
+        feedRevision: 'same-revision',
+      });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    await store.getState().loadOlderTeamMessages('my-team');
+    const oldEpoch =
+      store.getState().teamMessagesByName['my-team'].provenance?.requestScope.teamStateEpoch;
+    // The real launch lifecycle can bump the owner while retaining the visible cache.
+    invalidateTeamLocalStateEpoch('my-team');
+    hoisted.getMessagesPage
+      .mockResolvedValueOnce({
+        messages: [{ ...message, messageId: 'current-head' }],
+        nextCursor: 'current-head-cursor',
+        hasMore: true,
+        feedRevision: 'same-revision',
+      })
+      .mockResolvedValueOnce({
+        messages: [
+          { ...message, messageId: 'current-page', timestamp: new Date(1000).toISOString() },
+        ],
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: 'same-revision',
+      });
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(hoisted.getMessagesPage.mock.calls.slice(2)).toEqual([
+      ['my-team', { limit: 50 }],
+      ['my-team', { cursor: 'current-head-cursor', limit: 50 }],
+    ]);
+    const current = store.getState().teamMessagesByName['my-team'];
+    expect(current.canonicalMessages.map((m) => m.messageId)).toEqual([
+      'current-head',
+      'current-page',
+    ]);
+    expect(current.provenance?.requestScope.teamStateEpoch).not.toBe(oldEpoch);
+    expect(current.provenance?.pages).toHaveLength(1);
+    expect(current.provenance?.pages[0].inputCursor).toBe('current-head-cursor');
+  });
+
+  it('invalidates an exhausted older range when a same-revision live overlay shifts the head boundary', async () => {
+    const store = createSliceStore();
+    const durable = Array.from(
+      { length: 100 },
+      (_, index): InboxMessage => ({
+        from: 'bob',
+        to: 'user',
+        text: `durable ${100 - index}`,
+        read: true,
+        messageId: `D${100 - index}`,
+        timestamp: new Date((100 - index) * 1000).toISOString(),
+      })
+    );
+    const live = Array.from(
+      { length: 10 },
+      (_, index): InboxMessage => ({
+        ...durable[0],
+        messageId: `L${10 - index}`,
+        timestamp: new Date((110 - index) * 1000).toISOString(),
+        text: 'live overlay',
+      })
+    );
+    hoisted.getMessagesPage
+      .mockResolvedValueOnce({
+        messages: durable.slice(0, 50),
+        nextCursor: 'D51-cursor',
+        hasMore: true,
+        feedRevision: 'durable-revision',
+      })
+      .mockResolvedValueOnce({
+        messages: durable.slice(50),
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: 'durable-revision',
+      })
+      .mockResolvedValueOnce({
+        messages: [...live, ...durable.slice(0, 40)],
+        nextCursor: 'D61-cursor',
+        hasMore: true,
+        feedRevision: 'durable-revision',
+      });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(store.getState().teamMessagesByName['my-team'].hasMore).toBe(false);
+    await store.getState().refreshTeamMessagesHead('my-team');
+    const entry = store.getState().teamMessagesByName['my-team'];
+    expect(entry.canonicalMessages).toEqual([...live, ...durable.slice(0, 40)]);
+    expect(entry.provenance?.pages).toEqual([]);
+    expect(entry).toMatchObject({
+      nextCursor: 'D61-cursor',
+      hasMore: true,
+      historyReloadRequired: true,
+      messagesError: expect.stringContaining('Load older'),
+    });
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(3);
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: durable.slice(40, 90),
+      nextCursor: 'D11-cursor',
+      hasMore: true,
+      feedRevision: 'durable-revision',
+    });
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(hoisted.getMessagesPage.mock.calls[3]).toEqual([
+      'my-team',
+      { cursor: 'D61-cursor', limit: 50 },
+    ]);
     expect(
-      nextEntry?.canonicalMessages.map((message: { messageId?: string }) => message.messageId)
-    ).toEqual(['msg-5', 'msg-4', 'msg-3', 'msg-2', 'msg-1']);
-    expect(nextEntry?.nextCursor).toBe('cursor-tail');
-    expect(nextEntry?.hasMore).toBe(true);
+      store.getState().teamMessagesByName['my-team'].canonicalMessages.map((m) => m.messageId)
+    ).toContain('D60');
+  });
+
+  it('exposes paging failures without replacing trusted history or its cursor', async () => {
+    const store = createSliceStore();
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [],
+      nextCursor: 'cursor',
+      hasMore: true,
+      feedRevision: 'rev',
+    });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    hoisted.getMessagesPage.mockRejectedValueOnce(new Error('page unavailable'));
+    await store.getState().loadOlderTeamMessages('my-team');
+    expect(store.getState().teamMessagesByName['my-team']).toMatchObject({
+      loadingOlder: false,
+      messagesError: 'page unavailable',
+      nextCursor: 'cursor',
+      hasMore: true,
+    });
   });
 
   it('single-flights concurrent head refreshes and runs one fresh follow-up pass', async () => {
@@ -3300,7 +3591,15 @@ describe('teamSlice actions', () => {
         .teamMessagesByName[
           'my-team'
         ]?.canonicalMessages.map((message: { messageId?: string }) => message.messageId)
-    ).toEqual(['msg-4', 'msg-3', 'msg-2', 'msg-1']);
+    ).toEqual(['msg-4', 'msg-3']);
+    expect(store.getState().teamMessagesByName['my-team']).toMatchObject({
+      historyReloadRequired: true,
+      messagesError: expect.stringContaining('Load older'),
+      nextCursor: 'cursor-head',
+      hasMore: true,
+      loadingHead: false,
+      loadingOlder: false,
+    });
   });
 
   it('drops a queued head refresh behind an older-page load when launch invalidates the team epoch', async () => {
@@ -4080,7 +4379,10 @@ describe('teamSlice actions', () => {
   it('keeps the captured context when permanent delete resolves after a context switch', async () => {
     let resolveDelete!: () => void;
     hoisted.permanentlyDeleteTeam.mockImplementation(
-      () => new Promise<void>((resolve) => { resolveDelete = resolve; })
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        })
     );
     const store = createSliceStore();
     store.setState({ activeContextId: 'context-original' });
