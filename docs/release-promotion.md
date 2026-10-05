@@ -1,148 +1,128 @@
-# Existing Draft Promotion
+# Existing Draft Promotion and Partial Staging
 
-Use `scripts/ci/promote-existing-draft.mjs` to publish a reviewed release draft
-without rebuilding installers that are already attached to that draft.
+The ordinary full release uses `release.yml` and the compatible
+`scripts/ci/promote-existing-draft.mjs` entrypoint. Full remains the default:
+Mac, Windows and Linux must use the target version, and existing platform,
+signing, runtime and tag/workflow-SHA gates remain mandatory.
 
-The normal entry point is `release.yml`. Do not publish the release directly
-with GitHub's **Publish release** button or `gh release edit --draft=false`.
+For an existing old application tag, use `stage-existing-partial-draft.yml`
+from a reviewed tooling commit. Its operations are **prepare** and
+**stage-draft**. Neither builds applications nor publishes releases.
+Publication still requires separate owner authorization and a supported
+publication operation. Do not use GitHub's Publish button or direct
+`gh release edit --draft=false` as a substitute.
 
-## When to use it
+## Explicit carry policy
 
-Use the fast path when all platform jobs for the draft have already succeeded,
-the release notes are final, and the versioned installer assets must not change.
+`carry-mac` requires a pinned older public stable source tag in
+`777genius/agent-teams-ai`. For the Windows/Linux 2.17.2 draft, the source is
+`v2.17.1`. No moving `latest` source or Mac skip override is supported.
 
-Use the full build path instead when any installer needs to be rebuilt, a signing
-or notarization result is uncertain, the runtime pin changed, or the draft does
-not target the exact release tag commit.
+- Windows feeds contain x64 and ARM64 EXEs. Original blockmaps stay attached.
+- Linux feeds contain AppImage, deb, rpm and pacman, with their real hashes/sizes.
+- Mac feed bytes, historical date and absence of a minimum field are preserved.
+- Four canonical source ZIP/DMG files and eight existing Mac stable/legacy
+  aliases keep their original 2.17.1 names and bytes on both release tags.
+- Source product minimum 12.0 is recorded as artifact metadata; the feed is
+  never rewritten to insert a floor or the new target version.
 
-The release tag must already contain the fast-path workflow and script. A tag
-created before these files existed cannot use this mode; publish that release
-with the full workflow from its tag.
+## Prepare an immutable plan
 
-## Supported workflow
-
-```bash
-VERSION=2.10.0
-
-gh workflow run release.yml \
-  --repo 777genius/agent-teams-ai \
-  --ref "v${VERSION}" \
-  -f "release_tag=v${VERSION}" \
-  -f publish_release=true \
-  -f reuse_existing_draft_assets=true
-```
-
-Then identify and watch the new run:
-
-```bash
-gh run list \
-  --repo 777genius/agent-teams-ai \
-  --workflow release.yml \
-  --limit 3
-
-gh run watch <RUN_ID> --repo 777genius/agent-teams-ai
-```
-
-The workflow keeps the existing release ID, body, screenshots, target commit,
-and versioned assets. It only adds the stable aliases, compatibility aliases,
-and canonical updater feeds before making the same release public.
-
-## Safety checks
-
-Before any upload or publication, the script verifies:
-
-- `RELEASE_TAG` is a semantic version tag.
-- The release exists and is a draft, is not a prerelease, and has no updater
-  skip marker.
-- The draft's `targetCommitish` exactly matches the commit resolved by the tag.
-- All nine source artifacts exist: macOS ARM and Intel DMG/ZIP files, Windows
-  EXE, Linux AppImage, deb, rpm, and pacman packages.
-- Every source asset exposes a GitHub SHA-256 digest.
-- Every downloaded file matches that digest before it is reused.
-
-After validation, the script prepares:
-
-- 7 stable download aliases.
-- 7 legacy stable aliases.
-- 6 legacy updater aliases.
-- `latest.yml`, `latest-linux.yml`, and `latest-mac.yml` with SHA-512 hashes,
-  sizes, versioned filenames, and the publication timestamp.
-
-It uploads those files, publishes the release as GitHub latest, and runs
-`scripts/ci/verify-published-updater-release.sh`. If the updater guard fails,
-the release is returned to draft.
-
-## Read-only dry run
-
-Run this before publication to validate the real draft assets without uploading
-aliases, updater feeds, or changing the release state:
+Use the project's pinned Node runtime and frozen dependencies. `tsx` executes
+these typed scripts; the canonical TypeScript 7 typecheck checks their graph.
+Prepare requires the successful Windows/Linux build run, attempt and job IDs.
+The tag SHA, application SHA and draft target must match; tooling SHA is a
+separate reviewed commit.
 
 ```bash
-RELEASE_REPOSITORY=777genius/agent-teams-ai \
-RELEASE_TAG=v2.10.0 \
-PROMOTE_DRY_RUN=true \
-  node scripts/ci/promote-existing-draft.mjs
+pnpm exec tsx scripts/ci/prepare-existing-draft.ts \
+  --repository 777genius/agent-teams-ai --release-tag v2.17.2 \
+  --application-sha 359417f642abb97429aa6eb1a92f3ce52254e5f4 \
+  --tooling-sha REVIEWED_TOOLING_SHA --mode carry-mac --mac-source-tag v2.17.1 \
+  --build-run-id 36926049922 --build-attempt BUILD_ATTEMPT \
+  --build-job-ids WINDOWS_X64_JOB_ID,WINDOWS_ARM64_JOB_ID,LINUX_JOB_ID --output EMPTY_TEST_DIRECTORY
 ```
 
-The dry run downloads all nine source artifacts, verifies their SHA-256 values,
-and builds the 20 aliases and three feeds in a temporary directory. The
-directory is deleted automatically.
+Prepare audits actual downloaded bytes and writes `stage-plan.json` plus
+`stage-plan.sha256`. New feed dates use the target's captured `created_at`.
+Canonical plan serialization excludes retrieval times and destination upload
+IDs. Persist the plan artifact and its SHA-256; do not reconstruct a different
+plan to resume partial staging.
 
-To inspect generated files, provide an empty disposable directory:
+The staging workflow publishes only this metadata artifact. Dispatch it at the
+reviewed tooling SHA with `operation=prepare`. For `operation=stage-draft`,
+provide the original prepare run ID, artifact ID and `plan_digest`. A fresh
+runner verifies the artifact bytes, application/mode/source inputs and external
+plan digest, then downloads the pinned originals again.
 
 ```bash
-PROMOTION_DIR="$(mktemp -d)"
-
-RELEASE_REPOSITORY=777genius/agent-teams-ai \
-RELEASE_TAG=v2.10.0 \
-PROMOTE_DRY_RUN=true \
-PROMOTION_OUTPUT_DIR="$PROMOTION_DIR" \
-  node scripts/ci/promote-existing-draft.mjs
+pnpm exec tsx scripts/ci/stage-existing-draft.ts \
+  --plan TEST_DIRECTORY/stage-plan.json --plan-digest PREPARED_SHA256
+pnpm exec tsx scripts/ci/verify-updater-release.ts --state draft \
+  --plan TEST_DIRECTORY/stage-plan.json --plan-digest PREPARED_SHA256
 ```
 
-Remove `PROMOTION_DIR` after inspection. Never point it at a repository or a
-directory containing user files.
+Before every upload, stage rechecks release visibility, metadata, tag SHA,
+source identities and unchanged public latest. Missing outputs are appended;
+identical bytes are verified and skipped. Conflicting bytes stop the operation.
+There is no delete, clobber, replacement or automatic rollback. A lost upload
+response is reconciled before retry. Interrupted drafts remain unpublished and
+resume using the same immutable plan. The manifest is appended last.
 
-## Environment variables
+## Assembly is not publication readiness
 
-| Variable                           | Required | Purpose                                                        |
-| ---------------------------------- | -------- | -------------------------------------------------------------- |
-| `RELEASE_REPOSITORY`               | Yes      | GitHub repository in `owner/repository` form.                  |
-| `RELEASE_TAG`                      | Yes      | Exact semantic release tag, for example `v2.10.0`.             |
-| `GH_TOKEN`                         | Workflow | GitHub token used by `gh` for downloads, uploads, and publish. |
-| `PUBLISH_RELEASE`                  | No       | Must be `true` for publication; defaults to `false`.           |
-| `PROMOTE_DRY_RUN`                  | No       | Builds and verifies locally without mutations when `true`.     |
-| `PROMOTION_OUTPUT_DIR`             | No       | Keeps dry-run outputs in an explicit disposable directory.     |
-| `ALLOW_PUBLISHED_RELEASE_RECOVERY` | Internal | Allows the full workflow to repair an already-public release.  |
-| `REDRAFT_INCOMPLETE_RELEASE`       | Workflow | Returns an incomplete published release to draft.              |
+`release-platform-manifest.json` has schema 1 and immutable `phase: assembled`.
+It records original asset IDs/hashes, alias relationships, platform versions,
+application/tooling SHAs and build provenance. It contains no destination
+upload receipts, native outcomes or self hash. Completing stage does not claim
+that native updater installation has passed.
 
-`PROMOTE_DRY_RUN=true` and `PUBLISH_RELEASE=true` are mutually exclusive.
+Before carry publication, append `release-source-mac-evidence.json` separately
+without replacing the platform manifest. Its typed contract is
+`NativeEvidence` in `scripts/ci/release/contract.ts`. Bind `reference.inputDigest`
+to the manifest input digest and record producer repository/run/attempt/job,
+artifact ID/name/SHA-256 and reviewed tooling SHA. The producing artifact must
+contain `mac-source-signature-evidence.json` with the typed `NativeProbeArtifact`
+content: input digest, tooling SHA, source tag/application SHA and identical
+asset probes. The artifact content excludes its eventual receipt/digest,
+avoiding a self-hash cycle.
+All four source ZIP/DMG probes must bind source asset ID/SHA-256, bundle version,
+architecture, product minimum 12.0, TeamIdentifier `6C84CW694S` and successful
+codesign, spctl, stapler, lipo and bundle metadata command output hashes. The
+trusted producer is `.github/workflows/updater-mac-source.yml`.
+Signature evidence and the ten-scenario native OTA matrix remain
+separate evidence requirements; assembly tests replace neither.
 
-## Verification
+The default-branch publication guard checks the producing job and artifact
+bytes independently, audits actual canonical payload/feed bytes and current
+GitHub metadata, and requires anonymous source/target paths plus GitHub latest.
+A manifestless release is accepted only by the strict equal-version full
+contract. Unknown or malformed manifests fail closed. Missing signature
+sidecars make carried releases fail closed. Only transient transport failures
+retry; failed published verification returns the release to draft.
 
-Focused local verification:
+## Compatible environment entrypoint
+
+Existing full-mode environment variables and publication behavior are retained.
+`RELEASE_MODE=carry-mac` explicitly opts into typed assembly, with
+`PROMOTION_OPERATION=prepare` as the default. Prepare additionally requires
+`RELEASE_APPLICATION_SHA`, `RELEASE_TOOLING_SHA`, `MAC_SOURCE_TAG`,
+`RELEASE_BUILD_RUN_ID`, `RELEASE_BUILD_ATTEMPT`, `RELEASE_BUILD_JOB_IDS` and an
+empty disposable `PROMOTION_OUTPUT_DIR`. Stage uses `RELEASE_STAGE_PLAN` and
+`RELEASE_STAGE_PLAN_DIGEST`. Carry mode rejects `PUBLISH_RELEASE=true` in this
+assembly checkpoint. `PROMOTE_DRY_RUN=true` remains read-only.
+
+## Focused verification
 
 ```bash
 pnpm typecheck
-pnpm lint:fast:files -- \
-  scripts/ci/promote-existing-draft.mjs \
-  scripts/ci/promote-existing-draft.d.mts \
-  test/scripts/promoteExistingDraft.test.ts
-pnpm exec vitest run --maxWorkers=1 \
+pnpm lint:ci:files -- scripts/ci/release/*.ts scripts/ci/*existing-draft.ts \
+  scripts/ci/verify-updater-release.ts test/scripts/partialReleaseStaging.test.ts
+pnpm exec vitest run --maxWorkers=1 test/scripts/partialReleaseStaging.test.ts \
   test/scripts/promoteExistingDraft.test.ts
 ```
 
-The test suite includes an isolated end-to-end dry run with a fake GitHub
-release. Before enabling the fast path for a release, also run the read-only dry
-run against that real draft.
-
-## Recovery
-
-If source artifacts are missing, their digests do not match, or the target
-commit differs from the release tag, stop. Do not bypass the validation or
-publish directly. Resolve or replace the draft using the main release procedure
-in [RELEASE.md](RELEASE.md).
-
-If an incomplete release is already public, follow the recovery section in
-`RELEASE.md`. The full publish workflow supports repair mode; the normal fast
-path intentionally requires a draft.
+Use only disposable TEST state for runtime/native checks. Never test updater
+or agent actions on real user projects. Source replacement, changed metadata,
+missing architectures or digest conflicts require investigation; they are not
+permission to bypass validation or replace draft assets.

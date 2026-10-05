@@ -1161,6 +1161,18 @@ export default defineConfig([
     },
   },
 
+  // The existing JavaScript compatibility entrypoint is outside the TS project.
+  // Its replacement graph stays type-aware; retain normal JS/security lint here.
+  {
+    ...tseslint.configs.disableTypeChecked,
+    name: 'legacy-release-javascript-entrypoint',
+    files: ['scripts/ci/promote-existing-draft.mjs'],
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
+    },
+  },
+
   // === IMPORTANT: eslint-config-prettier MUST be LAST ===
   // This disables all ESLint rules that conflict with Prettier
   // Prettier handles formatting, ESLint handles code quality
