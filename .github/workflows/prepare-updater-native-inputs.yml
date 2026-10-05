@@ -50,6 +50,7 @@ jobs:
           receipt="$RUNNER_TEMP/TEST-windows-readonly-draft-visibility.json"
           outcome=unavailable
           http_status=0
+          command_exit=0
           actual=null
           if timeout 30s gh api repos/777genius/agent-teams-ai/releases/401358336 --jq '{id,tag_name,draft}' > "$metadata" 2> "$stderr"; then
             http_status=200
@@ -59,12 +60,24 @@ jobs:
             else
               outcome=identity-mismatch
             fi
-          elif [[ "$(cat "$stderr")" == *'(HTTP 404)'* ]]; then
-            http_status=404
-            outcome=not-visible
+          else
+            command_exit=$?
+            if [[ "$(cat "$stderr")" =~ \(HTTP[[:space:]]([1-5][0-9]{2})\) ]]; then
+              http_status="${BASH_REMATCH[1]}"
+            fi
+            case "$http_status" in
+              401) outcome=unauthorized ;;
+              403) outcome=forbidden ;;
+              404) outcome=not-visible ;;
+              429) outcome=rate-limited ;;
+              0)
+                if [[ "$command_exit" == 124 ]]; then outcome=timed-out; else outcome=process-error; fi
+                ;;
+              *) outcome=http-error ;;
+            esac
           fi
-          jq -n --arg outcome "$outcome" --argjson status "$http_status" --argjson actual "$actual" \
-            '{schemaVersion:1,scope:"contents:read",nativeEvidence:false,endpoint:"repos/777genius/agent-teams-ai/releases/401358336",expected:{id:401358336,tag_name:"v2.17.2",draft:true},outcome:$outcome,httpStatus:$status,actual:$actual}' > "$receipt"
+          jq -n --arg outcome "$outcome" --argjson status "$http_status" --argjson commandExit "$command_exit" --argjson actual "$actual" \
+            '{schemaVersion:1,scope:"contents:read",nativeEvidence:false,endpoint:"repos/777genius/agent-teams-ai/releases/401358336",expected:{id:401358336,tag_name:"v2.17.2",draft:true},outcome:$outcome,httpStatus:$status,commandExit:$commandExit,actual:$actual}' > "$receipt"
           jq -r '"Read-only draft visibility: \(.outcome), HTTP \(.httpStatus), nativeEvidence=false"' "$receipt"
       - name: Preserve the filtered read-only permission diagnostic
         if: always()
@@ -79,6 +92,11 @@ jobs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # GitHub exposes drafts only with repository push access. This trusted
+    # dispatch downloads bytes; it performs no release mutations.
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Require the reviewed immutable producer tooling SHA
         env:
