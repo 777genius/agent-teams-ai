@@ -1,0 +1,333 @@
+name: Build Linux and Windows Draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: New Linux/Windows draft tag
+        type: string
+        required: true
+        default: v2.17.3
+      application_sha:
+        description: Reviewed immutable application and workflow commit (40 hex characters)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  APPLICATION_SHA: ${{ inputs.application_sha }}
+
+jobs:
+  package:
+    name: ${{ matrix.job_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job_name: release-linux x64
+            runner: ubuntu-latest
+            platform: linux
+            arch: x64
+            runtime: linux-x64
+            bundle: linux-unpacked
+            command: pnpm pack:linux
+          - job_name: release-win x64
+            runner: windows-latest
+            platform: win32
+            arch: x64
+            runtime: win32-x64
+            bundle: win-unpacked
+            command: pnpm pack:win:x64
+          - job_name: release-win arm64
+            runner: windows-11-arm
+            platform: win32
+            arch: arm64
+            runtime: win32-arm64
+            bundle: win-arm64-unpacked
+            command: pnpm pack:win:arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Require immutable reviewed workflow and source
+        run: |
+          set -euo pipefail
+          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" ]]
+          [[ "$RELEASE_TAG" == 'v2.17.3' ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.application_sha }}
+          persist-credentials: false
+      - name: Verify source, version and existing tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$APPLICATION_SHA" ]]
+          [[ "$(jq -r .version package.json)" == "${RELEASE_TAG#v}" ]]
+          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$RELEASE_TAG" > "$RUNNER_TEMP/tag-refs.json"
+          if jq -e --arg ref "refs/tags/$RELEASE_TAG" 'any(.[]; .ref == $ref)' "$RUNNER_TEMP/tag-refs.json" >/dev/null; then
+            [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPLICATION_SHA" ]]
+          fi
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install Linux packaging dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools rpm xvfb binutils
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Stage bundled runtime
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node ./scripts/stage-runtime.mjs --platform ${{ matrix.runtime }}
+      - name: Stage terminal-platform runtime
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --platform ${{ matrix.runtime }}
+      - name: Verify Sentry release env
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs prebuild
+      - name: Verify PostHog release env
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs prebuild
+      - name: Build app
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: pnpm build
+      - name: Verify Sentry source map upload
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+      - name: Verify PostHog renderer bundle
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs postbuild
+      - name: Stage OpenCode console wrapper
+        if: ${{ matrix.platform == 'win32' }}
+        run: node ./scripts/stage-opencode-console-wrapper.mjs --platform ${{ matrix.runtime }} --require
+      - name: Verify packaged inputs
+        run: |
+          set -euo pipefail
+          test -f dist-electron/main/index.cjs
+          test -f dist-electron/preload/index.js
+          test -f out/renderer/index.html
+          test -f mcp-server/dist/index.js
+          test -f resources/runtime/VERSION
+          test -f resources/terminal-platform/VERSION
+          test -f resources/terminal-platform/terminal-platform-node/index.mjs
+          if [[ '${{ matrix.platform }}' == win32 ]]; then
+            test -f resources/terminal-platform/terminal-daemon.exe
+            test -f resources/runtime/opencode-console/opencode.exe
+          else
+            test -f resources/terminal-platform/terminal-daemon
+          fi
+      - name: Package without publication
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.command }} --publish never
+      - name: Validate Linux installers
+        if: ${{ matrix.platform == 'linux' }}
+        run: node ./scripts/electron-builder/verifyLinuxInstallers.cjs release
+      - name: Verify actual pacman dependencies and ELF imports
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          set -euo pipefail
+          archive="release/agent-teams-ai-${RELEASE_TAG#v}.pacman"
+          bsdtar -xOf "$archive" .PKGINFO > "$RUNNER_TEMP/pacman.PKGINFO"
+          grep -Fx "pkgver = ${RELEASE_TAG#v}-1" "$RUNNER_TEMP/pacman.PKGINFO"
+          jq -r '.build.pacman.depends[]' package.json | sort > "$RUNNER_TEMP/expected-depends"
+          sed -n 's/^depend = //p' "$RUNNER_TEMP/pacman.PKGINFO" | sort > "$RUNNER_TEMP/actual-depends"
+          diff -u "$RUNNER_TEMP/expected-depends" "$RUNNER_TEMP/actual-depends"
+          ! grep -Fx http-parser "$RUNNER_TEMP/actual-depends"
+          count=0
+          : > "$RUNNER_TEMP/elf-needed.txt"
+          while IFS= read -r -d '' file; do
+            if readelf -h "$file" >/dev/null 2>&1; then
+              count=$((count + 1))
+              printf '%s\n' "$file" >> "$RUNNER_TEMP/elf-needed.txt"
+              readelf -d "$file" >> "$RUNNER_TEMP/elf-needed.txt"
+            fi
+          done < <(find release/linux-unpacked -type f -print0)
+          ((count > 0))
+          ! grep -E 'NEEDED.*libhttp[-_]parser' "$RUNNER_TEMP/elf-needed.txt"
+      - name: Validate packaged bundle
+        run: node ./scripts/electron-builder/verifyBundle.cjs "release/${{ matrix.bundle }}" ${{ matrix.platform }} ${{ matrix.arch }}
+      - name: Smoke packaged app in disposable profile
+        timeout-minutes: 2
+        run: |
+          if [[ '${{ matrix.platform }}' == linux ]]; then
+            xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "release/${{ matrix.bundle }}" linux
+          else
+            node ./scripts/electron-builder/smokePackagedApp.cjs "release/${{ matrix.bundle }}" win32
+          fi
+      - name: Upload immutable producer payloads
+        uses: actions/upload-artifact@v7
+        with:
+          name: draft-${{ matrix.runtime }}-${{ github.run_attempt }}
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.pacman
+          if-no-files-found: error
+          retention-days: 30
+      - name: Preserve Linux packaging evidence
+        if: ${{ always() && matrix.platform == 'linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: packaging-linux-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pacman.PKGINFO
+            ${{ runner.temp }}/elf-needed.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+  draft:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: draft-*-${{ github.run_attempt }}
+          path: payloads
+          merge-multiple: true
+      - name: Create or resume append-only new draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" && "$RELEASE_TAG" == v2.17.3 ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > run.json
+          jq -e --arg sha "$APPLICATION_SHA" --argjson attempt "$GITHUB_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .event == "workflow_dispatch" and .path == ".github/workflows/build-linux-windows-draft.yml"' run.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > jobs.json
+          jq -e '.jobs | [.[] | select(.name == "release-linux x64" or .name == "release-win x64" or .name == "release-win arm64")] | length == 3 and all(.[]; .conclusion == "success")' jobs.json
+          mkdir -p evidence
+          jq --arg sha "$APPLICATION_SHA" --arg tag "$RELEASE_TAG" --argjson attempt "$GITHUB_RUN_ATTEMPT" --slurpfile run run.json '{schemaVersion:1, applicationSha:$sha, tag:$tag, runId:$run[0].id, attempt:$attempt, jobs:[.jobs[] | select(.name == "release-linux x64" or .name == "release-win x64" or .name == "release-win arm64") | {id,name,conclusion,run_id}], workflowPath:$run[0].path}' jobs.json > "evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          discover_draft() {
+            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp | jq --arg tag "$RELEASE_TAG" '[.[][] | select(.tag_name == $tag)]' > existing.json
+          }
+          verify_tag_ref() {
+            gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$RELEASE_TAG" > tag-refs.json
+            if jq -e --arg ref "refs/tags/$RELEASE_TAG" 'any(.[]; .ref == $ref)' tag-refs.json >/dev/null; then
+              [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPLICATION_SHA" ]]
+            fi
+          }
+          verify_tag_ref
+          discover_draft
+          count=$(jq length existing.json)
+          [[ "$count" == 0 || "$count" == 1 ]]
+          if [[ "$count" == 0 ]]; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$APPLICATION_SHA" --title "$RELEASE_TAG" --notes 'Linux/Windows build only. macOS remains at signed v2.17.1; carry-forward staging is required before publication.' --draft
+            discover_draft
+          fi
+          jq -e --arg tag "$RELEASE_TAG" --arg sha "$APPLICATION_SHA" 'length == 1 and (.[0] | .tag_name == $tag and .draft == true and .prerelease == false and .target_commitish == $sha and (.id | type == "number" and . > 0 and floor == .))' existing.json
+          release_id=$(jq -r '.[0].id' existing.json)
+          verify_bound_draft() {
+            gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" > draft.json
+            jq -e --argjson id "$release_id" --arg tag "$RELEASE_TAG" --arg sha "$APPLICATION_SHA" '.id == $id and .tag_name == $tag and .draft == true and .prerelease == false and .target_commitish == $sha' draft.json
+            verify_tag_ref
+          }
+          list_bound_assets() {
+            gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" --paginate --slurp | jq '[.[][]]' > fresh-assets.json
+          }
+          verify_asset_snapshot() {
+            jq -S 'map({id,name,size,digest,state}) | sort_by(.id)' expected-assets.json > expected-snapshot.json
+            jq -S 'map({id,name,size,digest,state}) | sort_by(.id)' fresh-assets.json > fresh-snapshot.json
+            diff -u expected-snapshot.json fresh-snapshot.json
+          }
+          verify_bound_draft
+          list_bound_assets
+          cp fresh-assets.json expected-assets.json
+          version=${RELEASE_TAG#v}
+          for name in "Agent.Teams.AI.Setup.$version.exe" "Agent.Teams.AI.Setup.$version-arm64.exe" "Agent.Teams.AI-$version.AppImage" "agent-teams-ai_${version}_amd64.deb" "agent-teams-ai-$version.x86_64.rpm" "agent-teams-ai-$version.pacman"; do
+            test -f "payloads/$name"
+          done
+          for file in payloads/*; do
+            jq -n --arg name "$(basename "$file")" --arg sha256 "$(sha256sum "$file" | cut -d' ' -f1)" '{name:$name,sha256:$sha256}'
+          done | jq -s . > payload-digests.json
+          proof="evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          jq --slurpfile payloads payload-digests.json '. + {payloads:$payloads[0]}' "$proof" > provenance.json
+          mv provenance.json "$proof"
+          for file in payloads/* evidence/*.json; do
+            [[ -f "$file" ]]
+            name=$(basename "$file")
+            case "$name" in *.exe|*.blockmap|*.AppImage|*.deb|*.rpm|*.pacman|build-provenance-*.json) ;; *) exit 1 ;; esac
+            digest="sha256:$(sha256sum "$file" | cut -d' ' -f1)"
+            verify_bound_draft
+            list_bound_assets
+            verify_asset_snapshot
+            matches=$(jq --arg name "$name" '[.[] | select(.name == $name)] | length' fresh-assets.json)
+            if [[ "$matches" != 0 ]]; then
+              [[ "$matches" == 1 ]]
+              jq -e --arg name "$name" --arg digest "$digest" 'any(.[]; .name == $name and .digest == $digest and .state == "uploaded")' fresh-assets.json || { echo "Asset collision: $name" >&2; exit 1; }
+            else
+              encoded_name=$(jq -rn --arg name "$name" '$name | @uri')
+              verify_bound_draft
+              # Numeric identity prevents a tag lookup from retargeting the write.
+              gh api "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?name=$encoded_name" --method POST -H 'Content-Type: application/octet-stream' --input "$file" > uploaded.json
+              jq -e --arg name "$name" --arg digest "$digest" --argjson size "$(stat -c %s "$file")" '.name == $name and .digest == $digest and .size == $size and .state == "uploaded" and (.id | type == "number" and . > 0 and floor == .)' uploaded.json
+              jq --slurpfile uploaded uploaded.json '. + $uploaded' expected-assets.json > next-assets.json
+              mv next-assets.json expected-assets.json
+            fi
+          done
+          verify_bound_draft
+          list_bound_assets
+          verify_asset_snapshot
+          verify_bound_draft
+          cat "evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve producer identity evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-provenance-${{ github.run_attempt }}
+          path: evidence/*.json
+          if-no-files-found: error
+          retention-days: 30
