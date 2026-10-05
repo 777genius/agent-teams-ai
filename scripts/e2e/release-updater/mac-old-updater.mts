@@ -44,7 +44,7 @@ import {
 } from './mac-old-native.mts';
 import { MacOldUi, macAbout, macDebugPort, macDebugTargets } from './mac-old-ui.mts';
 import { transportHook } from './transport.mts';
-import { macSerializedFunction } from './mac-serialization.mts';
+import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
 
 import type { TransportState } from './transport.mts';
 import { observeOldMac } from './mac-old-observer.mts';
@@ -228,8 +228,10 @@ async function launch(label: string, version: string) {
     await main.evaluate<string>('__filename', frame.callFrameId),
     path.join(resources, 'app.asar', 'dist-electron/main/index.cjs')
   );
-  await main.evaluate(
-    `(${macSerializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${macSerializedFunction(observeOldMac)})(require('electron'),()=>autoUpdater)`,
+  await macCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeOldMac)})(originalRequire('electron'),getUpdater);};})()`,
+    [mirror.origin, mirror.paths],
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -306,7 +308,7 @@ async function noUpdate(version: string, label: string, requestStart: number) {
       `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.1\\b/.test(block.textContent));})()`
     )
   );
-  await view().click('^Check for Updates$', macAbout);
+  await view().click('^Check for Updates$', 'about');
   const checked = await waitFor(
     async () => {
       const state = await observation();
@@ -490,8 +492,7 @@ try {
     );
     assert.equal(available.provider, 'GitHubProvider');
     evidence.available = available;
-    if (await view().point('^Later$', 'document.querySelector("[role=dialog]")'))
-      await view().click('^Later$', 'document.querySelector("[role=dialog]")');
+    if (await view().point('^Later$', 'dialog')) await view().click('^Later$', 'dialog');
     await waitFor(
       () => renderer!.evaluate<boolean | null>('document.querySelector("[role=dialog]")?null:true'),
       'available dialog dismissed'
@@ -515,7 +516,7 @@ try {
       )
     );
     const checks = available.events.filter((event) => event.type === 'available').length;
-    await view().click('^(?:Check for Updates|v?2\\.17\\.1 available)$', macAbout);
+    await view().click('^(?:Check for Updates|v?2\\.17\\.1 available)$', 'about');
     await waitFor(
       async () =>
         (await observation()).events.filter((event) => event.type === 'available').length > checks
@@ -523,13 +524,10 @@ try {
           : null,
       'real app Check for Updates completes'
     );
-    if (!(await view().point('^Download$', 'document.querySelector("[role=dialog]")')))
+    if (!(await view().point('^Download$', 'dialog')))
       await view().click('^(?:Update app|View details)$');
     await view().screenshot('available');
-    evidence.downloadAction = await view().click(
-      '^Download$',
-      'document.querySelector("[role=dialog]")'
-    );
+    evidence.downloadAction = await view().click('^Download$', 'dialog');
     await waitFor(
       async () =>
         (await observation()).events.some(
@@ -643,18 +641,12 @@ try {
           !request.range
       )
     );
-    if (!(await view().point('^Restart now$', 'document.querySelector("[role=dialog]")')))
+    if (!(await view().point('^Restart now$', 'dialog')))
       await view().click('^(?:Restart to update|View details)$');
-    await waitFor(
-      () => view().point('^Restart now$', 'document.querySelector("[role=dialog]")'),
-      'real Restart now button'
-    );
+    await waitFor(() => view().point('^Restart now$', 'dialog'), 'real Restart now button');
     await view().screenshot('downloaded');
     const restartTime = Date.now();
-    evidence.installAction = await view().click(
-      '^Restart now$',
-      'document.querySelector("[role=dialog]")'
-    );
+    evidence.installAction = await view().click('^Restart now$', 'dialog');
     main?.close();
     renderer?.close();
     main = undefined;

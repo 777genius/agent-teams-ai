@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { waitFor } from './cdp.mts';
+import { macCallFunction } from './mac-serialization.mts';
 import type { Cdp } from './cdp.mts';
 
 export const macAbout = `(() => {const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');return name?.parentElement?.parentElement??null;})()`;
@@ -26,12 +27,16 @@ export class MacOldUi {
     });
     await writeFile(path.join(this.output, `${label}.png`), Buffer.from(capture.data, 'base64'));
   }
-  async point(pattern: string, root = 'document') {
-    return this.renderer.evaluate<{ x: number; y: number; text: string } | null>(
-      `(() => { const scope=${root};if(!scope)return null;const regex=new RegExp(${JSON.stringify(pattern)},'i');for(const b of scope.querySelectorAll('button')) {if(b.disabled||!regex.test(b.textContent.trim()))continue;const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(r.width&&r.height&&b.contains(document.elementFromPoint(x,y)))return {x,y,text:b.textContent.trim()};}return null;})()`
+  async point(pattern: string, root: 'document' | 'about' | 'dialog' = 'document') {
+    const result = await macCallFunction<{ x: number; y: number; text: string } | null>(
+      this.renderer,
+      `(pattern,root)=>{let scope=document;if(root==='dialog')scope=document.querySelector('[role=dialog]');if(root==='about'){const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');scope=name?.parentElement?.parentElement??null;}if(!scope)return null;const regex=new RegExp(pattern,'i');for(const b of scope.querySelectorAll('button')){if(b.disabled||!regex.test(b.textContent.trim()))continue;const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(r.width&&r.height&&b.contains(document.elementFromPoint(x,y)))return {x,y,text:b.textContent.trim()};}return null;}`,
+      [pattern, root]
     );
+    assert(result !== undefined, 'UI hit testing must return a point or null');
+    return result;
   }
-  async click(pattern: string, root = 'document') {
+  async click(pattern: string, root: 'document' | 'about' | 'dialog' = 'document') {
     const location = await waitFor(
       () => this.point(pattern, root),
       `hit-tested ${pattern}`,

@@ -48,7 +48,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check authenticated input boundary
         run: |
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
+          package-manager-cache: false
       - name: Install pinned harness dependencies without product lifecycle scripts
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check typed native Mac harness
