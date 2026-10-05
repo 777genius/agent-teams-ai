@@ -492,7 +492,7 @@ try {
     );
     assert.equal(available.provider, 'GitHubProvider');
     evidence.available = available;
-    if (await view().point('^Later$', 'dialog')) await view().click('^Later$', 'dialog');
+    await view().click('^Later$', 'dialog');
     await waitFor(
       () => renderer!.evaluate<boolean | null>('document.querySelector("[role=dialog]")?null:true'),
       'available dialog dismissed'

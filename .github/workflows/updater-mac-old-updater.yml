@@ -42,7 +42,7 @@ jobs:
           [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tooling_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -71,7 +71,7 @@ jobs:
           root="$RUNNER_TEMP/TEST-mac-old-inputs"
           mkdir "$root"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > "$root/run.json"
-          jq -e --arg sha "$TOOLING_SHA" --argjson attempt "$PREPARED_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .status == "completed" and .conclusion == "success" and .event == "workflow_dispatch" and .path == ".github/workflows/stage-existing-partial-draft.yml"' "$root/run.json"
+          jq -e --arg sha "$TOOLING_SHA" --argjson attempt "$PREPARED_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .status == "completed" and .conclusion == "success" and .event == "workflow_dispatch" and (.path | split("@")[0]) == ".github/workflows/stage-existing-partial-draft.yml"' "$root/run.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" > "$root/artifact.json"
           jq -e --arg sha "$TOOLING_SHA" --arg digest "sha256:$ARTIFACT_SHA256" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .digest == $digest and .workflow_run.id == $run and .workflow_run.head_sha == $sha' "$root/artifact.json"
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$root/plan.zip"
@@ -129,7 +129,7 @@ jobs:
           [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tooling_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
