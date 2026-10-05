@@ -1,22 +1,20 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:http';
 import { createWriteStream } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createServer as portServer } from 'node:net';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { loadPlan, validateOrigins } from '../../ci/release/assembly.ts';
+import { loadPlan } from '../../ci/release/assembly.ts';
 import {
-  assetByName,
   canonical,
   digest,
   fileProof,
   requireThat,
   sameProof,
+  version,
 } from '../../ci/release/contract.ts';
-import { GitHubReleasePort } from '../../ci/release/github.ts';
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import {
@@ -30,9 +28,11 @@ import {
   restoreMacNetwork,
   stopMacOwned,
 } from './mac-loopback.mts';
+import { prepareMacInputs } from './mac-inputs.mts';
+import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
+import { macSerializedFunction } from './mac-serialization.mts';
 
-import type { StagePlan } from '../../ci/release/contract.ts';
 import type { TransportState } from './transport.mts';
 import type { App } from 'electron';
 
@@ -89,9 +89,15 @@ const sourceSha = '395572f9ff2a261cb28224754883a39d2c3c8827';
 const { values } = parseArgs({
   options: {
     ...Object.fromEntries(
-      ['plan', 'plan-sha256', 'input-digest', 'tooling-sha', 'architecture', 'evidence'].map(
-        (name) => [name, { type: 'string' as const }]
-      )
+      [
+        'plan',
+        'plan-sha256',
+        'input-digest',
+        'tooling-sha',
+        'architecture',
+        'feed-mode',
+        'evidence',
+      ].map((name) => [name, { type: 'string' as const }])
     ),
     'restore-network': { type: 'boolean' },
   },
@@ -131,12 +137,16 @@ if (values['restore-network']) {
   );
   process.exit(0);
 }
+const feedMode = required('feed-mode');
+assert(feedMode === 'preview' || feedMode === 'staged');
 const evidence: Record<string, unknown> = {
   schemaVersion: 1,
   scenario: 'mac-current-no-update',
   passed: false,
   currentVersion: '2.17.1',
-  previewCommonTag: 'v2.17.2',
+  feedMode,
+  finalPromotionFeed: false,
+  planBindingVerified: false,
   expectedVersion: '2.17.1',
   scope:
     'native signed Mac 2.17.1 genuine no-update; older OTA and minimum-OS launch are not covered',
@@ -147,113 +157,12 @@ let renderer: Cdp | undefined;
 let owner: Awaited<ReturnType<typeof macOwner>> | undefined;
 let child: ReturnType<typeof spawn> | undefined;
 let installed: string | undefined;
-let mirror: Awaited<ReturnType<typeof startMirror>> | undefined;
+let mirror: Awaited<ReturnType<typeof macReleaseMirror>> | undefined;
 let networkOwned = false;
 let log: ReturnType<typeof createWriteStream> | undefined;
 let logError: Error | undefined;
-
-const xml = (text: string) =>
-  text
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
-async function startMirror(plan: StagePlan) {
-  const snapshots = [plan.input.target, plan.input.macSource!.release];
-  const published = {
-    ...snapshots[0],
-    id: plan.input.target.id,
-    tag_name: plan.input.target.tag,
-    target_commitish: plan.input.target.applicationSha,
-    created_at: plan.input.target.createdAt,
-    name: plan.input.target.name,
-    body: plan.input.target.body,
-    draft: false,
-    prerelease: false,
-  };
-  const entries = snapshots
-    .map(
-      (release) =>
-        `<entry><id>${release.id}</id><title>${xml(release.name ?? release.tag)}</title><updated>${xml(release.createdAt)}</updated><link href="https://github.com/${repository}/releases/tag/${release.tag}"/><content type="text">${xml(release.body ?? '')}</content></entry>`
-    )
-    .join('');
-  const routes = new Map<
-    string,
-    { body: string; type: string; installer?: boolean; size?: number }
-  >([
-    [
-      `/github/${repository}/releases.atom`,
-      {
-        body: `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">${entries}</feed>`,
-        type: 'application/atom+xml',
-      },
-    ],
-    [
-      `/github/${repository}/releases/latest`,
-      { body: JSON.stringify(published), type: 'application/json' },
-    ],
-    [
-      `/api/repos/${repository}/releases/latest`,
-      { body: JSON.stringify(published), type: 'application/json' },
-    ],
-    [
-      `/api/repos/${repository}/releases/tags/v2.17.2`,
-      { body: JSON.stringify(published), type: 'application/json' },
-    ],
-  ]);
-  for (const release of snapshots) {
-    routes.set(`/github/${repository}/releases/download/${release.tag}/latest-mac.yml`, {
-      body: plan.feeds['latest-mac.yml'] ?? '',
-      type: 'application/yaml',
-    });
-    for (const original of plan.input.originals.filter(
-      (asset) => asset.tag === 'v2.17.1' && /\.(zip|dmg)$/.test(asset.name)
-    ))
-      routes.set(`/github/${repository}/releases/download/${release.tag}/${original.name}`, {
-        body: '',
-        type: 'application/octet-stream',
-        installer: true,
-        size: original.size,
-      });
-  }
-  const requests: { method: string; path: string; session: string | null; status: number }[] = [];
-  const server = createServer((request, response) => {
-    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    const route = routes.get(url.pathname);
-    const method = request.method ?? '';
-    // Any attempted installer GET is recorded and rejected. No-update must never reach it.
-    let status = route && ['GET', 'HEAD'].includes(method) ? 200 : 404;
-    if (route?.installer && method === 'GET') status = 409;
-    requests.push({
-      method,
-      path: url.pathname,
-      session: url.searchParams.get('TEST_session'),
-      status,
-    });
-    response.writeHead(status, {
-      'Content-Type': route?.type ?? 'text/plain',
-      'Content-Length': status === 200 ? (route?.size ?? Buffer.byteLength(route?.body ?? '')) : 0,
-      'Cache-Control': 'no-store',
-    });
-    response.end(method === 'HEAD' || status !== 200 ? undefined : route?.body);
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
-  const address = server.address();
-  assert(address && typeof address !== 'string');
-  return {
-    origin: `http://127.0.0.1:${address.port}`,
-    paths: [...routes.keys()],
-    requests,
-    close: () =>
-      new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      ),
-  };
-}
+let commonTag: string | undefined;
+let commonVersion: string | undefined;
 
 async function freePort() {
   const server = portServer();
@@ -442,14 +351,13 @@ try {
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
   assert.equal(plan.input.macSource?.release.applicationSha, sourceSha);
-  assert.equal(plan.input.target.tag, 'v2.17.2');
-  assert.equal(plan.input.target.applicationSha, '359417f642abb97429aa6eb1a92f3ce52254e5f4');
-  const port = new GitHubReleasePort();
-  await validateOrigins(port, plan, true);
-  const source = await port.release(repository, 'v2.17.1');
-  const name = `Agent.Teams.AI-2.17.1-${architecture}.dmg`;
-  const original = plan.input.originals.find((asset) => asset.name === name);
-  assert(original);
+  assert.equal(plan.input.target.tag, 'v2.17.3');
+  commonTag = plan.input.target.tag;
+  commonVersion = version(commonTag);
+  evidence.previewCommonTag = commonTag;
+  evidence.targetApplicationSha = plan.input.target.applicationSha;
+  evidence.build = plan.input.build;
+  assert(/^[a-f0-9]{40}$/.test(plan.input.target.applicationSha));
   const root = await mkdtemp(path.join(runnerRoot, 'TEST-mac-current-'));
   const home = path.join(root, 'home');
   const userData = path.join(root, 'user-data');
@@ -463,16 +371,14 @@ try {
     path.join(home, '.codex'),
   ])
     await mkdir(directory, { recursive: true });
-  const archive = path.join(root, name);
-  await port.download(repository, assetByName(source, name), archive);
-  sameProof(await fileProof(archive, name), original);
-  const rawFeed = path.join(root, 'latest-mac.yml');
-  const feedProof = plan.input.originals.find((asset) => asset.name === 'latest-mac.yml');
-  assert(feedProof);
-  await port.download(repository, assetByName(source, 'latest-mac.yml'), rawFeed);
-  sameProof(await fileProof(rawFeed, 'latest-mac.yml'), feedProof);
-  assert.equal(await readFile(rawFeed, 'utf8'), plan.feeds['latest-mac.yml']);
-  await validateOrigins(port, plan, true);
+  const inputs = await prepareMacInputs(plan, root, feedMode, architecture, evidence, {
+    planSha256: required('plan-sha256'),
+    inputDigest: required('input-digest'),
+    toolingSha,
+  });
+  const selected = inputs.files.get(inputs.names.dmg);
+  assert(selected);
+  const archive = selected.file;
   const mount = path.join(root, 'TEST-mount');
   await mkdir(mount);
   await commands.checked('dmg-verify', '/usr/bin/hdiutil', ['verify', archive]);
@@ -542,15 +448,9 @@ try {
   assert(packageBytes);
   assert.equal((JSON.parse(packageBytes.toString()) as { version: string }).version, '2.17.1');
   const windowReader = await prepareMacWindow(commands);
-  mirror = await startMirror(plan);
-  evidence.inputs = {
-    inputDigest: digest(canonical(plan.input)),
-    planSha256: required('plan-sha256'),
-    toolingSha,
-    sourceSha,
-    archive: original,
-    rawFeed: feedProof,
-  };
+  mirror = await macReleaseMirror(plan, inputs.source, inputs.files, inputs.feed, {
+    rejectInstallerGet: true,
+  });
   evidence.isolation = {
     root,
     home,
@@ -563,7 +463,7 @@ try {
   networkOwned = true;
   evidence.network = await containMacNetwork(commands, installed);
   const loopback = await fetch(
-    `${mirror.origin}/github/${repository}/releases/download/v2.17.2/latest-mac.yml`
+    `${mirror.origin}/github/${repository}/releases/download/${commonTag}/latest-mac.yml`
   );
   assert(loopback.ok);
   assert.equal(await loopback.text(), plan.feeds['latest-mac.yml']);
@@ -644,7 +544,7 @@ try {
   const entry = await main.evaluate<string>('__filename', frame.callFrameId);
   assert.equal(entry, path.join(resources, 'app.asar', 'dist-electron/main/index.cjs'));
   await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observeMac.toString()})(require('electron').app,()=>autoUpdater)`,
+    `(${macSerializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${macSerializedFunction(observeMac)})(require('electron').app,()=>autoUpdater)`,
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -696,7 +596,7 @@ try {
         ? state
         : null;
     },
-    'genuine startup no-update from common v2.17.2 preview',
+    'genuine startup no-update from the frozen common target preview',
     30_000
   );
   evidence.startup = startup;
@@ -733,14 +633,17 @@ try {
     5000
   );
   const ui = await uiSnapshot();
-  assert(!ui.body.includes('2.17.2'), 'Current Mac UI must not promise version 2.17.2');
+  assert(
+    !ui.body.includes(commonVersion),
+    'Current Mac UI must not promise the common target version'
+  );
   assert(!ui.dialogs.some((dialog) => /download|restart|install update/i.test(dialog)));
   assert(
     !ui.buttons.some(
       (button) => button.visible && /^(Download|Restart.*update|Install update)$/i.test(button.text)
     )
   );
-  for (const suffix of ['/releases.atom', '/releases/latest', '/v2.17.2/latest-mac.yml'])
+  for (const suffix of ['/releases.atom', '/releases/latest', `/${commonTag}/latest-mac.yml`])
     assert(
       mirror.requests.some(
         (request) =>

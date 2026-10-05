@@ -3,6 +3,12 @@ name: Native Mac current updater no-update
 on:
   workflow_dispatch:
     inputs:
+      feed_mode:
+        type: choice
+        required: true
+        default: preview
+        options: [preview, staged]
+        description: Staged draft binding is required for final acceptance
       tooling_sha: { type: string, required: true, description: Reviewed immutable tooling SHA }
       prepared_run_id: { type: string, required: true }
       prepared_run_attempt: { type: string, required: true }
@@ -24,7 +30,7 @@ jobs:
       matrix:
         include:
           - architecture: arm64
-            runner: macos-14
+            runner: macos-15
           - architecture: x64
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
@@ -50,7 +56,9 @@ jobs:
       - name: Check typed native Mac harness
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts
+      - name: Verify compiler-independent observer serialization
+        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts
       - name: Retrieve only the authenticated immutable prepared metadata plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,12 +90,13 @@ jobs:
           PLAN_SHA256: ${{ inputs.plan_sha256 }}
           INPUT_DIGEST: ${{ inputs.input_digest }}
           ARCHITECTURE: ${{ matrix.architecture }}
+          FEED_MODE: ${{ inputs.feed_mode }}
         run: |
           set -euo pipefail
           pnpm exec tsx scripts/e2e/release-updater/mac-updater.mts \
             --plan "$RUNNER_TEMP/TEST-mac-updater-inputs/stage-plan.json" \
             --plan-sha256 "$PLAN_SHA256" --input-digest "$INPUT_DIGEST" \
-            --tooling-sha "$TOOLING_SHA" --architecture "$ARCHITECTURE" \
+            --tooling-sha "$TOOLING_SHA" --architecture "$ARCHITECTURE" --feed-mode "$FEED_MODE" \
             --evidence "$RUNNER_TEMP/TEST-mac-updater-evidence"
       - name: Prove TEST app stopped before restoring this disposable job's PF
         id: network-cleanup
@@ -103,7 +112,7 @@ jobs:
         if: always() && steps.network-cleanup.outputs.upload_safe == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: TEST-mac-current-no-update-${{ matrix.architecture }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: TEST-mac-current-no-update-${{ matrix.architecture }}-${{ inputs.feed_mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/TEST-mac-updater-evidence/
             ${{ runner.temp }}/TEST-mac-updater-inputs/run.json
