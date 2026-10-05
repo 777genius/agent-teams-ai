@@ -159,12 +159,7 @@ function updateLinuxRobotFall() {
     return;
   }
 
-  if (currentScrollY < startScroll) {
-    resetLinuxRobotFall({ keepSourceHidden: hasLinuxRobotDeparted.value });
-    return;
-  }
-
-  if (scrollingUp) {
+  if (currentScrollY < startScroll || scrollingUp) {
     resetLinuxRobotFall({ keepSourceHidden: hasLinuxRobotDeparted.value });
     return;
   }
@@ -226,16 +221,10 @@ onUnmounted(() => {
   window.visualViewport?.removeEventListener('resize', scheduleLinuxRobotFallUpdate);
 });
 
-const platformIcons: Record<string, string> = {
-  macos: mdiApple,
-  windows: mdiMicrosoftWindows,
-  linux: mdiPenguin,
-};
-
-const platformColors: Record<string, string> = {
-  macos: '#00f0ff',
-  windows: '#39ff14',
-  linux: '#ffd700',
+const platformPresentation: Record<string, { icon: string; color: string }> = {
+  macos: { icon: mdiApple, color: '#00f0ff' },
+  windows: { icon: mdiMicrosoftWindows, color: '#39ff14' },
+  linux: { icon: mdiPenguin, color: '#ffd700' },
 };
 
 const getDownloadUrl = (asset: DownloadAsset) => {
@@ -293,7 +282,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           }"
           :style="{
             '--delay': `${index * 0.1}s`,
-            '--accent': platformColors[asset.os] || '#00f0ff',
+            '--accent': platformPresentation[asset.os]?.color || '#00f0ff',
           }"
           :data-download-os="asset.os"
           @click="downloadStore.setSelected(asset.id)"
@@ -330,7 +319,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
             <v-icon
               size="28"
               class="download-section__card-icon"
-              :icon="platformIcons[asset.os] || mdiDownload"
+              :icon="platformPresentation[asset.os]?.icon || mdiDownload"
             />
           </div>
 
