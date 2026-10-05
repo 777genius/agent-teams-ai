@@ -80,10 +80,12 @@ function Read-Owned([string]$file) {
   })
 }
 Write-TestProgress 'before-system-drawing'
+$drawingRuntimeNames = @('System.Drawing.Common.dll', 'System.Private.Windows.Core.dll', 'System.Private.Windows.GdiPlus.dll')
 $compilerReferences = [string[]]@($data.compilerReferences.assemblies | ForEach-Object {
   $file = [IO.Path]::GetFullPath($_.file)
   $directory = [IO.Path]::GetDirectoryName($file)
-  if (($directory -ne [IO.Path]::Combine($PSHOME, 'ref')) -and ($file -ne [IO.Path]::Combine($PSHOME, 'System.Drawing.Common.dll'))) { throw 'Compiler reference outside selected PSHOME' }
+  $installedDrawingRuntime = ($directory -eq $PSHOME) -and ($drawingRuntimeNames -contains [IO.Path]::GetFileName($file))
+  if (($directory -ne [IO.Path]::Combine($PSHOME, 'ref')) -and -not $installedDrawingRuntime) { throw 'Compiler reference outside selected PSHOME' }
   return $file
 })
 if ($compilerReferences.Count -lt 4 -or $data.compilerReferences.drawingCommon -ne [IO.Path]::Combine($PSHOME, 'System.Drawing.Common.dll')) { throw 'Installed compiler reference set required' }

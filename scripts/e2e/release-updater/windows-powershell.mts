@@ -115,7 +115,8 @@ export async function windowsShellTestEnvironment(
 }
 
 // Explicit Add-Type references replace its default .NET reference set on PS7.
-// Restore the installed runtime's complete ref set and its Drawing implementation.
+// Restore its complete ref set and Drawing implementation. .NET 10 Drawing exposes
+// types forwarded to its private Windows assemblies, which also need references.
 export async function windowsShellCompilerReferences(
   shell: Awaited<ReturnType<typeof selectedWindowsPowerShell>>
 ) {
@@ -142,7 +143,19 @@ export async function windowsShellCompilerReferences(
     .filter((name) => name.toLowerCase() !== 'system.drawing.common.dll')
     .map((name) => path.join(referenceDirectory, name));
   const drawingCommon = path.join(shell.psHome, 'System.Drawing.Common.dll');
-  files.push(drawingCommon);
+  const installedNames = new Set(
+    (await readdir(shell.psHome, { withFileTypes: true }))
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name.toLowerCase())
+  );
+  const runtimeNames = [
+    'System.Drawing.Common.dll',
+    ...['System.Private.Windows.Core.dll', 'System.Private.Windows.GdiPlus.dll'].filter((name) =>
+      installedNames.has(name.toLowerCase())
+    ),
+  ];
+  const runtimeAssemblies = runtimeNames.map((name) => path.join(shell.psHome, name));
+  files.push(...runtimeAssemblies);
   const assemblies = [];
   for (const file of files) {
     const canonical = await realpath(file);
@@ -154,11 +167,12 @@ export async function windowsShellCompilerReferences(
     const relative = path.relative(shell.psHome, canonical).split(path.sep);
     assert(
       (relative.length === 2 && relative[0]?.toLowerCase() === 'ref') ||
-        (relative.length === 1 && relative[0]?.toLowerCase() === 'system.drawing.common.dll'),
+        (relative.length === 1 &&
+          runtimeNames.some((name) => name.toLowerCase() === relative[0]?.toLowerCase())),
       'Compiler assembly must belong to selected installed PSHOME'
     );
     const actual = await hashFile(canonical);
     assemblies.push({ file: canonical, sha256: actual.sha256, size: actual.size });
   }
-  return { referenceDirectory, drawingCommon, assemblies };
+  return { referenceDirectory, drawingCommon, runtimeAssemblies, assemblies };
 }
