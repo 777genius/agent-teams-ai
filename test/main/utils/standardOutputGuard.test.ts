@@ -115,6 +115,31 @@ describe('standard output guard', () => {
     await expect(observed).resolves.toBe(failure);
   });
 
+  it('keeps a replacement guard owned when an old disposer runs again', () => {
+    const stream = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+    const originalWrite = stream.write;
+    const oldDispose = guard(stream);
+    oldDispose();
+    const replacementDispose = guard(stream);
+    const replacementWrite = stream.write;
+    oldDispose();
+    expect(installStandardOutputGuard(stream)).toBe(replacementDispose);
+    expect(stream.write).toBe(replacementWrite);
+    expect(stream.listenerCount('error')).toBe(1);
+    const failure = Object.assign(new Error('unexpected stream failure'), { code: 'EIO' });
+    expect(() => stream.emit('error', failure)).toThrow(failure);
+    expect(() => stream.emit('error', pipeError())).not.toThrow();
+    expect(stream.write('discarded')).toBe(true);
+    replacementDispose();
+    replacementDispose();
+    expect(stream.write).toBe(originalWrite);
+    expect(stream.listenerCount('error')).toBe(0);
+  });
+
   it('preserves healthy encoding, callback and receiver and installs idempotently', async () => {
     const chunks: string[] = [];
     const stream = new Writable({

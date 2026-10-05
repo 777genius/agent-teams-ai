@@ -44,10 +44,13 @@ export function installStandardOutputGuard(stream: Writable): () => void {
   };
   stream.on('error', onError);
   stream.write = guardedWrite;
+  let disposed = false;
   const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
     if (stream.write === guardedWrite) stream.write = originalWrite;
     stream.off('error', onError);
-    installedGuards.delete(stream);
+    if (installedGuards.get(stream) === dispose) installedGuards.delete(stream);
   };
   installedGuards.set(stream, dispose);
   return dispose;
