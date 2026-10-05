@@ -4,8 +4,9 @@ import { createReadStream } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 
-import { linuxFeedAssets, repository } from './inputs.mts';
+import { repository } from './inputs.mts';
 
+import type { FileProof } from '../../ci/release/contract.ts';
 import type { ServerResponse } from 'node:http';
 import type { loadInputs, Release } from './inputs.mts';
 
@@ -82,6 +83,8 @@ export async function startOtaMirror(
   feed: string
 ) {
   const requests: RequestRecord[] = [];
+  const image = inputs.verified.find((item) => item.file === 'target.AppImage');
+  assert(image, 'Missing verified installer bytes');
   const published = { ...inputs.draft, draft: false };
   const entries = [published, inputs.source]
     .map(
@@ -95,14 +98,15 @@ export async function startOtaMirror(
     [`${prefix}.atom`, { body: atom, type: 'application/atom+xml' }],
     [`${prefix}/latest`, { body: JSON.stringify(published), type: 'application/json' }],
     [
-      `/api/repos/${repository}/releases/tags/v2.17.2`,
+      `/api/repos/${repository}/releases/tags/${inputs.targetTag}`,
       { body: JSON.stringify(published), type: 'application/json' },
     ],
-    [`${prefix}/download/v2.17.2/latest-linux.yml`, { body: feed, type: 'application/yaml' }],
+    [
+      `${prefix}/download/${inputs.targetTag}/latest-linux.yml`,
+      { body: feed, type: 'application/yaml' },
+    ],
   ]);
-  const imagePath = `${prefix}/download/v2.17.2/Agent.Teams.AI-2.17.2.AppImage`;
-  const image = linuxFeedAssets[0];
-  assert(image, 'Missing installer metadata');
+  const imagePath = `${prefix}/download/${inputs.targetTag}/${image.name}`;
   const size = image.size;
   const server = createServer((request, response) => {
     const serve = async () => {
@@ -174,4 +178,61 @@ export async function startOtaMirror(
         server.close((error) => (error ? reject(error) : resolve()));
       }),
   };
+}
+
+export function assertProviderRoutes(requests: RequestRecord[], targetTag: string) {
+  for (const route of [
+    '/github/777genius/agent-teams-ai/releases.atom',
+    '/github/777genius/agent-teams-ai/releases/latest',
+    `/github/777genius/agent-teams-ai/releases/download/${targetTag}/latest-linux.yml`,
+  ])
+    assert(
+      requests.some(
+        (request) =>
+          request.path === route &&
+          request.method === 'GET' &&
+          request.session === 'electron-updater' &&
+          request.status === 200
+      ),
+      `Missing genuine provider GET: ${route}`
+    );
+}
+export function assertDownloadRoutes(
+  requests: RequestRecord[],
+  targetTag: string,
+  targetPin: FileProof
+) {
+  assertProviderRoutes(requests, targetTag);
+  const image = `/github/777genius/agent-teams-ai/releases/download/${targetTag}/${targetPin.name}`;
+  assert(
+    requests.some(
+      (request) =>
+        request.path === `/api/repos/777genius/agent-teams-ai/releases/tags/${targetTag}` &&
+        request.method === 'GET' &&
+        request.session === 'default' &&
+        request.status === 200
+    ),
+    'Missing service release API GET'
+  );
+  assert(
+    requests.some(
+      (request) =>
+        request.path === image &&
+        request.method === 'HEAD' &&
+        request.session === 'default' &&
+        request.status === 200
+    ),
+    'Missing service AppImage HEAD'
+  );
+  assert(
+    requests.some(
+      (request) =>
+        request.path === image &&
+        request.method === 'GET' &&
+        request.session === 'electron-updater' &&
+        request.status === 200 &&
+        request.transferred === targetPin.size
+    ),
+    'Missing complete genuine installer GET'
+  );
 }
