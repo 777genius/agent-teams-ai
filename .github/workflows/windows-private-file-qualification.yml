@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/qualification/windows-private-files/**'
       - '.github/workflows/windows-private-file-qualification.yml'
+      - '.gitattributes'
 permissions:
   contents: read
 jobs:
