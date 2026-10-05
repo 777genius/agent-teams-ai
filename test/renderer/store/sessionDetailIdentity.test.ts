@@ -88,6 +88,65 @@ describe('session detail owner identity', () => {
     };
   }
 
+  it('aligns a restored tab with the flat project resolved by session membership', async () => {
+    const id = open('A', 'missing-restored-project');
+    store.setState({
+      selectedProjectId: null,
+      selectedSessionId: null,
+      projects: [
+        {
+          id: 'sandbox-resolved',
+          name: 'Resolved sandbox',
+          path: '/synthetic-test/sandbox-resolved',
+          sessions: ['A'],
+          createdAt: 1,
+        },
+      ],
+    });
+    mock.getSessionDetail.mockResolvedValueOnce(detail('A', 'sandbox-resolved'));
+    store.getState().setActiveTab(id);
+    await vi.waitFor(() => {
+      expect(store.getState().tabSessionData[id]?.sessionDetail?.session.id).toBe('A');
+    });
+    expect(mock.getSessionDetail).toHaveBeenCalledExactlyOnceWith('sandbox-resolved', 'A');
+    expect(store.getState().getActiveTab()?.projectId).toBe('sandbox-resolved');
+    expect(store.getState().selectedProjectId).toBe('sandbox-resolved');
+    expect(store.getState().activeProjectId).toBe('sandbox-resolved');
+    expect(store.getState().selectedSessionId).toBe('A');
+    expect(store.getState().sessionDetail?.session.projectId).toBe('sandbox-resolved');
+    expect(store.getState().sessionDetailLoading).toBe(false);
+  });
+
+  it('aligns a restored tab before reusing its already loaded session cache', async () => {
+    const id = open('A', 'missing-restored-project');
+    mock.getSessionDetail.mockResolvedValueOnce(detail('A', 'sandbox-resolved'));
+    await store.getState().fetchSessionDetail('missing-restored-project', 'A', id);
+    const cached = store.getState().tabSessionData[id];
+    store.setState({
+      selectedProjectId: null,
+      selectedSessionId: null,
+      sessionDetail: null,
+      projects: [
+        {
+          id: 'sandbox-resolved',
+          name: 'Resolved sandbox',
+          path: '/synthetic-test/sandbox-resolved',
+          sessions: ['A'],
+          createdAt: 1,
+        },
+      ],
+    });
+    mock.getSessionDetail.mockClear();
+    store.getState().setActiveTab(id);
+    expect(mock.getSessionDetail).not.toHaveBeenCalled();
+    expect(store.getState().tabSessionData[id]).toBe(cached);
+    expect(store.getState().sessionDetail).toBe(cached.sessionDetail);
+    expect(store.getState().getActiveTab()?.projectId).toBe('sandbox-resolved');
+    expect(store.getState().selectedProjectId).toBe('sandbox-resolved');
+    expect(store.getState().activeProjectId).toBe('sandbox-resolved');
+    expect(store.getState().selectedSessionId).toBe('A');
+  });
+
   // Red on the old code: cleanup deletes generation 1, B reuses 1, then A
   // overwrites B's cache/detail or error. Assert the entire visible/cache state.
   it.each(['success', 'error'] as const)(
