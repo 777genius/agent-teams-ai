@@ -215,7 +215,7 @@ async function launch(image: string, env: NodeJS.ProcessEnv, version: string) {
   assert(filename.endsWith('/resources/app.asar/dist-electron/main/index.cjs'));
   await cdpCallFunction(
     main,
-    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
+    `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
     [mirror.origin, mirror.paths],
     frame.callFrameId
   );

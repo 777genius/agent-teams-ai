@@ -253,7 +253,7 @@ try {
   );
   evidence.hook = await cdpCallFunction(
     main,
-    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{return (${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);};})()`,
+    `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{return (${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);};})()`,
     [mirror.origin, mirror.paths],
     frame.callFrameId
   );

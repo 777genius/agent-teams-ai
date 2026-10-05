@@ -298,7 +298,7 @@ async function launch(version: string) {
   const entry = await pausedEntry(main, pid);
   await cdpCallFunction(
     main,
-    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observePackage)} )(originalRequire('electron'),getUpdater);};})()`,
+    `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observePackage)} )(originalRequire('electron'),getUpdater);};})()`,
     [mirror.origin, mirror.paths],
     entry.frame.callFrameId
   );
