@@ -11,22 +11,24 @@ import { hashFile, stageArguments } from './inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import { packageCases, packageInputs, packageKind, packageName } from './linux-packages-inputs.mts';
 import { packageMirror } from './linux-packages-mirror.mts';
-import { desktopProof, installedProof, ownedPackageApps } from './linux-packages-native.mts';
+import {
+  desktopProof,
+  installedProof,
+  lateWindowObservation,
+  observePackage,
+  ownedPackageApps,
+  rendererSandbox,
+} from './linux-packages-native.mts';
 import { processIdentity, stopOwnedGroup } from './native-window.mts';
 import { transportHook } from './transport.mts';
 
-import type { Identity } from './linux-packages-native.mts';
+import type {
+  Identity,
+  PackageUpdateEvent as UpdateEvent,
+  WindowProcess,
+} from './linux-packages-native.mts';
 import type { TransportState } from './transport.mts';
 
-interface UpdateEvent {
-  type: string;
-  version?: string;
-  percent?: number;
-  transferred?: number;
-}
-interface Observer {
-  on(event: string, listener: (info: Omit<UpdateEvent, 'type'>) => void): unknown;
-}
 interface Target {
   type: string;
   url: string;
@@ -34,39 +36,6 @@ interface Target {
 }
 interface Pause {
   callFrames: { callFrameId: string }[];
-}
-function observe(
-  electron: Pick<typeof import('electron'), 'app' | 'BrowserWindow'>,
-  updater: () => Observer
-) {
-  const events: UpdateEvent[] = [];
-  const observation = globalThis as typeof globalThis & {
-    __TEST_packageEvents: UpdateEvent[];
-    __TEST_packagePreferences: () => { sandbox?: boolean }[];
-  };
-  observation.__TEST_packageEvents = events;
-  // The original CJS frame owns require; later Runtime-global evaluations do
-  // not. Retain only this read-only observation of actual window preferences.
-  observation.__TEST_packagePreferences = () =>
-    electron.BrowserWindow.getAllWindows().map((window) => {
-      const contents = window.webContents as typeof window.webContents & {
-        getLastWebPreferences?: () => { sandbox?: boolean };
-      };
-      if (typeof contents.getLastWebPreferences !== 'function')
-        throw new Error('Original Electron cannot expose effective renderer preferences');
-      return { sandbox: contents.getLastWebPreferences().sandbox };
-    });
-  electron.app.once('ready', () => {
-    for (const type of ['download-progress', 'update-downloaded', 'update-not-available'])
-      updater().on(type, (info) =>
-        events.push({
-          type,
-          version: info.version,
-          percent: info.percent,
-          transferred: info.transferred,
-        })
-      );
-  });
 }
 const args = process.argv.slice(2);
 function value(name: string) {
@@ -323,7 +292,7 @@ async function launch(version: string) {
   main = await Cdp.connect(inspector.webSocketDebuggerUrl);
   const entry = await pausedEntry(main, pid);
   await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observe.toString()})(require('electron'),()=>autoUpdater)`,
+    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observePackage.toString()})(require('electron'),()=>autoUpdater)`,
     entry.frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -357,9 +326,7 @@ async function launch(version: string) {
       '!document.getElementById("splash")&&document.readyState==="complete"?true:null'
     );
   }, 'painted packaged desktop');
-  const prefs = await main.evaluate<{ sandbox?: boolean }[]>(
-    'globalThis.__TEST_packagePreferences()'
-  );
+  const prefs = await main.evaluate<WindowProcess[]>('globalThis.__TEST_packagePreferences()');
   assert(
     prefs.length && prefs.every((pref) => pref.sandbox === true),
     'Effective Electron renderer sandbox must be enabled'
@@ -392,7 +359,32 @@ async function nativeDesktop(candidate: Identity, label: string) {
     candidate.pid,
     'OS native window must belong to exact installed main PID'
   );
-  return result;
+  if (main) {
+    const windows = await main.evaluate<WindowProcess[]>('globalThis.__TEST_packagePreferences()');
+    const sandbox = await rendererSandbox(group, candidate, windows);
+    assert.deepEqual(
+      await main.evaluate('globalThis.__TEST_packagePreferences()'),
+      windows,
+      'Actual Electron window association changed during kernel proof'
+    );
+    return { ...result, sandbox };
+  }
+  assert(executable && evidence.automaticPackage && evidence.profileAfterAutomatic);
+  evidence.automaticNativeBeforeInspector = {
+    process: candidate,
+    desktop: result,
+    profile: evidence.profileAfterAutomatic,
+    version: targetVersion,
+    capturedAt: new Date().toISOString(),
+  };
+  const read = await lateWindowObservation(group, candidate, {
+    executable,
+    version: targetVersion,
+    resources: path.join(path.dirname(executable), 'resources'),
+    userData,
+  });
+  evidence.automaticReadOnlyInspector = read;
+  return { ...result, sandbox: read.sandbox };
 }
 
 try {
@@ -663,11 +655,12 @@ try {
         ...processPayload,
         maps: await readFile(`/proc/${successor.pid}/maps`, 'utf8'),
       };
+      assert.equal((await config()).general.theme, 'light');
+      evidence.profileAfterAutomatic = await config();
       evidence.automaticDesktop = await nativeDesktop(successor, 'automatic-desktop');
       const current = await processIdentity(successor.pid);
       assert.equal(current?.start, successor.start);
       assert.equal((await config()).general.theme, 'light');
-      evidence.profileAfterAutomatic = await config();
       evidence.automaticSuccessorProved = true;
       evidence.automaticProofAt = new Date().toISOString();
       const groupOwner = owners.get(successor.group);

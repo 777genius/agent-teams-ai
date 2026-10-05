@@ -11,10 +11,12 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
+import { createConnection } from 'node:net';
 import { promisify } from 'node:util';
 import { parse } from 'yaml';
 
 import { captureSources, readAsar, readInspectorFuse } from './archive.mts';
+import { Cdp, waitFor } from './cdp.mts';
 import { digest } from '../../ci/release/contract.ts';
 import { hashFile, repository } from './inputs.mts';
 import { captureNativeWindow, processIdentity } from './native-window.mts';
@@ -26,6 +28,57 @@ export type Identity = NonNullable<Awaited<ReturnType<typeof processIdentity>>>;
 export interface OwnedPackageApp extends Identity {
   executable: string;
   command: string[];
+}
+export interface WindowProcess {
+  windowId: number;
+  contentsId: number;
+  pid: number;
+  sandbox?: boolean;
+}
+export interface PackageUpdateEvent {
+  type: string;
+  version?: string;
+  percent?: number;
+  transferred?: number;
+}
+export function observePackage(
+  electron: Pick<typeof import('electron'), 'app' | 'BrowserWindow'>,
+  updater: () => {
+    on(event: string, listener: (info: Omit<PackageUpdateEvent, 'type'>) => void): unknown;
+  }
+) {
+  const events: PackageUpdateEvent[] = [];
+  const observation = globalThis as typeof globalThis & {
+    __TEST_packageEvents: PackageUpdateEvent[];
+    __TEST_packagePreferences: () => WindowProcess[];
+  };
+  observation.__TEST_packageEvents = events;
+  // Retain original CJS-owned Electron module for read-only window observation.
+  observation.__TEST_packagePreferences = () =>
+    electron.BrowserWindow.getAllWindows().map((window) => {
+      const contents = window.webContents as typeof window.webContents & {
+        getLastWebPreferences?: () => { sandbox?: boolean };
+      };
+      if (typeof contents.getLastWebPreferences !== 'function')
+        throw new Error('Original Electron cannot expose effective renderer preferences');
+      return {
+        windowId: window.id,
+        contentsId: contents.id,
+        pid: contents.getOSProcessId(),
+        sandbox: contents.getLastWebPreferences().sandbox,
+      };
+    });
+  electron.app.once('ready', () => {
+    for (const type of ['download-progress', 'update-downloaded', 'update-not-available'])
+      updater().on(type, (info) =>
+        events.push({
+          type,
+          version: info.version,
+          percent: info.percent,
+          transferred: info.transferred,
+        })
+      );
+  });
 }
 const tools = { PATH: '/usr/bin:/bin', LC_ALL: 'C' };
 export async function packageDatabase(kind: PackageKind) {
@@ -207,51 +260,267 @@ export async function ownedPackageApps(
   }
   return result;
 }
-export async function rendererSandbox(group: Identity, candidate: Identity) {
-  const processes = [];
-  const harnessStatus = await readFile('/proc/self/status', 'utf8');
-  const inheritedFilters = Number(/^Seccomp_filters:\s+(\d+)$/m.exec(harnessStatus)?.[1]);
-  assert(Number.isSafeInteger(inheritedFilters), 'Kernel must expose actual seccomp filter counts');
+async function unchangedMain(candidate: Identity, executable: string) {
+  const current = await processIdentity(candidate.pid);
+  assert(current && current.state !== 'Z', 'Owned main process exited');
+  assert.equal(current.start, candidate.start, 'Owned main PID was reused');
+  assert.equal(current.group, candidate.group, 'Owned main group changed');
+  assert.equal(await readlink(`/proc/${candidate.pid}/exe`), executable);
+  return current;
+}
+function kernelField(status: string, key: string) {
+  const line = status.split('\n').find((value) => value.startsWith(`${key}:`));
+  assert(line, `Kernel status lacks ${key}`);
+  return line.slice(key.length + 1).trim();
+}
+function noCapabilities(status: string) {
+  for (const key of ['CapInh', 'CapPrm', 'CapEff', 'CapAmb'])
+    assert.equal(BigInt(`0x${kernelField(status, key)}`), 0n, `TEST process has ${key}`);
+}
+function sandboxCommand(command: string[]) {
+  assert(
+    !command.some((argument) => /(?:^|\s)--no-sandbox(?:=|\s|$)/.test(argument)),
+    'Owned Electron process disabled sandbox'
+  );
+}
+async function kernelProcess(pid: number, candidate: Identity, executable: string) {
+  const identity = await processIdentity(pid);
+  assert(identity && identity.state !== 'Z', 'Electron-associated process exited');
+  assert.equal(identity.group, candidate.group, 'Electron-associated process escaped TEST group');
+  assert(BigInt(identity.start) >= BigInt(candidate.start), 'Process predates exact TEST main');
+  if (pid === candidate.pid)
+    assert.equal(identity.start, candidate.start, 'Owned main PID was reused');
+  const status = await readFile(`/proc/${pid}/status`, 'utf8');
+  const uid = kernelField(status, 'Uid').split(/\s+/).map(Number);
+  assert(
+    uid?.length === 4 && uid.every((value) => value === process.getuid?.()),
+    'Kernel UID differs from TEST user'
+  );
+  assert.equal(
+    await readlink(`/proc/${pid}/exe`),
+    executable,
+    'Process is not the installed TEST Electron'
+  );
+  const command = (await readFile(`/proc/${pid}/cmdline`, 'utf8')).split('\0').filter(Boolean);
+  // Chromium can retain zygote argv or flatten rewritten argv into one string.
+  sandboxCommand(command);
+  const current = await processIdentity(pid);
+  assert.equal(current?.start, identity.start, 'Associated PID was reused during kernel read');
+  assert.equal(current?.group, identity.group);
+  return {
+    identity,
+    command,
+    parent: Number(kernelField(status, 'PPid')),
+    namespacePids: kernelField(status, 'NSpid').split(/\s+/).map(Number),
+    filters: Number(kernelField(status, 'Seccomp_filters')),
+    status,
+  };
+}
+async function ownedSandboxCommands(group: Identity) {
+  const peers = [];
   for (const name of await readdir('/proc')) {
     if (!/^\d+$/.test(name)) continue;
     const pid = Number(name);
     if ((await stat(`/proc/${pid}`).catch(() => null))?.uid !== process.getuid?.()) continue;
     const identity = await processIdentity(pid);
-    if (
-      !identity ||
-      identity.state === 'Z' ||
-      identity.group !== group.group ||
-      BigInt(identity.start) < BigInt(group.start)
-    )
-      continue;
-    // The exact TEST launch group is established before any command/status read.
-    const rawCommand = await processFile(pid, 'cmdline');
-    if (rawCommand === null) continue;
-    const command = rawCommand.split('\0').filter(Boolean);
+    if (!identity || identity.state === 'Z' || identity.group !== group.group) continue;
+    assert(BigInt(identity.start) >= BigInt(group.start), 'Owned group member predates launch');
+    const raw = await processFile(pid, 'cmdline');
+    if (raw === null) continue;
+    const command = raw.split('\0').filter(Boolean);
+    sandboxCommand(command);
+    const current = await processIdentity(pid);
+    if (!current) continue;
+    assert.equal(current.start, identity.start, 'Owned group member PID was reused');
+    assert.equal(current.group, identity.group);
+    peers.push({ identity, command });
+  }
+  assert(peers.length, 'Owned native app group disappeared');
+  return peers;
+}
+export async function rendererSandbox(
+  group: Identity,
+  candidate: Identity,
+  windows: WindowProcess[]
+) {
+  assert.equal(candidate.group, group.group);
+  assert(BigInt(candidate.start) >= BigInt(group.start));
+  const executable = await readlink(`/proc/${candidate.pid}/exe`);
+  await unchangedMain(candidate, executable);
+  const main = await kernelProcess(candidate.pid, candidate, executable);
+  const harnessStatus = await readFile('/proc/self/status', 'utf8');
+  const inheritedFilters = Number(/^Seccomp_filters:\s+(\d+)$/m.exec(harnessStatus)?.[1]);
+  assert(Number.isSafeInteger(inheritedFilters), 'Kernel must expose actual seccomp filter counts');
+  assert(
+    windows.length && windows.every((window) => window.sandbox === true),
+    'All actual Electron windows must enable sandbox'
+  );
+  const processes = [];
+  for (const window of windows) {
     assert(
-      !command.some((argument) => /^--no-sandbox(?:=|$)/.test(argument)),
-      'Owned Electron process disabled sandbox'
+      Number.isSafeInteger(window.pid) && window.pid > 1 && window.pid !== candidate.pid,
+      'Invalid actual renderer PID'
     );
-    if (!command.includes('--type=renderer')) continue;
-    const status = await processFile(pid, 'status');
-    if (status === null) continue;
-    const filters = Number(/^Seccomp_filters:\s+(\d+)$/m.exec(status)?.[1]);
+    assert(Number.isSafeInteger(window.windowId) && window.windowId > 0);
+    assert(Number.isSafeInteger(window.contentsId) && window.contentsId > 0);
+    const renderer = await kernelProcess(window.pid, candidate, executable);
     assert(
-      /^Seccomp:\s+2$/m.test(status) && filters > inheritedFilters,
+      /^Seccomp:\s+2$/m.test(renderer.status) && renderer.filters > inheritedFilters,
       'Actual renderer must add Chromium seccomp filters beyond Docker'
     );
-    processes.push({
-      identity,
-      command,
-      status: status.split('\n').filter((line) => /^Uid|^Cap|^Seccomp|^NoNewPrivs/.test(line)),
-      filters,
-    });
+    assert(/^NoNewPrivs:\s+1$/m.test(renderer.status), 'Renderer must enforce no new privileges');
+    noCapabilities(renderer.status);
+    assert(
+      main.namespacePids.length &&
+        renderer.namespacePids.length > main.namespacePids.length &&
+        renderer.namespacePids.every(Number.isSafeInteger),
+      'Renderer must occupy a nested kernel PID namespace'
+    );
+    const ancestry = [renderer];
+    while (ancestry.at(-1)?.identity.pid !== candidate.pid) {
+      const previous = ancestry.at(-1);
+      assert(
+        previous && ancestry.length < 16 && previous.parent > 1,
+        'Renderer ancestry does not reach exact TEST main'
+      );
+      assert(
+        !ancestry.some((row) => row.identity.pid === previous.parent),
+        'Renderer ancestry cycle'
+      );
+      const parent = await kernelProcess(previous.parent, candidate, executable);
+      assert(BigInt(parent.identity.start) <= BigInt(previous.identity.start));
+      ancestry.push(parent);
+    }
+    await unchangedMain(candidate, executable);
+    assert.equal((await processIdentity(window.pid))?.start, renderer.identity.start);
+    processes.push({ window, ...renderer, ancestry });
   }
-  assert(processes.length, 'No actual sandboxed renderer associated with TEST app group');
-  const current = await processIdentity(candidate.pid);
-  assert.equal(current?.start, candidate.start);
-  assert.equal(current?.group, group.group);
-  return { inheritedFilters, processes, sandboxEnabled: true };
+  const peers = await ownedSandboxCommands(group);
+  await unchangedMain(candidate, executable);
+  return {
+    inheritedFilters,
+    main,
+    processes,
+    peers,
+    association: 'Original Electron webContents.getOSProcessId plus kernel ancestry',
+    sandboxEnabled: true,
+  };
+}
+export async function lateWindowObservation(
+  group: Identity,
+  candidate: Identity,
+  expected: {
+    executable: string;
+    version: string;
+    resources: string;
+    userData: string;
+  }
+) {
+  // Caller records automatic native paint/package/profile BEFORE this read.
+  // This cannot restart the app or install hooks in its updater/provider.
+  await unchangedMain(candidate, expected.executable);
+  const command = (await readFile(`/proc/${candidate.pid}/cmdline`, 'utf8'))
+    .split('\0')
+    .filter(Boolean);
+  const retained = command.find((argument) => argument.startsWith('--inspect-brk='));
+  let port = 9229;
+  if (retained) {
+    const match = /^--inspect-brk=127\.0\.0\.1:(\d+)$/.exec(retained);
+    assert(match, 'Retained Inspector must bind explicit loopback');
+    port = Number(match[1]);
+    assert(Number.isSafeInteger(port) && port > 0 && port <= 65535);
+  }
+  const fuse = await readInspectorFuse(expected.executable);
+  if (!retained) {
+    const { status } = await kernelProcess(candidate.pid, candidate, expected.executable);
+    noCapabilities(status);
+    const caught = /^SigCgt:\s+([a-f\d]+)$/im.exec(status)?.[1];
+    assert(
+      caught && (BigInt(`0x${caught}`) & (1n << 9n)) !== 0n,
+      'Original app does not catch SIGUSR1'
+    );
+    await new Promise<void>((resolve, reject) => {
+      const socket = createConnection({ host: '127.0.0.1', port });
+      socket.once('connect', () => {
+        socket.destroy();
+        reject(new Error('Late Inspector port is already occupied'));
+      });
+      socket.once('error', (error) => {
+        if ((error as NodeJS.ErrnoException).code === 'ECONNREFUSED') resolve();
+        else reject(error);
+      });
+      socket.setTimeout(1000, () => {
+        socket.destroy();
+        reject(new Error('Late Inspector port preflight timed out'));
+      });
+    });
+    noCapabilities((await kernelProcess(candidate.pid, candidate, expected.executable)).status);
+    await unchangedMain(candidate, expected.executable);
+    process.kill(candidate.pid, 'SIGUSR1');
+  }
+  const target = await waitFor(
+    async () => {
+      await unchangedMain(candidate, expected.executable);
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
+          signal: AbortSignal.timeout(500),
+        });
+        if (!response.ok) return null;
+        return (
+          ((await response.json()) as { type: string; webSocketDebuggerUrl: string }[]).find(
+            (row) => row.type === 'node' && row.webSocketDebuggerUrl
+          ) ?? null
+        );
+      } catch {
+        return null;
+      }
+    },
+    'same automatic PID read-only Inspector',
+    10_000
+  );
+  const connection = await Cdp.connect(target.webSocketDebuggerUrl);
+  try {
+    assert.equal(
+      await connection.evaluate('process.pid'),
+      candidate.pid,
+      'Inspector belongs to another process'
+    );
+    const expression = `(() => {const electron=process.mainModule.require('electron');return {pid:process.pid,version:electron.app.getVersion(),executable:process.execPath,resources:process.resourcesPath,userData:electron.app.getPath('userData'),entry:process.mainModule.filename,windows:electron.BrowserWindow.getAllWindows().map(window=>({windowId:window.id,contentsId:window.webContents.id,pid:window.webContents.getOSProcessId(),sandbox:window.webContents.getLastWebPreferences().sandbox}))};})()`;
+    const actual = await connection.evaluate<{
+      pid: number;
+      version: string;
+      executable: string;
+      resources: string;
+      userData: string;
+      entry: string;
+      windows: WindowProcess[];
+    }>(expression);
+    assert.equal(actual.pid, candidate.pid, 'Inspector belongs to another process');
+    for (const key of ['version', 'executable', 'resources', 'userData'] as const)
+      assert.equal(actual[key], expected[key]);
+    assert.equal(
+      actual.entry,
+      path.join(expected.resources, 'app.asar/dist-electron/main/index.cjs')
+    );
+    const sandbox = await rendererSandbox(group, candidate, actual.windows);
+    assert.deepEqual(
+      await connection.evaluate(expression),
+      actual,
+      'Actual Electron window association changed during kernel proof'
+    );
+    const identity = await unchangedMain(candidate, expected.executable);
+    return {
+      phase: 'Read-only association after automatic native paint',
+      method: retained ? 'retained-inspector' : 'SIGUSR1',
+      fuse,
+      port,
+      identity,
+      actual,
+      sandbox,
+    };
+  } finally {
+    connection.close();
+  }
 }
 export async function desktopProof(owner: Identity, directory: string, candidate = owner) {
   await mkdir(directory, { recursive: true });
@@ -298,7 +567,7 @@ export async function desktopProof(owner: Identity, directory: string, candidate
     assert.equal(after?.group, owner.group);
     if (ready) {
       await copyFile(image, native.screenshot);
-      return { ...native, attempts, ready, sandbox: await rendererSandbox(owner, candidate) };
+      return { ...native, attempts, ready };
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
