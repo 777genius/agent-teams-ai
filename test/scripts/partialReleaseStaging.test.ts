@@ -1,5 +1,8 @@
+// @vitest-environment node
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -13,6 +16,7 @@ import {
   stageDraft,
   verifyDraftBytes,
 } from '../../scripts/ci/release/assembly.js';
+import { releaseMain } from '../../scripts/ci/release/cli.js';
 import {
   MAC_EVIDENCE,
   MANIFEST,
@@ -58,6 +62,8 @@ class TestReleaseStorage implements ReleasePort {
   failName: string | null = null;
   nativeArtifact: NativeProbeArtifact | null = null;
   targetMinimum = '12.0';
+  missingLatestFeed: string | null = null;
+  beforeUpload: (() => void) | null = null;
   constructor() {
     this.releases.set('v2.17.2', {
       id: 2,
@@ -122,7 +128,16 @@ class TestReleaseStorage implements ReleasePort {
   async download(_repo: string, asset: Asset, destination: string): Promise<void> {
     await writeFile(destination, this.bytes.get(asset.id)!);
   }
-  async upload(_repo: string, tag: string, file: string): Promise<void> {
+  async upload(_repo: string, target: number | string, file: string): Promise<void> {
+    this.beforeUpload?.();
+    // Model both API identities: a tag resolves the current release, whereas an
+    // immutable ID can never select a replacement. This catches the old adapter.
+    const release =
+      typeof target === 'string'
+        ? this.releases.get(target)
+        : [...this.releases.values()].find((r) => r.id === target);
+    if (!release) throw new Error('Upload release ID no longer exists');
+    const tag = release.tag_name;
     const name = path.basename(file);
     this.uploads.push(name);
     if (this.failName === name) throw new Error('Interrupted transport');
@@ -158,6 +173,11 @@ class TestReleaseStorage implements ReleasePort {
   async publicLatest(_repo: string, tag: string): Promise<void> {
     const latest = await this.latest();
     if (tag !== latest.tag_name || latest.draft) throw new Error('Not public latest');
+  }
+  async publicLatestAsset(repo: string, name: string): Promise<void> {
+    if (name === this.missingLatestFeed) throw new Error('Latest download unavailable');
+    const latest = await this.latest();
+    await this.publicAsset(repo, latest.tag_name, name);
   }
 }
 async function prepared(store = new TestReleaseStorage()) {
@@ -248,6 +268,17 @@ describe('append-only partial release assembly', () => {
     await stageDraft(store, plan);
     for (const [name, id] of acceptedIds)
       expect(store.releases.get('v2.17.2')!.assets.find((a) => a.name === name)?.id).toBe(id);
+  });
+  it('never appends to a replacement release created after the final pre-upload identity read', async () => {
+    const { store, plan } = await prepared();
+    const original = await store.release(repository, 'v2.17.2');
+    store.beforeUpload = () => {
+      store.beforeUpload = null;
+      store.releases.set('v2.17.2', { ...structuredClone(original), id: 999 });
+    };
+    await expect(stageDraft(store, plan)).rejects.toThrow(/identity|snapshot|changed/i);
+    expect(await store.release(repository, 'v2.17.2')).toEqual({ ...original, id: 999 });
+    expect(store.uploads).toEqual([]);
   });
   it.each([
     'foreign collision',
@@ -475,6 +506,19 @@ describe('manifestless new full release macOS minimum', () => {
   );
 });
 
+describe('published latest updater download contract', () => {
+  it.each(['latest.yml', 'latest-linux.yml', 'latest-mac.yml'])(
+    'rejects unavailable latest redirect for %s even when tag assets and latest API are valid',
+    async (feed) => {
+      const store = manifestlessFull('13.0', '22.0.0');
+      store.missingLatestFeed = feed;
+      await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(
+        'Latest download unavailable'
+      );
+    }
+  );
+});
+
 function nativeProducer(): { ref: NativeEvidenceReference; metadata: NativeProducerMetadata } {
   return {
     ref: {
@@ -566,11 +610,17 @@ interface ReleaseTransportFixture {
   listed: Release[][];
   byId: Release;
   assetPages: Asset[][];
+  assetBytes?: Map<number, Buffer>;
+}
+function requirePosixGhFixture(): void {
+  if (process.platform === 'win32')
+    throw new Error('POSIX gh fixtures must not resolve real gh.exe on Windows');
 }
 async function releaseTransport(
   fixture: ReleaseTransportFixture,
   test: (port: GitHubReleasePort, calls: () => Promise<string[]>) => Promise<void>
 ): Promise<void> {
+  requirePosixGhFixture();
   const directory = await mkdtemp(path.join(tmpdir(), 'TEST-release-transport-'));
   directories.push(directory);
   // Exercise actual CLI routing, exit/error classification, discovery, ID read
@@ -588,6 +638,9 @@ case "$2" in
       cat "$fixture_dir/error.txt" >&2
       exit 1
     fi ;;
+  */commits/*) cat "$fixture_dir/commit.json" ;;
+  */releases/latest) cat "$fixture_dir/id.json" ;;
+  */releases/assets/*) cat "$fixture_dir/asset-\${2##*/}.bin" ;;
   */releases\\?per_page=100) cat "$fixture_dir/list.json" ;;
   */releases/*/assets\\?per_page=100) cat "$fixture_dir/assets.json" ;;
   */releases/*) cat "$fixture_dir/id.json" ;;
@@ -605,6 +658,12 @@ esac
   await writeFile(path.join(directory, 'list.json'), JSON.stringify(fixture.listed));
   await writeFile(path.join(directory, 'id.json'), JSON.stringify(fixture.byId));
   await writeFile(path.join(directory, 'assets.json'), JSON.stringify(fixture.assetPages));
+  await writeFile(
+    path.join(directory, 'commit.json'),
+    JSON.stringify({ sha: fixture.byId.target_commitish })
+  );
+  for (const [id, bytes] of fixture.assetBytes ?? [])
+    await writeFile(path.join(directory, `asset-${id}.bin`), bytes);
   vi.stubEnv('PATH', `${directory}${path.delimiter}${process.env.PATH ?? ''}`);
   try {
     await test(new GitHubReleasePort(), async () =>
@@ -615,7 +674,7 @@ esac
   }
 }
 
-describe('authenticated draft release transport', () => {
+describe.skipIf(process.platform === 'win32')('authenticated draft release transport', () => {
   it('discovers an exact draft after tag 404 and reads its numeric ID with all asset pages', async () => {
     const store = new TestReleaseStorage();
     const draft = await store.release(repository, 'v2.17.2');
@@ -693,5 +752,229 @@ describe('authenticated draft release transport', () => {
       await expect(port.release(repository, 'v2.17.2')).rejects.toThrow(/discovery|draft|identity/);
       expect((await calls()).some((endpoint) => endpoint.includes('/assets?'))).toBe(false);
     });
+  });
+});
+
+async function anonymousHttp(
+  release: Release,
+  failurePath: string,
+  status: number,
+  test: (
+    requests: { path: string; method: string | undefined; authorization?: string }[]
+  ) => Promise<void>
+): Promise<void> {
+  const requests: { path: string; method: string | undefined; authorization?: string }[] = [];
+  const server = createServer((request, response) => {
+    const pathname = request.url ?? '';
+    requests.push({
+      path: pathname,
+      method: request.method,
+      authorization: request.headers.authorization,
+    });
+    if (pathname !== failurePath && pathname.includes('/releases/latest/download/')) {
+      response.writeHead(302, {
+        Location: pathname.replace('/releases/latest/download/', '/releases/download/v2.17.2/'),
+      });
+      response.end();
+      return;
+    }
+    response.writeHead(pathname === failurePath ? status : 200, {
+      'Content-Type': 'application/json',
+    });
+    response.end(JSON.stringify(release));
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Missing TEST HTTP address');
+  const realFetch = globalThis.fetch;
+  // Send actual HTTP requests to TEST localhost; no response/status mock. Preserve
+  // the requested GitHub route so wrong aliases and anonymous auth leakage fail.
+  vi.stubGlobal('fetch', (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.hostname !== 'github.com' && url.hostname !== 'api.github.com')
+      throw new Error('Unexpected external request in TEST transport');
+    return realFetch(`http://127.0.0.1:${address.port}${url.pathname}${url.search}`, init);
+  });
+  try {
+    await test(requests);
+  } finally {
+    vi.unstubAllGlobals();
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    );
+  }
+}
+
+async function verifyCommandExit(tag: string, expected: number): Promise<void> {
+  requirePosixGhFixture();
+  const previousArgs = process.argv;
+  const previousExit = process.exitCode;
+  const stderr = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+  process.argv = [
+    previousArgs[0] ?? 'node',
+    'verify-updater-release.ts',
+    '--state',
+    'published',
+    '--repository',
+    repository,
+    '--release-tag',
+    tag,
+  ];
+  process.exitCode = undefined;
+  try {
+    releaseMain('verify');
+    await vi.waitFor(() => expect(process.exitCode).toBe(expected));
+    expect(stderr).toHaveBeenCalled();
+  } finally {
+    process.argv = previousArgs;
+    process.exitCode = previousExit;
+    stderr.mockRestore();
+  }
+}
+
+describe.skipIf(process.platform === 'win32')(
+  'anonymous HTTP adapter and verification CLI failure contract',
+  () => {
+    const endpoints = [
+      { kind: 'release', path: `/repos/${repository}/releases/tags/v2.17.2` },
+      { kind: 'latest API', path: `/repos/${repository}/releases/latest` },
+      { kind: 'tag asset', path: `/${repository}/releases/download/v2.17.2/latest.yml` },
+      { kind: 'latest asset', path: `/${repository}/releases/latest/download/latest.yml` },
+    ];
+    it.each(
+      endpoints.flatMap((endpoint) => [502, 503, 404].map((status) => ({ ...endpoint, status })))
+    )(
+      'preserves $kind HTTP $status through the actual adapter to CLI retry/permanent exit',
+      async ({ kind, path: pathname, status }) => {
+        const store = manifestlessFull('13.0', '22.0.0');
+        const target = await store.release(repository, 'v2.17.2');
+        await anonymousHttp(target, pathname, status, async (requests) => {
+          await releaseTransport(
+            {
+              tagResponse: target,
+              listed: [],
+              byId: target,
+              assetPages: [target.assets],
+              assetBytes: store.bytes,
+            },
+            () => verifyCommandExit(target.tag_name, status >= 500 ? 75 : 1)
+          );
+          const port = new GitHubReleasePort();
+          let failed: Promise<void>;
+          switch (kind) {
+            case 'release':
+              failed = port.publicRelease(repository, target.tag_name);
+              break;
+            case 'latest API':
+              failed = port.publicLatest(repository, target.tag_name);
+              break;
+            case 'tag asset':
+              failed = port.publicAsset(repository, target.tag_name, 'latest.yml');
+              break;
+            case 'latest asset':
+              failed = port.publicLatestAsset(repository, 'latest.yml');
+              break;
+            default:
+              throw new Error('Unexpected TEST anonymous endpoint');
+          }
+          await expect(failed).rejects.toMatchObject({ httpStatus: status });
+          expect(
+            requests.filter((request) => request.path === pathname).length
+          ).toBeGreaterThanOrEqual(2);
+          expect(requests.every((request) => request.authorization === undefined)).toBe(true);
+          if (kind.endsWith('asset'))
+            expect(
+              requests
+                .filter((request) => request.path === pathname)
+                .every((request) => request.method === 'HEAD')
+            ).toBe(true);
+        });
+      }
+    );
+  }
+);
+
+describe.skipIf(process.platform === 'win32')('immutable release upload transport', () => {
+  it('posts exact input bytes to frozen numeric release ID without resolving a tag or clobbering', async () => {
+    requirePosixGhFixture();
+    const directory = await mkdtemp(path.join(tmpdir(), 'TEST-release-upload-'));
+    directories.push(directory);
+    await writeFile(
+      path.join(directory, 'gh'),
+      `#!/bin/sh
+set -eu
+fixture_dir=$(dirname "$0")
+printf '%s\\n' "$@" > "$fixture_dir/arguments.txt"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = --input ]; then cat "$2" > "$fixture_dir/uploaded.bin"; break; fi
+  shift
+done
+printf '{}'
+`
+    );
+    await chmod(path.join(directory, 'gh'), 0o755);
+    const file = path.join(directory, 'feed proof + test.yml');
+    const bytes = Buffer.from('real upload payload\n');
+    await writeFile(file, bytes);
+    vi.stubEnv('PATH', `${directory}${path.delimiter}${process.env.PATH ?? ''}`);
+    try {
+      await new GitHubReleasePort().upload(repository, 2, file);
+      expect(
+        (await readFile(path.join(directory, 'arguments.txt'), 'utf8')).trim().split('\n')
+      ).toEqual([
+        'api',
+        'https://uploads.github.com/repos/777genius/agent-teams-ai/releases/2/assets?name=feed%20proof%20%2B%20test.yml',
+        '--hostname',
+        'github.com',
+        '--method',
+        'POST',
+        '-H',
+        'Content-Type: application/octet-stream',
+        '--input',
+        file,
+      ]);
+      expect(await readFile(path.join(directory, 'uploaded.bin'))).toEqual(bytes);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+it('refuses a POSIX gh fixture on Windows before invoking its adapter callback', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+  if (!descriptor) throw new Error('Missing process platform descriptor');
+  const invoke = vi.fn();
+  const target = await new TestReleaseStorage().release(repository, 'v2.17.2');
+  Object.defineProperty(process, 'platform', { value: 'win32' });
+  try {
+    await expect(
+      releaseTransport(
+        { tagResponse: target, listed: [], byId: target, assetPages: [target.assets] },
+        () => {
+          invoke();
+          return Promise.resolve();
+        }
+      )
+    ).rejects.toThrow('POSIX gh fixtures must not resolve real gh.exe on Windows');
+    expect(invoke).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(process, 'platform', descriptor);
+  }
+});
+
+it('follows the latest download redirect and preserves failure from its destination', async () => {
+  const target = await manifestlessFull('13.0', '22.0.0').release(repository, 'v2.17.2');
+  const alias = `/${repository}/releases/latest/download/latest.yml`;
+  const destination = `/${repository}/releases/download/v2.17.2/latest.yml`;
+  await anonymousHttp(target, destination, 503, async (requests) => {
+    await expect(
+      new GitHubReleasePort().publicLatestAsset(repository, 'latest.yml')
+    ).rejects.toMatchObject({ httpStatus: 503 });
+    expect(requests.map((request) => [request.path, request.method])).toEqual([
+      [alias, 'HEAD'],
+      [destination, 'HEAD'],
+    ]);
   });
 });

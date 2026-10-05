@@ -224,6 +224,7 @@ export async function verifyPublished(
   for (const name of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml']) {
     feeds[name] = (await audit(name)).raw.toString();
     await port.publicAsset(repository, tag, name);
+    await port.publicLatestAsset(repository, name);
   }
   if (!found) {
     const productMinimum = older(tag, 'v2.17.2')

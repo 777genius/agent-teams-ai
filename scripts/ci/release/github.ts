@@ -16,17 +16,25 @@ import type {
   ReleasePort,
 } from './contract.js';
 
-class CliError extends Error {
+export class ReleaseHttpError extends Error {
   readonly httpStatus: number | null;
+  constructor(message: string, httpStatus: number | null) {
+    super(message);
+    this.httpStatus = httpStatus;
+  }
+}
+class CliError extends ReleaseHttpError {
   constructor(
     executable: string,
     operation: string | undefined,
     code: number | null,
     stderr: string
   ) {
-    super(`${executable} ${operation} failed (${code}): ${stderr}`);
     const status = /\(HTTP (\d{3})\)/.exec(stderr)?.[1];
-    this.httpStatus = executable === 'gh' && status ? Number(status) : null;
+    super(
+      `${executable} ${operation} failed (${code}): ${stderr}`,
+      executable === 'gh' && status ? Number(status) : null
+    );
   }
 }
 async function executablePath(name: 'gh' | 'unzip'): Promise<string> {
@@ -75,6 +83,15 @@ async function command(
 }
 async function api<T>(endpoint: string): Promise<T> {
   return JSON.parse(await command(['api', endpoint])) as T;
+}
+async function anonymous(url: string, options?: RequestInit): Promise<Response> {
+  const response = await fetch(url, options);
+  if (!response.ok)
+    throw new ReleaseHttpError(
+      `Anonymous request unavailable: ${url} (HTTP ${response.status})`,
+      response.status
+    );
+  return response;
 }
 export interface NativeProducerMetadata {
   run: { head_sha: string; run_attempt: number; status: string; path: string };
@@ -245,8 +262,23 @@ export class GitHubReleasePort implements ReleasePort {
       destination
     );
   }
-  async upload(repository: string, tag: string, file: string): Promise<void> {
-    await command(['release', 'upload', tag, file, '--repo', repository]);
+  async upload(repository: string, releaseId: number, file: string): Promise<void> {
+    requireThat(
+      Number.isSafeInteger(releaseId) && releaseId > 0,
+      'Numeric draft release ID required'
+    );
+    await command([
+      'api',
+      `https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=${encodeURIComponent(path.basename(file))}`,
+      '--hostname',
+      'github.com',
+      '--method',
+      'POST',
+      '-H',
+      'Content-Type: application/octet-stream',
+      '--input',
+      file,
+    ]);
   }
   async verifyBuild(repository: string, sha: string, proof: BuildProof, mode: Mode): Promise<void> {
     requireThat(
@@ -298,18 +330,22 @@ export class GitHubReleasePort implements ReleasePort {
       );
   }
   async publicAsset(repository: string, tag: string, name: string): Promise<void> {
-    const response = await fetch(
-      `https://github.com/${repository}/releases/download/${tag}/${name}`,
-      { method: 'HEAD', redirect: 'follow' }
-    );
-    requireThat(response.ok, `Anonymous asset unavailable: ${tag}/${name}`);
+    await anonymous(`https://github.com/${repository}/releases/download/${tag}/${name}`, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
+  }
+  async publicLatestAsset(repository: string, name: string): Promise<void> {
+    await anonymous(`https://github.com/${repository}/releases/latest/download/${name}`, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
   }
   async publicRelease(repository: string, tag: string): Promise<void> {
-    const response = await fetch(
+    const response = await anonymous(
       `https://api.github.com/repos/${repository}/releases/tags/${tag}`,
       { headers: { Accept: 'application/vnd.github+json' } }
     );
-    requireThat(response.ok, `Anonymous release unavailable: ${tag}`);
     const release = (await response.json()) as Release;
     requireThat(
       !release.draft && !release.prerelease && release.tag_name === tag,
@@ -317,10 +353,9 @@ export class GitHubReleasePort implements ReleasePort {
     );
   }
   async publicLatest(repository: string, tag: string): Promise<void> {
-    const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`, {
+    const response = await anonymous(`https://api.github.com/repos/${repository}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' },
     });
-    requireThat(response.ok, 'Anonymous latest release unavailable');
     const release = (await response.json()) as Release;
     requireThat(
       !release.draft && !release.prerelease && release.tag_name === tag,

@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 
 import { loadPlan, prepareDraft, stageDraft, verifyDraftBytes } from './assembly.js';
 import { canonical, digest, requireThat } from './contract.js';
-import { GitHubReleasePort } from './github.js';
+import { GitHubReleasePort, ReleaseHttpError } from './github.js';
 import { verifyPublished } from './validation.js';
 
 export async function runReleaseCommand(
@@ -91,6 +91,12 @@ export function releaseMain(operation: 'prepare' | 'stage-draft' | 'verify'): vo
   runReleaseCommand(operation).catch((error: unknown) => {
     const details = error instanceof Error ? (error.stack ?? error.message) : String(error);
     process.stderr.write(`${details}\n`);
-    process.exitCode = /HTTP 5\d\d|ECONN|ETIMEDOUT|fetch failed|timed out/i.test(details) ? 75 : 1;
+    const transient =
+      (error instanceof ReleaseHttpError &&
+        error.httpStatus !== null &&
+        error.httpStatus >= 500 &&
+        error.httpStatus <= 599) ||
+      /HTTP 5\d\d|ECONN|ETIMEDOUT|fetch failed|timed out/i.test(details);
+    process.exitCode = transient ? 75 : 1;
   });
 }
