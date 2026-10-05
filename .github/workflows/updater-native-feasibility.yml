@@ -109,3 +109,61 @@ jobs:
           path: .artifacts/TEST-updater-evidence/
           if-no-files-found: warn
           retention-days: 14
+
+  linux-native-ota:
+    needs: verified-inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the native OTA harness
+        run: |
+          pnpm typecheck
+          pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-native-updater-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-updater-inputs/
+      - name: Prepare disposable FUSE, GUI and sandbox
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/TEST-ota-evidence
+          sudo apt-get update
+          sudo apt-get install -y libfuse2t64 xvfb xauth x11-utils imagemagick tesseract-ocr
+          test -c /dev/fuse
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          unshare -Ur true
+      - name: Exercise the original updater through download, install and automatic desktop startup
+        run: |
+          set -euo pipefail
+          export TEST_NODE_BIN="$(command -v node)"
+          export TEST_RUNNER_USER="$(id -un)"
+          export TEST_WORKSPACE="$PWD"
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+            sudo --preserve-env=DISPLAY,XAUTHORITY,TEST_NODE_BIN,TEST_RUNNER_USER,TEST_WORKSPACE \
+            unshare --net /bin/sh -c '
+              set -eu
+              ip link set lo up
+              runuser -u "$TEST_RUNNER_USER" -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
+                "$TEST_NODE_BIN" "$TEST_WORKSPACE/scripts/e2e/release-updater/linux-ota.mts" \
+                --inputs "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs" \
+                --evidence "$TEST_WORKSPACE/.artifacts/TEST-ota-evidence"
+            ' 2>&1 | tee .artifacts/TEST-ota-evidence/probe.log
+      - name: Preserve native OTA proof on success and failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-linux-native-ota-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-ota-evidence/
+          if-no-files-found: warn
+          retention-days: 14
