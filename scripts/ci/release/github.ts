@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
-import { digest, requireThat } from './contract.js';
+import { digest, isPreviousRelease, requireThat } from './contract.js';
 import type {
   Asset,
   BuildProof,
@@ -14,6 +14,7 @@ import type {
   NativeProbeArtifact,
   Release,
   ReleasePort,
+  StageInput,
 } from './contract.js';
 
 export class ReleaseHttpError extends Error {
@@ -84,14 +85,29 @@ async function command(
 async function api<T>(endpoint: string): Promise<T> {
   return JSON.parse(await command(['api', endpoint])) as T;
 }
-async function anonymous(url: string, options?: RequestInit): Promise<Response> {
-  const response = await fetch(url, options);
-  if (!response.ok)
-    throw new ReleaseHttpError(
-      `Anonymous request unavailable: ${url} (HTTP ${response.status})`,
-      response.status
-    );
-  return response;
+async function anonymous(url: string, options?: RequestInit): Promise<Release | undefined> {
+  const signal = AbortSignal.timeout(30_000);
+  try {
+    const response = await fetch(url, { ...options, signal });
+    if (!response.ok)
+      throw new ReleaseHttpError(
+        `Anonymous request unavailable: ${url} (HTTP ${response.status})`,
+        response.status
+      );
+    // Keep GET body consumption inside the deadline: headers alone do not prove
+    // that GitHub completed the response. HEAD proofs do not consume a body.
+    return options?.method === 'HEAD' ? undefined : ((await response.json()) as Release);
+  } catch (error) {
+    if (
+      signal.aborted &&
+      signal.reason instanceof Error &&
+      signal.reason.name === 'TimeoutError' &&
+      error instanceof Error &&
+      (error.name === 'TimeoutError' || error.name === 'AbortError')
+    )
+      throw new ReleaseHttpError(`Anonymous request timed out: ${url}`, 408);
+    throw error;
+  }
 }
 export interface NativeProducerMetadata {
   run: { head_sha: string; run_attempt: number; status: string; path: string };
@@ -359,26 +375,37 @@ export class GitHubReleasePort implements ReleasePort {
       redirect: 'follow',
     });
   }
-  async publicRelease(repository: string, tag: string): Promise<void> {
-    const response = await anonymous(
-      `https://api.github.com/repos/${repository}/releases/tags/${tag}`,
-      { headers: { Accept: 'application/vnd.github+json' } }
-    );
-    const release = (await response.json()) as Release;
+  async publicRelease(repository: string, tag: string, expectedTarget = false): Promise<void> {
+    let release: Release | undefined;
+    try {
+      release = await anonymous(`https://api.github.com/repos/${repository}/releases/tags/${tag}`, {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+    } catch (error) {
+      if (expectedTarget && error instanceof ReleaseHttpError && error.httpStatus === 404)
+        throw new ReleaseHttpError(
+          `Expected published target is not anonymously visible: ${tag}`,
+          408
+        );
+      throw error;
+    }
     requireThat(
-      !release.draft && !release.prerelease && release.tag_name === tag,
+      release && !release.draft && !release.prerelease && release.tag_name === tag,
       'Anonymous release visibility mismatch'
     );
   }
-  async publicLatest(repository: string, tag: string): Promise<void> {
-    const response = await anonymous(`https://api.github.com/repos/${repository}/releases/latest`, {
+  async publicLatest(
+    repository: string,
+    tag: string,
+    previous?: StageInput['latest']
+  ): Promise<void> {
+    const release = await anonymous(`https://api.github.com/repos/${repository}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' },
     });
-    const release = (await response.json()) as Release;
-    requireThat(
-      !release.draft && !release.prerelease && release.tag_name === tag,
-      'Anonymous latest tag mismatch'
-    );
+    if (release && !release.draft && !release.prerelease && release.tag_name === tag) return;
+    if (release && isPreviousRelease(release, previous))
+      throw new ReleaseHttpError('Anonymous latest still exposes the frozen previous release', 408);
+    throw new Error('Anonymous latest tag mismatch');
   }
   async verifyNative(ref: NativeEvidenceReference): Promise<NativeProbeArtifact> {
     requireThat(

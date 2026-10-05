@@ -121,12 +121,21 @@ export interface ReleasePort {
   verifyNative(reference: NativeEvidenceReference): Promise<NativeProbeArtifact>;
   publicAsset(repository: string, tag: string, name: string): Promise<void>;
   publicLatestAsset(repository: string, name: string): Promise<void>;
-  publicRelease(repository: string, tag: string): Promise<void>;
-  publicLatest(repository: string, tag: string): Promise<void>;
+  publicRelease(repository: string, tag: string, expectedTarget?: boolean): Promise<void>;
+  publicLatest(repository: string, tag: string, previous?: StageInput['latest']): Promise<void>;
 }
 
 export function requireThat(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+export function isPreviousRelease(release: Release, previous?: StageInput['latest']): boolean {
+  if (!previous) return false;
+  return (
+    release.id === previous.id &&
+    release.tag_name === previous.tag &&
+    release.draft === false &&
+    release.prerelease === false
+  );
 }
 export function basename(name: unknown): asserts name is string {
   requireThat(
