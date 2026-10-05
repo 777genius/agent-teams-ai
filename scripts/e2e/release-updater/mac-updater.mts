@@ -31,7 +31,7 @@ import {
 import { readMacInputs } from './mac-inputs.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
-import { macSerializedFunction } from './mac-serialization.mts';
+import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
 
 import type { TransportState } from './transport.mts';
 import type { App } from 'electron';
@@ -548,8 +548,10 @@ try {
   assert(frame);
   const entry = await main.evaluate<string>('__filename', frame.callFrameId);
   assert.equal(entry, path.join(resources, 'app.asar', 'dist-electron/main/index.cjs'));
-  await main.evaluate(
-    `(${macSerializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${macSerializedFunction(observeMac)})(require('electron').app,()=>autoUpdater)`,
+  await macCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeMac)})(originalRequire('electron').app,getUpdater);};})()`,
+    [mirror.origin, mirror.paths],
     frame.callFrameId
   );
   await main.send('Debugger.resume');
