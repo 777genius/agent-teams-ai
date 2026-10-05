@@ -3372,6 +3372,130 @@ describe('teamSlice actions', () => {
     ).toContain('D60');
   });
 
+  it.each(['initial hydration', 'owner rehydration', 'stale-page recovery'] as const)(
+    'observes head IPC failure during %s without rejecting the paging action or replacing trusted history',
+    async (path) => {
+      const store = createSliceStore();
+      const message: InboxMessage = {
+        from: 'alice',
+        to: 'user',
+        text: 'trusted',
+        read: true,
+        timestamp: new Date(1000).toISOString(),
+        messageId: 'trusted',
+      };
+      if (path !== 'initial hydration') {
+        hoisted.getMessagesPage.mockResolvedValueOnce({
+          messages: [message],
+          nextCursor: 'trusted-cursor',
+          hasMore: true,
+          feedRevision: 'rev-1',
+        });
+        await store.getState().refreshTeamMessagesHead('my-team');
+      }
+      const before = store.getState().teamMessagesByName['my-team'];
+      if (path === 'owner rehydration') invalidateTeamLocalStateEpoch('my-team');
+      if (path === 'stale-page recovery') {
+        hoisted.getMessagesPage.mockResolvedValueOnce({
+          messages: [{ ...message, messageId: 'stale-page' }],
+          nextCursor: null,
+          hasMore: false,
+          feedRevision: 'rev-2',
+        });
+      }
+      hoisted.getMessagesPage.mockRejectedValueOnce(new Error(`head unavailable during ${path}`));
+      await expect(store.getState().loadOlderTeamMessages('my-team')).resolves.toBeUndefined();
+      const failed = store.getState().teamMessagesByName['my-team'];
+      expect(failed.messagesError).toBe(`head unavailable during ${path}`);
+      expect(failed.loadingHead).toBe(false);
+      expect(failed.loadingOlder).toBe(false);
+      expect(failed.canonicalMessages).toEqual(before?.canonicalMessages ?? []);
+      expect(failed.provenance).toBe(before?.provenance);
+      expect(failed.nextCursor).toBe(before?.nextCursor ?? null);
+      expect(failed.feedRevision).toBe(before?.feedRevision ?? null);
+      expect(__getTeamScopedTransientStateForTests('my-team')).toMatchObject({
+        hasQueuedHeadRefreshAfterOlder: false,
+        hasPendingFreshMessagesHeadRefresh: false,
+      });
+      const callsAfterFailure = hoisted.getMessagesPage.mock.calls.length;
+      // A fresh explicit retry must start a new head operation, not rejoin a retired promise.
+      hoisted.getMessagesPage.mockResolvedValueOnce({
+        messages: [message],
+        nextCursor: 'retry-cursor',
+        hasMore: true,
+        feedRevision: 'rev-3',
+      });
+      await store.getState().refreshTeamMessagesHead('my-team');
+      expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(callsAfterFailure + 1);
+      expect(store.getState().teamMessagesByName['my-team'].feedRevision).toBe('rev-3');
+      hoisted.getMessagesPage.mockResolvedValueOnce({
+        messages: [],
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: 'rev-3',
+      });
+      await expect(store.getState().loadOlderTeamMessages('my-team')).resolves.toBeUndefined();
+      expect(store.getState().teamMessagesByName['my-team'].messagesError).toBeNull();
+    }
+  );
+
+  it('observes a shared head IPC failure for paging while direct head callers still receive rejection', async () => {
+    const store = createSliceStore();
+    const pending = createDeferredPromise<{
+      messages: InboxMessage[];
+      nextCursor: string | null;
+      hasMore: boolean;
+      feedRevision: string;
+    }>();
+    hoisted.getMessagesPage.mockImplementationOnce(() => pending.promise);
+    const head = store.getState().refreshTeamMessagesHead('my-team');
+    const rejectedHead = expect(head).rejects.toThrow('shared head unavailable');
+    const paging = store.getState().loadOlderTeamMessages('my-team');
+    pending.reject(new Error('shared head unavailable'));
+    await expect(paging).resolves.toBeUndefined();
+    await rejectedHead;
+    expect(store.getState().teamMessagesByName['my-team']).toMatchObject({
+      messagesError: 'shared head unavailable',
+      loadingHead: false,
+      loadingOlder: false,
+      headHydrated: false,
+    });
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('fences an obsolete owner head failure observed by paging without clearing replacement loading or errors', async () => {
+    const store = createSliceStore();
+    const pending = createDeferredPromise<{
+      messages: InboxMessage[];
+      nextCursor: string | null;
+      hasMore: boolean;
+      feedRevision: string;
+    }>();
+    hoisted.getMessagesPage.mockImplementationOnce(() => pending.promise);
+    const paging = store.getState().loadOlderTeamMessages('my-team');
+    invalidateTeamLocalStateEpoch('my-team');
+    const replacement = {
+      ...store.getState().teamMessagesByName['my-team'],
+      feedRevision: 'replacement-revision',
+      messagesError: 'replacement notice',
+      loadingHead: true,
+      nextCursor: 'replacement-cursor',
+    };
+    store.setState({ teamMessagesByName: { 'my-team': replacement } });
+    pending.reject(new Error('obsolete owner head unavailable'));
+    await expect(paging).resolves.toBeUndefined();
+    expect(store.getState().teamMessagesByName['my-team']).toBe(replacement);
+    hoisted.getMessagesPage.mockResolvedValueOnce({
+      messages: [],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'replacement-revision',
+    });
+    await store.getState().refreshTeamMessagesHead('my-team');
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(2);
+    expect(store.getState().teamMessagesByName['my-team'].loadingHead).toBe(false);
+  });
+
   it('exposes paging failures without replacing trusted history or its cursor', async () => {
     const store = createSliceStore();
     hoisted.getMessagesPage.mockResolvedValueOnce({

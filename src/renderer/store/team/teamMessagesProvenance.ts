@@ -1,6 +1,6 @@
 import { api } from '@renderer/api';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
-import { unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 
 import {
   areInboxMessageArraysEquivalent,
@@ -31,6 +31,19 @@ interface MessageActionPorts {
   inFlightTeamMessagesOlderRequests: Map<string, Promise<void>>;
   queuedTeamMessagesHeadRefreshesAfterOlder: Map<string, Promise<RefreshTeamMessagesHeadResult>>;
   pendingFreshTeamMessagesHeadRefreshes: Set<string>;
+}
+
+/** Paging is fire-and-forget in the UI; expected head IPC failures already have a scoped notice. */
+async function observeHeadForPaging(
+  request: Promise<RefreshTeamMessagesHeadResult>
+): Promise<boolean> {
+  try {
+    await request;
+    return true;
+  } catch (error) {
+    if (error instanceof IpcError) return false;
+    throw error;
+  }
 }
 
 /** Head and explicitly requested history share the existing incarnation-scoped single-flight. */
@@ -275,7 +288,7 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
 
       const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName);
       if (existingHeadRequest) {
-        await existingHeadRequest;
+        if (!(await observeHeadForPaging(existingHeadRequest))) return;
         if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
           return;
         }
@@ -283,7 +296,7 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
 
       let entry = getTeamMessagesCacheEntry(get(), teamName);
       if (!entry.headHydrated || !hasCurrentProvenance(teamName, entry)) {
-        await get().refreshTeamMessagesHead(teamName);
+        if (!(await observeHeadForPaging(get().refreshTeamMessagesHead(teamName)))) return;
         if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
           return;
         }
@@ -441,7 +454,7 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
       inFlightTeamMessagesOlderRequests.set(teamName, request);
       await request;
       if (refreshRequired && isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        await get().refreshTeamMessagesHead(teamName);
+        await observeHeadForPaging(get().refreshTeamMessagesHead(teamName));
       }
     },
   };
