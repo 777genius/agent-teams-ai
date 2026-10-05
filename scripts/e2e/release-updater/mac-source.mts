@@ -292,7 +292,7 @@ async function preparedPlan(
       run.status === 'completed' &&
       run.conclusion === 'success' &&
       run.event === 'workflow_dispatch' &&
-      run.path === '.github/workflows/stage-existing-partial-draft.yml',
+      run.path.split('@')[0] === '.github/workflows/stage-existing-partial-draft.yml',
     'Prepared plan producer identity/conclusion mismatch'
   );
   const artifact = await recorder.api<Artifact>(
