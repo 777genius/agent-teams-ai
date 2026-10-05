@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.1.2",
+  "version": "2.17.3",
   "dynamicFlags": {
     "showSponsorFluxion": true
   },
@@ -422,6 +422,21 @@
       "afterInstall": "resources/afterInstall.sh",
       "fpm": [
         "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ],
+      "depends": [
+        "c-ares",
+        "ffmpeg",
+        "gtk3",
+        "libevent",
+        "libvpx",
+        "libxslt",
+        "libxss",
+        "minizip",
+        "nss",
+        "re2",
+        "snappy",
+        "libnotify",
+        "libappindicator-gtk3"
       ]
     },
     "nsis": {
