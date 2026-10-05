@@ -16,8 +16,12 @@ permissions:
   contents: read
 
 jobs:
-  linux-predecessor-availability:
+  verified-inputs:
     if: github.repository == '777genius/agent-teams-ai' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # GitHub requires push-level access to read draft releases. Keep this token
+    # in an input-only job; the native application runs in a separate read-only VM.
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -33,11 +37,6 @@ jobs:
         run: mkdir -p .artifacts/TEST-updater-inputs .artifacts/TEST-updater-evidence
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
-      - name: Check typed harness and changed file lint
-        run: |
-          pnpm typecheck
-          pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts
-          pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
       - name: Read exact official predecessor and draft bytes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,6 +49,41 @@ jobs:
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern agent-teams-ai_2.17.1_amd64.deb --output "$inputs/old.deb"
           gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/target.AppImage"
           node scripts/e2e/release-updater/inputs.mts --write-catalog "$inputs"
+      - name: Hand verified bytes to the native VM
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-native-updater-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-updater-inputs/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 2
+
+  linux-predecessor-availability:
+    needs: verified-inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check typed harness and changed file lint
+        run: |
+          pnpm typecheck
+          pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-native-updater-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-updater-inputs/
+      - run: mkdir -p .artifacts/TEST-updater-evidence
       - name: Enable native FUSE and unprivileged Electron sandbox in ephemeral VM
         run: |
           set -euo pipefail
