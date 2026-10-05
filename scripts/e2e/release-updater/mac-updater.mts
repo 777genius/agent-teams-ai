@@ -550,7 +550,7 @@ try {
   assert.equal(entry, path.join(resources, 'app.asar', 'dist-electron/main/index.cjs'));
   await macCallFunction(
     main,
-    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeMac)})(originalRequire('electron').app,getUpdater);};})()`,
+    `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeMac)})(originalRequire('electron').app,getUpdater);};})()`,
     [mirror.origin, mirror.paths],
     frame.callFrameId
   );

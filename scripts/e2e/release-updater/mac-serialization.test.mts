@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { Session } from 'node:inspector/promises';
 import { tmpdir } from 'node:os';
 import { test } from 'node:test';
@@ -29,16 +31,22 @@ void test('compiled callback executes in an isolated signed-app-style lexical re
 });
 
 void test('CDP argument calls preserve the actual paused entry lexical frame', async () => {
-  const child = spawn(
-    process.execPath,
-    [
-      '--inspect-brk=127.0.0.1:0',
-      '--input-type=commonjs',
-      '-e',
-      'function __TEST_entry(){const __TEST_entrySecret="original entry lexical value";\ndebugger;\nsetInterval(()=>{},1000);}\n__TEST_entry();',
-    ],
-    { cwd: tmpdir(), stdio: ['ignore', 'ignore', 'pipe'] }
+  const fixture = await mkdtemp(path.join(tmpdir(), 'TEST-cdp-bundled-singleton-'));
+  const packageDirectory = path.join(fixture, 'node_modules', 'electron-updater');
+  await mkdir(packageDirectory, { recursive: true });
+  await writeFile(
+    path.join(packageDirectory, 'index.js'),
+    'exports.autoUpdater=Object.assign(new (require("node:events").EventEmitter)(),{identity:"separate installed-package singleton"});'
   );
+  const main = path.join(fixture, 'index.cjs');
+  await writeFile(
+    main,
+    'function __TEST_entry(){const __TEST_entrySecret="original entry lexical value";const originalReadyGetter=()=>autoUpdater;\ndebugger;\nconst autoUpdater=Object.assign(new (require("node:events").EventEmitter)(),{identity:"genuine bundled singleton"});globalThis.__TEST_readyResult=globalThis.__TEST_readyCallback();originalReadyGetter().emit("update-available",{version:"TEST-target"});setInterval(()=>{},1000); }\n__TEST_entry();'
+  );
+  const child = spawn(process.execPath, ['--inspect-brk=127.0.0.1:0', main], {
+    cwd: fixture,
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
   let stderr = '';
   let launchError: Error | undefined;
   child.stderr.on('data', (value: Buffer) => {
@@ -89,6 +97,39 @@ void test('CDP argument calls preserve the actual paused entry lexical frame', a
       ),
       { secret: 'original entry lexical value', requireType: 'function', value: input }
     );
+    await macCallFunction(
+      client,
+      '(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return ()=>{globalThis.__TEST_readyEvents=[];globalThis.__TEST_readyCallback=()=>{const updater=getUpdater();updater.on("update-available",value=>globalThis.__TEST_readyEvents.push(value.version));return updater.identity;};return "registered";};})()',
+      [],
+      frame.callFrameId
+    );
+    assert.equal(
+      await client.evaluate('autoUpdater.identity', frame.callFrameId).then(
+        () => false,
+        () => true
+      ),
+      true,
+      'Original bundled singleton is still in TDZ at the selected frame'
+    );
+    assert.equal(
+      await client.evaluate('require("electron-updater").autoUpdater.identity', frame.callFrameId),
+      'separate installed-package singleton'
+    );
+    // The singleton declaration is still in TDZ at the pause. Genuine access
+    // happens only when the original entry invokes its ready callback.
+    await client.send('Debugger.resume');
+    const resumedClient = client;
+    assert.equal(
+      await waitFor(
+        async () =>
+          (await resumedClient.evaluate<string | undefined>('globalThis.__TEST_readyResult')) ??
+          null,
+        'original ready getter',
+        5000
+      ),
+      'genuine bundled singleton'
+    );
+    assert.deepEqual(await client.evaluate('globalThis.__TEST_readyEvents'), ['TEST-target']);
   } finally {
     client?.close();
     if (child.pid && child.exitCode === null && child.signalCode === null) {
@@ -99,6 +140,7 @@ void test('CDP argument calls preserve the actual paused entry lexical frame', a
         5000
       );
     }
+    await rm(fixture, { recursive: true, force: true });
   }
 });
 
