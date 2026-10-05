@@ -18,7 +18,7 @@ import {
   captureOldMacSources,
   coldMacUpdaterCache,
   oldMacInstaller,
-  prepareMacInputs,
+  readMacInputs,
   sourceMacPin,
   sourceSha,
 } from './mac-inputs.mts';
@@ -65,6 +65,9 @@ const { values } = parseArgs({
         'architecture',
         'scenario',
         'feed-mode',
+        'inputs',
+        'input-artifact-id',
+        'input-artifact-sha256',
         'evidence',
       ].map((name) => [name, { type: 'string' as const }])
     ),
@@ -387,10 +390,12 @@ try {
   native = await prepareOldMacNative(commands);
   evidence.nativeReaders = native;
   await oldShipItBaseline(commands, native.job);
-  const inputs = await prepareMacInputs(plan, root, mode, architecture, evidence, {
+  const inputs = await readMacInputs(plan, required('inputs'), mode, architecture, evidence, {
     planSha256: required('plan-sha256'),
     inputDigest: required('input-digest'),
     toolingSha,
+    artifactId: Number(required('input-artifact-id')),
+    artifactSha256: required('input-artifact-sha256'),
   });
   const zip = inputs.files.get(inputs.names.zip);
   const dmg = inputs.files.get(inputs.names.dmg);
