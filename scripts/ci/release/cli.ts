@@ -93,7 +93,9 @@ export function releaseMain(operation: 'prepare' | 'stage-draft' | 'verify'): vo
     process.stderr.write(`${details}\n`);
     const transient =
       error instanceof ReleaseHttpError && error.httpStatus !== null
-        ? error.httpStatus === 408 || (error.httpStatus >= 500 && error.httpStatus <= 599)
+        ? error.httpStatus === 408 ||
+          error.httpStatus === 429 ||
+          (error.httpStatus >= 500 && error.httpStatus <= 599)
         : /HTTP 5\d\d|ECONN|ETIMEDOUT|fetch failed|timed out/i.test(details);
     process.exitCode = transient ? 75 : 1;
   });
