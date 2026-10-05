@@ -1,9 +1,11 @@
-import { createHash } from 'node:crypto';
-
+import {
+  readInboxWindow,
+  TeamHistoryError,
+  unwrapInboxWindow,
+} from '@features/team-message-history/main';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadThoughtSourceMessage } from '@shared/utils/leadDetection';
-import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -11,7 +13,14 @@ import { estimateCachedValueBytes } from './cacheMemoryEstimate';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import { readTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
+import type {
+  InboxMemberData,
+  InboxMessageCursor,
+  InboxMessagesWindow,
+} from '@features/team-message-history/main';
 import type { InboxMessage } from '@shared/types';
+
+export type { InboxMessageCursor, InboxMessagesWindow } from '@features/team-message-history/main';
 
 export const MAX_INBOX_FILE_BYTES = 10 * 1024 * 1024; // 10MB — skip corrupt/oversized inbox files
 const INBOX_READ_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
@@ -31,18 +40,6 @@ interface CachedInboxFile {
   signature: InboxFileSignature;
   messages: InboxMessage[];
   estimatedBytes: number;
-}
-
-export interface InboxMessageCursor {
-  timestampMs: number;
-  messageId: string;
-}
-
-export interface InboxMessagesWindow {
-  messages: InboxMessage[];
-  truncated: boolean;
-  sourceRevision: string;
-  sourceMessageCount: number;
 }
 
 function buildInboxFileSignature(stat: fs.Stats): InboxFileSignature {
@@ -73,14 +70,6 @@ function estimateInboxMessagesBytes(messages: readonly InboxMessage[]): number {
   return estimateCachedValueBytes(messages);
 }
 
-function requireInboxMessageId(message: InboxMessage): string {
-  const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-  if (messageId.length > 0) {
-    return messageId;
-  }
-  return getEffectiveInboxMessageId(message) ?? '';
-}
-
 function assignImpliedInboxRecipient(message: InboxMessage, member: string): void {
   if (message.to) {
     return;
@@ -89,50 +78,6 @@ function assignImpliedInboxRecipient(message: InboxMessage, member: string): voi
     return;
   }
   message.to = member;
-}
-
-function compareNewestFirst(left: InboxMessage, right: InboxMessage): number {
-  const rightMs = Date.parse(right.timestamp);
-  const leftMs = Date.parse(left.timestamp);
-  if (Number.isFinite(rightMs) && Number.isFinite(leftMs)) {
-    const diff = rightMs - leftMs;
-    if (diff !== 0) return diff;
-  }
-  return requireInboxMessageId(left).localeCompare(requireInboxMessageId(right));
-}
-
-function isMessageAfterCursor(message: InboxMessage, cursor: InboxMessageCursor | null): boolean {
-  if (!cursor) {
-    return true;
-  }
-
-  const messageMs = Date.parse(message.timestamp);
-  if (messageMs < cursor.timestampMs) return true;
-  if (messageMs > cursor.timestampMs) return false;
-  if (!cursor.messageId) return false;
-  return requireInboxMessageId(message).localeCompare(cursor.messageId) > 0;
-}
-
-function buildInboxSourceRevisionEntry(message: InboxMessage): string {
-  return JSON.stringify([
-    requireInboxMessageId(message),
-    message.timestamp ?? '',
-    message.from ?? '',
-    message.to ?? '',
-    message.source ?? '',
-    message.text ?? '',
-  ]);
-}
-
-function addInboxSourceRevisionEntries(
-  hash: ReturnType<typeof createHash>,
-  entries: string[]
-): void {
-  entries.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
-  for (const entry of entries) {
-    hash.update(entry);
-    hash.update('\n');
-  }
 }
 
 function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
@@ -612,203 +557,47 @@ export class TeamInboxReader {
     return merged;
   }
 
-  private async getMessagesWindowFor(
-    teamName: string,
-    member: string,
-    options: { cursor?: InboxMessageCursor | null; limit: number }
-  ): Promise<InboxMessagesWindow> {
-    const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
-    const limit = Math.max(1, Math.floor(options.limit));
-    const sourceRevisionHash = createHash('sha256');
-    const sourceRevisionEntries: string[] = [];
-    let raw: string;
-
-    try {
-      const stat = await fs.promises.stat(inboxPath);
-      if (!stat.isFile() || stat.size > MAX_INBOX_FILE_BYTES) {
-        this.deleteCachedMessages(inboxPath);
-        sourceRevisionHash.update(`skipped:${stat.isFile() ? 'oversized' : 'non-file'}\n`);
-        return {
-          messages: [],
-          truncated: false,
-          sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-          sourceMessageCount: 0,
-        };
-      }
-      const signature = buildInboxFileSignature(stat);
-      const cached = this.getCachedMessages(inboxPath, signature);
-      if (cached) {
-        return this.buildMessagesWindowFromMessages(cached, member, options);
-      }
-      raw = await readFileUtf8WithTimeout(inboxPath, 5_000);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        this.deleteCachedMessages(inboxPath);
-        sourceRevisionHash.update('missing\n');
-        return {
-          messages: [],
-          truncated: false,
-          sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-          sourceMessageCount: 0,
-        };
-      }
-      if (error instanceof FileReadTimeoutError) {
-        sourceRevisionHash.update('timeout\n');
-        return {
-          messages: [],
-          truncated: false,
-          sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-          sourceMessageCount: 0,
-        };
-      }
-      throw error;
-    }
-
-    let sourceMessageCount = 0;
-    let truncated = false;
-    let windowMessages: InboxMessage[] = [];
-
-    const parsed = visitInboxJsonArrayItems(raw, (item) => {
-      const message = normalizeInboxMessageItem(item);
-      if (!message) {
-        return;
-      }
-      assignImpliedInboxRecipient(message, member);
-      sourceMessageCount += 1;
-      if (!isTeamInternalControlMessageEnvelope(message)) {
-        sourceRevisionEntries.push(buildInboxSourceRevisionEntry(message));
-      }
-      if (isMessageAfterCursor(message, options.cursor ?? null)) {
-        windowMessages.push(message);
-      }
-      if (windowMessages.length > limit) {
-        truncated = true;
-        windowMessages.sort(compareNewestFirst);
-        windowMessages = windowMessages.slice(0, limit);
-      }
-    });
-
-    if (!parsed) {
-      addInboxSourceRevisionEntries(sourceRevisionHash, sourceRevisionEntries);
-      sourceRevisionHash.update('parse-error\n');
-      return {
-        messages: [],
-        truncated: false,
-        sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-        sourceMessageCount: 0,
-      };
-    }
-
-    windowMessages.sort(compareNewestFirst);
-    if (windowMessages.length > limit) {
-      truncated = true;
-      windowMessages = windowMessages.slice(0, limit);
-    }
-    addInboxSourceRevisionEntries(sourceRevisionHash, sourceRevisionEntries);
-
-    return {
-      messages: windowMessages,
-      truncated,
-      sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-      sourceMessageCount,
-    };
-  }
-
-  private buildMessagesWindowFromMessages(
-    messages: InboxMessage[],
-    member: string,
-    options: { cursor?: InboxMessageCursor | null; limit: number }
-  ): InboxMessagesWindow {
-    const limit = Math.max(1, Math.floor(options.limit));
-    const sourceRevisionHash = createHash('sha256');
-    const sourceRevisionEntries: string[] = [];
-    let truncated = false;
-    let windowMessages: InboxMessage[] = [];
-
-    for (const message of messages) {
-      assignImpliedInboxRecipient(message, member);
-      if (!isTeamInternalControlMessageEnvelope(message)) {
-        sourceRevisionEntries.push(buildInboxSourceRevisionEntry(message));
-      }
-      if (isMessageAfterCursor(message, options.cursor ?? null)) {
-        windowMessages.push(message);
-      }
-      if (windowMessages.length > limit) {
-        truncated = true;
-        windowMessages.sort(compareNewestFirst);
-        windowMessages = windowMessages.slice(0, limit);
-      }
-    }
-
-    windowMessages.sort(compareNewestFirst);
-    if (windowMessages.length > limit) {
-      truncated = true;
-      windowMessages = windowMessages.slice(0, limit);
-    }
-    addInboxSourceRevisionEntries(sourceRevisionHash, sourceRevisionEntries);
-
-    return {
-      messages: windowMessages,
-      truncated,
-      sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-      sourceMessageCount: messages.length,
-    };
-  }
-
   async getMessagesWindow(
     teamName: string,
     options: { cursor?: InboxMessageCursor | null; limit: number }
   ): Promise<InboxMessagesWindow> {
-    const members = (await this.listInboxNames(teamName)).sort((left, right) =>
-      left.localeCompare(right)
+    const inboxDir = path.join(getTeamsBasePath(), teamName, 'inboxes');
+    return unwrapInboxWindow(
+      await readInboxWindow(
+        {
+          listMembers: async () =>
+            (await fs.promises.readdir(inboxDir))
+              .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
+              .map((name) => name.replace(/\.json$/, ''))
+              .filter((name) => name !== '*'),
+          readMember: async (member): Promise<InboxMemberData> => {
+            const inboxPath = path.join(inboxDir, `${member}.json`);
+            try {
+              const stat = await fs.promises.stat(inboxPath);
+              if (!stat.isFile() || stat.size > MAX_INBOX_FILE_BYTES) {
+                this.deleteCachedMessages(inboxPath);
+                throw new TeamHistoryError(stat.isFile() ? 'oversized' : 'non_file');
+              }
+              // Legacy full reads cache tolerated parse failures as empty arrays.
+              // Strict windows validate the guarded raw source independently.
+              return { kind: 'raw', raw: await readFileUtf8WithTimeout(inboxPath, 5_000) };
+            } catch (error) {
+              this.deleteCachedMessages(inboxPath);
+              if (error instanceof TeamHistoryError) throw error;
+              if (error instanceof FileReadTimeoutError) throw new TeamHistoryError('timeout');
+              throw new TeamHistoryError(
+                (error as NodeJS.ErrnoException).code === 'ENOENT'
+                  ? 'missing_source'
+                  : 'read_failed'
+              );
+            }
+          },
+          normalize: normalizeInboxMessageItem,
+          assignRecipient: assignImpliedInboxRecipient,
+          visit: visitInboxJsonArrayItems,
+        },
+        options
+      )
     );
-    const limit = Math.max(1, Math.floor(options.limit));
-    const sourceRevisionHash = createHash('sha256');
-    sourceRevisionHash.update(`members:${members.join('\0')}\n`);
-
-    let sourceMessageCount = 0;
-    let truncated = false;
-    let windowMessages: InboxMessage[] = [];
-
-    for (const member of members) {
-      let memberWindow: InboxMessagesWindow;
-      try {
-        memberWindow = await this.getMessagesWindowFor(teamName, member, {
-          cursor: options.cursor ?? null,
-          limit,
-        });
-      } catch {
-        continue;
-      }
-
-      sourceRevisionHash.update(
-        `member:${member}:${memberWindow.sourceMessageCount}:${memberWindow.sourceRevision}\n`
-      );
-      sourceMessageCount += memberWindow.sourceMessageCount;
-      if (memberWindow.truncated) {
-        truncated = true;
-      }
-
-      windowMessages.push(...memberWindow.messages);
-
-      if (windowMessages.length > limit) {
-        truncated = true;
-        windowMessages.sort(compareNewestFirst);
-        windowMessages = windowMessages.slice(0, limit);
-      }
-    }
-
-    windowMessages.sort(compareNewestFirst);
-    if (windowMessages.length > limit) {
-      truncated = true;
-      windowMessages = windowMessages.slice(0, limit);
-    }
-
-    return {
-      messages: windowMessages,
-      truncated,
-      sourceRevision: sourceRevisionHash.digest('hex').slice(0, 24),
-      sourceMessageCount,
-    };
   }
 }

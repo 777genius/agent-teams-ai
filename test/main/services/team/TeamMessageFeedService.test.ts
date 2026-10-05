@@ -653,11 +653,10 @@ Messages:
       getSentMessages: vi.fn(async () => []),
     });
 
-    const page = await service.getPage('signal-ops-4', { limit: 10 });
-
+    await expect(service.getPage('signal-ops-4', { limit: 10 })).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE:read_failed'
+    );
     expect(getInboxMessages).not.toHaveBeenCalled();
-    expect(page.messages.map((message) => message.messageId)).toContain('lead-message');
-    expect(page.messages.map((message) => message.messageId)).not.toContain('full-inbox-only');
   });
 
   it('keeps page feedRevision stable across cursor changes when bounded sources are unchanged', async () => {
