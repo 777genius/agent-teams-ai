@@ -93,12 +93,17 @@ jobs:
         run: |
           pnpm typecheck
           if ($LASTEXITCODE -ne 0) { throw 'Canonical typecheck failed' }
-          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-mirror.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts
           if ($LASTEXITCODE -ne 0) { throw 'Windows harness lint failed' }
       - uses: actions/download-artifact@v8
         with:
           name: TEST-windows-updater-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-inputs/
+      - name: Diagnose PowerShell startup with exact minimal and TEST profile environments
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-evidence
+          if ($LASTEXITCODE -ne 0) { throw 'Windows startup diagnostic harness failed' }
       - name: Install and inspect official predecessor on its real native desktop
         run: |
           $ErrorActionPreference = 'Stop'
