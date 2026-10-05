@@ -1,0 +1,77 @@
+name: Native updater feasibility (Linux predecessor)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/e2e/release-updater/**'
+      - '.github/workflows/updater-native-feasibility.yml'
+      - 'tsconfig.updater-e2e.json'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'eslint.fast.config.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-predecessor-availability:
+    if: github.repository == '777genius/agent-teams-ai' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - name: Prepare disposable native inputs and evidence
+        run: mkdir -p .artifacts/TEST-updater-inputs .artifacts/TEST-updater-evidence
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check typed harness and changed file lint
+        run: |
+          pnpm typecheck
+          pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
+      - name: Read exact official predecessor and draft bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          inputs=.artifacts/TEST-updater-inputs
+          gh api repos/777genius/agent-teams-ai/releases/tags/v2.17.1 > "$inputs/source-api.json"
+          gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+          gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.1.AppImage --output "$inputs/old.AppImage"
+          gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern agent-teams-ai_2.17.1_amd64.deb --output "$inputs/old.deb"
+          gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/target.AppImage"
+          node scripts/e2e/release-updater/inputs.mts --write-catalog "$inputs"
+      - name: Enable native FUSE and unprivileged Electron sandbox in ephemeral VM
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libfuse2t64 xvfb xauth x11-utils imagemagick
+          test -c /dev/fuse
+          # Ubuntu 24 AppArmor otherwise blocks Electron's unprivileged userns.
+          # This runner is disposable; no root GUI or --no-sandbox is permitted.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Probe unmodified official AppImage with private authenticated Xvfb
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' --error-file=.artifacts/TEST-updater-evidence/xvfb.log \
+            node scripts/e2e/release-updater/linux-feasibility.mts \
+              --inputs .artifacts/TEST-updater-inputs \
+              --evidence .artifacts/TEST-updater-evidence \
+            2>&1 | tee .artifacts/TEST-updater-evidence/probe.log
+      - name: Preserve native evidence on success and failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-linux-predecessor-availability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-updater-evidence/
+          if-no-files-found: warn
+          retention-days: 14
