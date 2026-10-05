@@ -10,6 +10,7 @@ import {
   resolvePostHogBuildKey,
 } from './src/shared/utils/posthogBuildPolicy'
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
+import { sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -136,17 +137,29 @@ const sourceMapSetting = process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? fa
 
 // Sentry source map upload - only active in CI when SENTRY_AUTH_TOKEN is set.
 function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugin[] {
-  if (!process.env.SENTRY_AUTH_TOKEN) return []
-
+  const covered = Boolean(process.env.SENTRY_AUTH_TOKEN)
   return [
-    sentryVitePlugin({
+    ...(covered ? [sentryVitePlugin({
       org: process.env.SENTRY_ORG ?? 'quant-jump-pro',
       project: process.env.SENTRY_PROJECT ?? 'electron',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       telemetry: false,
       release: { name: `agent-teams-ai@${pkg.version}` },
       sourcemaps: sentrySourceMapTargets[target],
-    }) as Plugin,
+    }) as Plugin] : []),
+    sentryArtifactInventoryPlugin({
+      target,
+      covered,
+      release: `agent-teams-ai@${pkg.version}`,
+      buildId,
+      gitSha: buildGitSha,
+      evidenceDirectory: resolve(
+        __dirname,
+        '.artifacts/sentry',
+        buildGitSha || 'unknown',
+        buildId || 'unknown'
+      ),
+    }),
   ]
 }
 
