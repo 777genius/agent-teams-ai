@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
-import { digest, requireThat } from './contract.js';
+import { digest, isPreviousRelease, requireThat } from './contract.js';
 import type {
   Asset,
   BuildProof,
@@ -14,19 +14,28 @@ import type {
   NativeProbeArtifact,
   Release,
   ReleasePort,
+  StageInput,
 } from './contract.js';
 
-class CliError extends Error {
+export class ReleaseHttpError extends Error {
   readonly httpStatus: number | null;
+  constructor(message: string, httpStatus: number | null) {
+    super(message);
+    this.httpStatus = httpStatus;
+  }
+}
+class CliError extends ReleaseHttpError {
   constructor(
     executable: string,
     operation: string | undefined,
     code: number | null,
     stderr: string
   ) {
-    super(`${executable} ${operation} failed (${code}): ${stderr}`);
     const status = /\(HTTP (\d{3})\)/.exec(stderr)?.[1];
-    this.httpStatus = executable === 'gh' && status ? Number(status) : null;
+    super(
+      `${executable} ${operation} failed (${code}): ${stderr}`,
+      executable === 'gh' && status ? Number(status) : null
+    );
   }
 }
 async function executablePath(name: 'gh' | 'unzip'): Promise<string> {
@@ -76,6 +85,30 @@ async function command(
 async function api<T>(endpoint: string): Promise<T> {
   return JSON.parse(await command(['api', endpoint])) as T;
 }
+async function anonymous(url: string, options?: RequestInit): Promise<Release | undefined> {
+  const signal = AbortSignal.timeout(30_000);
+  try {
+    const response = await fetch(url, { ...options, signal });
+    if (!response.ok)
+      throw new ReleaseHttpError(
+        `Anonymous request unavailable: ${url} (HTTP ${response.status})`,
+        response.status
+      );
+    // Keep GET body consumption inside the deadline: headers alone do not prove
+    // that GitHub completed the response. HEAD proofs do not consume a body.
+    return options?.method === 'HEAD' ? undefined : ((await response.json()) as Release);
+  } catch (error) {
+    if (
+      signal.aborted &&
+      signal.reason instanceof Error &&
+      signal.reason.name === 'TimeoutError' &&
+      error instanceof Error &&
+      (error.name === 'TimeoutError' || error.name === 'AbortError')
+    )
+      throw new ReleaseHttpError(`Anonymous request timed out: ${url}`, 408);
+    throw error;
+  }
+}
 export interface NativeProducerMetadata {
   run: { head_sha: string; run_attempt: number; status: string; path: string };
   job: {
@@ -101,6 +134,22 @@ export interface NativeProducerMetadata {
     created_at: string;
     workflow_run: { id: number; head_sha: string };
   };
+}
+export interface GitHubBuildRun {
+  head_sha: string;
+  run_attempt: number;
+  path: string;
+  event: string;
+}
+function trustedBuildProducer(run: GitHubBuildRun, mode: Mode): boolean {
+  switch (run.path) {
+    case '.github/workflows/release.yml':
+      return run.event === 'push' || run.event === 'workflow_dispatch';
+    case '.github/workflows/build-linux-windows-draft.yml':
+      return mode === 'carry-mac' && run.event === 'workflow_dispatch';
+    default:
+      return false;
+  }
 }
 export function validateNativeProducer(
   ref: NativeEvidenceReference,
@@ -245,8 +294,23 @@ export class GitHubReleasePort implements ReleasePort {
       destination
     );
   }
-  async upload(repository: string, tag: string, file: string): Promise<void> {
-    await command(['release', 'upload', tag, file, '--repo', repository]);
+  async upload(repository: string, releaseId: number, file: string): Promise<void> {
+    requireThat(
+      Number.isSafeInteger(releaseId) && releaseId > 0,
+      'Numeric draft release ID required'
+    );
+    await command([
+      'api',
+      `https://uploads.github.com/repos/${repository}/releases/${releaseId}/assets?name=${encodeURIComponent(path.basename(file))}`,
+      '--hostname',
+      'github.com',
+      '--method',
+      'POST',
+      '-H',
+      'Content-Type: application/octet-stream',
+      '--input',
+      file,
+    ]);
   }
   async verifyBuild(repository: string, sha: string, proof: BuildProof, mode: Mode): Promise<void> {
     requireThat(
@@ -258,12 +322,14 @@ export class GitHubReleasePort implements ReleasePort {
         new Set(proof.jobIds).size === proof.jobIds.length,
       'Explicit build run/attempt/jobs required'
     );
-    const run = await api<{ head_sha: string; run_attempt: number; event: string }>(
-      `repos/${repository}/actions/runs/${proof.runId}`
-    );
+    const run = await api<GitHubBuildRun>(`repos/${repository}/actions/runs/${proof.runId}`);
     requireThat(
       run.head_sha === sha && run.run_attempt === proof.attempt,
       'Build run application SHA/attempt mismatch'
+    );
+    requireThat(
+      trustedBuildProducer(run, mode),
+      'Build producer workflow/event/mode is not trusted'
     );
     const pages = JSON.parse(
       await command([
@@ -298,34 +364,48 @@ export class GitHubReleasePort implements ReleasePort {
       );
   }
   async publicAsset(repository: string, tag: string, name: string): Promise<void> {
-    const response = await fetch(
-      `https://github.com/${repository}/releases/download/${tag}/${name}`,
-      { method: 'HEAD', redirect: 'follow' }
-    );
-    requireThat(response.ok, `Anonymous asset unavailable: ${tag}/${name}`);
+    await anonymous(`https://github.com/${repository}/releases/download/${tag}/${name}`, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
   }
-  async publicRelease(repository: string, tag: string): Promise<void> {
-    const response = await fetch(
-      `https://api.github.com/repos/${repository}/releases/tags/${tag}`,
-      { headers: { Accept: 'application/vnd.github+json' } }
-    );
-    requireThat(response.ok, `Anonymous release unavailable: ${tag}`);
-    const release = (await response.json()) as Release;
+  async publicLatestAsset(repository: string, name: string): Promise<void> {
+    await anonymous(`https://github.com/${repository}/releases/latest/download/${name}`, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
+  }
+  async publicRelease(repository: string, tag: string, expectedTarget = false): Promise<void> {
+    let release: Release | undefined;
+    try {
+      release = await anonymous(`https://api.github.com/repos/${repository}/releases/tags/${tag}`, {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+    } catch (error) {
+      if (expectedTarget && error instanceof ReleaseHttpError && error.httpStatus === 404)
+        throw new ReleaseHttpError(
+          `Expected published target is not anonymously visible: ${tag}`,
+          408
+        );
+      throw error;
+    }
     requireThat(
-      !release.draft && !release.prerelease && release.tag_name === tag,
+      release && !release.draft && !release.prerelease && release.tag_name === tag,
       'Anonymous release visibility mismatch'
     );
   }
-  async publicLatest(repository: string, tag: string): Promise<void> {
-    const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`, {
+  async publicLatest(
+    repository: string,
+    tag: string,
+    previous?: StageInput['latest']
+  ): Promise<void> {
+    const release = await anonymous(`https://api.github.com/repos/${repository}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' },
     });
-    requireThat(response.ok, 'Anonymous latest release unavailable');
-    const release = (await response.json()) as Release;
-    requireThat(
-      !release.draft && !release.prerelease && release.tag_name === tag,
-      'Anonymous latest tag mismatch'
-    );
+    if (release && !release.draft && !release.prerelease && release.tag_name === tag) return;
+    if (release && isPreviousRelease(release, previous))
+      throw new ReleaseHttpError('Anonymous latest still exposes the frozen previous release', 408);
+    throw new Error('Anonymous latest tag mismatch');
   }
   async verifyNative(ref: NativeEvidenceReference): Promise<NativeProbeArtifact> {
     requireThat(

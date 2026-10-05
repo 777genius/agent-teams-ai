@@ -14,6 +14,7 @@ import {
   checkRelease,
   digest,
   fileProof,
+  isPreviousRelease,
   manifestFor,
   older,
   platformNames,
@@ -32,6 +33,7 @@ import type {
   ReleasePort,
   StagePlan,
 } from './contract.js';
+import { ReleaseHttpError } from './github.js';
 
 async function downloadedProof(
   port: ReleasePort,
@@ -196,34 +198,43 @@ export async function verifyPublished(
     audited.set(name, result.proof);
     return result;
   };
-  const finish = async () => {
-    const final = await port.release(repository, tag);
+  const finish = async (plan?: StagePlan) => {
+    const previous = plan?.input.latest;
+    const checkLatest = async () => {
+      const latest = await port.latest(repository);
+      const current =
+        latest.id === target.id && latest.tag_name === tag && !latest.draft && !latest.prerelease;
+      if (!current && isPreviousRelease(latest, previous))
+        throw new ReleaseHttpError('GitHub latest still exposes the frozen previous release', 408);
+      requireThat(current, 'Published release is not GitHub latest');
+    };
+    await checkLatest();
+    await port.publicRelease(repository, tag, true);
+    await port.publicLatest(repository, tag, previous);
+    for (const name of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml']) {
+      await port.publicAsset(repository, tag, name);
+      await port.publicLatestAsset(repository, name);
+    }
+    // Public requests can take time; retain the final snapshot check after them,
+    // including plan aliases whose source bytes were proven independently.
+    const final = plan
+      ? await validateOrigins(port, plan, false)
+      : await port.release(repository, tag);
     checkRelease(final, releaseSnapshot(target, applicationSha), false);
     requireThat(
       (await port.tagSha(repository, tag)) === applicationSha,
       'Published tag changed during audit'
     );
-    for (const proof of audited.values()) checkMetadata(assetByName(final, proof.name), proof);
-    const latest = await port.latest(repository);
-    requireThat(
-      latest.id === target.id && latest.tag_name === tag,
-      'Latest changed during publication audit'
-    );
-    await port.publicLatest(repository, tag);
+    for (const proof of [...audited.values(), ...(plan?.outputs ?? [])])
+      checkMetadata(assetByName(final, proof.name), proof);
+    await checkLatest();
+    await port.publicLatest(repository, tag, previous);
   };
   requireThat(!releaseId || target.id === releaseId, 'Release ID/tag mismatch');
-  const latest = await port.latest(repository);
-  requireThat(
-    latest.id === target.id && latest.tag_name === tag && !latest.draft && !latest.prerelease,
-    'Published release is not GitHub latest'
-  );
-  await port.publicRelease(repository, tag);
-  await port.publicLatest(repository, tag);
   const found = target.assets.some((a) => a.name === MANIFEST);
   const feeds: Record<string, string> = {};
   for (const name of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml']) {
     feeds[name] = (await audit(name)).raw.toString();
-    await port.publicAsset(repository, tag, name);
   }
   if (!found) {
     const productMinimum = older(tag, 'v2.17.2')
@@ -280,6 +291,7 @@ export async function verifyPublished(
   // Changes during the audit invalidate the evidence; never silently accept a mixed snapshot.
   const final = await validateOrigins(port, plan, false);
   for (const proof of manifest.outputs) checkMetadata(assetByName(final, proof.name), proof);
-  await finish();
+  // Only a fully audited manifest can authorize retry for its frozen predecessor.
+  await finish(plan);
   return { mode: manifest.input.mode, tag };
 }

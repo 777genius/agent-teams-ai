@@ -205,8 +205,7 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 
 ## What is this
 
-An orchestration layer for AI agent teams across Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro.
-
+An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth)
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
