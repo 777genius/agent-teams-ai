@@ -765,7 +765,7 @@ describe.skipIf(process.platform === 'win32')('authenticated draft release trans
   });
 
   it.each([401, 403, 429, 500])(
-    'propagates HTTP %s without treating auth/rate/transport failure as draft absence',
+    'propagates HTTP %s without draft discovery and classifies its actual CLI failure',
     async (status) => {
       const draft = await new TestReleaseStorage().release(repository, 'v2.17.2');
       await releaseTransport(
@@ -773,6 +773,12 @@ describe.skipIf(process.platform === 'win32')('authenticated draft release trans
         async (port, calls) => {
           await expect(port.release(repository, 'v2.17.2')).rejects.toThrow(`HTTP ${status}`);
           expect(await calls()).toEqual([`repos/${repository}/releases/tags/v2.17.2`]);
+          await verifyCommandExit(
+            draft.tag_name,
+            status === 429 || status >= 500 ? 75 : 1,
+            new RegExp(`HTTP ${status}`)
+          );
+          expect(await calls()).toEqual(Array(2).fill(`repos/${repository}/releases/tags/v2.17.2`));
         }
       );
     }
@@ -925,7 +931,12 @@ describe.skipIf(process.platform === 'win32')(
             () =>
               verifyCommandExit(
                 target.tag_name,
-                status >= 500 || status === 408 || (kind === 'release' && status === 404) ? 75 : 1
+                status >= 500 ||
+                  status === 408 ||
+                  status === 429 ||
+                  (kind === 'release' && status === 404)
+                  ? 75
+                  : 1
               )
           );
           const port = new GitHubReleasePort();
