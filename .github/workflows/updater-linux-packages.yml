@@ -1,0 +1,233 @@
+name: Native Linux package updater
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/e2e/release-updater/linux-packages*.mts'
+      - '.github/workflows/updater-linux-packages.yml'
+      - 'scripts/e2e/release-updater/archive.mts'
+      - 'scripts/e2e/release-updater/cdp.mts'
+      - 'scripts/e2e/release-updater/inputs.mts'
+      - 'scripts/e2e/release-updater/native-window.mts'
+      - 'scripts/e2e/release-updater/transport.mts'
+      - 'scripts/ci/release/contract.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.updater-e2e.json'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'availability first; ota includes a separate fresh target install'
+        type: choice
+        options: [availability, ota]
+        default: availability
+      stage_artifact:
+        description: 'Optional immutable prepared stage artifact name'
+        type: string
+      stage_run_id:
+        description: 'Producer run ID for that prepared stage artifact'
+        type: string
+      plan_sha256:
+        description: 'Expected SHA256 of its exact stage-plan.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  inputs:
+    if: github.repository == '777genius/agent-teams-ai' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Draft reads require push permission. This job only reads release bytes;
+    # its token never reaches a desktop process or a native runtime job.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download and verify immutable official packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          inputs=.artifacts/TEST-linux-package-inputs
+          mkdir -p "$inputs"
+          gh api repos/777genius/agent-teams-ai/releases/tags/v2.17.1 > "$inputs/source-api.json"
+          gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+          for kind in deb rpm pacman; do
+            old=$(node scripts/e2e/release-updater/linux-packages-inputs.mts --name "$kind" 2.17.1)
+            target=$(node scripts/e2e/release-updater/linux-packages-inputs.mts --name "$kind" 2.17.2)
+            gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern "$old" --output "$inputs/$old"
+            gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern "$target" --output "$inputs/$target"
+          done
+          gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/Agent.Teams.AI-2.17.2.AppImage"
+          node scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TEST-linux-package-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-linux-package-inputs/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 2
+
+  native:
+    needs: inputs
+    permissions:
+      contents: read
+      actions: read
+    # The host supplies a kernel only; each GUI/package manager uses the native
+    # distro below. Ubuntu 22 avoids Ubuntu 24's host-global userns restriction.
+    # No host sysctl, privileged container, extra capability or AppArmor bypass.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: deb
+            image: ubuntu:24.04
+          - kind: rpm
+            image: fedora:44
+          - kind: pacman
+            image: archlinux:base
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Strict typed and full typed lint gates
+        run: |
+          pnpm typecheck
+          pnpm lint:ci:files -- scripts/e2e/release-updater/linux-packages*.mts
+          pnpm exec prettier --check scripts/e2e/release-updater/linux-packages*.mts .github/workflows/updater-linux-packages.yml
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-linux-package-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-linux-package-inputs/
+      - name: Download operator-bound prepared stage
+        if: inputs.stage_artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.stage_artifact }}
+          run-id: ${{ inputs.stage_run_id }}
+          github-token: ${{ github.token }}
+          path: .artifacts/TEST-linux-package-stage/
+      - name: Resolve base digest and prepare frozen native dependencies
+        env:
+          TEST_IMAGE: ${{ matrix.image }}
+          TEST_KIND: ${{ matrix.kind }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          build=.artifacts/TEST-linux-package-build
+          mkdir -p "$build" .artifacts/TEST-linux-package-evidence
+          docker pull "$TEST_IMAGE"
+          base=$(docker image inspect "$TEST_IMAGE" --format '{{index .RepoDigests 0}}')
+          test -n "$base"
+          printf 'FROM %s\n' "$base" > "$build/Dockerfile"
+          case "$TEST_KIND" in
+            deb) packages='apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick tesseract-ocr fonts-dejavu-core sudo util-linux libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libnotify4 libxss1 libxtst6 libasound2t64 libdrm2 libgbm1 xdg-utils cpio' ;;
+            rpm) packages='dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth xwininfo xprop ImageMagick tesseract tesseract-langpack-eng dejavu-sans-fonts sudo util-linux shadow-utils cpio nss atk at-spi2-atk cups-libs gtk3 libnotify libXScrnSaver libXtst alsa-lib libdrm mesa-libgbm xdg-utils which && dnf clean all' ;;
+            pacman) packages='pacman -Syu --noconfirm && pacman -S --noconfirm xorg-server-xvfb xorg-xauth xorg-xwininfo xorg-xprop imagemagick tesseract tesseract-data-eng ttf-dejavu sudo util-linux shadow cpio libarchive nss gtk3 libnotify libxss libxtst alsa-lib libdrm mesa xdg-utils which' ;;
+          esac
+          printf 'RUN %s\n' "$packages" >> "$build/Dockerfile"
+          if test "$TEST_KIND" = rpm; then
+            # Dependencies are prepared online above. Disable every repository
+            # section only inside this disposable image so the shipped updater's
+            # unchanged plain dnf install can resolve its local package offline.
+            cat >> "$build/Dockerfile" <<'OFFLINE'
+          RUN for repo in /etc/yum.repos.d/*.repo; do \
+                awk '/^[[:space:]]*\[/{print; print "enabled=0"; next} /^[[:space:]]*enabled[[:space:]]*=/{next} {print}' "$repo" > "$repo.TEST-offline" && mv "$repo.TEST-offline" "$repo"; \
+              done
+          OFFLINE
+          fi
+          printf 'RUN useradd -m -u 1000 TEST-updater && echo "TEST-updater ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/TEST-updater && chmod 0440 /etc/sudoers.d/TEST-updater\n' >> "$build/Dockerfile"
+          docker build --iidfile "$build/image.id" "$build" 2>&1 | tee "$build/build.log"
+          docker image inspect "$(cat "$build/image.id")" > "$build/image.json"
+          # Pin Docker's default seccomp source. Add only Chromium namespace
+          # syscalls; retain clone3 ENOSYS, mount restrictions and default caps.
+          gh api 'repos/moby/profiles/contents/seccomp/default.json?ref=2ceae35d351c156cb5a8efc0fdc4a08cf94569d8' --jq .content | base64 --decode > "$build/docker-default.json"
+          node scripts/e2e/release-updater/linux-packages-inputs.mts --seccomp "$build/docker-default.json" "$build/chromium-namespaces.json"
+          node scripts/e2e/release-updater/linux-packages-inputs.mts --security "$build" "$base" "$TEST_KIND" "$(git rev-parse HEAD)"
+      - name: Real native package install and unprivileged GUI in offline disposable containers
+        env:
+          TEST_KIND: ${{ matrix.kind }}
+          TEST_MODE: ${{ inputs.mode || 'availability' }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          build="$PWD/.artifacts/TEST-linux-package-build"
+          nodebin=$(command -v node)
+          image=$(cat "$build/image.id")
+          modes="$TEST_MODE"
+          if test "$TEST_MODE" = ota; then modes='ota fresh'; fi
+          result=0
+          for mode in $modes; do
+            evidence="$PWD/.artifacts/TEST-linux-package-evidence/$mode"
+            mkdir -p "$evidence"
+            sudo chown 1000:1000 "$evidence"
+            cid=$(docker create --network none --init --shm-size=1g --security-opt "seccomp=$build/chromium-namespaces.json" \
+              --mount "type=bind,src=$PWD,dst=/workspace,readonly" \
+              --mount "type=bind,src=$nodebin,dst=/usr/local/bin/node,readonly" \
+              --mount "type=bind,src=$evidence,dst=/evidence" \
+              --mount "type=bind,src=$build/security.json,dst=/TEST-container-security.json,readonly" \
+              --env "TEST_KIND=$TEST_KIND" --env "TEST_MODE=$mode" --env "TEST_PLAN_SHA=$TEST_PLAN_SHA" \
+              "$image" /bin/bash -c '
+                set -euo pipefail
+                inputs=/workspace/.artifacts/TEST-linux-package-inputs
+                mkdir -p /reference/2.17.1 /reference/2.17.2
+                for version in 2.17.1 2.17.2; do
+                  name=$(node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --name "$TEST_KIND" "$version")
+                  case "$TEST_KIND" in
+                    deb) dpkg-deb -x "$inputs/$name" "/reference/$version" ;;
+                    rpm) (cd "/reference/$version"; rpm2cpio "$inputs/$name" | cpio -idm --quiet) ;;
+                    pacman) bsdtar -xf "$inputs/$name" -C "/reference/$version" ;;
+                  esac
+                done
+                version=2.17.1; if test "$TEST_MODE" = fresh; then version=2.17.2; fi
+                name=$(node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --name "$TEST_KIND" "$version")
+                case "$TEST_KIND" in
+                  deb) dpkg -i "$inputs/$name"; dpkg-query -W > /evidence/os-packages.txt ;;
+                  rpm) dnf --disablerepo="*" install --nogpgcheck -y "$inputs/$name"; rpm -qa > /evidence/os-packages.txt; cat /etc/yum.repos.d/*.repo > /evidence/dnf-offline-repos.txt ;;
+                  pacman) pacman -U --noconfirm "$inputs/$name"; pacman -Q > /evidence/os-packages.txt ;;
+                esac
+                # Only distro package installation runs as container root. The
+                # harness, mirror, Xvfb and all app/successor processes use TEST uid.
+                stage=()
+                if test -n "$TEST_PLAN_SHA"; then stage=(--stage /workspace/.artifacts/TEST-linux-package-stage --plan-sha256 "$TEST_PLAN_SHA"); fi
+                runuser -u TEST-updater -- env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/TEST-updater LC_ALL=C.UTF-8 \
+                  xvfb-run --auto-servernum --server-args="-screen 0 1280x900x24 -nolisten tcp" --error-file=/evidence/xvfb.log \
+                  node /workspace/scripts/e2e/release-updater/linux-packages.mts --kind "$TEST_KIND" --mode "$TEST_MODE" \
+                  --inputs "$inputs" --references /reference --evidence /evidence "${stage[@]}"
+              ')
+            printf '%s\n' "$cid" > "$evidence/container.id"
+            docker inspect "$cid" > "$evidence/container-before.json"
+            docker start --attach "$cid" 2>&1 | tee "$evidence/container.log" || result=1
+            docker inspect "$cid" > "$evidence/container-after.json"
+            # Remove only this exact owned disposable container after evidence.
+            docker rm "$cid"
+          done
+          exit "$result"
+      - name: Preserve real native evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-linux-${{ matrix.kind }}-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .artifacts/TEST-linux-package-evidence/
+            .artifacts/TEST-linux-package-build/
+          if-no-files-found: warn
+          retention-days: 14
