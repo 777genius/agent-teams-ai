@@ -67,6 +67,21 @@ function Write-TestProgress([string]$phase) {
   [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
 }
 Write-TestProgress 'after-input-and-shell-validation'
+function Get-StartUtcTicks([object]$value) {
+  # ConvertFrom-Json can produce DateTime; compare instants without string coercion.
+  if ($value -is [DateTimeOffset]) { return $value.UtcDateTime.Ticks }
+  if ($value -is [DateTime]) {
+    if ($value.Kind -eq [DateTimeKind]::Unspecified) { throw 'Process start must include a time zone' }
+    return $value.ToUniversalTime().Ticks
+  }
+  if ($value -is [string] -and $value -cmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$') {
+    return [DateTimeOffset]::Parse($value,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::None).UtcDateTime.Ticks
+  }
+  throw 'Invalid process start timestamp'
+}
+function Test-SameStart([object]$actual,[object]$expected) {
+  return (Get-StartUtcTicks $actual) -eq (Get-StartUtcTicks $expected)
+}
 function Test-OwnedPath([string]$file) {
   $full = [IO.Path]::GetFullPath($file)
   if (-not $full.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
@@ -167,7 +182,7 @@ switch ($data.operation) {
   }
   'processes' { $result=@(Read-Owned $data.executable) }
   'capture' {
-    $process=@(Read-Owned $data.executable) | Where-Object { $_.pid -eq $data.pid -and $_.start -eq $data.start }
+    $process=@(Read-Owned $data.executable) | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) }
     if (@($process).Count -ne 1) { throw 'Owned PID changed before native capture' }
     $handle=[TestWindowsNative]::VisibleWindow($data.pid)
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
@@ -209,7 +224,7 @@ if ($data.operation -eq 'stop') {
   foreach ($owner in $data.owners) {
     $current=@(Read-Owned $owner.executable) | Where-Object { $_.pid -eq $owner.pid }
     if (@($current).Count) {
-      if ($current.start -ne $owner.start -or $current.sid -ne $owner.sid) { throw 'PID identity changed before cleanup' }
+      if (-not (Test-SameStart $current.start $owner.start) -or $current.sid -ne $owner.sid) { throw 'PID identity changed before cleanup' }
       try { Stop-Process -Id $owner.pid -Force }
       catch { if (@(Read-Owned $owner.executable | Where-Object { $_.pid -eq $owner.pid }).Count) { throw } }
     }

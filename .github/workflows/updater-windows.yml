@@ -62,7 +62,7 @@ jobs:
           [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tooling_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
