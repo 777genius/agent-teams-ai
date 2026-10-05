@@ -230,7 +230,7 @@ async function launch(label: string, version: string) {
   );
   await macCallFunction(
     main,
-    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeOldMac)})(originalRequire('electron'),getUpdater);};})()`,
+    `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeOldMac)})(originalRequire('electron'),getUpdater);};})()`,
     [mirror.origin, mirror.paths],
     frame.callFrameId
   );
