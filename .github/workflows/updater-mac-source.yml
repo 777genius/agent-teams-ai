@@ -65,7 +65,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
+          package-manager-cache: false
       - name: Install pinned tooling without product lifecycle scripts
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check typed signature harness
@@ -123,7 +123,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
+          package-manager-cache: false
       - name: Install pinned tooling without product lifecycle scripts
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Aggregate only successful current-attempt native producer artifacts
