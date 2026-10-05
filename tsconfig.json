@@ -11,6 +11,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "paths": {
       "@claude-teams/agent-graph": ["./packages/agent-graph/src/index.ts"],
       "@features/*": ["./src/features/*"],
@@ -25,7 +26,8 @@
     "src/**/*",
     "test/**/*",
     "scripts/team-changes-real-data-smoke.ts",
-    "scripts/smoke/codex-runtime-install.ts"
+    "scripts/smoke/codex-runtime-install.ts",
+    "scripts/e2e/release-updater/**/*.mts"
   ],
   "exclude": ["node_modules", "dist", "dist-electron"]
 }

@@ -52,7 +52,7 @@ export default defineConfig([
 
   {
     name: 'fast-typescript',
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,mts}'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
@@ -103,7 +103,7 @@ export default defineConfig([
 
   {
     name: 'fast-node-globals',
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,ts}', 'test/**/*.ts'],
+    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,ts,mts}', 'test/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
