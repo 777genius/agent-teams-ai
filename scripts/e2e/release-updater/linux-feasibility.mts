@@ -8,6 +8,7 @@ import path from 'node:path';
 
 import { captureSources, readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { cdpCallFunction, cdpSerializedFunction } from './cdp-values.mts';
 import { hashFile, loadInputs, pins, stageArguments } from './inputs.mts';
 import { startMirror } from './mirror.mts';
 import { captureNativeWindow, processIdentity, stopOwnedGroup } from './native-window.mts';
@@ -250,8 +251,10 @@ try {
     ),
     'Official AppRun disabled the Electron sandbox'
   );
-  evidence.hook = await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)})`,
+  evidence.hook = await cdpCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{return (${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);};})()`,
+    [mirror.origin, mirror.paths],
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -309,13 +312,17 @@ try {
   }, `genuine GitHubProvider available ${targetVersion}`);
   const details = await waitFor(
     () =>
-      renderer!.evaluate<{ x: number; y: number } | true | null>(`(() => {
+      cdpCallFunction<{ x: number; y: number } | true | null>(
+        renderer!,
+        `(version)=>{
     if(document.querySelector('[role=dialog]')) return true;
     const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='View details' && !b.disabled);
-    if(!button || !button.parentElement.textContent.includes(${JSON.stringify(targetVersion)})) return null;
+    if(!button || !button.parentElement.textContent.includes(version)) return null;
     const r=button.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;
     return r.width && r.height && button.contains(document.elementFromPoint(x,y)) ? {x,y} : null;
-  })()`),
+  }`,
+        [targetVersion]
+      ).then((value) => value ?? null),
     `real ${targetVersion} update banner`
   );
   if (details !== true) {
@@ -329,13 +336,17 @@ try {
   }
   const ui = await waitFor(
     () =>
-      renderer!.evaluate<string | null>(`(() => {
+      cdpCallFunction<string | null>(
+        renderer!,
+        `(version)=>{
     const dialog=document.querySelector('[role=dialog]');
     const download=dialog && [...dialog.querySelectorAll('button')].find(b=>b.textContent.trim()==='Download' && !b.disabled);
-    if(!dialog || !download || !dialog.textContent.includes(${JSON.stringify(targetVersion)})) return null;
+    if(!dialog || !download || !dialog.textContent.includes(version)) return null;
     const r=download.getBoundingClientRect();
     return r.width && r.height && download.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)) ? dialog.textContent.trim() : null;
-  })()`),
+  }`,
+        [targetVersion]
+      ).then((value) => value ?? null),
     `normal UI available ${targetVersion} with actionable Download`
   );
   const required = [

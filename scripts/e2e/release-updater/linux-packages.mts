@@ -9,6 +9,12 @@ import { promisify } from 'node:util';
 
 import { hashFile, stageArguments } from './inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import {
+  cdpCallFunction,
+  cdpSerializedFunction,
+  cdpBodyContains,
+  cdpButtonPoint,
+} from './cdp-values.mts';
 import { packageCases, packageInputs, packageKind, packageName } from './linux-packages-inputs.mts';
 import { packageMirror } from './linux-packages-mirror.mts';
 import {
@@ -28,6 +34,7 @@ import type {
   WindowProcess,
 } from './linux-packages-native.mts';
 import type { TransportState } from './transport.mts';
+import type { ButtonScope } from './cdp-values.mts';
 
 interface Target {
   type: string;
@@ -132,13 +139,11 @@ async function events() {
   assert(main);
   return main.evaluate<UpdateEvent[]>('globalThis.__TEST_packageEvents');
 }
-async function point(pattern: string, scope = 'document') {
+async function point(pattern: string, scope: ButtonScope = 'document') {
   assert(renderer);
-  return renderer.evaluate<{ x: number; y: number; text: string } | null>(
-    `(() => { const root=${scope}; const button=[...(root?.querySelectorAll('button')??[])].find(b=>new RegExp(${JSON.stringify(pattern)},'i').test(b.textContent.trim())&&!b.disabled); if(!button||document.getElementById('splash'))return null; button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;return r.width&&r.height&&button.contains(document.elementFromPoint(x,y))?{x,y,text:button.textContent.trim()}:null; })()`
-  );
+  return cdpButtonPoint(renderer, pattern, scope);
 }
-async function click(pattern: string, scope?: string) {
+async function click(pattern: string, scope?: ButtonScope) {
   const location = await waitFor(() => point(pattern, scope), `actionable ${pattern}`);
   assert(renderer);
   for (const type of ['mousePressed', 'mouseReleased'])
@@ -291,8 +296,10 @@ async function launch(version: string) {
   }, 'native package main inspector');
   main = await Cdp.connect(inspector.webSocketDebuggerUrl);
   const entry = await pausedEntry(main, pid);
-  await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observePackage.toString()})(require('electron'),()=>autoUpdater)`,
+  await cdpCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observePackage)} )(originalRequire('electron'),getUpdater);};})()`,
+    [mirror.origin, mirror.paths],
     entry.frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -497,11 +504,9 @@ try {
     }, `genuine native updater available ${targetVersion}`);
     await waitFor(() => {
       assert(renderer);
-      return renderer.evaluate<boolean | null>(
-        `document.body.innerText.includes(${JSON.stringify(targetVersion)})?true:null`
-      );
+      return cdpBodyContains(renderer, targetVersion);
     }, 'normal UI validated availability');
-    const dialog = 'document.querySelector("[role=dialog]")';
+    const dialog: ButtonScope = 'dialog';
     if (mode === 'availability') {
       if (!(await point('^Download$', dialog))) await click('^(?:View details|Update app)$');
       await waitFor(() => point('^Download$', dialog), 'hit-tested real available dialog');
@@ -548,7 +553,6 @@ try {
       evidence.profileBefore = await config();
       await screenshot('profile-before');
       await click('^Advanced$');
-      await click(`^(?:Check for updates|v?${targetVersion.replaceAll('.', '\\.')} available)$`);
       if (!(await point('^Download$', dialog))) await click('^(?:Update app|View details)$');
       await waitFor(() => point('^Download$', dialog), 'real download dialog');
       await screenshot('available');

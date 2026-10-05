@@ -19,6 +19,12 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { Cdp, waitFor } from './cdp.mts';
+import {
+  cdpCallFunction,
+  cdpSerializedFunction,
+  cdpBodyContains,
+  cdpButtonPoint,
+} from './cdp-values.mts';
 import { automaticDesktop, wrapperProvenance } from './linux-appimage-proof.mts';
 import { hashFile, loadInputs, pins, stageArguments } from './inputs.mts';
 import { processIdentity, stopOwnedGroup } from './native-window.mts';
@@ -28,6 +34,7 @@ import { transportHook } from './transport.mts';
 
 import type { FileProof } from '../../ci/release/contract.ts';
 import type { TransportState } from './transport.mts';
+import type { ButtonScope } from './cdp-values.mts';
 import type { App } from 'electron';
 
 interface Event {
@@ -206,8 +213,10 @@ async function launch(image: string, env: NodeJS.ProcessEnv, version: string) {
   assert(frame);
   const filename = await main.evaluate<string>('__filename', frame.callFrameId);
   assert(filename.endsWith('/resources/app.asar/dist-electron/main/index.cjs'));
-  await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observeOta.toString()})(require('electron').app,()=>autoUpdater)`,
+  await cdpCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
+    [mirror.origin, mirror.paths],
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -265,16 +274,11 @@ async function otaEvents() {
   assert(main);
   return main.evaluate<Event[]>('globalThis.__TEST_nativeOta');
 }
-async function point(pattern: string, scope = 'document') {
+async function point(pattern: string, scope: ButtonScope = 'document') {
   assert(renderer);
-  return renderer.evaluate<{ x: number; y: number; text: string } | null>(`(() => {
-    const root=${scope}; const button=[...(root?.querySelectorAll('button')??[])].find(b=>new RegExp(${JSON.stringify(pattern)},'i').test(b.textContent.trim()) && !b.disabled);
-    if(!button || document.getElementById('splash')) return null;
-    button.scrollIntoView({block:'center'}); const r=button.getBoundingClientRect(); const x=r.left+r.width/2,y=r.top+r.height/2;
-    return r.width && r.height && button.contains(document.elementFromPoint(x,y)) ? {x,y,text:button.textContent.trim()} : null;
-  })()`);
+  return cdpButtonPoint(renderer, pattern, scope);
 }
-async function click(pattern: string, scope?: string) {
+async function click(pattern: string, scope?: ButtonScope) {
   const location = await waitFor(() => point(pattern, scope), `actionable ${pattern}`);
   assert(renderer);
   for (const type of ['mousePressed', 'mouseReleased'])
@@ -478,15 +482,11 @@ try {
     // The bundled updater event precedes asynchronous service HEAD/API validation.
     // Wait for its real renderer result before navigating to Settings.
     await waitFor(
-      () =>
-        renderer!.evaluate<boolean | null>(
-          `document.body.innerText.includes(${JSON.stringify(targetVersion)}) ? true : null`
-        ),
+      () => cdpBodyContains(renderer!, targetVersion),
       'validated update reaches normal UI'
     );
     evidence.beforeSettingsUi = await uiSnapshot();
-    if (await point('^Later$', 'document.querySelector("[role=dialog]")'))
-      await click('^Later$', 'document.querySelector("[role=dialog]")');
+    if (await point('^Later$', 'dialog')) await click('^Later$', 'dialog');
     await waitFor(
       () =>
         renderer!.evaluate<boolean | null>('document.querySelector("[role=dialog]") ? null : true'),
@@ -525,14 +525,10 @@ try {
           : null,
       'user Check reaches genuine updater'
     );
-    if (!(await point('^Download$', 'document.querySelector("[role=dialog]")')))
-      await click('^(?:Update app|View details)$');
-    await waitFor(
-      () => point('^Download$', 'document.querySelector("[role=dialog]")'),
-      'available dialog'
-    );
+    if (!(await point('^Download$', 'dialog'))) await click('^(?:Update app|View details)$');
+    await waitFor(() => point('^Download$', 'dialog'), 'available dialog');
     await screenshot('available');
-    evidence.downloadAction = await click('^Download$', 'document.querySelector("[role=dialog]")');
+    evidence.downloadAction = await click('^Download$', 'dialog');
     await waitFor(
       async () =>
         (await otaEvents()).some(
@@ -562,12 +558,9 @@ try {
       'genuine downloaded version',
       180_000
     );
-    if (!(await point('^Restart now$', 'document.querySelector("[role=dialog]")')))
+    if (!(await point('^Restart now$', 'dialog')))
       await click('^(?:Restart to update|View details)$');
-    await waitFor(
-      () => point('^Restart now$', 'document.querySelector("[role=dialog]")'),
-      'actionable downloaded dialog'
-    );
+    await waitFor(() => point('^Restart now$', 'dialog'), 'actionable downloaded dialog');
     await screenshot('downloaded');
     evidence.updaterEvents = await otaEvents();
     evidence.transport = await transport();
@@ -590,10 +583,7 @@ try {
     const before = new Set(
       (await ownedApps({ root, home, userData }, minimumStart!)).map((app) => app.pid)
     );
-    evidence.installAction = await click(
-      '^Restart now$',
-      'document.querySelector("[role=dialog]")'
-    );
+    evidence.installAction = await click('^Restart now$', 'dialog');
     // Let the original updater quit without an attached debugger holding exit.
     main?.close();
     renderer?.close();
