@@ -31,6 +31,7 @@ import {
 import type {
   Asset,
   BuildProof,
+  Mode,
   NativeEvidence,
   NativeEvidenceReference,
   NativeProbeArtifact,
@@ -38,7 +39,7 @@ import type {
   ReleasePort,
 } from '../../scripts/ci/release/contract.js';
 import { GitHubReleasePort, validateNativeProducer } from '../../scripts/ci/release/github.js';
-import type { NativeProducerMetadata } from '../../scripts/ci/release/github.js';
+import type { GitHubBuildRun, NativeProducerMetadata } from '../../scripts/ci/release/github.js';
 import { verifyPublished } from '../../scripts/ci/release/validation.js';
 
 const repository = '777genius/agent-teams-ai';
@@ -977,4 +978,131 @@ it('follows the latest download redirect and preserves failure from its destinat
       [destination, 'HEAD'],
     ]);
   });
+});
+
+async function buildProducerTransport(
+  run: GitHubBuildRun,
+  mode: Mode,
+  test: (verify: () => Promise<void>, calls: () => Promise<string[]>) => Promise<void>
+): Promise<void> {
+  requirePosixGhFixture();
+  const directory = await mkdtemp(path.join(tmpdir(), 'TEST-build-producer-'));
+  directories.push(directory);
+  const jobs = [
+    { id: 11, run_id: 10, conclusion: 'success', name: 'release-win x64' },
+    { id: 12, run_id: 10, conclusion: 'success', name: 'release-win arm64' },
+    { id: 13, run_id: 10, conclusion: 'success', name: 'release-linux x64' },
+  ];
+  if (mode === 'full')
+    jobs.push(
+      { id: 14, run_id: 10, conclusion: 'success', name: 'release-mac x64' },
+      { id: 15, run_id: 10, conclusion: 'success', name: 'release-mac arm64' }
+    );
+  await writeFile(
+    path.join(directory, 'gh'),
+    `#!/bin/sh
+set -eu
+fixture_dir=$(dirname "$0")
+[ "$1" = api ]
+printf '%s\\n' "$2" >> "$fixture_dir/calls.txt"
+case "$2" in
+  */actions/runs/10) cat "$fixture_dir/run.json" ;;
+  */actions/runs/10/attempts/1/jobs\\?per_page=100) cat "$fixture_dir/jobs.json" ;;
+  *) exit 2 ;;
+esac
+`
+  );
+  await chmod(path.join(directory, 'gh'), 0o755);
+  await writeFile(path.join(directory, 'run.json'), JSON.stringify(run));
+  await writeFile(path.join(directory, 'jobs.json'), JSON.stringify([{ jobs }]));
+  const proof: BuildProof = { runId: 10, attempt: 1, jobIds: jobs.map((job) => job.id) };
+  vi.stubEnv('PATH', `${directory}${path.delimiter}${process.env.PATH ?? ''}`);
+  try {
+    await test(
+      () => new GitHubReleasePort().verifyBuild(repository, targetSha, proof, mode),
+      async () => (await readFile(path.join(directory, 'calls.txt'), 'utf8')).trim().split('\n')
+    );
+  } finally {
+    vi.unstubAllEnvs();
+  }
+}
+
+describe.skipIf(process.platform === 'win32')('trusted build workflow producer transport', () => {
+  const releaseWorkflow = '.github/workflows/release.yml';
+  const partialWorkflow = '.github/workflows/build-linux-windows-draft.yml';
+  const run = { head_sha: targetSha, run_attempt: 1 };
+  it.each<{ path: string; event: string; mode: Mode }>([
+    { path: releaseWorkflow, event: 'push', mode: 'carry-mac' },
+    { path: releaseWorkflow, event: 'workflow_dispatch', mode: 'full' },
+    { path: partialWorkflow, event: 'workflow_dispatch', mode: 'carry-mac' },
+  ])(
+    'accepts reviewed $path / $event for $mode with successful exact-attempt jobs',
+    async ({ path: workflow, event, mode }) => {
+      await buildProducerTransport(
+        { ...run, path: workflow, event },
+        mode,
+        async (verify, calls) => {
+          await expect(verify()).resolves.toBeUndefined();
+          expect(await calls()).toEqual([
+            `repos/${repository}/actions/runs/10`,
+            `repos/${repository}/actions/runs/10/attempts/1/jobs?per_page=100`,
+          ]);
+        }
+      );
+    }
+  );
+  it.each<{ failure: string; path: string; event: string; mode: Mode }>([
+    {
+      failure: 'unrelated workflow',
+      path: '.github/workflows/spoof-build.yml',
+      event: 'workflow_dispatch',
+      mode: 'carry-mac',
+    },
+    { failure: 'missing path', path: '', event: 'workflow_dispatch', mode: 'carry-mac' },
+    {
+      failure: 'noncanonical path suffix',
+      path: `${releaseWorkflow}@refs/heads/main`,
+      event: 'workflow_dispatch',
+      mode: 'carry-mac',
+    },
+    {
+      failure: 'pull request release producer',
+      path: releaseWorkflow,
+      event: 'pull_request',
+      mode: 'carry-mac',
+    },
+    {
+      failure: 'nested workflow release producer',
+      path: releaseWorkflow,
+      event: 'workflow_run',
+      mode: 'carry-mac',
+    },
+    { failure: 'push partial producer', path: partialWorkflow, event: 'push', mode: 'carry-mac' },
+    {
+      failure: 'pull request partial producer',
+      path: partialWorkflow,
+      event: 'pull_request',
+      mode: 'carry-mac',
+    },
+    {
+      failure: 'partial producer used for full release',
+      path: partialWorkflow,
+      event: 'workflow_dispatch',
+      mode: 'full',
+    },
+  ])(
+    'rejects $failure before reading/accepting successful similarly named platform jobs',
+    async ({ path: workflow, event, mode }) => {
+      await buildProducerTransport(
+        { ...run, path: workflow, event },
+        mode,
+        async (verify, calls) => {
+          await expect(verify()).rejects.toThrow(
+            'Build producer workflow/event/mode is not trusted'
+          );
+          expect(await calls()).toEqual([`repos/${repository}/actions/runs/10`]);
+        }
+      );
+    }
+  );
 });

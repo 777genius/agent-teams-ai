@@ -119,6 +119,22 @@ export interface NativeProducerMetadata {
     workflow_run: { id: number; head_sha: string };
   };
 }
+export interface GitHubBuildRun {
+  head_sha: string;
+  run_attempt: number;
+  path: string;
+  event: string;
+}
+function trustedBuildProducer(run: GitHubBuildRun, mode: Mode): boolean {
+  switch (run.path) {
+    case '.github/workflows/release.yml':
+      return run.event === 'push' || run.event === 'workflow_dispatch';
+    case '.github/workflows/build-linux-windows-draft.yml':
+      return mode === 'carry-mac' && run.event === 'workflow_dispatch';
+    default:
+      return false;
+  }
+}
 export function validateNativeProducer(
   ref: NativeEvidenceReference,
   metadata: NativeProducerMetadata
@@ -290,12 +306,14 @@ export class GitHubReleasePort implements ReleasePort {
         new Set(proof.jobIds).size === proof.jobIds.length,
       'Explicit build run/attempt/jobs required'
     );
-    const run = await api<{ head_sha: string; run_attempt: number; event: string }>(
-      `repos/${repository}/actions/runs/${proof.runId}`
-    );
+    const run = await api<GitHubBuildRun>(`repos/${repository}/actions/runs/${proof.runId}`);
     requireThat(
       run.head_sha === sha && run.run_attempt === proof.attempt,
       'Build run application SHA/attempt mismatch'
+    );
+    requireThat(
+      trustedBuildProducer(run, mode),
+      'Build producer workflow/event/mode is not trusted'
     );
     const pages = JSON.parse(
       await command([
