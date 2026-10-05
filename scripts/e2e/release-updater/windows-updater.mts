@@ -10,8 +10,13 @@ import { parse } from 'yaml';
 
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import {
+  cdpCallFunction,
+  cdpSerializedFunction,
+  cdpBodyContains,
+  cdpButtonPoint,
+} from './cdp-values.mts';
 import { hashFile } from './inputs.mts';
-import { serializedFunction } from './serialized-function.mts';
 import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs, windowsMirror } from './windows-mirror.mts';
 import { readPeArchitecture, windowsNative } from './windows-native.mts';
@@ -138,15 +143,7 @@ async function state() {
 }
 async function action(pattern: string, click = true) {
   assert(renderer);
-  const location = await waitFor(
-    () =>
-      renderer!.evaluate<{ x: number; y: number; text: string } | null>(`(() => {
-    const button=[...document.querySelectorAll('button')].find(b=>new RegExp(${JSON.stringify(pattern)},'i').test(b.textContent.trim())&&!b.disabled);
-    if(!button||document.getElementById('splash')) return null; button.scrollIntoView({block:'center'}); const r=button.getBoundingClientRect(); const x=r.left+r.width/2,y=r.top+r.height/2;
-    return r.width&&r.height&&button.contains(document.elementFromPoint(x,y))?{x,y,text:button.textContent.trim()}:null;
-  })()`),
-    `actionable ${pattern}`
-  );
+  const location = await waitFor(() => cdpButtonPoint(renderer!, pattern), `actionable ${pattern}`);
   if (click) {
     for (const type of ['mousePressed', 'mouseReleased']) {
       await renderer.send('Input.dispatchMouseEvent', {
@@ -392,8 +389,10 @@ try {
     filename.replaceAll('\\', '/').endsWith('/resources/app.asar/dist-electron/main/index.cjs')
   );
   evidence.appEntry = filename;
-  evidence.transportHook = await main.evaluate(
-    `(${serializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)})`,
+  evidence.transportHook = await cdpCallFunction(
+    main,
+    `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{return (${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);};})()`,
+    [mirror.origin, mirror.paths],
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -439,13 +438,7 @@ try {
       ? true
       : null;
   }, 'genuine Windows candidate');
-  await waitFor(
-    () =>
-      renderer!.evaluate<boolean | null>(
-        `document.body.innerText.includes(${JSON.stringify(targetVersion)}) ? true : null`
-      ),
-    'validated candidate reaches UI'
-  );
+  await waitFor(() => cdpBodyContains(renderer!, targetVersion), 'validated candidate reaches UI');
   const dialog = await renderer.evaluate<boolean>(
     'Boolean(document.querySelector("[role=dialog]"))'
   );
