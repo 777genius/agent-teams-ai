@@ -17,7 +17,6 @@ import { transportHook } from './transport.mts';
 
 import type { Identity } from './linux-packages-native.mts';
 import type { TransportState } from './transport.mts';
-import type { App } from 'electron';
 
 interface UpdateEvent {
   type: string;
@@ -36,11 +35,28 @@ interface Target {
 interface Pause {
   callFrames: { callFrameId: string }[];
 }
-function observe(app: App, updater: () => Observer) {
+function observe(
+  electron: Pick<typeof import('electron'), 'app' | 'BrowserWindow'>,
+  updater: () => Observer
+) {
   const events: UpdateEvent[] = [];
-  (globalThis as typeof globalThis & { __TEST_packageEvents: UpdateEvent[] }).__TEST_packageEvents =
-    events;
-  app.once('ready', () => {
+  const observation = globalThis as typeof globalThis & {
+    __TEST_packageEvents: UpdateEvent[];
+    __TEST_packagePreferences: () => { sandbox?: boolean }[];
+  };
+  observation.__TEST_packageEvents = events;
+  // The original CJS frame owns require; later Runtime-global evaluations do
+  // not. Retain only this read-only observation of actual window preferences.
+  observation.__TEST_packagePreferences = () =>
+    electron.BrowserWindow.getAllWindows().map((window) => {
+      const contents = window.webContents as typeof window.webContents & {
+        getLastWebPreferences?: () => { sandbox?: boolean };
+      };
+      if (typeof contents.getLastWebPreferences !== 'function')
+        throw new Error('Original Electron cannot expose effective renderer preferences');
+      return { sandbox: contents.getLastWebPreferences().sandbox };
+    });
+  electron.app.once('ready', () => {
     for (const type of ['download-progress', 'update-downloaded', 'update-not-available'])
       updater().on(type, (info) =>
         events.push({
@@ -307,7 +323,7 @@ async function launch(version: string) {
   main = await Cdp.connect(inspector.webSocketDebuggerUrl);
   const entry = await pausedEntry(main, pid);
   await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observe.toString()})(require('electron').app,()=>autoUpdater)`,
+    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${observe.toString()})(require('electron'),()=>autoUpdater)`,
     entry.frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -341,8 +357,8 @@ async function launch(version: string) {
       '!document.getElementById("splash")&&document.readyState==="complete"?true:null'
     );
   }, 'painted packaged desktop');
-  const prefs = await main.evaluate<{ sandbox: boolean }[]>(
-    'require("electron").BrowserWindow.getAllWindows().map(w=>({sandbox:w.webContents.getLastWebPreferences().sandbox}))'
+  const prefs = await main.evaluate<{ sandbox?: boolean }[]>(
+    'globalThis.__TEST_packagePreferences()'
   );
   assert(
     prefs.length && prefs.every((pref) => pref.sandbox === true),

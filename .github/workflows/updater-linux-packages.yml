@@ -191,7 +191,10 @@ jobs:
           case "$TEST_KIND" in
             deb) packages='apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick tesseract-ocr fonts-dejavu-core sudo util-linux libatomic1 libsecret-1-0 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libnotify4 libxss1 libxtst6 libasound2t64 libdrm2 libgbm1 xdg-utils cpio' ;;
             rpm) packages='dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth xwininfo xprop ImageMagick tesseract tesseract-langpack-eng dejavu-sans-fonts sudo util-linux shadow-utils cpio libatomic nss atk at-spi2-atk cups-libs gtk3 libnotify libXScrnSaver libXtst alsa-lib libdrm mesa-libgbm xdg-utils which && dnf clean all' ;;
-            pacman) packages='pacman -Syu --noconfirm && pacman -S --noconfirm xorg-server-xvfb xorg-xauth xorg-xwininfo xorg-xprop imagemagick tesseract tesseract-data-eng ttf-dejavu sudo util-linux shadow cpio libarchive nss gtk3 libnotify libxss libxtst alsa-lib libdrm mesa xdg-utils which' ;;
+            # Include the actual official predecessor's current dependencies;
+            # ffmpeg's transitive packages must be installed before network:none.
+            # The separately authenticated legacy http-parser stays absent here.
+            pacman) packages='pacman -Syu --noconfirm && pacman -S --noconfirm xorg-server-xvfb xorg-xauth xorg-xwininfo xorg-xprop imagemagick tesseract tesseract-data-eng ttf-dejavu sudo util-linux shadow cpio libarchive nss gtk3 libnotify libxss libxtst alsa-lib libdrm mesa xdg-utils which c-ares ffmpeg libevent libvpx libxslt minizip re2 snappy libappindicator' ;;
           esac
           printf 'RUN %s\n' "$packages" >> "$build/Dockerfile"
           if test "$TEST_KIND" = rpm; then
