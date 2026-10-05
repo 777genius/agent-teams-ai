@@ -11,6 +11,7 @@ import {
 } from './src/shared/utils/posthogBuildPolicy'
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
 import { sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
+import { resolveSentryBuildIdentity } from './scripts/build/sentryBuildIdentity'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -21,8 +22,17 @@ const terminalPlatformLocalRoot = resolveTerminalPlatformLocalRoot()
 const terminalPlatformSdkAliases = createTerminalPlatformSdkAliases()
 const rendererDependencyEsbuildTarget = 'esnext'
 const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', __dirname, '')
-const buildGitSha = resolveBuildGitSha()
-const buildId = resolveBuildId(buildGitSha)
+const sentryBuildCovered = Boolean(process.env.SENTRY_AUTH_TOKEN)
+const { gitSha: buildGitSha, buildId } = resolveSentryBuildIdentity({
+  env: process.env,
+  localEnv,
+  covered: sentryBuildCovered,
+  readGitSha: () => execSync('git rev-parse HEAD', {
+    cwd: __dirname,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }),
+})
 const sentryEnvironment = resolveSentryBuildEnvironment(process.env)
 const releaseChannel = resolveReleaseChannel()
 const officialPostHogBuild = isOfficialPostHogReleaseBuild(process.env)
@@ -52,41 +62,6 @@ const bundledDeps = prodDeps.filter(d => !runtimeExternalDeps.has(d))
 
 function firstNonEmptyEnv(...values: Array<string | undefined>): string {
   return values.map(value => value?.trim() ?? '').find(Boolean) ?? ''
-}
-
-function resolveBuildGitSha(): string {
-  const fromEnv = firstNonEmptyEnv(
-    process.env.GIT_SHA,
-    localEnv.GIT_SHA,
-    process.env.GITHUB_SHA,
-    localEnv.GITHUB_SHA,
-    process.env.VERCEL_GIT_COMMIT_SHA,
-    localEnv.VERCEL_GIT_COMMIT_SHA,
-    process.env.COMMIT_SHA,
-    localEnv.COMMIT_SHA
-  )
-  if (fromEnv) return fromEnv
-
-  try {
-    return execSync('git rev-parse HEAD', {
-      cwd: __dirname,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-  } catch {
-    return ''
-  }
-}
-
-function resolveBuildId(gitSha: string): string {
-  return (
-    firstNonEmptyEnv(
-      process.env.BUILD_ID,
-      localEnv.BUILD_ID,
-      process.env.VITE_BUILD_ID,
-      localEnv.VITE_BUILD_ID
-    ) || gitSha.slice(0, 12)
-  )
 }
 
 function resolveReleaseChannel(): string {
@@ -137,7 +112,7 @@ const sourceMapSetting = process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? fa
 
 // Sentry source map upload - only active in CI when SENTRY_AUTH_TOKEN is set.
 function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugin[] {
-  const covered = Boolean(process.env.SENTRY_AUTH_TOKEN)
+  const covered = sentryBuildCovered
   return [
     ...(covered ? [sentryVitePlugin({
       org: process.env.SENTRY_ORG ?? 'quant-jump-pro',
