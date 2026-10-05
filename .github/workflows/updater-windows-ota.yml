@@ -1,0 +1,371 @@
+name: Windows official installer fresh and native OTA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/e2e/release-updater/windows-*.mts'
+      - 'scripts/e2e/release-updater/archive.mts'
+      - 'scripts/e2e/release-updater/cdp.mts'
+      - 'scripts/e2e/release-updater/transport.mts'
+      - '.github/workflows/updater-windows-ota.yml'
+      - '.github/workflows/updater-windows.yml'
+      - 'scripts/e2e/release-updater/serialized-function*.mts'
+      - 'scripts/ci/release/contract.ts'
+      - 'tsconfig.updater-e2e.json'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+    inputs:
+      input_mode:
+        type: choice
+        options: [plan, legacy-2172]
+        default: plan
+        required: true
+      native_run_id: { type: string, required: false }
+      native_run_attempt: { type: string, required: false }
+      native_artifact_id: { type: string, required: false }
+      native_artifact_sha256: { type: string, required: false }
+      plan_digest: { type: string, required: false }
+      tooling_sha: { type: string, required: false }
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tooling-quality:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm typecheck
+      - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts
+
+  verified-windows-inputs:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Require the exact reviewed tooling SHA
+        env:
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tooling_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify immutable native producer and extract exact plan-bound inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+          NATIVE_ATTEMPT: ${{ inputs.native_run_attempt }}
+          NATIVE_ARTIFACT_ID: ${{ inputs.native_artifact_id }}
+          NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          node scripts/e2e/release-updater/windows-plan-download.mts --kind native --output .artifacts/TEST-windows-inputs --run-id "$NATIVE_RUN_ID" --run-attempt "$NATIVE_ATTEMPT" --artifact-id "$NATIVE_ARTIFACT_ID" --artifact-sha256 "$NATIVE_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-inputs/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 2
+
+  legacy-windows-inputs:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'legacy-2172'
+    # Draft reads need push-level access. The desktop VM never receives this
+    # credential and has only contents:read in its independent native job.
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Download immutable official Windows installers and blockmaps
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          inputs=.artifacts/TEST-windows-inputs
+          mkdir -p "$inputs"
+          gh api repos/777genius/agent-teams-ai/releases/398386033 > "$inputs/source-api.json"
+          gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+          for version in 2.17.1 2.17.2; do
+            for suffix in '' '-arm64'; do
+              asset="Agent.Teams.AI.Setup.$version$suffix.exe"
+              gh release download "v$version" --repo 777genius/agent-teams-ai --pattern "$asset" --dir "$inputs"
+              gh release download "v$version" --repo 777genius/agent-teams-ai --pattern "$asset.blockmap" --dir "$inputs"
+            done
+          done
+          node scripts/e2e/release-updater/windows-mirror.mts --verify-inputs "$inputs" --legacy-2172
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-inputs/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 2
+
+  windows-predecessor:
+    needs: [verified-windows-inputs, legacy-windows-inputs]
+    if: always() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check all typed updater tools and full changed file lint
+        run: |
+          pnpm typecheck
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical typecheck failed' }
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts scripts/e2e/release-updater/windows-powershell.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Windows harness lint failed' }
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-inputs/
+      - name: Pin the already-running installed PowerShell 7 native helper
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-evidence'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Native helper must be the already-running installed ProgramFiles/PowerShell pwsh.exe' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Compare legacy startup and require explicitly selected PowerShell 7
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-evidence
+          if ($LASTEXITCODE -ne 0) { throw 'Windows startup diagnostic harness failed' }
+      - name: Install and inspect official predecessor on its real native desktop
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force .artifacts/TEST-windows-evidence | Out-Null
+          if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Runner/Node architecture mismatch' }
+          node scripts/e2e/release-updater/windows-updater.mts ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-evidence 2>&1 | Tee-Object .artifacts/TEST-windows-evidence/probe.log
+          if ($LASTEXITCODE -ne 0) { throw 'Native predecessor feasibility failed; see actual source, UI and process evidence' }
+      - name: Stop only owned TEST processes and remove exact owned Firewall rules
+        if: always()
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ownership = '.artifacts/TEST-windows-evidence/ownership.json'
+          if (Test-Path -LiteralPath $ownership) {
+            node scripts/e2e/release-updater/windows-native.mts --cleanup $ownership
+            if ($LASTEXITCODE -ne 0) { throw 'Owned Windows cleanup failed' }
+          }
+      - name: Preserve source ledger, actual signatures, process and native screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-${{ matrix.arch }}-predecessor-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  fresh-windows:
+    needs: [verified-windows-inputs, legacy-windows-inputs, windows-predecessor]
+    if: always() && needs.windows-predecessor.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Require typed native OTA tooling
+        run: |
+          pnpm typecheck
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical project typecheck failed' }
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-ota.mts scripts/e2e/release-updater/windows-ota-profile.mts scripts/e2e/release-updater/windows-ota-mirror.mts scripts/e2e/release-updater/windows-ota-observer.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Typed Windows OTA lint failed' }
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-inputs/
+      - name: Pin the installed PowerShell from the running workflow shell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-fresh'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Installed ProgramFiles/PowerShell pwsh.exe required' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Require actual selected native shell health
+        run: |
+          node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-fresh
+          if ($LASTEXITCODE -ne 0) { throw 'Selected native PS7 discovery health failed' }
+      - name: Fresh official target installation on a separate native VM
+        run: |
+          if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Native runner architecture mismatch' }
+          node scripts/e2e/release-updater/windows-ota.mts --mode fresh ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-fresh 2>&1 | Tee-Object .artifacts/TEST-windows-fresh/probe.log
+          if ($LASTEXITCODE -ne 0) { throw 'Fresh native Windows target proof failed' }
+      - name: Clean exact owned native processes and physical profile links
+        if: always()
+        run: |
+          $ownership = '.artifacts/TEST-windows-fresh/ownership.json'
+          if (Test-Path -LiteralPath $ownership) {
+            node scripts/e2e/release-updater/windows-ota.mts --cleanup $ownership
+            if ($LASTEXITCODE -ne 0) { throw 'Owned fresh Windows cleanup failed' }
+          }
+      - name: Preserve independently installed target reference and native proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-fresh-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-fresh/
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-ota:
+    needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
+    if: always() && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, windows-11-arm]
+        mode: [full, cold, warm]
+        include:
+          - os: windows-2025
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-inputs/
+      - uses: actions/download-artifact@v8
+        with:
+          name: TEST-windows-fresh-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-reference/
+      - name: Pin the installed PowerShell from the running workflow shell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-ota'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Installed ProgramFiles/PowerShell pwsh.exe required' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Require actual selected native shell health
+        run: |
+          node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-ota
+          if ($LASTEXITCODE -ne 0) { throw 'Selected native PS7 discovery health failed' }
+      - name: Original updater download install and automatic native restart
+        run: |
+          if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Native runner architecture mismatch' }
+          node scripts/e2e/release-updater/windows-ota.mts --mode '${{ matrix.mode }}' ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-ota --fresh-reference .artifacts/TEST-windows-reference/fresh-reference.json 2>&1 | Tee-Object .artifacts/TEST-windows-ota/probe.log
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows OTA transport/install/restart proof failed' }
+      - name: Clean exact owned native processes and physical profile links
+        if: always()
+        run: |
+          $ownership = '.artifacts/TEST-windows-ota/ownership.json'
+          if (Test-Path -LiteralPath $ownership) {
+            node scripts/e2e/release-updater/windows-ota.mts --cleanup $ownership
+            if ($LASTEXITCODE -ne 0) { throw 'Owned Windows OTA cleanup failed' }
+          }
+      - name: Preserve actual transport installer successor preference and UI proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-ota-${{ matrix.arch }}-${{ matrix.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-ota/
+          if-no-files-found: error
+          retention-days: 14
