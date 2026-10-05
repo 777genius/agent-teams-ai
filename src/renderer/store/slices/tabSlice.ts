@@ -162,10 +162,10 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
         ) {
           return;
         }
-        // Cleanup old tab's state if it was a session tab
+        // Invalidate the previous owner before reusing its ID (including team lead data).
+        state.cleanupTabSessionData(activeTab.id);
         if (activeTab.type === 'session') {
           state.cleanupTabUIState(activeTab.id);
-          state.cleanupTabSessionData(activeTab.id);
         }
 
         const replacementTab: Tab = {
