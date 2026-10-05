@@ -19,8 +19,13 @@ import { parse } from 'yaml';
 
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import {
+  cdpCallFunction,
+  cdpSerializedFunction,
+  cdpBodyContains,
+  cdpButtonPoint,
+} from './cdp-values.mts';
 import { hashFile } from './inputs.mts';
-import { serializedFunction } from './serialized-function.mts';
 import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs } from './windows-mirror.mts';
 import { readPeArchitecture, windowsNative } from './windows-native.mts';
@@ -283,9 +288,7 @@ async function run() {
   }
   async function point(pattern: string) {
     assert(renderer);
-    return renderer.evaluate<{ x: number; y: number; text: string } | null>(
-      `(() => { const b=[...document.querySelectorAll('button')].find(b=>new RegExp(${JSON.stringify(pattern)},'i').test(b.textContent.trim())&&!b.disabled); if(!b||document.getElementById('splash'))return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;return r.width&&r.height&&b.contains(document.elementFromPoint(x,y))?{x,y,text:b.textContent.trim()}:null; })()`
-    );
+    return cdpButtonPoint(renderer, pattern);
   }
   async function click(pattern: string) {
     const location = await waitFor(() => point(pattern), `actionable ${pattern}`);
@@ -403,8 +406,10 @@ async function run() {
     assert(
       filename.replaceAll('\\', '/').endsWith('/resources/app.asar/dist-electron/main/index.cjs')
     );
-    await main.evaluate(
-      `(${serializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)});(${serializedFunction(observeOta)})(require('electron').app,()=>autoUpdater)`,
+    await cdpCallFunction(
+      main,
+      `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
+      [mirror.origin, mirror.paths],
       frame.callFrameId
     );
     await main.send('Debugger.resume');
@@ -581,10 +586,7 @@ async function run() {
         : null;
     }, 'genuine candidate from original GitHubProvider');
     await waitFor(
-      () =>
-        renderer!.evaluate<boolean | null>(
-          `document.body.innerText.includes(${JSON.stringify(targetVersion)})?true:null`
-        ),
+      () => cdpBodyContains(renderer!, targetVersion),
       'service-validated new version reaches UI'
     );
     if (await point('^Later$')) await click('^Later$');

@@ -94,6 +94,21 @@ public static class TestOtaObserver {
   }
 }
 '@ -ReferencedAssemblies $refs
+function Get-StartUtcTicks([object]$value) {
+  # ConvertFrom-Json can produce DateTime; compare instants without string coercion.
+  if ($value -is [DateTimeOffset]) { return $value.UtcDateTime.Ticks }
+  if ($value -is [DateTime]) {
+    if ($value.Kind -eq [DateTimeKind]::Unspecified) { throw 'Process start must include a time zone' }
+    return $value.ToUniversalTime().Ticks
+  }
+  if ($value -is [string] -and $value -cmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$') {
+    return [DateTimeOffset]::Parse($value,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::None).UtcDateTime.Ticks
+  }
+  throw 'Invalid process start timestamp'
+}
+function Test-SameStart([object]$actual,[object]$expected) {
+  return (Get-StartUtcTicks $actual) -eq (Get-StartUtcTicks $expected)
+}
 function Test-Canonical([string]$file) {
   $full=[TestOtaObserver]::Canonical($file)
   $prefix=[IO.Path]::GetFullPath($data.root)+[IO.Path]::DirectorySeparatorChar
@@ -131,17 +146,17 @@ switch ($data.operation) {
     $result=@{ program=$data.file; canonical=$canonical; name=$data.name }
   }
   'names' {
-    $owner=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and $_.start -eq $data.owner.start })
+    $owner=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and (Test-SameStart $_.start $data.owner.start) })
     if ($owner.Count -ne 1) { throw 'Native window PID identity changed' }
     $result=@([TestOtaObserver]::WindowNames([Convert]::ToInt64($data.hwnd,16),[uint32]$data.owner.pid))
-    $again=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and $_.start -eq $data.owner.start })
+    $again=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and (Test-SameStart $_.start $data.owner.start) })
     if ($again.Count -ne 1) { throw 'Native window identity changed during accessibility read' }
   }
   'stop' {
     foreach($owner in $data.owners) {
       $current=@(Read-Owned $owner.executable | Where-Object { $_.pid -eq $owner.pid })
       if ($current.Count -eq 0) { continue }
-      if ($current.Count -ne 1 -or $current[0].start -ne $owner.start -or $current[0].sid -ne $owner.sid -or $current[0].session -ne $owner.session) { throw 'Refuse changed TEST PID identity' }
+      if ($current.Count -ne 1 -or -not (Test-SameStart $current[0].start $owner.start) -or $current[0].sid -ne $owner.sid -or $current[0].session -ne $owner.session) { throw 'Refuse changed TEST PID identity' }
       Stop-Process -Id $owner.pid -Force -ErrorAction Stop
     }
     $result=@()
