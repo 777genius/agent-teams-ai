@@ -89,6 +89,9 @@ export const pages = ['/', '/download'] as const;
 /** Pages for sitemap */
 export const sitemapPages = ['/', '/download'] as const;
 
+/** Legal documents are published in English only. */
+export const legalPages = ['/terms', '/privacy-policy', '/refund-policy'] as const;
+
 export type SitemapPagePath = (typeof sitemapPages)[number];
 
 export const getLocaleMeta = (localeCode: LocaleCode) =>
@@ -113,7 +116,10 @@ const buildI18nRoutes = (source: readonly string[]): string[] => {
 };
 
 /** All i18n routes (for prerender) */
-export const generateI18nRoutes = (): string[] => buildI18nRoutes(pages);
+export const generateI18nRoutes = (): string[] => [...buildI18nRoutes(pages), ...legalPages];
 
 /** i18n routes for sitemap only */
-export const generateSitemapRoutes = (): string[] => buildI18nRoutes(sitemapPages);
+export const generateSitemapRoutes = (): string[] => [
+  ...buildI18nRoutes(sitemapPages),
+  ...legalPages,
+];
