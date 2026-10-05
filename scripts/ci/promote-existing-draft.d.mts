@@ -6,6 +6,9 @@ export interface PromotionLayout {
     windowsX64: string;
     windowsArm64: string;
     linux: string;
+    linuxDeb: string;
+    linuxRpm: string;
+    linuxPacman: string;
     macArm64Zip: string;
     macArm64Dmg: string;
     macX64Zip: string;
@@ -41,14 +44,17 @@ export function getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion: unkno
 export function promoteExistingDraft(options?: {
   environment?: Record<string, string | undefined>;
   now?: () => Date;
-}): Promise<{
-  repository: string;
-  tag: string;
-  targetCommit: string;
-  sourceAssets: number;
-  aliases: number;
-  feeds: string[];
-  dryRun: boolean;
-  published: boolean;
-  outputDirectory?: string;
-}>;
+}): Promise<
+  | {
+      repository: string;
+      tag: string;
+      targetCommit: string;
+      sourceAssets: number;
+      aliases: number;
+      feeds: string[];
+      dryRun: boolean;
+      published: boolean;
+      outputDirectory?: string;
+    }
+  | { mode: 'carry-mac'; operation: 'prepare' | 'stage-draft'; published: false }
+>;

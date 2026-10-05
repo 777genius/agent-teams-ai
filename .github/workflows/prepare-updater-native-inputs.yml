@@ -1,0 +1,129 @@
+name: Prepare immutable Windows native updater inputs
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/e2e/release-updater/windows-plan*.mts'
+      - 'scripts/e2e/release-updater/inputs.mts'
+      - 'scripts/ci/release/contract.ts'
+      - '.github/workflows/prepare-updater-native-inputs.yml'
+      - 'tsconfig.updater-e2e.json'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+    inputs:
+      prepared_run_id: { type: string, required: true }
+      prepared_run_attempt: { type: string, required: true }
+      prepared_artifact_id: { type: string, required: true }
+      prepared_artifact_sha256: { type: string, required: true }
+      plan_digest: { type: string, required: true }
+      tooling_sha: { type: string, required: true }
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  producer-quality:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm typecheck
+      - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+      - run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+      - name: Diagnose actual read-only token visibility of the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          metadata="$RUNNER_TEMP/TEST-windows-readonly-draft-metadata.json"
+          stderr="$RUNNER_TEMP/TEST-windows-readonly-draft.stderr"
+          receipt="$RUNNER_TEMP/TEST-windows-readonly-draft-visibility.json"
+          outcome=unavailable
+          http_status=0
+          actual=null
+          if timeout 30s gh api repos/777genius/agent-teams-ai/releases/401358336 --jq '{id,tag_name,draft}' > "$metadata" 2> "$stderr"; then
+            http_status=200
+            actual="$(cat "$metadata")"
+            if jq -e '.id == 401358336 and .tag_name == "v2.17.2" and .draft == true' "$metadata" > /dev/null; then
+              outcome=readable
+            else
+              outcome=identity-mismatch
+            fi
+          elif [[ "$(cat "$stderr")" == *'(HTTP 404)'* ]]; then
+            http_status=404
+            outcome=not-visible
+          fi
+          jq -n --arg outcome "$outcome" --argjson status "$http_status" --argjson actual "$actual" \
+            '{schemaVersion:1,scope:"contents:read",nativeEvidence:false,endpoint:"repos/777genius/agent-teams-ai/releases/401358336",expected:{id:401358336,tag_name:"v2.17.2",draft:true},outcome:$outcome,httpStatus:$status,actual:$actual}' > "$receipt"
+          jq -r '"Read-only draft visibility: \(.outcome), HTTP \(.httpStatus), nativeEvidence=false"' "$receipt"
+      - name: Preserve the filtered read-only permission diagnostic
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-readonly-draft-visibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/TEST-windows-readonly-draft-visibility.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  prepare-windows-inputs:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Require the reviewed immutable producer tooling SHA
+        env:
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tooling_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Require canonical typecheck and typed immutable-input tooling lint
+        run: |
+          pnpm typecheck
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+      - name: Check byte-backed immutable plan and actual staged metadata substitutions
+        run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+      - name: Verify the prepared producer and fetch exact real release bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_ATTEMPT: ${{ inputs.prepared_run_attempt }}
+          PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          PREPARED_ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          node scripts/e2e/release-updater/windows-plan-download.mts --kind prepared --output .artifacts/TEST-windows-native-inputs --run-id "$PREPARED_RUN_ID" --run-attempt "$PREPARED_ATTEMPT" --artifact-id "$PREPARED_ARTIFACT_ID" --artifact-sha256 "$PREPARED_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA"
+      - name: Upload immutable Windows native inputs
+        id: bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-windows-native-inputs
+          path: .artifacts/TEST-windows-native-inputs/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record the external artifact receipt
+        env:
+          ARTIFACT_ID: ${{ steps.bundle.outputs.artifact-id }}
+          ARTIFACT_SHA256: ${{ steps.bundle.outputs.artifact-digest }}
+        run: |
+          printf 'Windows native input artifact: %s\nSHA256: %s\nProducer run/attempt: %s/%s\n' "$ARTIFACT_ID" "$ARTIFACT_SHA256" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"

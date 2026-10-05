@@ -68,7 +68,7 @@
     "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
     "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
     "preview": "electron-vite preview",
-    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
     "typecheck:workspace": "pnpm typecheck && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
     "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",

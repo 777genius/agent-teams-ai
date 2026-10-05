@@ -6,7 +6,7 @@ dist/
 dist-electron/
 dist-standalone/
 out/
-release/
+/release/
 coverage/
 test-results/
 electron.vite.config.*.mjs

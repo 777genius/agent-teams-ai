@@ -997,6 +997,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: Promote validated release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1017,6 +1024,13 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Require publication mode
         if: ${{ !inputs.publish_release }}

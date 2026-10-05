@@ -27,6 +27,9 @@
     "test/**/*",
     "scripts/team-changes-real-data-smoke.ts",
     "scripts/smoke/codex-runtime-install.ts",
+    "scripts/ci/release/**/*.ts",
+    "scripts/ci/*existing-draft.ts",
+    "scripts/ci/verify-updater-release.ts",
     "scripts/e2e/release-updater/**/*.mts"
   ],
   "exclude": ["node_modules", "dist", "dist-electron"]
