@@ -48,7 +48,7 @@ $root = [IO.Path]::GetFullPath($data.root)
 if ((Split-Path -Leaf $root) -notlike 'TEST-updater-windows-*') { throw 'Not a TEST root' }
 function Test-OwnedPath([string]$file) {
   $full = [IO.Path]::GetFullPath($file)
-  if (-not $full.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
+  if (-not $full.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
   return $full
 }
 function Read-Owned([string]$file) {
