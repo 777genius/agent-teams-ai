@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lstat, readFile, writeFile } from 'node:fs/promises';
+import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { parse } from 'yaml';
@@ -10,6 +10,7 @@ import {
   assetByName,
   canonical,
   checkMetadata,
+  checkRelease,
   digest,
   fileProof,
   manifestFor,
@@ -19,9 +20,10 @@ import {
 } from '../../ci/release/contract.ts';
 import { GitHubReleasePort } from '../../ci/release/github.ts';
 import { readAsar, readInspectorFuse } from './archive.mts';
+import { checkMacArtifactAuthority } from './mac-input-artifact.mts';
 
 import type { Asset, Original, Release, StagePlan } from '../../ci/release/contract.ts';
-import type { MacCommands } from './mac-loopback.mts';
+import type { MacArtifactAuthority, MacInputBundle } from './mac-input-artifact.mts';
 
 const repository = '777genius/agent-teams-ai';
 export const sourceSha = '395572f9ff2a261cb28224754883a39d2c3c8827';
@@ -40,7 +42,7 @@ const oldDmg = {
 };
 const port = new GitHubReleasePort();
 export async function captureOldMacSources(
-  commands: MacCommands,
+  commands: { output: string },
   installed: string,
   label: string
 ) {
@@ -135,7 +137,7 @@ export async function prepareMacInputs(
   inputReceipt: { planSha256: string; inputDigest: string; toolingSha: string }
 ) {
   const source = await port.release(repository, 'v2.17.1');
-  await validateOrigins(port, plan, true);
+  const targetBefore = await validateOrigins(port, plan, true);
   await port.publicRelease(repository, source.tag_name);
   const raw = path.join(root, 'source-latest-mac.yml');
   const feedProof = sourceMacPin(plan, 'latest-mac.yml');
@@ -148,7 +150,15 @@ export async function prepareMacInputs(
   const feed = await readFile(raw, 'utf8');
   assert.equal(feed, plan.feeds['latest-mac.yml']);
   let selected = source;
-  let binding: unknown;
+  let binding:
+    | {
+        manifestAssetId: number;
+        manifestRestDigest: string | null;
+        manifest: ReturnType<typeof textProof>;
+        inputDigest: string;
+        draftFeed: Awaited<ReturnType<typeof verifiedDownload>>;
+      }
+    | undefined;
   if (mode === 'staged') {
     selected = await validateOrigins(port, plan, true);
     const manifest = path.join(root, MANIFEST);
@@ -195,10 +205,18 @@ export async function prepareMacInputs(
       assetByName(reread, download.proof.name),
       assetByName(selected, download.proof.name)
     );
-  await validateOrigins(port, plan, true);
+  const targetAfter = await validateOrigins(port, plan, true);
+  if (binding) {
+    const manifest = assetByName(targetAfter, MANIFEST);
+    checkMetadata(manifest, binding.manifest);
+    assert.equal(manifest.id, binding.manifestAssetId);
+    const draftFeed = assetByName(targetAfter, feedProof.name);
+    checkMetadata(draftFeed, feedProof);
+    assert.equal(draftFeed.id, binding.draftFeed.assetId);
+  }
   evidence.finalPromotionFeed = mode === 'staged';
   evidence.planBindingVerified = mode === 'staged';
-  evidence.inputs = {
+  const inputProof = {
     mode,
     sourceFeed,
     binding,
@@ -206,10 +224,135 @@ export async function prepareMacInputs(
     draftRetrievalPerformed: mode === 'staged',
     sourceSha,
     oldSha,
+    targetBefore,
+    targetAfter,
     planSha256: inputReceipt.planSha256,
     inputDigest: inputReceipt.inputDigest,
     toolingSha: inputReceipt.toolingSha,
   };
+  evidence.inputs = inputProof;
+  return { source, files, feed, names, inputProof };
+}
+export type MacPreparedInputProof = Awaited<ReturnType<typeof prepareMacInputs>>['inputProof'];
+export async function readMacInputs(
+  plan: StagePlan,
+  directory: string,
+  mode: 'preview' | 'staged',
+  architecture: 'arm64' | 'x64',
+  evidence: Record<string, unknown>,
+  expected: {
+    planSha256: string;
+    inputDigest: string;
+    toolingSha: string;
+    artifactId: number;
+    artifactSha256: string;
+  }
+) {
+  const root = await realpath(directory);
+  assert.equal(root, directory);
+  const authority = JSON.parse(
+    await readFile(path.join(root, 'validated-input-artifact.json'), 'utf8')
+  ) as MacArtifactAuthority;
+  checkMacArtifactAuthority(authority, {
+    artifactId: expected.artifactId,
+    artifactSha256: expected.artifactSha256,
+    toolingSha: expected.toolingSha,
+    runId: Number(process.env.GITHUB_RUN_ID),
+    attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    workflowPath:
+      process.env.GITHUB_WORKFLOW_REF?.split('@')[0]?.split('/').slice(2).join('/') ?? '',
+  });
+  const bundle = JSON.parse(
+    await readFile(path.join(root, 'mac-input-bundle.json'), 'utf8')
+  ) as MacInputBundle;
+  assert.equal(bundle.schemaVersion, 1);
+  assert.equal(bundle.repository, repository);
+  assert.equal(bundle.mode, mode);
+  assert.equal(bundle.planSha256, expected.planSha256);
+  assert.equal(bundle.inputDigest, expected.inputDigest);
+  assert.equal(bundle.toolingSha, expected.toolingSha);
+  assert.equal(bundle.runId, authority.run.id);
+  assert.equal(bundle.attempt, authority.run.run_attempt);
+  assert.equal(digest(await readFile(path.join(root, 'stage-plan.json'))), expected.planSha256);
+  assert.equal(digest(canonical(plan.input)), expected.inputDigest);
+  const prepared = bundle.platforms[architecture];
+  assert(prepared);
+  const input = prepared.inputProof;
+  assert.equal(input.mode, mode);
+  assert.equal(input.draftRetrievalPerformed, mode === 'staged');
+  assert.equal(input.planSha256, expected.planSha256);
+  assert.equal(input.inputDigest, expected.inputDigest);
+  assert.equal(input.toolingSha, expected.toolingSha);
+  checkRelease(input.targetBefore, plan.input.target, true);
+  checkRelease(input.targetAfter, plan.input.target, true);
+  const source = await port.release(repository, 'v2.17.1');
+  assert(plan.input.macSource);
+  checkRelease(source, plan.input.macSource.release, false);
+  checkRelease(prepared.source, plan.input.macSource.release, false);
+  assert.equal(await port.tagSha(repository, source.tag_name), sourceSha);
+  assert.equal(await port.minimum(repository, sourceSha), plan.input.macProductMinimum);
+  await port.publicRelease(repository, source.tag_name);
+  for (const original of plan.input.originals.filter((item) => item.tag === source.tag_name)) {
+    checkMetadata(assetByName(source, original.name), original, original.assetId);
+    checkMetadata(assetByName(prepared.source, original.name), original, original.assetId);
+  }
+  const selected = path.join(root, architecture);
+  const feed = await readFile(path.join(selected, 'source-latest-mac.yml'), 'utf8');
+  assert.equal(feed, plan.feeds['latest-mac.yml']);
+  const feedPin = sourceMacPin(plan, 'latest-mac.yml');
+  sameProof(textProof('latest-mac.yml', feed), feedPin);
+  sameProof(input.sourceFeed.proof, feedPin);
+  assert.equal(input.sourceFeed.releaseId, source.id);
+  assert.equal(input.sourceFeed.assetId, feedPin.assetId);
+  assert.equal(input.sourceFeed.restDigest, `sha256:${feedPin.sha256}`);
+  const [armZip, armDmg, intelZip, intelDmg] = platformNames('2.17.1').mac;
+  const names =
+    architecture === 'arm64' ? { zip: armZip, dmg: armDmg } : { zip: intelZip, dmg: intelDmg };
+  const files = new Map<string, { file: string; size: number }>();
+  for (const name of [names.zip, names.dmg]) {
+    const pin = sourceMacPin(plan, name);
+    const file = path.join(selected, name);
+    sameProof(await fileProof(file, name), pin);
+    const proofs = input.downloads.filter((download) => download.proof.name === name);
+    assert.equal(proofs.length, 1);
+    const proof = proofs[0];
+    assert(proof);
+    sameProof(proof.proof, pin);
+    assert.equal(proof.releaseId, mode === 'staged' ? plan.input.target.id : source.id);
+    assert.equal(proof.tag, mode === 'staged' ? plan.input.target.tag : source.tag_name);
+    assert(Number.isSafeInteger(proof.assetId) && proof.assetId > 0);
+    if (mode === 'preview') assert.equal(proof.assetId, pin.assetId);
+    else {
+      const staged = assetByName(input.targetAfter, name);
+      checkMetadata(staged, pin);
+      assert.equal(staged.id, proof.assetId);
+    }
+    assert.equal(proof.restDigest, `sha256:${pin.sha256}`);
+    files.set(name, { file, size: pin.size });
+  }
+  if (mode === 'staged') {
+    const binding = input.binding;
+    assert(binding);
+    const expectedManifest = textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`);
+    sameProof(await fileProof(path.join(selected, MANIFEST), MANIFEST), expectedManifest);
+    sameProof(binding.manifest, expectedManifest);
+    assert.equal(binding.inputDigest, expected.inputDigest);
+    assert.equal(binding.manifestRestDigest, `sha256:${expectedManifest.sha256}`);
+    assert(Number.isSafeInteger(binding.manifestAssetId) && binding.manifestAssetId > 0);
+    const manifest = assetByName(input.targetAfter, MANIFEST);
+    checkMetadata(manifest, expectedManifest);
+    assert.equal(manifest.id, binding.manifestAssetId);
+    assert.equal(await readFile(path.join(selected, 'draft-latest-mac.yml'), 'utf8'), feed);
+    sameProof(binding.draftFeed.proof, feedPin);
+    assert.equal(binding.draftFeed.releaseId, plan.input.target.id);
+    assert.equal(binding.draftFeed.tag, plan.input.target.tag);
+    assert.equal(binding.draftFeed.restDigest, `sha256:${feedPin.sha256}`);
+    assert(Number.isSafeInteger(binding.draftFeed.assetId) && binding.draftFeed.assetId > 0);
+    assert.equal(assetByName(input.targetAfter, feedPin.name).id, binding.draftFeed.assetId);
+  } else assert.equal(input.binding, undefined);
+  evidence.finalPromotionFeed = mode === 'staged';
+  evidence.planBindingVerified = mode === 'staged';
+  evidence.inputs = { ...input, authenticatedArtifact: authority };
   return { source, files, feed, names };
 }
 export async function oldMacInstaller(
