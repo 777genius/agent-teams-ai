@@ -1,0 +1,48 @@
+name: Native Windows filesystem qualification
+on:
+  push:
+    branches: [test/windows-private-file-qualification]
+    paths:
+      - 'scripts/qualification/windows-private-files/**'
+      - '.github/workflows/windows-private-file-qualification.yml'
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Stage standalone source packet
+        shell: pwsh
+        run: |
+          $packetSource = Join-Path $env:GITHUB_WORKSPACE 'scripts/qualification/windows-private-files'
+          $qualificationDirectory = Join-Path $env:RUNNER_TEMP 'filesystem-qualification'
+          if (Test-Path -LiteralPath $qualificationDirectory) { throw 'Qualification directory already exists' }
+          New-Item -ItemType Directory -Path $qualificationDirectory | Out-Null
+          $sourceFiles = @('README.md', 'package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'run.mts', 'native.test.ts', 'snapshot-manifest.json', 'fixtures/privateFiles.ts', 'fixtures/windowsPrivateAcl.ts')
+          foreach ($relative in $sourceFiles) {
+            $sourceFile = Join-Path $packetSource $relative
+            if (!(Test-Path -LiteralPath $sourceFile -PathType Leaf)) { throw 'Named source file is missing' }
+            $destinationFile = Join-Path $qualificationDirectory $relative
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destinationFile) -Force | Out-Null
+            Copy-Item -LiteralPath $sourceFile -Destination $destinationFile
+          }
+      - name: Activate pinned tooling
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.22.0 --activate
+      - name: Install standalone locked tooling
+        working-directory: ${{ runner.temp }}/filesystem-qualification
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Strict fixture contracts
+        working-directory: ${{ runner.temp }}/filesystem-qualification
+        run: pnpm typecheck
+      - name: Native ACL and filesystem behavior
+        working-directory: ${{ runner.temp }}/filesystem-qualification
+        run: pnpm qualify

@@ -1,0 +1,16 @@
+{
+  "name": "windows-filesystem-qualification",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+  "engines": { "node": "24.21.x" },
+  "scripts": {
+    "typecheck": "node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.json",
+    "qualify": "node --experimental-strip-types run.mts"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
+    "@types/node": "24.12.4"
+  }
+}
