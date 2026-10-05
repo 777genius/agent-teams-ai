@@ -129,7 +129,8 @@ export async function installedProof(
   const pkg = JSON.parse(metadata.toString()) as { version: string; main: string; type?: string };
   assert.equal(pkg.version, version);
   assert.equal(pkg.main, 'dist-electron/main/index.cjs');
-  assert(!pkg.type || pkg.type === 'commonjs');
+  // Node treats the explicit .cjs entry as CommonJS even with type: module.
+  // pausedEntry also verifies this exact entry in the owned native process.
   await writeFile(path.join(directory, 'app-update.yml'), configBytes);
   // Source capture proves actual packaged implementations; runtime class and
   // observed install behavior below provide the behavioral gate.

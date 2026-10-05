@@ -3,19 +3,18 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { stringify } from 'yaml';
 
+import { canonical, checkRelease, digest } from '../../ci/release/contract.ts';
 import {
-  canonical,
-  checkInput,
-  checkRelease,
-  digest,
-  manifestFor,
-  sameProof,
-  textProof,
-  validateFeed,
-} from '../../ci/release/contract.ts';
-import { applicationSha, hashFile, linuxFeedAssets, repository } from './inputs.mts';
+  applicationSha,
+  boundLinuxInputs,
+  hashFile,
+  linuxFeedAssets,
+  stageArguments,
+  verifyLinuxFile,
+} from './inputs.mts';
 
-import type { PlatformManifest, StagePlan, Release } from '../../ci/release/contract.ts';
+import type { Release } from '../../ci/release/contract.ts';
+import type { StageReference } from './inputs.mts';
 
 export type PackageKind = 'deb' | 'rpm' | 'pacman';
 export const packageCases = {
@@ -66,10 +65,54 @@ export function packageKind(value: unknown): PackageKind {
   );
   return value;
 }
+export function packageName(kind: PackageKind, version: string) {
+  assert(
+    ['2.17.1', '2.17.2', '2.17.3'].includes(version),
+    'Only exact release scenarios supported'
+  );
+  return {
+    deb: `agent-teams-ai_${version}_amd64.deb`,
+    rpm: `agent-teams-ai-${version}.x86_64.rpm`,
+    pacman: `agent-teams-ai-${version}.pacman`,
+  }[kind];
+}
 export async function packageInputs(
   directory: string,
-  stage?: { directory: string; planSha256: string }
+  stage?: StageReference,
+  historicalPreview = false
 ) {
+  if (stage) {
+    const prepared = await boundLinuxInputs(directory, stage);
+    const verified = [];
+    for (const expected of prepared.assets)
+      verified.push(
+        await verifyLinuxFile(directory, expected.name, expected, prepared.target, expected.assetId)
+      );
+    for (const pin of Object.values(packageCases)) {
+      const actual = await hashFile(path.join(directory, pin.old));
+      assert.equal(actual.sha256, pin.sha256, 'Independent immutable predecessor package');
+      assert.equal(actual.size, pin.size);
+      const matches = prepared.source.assets.filter((item) => item.name === pin.old);
+      assert.equal(matches.length, 1);
+      assert.equal(matches[0]?.digest, `sha256:${pin.sha256}`);
+      assert.equal(matches[0]?.size, pin.size);
+      verified.push({ file: pin.old, name: pin.old, tag: 'v2.17.1', ...actual });
+    }
+    return {
+      source: prepared.source,
+      target: prepared.target,
+      verified,
+      feed: prepared.feed,
+      binding: prepared.binding,
+      targetVersion: prepared.targetVersion,
+      targetTag: prepared.targetTag,
+      feedAssets: prepared.assets,
+    };
+  }
+  assert(
+    historicalPreview,
+    '2.17.3 native packages require authenticated stage; historical 2.17.2 must be explicit'
+  );
   const source = JSON.parse(
     await readFile(path.join(directory, 'source-api.json'), 'utf8')
   ) as Release;
@@ -114,7 +157,7 @@ export async function packageInputs(
   }
   const first = linuxFeedAssets[0];
   assert(first);
-  let feed = stringify({
+  const feed = stringify({
     version: '2.17.2',
     files: linuxFeedAssets.map((item) => ({
       url: item.name,
@@ -125,78 +168,45 @@ export async function packageInputs(
     sha512: first.sha512,
     releaseDate: target.created_at,
   });
-  let binding: {
+  const binding: {
     manifestBound: boolean;
     inputDigest: string;
     planSha256?: string;
     manifestSha256?: string;
   } = { manifestBound: false, inputDigest: digest(canonical({ source, target, verified })) };
-  if (stage) {
-    assert(/^[a-f0-9]{64}$/.test(stage.planSha256));
-    const planBytes = await readFile(path.join(stage.directory, 'stage-plan.json'));
-    assert.equal(digest(planBytes), stage.planSha256, 'Immutable staged plan digest');
-    const plan = JSON.parse(planBytes.toString()) as StagePlan;
-    assert.equal(plan.schemaVersion, 1);
-    checkInput(plan.input);
-    assert.equal(plan.input.repository, repository);
-    assert.equal(plan.input.target.applicationSha, applicationSha);
-    assert.equal(plan.input.target.id, target.id);
-    assert.equal(plan.input.target.tag, target.tag_name);
-    checkRelease(target, plan.input.target, true);
-    assert(plan.input.macSource);
-    checkRelease(source, plan.input.macSource.release, false);
-    const manifestBytes = await readFile(
-      path.join(stage.directory, 'release-platform-manifest.json')
-    );
-    const manifest = JSON.parse(manifestBytes.toString()) as PlatformManifest;
-    assert.equal(
-      canonical(manifest),
-      canonical(manifestFor(plan)),
-      'Manifest must bind the actual plan'
-    );
-    const stagedFeed = plan.feeds['latest-linux.yml'];
-    assert(stagedFeed);
-    const actualFeed = await readFile(path.join(stage.directory, 'latest-linux.yml'), 'utf8');
-    assert.equal(actualFeed, stagedFeed);
-    const proofs = verified.filter((item) => item.tag === 'v2.17.2');
-    validateFeed(actualFeed, '2.17.2', proofs);
-    for (const actual of proofs) {
-      const expected = plan.outputs.find((item) => item.name === actual.name);
-      assert(expected);
-      sameProof(actual, expected);
-    }
-    const expectedFeed = manifest.feeds.find((item) => item.name === 'latest-linux.yml');
-    assert(expectedFeed);
-    sameProof(textProof('latest-linux.yml', actualFeed), expectedFeed);
-    feed = actualFeed;
-    binding = {
-      manifestBound: true,
-      inputDigest: manifest.inputDigest,
-      planSha256: stage.planSha256,
-      manifestSha256: digest(manifestBytes),
-    };
-  }
-  return { source, target, verified, feed, binding };
+  return {
+    source,
+    target,
+    verified,
+    feed,
+    binding,
+    targetVersion: '2.17.2',
+    targetTag: target.tag_name,
+    feedAssets: linuxFeedAssets,
+  };
 }
 
 if (process.argv.includes('--verify-inputs')) {
   const index = process.argv.indexOf('--verify-inputs');
   const directory = process.argv[index + 1];
   assert(directory);
-  const result = await packageInputs(directory);
-  await writeFile(
-    path.join(directory, 'linux-package-input-verification.json'),
-    JSON.stringify({ verified: result.verified, binding: result.binding }, null, 2)
+  const result = await packageInputs(
+    directory,
+    stageArguments(process.argv),
+    process.argv.includes('--historical-preview')
   );
+  if (!process.argv.includes('--readonly'))
+    await writeFile(
+      path.join(directory, 'linux-package-input-verification.json'),
+      JSON.stringify({ verified: result.verified, binding: result.binding }, null, 2)
+    );
 }
 if (process.argv.includes('--name')) {
   const index = process.argv.indexOf('--name');
   const kind = packageKind(process.argv[index + 1]);
   const version = process.argv[index + 2];
-  assert(version === '2.17.1' || version === '2.17.2');
-  process.stdout.write(
-    `${version === '2.17.1' ? packageCases[kind].old : packageCases[kind].target}\n`
-  );
+  assert(version);
+  process.stdout.write(`${packageName(kind, version)}\n`);
 }
 if (process.argv.includes('--seccomp')) {
   const index = process.argv.indexOf('--seccomp');

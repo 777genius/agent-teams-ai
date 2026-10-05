@@ -7,9 +7,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { hashFile, linuxFeedAssets } from './inputs.mts';
+import { hashFile, stageArguments } from './inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
-import { packageCases, packageInputs, packageKind } from './linux-packages-inputs.mts';
+import { packageCases, packageInputs, packageKind, packageName } from './linux-packages-inputs.mts';
 import { packageMirror } from './linux-packages-mirror.mts';
 import { desktopProof, installedProof, ownedPackageApps } from './linux-packages-native.mts';
 import { processIdentity, stopOwnedGroup } from './native-window.mts';
@@ -81,6 +81,9 @@ const evidence: Record<string, unknown> = {
 };
 const owners = new Map<number, Identity>();
 const children: ReturnType<typeof spawn>[] = [];
+let targetVersion = '';
+let targetTag = '';
+let targetSize = 0;
 let minimumStart: string | undefined;
 let executable: string | undefined;
 let main: Cdp | undefined;
@@ -188,7 +191,7 @@ function transportRoutes(download: boolean, start = 0) {
   for (const route of [
     '/github/777genius/agent-teams-ai/releases.atom',
     '/github/777genius/agent-teams-ai/releases/latest',
-    '/github/777genius/agent-teams-ai/releases/download/v2.17.2/latest-linux.yml',
+    `/github/777genius/agent-teams-ai/releases/download/${targetTag}/latest-linux.yml`,
   ])
     assert(
       requests.some(
@@ -204,7 +207,7 @@ function transportRoutes(download: boolean, start = 0) {
   assert(
     requests.some(
       (request) =>
-        request.path === '/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.2' &&
+        request.path === `/api/repos/777genius/agent-teams-ai/releases/tags/${targetTag}` &&
         request.method === 'GET' &&
         request.session === 'default' &&
         request.status === 200
@@ -213,14 +216,13 @@ function transportRoutes(download: boolean, start = 0) {
   assert(
     requests.some(
       (request) =>
-        request.path.endsWith('/Agent.Teams.AI-2.17.2.AppImage') &&
+        request.path.endsWith(`/Agent.Teams.AI-${targetVersion}.AppImage`) &&
         request.method === 'HEAD' &&
         request.session === 'default' &&
         request.status === 200
     )
   );
-  const pin = linuxFeedAssets.find((item) => item.name === packageCases[kind].target);
-  assert(pin);
+  assert(targetSize > 0);
   assert(
     requests.some(
       (request) =>
@@ -228,7 +230,7 @@ function transportRoutes(download: boolean, start = 0) {
         request.method === 'GET' &&
         request.session === 'electron-updater' &&
         request.status === 200 &&
-        request.transferred === pin.size
+        request.transferred === targetSize
     ),
     'Complete real native package download missing'
   );
@@ -411,10 +413,18 @@ try {
     env: { PATH: '/usr/bin:/bin' },
     timeout: 5000,
   });
-  const stage = args.includes('--stage')
-    ? { directory: path.resolve(value('--stage')), planSha256: value('--plan-sha256') }
-    : undefined;
-  const inputs = await packageInputs(input, stage);
+  const inputs = await packageInputs(
+    input,
+    stageArguments(args),
+    args.includes('--historical-preview')
+  );
+  targetVersion = inputs.targetVersion;
+  targetTag = inputs.targetTag;
+  const target = inputs.verified.find((item) => item.name === packageName(kind, targetVersion));
+  assert(target);
+  targetSize = target.size;
+  evidence.targetVersion = targetVersion;
+  evidence.historicalPreview = !inputs.binding.manifestBound;
   evidence.inputs = inputs.verified;
   evidence.binding = inputs.binding;
   evidence.manifestBoundInputs = inputs.binding.manifestBound;
@@ -439,7 +449,7 @@ try {
     network: 'loopback-only across install/relaunch',
     credentialValuesInherited: false,
   };
-  const initialVersion = mode === 'fresh' ? '2.17.2' : '2.17.1';
+  const initialVersion = mode === 'fresh' ? targetVersion : '2.17.1';
   const prior = await installedProof(
     kind,
     initialVersion,
@@ -455,7 +465,7 @@ try {
     await waitFor(
       async () =>
         (await events()).some(
-          (event) => event.type === 'update-not-available' && event.version === '2.17.2'
+          (event) => event.type === 'update-not-available' && event.version === targetVersion
         )
           ? true
           : null,
@@ -473,14 +483,14 @@ try {
     await waitFor(async () => {
       const update = await state();
       return update.updater?.provider === 'GitHubProvider' &&
-        update.events.some((event) => event.type === 'available' && event.version === '2.17.2')
+        update.events.some((event) => event.type === 'available' && event.version === targetVersion)
         ? true
         : null;
-    }, 'genuine native updater available2.17.2');
+    }, `genuine native updater available ${targetVersion}`);
     await waitFor(() => {
       assert(renderer);
       return renderer.evaluate<boolean | null>(
-        'document.body.innerText.includes("2.17.2")?true:null'
+        `document.body.innerText.includes(${JSON.stringify(targetVersion)})?true:null`
       );
     }, 'normal UI validated availability');
     const dialog = 'document.querySelector("[role=dialog]")';
@@ -530,7 +540,7 @@ try {
       evidence.profileBefore = await config();
       await screenshot('profile-before');
       await click('^Advanced$');
-      await click('^(?:Check for updates|v?2\\.17\\.2 available)$');
+      await click(`^(?:Check for updates|v?${targetVersion.replaceAll('.', '\\.')} available)$`);
       if (!(await point('^Download$', dialog))) await click('^(?:Update app|View details)$');
       await waitFor(() => point('^Download$', dialog), 'real download dialog');
       await screenshot('available');
@@ -558,7 +568,7 @@ try {
       await waitFor(
         async () =>
           (await events()).some(
-            (event) => event.type === 'update-downloaded' && event.version === '2.17.2'
+            (event) => event.type === 'update-downloaded' && event.version === targetVersion
           )
             ? true
             : null,
@@ -624,7 +634,7 @@ try {
       }
       evidence.automaticPackage = await installedProof(
         kind,
-        '2.17.2',
+        targetVersion,
         references,
         path.join(output, 'automatic-source')
       );
@@ -649,11 +659,11 @@ try {
       evidence.automaticStop = await stopOwnedGroup(groupOwner);
       evidence.diagnosticRelaunch = true;
       const requestStart = mirror.requests.length;
-      evidence.diagnostic = await launch('2.17.2');
+      evidence.diagnostic = await launch(targetVersion);
       await waitFor(
         async () =>
           (await events()).some(
-            (event) => event.type === 'update-not-available' && event.version === '2.17.2'
+            (event) => event.type === 'update-not-available' && event.version === targetVersion
           )
             ? true
             : null,
@@ -681,7 +691,8 @@ try {
   }
   assert(!logError);
   evidence.sandboxEnabled = true;
-  evidence.stageBoundScenarioProved = mode === 'ota' && inputs.binding.manifestBound;
+  evidence.stageBoundScenarioProved =
+    (mode === 'ota' || mode === 'fresh') && inputs.binding.manifestBound;
   evidence.passed = true;
 } catch (error) {
   evidence.error = error instanceof Error ? error.stack : String(error);

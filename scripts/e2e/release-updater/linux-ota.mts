@@ -17,15 +17,16 @@ import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { parse } from 'yaml';
 
 import { Cdp, waitFor } from './cdp.mts';
-import { hashFile, linuxFeedAssets, loadInputs, pins } from './inputs.mts';
-import { captureNativeWindow, processIdentity, stopOwnedGroup } from './native-window.mts';
-import { startOtaMirror } from './ota-mirror.mts';
+import { automaticDesktop, wrapperProvenance } from './linux-appimage-proof.mts';
+import { hashFile, loadInputs, pins, stageArguments } from './inputs.mts';
+import { processIdentity, stopOwnedGroup } from './native-window.mts';
+import { assertDownloadRoutes, assertProviderRoutes, startOtaMirror } from './ota-mirror.mts';
 import { ownedApps, proveInstalledApp } from './ota-process.mts';
 import { transportHook } from './transport.mts';
 
+import type { FileProof } from '../../ci/release/contract.ts';
 import type { TransportState } from './transport.mts';
 import type { App } from 'electron';
 
@@ -49,59 +50,6 @@ interface Target {
 interface Pause {
   callFrames: { callFrameId: string }[];
 }
-type MirrorRequests = Awaited<ReturnType<typeof startOtaMirror>>['requests'];
-function assertProviderRoutes(requests: MirrorRequests) {
-  for (const route of [
-    '/github/777genius/agent-teams-ai/releases.atom',
-    '/github/777genius/agent-teams-ai/releases/latest',
-    '/github/777genius/agent-teams-ai/releases/download/v2.17.2/latest-linux.yml',
-  ])
-    assert(
-      requests.some(
-        (request) =>
-          request.path === route &&
-          request.method === 'GET' &&
-          request.session === 'electron-updater' &&
-          request.status === 200
-      ),
-      `Missing genuine provider GET: ${route}`
-    );
-}
-function assertDownloadRoutes(requests: MirrorRequests) {
-  assertProviderRoutes(requests);
-  const image = `/github/777genius/agent-teams-ai/releases/download/v2.17.2/${targetPin.name}`;
-  assert(
-    requests.some(
-      (request) =>
-        request.path === '/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.2' &&
-        request.method === 'GET' &&
-        request.session === 'default' &&
-        request.status === 200
-    ),
-    'Missing service release API GET'
-  );
-  assert(
-    requests.some(
-      (request) =>
-        request.path === image &&
-        request.method === 'HEAD' &&
-        request.session === 'default' &&
-        request.status === 200
-    ),
-    'Missing service AppImage HEAD'
-  );
-  assert(
-    requests.some(
-      (request) =>
-        request.path === image &&
-        request.method === 'GET' &&
-        request.session === 'electron-updater' &&
-        request.status === 200 &&
-        request.transferred === targetPin.size
-    ),
-    'Missing complete genuine installer GET'
-  );
-}
 const args = process.argv.slice(2);
 function option(name: string) {
   const index = args.indexOf(name);
@@ -115,14 +63,17 @@ function requiredPin(index: number) {
   return pin;
 }
 const priorPin = requiredPin(0);
-const targetPin = requiredPin(1);
-const targetFeed = linuxFeedAssets[0];
-assert(targetFeed, 'Independent target feed pin required');
+let targetPin: FileProof;
+let targetVersion = '';
+let targetTag = '';
+const fresh = args.includes('--fresh');
 const input = option('--inputs');
 const output = option('--evidence');
 await mkdir(output, { recursive: true });
 const evidence: Record<string, unknown> = {
-  scope: 'Linux AppImage native OTA 2.17.1 -> 2.17.2',
+  scope: fresh
+    ? 'Linux AppImage native fresh installation'
+    : 'Linux AppImage native OTA from 2.17.1',
   passed: false,
   automaticSuccessorProved: false,
   diagnosticRelaunch: false,
@@ -134,7 +85,7 @@ const userData = path.join(root, 'user-data');
 const claude = path.join(home, '.claude');
 const install = path.join(root, 'install');
 const oldImage = path.join(install, priorPin.name);
-const newImage = path.join(install, targetPin.name);
+let newImage = '';
 const owners = new Map<number, NonNullable<Awaited<ReturnType<typeof processIdentity>>>>();
 const spawned = new Map<number, ReturnType<typeof spawn>>();
 let main: Cdp | undefined;
@@ -148,131 +99,6 @@ log.on('error', (error) => {
 let minimumStart: string | undefined;
 const execute = promisify(execFile);
 const sandboxSamples: { stage: string; command: string[]; noSandbox: boolean }[] = [];
-
-async function wrapperProvenance(stage: string, executable: string, command: string[]) {
-  const appRun = path.join(path.dirname(executable), 'AppRun');
-  const bytes = await readFile(appRun);
-  const source = bytes.toString('utf8');
-  const saved = path.join(output, `${stage}-AppRun.txt`);
-  await writeFile(saved, bytes);
-  const noSandbox = command.some((argument) => /^--no-sandbox(?:=|$)/.test(argument));
-  sandboxSamples.push({ stage, command, noSandbox });
-  evidence.sandboxEnabled = sandboxSamples.every((sample) => !sample.noSandbox);
-  evidence.sandbox = {
-    harnessRequestedNoSandbox: false,
-    canonicalGatePassed: evidence.sandboxEnabled,
-    samples: sandboxSamples,
-    limitation: sandboxSamples.some((sample) => sample.noSandbox)
-      ? 'Official AppRun supplied --no-sandbox; native installation facts do not pass the canonical sandbox gate'
-      : undefined,
-  };
-  return {
-    path: appRun,
-    saved,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-    relevantLines: source.split('\n').filter((line) => /unshare|NO_SANDBOX|no-sandbox/.test(line)),
-  };
-}
-
-async function automaticDesktop(
-  owner: NonNullable<Awaited<ReturnType<typeof processIdentity>>>,
-  directory: string
-) {
-  const deadline = Date.now() + 45_000;
-  const env = {
-    PATH: '/usr/bin:/bin',
-    DISPLAY: process.env.DISPLAY,
-    XAUTHORITY: process.env.XAUTHORITY,
-    LC_ALL: 'C',
-    OMP_THREAD_LIMIT: '1',
-  };
-  const run = (command: string, parameters: string[]) => {
-    assert(Date.now() < deadline, 'Automatic desktop did not paint within 45 seconds');
-    const started = Date.now();
-    return execute(command, parameters, {
-      env,
-      timeout: Math.min(10_000, deadline - Date.now()),
-      maxBuffer: 1_048_576,
-    }).catch((error: unknown) => {
-      const failure = error as Error & {
-        code?: string | number;
-        killed?: boolean;
-        signal?: string;
-        stdout?: string;
-        stderr?: string;
-      };
-      evidence.nativeToolFailure = {
-        command,
-        parameters,
-        elapsedMs: Date.now() - started,
-        code: failure.code,
-        killed: failure.killed,
-        signal: failure.signal,
-        stdout: failure.stdout,
-        stderr: failure.stderr,
-      };
-      throw error;
-    });
-  };
-  const native = await captureNativeWindow(owner, directory);
-  const attempts: Record<string, unknown>[] = [];
-  evidence.automaticDesktop = { ready: false, timeoutMs: 45_000, attempts };
-  while (Date.now() < deadline) {
-    const identity = await processIdentity(owner.pid);
-    assert.equal(identity?.start, owner.start, 'Automatic desktop PID changed');
-    assert.equal(identity?.group, owner.group, 'Automatic desktop group changed');
-    const { stdout: property } = await run('/usr/bin/xprop', ['-id', native.id, '_NET_WM_PID']);
-    assert.equal(
-      Number(/=\s*(\d+)/.exec(property)?.[1]),
-      native.identity.pid,
-      'Native window owner changed'
-    );
-    const { stdout: info } = await run('/usr/bin/xwininfo', ['-id', native.id, '-stats']);
-    assert(/Map State:\s*IsViewable/.test(info), 'Automatic native window is hidden');
-    const name = `attempt-${String(attempts.length + 1).padStart(3, '0')}`;
-    const screenshot = path.join(directory, `${name}.png`);
-    await run('/usr/bin/import', ['-window', native.id, screenshot]);
-    const { stdout, stderr } = await run('/usr/bin/tesseract', [
-      screenshot,
-      'stdout',
-      '--psm',
-      '11',
-    ]);
-    const ocr = path.join(directory, `${name}.ocr.txt`);
-    await writeFile(ocr, stdout);
-    await writeFile(path.join(directory, `${name}.ocr.stderr.txt`), stderr);
-    const image = await hashFile(screenshot);
-    const current = await processIdentity(owner.pid);
-    assert.equal(current?.start, owner.start, 'Automatic desktop PID changed during capture');
-    assert.equal(current?.group, owner.group);
-    const ready =
-      /Providers\s*&\s*plans/i.test(stdout) &&
-      /\bTasks\b/.test(stdout) &&
-      !/Preparing\s+workspace|splash/i.test(stdout);
-    attempts.push({
-      capturedAt: new Date().toISOString(),
-      screenshot,
-      sha256: image.sha256,
-      ocr,
-      ocrSha256: createHash('sha256').update(stdout).digest('hex'),
-      stdout,
-      stderr,
-      ready,
-    });
-    if (ready) {
-      assert(Date.now() <= deadline, 'Automatic desktop did not paint within 45 seconds');
-      evidence.automaticDesktop = { ready: true, timeoutMs: 45_000, attempts };
-      await copyFile(screenshot, native.screenshot);
-      return { ...native, identity: current, property, info, sha256: image.sha256, ocr };
-    }
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.min(500, Math.max(0, deadline - Date.now())))
-    );
-  }
-  throw new Error(
-    'Automatic desktop did not show Providers & plans and Tasks without Preparing workspace within 45 seconds'
-  );
-}
 
 // Read-only listeners attach to the bundled singleton in its original CJS frame.
 function observeOta(app: App, getUpdater: () => Observer) {
@@ -419,7 +245,14 @@ async function launch(image: string, env: NodeJS.ProcessEnv, version: string) {
   );
   const command = (await readFile(`/proc/${app.pid}/cmdline`)).toString().split('\0');
   assert(state.roots?.executable);
-  const wrapper = await wrapperProvenance(`launch-${version}`, state.roots.executable, command);
+  const wrapper = await wrapperProvenance(
+    `launch-${version}`,
+    state.roots.executable,
+    command,
+    output,
+    evidence,
+    sandboxSamples
+  );
   return { identity, state, filename, command, wrapper };
 }
 async function transport() {
@@ -514,38 +347,40 @@ try {
     throw error;
   });
   await access('/dev/fuse');
-  const inputs = await loadInputs(input);
-  const feed = args.includes('--staged-feed')
-    ? await readFile(option('--staged-feed'), 'utf8')
-    : inputs.feed;
-  const metadata = parse(feed) as {
-    version: string;
-    path: string;
-    sha512: string;
-    files: { url: string; size: number; sha512: string }[];
-  };
-  assert.equal(metadata.version, '2.17.2');
-  assert.equal(metadata.path, targetPin.name);
-  assert.equal(metadata.sha512, targetFeed.sha512);
-  assert.equal(metadata.files.length, linuxFeedAssets.length);
-  for (const item of linuxFeedAssets) {
-    const matches = metadata.files.filter((file) => file.url === item.name);
-    assert.equal(matches.length, 1);
-    assert.equal(matches[0]?.sha512, item.sha512);
-    assert.equal(matches[0]?.size, item.size);
-  }
+  const inputs = await loadInputs(
+    input,
+    stageArguments(args),
+    args.includes('--historical-preview')
+  );
+  const image = inputs.verified.find((item) => item.file === 'target.AppImage');
+  assert(image);
+  targetPin = image;
+  targetVersion = inputs.targetVersion;
+  targetTag = inputs.targetTag;
+  newImage = path.join(install, targetPin.name);
+  evidence.targetVersion = targetVersion;
+  evidence.binding = inputs.binding;
+  evidence.historicalPreview = !inputs.binding.manifestBound;
+  assert(
+    !inputs.binding.manifestBound || !args.includes('--staged-feed'),
+    'Bound stage feed cannot be overridden'
+  );
+  assert(
+    !args.includes('--staged-feed'),
+    'Use the exact prepared stage, or explicit historical preview'
+  );
+  const feed = inputs.feed;
   evidence.inputs = inputs.verified;
   evidence.inputDigest = inputs.inputDigest;
+  const boundKind = inputs.binding.manifestBound
+    ? 'immutable-prepared-stage'
+    : 'historical-feasibility-publication-preview';
   evidence.feed = {
-    source: args.includes('--staged-feed')
-      ? option('--staged-feed')
-      : 'feasibility-publication-preview',
+    source: boundKind,
     sha256: createHash('sha256').update(feed).digest('hex'),
-    finalPromotionFeed: false,
-    planBindingVerified: false,
-    inputKind: args.includes('--staged-feed')
-      ? 'operator-provided-unbound-feed'
-      : 'feasibility-publication-preview',
+    finalPromotionFeed: inputs.binding.manifestBound,
+    planBindingVerified: inputs.binding.manifestBound,
+    inputKind: boundKind,
   };
   await writeFile(path.join(output, 'latest-linux.yml'), feed);
   for (const directory of [
@@ -559,9 +394,11 @@ try {
     path.join(home, '.local/share'),
   ])
     await mkdir(directory, { recursive: true });
-  await copyFile(path.join(input, 'old.AppImage'), oldImage);
-  await chmod(oldImage, 0o755);
-  assert.equal((await hashFile(oldImage)).sha256, priorPin.sha256);
+  if (!fresh) {
+    await copyFile(path.join(input, 'old.AppImage'), oldImage);
+    await chmod(oldImage, 0o755);
+    assert.equal((await hashFile(oldImage)).sha256, priorPin.sha256);
+  }
   const env: NodeJS.ProcessEnv = {
     PATH: '/usr/bin:/bin',
     LANG: 'en_US.UTF-8',
@@ -591,207 +428,261 @@ try {
     childEnvironmentKeys: Object.keys(env),
   };
   mirror = await startOtaMirror(inputs, input, feed);
-  evidence.prior = await launch(oldImage, env, '2.17.1');
-  await waitFor(async () => {
-    const state = await transport();
-    return state.updater?.provider === 'GitHubProvider' &&
-      state.events.some((event) => event.type === 'available' && event.version === '2.17.2')
-      ? true
-      : null;
-  }, 'genuine available version');
-  // The bundled updater event precedes asynchronous service HEAD/API validation.
-  // Wait for its real renderer result before navigating to Settings.
-  await waitFor(
-    () =>
-      renderer!.evaluate<boolean | null>(
-        'document.body.innerText.includes("2.17.2") ? true : null'
+  if (fresh) {
+    await copyFile(path.join(input, 'target.AppImage'), newImage);
+    await chmod(newImage, 0o755);
+    const initial = await launch(newImage, env, targetVersion);
+    assert.equal((await hashFile(newImage)).sha256, targetPin.sha256);
+    const actual = await waitFor(
+      async () =>
+        (await ownedApps({ root, home, userData }, initial.identity.start)).find(
+          (app) => app.pid === initial.identity.pid && app.image === newImage
+        ) ?? null,
+      'fresh actual target process'
+    );
+    evidence.freshPackage = await proveInstalledApp(actual, targetVersion);
+    await waitFor(
+      async () =>
+        (await otaEvents()).some(
+          (event) => event.type === 'not-available' && event.version === targetVersion
+        )
+          ? true
+          : null,
+      'fresh installed target genuine no-update'
+    );
+    const pixels = path.join(output, 'fresh-desktop');
+    await mkdir(pixels);
+    evidence.freshDesktop = await automaticDesktop(actual, pixels, evidence);
+    assertProviderRoutes(mirror.requests, targetTag);
+    assert(
+      !mirror.requests.some(
+        (request) => request.method === 'GET' && request.path.endsWith('.AppImage')
       ),
-    'validated update reaches normal UI'
-  );
-  evidence.beforeSettingsUi = await uiSnapshot();
-  if (await point('^Later$', 'document.querySelector("[role=dialog]")'))
-    await click('^Later$', 'document.querySelector("[role=dialog]")');
-  await waitFor(
-    () =>
-      renderer!.evaluate<boolean | null>('document.querySelector("[role=dialog]") ? null : true'),
-    'update dialog closed before Settings'
-  );
-  assert(renderer);
-  for (const type of ['keyDown', 'keyUp'])
-    await renderer.send('Input.dispatchKeyEvent', { type, key: ',', code: 'Comma', modifiers: 2 });
-  evidence.afterSettingsShortcutUi = await uiSnapshot();
-  await click('^Light$');
-  await waitFor(async () => {
-    try {
-      return (await config()).general.theme === 'light' ? true : null;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    }
-  }, 'TEST preference persisted through real Settings UI');
-  evidence.profileBefore = await config();
-  await screenshot('profile-before');
-  await click('^Advanced$');
-  const availableBeforeCheck = (await transport()).events.filter(
-    (event) => event.type === 'available'
-  ).length;
-  await click('^(?:Check for updates|v?2\\.17\\.2 available)$');
-  await waitFor(
-    async () =>
-      (await transport()).events.filter((event) => event.type === 'available').length >
-      availableBeforeCheck
+      'Fresh current client must not download an update'
+    );
+    evidence.postUpdate = {
+      events: await otaEvents(),
+      transport: await transport(),
+      noInstallerGet: true,
+    };
+    await screenshot('fresh');
+  } else {
+    evidence.prior = await launch(oldImage, env, '2.17.1');
+    await waitFor(async () => {
+      const state = await transport();
+      return state.updater?.provider === 'GitHubProvider' &&
+        state.events.some((event) => event.type === 'available' && event.version === targetVersion)
         ? true
-        : null,
-    'user Check reaches genuine updater'
-  );
-  if (!(await point('^Download$', 'document.querySelector("[role=dialog]")')))
-    await click('^(?:Update app|View details)$');
-  await waitFor(
-    () => point('^Download$', 'document.querySelector("[role=dialog]")'),
-    'available dialog'
-  );
-  await screenshot('available');
-  evidence.downloadAction = await click('^Download$', 'document.querySelector("[role=dialog]")');
-  await waitFor(
-    async () =>
-      (await otaEvents()).some(
-        (event) =>
-          event.type === 'progress' && (event.percent ?? 0) > 0 && (event.percent ?? 100) < 100
-      )
-        ? true
-        : null,
-    'genuine download progress',
-    120_000
-  );
-  evidence.progressUi = await waitFor(
-    () =>
-      renderer!.evaluate<string | null>(
-        `(() => { const button=[...document.querySelectorAll('button')].find(b=>/\\d+%/.test(b.textContent)); if(!button) return null; const r=button.getBoundingClientRect(); return r.width && r.height ? button.textContent.trim() : null; })()`
+        : null;
+    }, 'genuine available version');
+    // The bundled updater event precedes asynchronous service HEAD/API validation.
+    // Wait for its real renderer result before navigating to Settings.
+    await waitFor(
+      () =>
+        renderer!.evaluate<boolean | null>(
+          `document.body.innerText.includes(${JSON.stringify(targetVersion)}) ? true : null`
+        ),
+      'validated update reaches normal UI'
+    );
+    evidence.beforeSettingsUi = await uiSnapshot();
+    if (await point('^Later$', 'document.querySelector("[role=dialog]")'))
+      await click('^Later$', 'document.querySelector("[role=dialog]")');
+    await waitFor(
+      () =>
+        renderer!.evaluate<boolean | null>('document.querySelector("[role=dialog]") ? null : true'),
+      'update dialog closed before Settings'
+    );
+    assert(renderer);
+    for (const type of ['keyDown', 'keyUp'])
+      await renderer.send('Input.dispatchKeyEvent', {
+        type,
+        key: ',',
+        code: 'Comma',
+        modifiers: 2,
+      });
+    evidence.afterSettingsShortcutUi = await uiSnapshot();
+    await click('^Light$');
+    await waitFor(async () => {
+      try {
+        return (await config()).general.theme === 'light' ? true : null;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw error;
+      }
+    }, 'TEST preference persisted through real Settings UI');
+    evidence.profileBefore = await config();
+    await screenshot('profile-before');
+    await click('^Advanced$');
+    const availableBeforeCheck = (await transport()).events.filter(
+      (event) => event.type === 'available'
+    ).length;
+    await click(`^(?:Check for updates|v?${targetVersion.replaceAll('.', '\\.')} available)$`);
+    await waitFor(
+      async () =>
+        (await transport()).events.filter((event) => event.type === 'available').length >
+        availableBeforeCheck
+          ? true
+          : null,
+      'user Check reaches genuine updater'
+    );
+    if (!(await point('^Download$', 'document.querySelector("[role=dialog]")')))
+      await click('^(?:Update app|View details)$');
+    await waitFor(
+      () => point('^Download$', 'document.querySelector("[role=dialog]")'),
+      'available dialog'
+    );
+    await screenshot('available');
+    evidence.downloadAction = await click('^Download$', 'document.querySelector("[role=dialog]")');
+    await waitFor(
+      async () =>
+        (await otaEvents()).some(
+          (event) =>
+            event.type === 'progress' && (event.percent ?? 0) > 0 && (event.percent ?? 100) < 100
+        )
+          ? true
+          : null,
+      'genuine download progress',
+      120_000
+    );
+    evidence.progressUi = await waitFor(
+      () =>
+        renderer!.evaluate<string | null>(
+          `(() => { const button=[...document.querySelectorAll('button')].find(b=>/\\d+%/.test(b.textContent)); if(!button) return null; const r=button.getBoundingClientRect(); return r.width && r.height ? button.textContent.trim() : null; })()`
+        ),
+      'visible progress from real updater'
+    );
+    await screenshot('progress');
+    await waitFor(
+      async () =>
+        (await otaEvents()).some(
+          (event) => event.type === 'downloaded' && event.version === targetVersion
+        )
+          ? true
+          : null,
+      'genuine downloaded version',
+      180_000
+    );
+    if (!(await point('^Restart now$', 'document.querySelector("[role=dialog]")')))
+      await click('^(?:Restart to update|View details)$');
+    await waitFor(
+      () => point('^Restart now$', 'document.querySelector("[role=dialog]")'),
+      'actionable downloaded dialog'
+    );
+    await screenshot('downloaded');
+    evidence.updaterEvents = await otaEvents();
+    evidence.transport = await transport();
+    assertDownloadRoutes(mirror.requests, targetTag, targetPin);
+    const downloadLog = await readFile(path.join(output, 'desktop.log'), 'utf8');
+    evidence.downloadMode = {
+      fullDownloadObserved: mirror.requests.some(
+        (request) =>
+          request.method === 'GET' &&
+          request.path.endsWith('.AppImage') &&
+          !request.range &&
+          request.status === 200
       ),
-    'visible progress from real updater'
-  );
-  await screenshot('progress');
-  await waitFor(
-    async () =>
-      (await otaEvents()).some((event) => event.type === 'downloaded' && event.version === '2.17.2')
-        ? true
-        : null,
-    'genuine downloaded version',
-    180_000
-  );
-  if (!(await point('^Restart now$', 'document.querySelector("[role=dialog]")')))
-    await click('^(?:Restart to update|View details)$');
-  await waitFor(
-    () => point('^Restart now$', 'document.querySelector("[role=dialog]")'),
-    'actionable downloaded dialog'
-  );
-  await screenshot('downloaded');
-  evidence.updaterEvents = await otaEvents();
-  evidence.transport = await transport();
-  assertDownloadRoutes(mirror.requests);
-  const downloadLog = await readFile(path.join(output, 'desktop.log'), 'utf8');
-  evidence.downloadMode = {
-    fullDownloadObserved: mirror.requests.some(
-      (request) =>
-        request.method === 'GET' &&
-        request.path.endsWith('.AppImage') &&
-        !request.range &&
-        request.status === 200
-    ),
-    fullFallbackObserved: downloadLog.includes(
-      'Cannot download differentially, fallback to full download'
-    ),
-    differentialProved: false,
-    fallbackLog: downloadLog.split('\n').filter((line) => /differential|fallback/.test(line)),
-  };
-  const before = new Set(
-    (await ownedApps({ root, home, userData }, minimumStart!)).map((app) => app.pid)
-  );
-  evidence.installAction = await click('^Restart now$', 'document.querySelector("[role=dialog]")');
-  // Let the original updater quit without an attached debugger holding exit.
-  main?.close();
-  renderer?.close();
-  main = undefined;
-  renderer = undefined;
-  const successor = await waitFor(
-    async () =>
-      (await ownedApps({ root, home, userData }, minimumStart!)).find(
-        (app) => app.image === newImage && !before.has(app.pid)
-      ) ?? null,
-    'updater-created automatic successor',
-    90_000
-  );
-  assert.equal(successor.group, successor.pid, 'Automatic successor must own its spawned group');
-  owners.set(successor.pid, successor);
-  assert.equal(await readlink(`/proc/${successor.pid}/ns/net`), evidence.networkNamespace);
-  assert(
-    !successor.command.some((argument) => /inspect|remote-debugging/.test(argument)),
-    'Automatic updater restart must precede any diagnostic relaunch'
-  );
-  const installed = await hashFile(newImage);
-  assert.equal(installed.sha256, targetPin.sha256);
-  assert.equal(installed.sha512, targetFeed.sha512);
-  assert.equal(installed.size, targetPin.size);
-  assert((await stat(newImage)).mode & 0o111, 'Installed image must remain executable');
-  assert.equal(
-    await access(oldImage).then(
-      () => true,
-      () => false
-    ),
-    false,
-    'Updater must replace its owned prior image'
-  );
-  evidence.successor = await proveInstalledApp(successor);
-  evidence.automaticWrapper = await wrapperProvenance(
-    'automatic-successor',
-    successor.executable,
-    successor.command
-  );
-  const nativeOutput = path.join(output, 'automatic-successor');
-  await mkdir(nativeOutput);
-  evidence.automaticWindow = await automaticDesktop(successor, nativeOutput);
-  evidence.successor = await proveInstalledApp(successor);
-  assert.equal((await config()).general.theme, 'light');
-  evidence.profileAfterAutomatic = await config();
-  evidence.automaticSuccessorProved = true;
-  evidence.automaticProofAt = new Date().toISOString();
-  // Diagnostic relaunch is permitted only after the automatic native proof.
-  evidence.automaticStop = await stopOwnedGroup(successor);
-  evidence.diagnosticRelaunch = true;
-  const diagnosticRequestStart = mirror.requests.length;
-  const downloadRequests = mirror.requests.filter(
-    (request) => request.method === 'GET' && request.path.endsWith('.AppImage')
-  ).length;
-  evidence.diagnostic = await launch(newImage, env, '2.17.2');
-  await waitFor(
-    async () =>
-      (await otaEvents()).some(
-        (event) => event.type === 'not-available' && event.version === '2.17.2'
-      )
-        ? true
-        : null,
-    'new installed app genuine no-update'
-  );
-  assert.equal(
-    await renderer!.evaluate<boolean>('document.documentElement.classList.contains("light")'),
-    true,
-    'Real new renderer must load preserved preference'
-  );
-  assert.equal((await config()).general.theme, 'light');
-  assertProviderRoutes(mirror.requests.slice(diagnosticRequestStart));
-  assert.equal(
-    mirror.requests.filter(
+      fullFallbackObserved: downloadLog.includes(
+        'Cannot download differentially, fallback to full download'
+      ),
+      differentialProved: false,
+      fallbackLog: downloadLog.split('\n').filter((line) => /differential|fallback/.test(line)),
+    };
+    const before = new Set(
+      (await ownedApps({ root, home, userData }, minimumStart!)).map((app) => app.pid)
+    );
+    evidence.installAction = await click(
+      '^Restart now$',
+      'document.querySelector("[role=dialog]")'
+    );
+    // Let the original updater quit without an attached debugger holding exit.
+    main?.close();
+    renderer?.close();
+    main = undefined;
+    renderer = undefined;
+    const successor = await waitFor(
+      async () =>
+        (await ownedApps({ root, home, userData }, minimumStart!)).find(
+          (app) => app.image === newImage && !before.has(app.pid)
+        ) ?? null,
+      'updater-created automatic successor',
+      90_000
+    );
+    assert.equal(successor.group, successor.pid, 'Automatic successor must own its spawned group');
+    owners.set(successor.pid, successor);
+    assert.equal(await readlink(`/proc/${successor.pid}/ns/net`), evidence.networkNamespace);
+    assert(
+      !successor.command.some((argument) => /inspect|remote-debugging/.test(argument)),
+      'Automatic updater restart must precede any diagnostic relaunch'
+    );
+    const installed = await hashFile(newImage);
+    assert.equal(installed.sha256, targetPin.sha256);
+    assert.equal(installed.sha512, targetPin.sha512);
+    assert.equal(installed.size, targetPin.size);
+    assert((await stat(newImage)).mode & 0o111, 'Installed image must remain executable');
+    assert.equal(
+      await access(oldImage).then(
+        () => true,
+        () => false
+      ),
+      false,
+      'Updater must replace its owned prior image'
+    );
+    evidence.successor = await proveInstalledApp(successor, targetVersion);
+    evidence.automaticWrapper = await wrapperProvenance(
+      'automatic-successor',
+      successor.executable,
+      successor.command,
+      output,
+      evidence,
+      sandboxSamples
+    );
+    const nativeOutput = path.join(output, 'automatic-successor');
+    await mkdir(nativeOutput);
+    evidence.automaticWindow = await automaticDesktop(successor, nativeOutput, evidence);
+    evidence.successor = await proveInstalledApp(successor, targetVersion);
+    assert.equal((await config()).general.theme, 'light');
+    evidence.profileAfterAutomatic = await config();
+    evidence.automaticSuccessorProved = true;
+    evidence.automaticProofAt = new Date().toISOString();
+    // Diagnostic relaunch is permitted only after the automatic native proof.
+    evidence.automaticStop = await stopOwnedGroup(successor);
+    evidence.diagnosticRelaunch = true;
+    const diagnosticRequestStart = mirror.requests.length;
+    const downloadRequests = mirror.requests.filter(
       (request) => request.method === 'GET' && request.path.endsWith('.AppImage')
-    ).length,
-    downloadRequests
-  );
-  evidence.postUpdate = {
-    events: await otaEvents(),
-    transport: await transport(),
-    preference: 'light',
-    noInstallerGet: true,
-  };
-  await screenshot('post-update');
+    ).length;
+    evidence.diagnostic = await launch(newImage, env, targetVersion);
+    await waitFor(
+      async () =>
+        (await otaEvents()).some(
+          (event) => event.type === 'not-available' && event.version === targetVersion
+        )
+          ? true
+          : null,
+      'new installed app genuine no-update'
+    );
+    assert.equal(
+      await renderer!.evaluate<boolean>('document.documentElement.classList.contains("light")'),
+      true,
+      'Real new renderer must load preserved preference'
+    );
+    assert.equal((await config()).general.theme, 'light');
+    assertProviderRoutes(mirror.requests.slice(diagnosticRequestStart), targetTag);
+    assert.equal(
+      mirror.requests.filter(
+        (request) => request.method === 'GET' && request.path.endsWith('.AppImage')
+      ).length,
+      downloadRequests
+    );
+    evidence.postUpdate = {
+      events: await otaEvents(),
+      transport: await transport(),
+      preference: 'light',
+      noInstallerGet: true,
+    };
+    await screenshot('post-update');
+  }
+  evidence.stageBoundScenarioProved = inputs.binding.manifestBound;
   assert(!logError);
   assert(
     sandboxSamples.every((sample) => !sample.noSandbox),

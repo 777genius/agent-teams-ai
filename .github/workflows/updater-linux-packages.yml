@@ -21,8 +21,13 @@ on:
         type: choice
         options: [availability, ota]
         default: availability
+      target_mode:
+        description: '2.17.3 requires exact prepared stage; 2.17.2 is historical infrastructure evidence only'
+        type: choice
+        options: [staged-2.17.3, historical-2.17.2]
+        default: staged-2.17.3
       stage_artifact:
-        description: 'Optional immutable prepared stage artifact name'
+        description: 'Required immutable prepared stage artifact for 2.17.3'
         type: string
       stage_run_id:
         description: 'Producer run ID for that prepared stage artifact'
@@ -43,6 +48,7 @@ jobs:
     # its token never reaches a desktop process or a native runtime job.
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -53,23 +59,75 @@ jobs:
           node-version: '26.10.0'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Require explicit prepared artifact identity
+        if: inputs.target_mode == 'staged-2.17.3'
+        env:
+          TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
+          TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          test -n "$TEST_STAGE_NAME"
+          [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
+          [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
+      - name: Download immutable prepared stage for the current target
+        if: inputs.target_mode == 'staged-2.17.3'
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.stage_artifact }}
+          run-id: ${{ inputs.stage_run_id }}
+          github-token: ${{ github.token }}
+          path: .artifacts/TEST-linux-package-inputs/stage/
       - name: Download and verify immutable official packages
         env:
           GH_TOKEN: ${{ github.token }}
+          TEST_TARGET_MODE: ${{ inputs.target_mode || 'historical-2.17.2' }}
+          TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
         run: |
           set -euo pipefail
           inputs=.artifacts/TEST-linux-package-inputs
           mkdir -p "$inputs"
-          gh api repos/777genius/agent-teams-ai/releases/tags/v2.17.1 > "$inputs/source-api.json"
-          gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+          gh api repos/777genius/agent-teams-ai/releases/398386033 > "$inputs/source-api.json"
           for kind in deb rpm pacman; do
             old=$(node scripts/e2e/release-updater/linux-packages-inputs.mts --name "$kind" 2.17.1)
-            target=$(node scripts/e2e/release-updater/linux-packages-inputs.mts --name "$kind" 2.17.2)
             gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern "$old" --output "$inputs/$old"
-            gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern "$target" --output "$inputs/$target"
           done
-          gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/Agent.Teams.AI-2.17.2.AppImage"
-          node scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs"
+          flags=(--historical-preview)
+          if test "$TEST_TARGET_MODE" = staged-2.17.3; then
+            node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
+            release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
+            gh api "repos/777genius/agent-teams-ai/releases/$release" > "$inputs/draft-api.json"
+            # Consume actual stage-draft upload bytes, rather than rebuilding
+            # its generated metadata inside the native harness.
+            node scripts/e2e/release-updater/inputs.mts --metadata-downloads "$inputs/stage" "$TEST_PLAN_SHA" "$inputs/draft-api.json" > "$inputs/staged-metadata-downloads.json"
+            jq -r '.[] | [.id,.name] | @tsv' "$inputs/staged-metadata-downloads.json" > "$inputs/staged-metadata.tsv"
+            while IFS=$'\t' read -r asset name; do
+              gh api "repos/777genius/agent-teams-ai/releases/assets/$asset" -H 'Accept: application/octet-stream' > "$inputs/stage/$name"
+            done < "$inputs/staged-metadata.tsv"
+            jq -r '.assets[] | [.id,.name] | @tsv' "$inputs/target-download-identities.json" > "$inputs/target-assets.tsv"
+            while IFS=$'\t' read -r asset name; do
+              gh api "repos/777genius/agent-teams-ai/releases/assets/$asset" -H 'Accept: application/octet-stream' > "$inputs/$name"
+            done < "$inputs/target-assets.tsv"
+            flags=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
+          else
+            test "$TEST_TARGET_MODE" = historical-2.17.2
+            gh api repos/777genius/agent-teams-ai/releases/401358336 > "$inputs/draft-api.json"
+            for kind in deb rpm pacman; do
+              target=$(node scripts/e2e/release-updater/linux-packages-inputs.mts --name "$kind" 2.17.2)
+              gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern "$target" --output "$inputs/$target"
+            done
+            gh release download v2.17.2 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.2.AppImage --output "$inputs/Agent.Teams.AI-2.17.2.AppImage"
+          fi
+          node scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs" "${flags[@]}"
+          # Immutable official archived dependency for the original 2.17.1 only.
+          # Trusted signature validation and installation happen later in its
+          # separate offline older-profile container, never the fresh image.
+          name=http-parser-2.9.4-2-x86_64.pkg.tar.zst
+          curl --fail --location --proto '=https' "https://archive.archlinux.org/packages/h/http-parser/$name" --output "$inputs/$name"
+          curl --fail --location --proto '=https' "https://archive.archlinux.org/packages/h/http-parser/$name.sig" --output "$inputs/$name.sig"
+          printf '5b88adb54cfedef794fd16105c3799aafc2b95bb6273ff1ddf96c6f195b1b676  %s\n3a0e243348d01c96967fe1543e360a2a8c5e6f794b754f4b89f84099a9501072  %s\n' "$inputs/$name" "$inputs/$name.sig" | sha256sum --check
+          test "$(stat -c %s "$inputs/$name")" = 20942
+          test "$(stat -c %s "$inputs/$name.sig")" = 566
       - uses: actions/upload-artifact@v7
         with:
           name: TEST-linux-package-inputs-${{ github.run_id }}-${{ github.run_attempt }}
@@ -117,14 +175,6 @@ jobs:
         with:
           name: TEST-linux-package-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-linux-package-inputs/
-      - name: Download operator-bound prepared stage
-        if: inputs.stage_artifact != ''
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ inputs.stage_artifact }}
-          run-id: ${{ inputs.stage_run_id }}
-          github-token: ${{ github.token }}
-          path: .artifacts/TEST-linux-package-stage/
       - name: Resolve base digest and prepare frozen native dependencies
         env:
           TEST_IMAGE: ${{ matrix.image }}
@@ -139,7 +189,7 @@ jobs:
           test -n "$base"
           printf 'FROM %s\n' "$base" > "$build/Dockerfile"
           case "$TEST_KIND" in
-            deb) packages='apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick tesseract-ocr fonts-dejavu-core sudo util-linux libatomic1 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libnotify4 libxss1 libxtst6 libasound2t64 libdrm2 libgbm1 xdg-utils cpio' ;;
+            deb) packages='apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth x11-utils imagemagick tesseract-ocr fonts-dejavu-core sudo util-linux libatomic1 libsecret-1-0 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libnotify4 libxss1 libxtst6 libasound2t64 libdrm2 libgbm1 xdg-utils cpio' ;;
             rpm) packages='dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth xwininfo xprop ImageMagick tesseract tesseract-langpack-eng dejavu-sans-fonts sudo util-linux shadow-utils cpio libatomic nss atk at-spi2-atk cups-libs gtk3 libnotify libXScrnSaver libXtst alsa-lib libdrm mesa-libgbm xdg-utils which && dnf clean all' ;;
             pacman) packages='pacman -Syu --noconfirm && pacman -S --noconfirm xorg-server-xvfb xorg-xauth xorg-xwininfo xorg-xprop imagemagick tesseract tesseract-data-eng ttf-dejavu sudo util-linux shadow cpio libarchive nss gtk3 libnotify libxss libxtst alsa-lib libdrm mesa xdg-utils which' ;;
           esac
@@ -167,6 +217,7 @@ jobs:
           TEST_KIND: ${{ matrix.kind }}
           TEST_MODE: ${{ inputs.mode || 'availability' }}
           TEST_PLAN_SHA: ${{ inputs.plan_sha256 }}
+          TEST_TARGET_MODE: ${{ inputs.target_mode || 'historical-2.17.2' }}
         run: |
           set -euo pipefail
           build="$PWD/.artifacts/TEST-linux-package-build"
@@ -185,7 +236,7 @@ jobs:
               --mount "type=bind,src=$nodebin,dst=/usr/local/bin/node,readonly" \
               --mount "type=bind,src=$evidence,dst=/evidence" \
               --mount "type=bind,src=$build/security.json,dst=/TEST-container-security.json,readonly" \
-              --env "TEST_KIND=$TEST_KIND" --env "TEST_MODE=$mode" --env "TEST_PLAN_SHA=$TEST_PLAN_SHA" \
+              --env "TEST_KIND=$TEST_KIND" --env "TEST_MODE=$mode" --env "TEST_PLAN_SHA=$TEST_PLAN_SHA" --env "TEST_TARGET_MODE=$TEST_TARGET_MODE" \
               "$image" /bin/bash -c '
                 set -euo pipefail
                 inputs=/workspace/.artifacts/TEST-linux-package-inputs
@@ -198,8 +249,15 @@ jobs:
                 esac
                 ldd /usr/local/bin/node > /evidence/node-shared-libraries.txt
                 node --version > /evidence/node-version.txt
-                mkdir -p /reference/2.17.1 /reference/2.17.2
-                for version in 2.17.1 2.17.2; do
+                target=2.17.2
+                stage=(--historical-preview)
+                if test "$TEST_TARGET_MODE" = staged-2.17.3; then
+                  target=2.17.3
+                  stage=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
+                else test "$TEST_TARGET_MODE" = historical-2.17.2; fi
+                node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs" "${stage[@]}" --readonly
+                mkdir -p /reference/2.17.1 "/reference/$target"
+                for version in 2.17.1 "$target"; do
                   name=$(node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --name "$TEST_KIND" "$version")
                   case "$TEST_KIND" in
                     deb) dpkg-deb -x "$inputs/$name" "/reference/$version" ;;
@@ -207,17 +265,33 @@ jobs:
                     pacman) bsdtar -xf "$inputs/$name" -C "/reference/$version"; cp "/reference/$version/.PKGINFO" "/evidence/pacman-$version.PKGINFO"; sha256sum "/evidence/pacman-$version.PKGINFO" ;;
                   esac
                 done
-                version=2.17.1; if test "$TEST_MODE" = fresh; then version=2.17.2; fi
+                version=2.17.1; if test "$TEST_MODE" = fresh; then version=$target; fi
+                if test "$TEST_KIND" = pacman; then
+                  # The clean prepared current Arch image contains no legacy
+                  # package. New target metadata cannot declare the removed dep.
+                  if pacman -Q http-parser > /evidence/legacy-before.txt 2>&1; then exit 1; fi
+                  if test "$target" = 2.17.3; then
+                    if grep -Eq "^depend = http-parser([<>=].*)?$" "/reference/$target/.PKGINFO"; then exit 1; fi
+                  fi
+                  if test "$TEST_MODE" != fresh; then
+                    legacy="$inputs/http-parser-2.9.4-2-x86_64.pkg.tar.zst"
+                    printf "5b88adb54cfedef794fd16105c3799aafc2b95bb6273ff1ddf96c6f195b1b676  %s\n3a0e243348d01c96967fe1543e360a2a8c5e6f794b754f4b89f84099a9501072  %s\n" "$legacy" "$legacy.sig" | sha256sum --check > /evidence/legacy-digests.txt
+                    pacman-key --verify "$legacy.sig" "$legacy" 2>&1 | tee /evidence/legacy-signature.txt
+                    pacman -U --noconfirm "$legacy" 2>&1 | tee /evidence/legacy-install.txt
+                    pacman -Q http-parser > /evidence/legacy-installed.txt
+                    pacman -Q archlinux-keyring > /evidence/legacy-keyring-version.txt
+                    sha256sum /usr/share/pacman/keyrings/archlinux.gpg > /evidence/legacy-keyring-sha256.txt
+                  fi
+                fi
                 name=$(node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --name "$TEST_KIND" "$version")
                 case "$TEST_KIND" in
                   deb) dpkg -i "$inputs/$name"; dpkg-query -W > /evidence/os-packages.txt ;;
                   rpm) dnf --disablerepo="*" install --nogpgcheck -y "$inputs/$name"; rpm -qa > /evidence/os-packages.txt; cat /etc/yum.repos.d/*.repo > /evidence/dnf-offline-repos.txt ;;
-                  pacman) pacman -U --noconfirm "$inputs/$name"; pacman -Q > /evidence/os-packages.txt ;;
+                  pacman) pacman -U --noconfirm "$inputs/$name"; pacman -Q > /evidence/os-packages.txt
+                    if test "$TEST_MODE" = fresh && pacman -Q http-parser > /evidence/legacy-after-fresh.txt 2>&1; then exit 1; fi ;;
                 esac
                 # Only distro package installation runs as container root. The
                 # harness, mirror, Xvfb and all app/successor processes use TEST uid.
-                stage=()
-                if test -n "$TEST_PLAN_SHA"; then stage=(--stage /workspace/.artifacts/TEST-linux-package-stage --plan-sha256 "$TEST_PLAN_SHA"); fi
                 runuser -u TEST-updater -- env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/TEST-updater LC_ALL=C.UTF-8 \
                   xvfb-run --auto-servernum --server-args="-screen 0 1280x900x24 -nolisten tcp" --error-file=/evidence/native/xvfb.log \
                   node /workspace/scripts/e2e/release-updater/linux-packages.mts --kind "$TEST_KIND" --mode "$TEST_MODE" \

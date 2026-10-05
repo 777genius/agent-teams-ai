@@ -70,7 +70,10 @@ export async function ownedApps(roots: OwnedRoots, minimumStart: string) {
   return apps;
 }
 
-export async function proveInstalledApp(app: Awaited<ReturnType<typeof ownedApps>>[number]) {
+export async function proveInstalledApp(
+  app: Awaited<ReturnType<typeof ownedApps>>[number],
+  expectedVersion: string
+) {
   const identity = await processIdentity(app.pid);
   assert.equal(identity?.start, app.start, 'Successor PID was reused');
   const resources = path.join(path.dirname(app.executable), 'resources');
@@ -79,7 +82,7 @@ export async function proveInstalledApp(app: Awaited<ReturnType<typeof ownedApps
     version: string;
     main: string;
   };
-  assert.equal(metadata.version, '2.17.2');
+  assert.equal(metadata.version, expectedVersion);
   assert.equal(metadata.main, 'dist-electron/main/index.cjs');
   const elf = await readFile(app.executable);
   assert.equal(elf.subarray(0, 4).toString('hex'), '7f454c46');

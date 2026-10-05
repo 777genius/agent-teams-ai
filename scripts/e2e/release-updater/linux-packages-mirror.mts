@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 
 import { repository } from './inputs.mts';
-import { packageCases } from './linux-packages-inputs.mts';
+import { packageName } from './linux-packages-inputs.mts';
 
 import type { packageInputs, PackageKind } from './linux-packages-inputs.mts';
 
@@ -72,6 +72,8 @@ export async function packageMirror(
     transferred: number;
     error?: string;
   }[] = [];
+  const targetName = packageName(kind, inputs.targetVersion);
+  const imageName = `Agent.Teams.AI-${inputs.targetVersion}.AppImage`;
   const published = { ...inputs.target, draft: false };
   const prefix = `/github/${repository}/releases`;
   const entries = [published, inputs.source]
@@ -85,19 +87,19 @@ export async function packageMirror(
     [`${prefix}.atom`, { body: atom, type: 'application/atom+xml' }],
     [`${prefix}/latest`, { body: JSON.stringify(published), type: 'application/json' }],
     [
-      `/api/repos/${repository}/releases/tags/v2.17.2`,
+      `/api/repos/${repository}/releases/tags/${inputs.targetTag}`,
       { body: JSON.stringify(published), type: 'application/json' },
     ],
     [
-      `${prefix}/download/v2.17.2/latest-linux.yml`,
+      `${prefix}/download/${inputs.targetTag}/latest-linux.yml`,
       { body: inputs.feed, type: 'application/yaml' },
     ],
   ]);
-  const installer = `${prefix}/download/v2.17.2/${packageCases[kind].target}`;
-  const appImage = `${prefix}/download/v2.17.2/Agent.Teams.AI-2.17.2.AppImage`;
-  const file = inputs.verified.find((item) => item.name === packageCases[kind].target);
+  const installer = `${prefix}/download/${inputs.targetTag}/${targetName}`;
+  const appImage = `${prefix}/download/${inputs.targetTag}/${imageName}`;
+  const file = inputs.verified.find((item) => item.name === targetName);
   assert(file);
-  const image = inputs.verified.find((item) => item.name === 'Agent.Teams.AI-2.17.2.AppImage');
+  const image = inputs.verified.find((item) => item.name === imageName);
   assert(image);
   const server = createServer((request, response) => {
     const serve = async () => {
