@@ -123,7 +123,7 @@ interface SentryMainApi {
   init?: (options: SentryInitOptions) => void;
   captureException?: (
     error: unknown,
-    context?: { tags?: Record<string, string> }
+    context?: { tags?: Record<string, string>; contexts?: Record<string, Record<string, number>> }
   ) => string | undefined;
   setUser?: (user: { id: string } | null) => void;
   setTags?: (tags: Record<string, string>) => void;
@@ -381,6 +381,34 @@ export function captureMainException(error: unknown, operation: string): string 
   const exception = error instanceof Error ? error : new Error('Non-Error exception');
   return Sentry.captureException(exception, {
     tags: { 'error.operation': safeOperation },
+  });
+}
+
+/** Preserve crash evidence without accepting arbitrary renderer or project metadata. */
+export function captureRendererProcessGone(
+  details: { reason: string; exitCode: number },
+  recoveryAttempts: number
+): string | undefined {
+  if (!initialized || !telemetryAllowed || !Sentry?.captureException) return undefined;
+  const reasons = [
+    'clean-exit',
+    'abnormal-exit',
+    'killed',
+    'crashed',
+    'oom',
+    'launch-failed',
+    'integrity-failure',
+    'memory-eviction',
+  ];
+  const reason = reasons.includes(details.reason) ? details.reason : 'unknown';
+  const diagnostics: Record<string, number> = {};
+  if (Number.isSafeInteger(details.exitCode)) diagnostics.exit_code = details.exitCode;
+  if (Number.isInteger(recoveryAttempts) && recoveryAttempts >= 0 && recoveryAttempts <= 2) {
+    diagnostics.recovery_attempts = recoveryAttempts;
+  }
+  return Sentry.captureException(new Error(`Renderer process terminated: ${reason}`), {
+    tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': reason },
+    contexts: { renderer_crash: diagnostics },
   });
 }
 

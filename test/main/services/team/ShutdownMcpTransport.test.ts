@@ -171,6 +171,7 @@ describe('shutdown MCP transport authority', () => {
       },
       clearStartupTimers: noOp,
       clearInboxNotifyTimers: noOp,
+      rendererRecoveryController: null,
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
       teamProvisioningService: { setRuntimeRecoveryFailureObserver: noOp, stopAllTeams: stop },

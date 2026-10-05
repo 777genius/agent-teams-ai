@@ -225,7 +225,44 @@ describe('main Sentry telemetry gate', () => {
     sentry.syncTelemetryFlag(false);
 
     expect(sentry.captureMainException(new Error('ignored'), 'app-startup')).toBeUndefined();
+    expect(
+      sentry.captureRendererProcessGone({ reason: 'crashed', exitCode: 139 }, 1)
+    ).toBeUndefined();
     expect(sentryApi.captureException).not.toHaveBeenCalled();
+  });
+
+  it('preserves renderer crash diagnostics through the telemetry privacy filter', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'crash-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    expect(sentry.captureRendererProcessGone({ reason: 'crashed', exitCode: 139 }, 2)).toBe(
+      'crash-event'
+    );
+    const [error, context] = captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(error.message).toBe('Renderer process terminated: crashed');
+    expect(sentry.filterSentryEventForTelemetry(context)).toEqual({
+      tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': 'crashed' },
+      contexts: { renderer_crash: { exit_code: 139, recovery_attempts: 2 } },
+    });
+  });
+
+  it('drops arbitrary crash metadata and invalid diagnostics', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'crash-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    const details = {
+      reason: '/Users/alice/private-repo secret',
+      exitCode: NaN,
+      token: 'private-token',
+    };
+    sentry.captureRendererProcessGone(details, 999);
+    const [error, context] = captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(error.message).toBe('Renderer process terminated: unknown');
+    expect(context).toEqual({
+      tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': 'unknown' },
+      contexts: { renderer_crash: {} },
+    });
+    expect(JSON.stringify(context)).not.toContain('private');
   });
 
   it('cleans classic IPC listeners before closing and reinitializing Sentry', async () => {

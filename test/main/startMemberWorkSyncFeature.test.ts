@@ -6,6 +6,7 @@ import {
   runShutdownBackupAfterWorkSyncDrain,
   startPreparedMemberWorkSyncFeature,
 } from '../../src/main/startMemberWorkSyncFeature';
+import { StartupCancelledError } from '../../src/main/utils/startupCancellation';
 
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 
@@ -16,7 +17,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
 
     observation.attach({
       recordStallObservation: async () => undefined,
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
     expect(observation.isAttached()).toBe(true);
 
     observation.attach(null);
@@ -24,7 +28,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
 
     observation.attach({
       recordStallObservation: async () => undefined,
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
     observation.dispose();
     expect(observation.isAttached()).toBe(false);
   });
@@ -45,7 +52,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
       recordStallObservation: async (input: { taskId: string }) => {
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(recorded).toEqual(['task-1']);
@@ -71,7 +81,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(attempts).toBe(1);
@@ -107,7 +120,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(recorded).toEqual(['task-1']);
@@ -141,7 +157,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(recorded).toEqual(['task-2']);
@@ -174,7 +193,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation' | 'refreshStatus'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation' | 'refreshStatus'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(recorded).toEqual(['task-1']);
@@ -213,7 +235,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(input.taskId);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation' | 'refreshStatus'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation' | 'refreshStatus'
+    > as MemberWorkSyncFeatureFacade);
 
     await vi.waitFor(() => {
       expect(recorded).toEqual(['task-2']);
@@ -238,7 +263,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
         }
         recorded.push(`${input.teamName}:${input.taskId}`);
       },
-    } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+    } as Pick<
+      MemberWorkSyncFeatureFacade,
+      'recordStallObservation'
+    > as MemberWorkSyncFeatureFacade);
 
     await observation.record({
       teamName: 'team-b',
@@ -268,7 +296,10 @@ describe('createDeferredWorkSyncStallObservation', () => {
           attempts += 1;
           throw new Error('status_missing');
         },
-      } as Pick<MemberWorkSyncFeatureFacade, 'recordStallObservation'> as MemberWorkSyncFeatureFacade);
+      } as Pick<
+        MemberWorkSyncFeatureFacade,
+        'recordStallObservation'
+      > as MemberWorkSyncFeatureFacade);
       await vi.advanceTimersByTimeAsync(0);
       expect(attempts).toBe(1);
       observation.dispose();
@@ -321,6 +352,55 @@ describe('runShutdownBackupAfterWorkSyncDrain', () => {
 });
 
 describe('startPreparedMemberWorkSyncFeature', () => {
+  it('disposes unowned prepared state without starting backup work after shutdown', async () => {
+    const initialize = vi.fn(async () => undefined);
+    const dispose = vi.fn(async () => undefined);
+    const startBackground = vi.fn();
+    const attach = vi.fn();
+    await expect(
+      startPreparedMemberWorkSyncFeature({
+        backup: { initialize } as never,
+        prepared: { dispose, startBackground } as never,
+        stallObservation: { attach },
+        isShutdownStarted: () => true,
+      })
+    ).rejects.toBeInstanceOf(StartupCancelledError);
+    expect(initialize).not.toHaveBeenCalled();
+    expect(dispose).toHaveBeenCalledOnce();
+    expect(startBackground).not.toHaveBeenCalled();
+    expect(attach).not.toHaveBeenCalled();
+  });
+
+  it.each(['resolved', 'rejected'] as const)(
+    'does not start background work after a %s backup await during shutdown',
+    async (outcome) => {
+      let shuttingDown = false;
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<void>((done, fail) => {
+        resolve = done;
+        reject = fail;
+      });
+      const dispose = vi.fn(async () => undefined);
+      const startBackground = vi.fn();
+      const attach = vi.fn();
+      const startup = startPreparedMemberWorkSyncFeature({
+        backup: { initialize: () => pending } as never,
+        prepared: { dispose, startBackground } as never,
+        stallObservation: { attach },
+        isShutdownStarted: () => shuttingDown,
+      });
+      const rejection = expect(startup).rejects.toBeInstanceOf(StartupCancelledError);
+      shuttingDown = true;
+      if (outcome === 'resolved') resolve();
+      else reject(new Error('backup disposed during shutdown'));
+      await rejection;
+      expect(dispose).toHaveBeenCalledOnce();
+      expect(startBackground).not.toHaveBeenCalled();
+      expect(attach).not.toHaveBeenCalled();
+    }
+  );
+
   it('keeps desktop startup alive when backup initialization fails', async () => {
     const dispose = vi.fn(async () => undefined);
     const startBackground = vi.fn();
@@ -347,17 +427,20 @@ describe('startPreparedMemberWorkSyncFeature', () => {
     const dispose = vi.fn(async () => undefined);
     const startBackground = vi.fn();
     const attach = vi.fn();
+    const onStarted = vi.fn();
     const prepared = { dispose, startBackground };
     await expect(
       startPreparedMemberWorkSyncFeature({
         backup: { initialize: async () => undefined } as never,
         prepared: prepared as never,
         stallObservation: { attach },
+        onStarted,
       })
     ).resolves.toBe(prepared);
     expect(dispose).not.toHaveBeenCalled();
     expect(startBackground).toHaveBeenCalledOnce();
     expect(attach).toHaveBeenCalledOnce();
+    expect(onStarted).toHaveBeenCalledExactlyOnceWith(prepared);
   });
 });
 
