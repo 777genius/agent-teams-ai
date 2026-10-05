@@ -22,7 +22,92 @@ permissions:
   actions: read
 
 jobs:
+  prepare-mac-inputs:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
+    name: prepare-mac-inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      artifact_id: ${{ steps.bundle.outputs.artifact-id }}
+      artifact_sha256: ${{ steps.bundle.outputs.artifact-digest }}
+    steps:
+      - name: Require reviewed immutable tooling
+        env:
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tooling_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check authenticated input boundary
+        run: |
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
+          ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts
+      - name: Retrieve only the authenticated immutable prepared metadata plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_RUN_ATTEMPT: ${{ inputs.prepared_run_attempt }}
+          ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ && "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          root="$RUNNER_TEMP/TEST-mac-updater-inputs"
+          mkdir "$root"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > "$root/run.json"
+          jq -e --arg sha "$TOOLING_SHA" --argjson attempt "$PREPARED_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .status == "completed" and .conclusion == "success" and .event == "workflow_dispatch" and .path == ".github/workflows/stage-existing-partial-draft.yml"' "$root/run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" > "$root/artifact.json"
+          jq -e --arg sha "$TOOLING_SHA" --arg digest "sha256:$ARTIFACT_SHA256" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .digest == $digest and .workflow_run.id == $run and .workflow_run.head_sha == $sha' "$root/artifact.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$root/plan.zip"
+          [[ "$(shasum -a 256 "$root/plan.zip" | cut -d' ' -f1)" == "$ARTIFACT_SHA256" ]]
+          [[ "$(unzip -Z1 "$root/plan.zip" | awk '$0 == "stage-plan.json" {count++} END {print count+0}')" == 1 ]]
+          unzip -p "$root/plan.zip" stage-plan.json > "$root/stage-plan.json"
+          [[ "$(shasum -a 256 "$root/stage-plan.json" | cut -d' ' -f1)" == "$PLAN_SHA256" ]]
+      - name: Authenticate and hash real release inputs without native application execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          INPUT_DIGEST: ${{ inputs.input_digest }}
+          FEED_MODE: ${{ inputs.feed_mode }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsx scripts/e2e/release-updater/mac-input-transfer.mts \
+            --operation prepare --plan "$RUNNER_TEMP/TEST-mac-updater-inputs/stage-plan.json" \
+            --plan-sha256 "$PLAN_SHA256" --input-digest "$INPUT_DIGEST" \
+            --tooling-sha "$TOOLING_SHA" --feed-mode "$FEED_MODE" \
+            --output "$RUNNER_TEMP/TEST-mac-authenticated-inputs"
+      - name: Upload authenticated immutable Mac inputs
+        id: bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-mac-authenticated-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/TEST-mac-authenticated-inputs/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+
   mac-current-no-update:
+    needs: prepare-mac-inputs
+    permissions:
+      contents: read
+      actions: read
     if: github.repository == '777genius/agent-teams-ai'
     name: mac-current-no-update (${{ matrix.architecture }})
     strategy:
@@ -56,36 +141,26 @@ jobs:
       - name: Check typed native Mac harness
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
       - name: Verify compiler-independent observer serialization
         run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts
-      - name: Retrieve only the authenticated immutable prepared metadata plan
+      - name: Retrieve and verify only this completed authenticated producer job's immutable artifact
         env:
           GH_TOKEN: ${{ github.token }}
           TOOLING_SHA: ${{ inputs.tooling_sha }}
-          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
-          PREPARED_RUN_ATTEMPT: ${{ inputs.prepared_run_attempt }}
-          ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
-          ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
-          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-inputs.outputs.artifact_id }}
+          INPUT_ARTIFACT_SHA256: ${{ needs.prepare-mac-inputs.outputs.artifact_sha256 }}
         run: |
           set -euo pipefail
-          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ && "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
-          [[ "$ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_SHA256" =~ ^[a-f0-9]{64}$ ]]
-          root="$RUNNER_TEMP/TEST-mac-updater-inputs"
-          mkdir "$root"
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > "$root/run.json"
-          jq -e --arg sha "$TOOLING_SHA" --argjson attempt "$PREPARED_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .status == "completed" and .conclusion == "success" and .event == "workflow_dispatch" and .path == ".github/workflows/stage-existing-partial-draft.yml"' "$root/run.json"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" > "$root/artifact.json"
-          jq -e --arg sha "$TOOLING_SHA" --arg digest "sha256:$ARTIFACT_SHA256" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .digest == $digest and .workflow_run.id == $run and .workflow_run.head_sha == $sha' "$root/artifact.json"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$root/plan.zip"
-          [[ "$(shasum -a 256 "$root/plan.zip" | cut -d' ' -f1)" == "$ARTIFACT_SHA256" ]]
-          [[ "$(unzip -Z1 "$root/plan.zip" | awk '$0 == "stage-plan.json" {count++} END {print count+0}')" == 1 ]]
-          unzip -p "$root/plan.zip" stage-plan.json > "$root/stage-plan.json"
-          [[ "$(shasum -a 256 "$root/stage-plan.json" | cut -d' ' -f1)" == "$PLAN_SHA256" ]]
+          ./node_modules/.bin/tsx scripts/e2e/release-updater/mac-input-transfer.mts \
+            --operation retrieve --tooling-sha "$TOOLING_SHA" \
+            --artifact-id "$INPUT_ARTIFACT_ID" --artifact-sha256 "$INPUT_ARTIFACT_SHA256" \
+            --output "$RUNNER_TEMP/TEST-mac-authenticated-inputs"
       - name: Native signed current Mac app completes genuine no-update with OS containment
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-inputs.outputs.artifact_id }}
+          INPUT_ARTIFACT_SHA256: ${{ needs.prepare-mac-inputs.outputs.artifact_sha256 }}
           TOOLING_SHA: ${{ inputs.tooling_sha }}
           PLAN_SHA256: ${{ inputs.plan_sha256 }}
           INPUT_DIGEST: ${{ inputs.input_digest }}
@@ -94,7 +169,9 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec tsx scripts/e2e/release-updater/mac-updater.mts \
-            --plan "$RUNNER_TEMP/TEST-mac-updater-inputs/stage-plan.json" \
+            --plan "$RUNNER_TEMP/TEST-mac-authenticated-inputs/stage-plan.json" \
+            --inputs "$RUNNER_TEMP/TEST-mac-authenticated-inputs" \
+            --input-artifact-id "$INPUT_ARTIFACT_ID" --input-artifact-sha256 "$INPUT_ARTIFACT_SHA256" \
             --plan-sha256 "$PLAN_SHA256" --input-digest "$INPUT_DIGEST" \
             --tooling-sha "$TOOLING_SHA" --architecture "$ARCHITECTURE" --feed-mode "$FEED_MODE" \
             --evidence "$RUNNER_TEMP/TEST-mac-updater-evidence"
@@ -115,7 +192,10 @@ jobs:
           name: TEST-mac-current-no-update-${{ matrix.architecture }}-${{ inputs.feed_mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/TEST-mac-updater-evidence/
-            ${{ runner.temp }}/TEST-mac-updater-inputs/run.json
-            ${{ runner.temp }}/TEST-mac-updater-inputs/artifact.json
+            ${{ runner.temp }}/TEST-mac-authenticated-inputs/validated-input-artifact.json
+            ${{ runner.temp }}/TEST-mac-authenticated-inputs/mac-input-bundle.json
+            ${{ runner.temp }}/TEST-mac-authenticated-inputs/prepared-run.json
+            ${{ runner.temp }}/TEST-mac-authenticated-inputs/prepared-artifact.json
+            ${{ runner.temp }}/TEST-mac-authenticated-inputs/stage-plan.json
           if-no-files-found: warn
           retention-days: 30

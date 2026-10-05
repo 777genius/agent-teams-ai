@@ -28,7 +28,7 @@ import {
   restoreMacNetwork,
   stopMacOwned,
 } from './mac-loopback.mts';
-import { prepareMacInputs } from './mac-inputs.mts';
+import { readMacInputs } from './mac-inputs.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
 import { macSerializedFunction } from './mac-serialization.mts';
@@ -96,6 +96,9 @@ const { values } = parseArgs({
         'tooling-sha',
         'architecture',
         'feed-mode',
+        'inputs',
+        'input-artifact-id',
+        'input-artifact-sha256',
         'evidence',
       ].map((name) => [name, { type: 'string' as const }])
     ),
@@ -371,10 +374,12 @@ try {
     path.join(home, '.codex'),
   ])
     await mkdir(directory, { recursive: true });
-  const inputs = await prepareMacInputs(plan, root, feedMode, architecture, evidence, {
+  const inputs = await readMacInputs(plan, required('inputs'), feedMode, architecture, evidence, {
     planSha256: required('plan-sha256'),
     inputDigest: required('input-digest'),
     toolingSha,
+    artifactId: Number(required('input-artifact-id')),
+    artifactSha256: required('input-artifact-sha256'),
   });
   const selected = inputs.files.get(inputs.names.dmg);
   assert(selected);
