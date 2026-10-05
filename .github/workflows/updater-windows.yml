@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '26.10.0'
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '26.10.0'
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Verify immutable native producer and extract exact plan-bound inputs
         env:
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '26.10.0'
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Download immutable official Windows installers and blockmaps
         env:
@@ -159,7 +159,7 @@ jobs:
         with:
           node-version: '26.10.0'
           architecture: ${{ matrix.arch }}
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check all typed updater tools and full changed file lint
         run: |
