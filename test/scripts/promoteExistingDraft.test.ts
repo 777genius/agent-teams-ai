@@ -44,29 +44,29 @@ class FeedCompatibilityUpdater extends AppUpdater {
       appUpdateConfigPath: path.join(directory, 'app-update.yml'),
       userDataPath: directory,
       baseCachePath: directory,
-      whenReady: async () => {},
-      relaunch: () => {},
-      quit: () => {},
-      onQuit: () => {},
+      whenReady: () => Promise.resolve(),
+      relaunch: () => undefined,
+      quit: () => undefined,
+      onQuit: () => undefined,
     });
     this.autoDownload = false;
     this.logger = null;
   }
 
-  protected override async getUpdateInfoAndProvider() {
+  protected override getUpdateInfoAndProvider() {
     const url = new URL('https://release-compatibility.invalid/');
-    return {
+    return Promise.resolve({
       info: parseUpdateInfo(this.feed, 'latest-mac.yml', url),
       provider: new GenericProvider({ provider: 'generic', url: url.href }, this, {
         platform: 'darwin',
         isUseMultipleRangeRequest: false,
-        executor: new ElectronHttpExecutor(() => {}),
+        executor: new ElectronHttpExecutor(() => undefined),
       }),
-    };
+    });
   }
 
-  protected override async doDownloadUpdate(): Promise<string[]> {
-    throw new Error('Compatibility test must never download an update');
+  protected override doDownloadUpdate(): Promise<string[]> {
+    return Promise.reject(new Error('Compatibility test must never download an update'));
   }
 
   override quitAndInstall(): void {
@@ -191,6 +191,9 @@ describe('promote-existing-draft', () => {
       const output = path.join(root, 'output');
       const bin = path.join(root, 'bin');
       await Promise.all([mkdir(fixtures), mkdir(output), mkdir(bin)]);
+      // The generated extensionless CLI uses CommonJS. Do not inherit a
+      // package scope from a shared temporary directory on hosted machines.
+      await writeFile(path.join(root, 'package.json'), JSON.stringify({ type: 'commonjs' }));
 
       const version = '9.9.9';
       const tag = `v${version}`;

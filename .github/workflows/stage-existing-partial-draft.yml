@@ -1,0 +1,99 @@
+name: Stage Existing Partial Draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [prepare, stage-draft]
+        default: prepare
+      mode:
+        type: choice
+        options: [full, carry-mac]
+        default: full
+      release_tag: { type: string, required: true }
+      application_sha: { type: string, required: true }
+      tooling_sha: { type: string, required: true }
+      mac_source_tag: { type: string }
+      build_run_id: { type: string }
+      build_attempt: { type: string }
+      build_job_ids: { type: string }
+      prepared_run_id: { type: string }
+      prepared_artifact_id: { type: string }
+      plan_digest: { type: string }
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  assemble-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Require reviewed immutable tooling SHA
+        env:
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tooling_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Prepare or resume immutable plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPERATION: ${{ inputs.operation }}
+          MODE: ${{ inputs.mode }}
+          TAG: ${{ inputs.release_tag }}
+          APPLICATION_SHA: ${{ inputs.application_sha }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+          MAC_SOURCE_TAG: ${{ inputs.mac_source_tag }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          BUILD_ATTEMPT: ${{ inputs.build_attempt }}
+          BUILD_JOB_IDS: ${{ inputs.build_job_ids }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+        run: |
+          [[ "$(git rev-parse HEAD)" == "$TOOLING_SHA" ]]
+          if [[ "$OPERATION" == prepare ]]; then
+            args=(--repository "$GITHUB_REPOSITORY" --release-tag "$TAG" --application-sha "$APPLICATION_SHA" --tooling-sha "$TOOLING_SHA" --mode "$MODE" --output "$RUNNER_TEMP/TEST-stage" --build-run-id "$BUILD_RUN_ID" --build-attempt "$BUILD_ATTEMPT" --build-job-ids "$BUILD_JOB_IDS")
+            if [[ -n "$MAC_SOURCE_TAG" ]]; then args+=(--mac-source-tag "$MAC_SOURCE_TAG"); fi
+            pnpm exec tsx scripts/ci/prepare-existing-draft.ts "${args[@]}"
+          else
+            [[ "$OPERATION" == stage-draft && "$PREPARED_RUN_ID" =~ ^[0-9]+$ && "$PREPARED_ARTIFACT_ID" =~ ^[0-9]+$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > "$RUNNER_TEMP/prepare-run.json"
+            jq -e --arg sha "$TOOLING_SHA" '.head_sha == $sha and .status == "completed" and .conclusion == "success" and .path == ".github/workflows/stage-existing-partial-draft.yml"' "$RUNNER_TEMP/prepare-run.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID" > "$RUNNER_TEMP/artifact.json"
+            jq -e --argjson run "$PREPARED_RUN_ID" --arg sha "$TOOLING_SHA" '.expired == false and .name == "existing-draft-stage-plan" and .workflow_run.id == $run and .workflow_run.head_sha == $sha' "$RUNNER_TEMP/artifact.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID/zip" > "$RUNNER_TEMP/plan.zip"
+            expected=$(jq -r .digest "$RUNNER_TEMP/artifact.json")
+            [[ "sha256:$(sha256sum "$RUNNER_TEMP/plan.zip" | cut -d' ' -f1)" == "$expected" ]]
+            mkdir "$RUNNER_TEMP/TEST-stage"
+            unzip -p "$RUNNER_TEMP/plan.zip" stage-plan.json > "$RUNNER_TEMP/TEST-stage/stage-plan.json"
+            plan="$RUNNER_TEMP/TEST-stage/stage-plan.json"
+            jq -e --arg tag "$TAG" --arg app "$APPLICATION_SHA" --arg tooling "$TOOLING_SHA" --arg mode "$MODE" --arg source "$MAC_SOURCE_TAG" '.input.target.tag == $tag and .input.target.applicationSha == $app and .input.toolingSha == $tooling and .input.mode == $mode and (.input.macSource.release.tag // "") == $source' "$plan"
+            pnpm exec tsx scripts/ci/stage-existing-draft.ts --plan "$plan" --plan-digest "$PLAN_DIGEST"
+            pnpm exec tsx scripts/ci/verify-updater-release.ts --state draft --plan "$plan" --plan-digest "$PLAN_DIGEST"
+          fi
+      - name: Persist immutable metadata plan
+        if: ${{ inputs.operation == 'prepare' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: existing-draft-stage-plan
+          path: |
+            ${{ runner.temp }}/TEST-stage/stage-plan.json
+            ${{ runner.temp }}/TEST-stage/stage-plan.sha256
+          if-no-files-found: error
+          retention-days: 30

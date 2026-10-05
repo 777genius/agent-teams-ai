@@ -592,11 +592,7 @@ export default defineConfig([
   {
     name: 'electron-main',
     files: ['src/main/**/*.ts'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
+    languageOptions: { globals: { ...globals.node } },
     rules: {
       // Allow console in main process for logging
       'no-console': 'off',
@@ -644,23 +640,14 @@ export default defineConfig([
   {
     name: 'electron-preload',
     files: ['src/preload/**/*.ts'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.browser,
-      },
-    },
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 
   // Renderer process (React + A11y + Tailwind)
   {
     name: 'renderer-react',
     files: ['src/renderer/**/*.{ts,tsx}'],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
-    },
+    languageOptions: { globals: { ...globals.browser } },
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooks,
@@ -1158,6 +1145,18 @@ export default defineConfig([
           ],
         },
       ],
+    },
+  },
+
+  // The existing JavaScript compatibility entrypoint is outside the TS project.
+  // Its replacement graph stays type-aware; retain normal JS/security lint here.
+  {
+    ...tseslint.configs.disableTypeChecked,
+    name: 'legacy-release-javascript-entrypoint',
+    files: ['scripts/ci/promote-existing-draft.mjs'],
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
     },
   },
 
