@@ -20,16 +20,22 @@ let heroMessageObserver: IntersectionObserver | null = null;
 let heroMotionQuery: MediaQueryList | null = null;
 
 const downloadStore = useDownloadStore();
-const { resolve, data: releaseData } = useReleaseDownloads();
+const { resolve, platformInfo, data: releaseData } = useReleaseDownloads();
+const { trackDownloadClick } = useAnalytics();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
 const { selectedDownloadAsset } = useDownloadAssetPresentation();
 
 useCyberHeroParallax(heroRef);
 
-const releaseVersion = computed(() => releaseData.value?.version || null);
+const selectedRelease = computed(() => {
+  const asset = selectedDownloadAsset.value;
+  return asset ? platformInfo(asset.os, asset.resolvedArch) : releaseData.value;
+});
+const releaseLabel = computed(() => selectedDownloadAsset.value?.label || 'GitHub Release');
+const releaseVersion = computed(() => selectedRelease.value?.version || null);
 const releaseDate = computed(() => {
-  if (!releaseData.value?.pubDate) return "";
-  return new Date(releaseData.value.pubDate).toLocaleDateString(locale.value, {
+  if (!selectedRelease.value?.pubDate) return "";
+  return new Date(selectedRelease.value.pubDate).toLocaleDateString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -142,6 +148,13 @@ const heroDownloadTarget = computed(() => (
     : "_blank"
 ));
 
+function handleHeroDownloadClick() {
+  const asset = selectedDownloadAsset.value;
+  if (!asset || ((asset.os === 'windows' || asset.os === 'macos') && asset.resolvedArch === 'unknown')) return;
+  trackDownloadClick({ os: asset.os, arch: asset.resolvedArch,
+    version: resolve(asset.os, asset.resolvedArch)?.version ?? null, source: 'hero' });
+}
+
 const docsHref = computed(() => buildDocsHref({
   locale: locale.value,
   docsSiteUrl: runtimeConfig.public.docsSiteUrl,
@@ -152,7 +165,8 @@ const downloadActionSubtitle = computed(() => {
     return t("hero.platformDefault");
   }
 
-  return selectedDownloadAsset.value.actionSubtitle;
+  const asset = selectedDownloadAsset.value;
+  return asset.os === 'macos' ? `macOS · ${asset.archLabel}` : asset.actionSubtitle;
 });
 const docsActionSubtitle = computed(() => (
   t("hero.guidesSetup")
@@ -302,6 +316,7 @@ onUnmounted(() => {
               tone="primary"
               :icon="mdiDownload"
               :subtitle="downloadActionSubtitle"
+              @click="handleHeroDownloadClick"
             >
               {{ t("hero.downloadNow") }}
             </CyberHeroActionButton>
@@ -320,7 +335,7 @@ onUnmounted(() => {
             class="cyber-hero__terminal-note cyber-panel"
           >
             <span class="cyber-hero__release">
-              v{{ releaseVersion }}
+              {{ releaseLabel }} · v{{ releaseVersion }}
               <span v-if="releaseDate" class="cyber-hero__release-date">
                 · {{ releaseDate }}
               </span>
