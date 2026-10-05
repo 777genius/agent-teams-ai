@@ -184,13 +184,34 @@ async function automaticDesktop(
     DISPLAY: process.env.DISPLAY,
     XAUTHORITY: process.env.XAUTHORITY,
     LC_ALL: 'C',
+    OMP_THREAD_LIMIT: '1',
   };
   const run = (command: string, parameters: string[]) => {
     assert(Date.now() < deadline, 'Automatic desktop did not paint within 45 seconds');
+    const started = Date.now();
     return execute(command, parameters, {
       env,
       timeout: Math.min(10_000, deadline - Date.now()),
       maxBuffer: 1_048_576,
+    }).catch((error: unknown) => {
+      const failure = error as Error & {
+        code?: string | number;
+        killed?: boolean;
+        signal?: string;
+        stdout?: string;
+        stderr?: string;
+      };
+      evidence.nativeToolFailure = {
+        command,
+        parameters,
+        elapsedMs: Date.now() - started,
+        code: failure.code,
+        killed: failure.killed,
+        signal: failure.signal,
+        stdout: failure.stdout,
+        stderr: failure.stderr,
+      };
+      throw error;
     });
   };
   const native = await captureNativeWindow(owner, directory);
