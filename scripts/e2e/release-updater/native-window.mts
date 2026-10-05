@@ -66,11 +66,14 @@ export async function stopOwnedGroup(owner: ProcessIdentity) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     remaining = await groupMembers(owner);
   }
-  const killed = remaining.map((member) => member.pid);
+  let killed: number[] = [];
   if (remaining.length) {
     // Fresh ownership readback immediately before escalating this group only.
     remaining = await groupMembers(owner);
-    if (remaining.length) process.kill(-owner.group, 'SIGKILL');
+    if (remaining.length) {
+      process.kill(-owner.group, 'SIGKILL');
+      killed = remaining.map((member) => member.pid);
+    }
     await waitFor(
       async () => ((await groupMembers(owner)).length === 0 ? true : null),
       'owned process group termination',

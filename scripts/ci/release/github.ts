@@ -16,6 +16,19 @@ import type {
   ReleasePort,
 } from './contract.js';
 
+class CliError extends Error {
+  readonly httpStatus: number | null;
+  constructor(
+    executable: string,
+    operation: string | undefined,
+    code: number | null,
+    stderr: string
+  ) {
+    super(`${executable} ${operation} failed (${code}): ${stderr}`);
+    const status = /\(HTTP (\d{3})\)/.exec(stderr)?.[1];
+    this.httpStatus = executable === 'gh' && status ? Number(status) : null;
+  }
+}
 async function executablePath(name: 'gh' | 'unzip'): Promise<string> {
   for (const directory of (process.env.PATH ?? '')
     .split(path.delimiter)
@@ -46,11 +59,7 @@ async function command(
     child.on('close', (code) =>
       code === 0
         ? resolve()
-        : reject(
-            new Error(
-              `${executable} ${args[0]} failed (${code}): ${Buffer.concat(errors).toString()}`
-            )
-          )
+        : reject(new CliError(executable, args[0], code, Buffer.concat(errors).toString()))
     );
   });
   if (destination)
@@ -67,9 +76,133 @@ async function command(
 async function api<T>(endpoint: string): Promise<T> {
   return JSON.parse(await command(['api', endpoint])) as T;
 }
+export interface NativeProducerMetadata {
+  run: { head_sha: string; run_attempt: number; status: string; path: string };
+  job: {
+    run_id: number;
+    name: string;
+    status: string;
+    conclusion: string;
+    started_at: string;
+    completed_at: string;
+    steps: {
+      name: string;
+      status: string;
+      conclusion: string;
+      started_at: string;
+      completed_at: string;
+    }[];
+  };
+  attemptJobIds: number[];
+  artifact: {
+    name: string;
+    digest: string;
+    expired: boolean;
+    created_at: string;
+    workflow_run: { id: number; head_sha: string };
+  };
+}
+export function validateNativeProducer(
+  ref: NativeEvidenceReference,
+  metadata: NativeProducerMetadata
+): void {
+  const { run, job, artifact } = metadata;
+  requireThat(
+    run.path === '.github/workflows/updater-mac-source.yml' &&
+      run.head_sha === ref.toolingSha &&
+      run.run_attempt === ref.runAttempt &&
+      run.status === 'completed' &&
+      metadata.attemptJobIds.includes(ref.jobId) &&
+      job.run_id === ref.runId &&
+      job.name === 'mac-source-signatures' &&
+      job.status === 'completed' &&
+      job.conclusion === 'success',
+    'Native evidence producer did not succeed in trusted workflow/job/attempt at reviewed tooling SHA'
+  );
+  const expectedName = `mac-source-signature-evidence-${ref.runId}-${ref.runAttempt}`;
+  requireThat(
+    !artifact.expired &&
+      artifact.name === expectedName &&
+      ref.artifactName === expectedName &&
+      artifact.digest === `sha256:${ref.artifactSha256}` &&
+      artifact.workflow_run.id === ref.runId &&
+      artifact.workflow_run.head_sha === ref.toolingSha,
+    'Native evidence artifact identity/digest/attempt mismatch'
+  );
+  requireThat(Array.isArray(job.steps), 'Native evidence producer upload steps missing');
+  const uploads = job.steps.filter(
+    (step) => step.name === 'Preserve aggregate evidence and diagnostics'
+  );
+  const upload = uploads[0];
+  requireThat(
+    uploads.length === 1 && upload?.status === 'completed' && upload.conclusion === 'success',
+    'Native evidence producer upload step missing, ambiguous, or unsuccessful'
+  );
+  const [jobStart, jobEnd, uploadStart, uploadEnd, created] = [
+    job.started_at,
+    job.completed_at,
+    upload.started_at,
+    upload.completed_at,
+    artifact.created_at,
+  ].map(Date.parse);
+  requireThat(
+    typeof jobStart === 'number' &&
+      typeof jobEnd === 'number' &&
+      typeof uploadStart === 'number' &&
+      typeof uploadEnd === 'number' &&
+      typeof created === 'number' &&
+      [jobStart, jobEnd, uploadStart, uploadEnd, created].every(Number.isFinite) &&
+      jobStart <= uploadStart &&
+      uploadStart <= uploadEnd &&
+      uploadEnd <= jobEnd &&
+      created >= uploadStart &&
+      created < uploadEnd + 1000,
+    'Native evidence artifact was not created by the successful producer upload step'
+  );
+  // GitHub step timestamps have second precision; only the final fractional second
+  // is admitted. The attempt-specific immutable artifact name also remains mandatory.
+}
 export class GitHubReleasePort implements ReleasePort {
+  private async releaseByTag(repository: string, tag: string): Promise<Release> {
+    try {
+      const release = await api<Release>(`repos/${repository}/releases/tags/${tag}`);
+      requireThat(release.tag_name === tag, 'Release tag endpoint returned a different tag');
+      return release;
+    } catch (error) {
+      // GitHub's tag endpoint can hide authenticated drafts. Only its explicit
+      // HTTP 404 permits discovery; auth, rate-limit and transport errors propagate.
+      if (!(error instanceof CliError) || error.httpStatus !== 404) throw error;
+    }
+    const pages = JSON.parse(
+      await command(['api', `repos/${repository}/releases?per_page=100`, '--paginate', '--slurp'])
+    ) as Release[][];
+    requireThat(
+      Array.isArray(pages) && pages.every(Array.isArray),
+      'Invalid authenticated release list'
+    );
+    const matches = pages.flat().filter((release) => release.tag_name === tag);
+    requireThat(
+      matches.length === 1,
+      'Authenticated release discovery requires one exact tag match'
+    );
+    const listed = matches[0];
+    requireThat(
+      listed && Number.isSafeInteger(listed.id) && listed.id > 0 && listed.draft === true,
+      'Tag endpoint 404 discovery is restricted to an authenticated draft'
+    );
+    const release = await api<Release>(`repos/${repository}/releases/${listed.id}`);
+    requireThat(
+      release.id === listed.id &&
+        release.tag_name === tag &&
+        release.draft === true &&
+        release.prerelease === listed.prerelease &&
+        release.target_commitish === listed.target_commitish,
+      'Discovered draft identity/state changed during ID read'
+    );
+    return release;
+  }
   async release(repository: string, tag: string): Promise<Release> {
-    const release = await api<Release>(`repos/${repository}/releases/tags/${tag}`);
+    const release = await this.releaseByTag(repository, tag);
     const assets = JSON.parse(
       await command([
         'api',
@@ -203,10 +336,10 @@ export class GitHubReleasePort implements ReleasePort {
     );
     for (const id of [ref.runId, ref.runAttempt, ref.jobId, ref.artifactId])
       requireThat(Number.isSafeInteger(id) && id > 0, 'Invalid native producer identity');
-    const run = await api<{ head_sha: string; run_attempt: number; status: string; path: string }>(
+    const run = await api<NativeProducerMetadata['run']>(
       `repos/${ref.repository}/actions/runs/${ref.runId}`
     );
-    const job = await api<{ run_id: number; conclusion: string }>(
+    const job = await api<NativeProducerMetadata['job']>(
       `repos/${ref.repository}/actions/jobs/${ref.jobId}`
     );
     const pages = JSON.parse(
@@ -217,33 +350,15 @@ export class GitHubReleasePort implements ReleasePort {
         '--slurp',
       ])
     ) as { jobs: { id: number }[] }[];
-    requireThat(
-      pages.some((p) => p.jobs.some((j) => j.id === ref.jobId)),
-      'Native evidence job belongs to a different run attempt'
+    const artifact = await api<NativeProducerMetadata['artifact']>(
+      `repos/${ref.repository}/actions/artifacts/${ref.artifactId}`
     );
-    const artifact = await api<{
-      name: string;
-      digest: string;
-      expired: boolean;
-      workflow_run: { id: number; head_sha: string };
-    }>(`repos/${ref.repository}/actions/artifacts/${ref.artifactId}`);
-    requireThat(
-      run.path === '.github/workflows/updater-mac-source.yml' &&
-        run.head_sha === ref.toolingSha &&
-        run.run_attempt === ref.runAttempt &&
-        run.status === 'completed' &&
-        job.run_id === ref.runId &&
-        job.conclusion === 'success',
-      'Native evidence producer did not succeed in trusted workflow at reviewed tooling SHA'
-    );
-    requireThat(
-      !artifact.expired &&
-        artifact.name === ref.artifactName &&
-        artifact.digest === `sha256:${ref.artifactSha256}` &&
-        artifact.workflow_run.id === ref.runId &&
-        artifact.workflow_run.head_sha === ref.toolingSha,
-      'Native evidence artifact identity/digest mismatch'
-    );
+    validateNativeProducer(ref, {
+      run,
+      job,
+      artifact,
+      attemptJobIds: pages.flatMap((p) => p.jobs.map((j) => j.id)),
+    });
     const directory = await mkdtemp(path.join(tmpdir(), 'TEST-mac-evidence-'));
     try {
       const zip = path.join(directory, 'evidence.zip');

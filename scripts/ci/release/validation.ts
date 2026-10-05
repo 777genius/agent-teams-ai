@@ -2,6 +2,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { parse } from 'yaml';
+
 import { checkPlan, requiredFeed, validateOrigins } from './assembly.js';
 import {
   MAC_EVIDENCE,
@@ -13,6 +15,7 @@ import {
   digest,
   fileProof,
   manifestFor,
+  older,
   platformNames,
   releaseSnapshot,
   requireThat,
@@ -138,7 +141,8 @@ async function verifyCarriedSource(
 async function verifyLegacyFull(
   target: Release,
   feeds: Record<string, string>,
-  audit: (name: string) => Promise<{ raw: Buffer; proof: FileProof }>
+  audit: (name: string) => Promise<{ raw: Buffer; proof: FileProof }>,
+  productMinimum: string | undefined
 ): Promise<void> {
   const tag = target.tag_name;
   const names = platformNames(version(tag));
@@ -149,7 +153,30 @@ async function verifyLegacyFull(
   ] as const) {
     const proofs: FileProof[] = [];
     for (const name of expectedNames) proofs.push((await audit(name)).proof);
-    validateFeed(requiredFeed(feeds, feed), version(tag), proofs);
+    const raw = requiredFeed(feeds, feed);
+    // Historical complete releases had all four Linux assets but exposed only
+    // AppImage in the updater feed. New plans/releases use the four-format contract.
+    const parsed = parse(raw) as { files?: unknown } | null;
+    const historicalAppImage =
+      feed === 'latest-linux.yml' &&
+      older(tag, 'v2.17.2') &&
+      Array.isArray(parsed?.files) &&
+      parsed.files.length === 1;
+    validateFeed(raw, version(tag), historicalAppImage ? proofs.slice(0, 1) : proofs);
+  }
+  if (!older(tag, 'v2.17.2')) {
+    requireThat(
+      productMinimum === '12.0' || productMinimum === '13.0',
+      'Unsupported application macOS minimum for manifestless full release'
+    );
+    const mac = parse(requiredFeed(feeds, 'latest-mac.yml')) as {
+      minimumSystemVersion?: unknown;
+    } | null;
+    const darwinMinimum = productMinimum === '12.0' ? '21.0.0' : '22.0.0';
+    requireThat(
+      mac?.minimumSystemVersion === darwinMinimum,
+      'Manifestless full release macOS minimum differs from application commit'
+    );
   }
   for (const name of names.windows.map((n) => `${n}.blockmap`)) assetByName(target, name);
 }
@@ -199,7 +226,10 @@ export async function verifyPublished(
     await port.publicAsset(repository, tag, name);
   }
   if (!found) {
-    await verifyLegacyFull(target, feeds, audit);
+    const productMinimum = older(tag, 'v2.17.2')
+      ? undefined
+      : await port.minimum(repository, applicationSha);
+    await verifyLegacyFull(target, feeds, audit, productMinimum);
     await finish();
     return { mode: 'full', tag };
   }
