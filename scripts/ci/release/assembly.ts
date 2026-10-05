@@ -426,7 +426,7 @@ async function reconcileOutput(
     try {
       await port.upload(
         plan.input.repository,
-        plan.input.target.tag,
+        plan.input.target.id,
         path.join(directory, proof.name)
       );
     } catch (error) {
