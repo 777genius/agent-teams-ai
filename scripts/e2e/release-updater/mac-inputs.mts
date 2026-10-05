@@ -41,6 +41,16 @@ const oldDmg = {
   },
 };
 const port = new GitHubReleasePort();
+export function checkMacAssetSnapshot(actual: Asset, expected: Asset) {
+  const snapshot = (asset: Asset) => ({
+    id: asset.id,
+    name: asset.name,
+    size: asset.size,
+    digest: asset.digest,
+    state: Reflect.get(asset, 'state') as unknown,
+  });
+  assert.deepEqual(snapshot(actual), snapshot(expected));
+}
 export async function captureOldMacSources(
   commands: { output: string },
   installed: string,
@@ -201,7 +211,7 @@ export async function prepareMacInputs(
   }
   const reread = await port.release(repository, selected.tag_name);
   for (const download of downloads)
-    assert.deepEqual(
+    checkMacAssetSnapshot(
       assetByName(reread, download.proof.name),
       assetByName(selected, download.proof.name)
     );
@@ -383,7 +393,7 @@ export async function oldMacInstaller(
     applicationSha: oldSha,
     proof,
   };
-  assert.deepEqual(assetByName(await port.release(repository, old.tag_name), name), asset);
+  checkMacAssetSnapshot(assetByName(await port.release(repository, old.tag_name), name), asset);
   assert.equal(await port.tagSha(repository, old.tag_name), oldSha);
   return file;
 }

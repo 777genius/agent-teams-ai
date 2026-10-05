@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { checkMacArtifactAuthority } from './mac-input-artifact.mts';
+import { checkMacAssetSnapshot } from './mac-inputs.mts';
 
+import type { Asset } from '../../ci/release/contract.ts';
 import type { MacArtifactAuthority, MacArtifactExpected } from './mac-input-artifact.mts';
 
 const expected: MacArtifactExpected = {
@@ -56,6 +58,11 @@ function fixture(): MacArtifactAuthority {
 void test('a successful authenticated job is usable while its dependent native workflow remains active', () => {
   assert.doesNotThrow(() => checkMacArtifactAuthority(fixture(), expected));
 });
+void test('a documented ref-suffixed workflow path retains exact producer authority', () => {
+  const value = fixture();
+  value.run.path = `${expected.workflowPath}@main`;
+  assert.doesNotThrow(() => checkMacArtifactAuthority(value, expected));
+});
 const invalid: { name: string; mutate: (value: MacArtifactAuthority) => void }[] = [
   {
     name: 'foreign artifact ID',
@@ -97,6 +104,19 @@ const invalid: { name: string; mutate: (value: MacArtifactAuthority) => void }[]
     name: 'untrusted workflow',
     mutate: (value) => {
       value.run.path = '.github/workflows/release.yml';
+    },
+  },
+  {
+    name: 'ref-suffixed wrong workflow filename',
+    mutate: (value) => {
+      value.run.path = '.github/workflows/release.yml@main';
+    },
+  },
+  {
+    name: 'wrong tooling head with a valid ref-suffixed workflow',
+    mutate: (value) => {
+      value.run.path = `${expected.workflowPath}@main`;
+      value.run.head_sha = 'c'.repeat(40);
     },
   },
   {
@@ -147,4 +167,62 @@ for (const { name, mutate } of invalid)
     const value = fixture();
     mutate(value);
     assert.throws(() => checkMacArtifactAuthority(value, expected));
+  });
+
+function assetFixture(): Asset & { state: string; download_count: number } {
+  return {
+    id: 593747171,
+    name: 'Agent.Teams.AI-2.17.0-arm64.dmg',
+    size: 249860511,
+    digest: 'sha256:ffee8ea0ae14507da597a7339c1e78481d2ddaf96686e6aad32229f716cc46d7',
+    state: 'uploaded',
+    download_count: 124,
+  };
+}
+void test('an asset download counter may increase without changing its trusted snapshot', () => {
+  const before = assetFixture();
+  const after = { ...before, download_count: before.download_count + 1 };
+  assert.doesNotThrow(() => checkMacAssetSnapshot(after, before));
+});
+const assetChanges: {
+  name: string;
+  mutate: (asset: ReturnType<typeof assetFixture>) => void;
+}[] = [
+  {
+    name: 'ID',
+    mutate: (asset) => {
+      asset.id += 1;
+    },
+  },
+  {
+    name: 'name',
+    mutate: (asset) => {
+      asset.name = 'substituted.dmg';
+    },
+  },
+  {
+    name: 'size',
+    mutate: (asset) => {
+      asset.size += 1;
+    },
+  },
+  {
+    name: 'digest',
+    mutate: (asset) => {
+      asset.digest = `sha256:${'c'.repeat(64)}`;
+    },
+  },
+  {
+    name: 'state',
+    mutate: (asset) => {
+      asset.state = 'starter';
+    },
+  },
+];
+for (const { name, mutate } of assetChanges)
+  void test(`reject changed asset ${name} after download`, () => {
+    const before = assetFixture();
+    const after = { ...before };
+    mutate(after);
+    assert.throws(() => checkMacAssetSnapshot(after, before));
   });
