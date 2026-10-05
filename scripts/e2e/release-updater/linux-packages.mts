@@ -393,6 +393,7 @@ try {
   const status = await readFile('/proc/self/status', 'utf8');
   assert(/^Seccomp:\s+2$/m.test(status), 'Disposable container must retain seccomp filtering');
   evidence.container = {
+    uid: process.getuid?.(),
     osRelease: await readFile('/etc/os-release', 'utf8'),
     netNamespace: await readlink('/proc/self/ns/net'),
     security: status.split('\n').filter((line) => /^Seccomp|^Cap|^NoNewPrivs/.test(line)),

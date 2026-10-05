@@ -154,7 +154,7 @@ jobs:
               done
           OFFLINE
           fi
-          printf 'RUN useradd -m -u 1000 TEST-updater && echo "TEST-updater ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/TEST-updater && chmod 0440 /etc/sudoers.d/TEST-updater\n' >> "$build/Dockerfile"
+          printf 'RUN useradd -m -U TEST-updater && echo "TEST-updater ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/TEST-updater && chmod 0440 /etc/sudoers.d/TEST-updater\n' >> "$build/Dockerfile"
           docker build --iidfile "$build/image.id" "$build" 2>&1 | tee "$build/build.log"
           docker image inspect "$(cat "$build/image.id")" > "$build/image.json"
           # Pin Docker's default seccomp source. Add only Chromium namespace
@@ -177,8 +177,9 @@ jobs:
           result=0
           for mode in $modes; do
             evidence="$PWD/.artifacts/TEST-linux-package-evidence/$mode"
-            mkdir -p "$evidence"
-            sudo chown 1000:1000 "$evidence"
+            # Host-owned metadata remains writable by the job runner. Only the
+            # native child directory is assigned to the container TEST identity.
+            mkdir -p "$evidence/native"
             cid=$(docker create --network none --init --shm-size=1g --security-opt "seccomp=$build/chromium-namespaces.json" \
               --mount "type=bind,src=$PWD,dst=/workspace,readonly" \
               --mount "type=bind,src=$nodebin,dst=/usr/local/bin/node,readonly" \
@@ -188,6 +189,7 @@ jobs:
               "$image" /bin/bash -c '
                 set -euo pipefail
                 inputs=/workspace/.artifacts/TEST-linux-package-inputs
+                chown TEST-updater:TEST-updater /evidence/native
                 mkdir -p /reference/2.17.1 /reference/2.17.2
                 for version in 2.17.1 2.17.2; do
                   name=$(node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --name "$TEST_KIND" "$version")
@@ -209,9 +211,9 @@ jobs:
                 stage=()
                 if test -n "$TEST_PLAN_SHA"; then stage=(--stage /workspace/.artifacts/TEST-linux-package-stage --plan-sha256 "$TEST_PLAN_SHA"); fi
                 runuser -u TEST-updater -- env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/TEST-updater LC_ALL=C.UTF-8 \
-                  xvfb-run --auto-servernum --server-args="-screen 0 1280x900x24 -nolisten tcp" --error-file=/evidence/xvfb.log \
+                  xvfb-run --auto-servernum --server-args="-screen 0 1280x900x24 -nolisten tcp" --error-file=/evidence/native/xvfb.log \
                   node /workspace/scripts/e2e/release-updater/linux-packages.mts --kind "$TEST_KIND" --mode "$TEST_MODE" \
-                  --inputs "$inputs" --references /reference --evidence /evidence "${stage[@]}"
+                  --inputs "$inputs" --references /reference --evidence /evidence/native "${stage[@]}"
               ')
             printf '%s\n' "$cid" > "$evidence/container.id"
             docker inspect "$cid" > "$evidence/container-before.json"
