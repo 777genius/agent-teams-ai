@@ -408,7 +408,7 @@ async function run() {
     );
     await cdpCallFunction(
       main,
-      `(()=>{const originalRequire=require;const getUpdater=()=>originalRequire('electron-updater').autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
+      `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observeOta)} )(originalRequire('electron').app,getUpdater);};})()`,
       [mirror.origin, mirror.paths],
       frame.callFrameId
     );
