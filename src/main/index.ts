@@ -19,12 +19,18 @@ process.env.UV_THREADPOOL_SIZE ??= '16';
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
+import './bootstrapStandardOutput';
 import {
   earlyElectronDevPathOverrideResult,
   earlyElectronUserDataMigrationResult,
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import {
+  assertStartupActive,
+  createStartupStage,
+  StartupCancelledError,
+} from './utils/startupCancellation';
 
 import type {
   AppCloseReadinessResult,
@@ -191,6 +197,7 @@ import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
+import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -325,7 +332,12 @@ import {
   captureStartupMemorySnapshot,
   formatStartupMemorySnapshot,
 } from './utils/startupTelemetry';
-import { captureMainException, getMainSentryStatus, syncTelemetryFlag } from './sentry';
+import {
+  captureMainException,
+  captureRendererProcessGone,
+  getMainSentryStatus,
+  syncTelemetryFlag,
+} from './sentry';
 import { setCodexRuntimeMainWindow } from './ipc/codexRuntime';
 import {
   ActiveTeamRegistry,
@@ -482,9 +494,11 @@ const suppressedSources = new Set(['user_sent']);
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined
 ): Promise<TeamRuntimeAdapterRegistry> {
-  const binaryPath = await ClaudeBinaryResolver.resolve({
-    onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
-  });
+  const binaryPath = await startupStage(() =>
+    ClaudeBinaryResolver.resolve({
+      onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
+    })
+  );
   if (!binaryPath) {
     logger.warn('[OpenCode] Runtime adapter bridge disabled: orchestrator CLI binary not resolved');
     reportProgress(
@@ -515,7 +529,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
   // Where the runtime records the agent processes it starts, for the sweeps that
   // may only reap a tree they can prove this app owns - read back under this
   // same scope, however the Claude root moves later.
-  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
+  await startupStage(() =>
+    applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope })
+  );
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
@@ -524,7 +540,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
-  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
+  assertStartupActive(isShutdownStarted);
   revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
@@ -597,14 +613,17 @@ async function createOpenCodeRuntimeAdapterRegistry(
   };
   try {
     reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
-    const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
-      teamsBasePath: getTeamsBasePath(),
-      provider: 'opencode',
-    });
+    const turnSettledEnv = await startupStage(() =>
+      buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+        teamsBasePath: getTeamsBasePath(),
+        provider: 'opencode',
+      })
+    );
     if (turnSettledEnv) {
       Object.assign(bridgeEnv, turnSettledEnv);
     }
   } catch (error) {
+    assertStartupActive(isShutdownStarted);
     logger.warn(
       `[OpenCode] Runtime adapter bridge turn-settled spool unavailable: ${
         error instanceof Error ? error.message : String(error)
@@ -614,7 +633,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   if (useHttpMcpBridge) {
     try {
       reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
-      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+      const mcpHttpServer = await startupStage(
+        () => agentTeamsMcpHttpServer.ensureStarted(),
+        () => agentTeamsMcpHttpServer.stop({ preventRestart: true })
+      );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
         mcpHttpServer.url,
         openCodeManagedHostInstanceId,
@@ -623,6 +645,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
     } catch (error) {
+      assertStartupActive(isShutdownStarted);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
           error instanceof Error ? error.message : String(error)
@@ -636,7 +659,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       mcpUrl: bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
     })
   ) {
-    await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
+    await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
   }
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
@@ -1040,8 +1063,7 @@ let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
-let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
-let rendererRecoveryAttempts = 0;
+let rendererRecoveryController: RendererRecoveryController | null = null;
 let servicesReady = false;
 let rendererDidFinishLoad = false;
 let backgroundStartupTasksStarted = false;
@@ -1181,6 +1203,7 @@ function notifyCoreTeamChangeObservers(event: TeamChangeEvent): void {
 function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
 }
+const startupStage = createStartupStage(isShutdownStarted);
 
 function hasActiveTeamRuntimesForWindowClose(): boolean {
   if (!servicesReady || !teamProvisioningService) {
@@ -1886,14 +1909,12 @@ function reconfigureLocalContextForClaudeRoot(): void {
   }
 }
 
-/**
- * Initializes all services.
- */
+/** Initializes all services. */
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
   // An inherited endpoint belongs to a previous process, not this Host's server.
-  await clearTeamControlApiState();
+  await startupStage(clearTeamControlApiState);
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -2107,27 +2128,31 @@ async function initializeServices(): Promise<void> {
           logWarning: (message) => logger.warn(message),
         })
       : null;
-  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  if (windowsStartupCleanup) await startupStage(() => windowsStartupCleanup.preflight());
   else
-    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
-      appStartedAtMs,
-      requiredProfileScope: buildOpenCodeAppProfileScope(
-        app.getPath('userData'),
-        getClaudeBasePath()
-      ),
-      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
-      logWarning: (message) => logger.warn(message),
-      logError: (message) => logger.error(message),
-    });
+    await startupStage(() =>
+      reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+        appStartedAtMs,
+        requiredProfileScope: buildOpenCodeAppProfileScope(
+          app.getPath('userData'),
+          getClaudeBasePath()
+        ),
+        logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+        logWarning: (message) => logger.warn(message),
+        logError: (message) => logger.error(message),
+      })
+    );
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
   });
-  teamProvisioningService.setRuntimeAdapterRegistry(
-    await createOpenCodeRuntimeAdapterRegistry((phase, message) =>
+  const runtimeAdapterRegistry = await startupStage(() =>
+    createOpenCodeRuntimeAdapterRegistry((phase, message) =>
       publishStartupStatus({ phase, message })
     )
   );
+  assertStartupActive(isShutdownStarted);
+  teamProvisioningService.setRuntimeAdapterRegistry(runtimeAdapterRegistry);
   teamRuntimeRecoveryFeature.start();
   // Armed before the delay, not inside the task, so a launch requested during
   // the scheduling delay serialises behind the sweep as well.
@@ -2824,16 +2849,21 @@ async function initializeServices(): Promise<void> {
     phase: 'team-backups',
     message: 'Checking team backups...',
   });
-  memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
+  await startPreparedMemberWorkSyncFeature({
     backup: initializedBackupOwner,
     prepared: preparedMemberWorkSyncFeature,
     stallObservation: memberWorkSyncStallObservation,
+    isShutdownStarted,
+    onStarted: (feature) => {
+      memberWorkSyncFeature = feature;
+    },
     onRestoreProgress: ({ current, total }) => {
       publishStartupStatus({
         message: `Checking team backups (${current} of ${total})...`,
       });
     },
   });
+  assertStartupActive(isShutdownStarted);
   void teamDataService
     .getAllTasks()
     .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));
@@ -2976,19 +3006,17 @@ async function initializeServices(): Promise<void> {
   });
 }
 
-/**
- * Starts the HTTP sidecar server with services from the active context.
- */
+/** Starts the HTTP sidecar server with services from the active context. */
 async function startHttpServer(
   modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
 ): Promise<void> {
   if (isShutdownStarted()) {
-    return;
+    throw new StartupCancelledError();
   }
 
   try {
     if (httpServer.isRunning()) {
-      await syncTeamControlApiState();
+      await startupStage(syncTeamControlApiState);
       return;
     }
 
@@ -3020,20 +3048,19 @@ async function startHttpServer(
     if (isShutdownStarted()) {
       await httpServer.stop().catch(() => undefined);
       await clearTeamControlApiState().catch(() => undefined);
-      return;
+      throw new StartupCancelledError();
     }
-    await syncTeamControlApiState();
+    await startupStage(syncTeamControlApiState);
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
     await clearTeamControlApiState().catch(() => undefined);
+    assertStartupActive(isShutdownStarted);
     logger.error('Failed to start HTTP server:', error);
     throw error;
   }
 }
 
-/**
- * Shuts down all services.
- */
+/** Shuts down all services. */
 async function shutdownServices(): Promise<void> {
   stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
@@ -3041,6 +3068,7 @@ async function shutdownServices(): Promise<void> {
   }
 
   tokenUsageFeature?.dispose();
+  rendererRecoveryController?.dispose();
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
@@ -3290,44 +3318,7 @@ function runPostRendererStartupTasks(): void {
   }, STARTUP_CLI_WARMUP_DELAY_MS);
 }
 
-function scheduleRendererRecovery(win: BrowserWindow): void {
-  if (isShutdownStarted()) {
-    return;
-  }
-  if (rendererRecoveryTimer) {
-    return;
-  }
-  if (rendererRecoveryAttempts >= 2) {
-    logger.error('Renderer recovery limit reached; skipping automatic reload');
-    return;
-  }
-
-  rendererRecoveryAttempts += 1;
-  const delayMs = rendererRecoveryAttempts * 1000;
-  logger.warn(`Scheduling renderer recovery attempt ${rendererRecoveryAttempts} in ${delayMs}ms`);
-
-  rendererRecoveryTimer = setTimeout(() => {
-    rendererRecoveryTimer = null;
-    if (isShutdownStarted()) {
-      return;
-    }
-    if (!mainWindow || mainWindow !== win || win.isDestroyed()) {
-      return;
-    }
-
-    markRendererUnavailable(win);
-    try {
-      win.webContents.reload();
-    } catch (error) {
-      logger.error(`Renderer recovery reload failed: ${String(error)}`);
-    }
-  }, delayMs);
-  rendererRecoveryTimer.unref?.();
-}
-
-/**
- * Creates the main application window.
- */
+/** Creates the main application window. */
 function createWindow(): void {
   if (isShutdownStarted()) {
     return;
@@ -3356,6 +3347,24 @@ function createWindow(): void {
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'Agent Teams AI',
   });
+  const recoveryWindow = mainWindow;
+  const recovery = new RendererRecoveryController({
+    canRecover: () =>
+      !isShutdownStarted() &&
+      mainWindow === recoveryWindow &&
+      !recoveryWindow.isDestroyed() &&
+      !recoveryWindow.webContents.isDestroyed(),
+    reload: () => {
+      markRendererUnavailable(recoveryWindow);
+      recoveryWindow.webContents.reload();
+    },
+    onScheduled: (attempt, delayMs) =>
+      logger.warn(`Scheduling renderer recovery attempt ${attempt} in ${delayMs}ms`),
+    onLimitReached: () =>
+      logger.error('Renderer recovery limit reached; skipping automatic reload'),
+    onReloadError: (error) => logger.error(`Renderer recovery reload failed: ${String(error)}`),
+  });
+  rendererRecoveryController = recovery;
   announcementsLifecycle.registerMainWindow(mainWindow);
   markRendererUnavailable(mainWindow);
 
@@ -3393,6 +3402,7 @@ function createWindow(): void {
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
+    recovery.loadStarted();
     if (isShutdownStarted()) {
       return;
     }
@@ -3408,11 +3418,7 @@ function createWindow(): void {
         return;
       }
       markRendererReady(mainWindow);
-      rendererRecoveryAttempts = 0;
-      if (rendererRecoveryTimer) {
-        clearTimeout(rendererRecoveryTimer);
-        rendererRecoveryTimer = null;
-      }
+      recovery.loadFinished();
       logger.warn('[startup] renderer did-finish-load');
       syncTrafficLightPosition(mainWindow);
       const fullscreenSyncTimer = setTimeout(() => {
@@ -3511,10 +3517,8 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', () => {
-    if (rendererRecoveryTimer) {
-      clearTimeout(rendererRecoveryTimer);
-      rendererRecoveryTimer = null;
-    }
+    recovery.dispose();
+    if (rendererRecoveryController === recovery) rendererRecoveryController = null;
     clearRendererAvailability(mainWindow);
     mainWindow = null;
     // Clear main window references
@@ -3552,17 +3556,12 @@ function createWindow(): void {
       return;
     }
     if (details.reason !== 'clean-exit' && details.reason !== 'killed') {
-      captureMainException(
-        new Error(`Renderer process terminated: ${details.reason}`),
-        'renderer_process_gone'
-      );
+      captureRendererProcessGone(details, recovery.recoveryAttempts);
     }
     markRendererUnavailable(mainWindow);
     rendererDidFinishLoad = false;
     branchStatusService?.resetAllTracking();
-    if (mainWindow) {
-      scheduleRendererRecovery(mainWindow);
-    }
+    recovery.processGone();
   });
 
   attachMainWindowToServices();
@@ -3570,10 +3569,9 @@ function createWindow(): void {
   logger.info('Main window created');
 }
 
-/**
- * Application ready handler.
- */
+/** Application ready handler. */
 void app.whenReady().then(async () => {
+  if (isShutdownStarted()) return;
   persistentAppLog ??= installPersistentAppLog({
     directory: app.getPath('logs'),
     appVersion: app.getVersion(),
@@ -3629,7 +3627,8 @@ void app.whenReady().then(async () => {
 
     createWindow();
 
-    await initializeServices();
+    await startupStage(initializeServices);
+    assertStartupActive(isShutdownStarted);
     servicesReady = true;
     attachMainWindowToServices();
     publishStartupStatus({
@@ -3652,6 +3651,7 @@ void app.whenReady().then(async () => {
       }
     });
   } catch (error) {
+    if (isShutdownStarted() || error instanceof StartupCancelledError) return;
     logger.error('Startup initialization failed:', error);
     captureMainException(error, 'startup_initialization');
     publishStartupStatus({

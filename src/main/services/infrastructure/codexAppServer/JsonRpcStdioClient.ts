@@ -131,6 +131,8 @@ export class JsonRpcStdioClient {
 
     let nextRequestId = 1;
     let closed = false;
+    let transportError: Error | null = null;
+    const pendingNotifications = new Set<(error: Error) => void>();
 
     const rejectAll = (error: Error): void => {
       for (const [id, entry] of pending) {
@@ -138,7 +140,17 @@ export class JsonRpcStdioClient {
         entry.reject(error);
         pending.delete(id);
       }
+      for (const reject of pendingNotifications) reject(error);
+      pendingNotifications.clear();
     };
+
+    const failTransport = (error: Error): void => {
+      transportError ??= error;
+      rejectAll(transportError);
+    };
+    // A failed write invokes its callback and then emits 'error'. Keep this
+    // listener for the stream's lifetime, including errors arriving after close.
+    child.stdin?.on('error', failTransport);
 
     const handleNotification = (message: JsonRpcNotificationMessage): void => {
       if (typeof message.method !== 'string' || message.method.length === 0) {
@@ -190,15 +202,11 @@ export class JsonRpcStdioClient {
     });
 
     child.once('error', (error) => {
-      rejectAll(error instanceof Error ? error : new Error(String(error)));
+      failTransport(error);
     });
 
     child.once('exit', (code, signal) => {
-      if (pending.size === 0) {
-        return;
-      }
-
-      rejectAll(
+      failTransport(
         new Error(
           `JSON-RPC process exited unexpectedly (code=${code ?? 'null'} signal=${signal ?? 'null'})`
         )
@@ -263,7 +271,7 @@ export class JsonRpcStdioClient {
       }
       closed = true;
 
-      rejectAll(new Error('JSON-RPC session closed'));
+      failTransport(new Error('JSON-RPC session closed'));
       notificationListeners.clear();
       lineReader.close();
 
@@ -297,12 +305,18 @@ export class JsonRpcStdioClient {
         timeoutMs = requestTimeoutMs
       ): Promise<TResult> =>
         new Promise<TResult>((resolve, reject) => {
+          if (transportError) {
+            reject(transportError);
+            return;
+          }
           if (!child.stdin || child.stdin.destroyed || child.stdin.writableEnded) {
             reject(new Error('JSON-RPC stdin is not available'));
             return;
           }
 
           const id = nextRequestId++;
+          // Serialization can throw without indicating a transport failure.
+          const line = `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`;
           const timeoutId = setTimeout(() => {
             pending.delete(id);
             reject(new Error(`JSON-RPC request timed out: ${method}`));
@@ -315,33 +329,36 @@ export class JsonRpcStdioClient {
             timeoutId,
           });
 
-          child.stdin.write(
-            `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
-            (error) => {
-              if (!error) {
-                return;
-              }
-
-              clearTimeout(timeoutId);
-              pending.delete(id);
-              reject(error instanceof Error ? error : new Error(String(error)));
-            }
-          );
+          try {
+            child.stdin.write(line, (error) => {
+              if (error) failTransport(error);
+            });
+          } catch (error) {
+            failTransport(error instanceof Error ? error : new Error(String(error)));
+          }
         }),
 
       notify: async (method: string, params?: unknown): Promise<void> => {
+        if (transportError) throw transportError;
         if (!child.stdin || child.stdin.destroyed || child.stdin.writableEnded) {
           throw new Error('JSON-RPC stdin is not available');
         }
 
+        const line = `${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`;
         await new Promise<void>((resolve, reject) => {
-          child.stdin!.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`, (error) => {
-            if (error) {
-              reject(error instanceof Error ? error : new Error(String(error)));
-              return;
-            }
-            resolve();
-          });
+          pendingNotifications.add(reject);
+          try {
+            child.stdin!.write(line, (error) => {
+              if (error) {
+                failTransport(error);
+                return;
+              }
+              pendingNotifications.delete(reject);
+              resolve();
+            });
+          } catch (error) {
+            failTransport(error instanceof Error ? error : new Error(String(error)));
+          }
         });
       },
 

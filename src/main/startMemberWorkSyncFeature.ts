@@ -2,6 +2,7 @@ import {
   getMemberWorkSyncAcceptedReport,
   type MemberWorkSyncFeatureFacade,
 } from '@features/member-work-sync/main';
+import { assertStartupActive, StartupCancelledError } from '@main/utils/startupCancellation';
 import { createLogger } from '@shared/utils/logger';
 
 import type { TeamTaskStallObservationPort } from '@main/services/team/stallMonitor/TeamTaskStallNotifier';
@@ -211,16 +212,26 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   prepared: MemberWorkSyncFeatureFacade;
   stallObservation: { attach(feature: MemberWorkSyncFeatureFacade): void };
   onRestoreProgress?: (progress: { current: number; total: number }) => void;
+  isShutdownStarted?: () => boolean;
+  onStarted?: (feature: MemberWorkSyncFeatureFacade) => void;
 }): Promise<MemberWorkSyncFeatureFacade | null> {
+  const isShutdownStarted = input.isShutdownStarted ?? (() => false);
   try {
+    assertStartupActive(isShutdownStarted);
     await input.backup.initialize(input.onRestoreProgress);
+    assertStartupActive(isShutdownStarted);
   } catch (error) {
+    if (isShutdownStarted() || error instanceof StartupCancelledError) {
+      await input.prepared.dispose();
+      throw new StartupCancelledError();
+    }
     startupLogger.warn(`[Init] Team backup initialization failed: ${String(error)}`);
     await input.prepared.dispose();
     return null;
   }
   input.prepared.startBackground();
   input.stallObservation.attach(input.prepared);
+  input.onStarted?.(input.prepared);
   return input.prepared;
 }
 

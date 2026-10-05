@@ -10,6 +10,11 @@ import {
   writeTeamControlApiState,
 } from '@main/services/team/TeamControlApiState';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import {
+  assertStartupActive,
+  createStartupStage,
+  StartupCancelledError,
+} from '@main/utils/startupCancellation';
 import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -68,6 +73,7 @@ function resolverSource(kind: ResolverKind): string {
 function createHost(publish = writeTeamControlApiState) {
   let running = false;
   let shuttingDown = false;
+  const isShutdownStarted = () => shuttingDown;
   const server = {
     isRunning: () => running,
     getPort: () => 4591,
@@ -94,7 +100,10 @@ function createHost(publish = writeTeamControlApiState) {
   // eslint-disable-next-line sonarjs/code-eval -- trusted local source, no user input
   const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
-    isShutdownStarted: () => shuttingDown,
+    isShutdownStarted,
+    assertStartupActive,
+    startupStage: createStartupStage(isShutdownStarted),
+    StartupCancelledError,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
     writeTeamControlApiState: publish,
@@ -146,7 +155,9 @@ describe('existing app Host endpoint wiring', () => {
       (node): node is ts.FunctionDeclaration =>
         ts.isFunctionDeclaration(node) && node.name?.text === 'initializeServices'
     );
-    expect(init?.body?.statements[0]?.getText(source)).toBe('await clearTeamControlApiState();');
+    expect(init?.body?.statements[0]?.getText(source)).toBe(
+      'await startupStage(clearTeamControlApiState);'
+    );
   });
 
   it('publishes the listening fallback port on cold start and already-running start', async () => {
@@ -235,7 +246,7 @@ describe('existing app Host endpoint wiring', () => {
       host.shutdown();
       return Promise.resolve(4591);
     });
-    await host.start();
+    await expect(host.start()).rejects.toBeInstanceOf(StartupCancelledError);
     expect(host.server.stop).toHaveBeenCalledOnce();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
     await expect(readFile(path.join(root, 'team-control-api.json'))).rejects.toMatchObject({
