@@ -116,10 +116,11 @@ export interface ReleasePort {
   latest(repository: string): Promise<Release>;
   minimum(repository: string, sha: string): Promise<string>;
   download(repository: string, asset: Asset, destination: string): Promise<void>;
-  upload(repository: string, tag: string, file: string): Promise<void>;
+  upload(repository: string, releaseId: number, file: string): Promise<void>;
   verifyBuild(repository: string, sha: string, proof: BuildProof, mode: Mode): Promise<void>;
   verifyNative(reference: NativeEvidenceReference): Promise<NativeProbeArtifact>;
   publicAsset(repository: string, tag: string, name: string): Promise<void>;
+  publicLatestAsset(repository: string, name: string): Promise<void>;
   publicRelease(repository: string, tag: string): Promise<void>;
   publicLatest(repository: string, tag: string): Promise<void>;
 }
