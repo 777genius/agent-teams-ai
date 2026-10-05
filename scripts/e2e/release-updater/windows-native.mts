@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { open, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+
+import type { ExecFileException } from 'node:child_process';
 
 const execute = promisify(execFile);
 export interface WindowsProcess {
@@ -46,6 +48,13 @@ $ErrorActionPreference = 'Stop'
 $data = Get-Content -LiteralPath $InputFile -Raw | ConvertFrom-Json
 $root = [IO.Path]::GetFullPath($data.root)
 if ((Split-Path -Leaf $root) -notlike 'TEST-updater-windows-*') { throw 'Not a TEST root' }
+if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($InputFile)) -ne $root) { throw 'Input outside TEST root' }
+$progress = $InputFile + '.progress.jsonl'
+function Write-TestProgress([string]$phase) {
+  $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
+  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
+}
+Write-TestProgress 'script-entry'
 function Test-OwnedPath([string]$file) {
   $full = [IO.Path]::GetFullPath($file)
   if (-not $full.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
@@ -60,7 +69,10 @@ function Read-Owned([string]$file) {
     @{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; executable=$_.ExecutablePath; command=$_.CommandLine; start=$_.CreationDate.ToUniversalTime().ToString('o'); session=[int]$_.SessionId; sid=$owner.Sid }
   })
 }
+Write-TestProgress 'before-system-drawing'
 Add-Type -AssemblyName System.Drawing
+Write-TestProgress 'after-system-drawing'
+Write-TestProgress 'before-native-compile'
 Add-Type -TypeDefinition @'
 using System;
 using System.Text;
@@ -113,6 +125,8 @@ public static class TestWindowsNative {
   }
 }
 '@ -ReferencedAssemblies System.dll,System.Drawing.dll
+Write-TestProgress 'after-native-compile'
+Write-TestProgress 'operation-entry'
 $result = $null
 switch ($data.operation) {
   'session' {
@@ -174,7 +188,7 @@ if ($data.operation -eq 'stop') {
 ConvertTo-Json -InputObject $result -Depth 12 -Compress
 `;
 
-export async function windowsNative(root: string) {
+export async function windowsNative(root: string, evidence: string) {
   assert.equal(process.platform, 'win32');
   assert(path.basename(root).startsWith('TEST-updater-windows-'));
   const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
@@ -188,6 +202,9 @@ export async function windowsNative(root: string) {
   );
   const script = path.join(root, 'native.ps1');
   await writeFile(script, powershell);
+  await mkdir(evidence, { recursive: true });
+  const diagnostics = await mkdtemp(path.join(evidence, 'native-diagnostics-'));
+  await copyFile(script, path.join(diagnostics, 'native.ps1'));
   const env: NodeJS.ProcessEnv = {
     SystemRoot: systemRoot,
     WINDIR: systemRoot,
@@ -197,21 +214,69 @@ export async function windowsNative(root: string) {
   };
   let sequence = 0;
   async function call<T>(operation: string, values: Record<string, unknown> = {}): Promise<T> {
-    const input = path.join(root, `native-${++sequence}.json`);
+    const commandSequence = ++sequence;
+    const input = path.join(root, `native-${commandSequence}.json`);
     await writeFile(input, JSON.stringify({ root, operation, ...values }));
-    const result = await execute(
-      executable,
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
+    await copyFile(input, path.join(diagnostics, path.basename(input)));
+    const progress = `${input}.progress.jsonl`;
+    await writeFile(progress, '');
+    const resultFile = path.join(diagnostics, `native-${commandSequence}.result.json`);
+    const startedAt = Date.now();
+    let result: { stdout: string; stderr: string };
+    try {
+      result = await execute(
+        executable,
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          script,
+          '-InputFile',
+          input,
+        ],
+        { env, timeout: 20_000, maxBuffer: 2_097_152 }
+      );
+    } catch (error) {
+      const failure =
+        error instanceof Error
+          ? (error as ExecFileException & { stdout?: string; stderr?: string })
+          : undefined;
+      const record = {
+        operation,
         script,
-        '-InputFile',
         input,
-      ],
-      { env, timeout: 20_000, maxBuffer: 2_097_152 }
+        elapsedMs: Date.now() - startedAt,
+        code: failure?.code ?? null,
+        killed: failure?.killed ?? null,
+        signal: failure?.signal ?? null,
+        stdout: failure?.stdout ?? null,
+        stderr: failure?.stderr ?? null,
+        error: error instanceof Error ? (error.stack ?? error.message) : String(error),
+      };
+      await writeFile(resultFile, JSON.stringify(record, null, 2));
+      throw new Error(
+        `Native Windows ${operation} failed; diagnostics: ${resultFile}; ${JSON.stringify({ elapsedMs: record.elapsedMs, code: record.code, killed: record.killed, signal: record.signal })}`,
+        { cause: error }
+      );
+    } finally {
+      try {
+        await copyFile(progress, path.join(diagnostics, path.basename(progress)));
+      } catch (error) {
+        await writeFile(
+          path.join(diagnostics, `native-${commandSequence}.progress-copy-error.json`),
+          JSON.stringify({ operation, progress, error: String(error) }, null, 2)
+        );
+      }
+    }
+    await writeFile(
+      resultFile,
+      JSON.stringify(
+        { operation, script, input, elapsedMs: Date.now() - startedAt, ...result },
+        null,
+        2
+      )
     );
     return JSON.parse(result.stdout.trim()) as T;
   }
@@ -272,7 +337,7 @@ if (process.argv.includes('--cleanup')) {
   };
   assert(/^TEST-updater-windows-[a-f0-9-]+$/.test(owned.firewallGroup));
   assert(owned.firewallNames.every((name) => name.startsWith(`${owned.firewallGroup}-`)));
-  const native = await windowsNative(owned.root);
+  const native = await windowsNative(owned.root, path.dirname(path.resolve(file)));
   const files = [owned.executable, owned.priorInstaller, owned.targetInstaller];
   for (const executable of files) {
     await native.stop(await native.processes(executable));

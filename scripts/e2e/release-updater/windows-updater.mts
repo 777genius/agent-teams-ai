@@ -58,9 +58,10 @@ const priorInstaller = path.join(root, 'prior.Setup.exe');
 const targetInstaller = path.join(root, 'target.Setup.exe');
 const firewallGroup = `TEST-updater-windows-${randomUUID()}`;
 const firewallNames: string[] = [];
-const native = await windowsNative(root);
+const native = await windowsNative(root, output);
 let main: Cdp | undefined;
 let renderer: Cdp | undefined;
+let child: ReturnType<typeof spawn> | undefined;
 let mirror: Awaited<ReturnType<typeof windowsMirror>> | undefined;
 const log = createWriteStream(path.join(output, 'desktop.log'));
 let logError: Error | undefined;
@@ -302,8 +303,10 @@ try {
   };
   assert.equal(metadata.version, '2.17.1');
   assert.equal(metadata.main, 'dist-electron/main/index.cjs');
+  const bundledMain = mainBytes.toString();
   assert(
-    mainBytes.toString().includes('const autoUpdater ='),
+    /\bconst\s+autoUpdater\s*=/.test(bundledMain) ||
+      /\bconst\s+\{\s*autoUpdater\s*\}\s*=\s*electronUpdater\b/.test(bundledMain),
     'Actual bundled updater lexical binding must be inspected'
   );
   const appUpdate = await readFile(path.join(install, 'resources', 'app-update.yml'), 'utf8');
@@ -334,6 +337,7 @@ try {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  child = app;
   app.on('error', (error) => {
     evidence.launchError = String(error);
   });
@@ -519,6 +523,18 @@ try {
   evidence.cleanup = cleanup.map((result) =>
     result.status === 'fulfilled' ? result.value : String(result.reason)
   );
+  if (child && cleanup[0]?.status === 'rejected') {
+    // Ownership failed: release only this spawn's handles; retain its Firewall rules.
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+    child.unref();
+    evidence.unresolvedLaunch = {
+      pid: child.pid,
+      exitCode: child.exitCode,
+      signalCode: child.signalCode,
+      signalSent: false,
+    };
+  }
   // Keep app containment active until process cleanup completed.
   try {
     assert(
