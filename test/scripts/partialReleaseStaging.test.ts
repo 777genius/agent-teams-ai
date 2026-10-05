@@ -35,6 +35,7 @@ import type {
   NativeEvidence,
   NativeEvidenceReference,
   NativeProbeArtifact,
+  PlatformManifest,
   Release,
   ReleasePort,
 } from '../../scripts/ci/release/contract.js';
@@ -325,7 +326,15 @@ describe('append-only partial release assembly', () => {
     const { store, plan } = await prepared();
     await stageDraft(store, plan);
     store.releases.get('v2.17.2')!.draft = false;
-    await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(MAC_EVIDENCE);
+    const previousLatest = vi
+      .spyOn(store, 'latest')
+      .mockResolvedValue(await store.release(repository, 'v2.17.1'));
+    try {
+      // A lagging latest must not turn missing native proof into a retryable result.
+      await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(MAC_EVIDENCE);
+    } finally {
+      previousLatest.mockRestore();
+    }
     const manifest = manifestFor(plan);
     const evidence: NativeEvidence = {
       schemaVersion: 1,
@@ -612,6 +621,8 @@ interface ReleaseTransportFixture {
   byId: Release;
   assetPages: Asset[][];
   assetBytes?: Map<number, Buffer>;
+  latestResponse?: Release;
+  productMinimum?: string;
 }
 function requirePosixGhFixture(): void {
   if (process.platform === 'win32')
@@ -640,7 +651,10 @@ case "$2" in
       exit 1
     fi ;;
   */commits/*) cat "$fixture_dir/commit.json" ;;
-  */releases/latest) cat "$fixture_dir/id.json" ;;
+  */releases/latest) cat "$fixture_dir/latest.json" ;;
+  */contents/package.json\\?ref=*) cat "$fixture_dir/package.json" ;;
+  */actions/runs/10) cat "$fixture_dir/build-run.json" ;;
+  */actions/runs/10/attempts/1/jobs\\?per_page=100) cat "$fixture_dir/build-jobs.json" ;;
   */releases/assets/*) cat "$fixture_dir/asset-\${2##*/}.bin" ;;
   */releases\\?per_page=100) cat "$fixture_dir/list.json" ;;
   */releases/*/assets\\?per_page=100) cat "$fixture_dir/assets.json" ;;
@@ -659,6 +673,43 @@ esac
   await writeFile(path.join(directory, 'list.json'), JSON.stringify(fixture.listed));
   await writeFile(path.join(directory, 'id.json'), JSON.stringify(fixture.byId));
   await writeFile(path.join(directory, 'assets.json'), JSON.stringify(fixture.assetPages));
+  await writeFile(
+    path.join(directory, 'latest.json'),
+    JSON.stringify(fixture.latestResponse ?? fixture.byId)
+  );
+  await writeFile(
+    path.join(directory, 'package.json'),
+    JSON.stringify({
+      content: Buffer.from(
+        JSON.stringify({
+          build: { mac: { minimumSystemVersion: fixture.productMinimum ?? '13.0' } },
+        })
+      ).toString('base64'),
+    })
+  );
+  await writeFile(
+    path.join(directory, 'build-run.json'),
+    JSON.stringify({
+      head_sha: fixture.byId.target_commitish,
+      run_attempt: 1,
+      path: '.github/workflows/release.yml',
+      event: 'push',
+    })
+  );
+  await writeFile(
+    path.join(directory, 'build-jobs.json'),
+    JSON.stringify([
+      {
+        jobs: [
+          { id: 11, run_id: 10, conclusion: 'success', name: 'release-win x64' },
+          { id: 12, run_id: 10, conclusion: 'success', name: 'release-win arm64' },
+          { id: 13, run_id: 10, conclusion: 'success', name: 'release-linux x64' },
+          { id: 14, run_id: 10, conclusion: 'success', name: 'release-mac x64' },
+          { id: 15, run_id: 10, conclusion: 'success', name: 'release-mac arm64' },
+        ],
+      },
+    ])
+  );
   await writeFile(
     path.join(directory, 'commit.json'),
     JSON.stringify({ sha: fixture.byId.target_commitish })
@@ -762,7 +813,8 @@ async function anonymousHttp(
   status: number,
   test: (
     requests: { path: string; method: string | undefined; authorization?: string }[]
-  ) => Promise<void>
+  ) => Promise<void>,
+  routes: ReadonlyMap<string, { release?: Release; stall?: 'headers' | 'body' }> = new Map()
 ): Promise<void> {
   const requests: { path: string; method: string | undefined; authorization?: string }[] = [];
   const server = createServer((request, response) => {
@@ -772,6 +824,8 @@ async function anonymousHttp(
       method: request.method,
       authorization: request.headers.authorization,
     });
+    const route = routes.get(pathname);
+    if (route?.stall === 'headers') return;
     if (pathname !== failurePath && pathname.includes('/releases/latest/download/')) {
       response.writeHead(302, {
         Location: pathname.replace('/releases/latest/download/', '/releases/download/v2.17.2/'),
@@ -782,7 +836,11 @@ async function anonymousHttp(
     response.writeHead(pathname === failurePath ? status : 200, {
       'Content-Type': 'application/json',
     });
-    response.end(JSON.stringify(release));
+    if (route?.stall === 'body') {
+      response.write('{"id":');
+      return;
+    }
+    response.end(JSON.stringify(route?.release ?? release));
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -808,7 +866,7 @@ async function anonymousHttp(
   }
 }
 
-async function verifyCommandExit(tag: string, expected: number): Promise<void> {
+async function verifyCommandExit(tag: string, expected: number, message?: RegExp): Promise<void> {
   requirePosixGhFixture();
   const previousArgs = process.argv;
   const previousExit = process.exitCode;
@@ -828,6 +886,8 @@ async function verifyCommandExit(tag: string, expected: number): Promise<void> {
     releaseMain('verify');
     await vi.waitFor(() => expect(process.exitCode).toBe(expected));
     expect(stderr).toHaveBeenCalled();
+    if (message)
+      expect(stderr.mock.calls.map(([details]) => String(details)).join('')).toMatch(message);
   } finally {
     process.argv = previousArgs;
     process.exitCode = previousExit;
@@ -845,7 +905,9 @@ describe.skipIf(process.platform === 'win32')(
       { kind: 'latest asset', path: `/${repository}/releases/latest/download/latest.yml` },
     ];
     it.each(
-      endpoints.flatMap((endpoint) => [502, 503, 404].map((status) => ({ ...endpoint, status })))
+      endpoints.flatMap((endpoint) =>
+        [502, 503, 408, 404, 401, 403, 429].map((status) => ({ ...endpoint, status }))
+      )
     )(
       'preserves $kind HTTP $status through the actual adapter to CLI retry/permanent exit',
       async ({ kind, path: pathname, status }) => {
@@ -860,7 +922,11 @@ describe.skipIf(process.platform === 'win32')(
               assetPages: [target.assets],
               assetBytes: store.bytes,
             },
-            () => verifyCommandExit(target.tag_name, status >= 500 ? 75 : 1)
+            () =>
+              verifyCommandExit(
+                target.tag_name,
+                status >= 500 || status === 408 || (kind === 'release' && status === 404) ? 75 : 1
+              )
           );
           const port = new GitHubReleasePort();
           let failed: Promise<void>;
@@ -896,6 +962,229 @@ describe.skipIf(process.platform === 'win32')(
     );
   }
 );
+
+// An unbounded fetch (including a stalled JSON body) fails this observable deadline.
+// Real Node HTTP is used; only the destination is redirected to TEST localhost.
+it('bounds anonymous header and JSON-body stalls and reports HTTP 408 within 40 seconds', async () => {
+  const target = await manifestlessFull('13.0', '22.0.0').release(repository, 'v2.17.2');
+  const releasePath = `/repos/${repository}/releases/tags/v2.17.2`;
+  const latestPath = `/repos/${repository}/releases/latest`;
+  await anonymousHttp(
+    target,
+    '',
+    200,
+    async (requests) => {
+      const started = performance.now();
+      const port = new GitHubReleasePort();
+      const results = Promise.allSettled([
+        port.publicRelease(repository, target.tag_name),
+        port.publicLatest(repository, target.tag_name),
+      ]);
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const settled = await Promise.race([
+          results,
+          new Promise<never>((_resolve, reject) => {
+            watchdog = setTimeout(
+              () => reject(new Error('Anonymous requests exceeded 38 seconds')),
+              38_000
+            );
+          }),
+        ]);
+        expect(performance.now() - started).toBeLessThan(40_000);
+        expect(settled).toEqual([
+          { status: 'rejected', reason: expect.objectContaining({ httpStatus: 408 }) },
+          { status: 'rejected', reason: expect.objectContaining({ httpStatus: 408 }) },
+        ]);
+        expect(requests).toHaveLength(2);
+        expect(requests.map((request) => request.path)).toEqual(
+          expect.arrayContaining([latestPath, releasePath])
+        );
+      } finally {
+        clearTimeout(watchdog);
+      }
+    },
+    new Map([
+      [releasePath, { stall: 'headers' }],
+      [latestPath, { stall: 'body' }],
+    ])
+  );
+}, 45_000);
+
+async function publishedFullManifest(): Promise<TestReleaseStorage> {
+  const store = manifestlessFull('13.0', '22.0.0');
+  store.releases.get('v2.17.2')!.draft = true;
+  const output = await mkdtemp(path.join(tmpdir(), 'TEST-full-propagation-'));
+  directories.push(output);
+  const { plan } = await prepareDraft(store, {
+    repository,
+    tag: 'v2.17.2',
+    applicationSha: targetSha,
+    toolingSha,
+    mode: 'full',
+    build: { runId: 10, attempt: 1, jobIds: [11, 12, 13, 14, 15] },
+    output,
+  });
+  await stageDraft(store, plan);
+  store.releases.get('v2.17.2')!.draft = false;
+  return store;
+}
+
+it('rejects a manifest alias changed during the final public feed check', async () => {
+  const store = await publishedFullManifest();
+  const publicLatestAsset = store.publicLatestAsset.bind(store);
+  const visibility = vi.spyOn(store, 'publicLatestAsset').mockImplementation(async (repo, name) => {
+    await publicLatestAsset(repo, name);
+    if (name === 'latest-mac.yml') {
+      const alias = store.releases
+        .get('v2.17.2')!
+        .assets.find((asset) => asset.name === 'Agent.Teams.AI.Setup.exe')!;
+      alias.digest = `sha256:${'f'.repeat(64)}`;
+    }
+  });
+  try {
+    await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(
+      'Asset identity/digest changed: Agent.Teams.AI.Setup.exe'
+    );
+  } finally {
+    visibility.mockRestore();
+  }
+});
+
+describe.skipIf(process.platform === 'win32')('published release propagation identity', () => {
+  it.each(['authenticated', 'anonymous'] as const)(
+    'retries only the validated frozen previous %s latest ID/tag',
+    async (surface) => {
+      const store = await publishedFullManifest();
+      const target = await store.release(repository, 'v2.17.2');
+      const previous = await store.release(repository, 'v2.17.1');
+      await anonymousHttp(
+        target,
+        '',
+        200,
+        () =>
+          releaseTransport(
+            {
+              tagResponse: target,
+              listed: [],
+              byId: target,
+              assetPages: [target.assets],
+              assetBytes: store.bytes,
+              latestResponse: surface === 'authenticated' ? previous : target,
+            },
+            () => verifyCommandExit(target.tag_name, 75)
+          ),
+        new Map([
+          [
+            `/repos/${repository}/releases/latest`,
+            { release: surface === 'anonymous' ? previous : target },
+          ],
+        ])
+      );
+    }
+  );
+  it.each(
+    (['authenticated', 'anonymous'] as const).flatMap((surface) =>
+      ['wrong ID', 'wrong tag', 'draft', 'prerelease'].map((failure) => ({ surface, failure }))
+    )
+  )('rejects $surface previous latest with $failure as permanent', async ({ surface, failure }) => {
+    const store = await publishedFullManifest();
+    const target = await store.release(repository, 'v2.17.2');
+    const previous = await store.release(repository, 'v2.17.1');
+    if (failure === 'wrong ID') previous.id = 99;
+    if (failure === 'wrong tag') previous.tag_name = 'v2.17.0';
+    if (failure === 'draft') previous.draft = true;
+    if (failure === 'prerelease') previous.prerelease = true;
+    await anonymousHttp(
+      target,
+      '',
+      200,
+      () =>
+        releaseTransport(
+          {
+            tagResponse: target,
+            listed: [],
+            byId: target,
+            assetPages: [target.assets],
+            assetBytes: store.bytes,
+            latestResponse: surface === 'authenticated' ? previous : target,
+          },
+          () => verifyCommandExit(target.tag_name, 1)
+        ),
+      new Map([
+        [
+          `/repos/${repository}/releases/latest`,
+          { release: surface === 'anonymous' ? previous : target },
+        ],
+      ])
+    );
+  });
+  it.each(['invalid digest', 'invalid plan'])(
+    'does not trust %s even when authenticated latest is the frozen previous release',
+    async (failure) => {
+      const store = await publishedFullManifest();
+      const target = await store.release(repository, 'v2.17.2');
+      const previous = await store.release(repository, 'v2.17.1');
+      const asset = target.assets.find((candidate) => candidate.name === MANIFEST)!;
+      const manifest = JSON.parse(
+        store.content(target.tag_name, MANIFEST).toString()
+      ) as PlatformManifest;
+      if (failure === 'invalid digest') manifest.inputDigest = 'f'.repeat(64);
+      else {
+        manifest.input.macProductMinimum = '14.0';
+        manifest.inputDigest = digest(canonical(manifest.input));
+      }
+      const bytes = Buffer.from(JSON.stringify(manifest));
+      store.bytes.set(asset.id, bytes);
+      asset.size = bytes.length;
+      asset.digest = `sha256:${digest(bytes)}`;
+      await releaseTransport(
+        {
+          tagResponse: target,
+          listed: [],
+          byId: target,
+          assetPages: [target.assets],
+          assetBytes: store.bytes,
+          latestResponse: previous,
+        },
+        () =>
+          verifyCommandExit(
+            target.tag_name,
+            1,
+            failure === 'invalid digest'
+              ? /Invalid platform manifest/
+              : /Unsupported macOS product minimum/
+          )
+      );
+    }
+  );
+  it('keeps a manifestless previous latest permanent because it has no trusted frozen baseline', async () => {
+    const store = manifestlessFull('13.0', '22.0.0');
+    const target = await store.release(repository, 'v2.17.2');
+    const previous = await store.release(repository, 'v2.17.1');
+    await releaseTransport(
+      {
+        tagResponse: target,
+        listed: [],
+        byId: target,
+        assetPages: [target.assets],
+        assetBytes: store.bytes,
+        latestResponse: previous,
+      },
+      () => verifyCommandExit(target.tag_name, 1)
+    );
+  });
+  it('leaves published source 404 visibility permanent', async () => {
+    const target = await manifestlessFull('13.0', '22.0.0').release(repository, 'v2.17.2');
+    const sourcePath = `/repos/${repository}/releases/tags/v2.17.1`;
+    await anonymousHttp(target, sourcePath, 404, async () => {
+      const port = new GitHubReleasePort();
+      await expect(port.publicRelease(repository, 'v2.17.1')).rejects.toMatchObject({
+        httpStatus: 404,
+      });
+    });
+  });
+});
 
 describe.skipIf(process.platform === 'win32')('immutable release upload transport', () => {
   it('posts exact input bytes to frozen numeric release ID without resolving a tag or clobbering', async () => {
