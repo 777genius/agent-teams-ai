@@ -224,7 +224,7 @@ export async function windowsNative(root: string, evidence: string) {
     const startedAt = Date.now();
     let result: { stdout: string; stderr: string };
     try {
-      result = await execute(
+      const pending = execute(
         executable,
         [
           '-NoProfile',
@@ -238,6 +238,9 @@ export async function windowsNative(root: string, evidence: string) {
         ],
         { env, timeout: 20_000, maxBuffer: 2_097_152 }
       );
+      // Input is passed via -InputFile. Close the unused pipe before awaiting completion.
+      pending.child.stdin?.end();
+      result = await pending;
     } catch (error) {
       const failure =
         error instanceof Error
