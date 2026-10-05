@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { mdiApple, mdiMicrosoftWindows, mdiPenguin, mdiDownload, mdiCheckCircle } from '@mdi/js';
 import robotAvatarSeatedMagenta from '~/assets/images/hero/robots/robot-avatar-seated-magenta-v1.webp';
-import type { DownloadOs, DownloadArch } from '~/data/downloads';
+import type { PresentedDownloadAsset } from '~/composables/useDownloadAssetPresentation';
+
+type DownloadAsset = Pick<PresentedDownloadAsset, 'id' | 'os' | 'arch' | 'fileName'>;
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
 const downloadStore = useDownloadStore();
-const { data: releaseData, resolve } = useReleaseDownloads();
+const { data: releaseData, resolve, platformInfo } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { releaseDownloadUrl } = useGithubRepo();
-const { getDownloadArch, requiresArchitectureSelection, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
+const { getDownloadArch, requiresArchitectureSelection, selectedDownloadAsset, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
 const isMounted = ref(false);
 const showLinuxRobotMessage = ref(false);
 const showFallingLinuxRobot = ref(false);
@@ -157,12 +159,7 @@ function updateLinuxRobotFall() {
     return;
   }
 
-  if (currentScrollY < startScroll) {
-    resetLinuxRobotFall({ keepSourceHidden: hasLinuxRobotDeparted.value });
-    return;
-  }
-
-  if (scrollingUp) {
+  if (currentScrollY < startScroll || scrollingUp) {
     resetLinuxRobotFall({ keepSourceHidden: hasLinuxRobotDeparted.value });
     return;
   }
@@ -224,35 +221,36 @@ onUnmounted(() => {
   window.visualViewport?.removeEventListener('resize', scheduleLinuxRobotFallUpdate);
 });
 
-const platformIcons: Record<string, string> = {
-  macos: mdiApple,
-  windows: mdiMicrosoftWindows,
-  linux: mdiPenguin,
+const platformPresentation: Record<string, { icon: string; color: string }> = {
+  macos: { icon: mdiApple, color: '#00f0ff' },
+  windows: { icon: mdiMicrosoftWindows, color: '#39ff14' },
+  linux: { icon: mdiPenguin, color: '#ffd700' },
 };
 
-const platformColors: Record<string, string> = {
-  macos: '#00f0ff',
-  windows: '#39ff14',
-  linux: '#ffd700',
-};
-
-const getDownloadUrl = (asset: { os: DownloadOs; arch: DownloadArch; fileName: string }) => {
+const getDownloadUrl = (asset: DownloadAsset) => {
   if (!isMounted.value) return releaseDownloadUrl(asset.fileName);
   const arch = getDownloadArch(asset);
   return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
 };
 
-const handleDownloadClick = (asset: { id: string; os: DownloadOs; arch: DownloadArch; fileName: string }) => {
+const handleDownloadClick = (asset: DownloadAsset) => {
   if (requiresArchitectureSelection(asset)) return;
   trackDownloadClick({ os: asset.os, arch: getDownloadArch(asset),
-    version: releaseVersion.value, source: 'download_section' });
+    version: resolve(asset.os, getDownloadArch(asset))?.version ?? null, source: 'download_section' });
   downloadStore.setSelected(asset.id);
 };
 
-const releaseVersion = computed(() => releaseData.value?.version || null);
+const getDownloadVersion = (asset: Pick<DownloadAsset, 'os' | 'arch'>) =>
+  platformInfo(asset.os, getDownloadArch(asset)).version;
+const selectedRelease = computed(() => {
+  const asset = selectedDownloadAsset.value;
+  return asset ? platformInfo(asset.os, asset.resolvedArch) : releaseData.value;
+});
+const releaseLabel = computed(() => selectedDownloadAsset.value?.label || 'GitHub Release');
+const releaseVersion = computed(() => selectedRelease.value?.version || null);
 const releaseDate = computed(() => {
-  if (!releaseData.value?.pubDate) return '';
-  return new Date(releaseData.value.pubDate).toLocaleDateString(locale.value, {
+  if (!selectedRelease.value?.pubDate) return '';
+  return new Date(selectedRelease.value.pubDate).toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -284,7 +282,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           }"
           :style="{
             '--delay': `${index * 0.1}s`,
-            '--accent': platformColors[asset.os] || '#00f0ff',
+            '--accent': platformPresentation[asset.os]?.color || '#00f0ff',
           }"
           :data-download-os="asset.os"
           @click="downloadStore.setSelected(asset.id)"
@@ -321,14 +319,16 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
             <v-icon
               size="28"
               class="download-section__card-icon"
-              :icon="platformIcons[asset.os] || mdiDownload"
+              :icon="platformPresentation[asset.os]?.icon || mdiDownload"
             />
           </div>
 
           <!-- Platform info -->
           <div class="download-section__card-info">
             <h3 class="download-section__card-label">{{ asset.label }}</h3>
-            <span class="download-section__card-arch">{{ asset.archLabel }}</span>
+            <span class="download-section__card-arch">
+              {{ asset.archLabel }}<template v-if="isMounted && getDownloadVersion(asset)"> · v{{ getDownloadVersion(asset) }}</template>
+            </span>
             <DownloadArchitectureToggle
               v-if="(asset.os === 'macos' || asset.os === 'windows') && downloadStore.selectedId === asset.id"
               :os="asset.os"
@@ -359,7 +359,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
       </div>
 
       <p v-if="isMounted && releaseVersion" class="download-section__release-info">
-        v{{ releaseVersion }} · {{ releaseDate }}
+        {{ releaseLabel }} · v{{ releaseVersion }}<template v-if="releaseDate"> · {{ releaseDate }}</template>
       </p>
     </v-container>
 
