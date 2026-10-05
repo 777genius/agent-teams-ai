@@ -1,0 +1,123 @@
+name: Native Mac older OTA and fresh carried install
+
+on:
+  workflow_dispatch:
+    inputs:
+      feed_mode:
+        type: choice
+        required: true
+        default: preview
+        options: [preview, staged]
+        description: Preview is diagnostic; staged draft binding is required for acceptance
+      tooling_sha: { type: string, required: true, description: Reviewed immutable tooling SHA }
+      prepared_run_id: { type: string, required: true }
+      prepared_run_attempt: { type: string, required: true }
+      prepared_artifact_id: { type: string, required: true }
+      prepared_artifact_sha256: { type: string, required: true }
+      plan_sha256: { type: string, required: true }
+      input_digest: { type: string, required: true }
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  mac-older-and-fresh:
+    if: github.repository == '777genius/agent-teams-ai'
+    name: mac-older-and-fresh (${{ matrix.scenario }}, ${{ matrix.architecture }}, ${{ inputs.feed_mode }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { scenario: older, architecture: arm64, runner: macos-15 }
+          - { scenario: older, architecture: x64, runner: macos-15-intel }
+          - { scenario: fresh, architecture: arm64, runner: macos-15 }
+          - { scenario: fresh, architecture: x64, runner: macos-15-intel }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - name: Require reviewed immutable tooling
+        env:
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tooling_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install pinned harness dependencies without product lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check typed native Mac harness
+        run: |
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/mac-old-native.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-old-ui.mts scripts/e2e/release-updater/mac-old-observer.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts
+      - name: Verify compiler-independent observer serialization
+        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts
+      - name: Retrieve only the authenticated immutable prepared metadata plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_RUN_ATTEMPT: ${{ inputs.prepared_run_attempt }}
+          ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ && "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          root="$RUNNER_TEMP/TEST-mac-old-inputs"
+          mkdir "$root"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > "$root/run.json"
+          jq -e --arg sha "$TOOLING_SHA" --argjson attempt "$PREPARED_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .status == "completed" and .conclusion == "success" and .event == "workflow_dispatch" and .path == ".github/workflows/stage-existing-partial-draft.yml"' "$root/run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID" > "$root/artifact.json"
+          jq -e --arg sha "$TOOLING_SHA" --arg digest "sha256:$ARTIFACT_SHA256" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .digest == $digest and .workflow_run.id == $run and .workflow_run.head_sha == $sha' "$root/artifact.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$root/plan.zip"
+          [[ "$(shasum -a 256 "$root/plan.zip" | cut -d' ' -f1)" == "$ARTIFACT_SHA256" ]]
+          [[ "$(unzip -Z1 "$root/plan.zip" | awk '$0 == "stage-plan.json" {count++} END {print count+0}')" == 1 ]]
+          unzip -p "$root/plan.zip" stage-plan.json > "$root/stage-plan.json"
+          [[ "$(shasum -a 256 "$root/stage-plan.json" | cut -d' ' -f1)" == "$PLAN_SHA256" ]]
+      - name: Real signed Squirrel OTA or fresh carried install in a separate Aqua VM
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLING_SHA: ${{ inputs.tooling_sha }}
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          INPUT_DIGEST: ${{ inputs.input_digest }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+          SCENARIO: ${{ matrix.scenario }}
+          FEED_MODE: ${{ inputs.feed_mode }}
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/e2e/release-updater/mac-old-updater.mts \
+            --plan "$RUNNER_TEMP/TEST-mac-old-inputs/stage-plan.json" \
+            --plan-sha256 "$PLAN_SHA256" --input-digest "$INPUT_DIGEST" \
+            --tooling-sha "$TOOLING_SHA" --architecture "$ARCHITECTURE" \
+            --scenario "$SCENARIO" --feed-mode "$FEED_MODE" \
+            --evidence "$RUNNER_TEMP/TEST-mac-old-evidence-${{ matrix.scenario }}"
+      - name: Prove TEST apps and owned ShipIt launchd job stopped without respawn before PF restore
+        id: network-cleanup
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f "$RUNNER_TEMP/TEST-mac-old-evidence-${{ matrix.scenario }}/pf-owned.json" ]]; then
+            pnpm exec tsx scripts/e2e/release-updater/mac-old-updater.mts \
+              --restore-network --evidence "$RUNNER_TEMP/TEST-mac-old-evidence-${{ matrix.scenario }}"
+          fi
+          echo "upload_safe=true" >> "$GITHUB_OUTPUT"
+      - name: Preserve native OTA, automatic Aqua successor, preferences and binding evidence
+        if: always() && steps.network-cleanup.outputs.upload_safe == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: TEST-mac-${{ matrix.scenario }}-${{ matrix.architecture }}-${{ inputs.feed_mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/TEST-mac-old-evidence-${{ matrix.scenario }}/
+            ${{ runner.temp }}/TEST-mac-old-inputs/run.json
+            ${{ runner.temp }}/TEST-mac-old-inputs/artifact.json
+          if-no-files-found: warn
+          retention-days: 30
