@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-publication-guard-${{ github.event.release.id }}
@@ -32,6 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Verify updater channel or return release to draft
+        id: verify
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_REPOSITORY: ${{ github.repository }}
@@ -39,3 +41,29 @@ jobs:
           RELEASE_ID: ${{ github.event.release.id }}
           REDRAFT_INCOMPLETE_RELEASE: 'true'
         run: bash scripts/ci/verify-published-updater-release.sh
+
+      # This recovery has no checkout, Node, pnpm, or installed-tooling dependency.
+      # A failed prerequisite must not leave an unaudited stable release public.
+      - name: Return unaudited release to draft after any guard failure
+        if: ${{ always() && steps.verify.outcome != 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_ID: ${{ github.event.release.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ && "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          endpoint="repos/${RELEASE_REPOSITORY}/releases/${RELEASE_ID}"
+          state="$(gh api "$endpoint" --jq '[.tag_name, .draft] | @tsv')"
+          IFS=$'\t' read -r actual_tag actual_draft <<< "$state"
+          [[ "$actual_tag" == "$RELEASE_TAG" ]]
+          if [[ "$actual_draft" != true ]]; then
+            gh api --method PATCH "$endpoint" -F draft=true -f make_latest=false >/dev/null
+          fi
+          state="$(gh api "$endpoint" --jq '[.tag_name, .draft] | @tsv')"
+          IFS=$'\t' read -r actual_tag actual_draft <<< "$state"
+          [[ "$actual_tag" == "$RELEASE_TAG" && "$actual_draft" == true ]]
+          echo "[release-updater-guard] Unaudited ${RELEASE_TAG} is draft"

@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 
 import {
@@ -33,6 +33,8 @@ import type {
   Release,
   ReleasePort,
 } from '../../scripts/ci/release/contract.js';
+import { GitHubReleasePort, validateNativeProducer } from '../../scripts/ci/release/github.js';
+import type { NativeProducerMetadata } from '../../scripts/ci/release/github.js';
 import { verifyPublished } from '../../scripts/ci/release/validation.js';
 
 const repository = '777genius/agent-teams-ai';
@@ -150,9 +152,9 @@ class TestReleaseStorage implements ReleasePort {
     if (this.releases.get(tag)!.draft) throw new Error('Not public');
     return Promise.resolve();
   }
-  publicLatest(_repo: string, tag: string): Promise<void> {
-    if (tag !== 'v2.17.2' || this.releases.get(tag)!.draft) throw new Error('Not public latest');
-    return Promise.resolve();
+  async publicLatest(_repo: string, tag: string): Promise<void> {
+    const latest = await this.latest();
+    if (tag !== latest.tag_name || latest.draft) throw new Error('Not public latest');
   }
 }
 async function prepared(store = new TestReleaseStorage()) {
@@ -298,7 +300,7 @@ describe('append-only partial release assembly', () => {
         runAttempt: 1,
         jobId: 21,
         artifactId: 22,
-        artifactName: 'mac-source-signatures',
+        artifactName: 'mac-source-signature-evidence-20-1',
         artifactSha256: 'a'.repeat(64),
         toolingSha,
         inputDigest: manifest.inputDigest,
@@ -345,5 +347,291 @@ describe('append-only partial release assembly', () => {
       .get('v2.17.2')!
       .assets.filter((a) => a.name !== 'agent-teams-ai-2.17.2.pacman');
     await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow('Missing asset');
+  });
+
+  it('accepts a historical complete release with an AppImage-only Linux feed while auditing all four same-version assets', async () => {
+    const store = new TestReleaseStorage();
+    const names = platformNames('2.17.1');
+    for (const name of [
+      ...names.windows,
+      ...names.linux,
+      ...names.windows.map((n) => `${n}.blockmap`),
+    ])
+      store.add('v2.17.1', name, Buffer.from(`historical-full-payload:${name}`));
+    for (const [feed, files] of [
+      ['latest.yml', names.windows],
+      ['latest-linux.yml', names.linux.slice(0, 1)],
+    ] as const)
+      store.add(
+        'v2.17.1',
+        feed,
+        Buffer.from(
+          renderFeed(
+            '2.17.1',
+            files.map((name) => textProof(name, store.content('v2.17.1', name))),
+            '2026-09-28T15:27:10Z'
+          )
+        )
+      );
+    expect(await verifyPublished(store, repository, 'v2.17.1')).toEqual({
+      mode: 'full',
+      tag: 'v2.17.1',
+    });
+    const rpm = store.releases
+      .get('v2.17.1')!
+      .assets.find((asset) => asset.name === names.linux[2])!;
+    store.bytes.set(rpm.id, Buffer.from('changed package bytes outside single-entry feed'));
+    await expect(verifyPublished(store, repository, 'v2.17.1')).rejects.toThrow('digest changed');
+    store.releases.get('v2.17.1')!.assets = store.releases
+      .get('v2.17.1')!
+      .assets.filter((asset) => asset.name !== names.linux[2]);
+    await expect(verifyPublished(store, repository, 'v2.17.1')).rejects.toThrow('Missing asset');
+  });
+
+  it('requires four Linux feed formats for new manifestless full releases', async () => {
+    const store = new TestReleaseStorage();
+    const names = platformNames('2.17.2');
+    for (const name of names.mac) store.add('v2.17.2', name, Buffer.from(`full-new-mac:${name}`));
+    for (const [feed, files] of [
+      ['latest.yml', names.windows],
+      ['latest-linux.yml', names.linux.slice(0, 1)],
+      ['latest-mac.yml', names.mac],
+    ] as const)
+      store.add(
+        'v2.17.2',
+        feed,
+        Buffer.from(
+          renderFeed(
+            '2.17.2',
+            files.map((name) => textProof(name, store.content('v2.17.2', name))),
+            '2026-10-01T21:02:41Z'
+          )
+        )
+      );
+    store.releases.get('v2.17.2')!.draft = false;
+    await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(
+      'Invalid updater feed'
+    );
+  });
+});
+
+function nativeProducer(): { ref: NativeEvidenceReference; metadata: NativeProducerMetadata } {
+  return {
+    ref: {
+      repository,
+      runId: 20,
+      runAttempt: 2,
+      jobId: 201,
+      artifactId: 22,
+      artifactName: 'mac-source-signature-evidence-20-2',
+      artifactSha256: 'a'.repeat(64),
+      toolingSha,
+      inputDigest: 'b'.repeat(64),
+    },
+    metadata: {
+      run: {
+        head_sha: toolingSha,
+        run_attempt: 2,
+        status: 'completed',
+        path: '.github/workflows/updater-mac-source.yml',
+      },
+      job: {
+        run_id: 20,
+        name: 'mac-source-signatures',
+        status: 'completed',
+        conclusion: 'success',
+        started_at: '2026-10-05T10:00:00Z',
+        completed_at: '2026-10-05T10:05:00Z',
+        steps: [
+          {
+            name: 'Preserve aggregate evidence and diagnostics',
+            status: 'completed',
+            conclusion: 'success',
+            started_at: '2026-10-05T10:04:00Z',
+            completed_at: '2026-10-05T10:04:30Z',
+          },
+        ],
+      },
+      attemptJobIds: [201],
+      artifact: {
+        name: 'mac-source-signature-evidence-20-2',
+        digest: `sha256:${'a'.repeat(64)}`,
+        expired: false,
+        created_at: '2026-10-05T10:04:20Z',
+        workflow_run: { id: 20, head_sha: toolingSha },
+      },
+    },
+  };
+}
+
+describe('native producer authorization', () => {
+  it('accepts only the reviewed current-attempt aggregate upload, including GitHub final-second precision', () => {
+    const { ref, metadata } = nativeProducer();
+    expect(() => validateNativeProducer(ref, metadata)).not.toThrow();
+    metadata.artifact.created_at = '2026-10-05T10:04:30.999Z';
+    expect(() => validateNativeProducer(ref, metadata)).not.toThrow();
+    metadata.artifact.created_at = '2026-10-05T10:04:31.000Z';
+    expect(() => validateNativeProducer(ref, metadata)).toThrow('producer upload step');
+  });
+
+  it.each([
+    'unrelated job',
+    'different attempt',
+    'old archive name',
+    'old archive timestamp',
+    'outside upload window',
+    'ambiguous upload',
+    'unsuccessful upload',
+  ])('rejects %s even when run/job succeed and artifact digest matches', (failure) => {
+    const { ref, metadata } = nativeProducer();
+    if (failure === 'unrelated job') metadata.job.name = 'unrelated successful job';
+    if (failure === 'different attempt') metadata.attemptJobIds = [101];
+    if (failure === 'old archive name') {
+      ref.artifactName = 'mac-source-signature-evidence-20-1';
+      metadata.artifact.name = ref.artifactName;
+    }
+    if (failure === 'old archive timestamp') metadata.artifact.created_at = '2026-10-04T10:04:20Z';
+    if (failure === 'outside upload window') metadata.artifact.created_at = '2026-10-05T10:03:20Z';
+    const upload = metadata.job.steps[0];
+    if (!upload) throw new Error('Native producer fixture is missing its upload step');
+    if (failure === 'ambiguous upload') metadata.job.steps.push({ ...upload });
+    if (failure === 'unsuccessful upload') upload.conclusion = 'failure';
+    expect(() => validateNativeProducer(ref, metadata)).toThrow(/producer|artifact|upload/);
+  });
+});
+
+interface ReleaseTransportFixture {
+  tagResponse?: Release;
+  tagStatus?: number;
+  listed: Release[][];
+  byId: Release;
+  assetPages: Asset[][];
+}
+async function releaseTransport(
+  fixture: ReleaseTransportFixture,
+  test: (port: GitHubReleasePort, calls: () => Promise<string[]>) => Promise<void>
+): Promise<void> {
+  const directory = await mkdtemp(path.join(tmpdir(), 'TEST-release-transport-'));
+  directories.push(directory);
+  // Exercise actual CLI routing, exit/error classification, discovery, ID read
+  // and asset pagination. The shell replaces network access, not release logic.
+  await writeFile(
+    path.join(directory, 'gh'),
+    `#!/bin/sh
+set -eu
+fixture_dir=$(dirname "$0")
+[ "$1" = api ]
+printf '%s\\n' "$2" >> "$fixture_dir/calls.txt"
+case "$2" in
+  */releases/tags/*)
+    if [ -f "$fixture_dir/tag.json" ]; then cat "$fixture_dir/tag.json"; else
+      cat "$fixture_dir/error.txt" >&2
+      exit 1
+    fi ;;
+  */releases\\?per_page=100) cat "$fixture_dir/list.json" ;;
+  */releases/*/assets\\?per_page=100) cat "$fixture_dir/assets.json" ;;
+  */releases/*) cat "$fixture_dir/id.json" ;;
+  *) exit 2 ;;
+esac
+`
+  );
+  await chmod(path.join(directory, 'gh'), 0o755);
+  if (fixture.tagResponse)
+    await writeFile(path.join(directory, 'tag.json'), JSON.stringify(fixture.tagResponse));
+  await writeFile(
+    path.join(directory, 'error.txt'),
+    `gh: REST failure (HTTP ${fixture.tagStatus ?? 404})\n`
+  );
+  await writeFile(path.join(directory, 'list.json'), JSON.stringify(fixture.listed));
+  await writeFile(path.join(directory, 'id.json'), JSON.stringify(fixture.byId));
+  await writeFile(path.join(directory, 'assets.json'), JSON.stringify(fixture.assetPages));
+  vi.stubEnv('PATH', `${directory}${path.delimiter}${process.env.PATH ?? ''}`);
+  try {
+    await test(new GitHubReleasePort(), async () =>
+      (await readFile(path.join(directory, 'calls.txt'), 'utf8')).trim().split('\n')
+    );
+  } finally {
+    vi.unstubAllEnvs();
+  }
+}
+
+describe('authenticated draft release transport', () => {
+  it('discovers an exact draft after tag 404 and reads its numeric ID with all asset pages', async () => {
+    const store = new TestReleaseStorage();
+    const draft = await store.release(repository, 'v2.17.2');
+    const source = await store.release(repository, 'v2.17.1');
+    await releaseTransport(
+      {
+        listed: [[source], [draft]],
+        byId: { ...draft, assets: [] },
+        assetPages: [draft.assets.slice(0, 2), draft.assets.slice(2)],
+      },
+      async (port, calls) => {
+        const actual = await port.release(repository, 'v2.17.2');
+        expect(actual).toEqual(draft);
+        expect(await calls()).toEqual([
+          `repos/${repository}/releases/tags/v2.17.2`,
+          `repos/${repository}/releases?per_page=100`,
+          `repos/${repository}/releases/2`,
+          `repos/${repository}/releases/2/assets?per_page=100`,
+        ]);
+      }
+    );
+  });
+
+  it('keeps published source tag transport without draft discovery', async () => {
+    const source = await new TestReleaseStorage().release(repository, 'v2.17.1');
+    await releaseTransport(
+      { tagResponse: source, listed: [], byId: source, assetPages: [source.assets] },
+      async (port, calls) => {
+        expect(await port.release(repository, 'v2.17.1')).toEqual(source);
+        expect(await calls()).toEqual([
+          `repos/${repository}/releases/tags/v2.17.1`,
+          `repos/${repository}/releases/1/assets?per_page=100`,
+        ]);
+      }
+    );
+  });
+
+  it.each([401, 403, 429, 500])(
+    'propagates HTTP %s without treating auth/rate/transport failure as draft absence',
+    async (status) => {
+      const draft = await new TestReleaseStorage().release(repository, 'v2.17.2');
+      await releaseTransport(
+        { tagStatus: status, listed: [[draft]], byId: draft, assetPages: [draft.assets] },
+        async (port, calls) => {
+          await expect(port.release(repository, 'v2.17.2')).rejects.toThrow(`HTTP ${status}`);
+          expect(await calls()).toEqual([`repos/${repository}/releases/tags/v2.17.2`]);
+        }
+      );
+    }
+  );
+
+  it.each([
+    'missing tag',
+    'duplicate tag',
+    'published list match',
+    'changed ID',
+    'changed tag',
+    'changed draft state',
+    'changed application commit',
+  ])('rejects %s during authenticated discovery', async (failure) => {
+    const draft = await new TestReleaseStorage().release(repository, 'v2.17.2');
+    const fixture: ReleaseTransportFixture = {
+      listed: [[draft]],
+      byId: structuredClone(draft),
+      assetPages: [draft.assets],
+    };
+    if (failure === 'missing tag') fixture.listed = [[{ ...draft, tag_name: 'v2.17.20' }]];
+    if (failure === 'duplicate tag') fixture.listed = [[draft], [{ ...draft, id: 99 }]];
+    if (failure === 'published list match') fixture.listed = [[{ ...draft, draft: false }]];
+    if (failure === 'changed ID') fixture.byId.id = 99;
+    if (failure === 'changed tag') fixture.byId.tag_name = 'v2.17.20';
+    if (failure === 'changed draft state') fixture.byId.draft = false;
+    if (failure === 'changed application commit') fixture.byId.target_commitish = sourceSha;
+    await releaseTransport(fixture, async (port, calls) => {
+      await expect(port.release(repository, 'v2.17.2')).rejects.toThrow(/discovery|draft|identity/);
+      expect((await calls()).some((endpoint) => endpoint.includes('/assets?'))).toBe(false);
+    });
   });
 });

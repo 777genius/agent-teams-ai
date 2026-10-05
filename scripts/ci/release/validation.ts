@@ -2,6 +2,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { parse } from 'yaml';
+
 import { checkPlan, requiredFeed, validateOrigins } from './assembly.js';
 import {
   MAC_EVIDENCE,
@@ -13,6 +15,7 @@ import {
   digest,
   fileProof,
   manifestFor,
+  older,
   platformNames,
   releaseSnapshot,
   requireThat,
@@ -149,7 +152,16 @@ async function verifyLegacyFull(
   ] as const) {
     const proofs: FileProof[] = [];
     for (const name of expectedNames) proofs.push((await audit(name)).proof);
-    validateFeed(requiredFeed(feeds, feed), version(tag), proofs);
+    const raw = requiredFeed(feeds, feed);
+    // Historical complete releases had all four Linux assets but exposed only
+    // AppImage in the updater feed. New plans/releases use the four-format contract.
+    const parsed = parse(raw) as { files?: unknown } | null;
+    const historicalAppImage =
+      feed === 'latest-linux.yml' &&
+      older(tag, 'v2.17.2') &&
+      Array.isArray(parsed?.files) &&
+      parsed.files.length === 1;
+    validateFeed(raw, version(tag), historicalAppImage ? proofs.slice(0, 1) : proofs);
   }
   for (const name of names.windows.map((n) => `${n}.blockmap`)) assetByName(target, name);
 }
