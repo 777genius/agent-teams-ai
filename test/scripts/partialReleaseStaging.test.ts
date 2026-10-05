@@ -57,6 +57,7 @@ class TestReleaseStorage implements ReleasePort {
   lostResponse = false;
   failName: string | null = null;
   nativeArtifact: NativeProbeArtifact | null = null;
+  targetMinimum = '12.0';
   constructor() {
     this.releases.set('v2.17.2', {
       id: 2,
@@ -113,8 +114,10 @@ class TestReleaseStorage implements ReleasePort {
   async latest(): Promise<Release> {
     return this.release(repository, this.releases.get('v2.17.2')!.draft ? 'v2.17.1' : 'v2.17.2');
   }
-  minimum(): Promise<string> {
-    return Promise.resolve('12.0');
+  minimum(repo: string, sha: string): Promise<string> {
+    if (repo !== repository || (sha !== targetSha && sha !== sourceSha))
+      throw new Error('Unknown application minimum identity');
+    return Promise.resolve(sha === targetSha ? this.targetMinimum : '12.0');
   }
   async download(_repo: string, asset: Asset, destination: string): Promise<void> {
     await writeFile(destination, this.bytes.get(asset.id)!);
@@ -413,6 +416,63 @@ describe('append-only partial release assembly', () => {
       'Invalid updater feed'
     );
   });
+});
+
+function manifestlessFull(productMinimum: string, darwinMinimum?: string): TestReleaseStorage {
+  const store = new TestReleaseStorage();
+  store.targetMinimum = productMinimum;
+  const names = platformNames('2.17.2');
+  for (const name of names.mac) store.add('v2.17.2', name, Buffer.from(`full-new-mac:${name}`));
+  for (const [feed, files] of [
+    ['latest.yml', names.windows],
+    ['latest-linux.yml', names.linux],
+    ['latest-mac.yml', names.mac],
+  ] as const)
+    store.add(
+      'v2.17.2',
+      feed,
+      Buffer.from(
+        renderFeed(
+          '2.17.2',
+          files.map((name) => textProof(name, store.content('v2.17.2', name))),
+          '2026-10-01T21:02:41Z',
+          feed === 'latest-mac.yml' ? darwinMinimum : undefined
+        )
+      )
+    );
+  store.releases.get('v2.17.2')!.draft = false;
+  return store;
+}
+
+describe('manifestless new full release macOS minimum', () => {
+  it.each<[string, string]>([
+    ['12.0', '21.0.0'],
+    ['13.0', '22.0.0'],
+  ])(
+    'accepts application product %s only with matching Darwin floor %s',
+    async (productMinimum, darwinMinimum) => {
+      const store = manifestlessFull(productMinimum, darwinMinimum);
+      expect(await verifyPublished(store, repository, 'v2.17.2')).toEqual({
+        mode: 'full',
+        tag: 'v2.17.2',
+      });
+    }
+  );
+
+  it.each<[string, string | undefined]>([
+    ['12.0', undefined],
+    ['13.0', undefined],
+    ['12.0', '22.0.0'],
+    ['13.0', '21.0.0'],
+    ['13.0', '13.0'],
+    ['14.0', '23.0.0'],
+  ])(
+    'rejects missing/wrong/unsupported product %s and Darwin floor %s despite valid payload byte proofs',
+    async (productMinimum, darwinMinimum) => {
+      const store = manifestlessFull(productMinimum, darwinMinimum);
+      await expect(verifyPublished(store, repository, 'v2.17.2')).rejects.toThrow(/macOS minimum/);
+    }
+  );
 });
 
 function nativeProducer(): { ref: NativeEvidenceReference; metadata: NativeProducerMetadata } {
