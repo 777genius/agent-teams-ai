@@ -11,12 +11,21 @@ import { parse } from 'yaml';
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import { hashFile } from './inputs.mts';
+import { serializedFunction } from './serialized-function.mts';
 import { transportHook } from './transport.mts';
-import { windowsInputs, windowsMirror } from './windows-mirror.mts';
+import { readWindowsInputMode, windowsInputs, windowsMirror } from './windows-mirror.mts';
 import { readPeArchitecture, windowsNative } from './windows-native.mts';
+import {
+  appEnvironment,
+  absent,
+  ownPhysicalProfile,
+  releasePhysicalProfile,
+} from './windows-ota-profile.mts';
+import { inheritedWindowsEnvironment } from './windows-powershell.mts';
 
 import type { TransportState } from './transport.mts';
 import type { WindowsProcess } from './windows-native.mts';
+import type { ProfileOwnership } from './windows-ota-profile.mts';
 
 interface Target {
   type: string;
@@ -50,7 +59,6 @@ assert.equal(
   'Only a disposable GitHub Windows VM is authorized'
 );
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-updater-windows-')));
-const home = path.join(root, 'home');
 const userData = path.join(root, 'user-data');
 const install = path.join(root, 'install');
 const executable = path.join(install, 'AgentTeamsAI.exe');
@@ -58,6 +66,8 @@ const priorInstaller = path.join(root, 'prior.Setup.exe');
 const targetInstaller = path.join(root, 'target.Setup.exe');
 const firewallGroup = `TEST-updater-windows-${randomUUID()}`;
 const firewallNames: string[] = [];
+const profileFile = path.join(output, 'profile-ownership.json');
+let profile: ProfileOwnership | undefined;
 const native = await windowsNative(root, output);
 let main: Cdp | undefined;
 let renderer: Cdp | undefined;
@@ -69,11 +79,19 @@ log.on('error', (error) => {
   logError = error;
 });
 const owners: WindowsProcess[] = [];
-evidence.isolation = { root, home, userData, install, executable, firewallGroup };
+evidence.isolation = { root, userData, install, executable, firewallGroup, profileFile };
 await writeFile(
   path.join(output, 'ownership.json'),
   JSON.stringify(
-    { root, executable, priorInstaller, targetInstaller, firewallGroup, firewallNames },
+    {
+      root,
+      executable,
+      priorInstaller,
+      targetInstaller,
+      firewallGroup,
+      firewallNames,
+      profileFile,
+    },
     null,
     2
   )
@@ -144,16 +162,11 @@ async function action(pattern: string, click = true) {
 }
 
 try {
-  for (const directory of [
-    home,
-    userData,
-    install,
-    path.join(home, '.claude'),
-    path.join(root, 'roaming'),
-    path.join(root, 'local'),
-    path.join(root, 'temp'),
-  ])
-    await mkdir(directory, { recursive: true });
+  await mkdir(install);
+  const physical = await native.physicalProfile();
+  evidence.physicalProfile = physical;
+  profile = await ownPhysicalProfile(root, physical, output);
+  evidence.profileOwnership = profile;
   const session = await native.session();
   evidence.desktopSession = session;
   assert.equal(
@@ -162,9 +175,16 @@ try {
     'Interactive Console window station required'
   );
   assert.equal(session.desktop.toLowerCase(), 'default', 'Interactive default desktop required');
-  const inputs = await windowsInputs(input);
+  const inputs = await windowsInputs(input, readWindowsInputMode());
   evidence.inputs = inputs.verified;
   evidence.inputDigest = inputs.inputDigest;
+  const targetVersion = inputs.targetVersion;
+  evidence.targetBinding = {
+    targetVersion,
+    legacyFixture: inputs.legacyFixture,
+    plan: inputs.plan,
+    stagedMetadata: inputs.stagedMetadata,
+  };
   evidence.feed = {
     feasibilityOnly: true,
     sha256: createHash('sha256').update(inputs.feed).digest('hex'),
@@ -174,7 +194,8 @@ try {
     (pin) => pin.arch === process.arch && pin.tag === 'v2.17.1' && pin.name.endsWith('.exe')
   );
   const target = inputs.verified.find(
-    (pin) => pin.arch === process.arch && pin.tag === 'v2.17.2' && pin.name.endsWith('.exe')
+    (pin) =>
+      pin.arch === process.arch && pin.tag === inputs.target.tag_name && pin.name.endsWith('.exe')
   );
   assert(prior && target);
   await copyFile(path.join(input, prior.name), priorInstaller);
@@ -191,7 +212,15 @@ try {
     await writeFile(
       path.join(output, 'ownership.json'),
       JSON.stringify(
-        { root, executable, priorInstaller, targetInstaller, firewallGroup, firewallNames },
+        {
+          root,
+          executable,
+          priorInstaller,
+          targetInstaller,
+          firewallGroup,
+          firewallNames,
+          profileFile,
+        },
         null,
         2
       )
@@ -213,27 +242,9 @@ try {
     );
     assert.equal(rule.remote.length, 3, 'IPv4/IPv6 non-loopback containment required');
   }
-  const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
+  const systemRoot = inheritedWindowsEnvironment('SystemRoot');
   assert(systemRoot);
-  const env: NodeJS.ProcessEnv = {
-    SystemRoot: systemRoot,
-    WINDIR: systemRoot,
-    SystemDrive: path.parse(systemRoot).root.slice(0, -1),
-    PATH: path.join(systemRoot, 'System32'),
-    HOME: home,
-    USERPROFILE: home,
-    APPDATA: path.join(root, 'roaming'),
-    LOCALAPPDATA: path.join(root, 'local'),
-    TEMP: path.join(root, 'temp'),
-    TMP: path.join(root, 'temp'),
-    CLAUDE_CONFIG_DIR: path.join(home, '.claude'),
-    CODEX_HOME: path.join(home, '.codex'),
-    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userData,
-    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: path.join(home, '.claude'),
-    AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
-    NODE_ENV: 'production',
-  };
+  const env = appEnvironment(physical, root, systemRoot);
   evidence.childEnvironmentKeys = Object.keys(env);
   const setup = spawn(priorInstaller, ['/S', `/D=${install}`], {
     cwd: root,
@@ -330,7 +341,6 @@ try {
     `--remote-debugging-port=${rendererPort}`,
     '--remote-debugging-address=127.0.0.1',
     '--lang=en-US',
-    `--user-data-dir=${userData}`,
   ];
   const app = spawn(executable, appArguments, {
     cwd: root,
@@ -383,7 +393,7 @@ try {
   );
   evidence.appEntry = filename;
   evidence.transportHook = await main.evaluate(
-    `(${transportHook.toString()})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)})`,
+    `(${serializedFunction(transportHook)})(require('electron'),()=>autoUpdater,${JSON.stringify(mirror.origin)},${JSON.stringify(mirror.paths)})`,
     frame.callFrameId
   );
   await main.send('Debugger.resume');
@@ -394,8 +404,16 @@ try {
   assert.equal(roots.roots?.version, '2.17.1');
   assert.equal(roots.roots?.arch, process.arch);
   assert.equal(roots.roots?.packaged, true);
-  assert.equal(roots.roots?.userData.toLowerCase(), userData.toLowerCase());
-  assert.equal(roots.roots?.home.toLowerCase(), home.toLowerCase());
+  assert(roots.roots);
+  assert.equal(roots.roots.home.toLowerCase(), physical.home.toLowerCase());
+  assert.equal(
+    roots.roots.userData.toLowerCase(),
+    path.join(physical.roaming, 'agent-teams-ai').toLowerCase()
+  );
+  assert.equal((await realpath(roots.roots.userData)).toLowerCase(), userData.toLowerCase());
+  for (const entry of profile.links)
+    assert.equal((await realpath(entry.link)).toLowerCase(), entry.target.toLowerCase());
+  evidence.roots = roots.roots;
   assert.equal(roots.updater?.class, 'NsisUpdater');
   assert.deepEqual(roots.bound, ['default', 'electron-updater']);
   const page = await waitFor(
@@ -417,14 +435,14 @@ try {
   await waitFor(async () => {
     const result = await state();
     return result.updater?.provider === 'GitHubProvider' &&
-      result.events.some((event) => event.type === 'available' && event.version === '2.17.2')
+      result.events.some((event) => event.type === 'available' && event.version === targetVersion)
       ? true
       : null;
   }, 'genuine Windows candidate');
   await waitFor(
     () =>
       renderer!.evaluate<boolean | null>(
-        'document.body.innerText.includes("2.17.2") ? true : null'
+        `document.body.innerText.includes(${JSON.stringify(targetVersion)}) ? true : null`
       ),
     'validated candidate reaches UI'
   );
@@ -436,7 +454,7 @@ try {
   }
   evidence.downloadButton = await action('^Download$', false);
   const text = await renderer.evaluate<string>('document.querySelector("[role=dialog]").innerText');
-  assert(text.includes('2.17.2'));
+  assert(text.includes(targetVersion));
   evidence.availableDialog = text;
   await screenshot('available-renderer');
   const nativeDirectory = path.join(root, 'native-capture');
@@ -481,7 +499,9 @@ try {
     mirror.requests.some(
       (request) =>
         request.session === 'default' &&
-        request.path.includes('/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.2') &&
+        request.path.includes(
+          `/api/repos/777genius/agent-teams-ai/releases/tags/${inputs.target.tag_name}`
+        ) &&
         request.status === 200
     )
   );
@@ -547,6 +567,12 @@ try {
     }
     evidence.firewallRemoved = await native.removeFirewall(firewallGroup, firewallNames);
     assert.deepEqual(evidence.firewallRemoved, []);
+    if (!(await absent(profileFile))) {
+      const ownedProfile = JSON.parse(await readFile(profileFile, 'utf8')) as ProfileOwnership;
+      assert.equal(ownedProfile.root, root);
+      await releasePhysicalProfile(ownedProfile);
+      evidence.profileReleased = true;
+    }
   } catch (error) {
     evidence.firewallCleanupError = String(error);
     evidence.passed = false;

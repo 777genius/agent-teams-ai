@@ -7,36 +7,12 @@ import path from 'node:path';
 import { stringify } from 'yaml';
 
 import { hashFile } from './inputs.mts';
+import { planWindowsInputs, windowsPredecessorPins } from './windows-plan-inputs.mts';
+
+import type { WindowsInputSet } from './windows-plan-inputs.mts';
 
 export const windowsPins = [
-  {
-    tag: 'v2.17.1',
-    arch: 'x64',
-    name: 'Agent.Teams.AI.Setup.2.17.1.exe',
-    size: 206705165,
-    sha256: 'd6cc899235bfcab17c9bb30b3f0959ea8ea2549c6416161bc6f5a96f35b5a463',
-  },
-  {
-    tag: 'v2.17.1',
-    arch: 'x64',
-    name: 'Agent.Teams.AI.Setup.2.17.1.exe.blockmap',
-    size: 215243,
-    sha256: '9ba29ce8df953d3b253ea5284384f422cf21e62dfb365e1a3e517dfe9d1cc69a',
-  },
-  {
-    tag: 'v2.17.1',
-    arch: 'arm64',
-    name: 'Agent.Teams.AI.Setup.2.17.1-arm64.exe',
-    size: 196906862,
-    sha256: 'd7bbfe282cba0467f389b24ca3f0cc0404efbbd21c0ce0d09a0e0080c9abfc43',
-  },
-  {
-    tag: 'v2.17.1',
-    arch: 'arm64',
-    name: 'Agent.Teams.AI.Setup.2.17.1-arm64.exe.blockmap',
-    size: 205207,
-    sha256: '75b498d86b77fcceea7a2825d3282758d00cd1a654cb4ffa0cd44b27ae1ef218',
-  },
+  ...windowsPredecessorPins,
   {
     tag: 'v2.17.2',
     arch: 'x64',
@@ -66,24 +42,40 @@ export const windowsPins = [
     sha256: '71eeab1a1e8f20940b14849b424d616f4068b130787b269604e13c8ec3837eba',
   },
 ] as const;
-interface Release {
-  id: number;
-  tag_name: string;
-  target_commitish: string;
-  draft: boolean;
-  prerelease: boolean;
-  created_at: string;
-  name: string | null;
-  body: string | null;
-  assets: { name: string; size: number; digest?: string | null }[];
+export type { WindowsInputSet, WindowsProofPin } from './windows-plan-inputs.mts';
+type WindowsRelease = WindowsInputSet['source'];
+export interface WindowsInputMode {
+  plan?: string;
+  legacy2172?: boolean;
 }
-export async function windowsInputs(directory: string) {
+export function readWindowsInputMode(args = process.argv.slice(2)): WindowsInputMode {
+  const index = args.indexOf('--plan');
+  const legacy2172 = args.includes('--legacy-2172');
+  const plan = index < 0 ? undefined : args[index + 1];
+  assert(index < 0 || (plan && !plan.startsWith('--')), '--plan file required');
+  assert(Boolean(plan) !== legacy2172, 'Explicit --plan or --legacy-2172 required');
+  return { plan: plan ? path.resolve(plan) : undefined, legacy2172 };
+}
+export async function windowsInputs(
+  directory: string,
+  mode: WindowsInputMode
+): Promise<WindowsInputSet> {
+  assert(
+    Boolean(mode.plan) !== Boolean(mode.legacy2172),
+    'Choose an immutable 2.17.3 plan or explicit legacy 2.17.2 infrastructure fixture'
+  );
+  if (mode.plan)
+    return planWindowsInputs(
+      directory,
+      mode.plan,
+      windowsPins.filter((pin) => pin.tag === 'v2.17.1')
+    );
   const source = JSON.parse(
     await readFile(path.join(directory, 'source-api.json'), 'utf8')
-  ) as Release;
+  ) as WindowsRelease;
   const target = JSON.parse(
     await readFile(path.join(directory, 'draft-api.json'), 'utf8')
-  ) as Release;
+  ) as WindowsRelease;
   assert.equal(source.id, 398386033);
   assert.equal(source.tag_name, 'v2.17.1');
   assert.equal(source.target_commitish, '395572f9ff2a261cb28224754883a39d2c3c8827');
@@ -122,7 +114,15 @@ export async function windowsInputs(directory: string) {
   const inputDigest = createHash('sha256')
     .update(JSON.stringify({ source, target, verified }))
     .digest('hex');
-  return { source, target, verified, feed, inputDigest };
+  return {
+    source,
+    target,
+    verified,
+    feed,
+    inputDigest,
+    targetVersion: '2.17.2',
+    legacyFixture: true,
+  };
 }
 
 const xml = (text: string) =>
@@ -154,10 +154,13 @@ export async function windowsMirror(
     ],
     [`${prefix}/latest`, { body: JSON.stringify(published), type: 'application/json' }],
     [
-      '/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.2',
+      `/api/repos/777genius/agent-teams-ai/releases/tags/${inputs.target.tag_name}`,
       { body: JSON.stringify(published), type: 'application/json' },
     ],
-    [`${prefix}/download/v2.17.2/latest.yml`, { body: inputs.feed, type: 'application/yaml' }],
+    [
+      `${prefix}/download/${inputs.target.tag_name}/latest.yml`,
+      { body: inputs.feed, type: 'application/yaml' },
+    ],
   ]);
   const assets = new Map(
     inputs.verified.map((pin) => [`${prefix}/download/${pin.tag}/${pin.name}`, pin])
@@ -264,11 +267,17 @@ if (process.argv.includes('--verify-inputs')) {
   const index = process.argv.indexOf('--verify-inputs');
   const directory = process.argv[index + 1];
   assert(directory);
-  const inputs = await windowsInputs(path.resolve(directory));
+  const inputs = await windowsInputs(path.resolve(directory), readWindowsInputMode());
   await writeFile(
     path.join(directory, 'windows-input-verification.json'),
     JSON.stringify(
-      { verified: inputs.verified, inputDigest: inputs.inputDigest, feasibilityOnly: true },
+      {
+        verified: inputs.verified,
+        inputDigest: inputs.inputDigest,
+        targetVersion: inputs.targetVersion,
+        legacyFixture: inputs.legacyFixture,
+        plan: inputs.plan,
+      },
       null,
       2
     )

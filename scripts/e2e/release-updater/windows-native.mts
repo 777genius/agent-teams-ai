@@ -9,8 +9,10 @@ import {
   windowsShellCompilerReferences,
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
+import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
 
 import type { ExecFileException } from 'node:child_process';
+import type { PhysicalProfile, ProfileOwnership } from './windows-ota-profile.mts';
 
 const execute = promisify(execFile);
 export interface WindowsProcess {
@@ -149,6 +151,15 @@ Write-TestProgress 'after-native-compile'
 Write-TestProgress 'operation-entry'
 $result = $null
 switch ($data.operation) {
+  'profile' {
+    foreach($registry in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
+      if (Test-Path -LiteralPath $registry) {
+        $installed=@(Get-ChildItem -LiteralPath $registry | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Agent Teams AI(?:$|\s)' })
+        if ($installed.Count) { throw 'Disposable OS profile already has an Agent Teams AI installation' }
+      }
+    }
+    $result=@{ home=[Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile); roaming=[Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData); local=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData) }
+  }
   'session' {
     $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
     $principal=New-Object Security.Principal.WindowsPrincipal($identity)
@@ -303,6 +314,7 @@ export async function windowsNative(root: string, evidence: string) {
     return JSON.parse(result.stdout.trim()) as T;
   }
   return {
+    physicalProfile: () => call<PhysicalProfile>('profile'),
     session: () => call<DesktopSession>('session'),
     processes: (executable: string) => call<WindowsProcess[]>('processes', { executable }),
     capture: (owner: WindowsProcess, screenshot: string) =>
@@ -356,6 +368,7 @@ if (process.argv.includes('--cleanup')) {
     targetInstaller: string;
     firewallGroup: string;
     firewallNames: string[];
+    profileFile?: string;
   };
   assert(/^TEST-updater-windows-[a-f0-9-]+$/.test(owned.firewallGroup));
   assert(owned.firewallNames.every((name) => name.startsWith(`${owned.firewallGroup}-`)));
@@ -370,4 +383,11 @@ if (process.argv.includes('--cleanup')) {
     );
   }
   assert.deepEqual(await native.removeFirewall(owned.firewallGroup, owned.firewallNames), []);
+  if (owned.profileFile && !(await absent(owned.profileFile))) {
+    assert.equal(path.basename(owned.profileFile), 'profile-ownership.json');
+    assert.equal(path.dirname(path.resolve(owned.profileFile)), path.dirname(path.resolve(file)));
+    const profile = JSON.parse(await readFile(owned.profileFile, 'utf8')) as ProfileOwnership;
+    assert.equal(profile.root, owned.root);
+    await releasePhysicalProfile(profile);
+  }
 }
