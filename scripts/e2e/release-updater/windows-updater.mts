@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -49,7 +49,7 @@ assert.equal(
   'true',
   'Only a disposable GitHub Windows VM is authorized'
 );
-const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-updater-windows-'));
+const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-updater-windows-')));
 const home = path.join(root, 'home');
 const userData = path.join(root, 'user-data');
 const install = path.join(root, 'install');
