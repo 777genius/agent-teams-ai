@@ -82,7 +82,8 @@ async function handleGetSubagentDetail(
       return null;
     }
     const context = registry.getActive();
-    return await readSubagentDetail(
+    const source = context.getDetailReadSource();
+    const detail = await readSubagentDetail(
       context,
       lifetime,
       validatedProject.value!,
@@ -90,6 +91,7 @@ async function handleGetSubagentDetail(
       validatedSubagent.value!,
       detailOptions.bypassCache
     );
+    return lifetime.isCurrent() && context.isDetailReadSourceCurrent(source) ? detail : null;
   } catch (error) {
     logger.error(`Error in get-subagent-detail for ${subagentId}:`, error);
     return null;

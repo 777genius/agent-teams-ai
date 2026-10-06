@@ -217,13 +217,15 @@ async function handleGetSessionDetail(
       return null;
     }
     const context = registry.getActive();
-    return await readSessionDetail(
+    const source = context.getDetailReadSource();
+    const detail = await readSessionDetail(
       context,
       lifetime,
       validatedProject.value!,
       validatedSession.value!,
       detailOptions.bypassCache
     );
+    return lifetime.isCurrent() && context.isDetailReadSourceCurrent(source) ? detail : null;
   } catch (error) {
     logger.error(`Error in get-session-detail for ${projectId}/${sessionId}:`, error);
     return null;

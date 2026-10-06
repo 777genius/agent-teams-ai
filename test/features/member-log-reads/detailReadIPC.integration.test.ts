@@ -3,7 +3,11 @@ import {
   registerSessionHandlers,
   removeSessionHandlers,
 } from '@main/ipc/sessions';
-import { initializeSubagentHandlers, registerSubagentHandlers } from '@main/ipc/subagents';
+import {
+  initializeSubagentHandlers,
+  registerSubagentHandlers,
+  removeSubagentHandlers,
+} from '@main/ipc/subagents';
 import { ServiceContext } from '@main/services/infrastructure/ServiceContext';
 import { ServiceContextRegistry } from '@main/services/infrastructure/ServiceContextRegistry';
 import { PassThrough, Readable } from 'node:stream';
@@ -253,6 +257,61 @@ describe('registered IPC detail read ownership', () => {
     expect(first?.description).toBe('observable-fresh-subagent');
     expect(second).toBe(first);
     expect(context.dataCache.getSubagent(`subagent-${project}-${session}-worker-a`)).toBe(first);
+  });
+
+  describe.each(['session', 'subagent'] as const)('%s cached reply ownership', (kind) => {
+    // Red if an already-fulfilled helper escapes retirement in the IPC await continuation.
+    it.each(['replacement', 'disposal', 'adapter'] as const)(
+      'rejects a cached reply retired by %s before handler settlement',
+      async (retirement) => {
+        const first = fixture();
+        const replacement = fixture();
+        const registry = new ServiceContextRegistry();
+        registry.registerContext(first.context);
+        let ipc = transport(registry);
+        const read = () => (kind === 'session' ? ipc.read() : ipc.readSubagent());
+        const warm = read();
+        await vi.waitFor(() => expect(first.reads).toHaveLength(1));
+        first.reads[0].end(jsonl('cached-owner'));
+        expect(await warm).not.toBeNull();
+
+        const retired = read();
+        if (retirement === 'replacement') {
+          registry.replaceContext('local', replacement.context);
+        } else if (retirement === 'disposal') {
+          first.context.dispose();
+        } else {
+          if (kind === 'session') removeSessionHandlers(ipc.ipc);
+          else removeSubagentHandlers(ipc.ipc);
+        }
+        expect(await retired).toBeNull();
+        expect(first.reads).toHaveLength(1);
+
+        if (retirement === 'disposal') {
+          const replacementRegistry = new ServiceContextRegistry();
+          replacementRegistry.registerContext(replacement.context);
+          ipc = transport(replacementRegistry);
+        }
+        if (retirement === 'adapter') {
+          ipc = transport(registry);
+          // Removing an adapter preserves the context's independently owned cache.
+          expect(await read()).toBe(await warm);
+          expect(first.reads).toHaveLength(1);
+        } else {
+          const current = read();
+          await vi.waitFor(() => expect(replacement.reads).toHaveLength(1));
+          replacement.reads[0].end(jsonl('current-owner'));
+          const detail = await current;
+          if (kind === 'session') {
+            expect(
+              (detail as SessionDetail | null)?.messages.map((message) => message.uuid)
+            ).toEqual(['current-owner']);
+          } else {
+            expect((detail as SubagentDetail | null)?.description).toBe('observable-current-owner');
+          }
+        }
+      }
+    );
   });
 
   it.each([null, true, [], { bypassCache: 'true' }, { bypassCache: 1 }])(
