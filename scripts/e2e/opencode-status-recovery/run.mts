@@ -111,6 +111,17 @@ const evidence: Record<string, unknown> = {
     .update(await readFile(fixture))
     .digest('hex'),
   base: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+  productionSourceHashes: Object.fromEntries(
+    await Promise.all(
+      [
+        'src/renderer/hooks/useOpenCodePassiveStatusPrefetch.ts',
+        'src/renderer/components/team/dialogs/TeamModelSelector.tsx',
+      ].map(async (file) => [
+        file,
+        createHash('sha256').update(await readFile(path.join(repo, file))).digest('hex'),
+      ])
+    )
+  ),
 };
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const calls = async () =>
@@ -126,6 +137,7 @@ const calls = async () =>
           phase: string;
           source?: string;
           failed?: boolean;
+          model?: string | null;
           args: string[];
         }
     );
@@ -324,6 +336,7 @@ try {
       ['Opencode Zen', 'opencode-zen'],
       ['Agentrouter', 'agentrouter'],
     ]) {
+      const sourceGroup = `[...document.querySelectorAll('[data-testid="team-model-selector-opencode-group"]')].find(g => g.textContent.toLowerCase().replace(/[^a-z]/g, '').includes(${JSON.stringify(source.replace(/[^a-z]/g, ''))}))`;
       await click(
         `[...document.querySelectorAll('button')].find(b => b.getAttribute('role') === 'tab' && b.textContent.includes(${JSON.stringify(label)}))`
       );
@@ -341,27 +354,32 @@ try {
       await waitFor(
         async () =>
           (await evaluate<boolean>(
-            `[...document.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-disabled') === 'false')`
+            `(() => { const group = ${sourceGroup}; return !!group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-disabled') === 'false'); })()`
           )) || null,
         `${source}: selectable model`
       );
-      await waitFor(
-        async () =>
-          (await evaluate<boolean>(
-            `[...document.querySelectorAll('[data-testid="team-model-selector-opencode-group"]')].some(g => g.textContent.toLowerCase().replace(/[^a-z]/g, '').includes(${JSON.stringify(source.replace(/[^a-z]/g, ''))}))`
-          )) || null,
-        `${source}: rendered catalog group`
-      );
       await snapshot(`selectable-${source}`);
+      // The default card can show the same resolved model name. Select the
+      // explicit card inside this source's group, then verify its qualified route.
       await click(
-        `[...document.querySelectorAll('[data-testid="team-model-selector-model-option"]')].find(b => b.textContent.includes('recovery-model'))`
+        `(() => { const group = ${sourceGroup}; return group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].find(b => b.textContent.includes('recovery-model')); })()`
       );
       await waitFor(
         async () =>
           (await evaluate<boolean>(
-            `[...document.querySelectorAll('[data-testid="team-model-selector-opencode-group"]')].some(g => g.textContent.toLowerCase().replace(/[^a-z]/g, '').includes(${JSON.stringify(source.replace(/[^a-z]/g, ''))}) && [...g.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-pressed') === 'true'))`
+            `(() => { const group = ${sourceGroup}; return !!group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-pressed') === 'true'); })()`
           )) || null,
         `${source}: model selection committed`
+      );
+      await waitFor(
+        async () =>
+          (await calls()).some(
+            (call) =>
+              call.event === 'readiness-response' &&
+              call.phase === 'healthy' &&
+              call.model === `${source}/recovery-model`
+          ) || null,
+        `${source}: qualified route checked through preload IPC`
       );
       await snapshot(`selected-${source}`);
     }
