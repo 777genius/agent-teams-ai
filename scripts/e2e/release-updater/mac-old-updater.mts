@@ -302,11 +302,15 @@ async function noUpdate(version: string, label: string, requestStart: number) {
   );
   await view().settings();
   await view().click('^Advanced$');
-  assert(renderer);
-  assert(
-    await renderer.evaluate<boolean>(
-      `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.1\\b/.test(block.textContent));})()`
-    )
+  const aboutRenderer = renderer;
+  assert(aboutRenderer);
+  await waitFor(
+    () =>
+      aboutRenderer.evaluate<boolean>(
+        `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.1\\b/.test(block.textContent));})()`
+      ),
+    'painted About version 2.17.1',
+    10_000
   );
   await view().click('^Check for Updates$', 'about');
   const checked = await waitFor(
@@ -513,11 +517,15 @@ try {
     }, 'real Settings Light preference persisted');
     evidence.preferenceBefore = await config();
     await view().click('^Advanced$');
-    assert(renderer);
-    assert(
-      await renderer.evaluate<boolean>(
-        `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.0\\b/.test(block.textContent));})()`
-      )
+    const aboutRenderer = renderer;
+    assert(aboutRenderer);
+    await waitFor(
+      () =>
+        aboutRenderer.evaluate<boolean>(
+          `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.0\\b/.test(block.textContent));})()`
+        ),
+      'painted About version 2.17.0',
+      10_000
     );
     const checks = available.events.filter((event) => event.type === 'available').length;
     await view().click('^(?:Check for Updates|v?2\\.17\\.1 available)$', 'about');
