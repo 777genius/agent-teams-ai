@@ -9,10 +9,11 @@
  * - get-session-metrics: Get metrics for a session
  */
 
+import { DetailReadAdapterLifetime, readSessionDetail } from '@features/member-log-reads/main';
 import { createLogger } from '@shared/utils/logger';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
-import { DataCache } from '../services';
+import { DataCache } from '../services/infrastructure/DataCache';
 import {
   type ConversationGroup,
   type PaginatedSessionsResult,
@@ -23,6 +24,7 @@ import {
   type SessionsPaginationOptions,
 } from '../types';
 
+import { normalizeDetailReadOptions } from './detailReadOptions';
 import { coercePageLimit, validateProjectId, validateSessionId } from './guards';
 
 import type { ServiceContextRegistry } from '../services';
@@ -32,12 +34,15 @@ const logger = createLogger('IPC:sessions');
 
 // Service registry - set via initialize
 let registry: ServiceContextRegistry;
+let adapter: DetailReadAdapterLifetime | undefined;
 
 /**
  * Initializes session handlers with service registry.
  */
 export function initializeSessionHandlers(contextRegistry: ServiceContextRegistry): void {
+  adapter?.retire();
   registry = contextRegistry;
+  adapter = new DetailReadAdapterLifetime();
 }
 
 /**
@@ -59,6 +64,8 @@ export function registerSessionHandlers(ipcMain: IpcMain): void {
  * Removes all session IPC handlers.
  */
 export function removeSessionHandlers(ipcMain: IpcMain): void {
+  adapter?.retire();
+  adapter = undefined;
   ipcMain.removeHandler('get-sessions');
   ipcMain.removeHandler('get-sessions-paginated');
   ipcMain.removeHandler('get-sessions-by-ids');
@@ -201,68 +208,25 @@ async function handleGetSessionDetail(
   sessionId: string,
   options?: { bypassCache?: boolean }
 ): Promise<SessionDetail | null> {
-  let fill: ReturnType<DataCache['beginSessionFill']> | undefined;
   try {
     const validatedProject = validateProjectId(projectId);
     const validatedSession = validateSessionId(sessionId);
-    if (!validatedProject.valid || !validatedSession.valid) {
-      logger.error(
-        `get-session-detail rejected: ${validatedProject.error ?? validatedSession.error ?? 'Invalid parameters'}`
-      );
+    const detailOptions = normalizeDetailReadOptions(options);
+    const lifetime = adapter;
+    if (!validatedProject.valid || !validatedSession.valid || !detailOptions || !lifetime) {
       return null;
     }
-
-    const { projectScanner, sessionParser, subagentResolver, chunkBuilder, dataCache } =
-      registry.getActive();
-
-    const safeProjectId = validatedProject.value!;
-    const safeSessionId = validatedSession.value!;
-    const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
-
-    // Check cache first
-    let sessionDetail = dataCache.get(cacheKey);
-
-    if (sessionDetail && !options?.bypassCache) {
-      return sessionDetail;
-    }
-
-    fill = dataCache.beginSessionFill(safeProjectId, safeSessionId);
-
-    const fsType = projectScanner.getFileSystemProvider().type;
-    // In SSH mode, avoid an extra deep metadata scan before full parse.
-    const session = await projectScanner.getSessionWithOptions(safeProjectId, safeSessionId, {
-      metadataLevel: fsType === 'ssh' ? 'light' : 'deep',
-    });
-    if (!session) {
-      logger.error(`Session not found: ${sessionId}`);
-      return null;
-    }
-
-    // Parse session messages
-    const parsedSession = await sessionParser.parseSession(safeProjectId, safeSessionId);
-
-    // Resolve subagents
-    const subagents = await subagentResolver.resolveSubagents(
-      safeProjectId,
-      safeSessionId,
-      parsedSession.taskCalls,
-      parsedSession.messages
+    const context = registry.getActive();
+    return await readSessionDetail(
+      context,
+      lifetime,
+      validatedProject.value!,
+      validatedSession.value!,
+      detailOptions.bypassCache
     );
-    session.hasSubagents = subagents.length > 0;
-
-    // Build session detail with chunks
-    sessionDetail = chunkBuilder.buildSessionDetail(session, parsedSession.messages, subagents);
-
-    // Cache the result
-    if (!fill.isSourceCurrent()) return null;
-    fill.commit(sessionDetail);
-
-    return sessionDetail;
   } catch (error) {
     logger.error(`Error in get-session-detail for ${projectId}/${sessionId}:`, error);
     return null;
-  } finally {
-    fill?.release();
   }
 }
 
@@ -356,13 +320,21 @@ async function handleGetWaterfallData(
   sessionId: string
 ): Promise<WaterfallData | null> {
   try {
-    const detail = await handleGetSessionDetail(_event, projectId, sessionId);
-    if (!detail) {
-      return null;
-    }
-
-    const { chunkBuilder } = registry.getActive();
-    return chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);
+    const validatedProject = validateProjectId(projectId);
+    const validatedSession = validateSessionId(sessionId);
+    const lifetime = adapter;
+    if (!validatedProject.valid || !validatedSession.valid || !lifetime) return null;
+    const context = registry.getActive();
+    const source = context.getDetailReadSource();
+    const detail = await readSessionDetail(
+      context,
+      lifetime,
+      validatedProject.value!,
+      validatedSession.value!,
+      false
+    );
+    if (!detail || !lifetime.isCurrent() || !context.isDetailReadSourceCurrent(source)) return null;
+    return context.chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);
   } catch (error) {
     logger.error(`Error in get-waterfall-data for ${projectId}/${sessionId}:`, error);
     return null;
