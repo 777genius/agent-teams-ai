@@ -13,6 +13,7 @@ import { type SubagentDetail } from '../types';
 import { validateProjectId, validateSessionId, validateSubagentId } from './guards';
 
 import type { ServiceContextRegistry } from '../services';
+import type { DetailCacheFillLease } from '../services/infrastructure/DataCache';
 
 const logger = createLogger('IPC:subagents');
 
@@ -59,6 +60,7 @@ async function handleGetSubagentDetail(
   subagentId: string,
   options?: { bypassCache?: boolean }
 ): Promise<SubagentDetail | null> {
+  let fill: DetailCacheFillLease<SubagentDetail> | undefined;
   try {
     const validatedProject = validateProjectId(projectId);
     const validatedSession = validateSessionId(sessionId);
@@ -90,6 +92,8 @@ async function handleGetSubagentDetail(
       return subagentDetail;
     }
 
+    fill = dataCache.beginSubagentFill(safeProjectId, safeSessionId, safeSubagentId);
+
     // Get provider and projectsDir from projectScanner
     const fsProvider = projectScanner.getFileSystemProvider();
     const projectsDir = projectScanner.getProjectsDir();
@@ -113,11 +117,14 @@ async function handleGetSubagentDetail(
     subagentDetail = builtDetail;
 
     // Cache the result
-    dataCache.setSubagent(cacheKey, subagentDetail);
+    if (!fill.isSourceCurrent()) return null;
+    fill.commit(subagentDetail);
 
     return subagentDetail;
   } catch (error) {
     logger.error(`Error in get-subagent-detail for ${subagentId}:`, error);
     return null;
+  } finally {
+    fill?.release();
   }
 }
