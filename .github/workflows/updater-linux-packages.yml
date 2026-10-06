@@ -42,7 +42,7 @@ permissions:
 jobs:
   inputs:
     if: github.repository == '777genius/agent-teams-ai' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 25
     # Draft reads require push permission. This job only reads release bytes;
     # its token never reaches a desktop process or a native runtime job.
@@ -144,7 +144,7 @@ jobs:
     # The host supplies a kernel only; each GUI/package manager uses the native
     # distro below. Ubuntu 22 avoids Ubuntu 24's host-global userns restriction.
     # No host sysctl, privileged container, extra capability or AppArmor bypass.
-    runs-on: ubuntu-22.04
+    runs-on: ${{ vars.CI_LINUX_2204_RUNNER || 'ubicloud-standard-4-ubuntu-2204' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false

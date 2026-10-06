@@ -33,7 +33,7 @@ on:
 jobs:
   install:
     name: Install Codex runtime (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os == 'macos-latest' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.os }}
     timeout-minutes: 20
 
     strategy:

@@ -2261,3 +2261,19 @@ git push origin :refs/tags/v1.0.0
 # Check workflow status
 gh run list --repo 777genius/agent-teams-ai --workflow release.yml --limit 3
 ```
+
+
+### Managed GitHub Actions runners
+
+Linux jobs use Ubicloud (`CI_LINUX_RUNNER`, default `ubicloud-standard-4`).
+The Ubuntu 22.04 package test uses `CI_LINUX_2204_RUNNER` (default
+`ubicloud-standard-4-ubuntu-2204`) to preserve its host OS baseline.
+ARM macOS jobs use Namespace (`CI_MACOS_ARM_RUNNER`, default
+`namespace-profile-macos-15`, macOS 15 / Apple Silicon). Windows and Intel macOS
+jobs keep their GitHub-hosted runners to preserve platform and architecture coverage.
+Both provider GitHub Apps must include this repository in their allowed repositories.
+The runner variables can select a different provisioned label without editing every
+workflow. They are scalar labels, not JSON arrays. To roll back routing, set
+`CI_LINUX_RUNNER=ubuntu-24.04`, `CI_LINUX_2204_RUNNER=ubuntu-22.04`,
+and `CI_MACOS_ARM_RUNNER=macos-15`.
+Runner routing does not change release publication approval or signing requirements.
