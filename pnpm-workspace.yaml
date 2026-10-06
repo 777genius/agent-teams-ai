@@ -74,7 +74,7 @@ overrides:
   'path-to-regexp': '8.4.0'
   'picomatch@2': '2.3.2'
   'picomatch@4': '4.0.4'
-  'postcss': '8.5.23'
+  'postcss': '8.5.28'
   # Tiptap and nested transforms must share model classes for wrapping/splitting.
   'prosemirror-model': '1.25.12'
   'prosemirror-view': '1.42.6'
