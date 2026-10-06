@@ -21,7 +21,13 @@ jobs:
           sudo /sbin/pfctl -sn > "$RUNNER_TEMP/TEST-pf-readonly/nat.txt"
           cat "$RUNNER_TEMP/TEST-pf-readonly/nat.txt" "$RUNNER_TEMP/TEST-pf-readonly/rules.txt" > "$RUNNER_TEMP/TEST-pf-readonly/baseline.conf"
           cat "$RUNNER_TEMP/TEST-pf-readonly/baseline.conf"
-          sudo /sbin/pfctl -n -f "$RUNNER_TEMP/TEST-pf-readonly/baseline.conf" 2>&1 | tee "$RUNNER_TEMP/TEST-pf-readonly/parse.log"
+          if sudo /sbin/pfctl -n -f "$RUNNER_TEMP/TEST-pf-readonly/baseline.conf" > "$RUNNER_TEMP/TEST-pf-readonly/original-parse.log" 2>&1; then
+            echo "Original captured baseline parsed"
+          else
+            cat "$RUNNER_TEMP/TEST-pf-readonly/original-parse.log"
+          fi
+          { printf 'set require-order no\n'; cat "$RUNNER_TEMP/TEST-pf-readonly/baseline.conf"; } > "$RUNNER_TEMP/TEST-pf-readonly/candidate.conf"
+          sudo /sbin/pfctl -n -f "$RUNNER_TEMP/TEST-pf-readonly/candidate.conf" 2>&1 | tee "$RUNNER_TEMP/TEST-pf-readonly/candidate-parse.log"
       - name: Preserve read-only parser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
