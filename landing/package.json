@@ -33,7 +33,7 @@
     "nuxt-icon": "^0.6.10",
     "pinia": "^3.0.4",
     "swiper": "^12.1.2",
-    "vue": "^3.5.27",
+    "vue": "3.5.43",
     "vue-i18n": "^11.2.8",
     "vue-router": "^4.6.4",
     "vuetify": "^3.11.6"
@@ -58,6 +58,7 @@
   "overrides": {
     "@nuxt/devtools": "3.4.1",
     "@nuxt/schema": "3.21.11",
+    "@vue/server-renderer": "3.5.43",
     "brace-expansion": "5.0.12",
     "esbuild": "0.28.1",
     "immutable": "5.1.9",
@@ -65,12 +66,16 @@
     "js-yaml@4": "4.3.2",
     "linkify-it": "5.0.2",
     "minimatch@9": "9.0.7",
-    "postcss": "8.5.23",
+    "postcss": "8.5.28",
+    "seroval": "1.6.8",
     "shell-quote": "1.10.0",
+    "simple-git": "4.0.2",
+    "source-map-js": "1.2.2",
     "svgo": "4.1.0",
     "tar": "7.5.22",
     "axios": "1.18.1",
     "nanoid@3": "3.3.18",
-    "devalue": "5.9.4"
+    "devalue": "5.9.4",
+    "vue": "3.5.43"
   }
 }

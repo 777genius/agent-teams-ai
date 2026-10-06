@@ -153,6 +153,7 @@ export class FileSearchService {
     try {
       const git = simpleGit({
         baseDir: projectRoot,
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
         timeout: { block: 10_000 },
       }).env('GIT_OPTIONAL_LOCKS', '0');
 
