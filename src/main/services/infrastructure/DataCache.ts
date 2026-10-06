@@ -8,10 +8,19 @@
  * - Provide cache invalidation for file changes
  */
 
+import { DetailCacheFillFence } from '@features/member-log-reads/main';
 import { type SessionDetail, type SubagentDetail } from '@main/types';
 import { createLogger } from '@shared/utils/logger';
 
+import type { DetailCacheFillScope } from '@features/member-log-reads/main';
+
 const logger = createLogger('Service:DataCache');
+
+export interface DetailCacheFillLease<T> {
+  isSourceCurrent(): boolean;
+  commit(value: T): boolean;
+  release(): void;
+}
 
 interface CacheEntry<T> {
   value: T;
@@ -29,6 +38,7 @@ export class DataCache {
   private maxSize: number;
   private ttl: number; // Time-to-live in milliseconds
   private enabled: boolean; // Whether caching is enabled
+  private readonly fillFence = new DetailCacheFillFence();
   private disposed = false; // Flag to prevent reuse after disposal
   private static readonly CURRENT_VERSION = 2; // Increment when cache structure changes
 
@@ -43,6 +53,8 @@ export class DataCache {
    * Enable or disable caching.
    */
   setEnabled(enabled: boolean): void {
+    if (this.disposed || this.enabled === enabled) return;
+    this.fillFence.advanceRevision();
     this.enabled = enabled;
     if (!enabled) {
       // Clear cache when disabling
@@ -167,6 +179,7 @@ export class DataCache {
    * @param value - The SessionDetail to cache
    */
   set(key: string, value: SessionDetail): void {
+    this.fillFence.supersedeCommit(key);
     this.setInternal(key, value);
   }
 
@@ -176,7 +189,43 @@ export class DataCache {
    * @param value - The SubagentDetail to cache
    */
   setSubagent(key: string, value: SubagentDetail): void {
+    this.fillFence.supersedeCommit(key);
     this.setInternal(key, value);
+  }
+
+  beginSessionFill(projectId: string, sessionId: string): DetailCacheFillLease<SessionDetail> {
+    return this.beginFill({
+      key: DataCache.buildKey(projectId, sessionId),
+      projectId,
+      sessionId,
+      kind: 'session',
+    });
+  }
+
+  beginSubagentFill(
+    projectId: string,
+    sessionId: string,
+    subagentId: string
+  ): DetailCacheFillLease<SubagentDetail> {
+    return this.beginFill({
+      key: `subagent-${projectId}-${sessionId}-${subagentId}`,
+      projectId,
+      sessionId,
+      kind: 'subagent',
+    });
+  }
+
+  private beginFill<T extends CachedValue>(scope: DetailCacheFillScope): DetailCacheFillLease<T> {
+    const permit = this.fillFence.begin(scope);
+    return {
+      isSourceCurrent: () => permit.isSourceCurrent(),
+      commit: (value) => {
+        if (!this.enabled || this.disposed || !permit.canCommit()) return false;
+        this.setInternal(scope.key, value);
+        return true;
+      },
+      release: () => permit.release(),
+    };
   }
 
   /**
@@ -217,6 +266,7 @@ export class DataCache {
    * @param key - Cache key to invalidate
    */
   invalidate(key: string): void {
+    this.fillFence.invalidate((scope) => scope.key === key);
     this.cache.delete(key);
   }
 
@@ -224,6 +274,10 @@ export class DataCache {
    * Invalidates a cache entry by project and session IDs.
    */
   invalidateSession(projectId: string, sessionId: string): void {
+    this.fillFence.invalidate(
+      (scope) =>
+        scope.sessionId === sessionId && this.matchesProjectOrComposite(scope.projectId, projectId)
+    );
     const keysToDelete: string[] = [];
     const sessionToken = `-${sessionId}-`;
 
@@ -251,6 +305,12 @@ export class DataCache {
    * Invalidates all cached subagent details for a session.
    */
   invalidateSubagentSession(projectId: string, sessionId: string): void {
+    this.fillFence.invalidate(
+      (scope) =>
+        scope.kind === 'subagent' &&
+        scope.sessionId === sessionId &&
+        this.matchesProjectOrComposite(scope.projectId, projectId)
+    );
     const sessionToken = `-${sessionId}-`;
     const keysToDelete: string[] = [];
 
@@ -270,6 +330,9 @@ export class DataCache {
    * @param projectId - The project ID
    */
   invalidateProject(projectId: string): void {
+    this.fillFence.invalidate((scope) =>
+      this.matchesProjectOrComposite(scope.projectId, projectId)
+    );
     const keysToDelete: string[] = [];
 
     for (const key of this.cache.keys()) {
@@ -293,6 +356,7 @@ export class DataCache {
    * Clears the entire cache.
    */
   clear(): void {
+    this.fillFence.invalidate(() => true);
     this.cache.clear();
   }
 
@@ -410,6 +474,7 @@ export class DataCache {
     }
 
     logger.info('Disposing DataCache');
+    this.fillFence.dispose();
 
     // Clear all cached data
     this.cache.clear();

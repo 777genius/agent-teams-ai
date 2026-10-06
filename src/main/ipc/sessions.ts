@@ -201,6 +201,7 @@ async function handleGetSessionDetail(
   sessionId: string,
   options?: { bypassCache?: boolean }
 ): Promise<SessionDetail | null> {
+  let fill: ReturnType<DataCache['beginSessionFill']> | undefined;
   try {
     const validatedProject = validateProjectId(projectId);
     const validatedSession = validateSessionId(sessionId);
@@ -224,6 +225,8 @@ async function handleGetSessionDetail(
     if (sessionDetail && !options?.bypassCache) {
       return sessionDetail;
     }
+
+    fill = dataCache.beginSessionFill(safeProjectId, safeSessionId);
 
     const fsType = projectScanner.getFileSystemProvider().type;
     // In SSH mode, avoid an extra deep metadata scan before full parse.
@@ -251,12 +254,15 @@ async function handleGetSessionDetail(
     sessionDetail = chunkBuilder.buildSessionDetail(session, parsedSession.messages, subagents);
 
     // Cache the result
-    dataCache.set(cacheKey, sessionDetail);
+    if (!fill.isSourceCurrent()) return null;
+    fill.commit(sessionDetail);
 
     return sessionDetail;
   } catch (error) {
     logger.error(`Error in get-session-detail for ${projectId}/${sessionId}:`, error);
     return null;
+  } finally {
+    fill?.release();
   }
 }
 
