@@ -50,8 +50,15 @@ async function withGitSandbox(run: (sandbox: GitSandbox) => Promise<void>): Prom
     // eslint-disable-next-line sonarjs/no-os-command-from-path -- Same installed Git and isolated fixture.
     execFileSync('git', ['add', '--', '.gitignore', 'tracked file.txt'], options);
 
+    // Inherited config with a missing pair makes Git fail if a service forwards it.
+    // Keep setup clean so the public-service assertions prove ambient filtering.
+    vi.stubEnv('GIT_CONFIG_COUNT', '1');
+    vi.stubEnv('GIT_CONFIG_KEY_0', undefined);
+    vi.stubEnv('GIT_CONFIG_VALUE_0', undefined);
+
     await run({ projectRoot, gitStatus, fileSearch });
   } finally {
+    vi.unstubAllEnvs();
     gitStatus.destroy();
     fileSearch.invalidateListFilesCache(projectRoot);
     await rm(projectRoot, { recursive: true, force: true });
