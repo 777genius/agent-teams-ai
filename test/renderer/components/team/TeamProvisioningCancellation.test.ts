@@ -55,7 +55,7 @@ vi.mock('@renderer/components/ui/button', () => ({
 }));
 
 vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
-  ProvisioningProgressBlock: ({
+  ProvisioningProgressBlock: function StatefulProgressBlock({
     currentStepIndex,
     loading,
     message,
@@ -69,8 +69,9 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
     successMessage?: string | null;
     successMessageSeverity?: string;
     onCancel?: (() => void) | null;
-  }) =>
-    React.createElement(
+  }) {
+    const [diagnosticsOpen, setDiagnosticsOpen] = React.useState(false);
+    return React.createElement(
       'div',
       {
         'data-testid': 'progress-block',
@@ -79,10 +80,22 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
         'data-success-severity': successMessageSeverity ?? '',
       },
       [successMessage, message].filter(Boolean).join(' '),
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'diagnostics-toggle',
+          onClick: () => setDiagnosticsOpen(!diagnosticsOpen),
+        },
+        'Toggle diagnostics'
+      ),
+      diagnosticsOpen
+        ? React.createElement('div', { 'data-testid': 'diagnostics-open' }, 'Expanded diagnostics')
+        : null,
       onCancel
         ? React.createElement('button', { onClick: onCancel, 'data-testid': 'cancel' }, 'Cancel')
         : null
-    ),
+    );
+  },
 }));
 
 import { TeamProvisioningPanel } from '@renderer/components/team/TeamProvisioningPanel';
@@ -215,6 +228,77 @@ describe('synthetic provisioning cancellation UI ownership', () => {
     } finally {
       old.resolve();
       current.resolve();
+      await settle(() => root.unmount());
+    }
+  });
+
+  it('shows same-owner cleanup failure after cancelled progress removes the presentation', async () => {
+    const attempt = deferredCancellation();
+    storeState.cancelProvisioning.mockReturnValueOnce(attempt.promise);
+    const { host, root } = await mountCancellablePanel();
+    try {
+      await settle(() => {
+        host
+          .querySelector('[data-testid="cancel"]')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      storeState.progress = { ...storeState.progress, state: 'cancelled' };
+      await settle(() => {
+        root.render(
+          React.createElement(TeamProvisioningPanel, {
+            teamName: 'synthetic-cancel-test',
+            className: 'cancelled-render',
+          })
+        );
+      });
+      await settle(() => {
+        attempt.reject(new Error('Failed to clean up cancelled helper'));
+      });
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+        'Failed to clean up cancelled helper'
+      );
+      expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+      storeState.progress = { ...storeState.progress, startedAt: '2026-04-08T16:01:00.000Z' };
+      await settle(() => {
+        root.render(
+          React.createElement(TeamProvisioningPanel, {
+            teamName: 'synthetic-cancel-test',
+            className: 'replacement-cancelled-render',
+          })
+        );
+      });
+      expect(host.querySelector('[role="alert"]')).toBeNull();
+    } finally {
+      attempt.resolve();
+      await settle(() => root.unmount());
+    }
+  });
+
+  it('preserves an expanded diagnostics view during cancellation and after failure', async () => {
+    const attempt = deferredCancellation();
+    storeState.cancelProvisioning.mockReturnValueOnce(attempt.promise);
+    const { host, root } = await mountCancellablePanel();
+    try {
+      await settle(() => {
+        host
+          .querySelector('[data-testid="diagnostics-toggle"]')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      const expanded = host.querySelector('[data-testid="diagnostics-open"]');
+      expect(expanded).not.toBeNull();
+      await settle(() => {
+        host
+          .querySelector('[data-testid="cancel"]')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(host.querySelector('[data-testid="diagnostics-open"]')).toBe(expanded);
+      await settle(() => {
+        attempt.reject(new Error('Cancellation failed'));
+      });
+      expect(host.querySelector('[data-testid="diagnostics-open"]')).toBe(expanded);
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('Cancellation failed');
+    } finally {
+      attempt.resolve();
       await settle(() => root.unmount());
     }
   });

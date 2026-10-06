@@ -83,8 +83,14 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
     setOpenCodeRetryError(null);
   }, [runInstanceKey]);
 
+  const currentCancel =
+    cancelAttempt?.owner === (runInstanceKey ?? undefined) ? cancelAttempt : null;
+  const cancelError = currentCancel?.error ?? null;
+  const cancelPending = currentCancel?.pending ?? false;
+
   if (!presentation) {
-    return provisioningError ? (
+    const visibleError = cancelError ?? provisioningError;
+    return visibleError ? (
       <div
         role="alert"
         className={cn(
@@ -93,7 +99,12 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
         )}
       >
         <p className="min-w-0 flex-1 whitespace-pre-wrap text-xs text-[var(--step-error-text)] [overflow-wrap:anywhere]">
-          {provisioningError}
+          {cancelError
+            ? t('provisioning.cancelFailed', {
+                defaultValue: 'Could not cancel launch: {{error}}',
+                error: cancelError,
+              })
+            : provisioningError}
         </p>
         {dismissible ? (
           <Button
@@ -101,7 +112,10 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
             size="sm"
             className="h-6 shrink-0 border-red-500/40 px-2 text-xs text-[var(--step-error-text)] hover:bg-red-500/10"
             aria-label={t('actions.close')}
-            onClick={() => clearProvisioningError(teamName)}
+            onClick={() => {
+              if (cancelError) setCancelAttempt(null);
+              else clearProvisioningError(teamName);
+            }}
           >
             <X size={12} />
           </Button>
@@ -117,11 +131,6 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   if (presentation.currentStepIndex >= 0 && !presentation.isFailed) {
     lastActiveStepRef.current = presentation.currentStepIndex;
   }
-
-  const currentCancel =
-    cancelAttempt?.owner === (runInstanceKey ?? undefined) ? cancelAttempt : null;
-  const cancelError = currentCancel?.error ?? null;
-  const cancelPending = currentCancel?.pending ?? false;
 
   const showRunningState = presentation.isActive || presentation.hasMembersStillJoining;
   const canRetryFailedOpenCode =
@@ -232,17 +241,8 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
             }
           : null
       }
-      className={
-        !presentation.isFailed && !retryOpenCodeAction && !cancelError && !cancelPending
-          ? className
-          : undefined
-      }
     />
   );
-
-  if (!presentation.isFailed && !retryOpenCodeAction && !cancelError && !cancelPending) {
-    return block;
-  }
 
   return (
     <div className={cn('space-y-2', className)}>
