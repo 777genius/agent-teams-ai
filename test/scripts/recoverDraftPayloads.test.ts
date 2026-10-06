@@ -35,7 +35,7 @@ interface StoredAsset {
 class DraftStorage implements RecoveryPort {
   assets: StoredAsset[] = [];
   uploaded: { releaseId: number; bytes: Buffer; name: string }[] = [];
-  draftId = 404009045;
+  draftId = 404985707;
   attempts = 1;
   lostResponse = false;
   artifactMutation: Record<string, unknown> = {};
@@ -49,20 +49,20 @@ class DraftStorage implements RecoveryPort {
     else if (endpoint.includes('/releases/'))
       value = {
         id: this.draftId,
-        tag_name: 'v2.17.3',
-        target_commitish: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+        tag_name: 'v2.17.5',
+        target_commitish: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
         draft: true,
         prerelease: false,
       };
     else if (endpoint.includes('matching-refs'))
-      value = this.tagSha ? [{ ref: 'refs/tags/v2.17.3' }] : [];
+      value = this.tagSha ? [{ ref: 'refs/tags/v2.17.5' }] : [];
     else if (endpoint.includes('/commits/')) value = { sha: this.tagSha };
     else if (endpoint.includes('/actions/runs/'))
       value = {
-        id: 37342668377,
+        id: 37498376671,
         path: this.runPath,
         event: this.runEvent,
-        head_sha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+        head_sha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
         run_attempt: 1,
         status: 'completed',
         conclusion: 'failure',
@@ -72,9 +72,9 @@ class DraftStorage implements RecoveryPort {
       if (!pin) throw new Error('Unknown fixture job');
       value = {
         id: pin.jobId,
-        run_id: 37342668377,
+        run_id: 37498376671,
         run_attempt: this.attempts,
-        head_sha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+        head_sha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
         name: pin.jobName,
         status: 'completed',
         conclusion: 'success',
@@ -100,8 +100,8 @@ class DraftStorage implements RecoveryPort {
         expired: false,
         created_at: '2026-10-05T17:20:54Z',
         workflow_run: {
-          id: 37342668377,
-          head_sha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+          id: 37498376671,
+          head_sha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
           repository_id: 1163183284,
           head_repository_id: 1163183284,
         },
@@ -139,7 +139,7 @@ async function payloadFixture(): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), 'TEST-recovery-payloads-'));
   directories.push(directory);
   await mkdir(path.join(directory, 'payloads'));
-  const names = platformNames('2.17.3');
+  const names = platformNames('2.17.5');
   for (const name of [
     ...names.windows,
     ...names.windows.map((item) => `${item}.blockmap`),
@@ -232,7 +232,7 @@ it.each([
   {
     workflow_run: {
       id: 37342668378,
-      head_sha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+      head_sha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
       repository_id: 1163183284,
       head_repository_id: 1163183284,
     },
@@ -258,18 +258,18 @@ it('appends eight actual payloads and original provenance, then a fresh retry is
   const storage = new DraftStorage();
   await appendDraftPayloads(storage, await payloadFixture(), []);
   expect(storage.uploaded).toHaveLength(9);
-  expect(storage.uploaded.every((upload) => upload.releaseId === 404009045)).toBe(true);
+  expect(storage.uploaded.every((upload) => upload.releaseId === 404985707)).toBe(true);
   const evidence = storage.uploaded.find(
-    (upload) => upload.name === 'build-provenance-37342668377-1.json'
+    (upload) => upload.name === 'build-provenance-37498376671-1.json'
   );
   expect(evidence).toBeDefined();
   const proof: unknown = JSON.parse(evidence?.bytes.toString() ?? 'null');
   expect(proof).toMatchObject({
-    runId: 37342668377,
+    runId: 37498376671,
     attempt: 1,
-    applicationSha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
+    applicationSha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
     workflowPath: '.github/workflows/build-linux-windows-draft.yml',
-    jobs: [{ id: 111873384897 }, { id: 111873385262 }, { id: 111873385293 }],
+    jobs: [{ id: 112388693906 }, { id: 112388693295 }, { id: 112388693609 }],
   });
   expect(
     storage.uploaded
@@ -283,7 +283,7 @@ it('rejects every known collision before the first write', async () => {
   const storage = new DraftStorage();
   storage.assets.push({
     id: 1,
-    name: 'agent-teams-ai_2.17.3_amd64.deb',
+    name: 'agent-teams-ai_2.17.5_amd64.deb',
     size: 10,
     digest: `sha256:${'0'.repeat(64)}`,
     state: 'uploaded',
@@ -299,7 +299,7 @@ it('rejects replacement draft identity and changed asset snapshots without mutat
   await expect(appendDraftPayloads(storage, await payloadFixture(), [])).rejects.toThrow(
     'Bound draft identity'
   );
-  storage.draftId = 404009045;
+  storage.draftId = 404985707;
   storage.assets.push({
     id: 1,
     name: 'foreign.json',
@@ -319,7 +319,7 @@ it('requires an existing target tag to resolve to the original application commi
     'target tag application SHA changed'
   );
   expect(storage.uploaded).toHaveLength(0);
-  storage.tagSha = 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322';
+  storage.tagSha = '36c48514bce010d50d5b74660d2c2ab5a00d233b';
   await appendDraftPayloads(storage, await payloadFixture(), []);
   expect(storage.uploaded).toHaveLength(9);
 });

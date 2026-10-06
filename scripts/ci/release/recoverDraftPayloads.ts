@@ -12,33 +12,33 @@ import type { GitHubBuildRun } from './github.js';
 
 export const RECOVERY = {
   repository: '777genius/agent-teams-ai',
-  tag: 'v2.17.3',
-  releaseId: 404009045,
-  applicationSha: 'acda6e3a0990aec3cd37b9bd696f36e78aaa4322',
-  runId: 37342668377,
+  tag: 'v2.17.5',
+  releaseId: 404985707,
+  applicationSha: '36c48514bce010d50d5b74660d2c2ab5a00d233b',
+  runId: 37498376671,
   attempt: 1,
   workflowPath: '.github/workflows/build-linux-windows-draft.yml',
   producers: [
     {
-      jobId: 111873384897,
+      jobId: 112388693906,
       jobName: 'release-win x64',
-      artifactId: 11361141479,
+      artifactId: 11430140734,
       name: 'draft-win32-x64-1',
-      sha256: '78cace5bde762015fd293cfbfdd5e405773f66c1126177b22faaf699108553f0',
+      sha256: 'eea6e28347c43fb41db3f744021d619d166d979d8a77ea875e50c679d3d3dea7',
     },
     {
-      jobId: 111873385262,
+      jobId: 112388693295,
       jobName: 'release-linux x64',
-      artifactId: 11363200282,
+      artifactId: 11429846886,
       name: 'draft-linux-x64-1',
-      sha256: '36c85673a1907225d6ea2078716b5544f0172cc93b903807e453bf2ab837cfb0',
+      sha256: '9d8ecea50fb80e4850ba742900cd60d8c1271b0e28471da4af6e5884665b86f6',
     },
     {
-      jobId: 111873385293,
+      jobId: 112388693609,
       jobName: 'release-win arm64',
-      artifactId: 11360727266,
+      artifactId: 11428504853,
       name: 'draft-win32-arm64-1',
-      sha256: '98e46e6b9e215d418ed71dbe4464d3228c6408fa93cd060f5fa285e1d4122130',
+      sha256: 'e7f6e8997e559bd409b2e33479bdc68ea9035c729efb1cd5898b385126ee68a0',
     },
   ],
 } as const;
@@ -139,7 +139,7 @@ export function recoveryPort(): RecoveryPort {
   };
 }
 function payloadNames(index: number): string[] {
-  const names = platformNames('2.17.3');
+  const names = platformNames('2.17.5');
   if (index === 1) return names.linux;
   const name = names.windows[index === 0 ? 0 : 1];
   requireThat(name, 'Windows payload name missing');
@@ -364,7 +364,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   requireThat(
     process.env.GITHUB_REPOSITORY === RECOVERY.repository &&
       process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' &&
-      process.env.GITHUB_REF === 'refs/heads/main' &&
+      process.env.GITHUB_REF === 'refs/tags/release-tooling-v2.17.5-recovery' &&
       /^[a-f0-9]{40}$/.test(process.env.EXPECTED_TOOLING_SHA ?? '') &&
       process.env.GITHUB_SHA === process.env.EXPECTED_TOOLING_SHA,
     'Canonical recovery workflow/tooling SHA required'

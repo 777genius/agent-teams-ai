@@ -2,7 +2,10 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { MessagesThreadView } from '@renderer/components/team/messages/MessagesThreadView';
+import { mutationListeners } from 'happy-dom/lib/PropertySymbol.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { Node as HappyDOMNode } from 'happy-dom';
 
 describe('MessagesThreadView floating footer', () => {
   afterEach(() => {
@@ -12,14 +15,26 @@ describe('MessagesThreadView floating footer', () => {
 
   it('reserves its measured height without remounting the composer across Full Screen changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    // Happy DOM keeps only a WeakRef to callbacks. Retain the real callback for
-    // the observer's lifetime so GC cannot silently disable later measurements.
+    // Happy DOM strongly retains the observer callback, but its node listener
+    // holds only a WeakRef to a separate report closure. Retain that closure
+    // until disconnect so GC cannot remove native mutation delivery under load.
     const NativeMutationObserver = globalThis.MutationObserver;
     class RetainedMutationObserver extends NativeMutationObserver {
-      readonly retainedCallback: MutationCallback;
-      constructor(callback: MutationCallback) {
-        super(callback);
-        this.retainedCallback = callback;
+      private readonly retainedReports = new Set<unknown>();
+      override observe(target: Node, options?: MutationObserverInit): void {
+        const node = target as unknown as HappyDOMNode;
+        const previous = new Set(node[mutationListeners]);
+        super.observe(target, options);
+        for (const listener of node[mutationListeners]) {
+          if (previous.has(listener)) continue;
+          const report = listener.callback.deref();
+          if (!report) throw new Error('Native mutation report callback was lost during observe');
+          this.retainedReports.add(report);
+        }
+      }
+      override disconnect(): void {
+        super.disconnect();
+        this.retainedReports.clear();
       }
     }
     vi.stubGlobal('MutationObserver', RetainedMutationObserver);
