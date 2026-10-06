@@ -31,6 +31,7 @@ import {
   type HelperRole,
 } from './nativeGateDiagnostics';
 import { createFixtureOutputCollector } from './nativeGateOutput';
+import { runNativePendingWriteGate } from './nativePendingWriteGate';
 
 function timeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
   return new Promise((resolvePromise, reject) => {
@@ -719,6 +720,11 @@ export async function runNativeGate(
       'truncated',
     ] as const) {
       await runScenario(mode, () => nativeLossScenario(context, mode, sentinel));
+    }
+    for (const mode of ['complete', 'deadline'] as const) {
+      await runScenario(`write-pending-${mode}`, () =>
+        runNativePendingWriteGate(fixture, mode, track)
+      );
     }
     console.log(
       JSON.stringify({

@@ -26,6 +26,16 @@ enum Exit : DWORD { OwnerEof=70, Bootstrap=71, ReadFailure=72, WriteFailure=73,
   WriteDeadline=74, ProtocolFailure=75, CancelUndrained=76, PendingReadBarrier=77 };
 constexpr DWORD ReleasedTerminal=1;
 inline std::atomic<DWORD> terminalChoice{0}; // active -> first failure OR completed-ACK success
+#ifdef OWNED_PROCESS_TEST_PENDING_WRITE
+enum class TestIo { Issue, Wait, Result, Cancel, CancelResult, EventClose };
+void observeTestIo(TestIo,HANDLE,OVERLAPPED&,BOOL,DWORD,DWORD,
+  void* = nullptr,DWORD = 0,ULONGLONG = 0) noexcept;
+void observeTestTerminal(DWORD,bool) noexcept;
+void observeTestFailure(DWORD) noexcept;
+#define WIRE_TEST_IO(...) observeTestIo(__VA_ARGS__)
+#else
+#define WIRE_TEST_IO(...) ((void)0)
+#endif
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
 inline bool terminalRaceEnabled=false; // immutable bootstrap value, only in unstaged fixture
 inline std::atomic<bool> terminalRaceRejected{false}, terminalRaceObserved{false};
@@ -44,6 +54,9 @@ inline void latchFailure(DWORD cause) {
   latchFailure(cause);
   const auto winner=terminalChoice.load();
   DWORD status=winner;
+#ifdef OWNED_PROCESS_TEST_PENDING_WRITE
+  observeTestTerminal(winner,undrained);
+#endif
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
   // Complete ACK bytes plus an unrelated early write deadline must not impersonate the CAS gate.
   if(terminalRaceEnabled&&winner==WriteDeadline&&
@@ -61,14 +74,31 @@ inline bool disconnected(DWORD error) {
 inline bool terminalIoError(DWORD error) {
   return disconnected(error)||error==ERROR_OPERATION_ABORTED;
 }
+inline void closeTransferEvent(HANDLE pipe,OVERLAPPED& operation) {
+#ifdef OWNED_PROCESS_TEST_PENDING_WRITE
+  const BOOL closed=CloseHandle(operation.hEvent);
+  const DWORD error=closed?ERROR_SUCCESS:GetLastError();
+  WIRE_TEST_IO(TestIo::EventClose,pipe,operation,closed,error,0);
+#else
+  (void)pipe; CloseHandle(operation.hEvent);
+#endif
+}
 [[noreturn]] inline void cancelAndFail(HANDLE pipe,OVERLAPPED& operation,DWORD cause) {
   latchFailure(cause); // cancellation/late success cannot replace the first terminal cause
+#ifdef OWNED_PROCESS_TEST_PENDING_WRITE
+  observeTestFailure(failureCause()); // original first failure precedes the real cancellation request
+  const BOOL cancelled=CancelIoEx(pipe,&operation);
+  const DWORD cancelError=cancelled?ERROR_SUCCESS:GetLastError();
+  WIRE_TEST_IO(TestIo::Cancel,pipe,operation,cancelled,cancelError,0);
+#else
   CancelIoEx(pipe,&operation); // ERROR_NOT_FOUND is not completion evidence
+#endif
   DWORD ignored=0;
   const bool completed=GetOverlappedResult(pipe,&operation,&ignored,FALSE)!=FALSE;
   const DWORD error=completed?ERROR_SUCCESS:GetLastError();
+  WIRE_TEST_IO(TestIo::CancelResult,pipe,operation,completed,error,ignored);
   const bool terminal=completed||terminalIoError(error);
-  if(terminal) CloseHandle(operation.hEvent);
+  if(terminal) closeTransferEvent(pipe,operation);
   terminateFailure(cause,!terminal);
 }
 struct Transfer { DWORD count,error; };
@@ -81,8 +111,9 @@ inline Transfer transfer(HANDLE pipe,void* data,DWORD size,bool writing,ULONGLON
   const BOOL immediate=writing?WriteFile(pipe,data,size,nullptr,&operation):
     ReadFile(pipe,data,size,nullptr,&operation);
   const DWORD issuedError=immediate?ERROR_SUCCESS:GetLastError();
+  if(writing) WIRE_TEST_IO(TestIo::Issue,pipe,operation,immediate,issuedError,0,data,size,deadline);
   if(!immediate&&issuedError!=ERROR_IO_PENDING) {
-    CloseHandle(operation.hEvent); return {0,issuedError}; // API rejected; no outstanding request
+    closeTransferEvent(pipe,operation); return {0,issuedError}; // API rejected; no outstanding request
   }
   if(!immediate) {
     if(!writing&&pendingRead) pendingRead(); // actual ERROR_IO_PENDING, with this read storage alive
@@ -90,16 +121,19 @@ inline Transfer transfer(HANDLE pipe,void* data,DWORD size,bool writing,ULONGLON
     if(deadline&&now>=deadline) cancelAndFail(pipe,operation,WriteDeadline);
     const DWORD budget=deadline?static_cast<DWORD>(deadline-now):INFINITE;
     const DWORD wait=WaitForSingleObject(operation.hEvent,budget);
+    if(writing) WIRE_TEST_IO(TestIo::Wait,pipe,operation,TRUE,wait,0);
     if(wait!=WAIT_OBJECT_0) cancelAndFail(pipe,operation,
       wait==WAIT_TIMEOUT?WriteDeadline:CancelUndrained);
   }
   DWORD count=0;
-  if(!GetOverlappedResult(pipe,&operation,&count,FALSE)) {
-    const DWORD error=GetLastError();
+  const BOOL completed=GetOverlappedResult(pipe,&operation,&count,FALSE);
+  const DWORD error=completed?ERROR_SUCCESS:GetLastError();
+  if(writing) WIRE_TEST_IO(TestIo::Result,pipe,operation,completed,error,count);
+  if(!completed) {
     if(!terminalIoError(error)) cancelAndFail(pipe,operation,CancelUndrained);
-    CloseHandle(operation.hEvent); return {0,error};
+    closeTransferEvent(pipe,operation); return {0,error};
   }
-  CloseHandle(operation.hEvent); // result query proved terminal, never just event signal
+  closeTransferEvent(pipe,operation); // result query proved terminal, never just event signal
   if(deadline&&GetTickCount64()>=deadline) terminateFailure(WriteDeadline);
   if(failureCause()) terminateFailure(failureCause());
   if(count>size) terminateFailure(writing?WriteFailure:ReadFailure);

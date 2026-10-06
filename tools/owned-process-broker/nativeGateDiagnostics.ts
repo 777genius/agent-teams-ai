@@ -23,6 +23,8 @@ type GateScenario =
   | 'lost-prepared'
   | 'malformed'
   | 'truncated'
+  | 'write-pending-complete'
+  | 'write-pending-deadline'
   | 'cleanup';
 export type GatePhase =
   | 'start'
@@ -44,7 +46,7 @@ export type GatePhase =
   | 'loss-dispatch'
   | 'abandon-control'
   | 'helper-exits';
-export type HelperRole = 'sentinel' | 'witness' | 'raw-broker';
+export type HelperRole = 'sentinel' | 'witness' | 'raw-broker' | 'write-fixture';
 type CleanupObservation = 'before-private-abandon' | 'after-helper-wait';
 interface HelperFacts {
   slot: number;

@@ -22,6 +22,7 @@ import type { BrokerExit } from '../../src/main/utils/ownedProcess/contract';
 import type { Frame } from '../../src/main/utils/ownedProcess/codec';
 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';
 import { createFixtureOutputCollector } from './nativeGateOutput';
+import { parseBinaryInventory, validateNativeWriteFacts } from './nativePendingWriteGate';
 
 const generation = '00112233-4455-6677-8899-aabbccddeeff';
 const owner = {
@@ -736,5 +737,47 @@ describe('native fixture complete output records', () => {
     );
     expect(output.children).toEqual([]);
     expect(output.hasFinal()).toBe(false);
+  });
+});
+
+// Literal decoder contracts only; these numbers do not qualify any real Win32 operation.
+describe('native pending write receipt validation', () => {
+  const directory = 'C:\\sandbox\\Release';
+  const path = `${directory}\\owned-process-pending-write-fixture.exe`;
+  const digest = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const inventory = `Algorithm : SHA256\r\nHash      : ${digest}\r\nPath      : ${path}\r\n\r\n`;
+  it.each(['', '\uFEFF'])('accepts a complete inventory with zero or one BOM (%j)', (bom) => {
+    expect([...parseBinaryInventory(Buffer.from(bom + inventory), directory)]).toEqual([
+      [path.toLowerCase(), digest],
+    ]);
+  });
+  it('rejects two leading BOMs before binary admission', () => {
+    expect(() =>
+      parseBinaryInventory(Buffer.from('\uFEFF\uFEFF' + inventory), directory)
+    ).toThrow();
+  });
+  it('rejects a timed-out pending wait even if later completion and event-close look successful', () => {
+    const row = [1, 1048576, 0, 997, 1, 0, 996, 0, 0, 1, 0, 1048576].concat([
+      0, 0, 0, 0, 0, 0, 1, 1, 15, 1, 0, 2,
+    ]);
+    const facts = {
+      schema: 1,
+      mode: 0,
+      writerExit: 0,
+      activeProcesses: 0,
+      readBytes: 1048576,
+      header: [1, 0, 1, 0, 1, 5000, 0, 0, 0, 0, 1, 1, 2, 0].concat(
+        Array<number>(18).fill(0),
+        [16, 0, 16, 16, 1048576, 1, 1, 1, 0, 0, 1, 0, 65536, 0],
+        Array<number>(18).fill(0)
+      ),
+      operations: [row, ...Array.from({ length: 7 }, () => Array<number>(24).fill(0))],
+    };
+    expect(() => validateNativeWriteFacts(facts, 'complete')).not.toThrow();
+    const timedOut = { ...facts, operations: facts.operations.map((operation) => [...operation]) };
+    const pending = timedOut.operations[0];
+    if (!pending) throw new Error('Literal pending operation missing');
+    pending[8] = 258; // Only WAIT_OBJECT_0 becomes WAIT_TIMEOUT; all other facts stay identical.
+    expect(() => validateNativeWriteFacts(timedOut, 'complete')).toThrow();
   });
 });

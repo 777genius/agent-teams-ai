@@ -69,6 +69,22 @@ the original broker process to exit0, exercising reader/writer scheduling rather
 This same unstaged variant requires an actual post-Launch ReadFile ERROR_IO_PENDING before
 Prepared, proving concurrent read/reply scheduling. Native pending-write timeout/cancellation
 storage races remain an explicit OPEN runtime gate; synthetic bridge tests cannot prove them.
+The new unstaged pending-write fixture qualifies only the shared native transport primitive.
+Its native supervisor holds a private connected byte-pipe reader until a real WriteFile pending
+and GetOverlappedResult incomplete observation. Positive drain has its own OVERLAPPED/event/
+64KiB buffer under the original writer deadline. The deadline cohort leaves the peer unread,
+records exact CancelIoEx/result facts and requires original writer exit74 or202 according to
+terminal proof. Pending storage stays live to a proved terminal result or original process death.
+The original supervisor exits0 only after fresh inner Job0; the outer controller still owns
+the Node/Electron run and all descendants. No product Stop/Release receipt is derived.
+Before spawn, nativePendingWriteGate reads checkout/native-evidence/binary-sha256.txt anchored
+to its own source module, with strict bounded full-path/digest and actual PE-architecture checks.
+The current workflow creates that inventory before either gate; running without it fails closed.
+Only the pending-write fixture compiles its passive observation definition, and staging remains
+exactly normal broker plus manifest. Both new cases run after all17 existing scenarios on both
+real architectures under Node and pinned Electron. No new WRITE gate has yet executed.
+Claims remain branch-observed: unhit terminal/undrained/partial/late-completion races and direct
+broker-fd3 backpressure remain OPEN. Neither pauses nor an elapsed deadline prove API pending.
 Its compile-guarded numeric `OWNED_PROCESS_TEST_TERMINAL_RACE=1` fixture toggle forces a
 failure CAS after genuine full ACK and before success CAS; the raw gate separately requires
 original exit74. A bounded two-way atomic handshake requires the actual losing success CAS
