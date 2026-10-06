@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import { parseArgs } from 'node:util';
 
 import {
@@ -26,6 +24,8 @@ import type {
   Release,
   StagePlan,
 } from '../../ci/release/contract.ts';
+
+import { downloadGithubFile } from './github-download.mts';
 
 // This checkpoint verifies shipped signatures, not application launch or OTA behavior.
 const repository = '777genius/agent-teams-ai';
@@ -193,34 +193,13 @@ class Recorder {
   }
 
   async download(label: string, endpoint: string, file: string): Promise<void> {
-    const args = ['api', endpoint, '-H', 'Accept: application/octet-stream'];
-    const child = spawn(ghBinary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    const stderr: Buffer[] = [];
-    child.stderr.on('data', (bytes: Buffer) => stderr.push(bytes));
-    const timer = setTimeout(() => child.kill('SIGKILL'), 600_000);
-    const completion = new Promise<number>((resolve, reject) => {
-      child.on('error', reject);
-      child.on('close', (code) => resolve(code ?? 128));
-    });
-    let exitCode = 128;
-    let error = '';
-    try {
-      [, exitCode] = await Promise.all([
-        pipeline(child.stdout, createWriteStream(file, { flags: 'wx' })),
-        completion,
-      ]);
-    } catch (cause) {
-      child.kill('SIGKILL');
-      error = cause instanceof Error ? cause.message : String(cause);
-    } finally {
-      clearTimeout(timer);
-    }
+    const { exitCode, stderr, error } = await downloadGithubFile(ghBinary, endpoint, file);
     const proof = await this.finish(
       label,
       `gh api ${endpoint} (stdout streamed to file)`,
       exitCode,
       '',
-      `${Buffer.concat(stderr).toString()}${error}`
+      `${stderr}${error}`
     );
     requireThat(exitCode === 0 && !error, `${label} failed; see ${proof.logFile}`);
   }
