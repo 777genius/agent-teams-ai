@@ -68,7 +68,7 @@
     "minimatch@9": "9.0.7",
     "postcss": "8.5.28",
     "seroval": "1.6.8",
-    "shell-quote": "1.10.0",
+    "shell-quote": "1.12.0",
     "simple-git": "4.0.2",
     "source-map-js": "1.2.2",
     "svgo": "4.1.0",
