@@ -45,5 +45,7 @@ jobs:
         working-directory: ${{ runner.temp }}/filesystem-qualification
         run: pnpm typecheck
       - name: Native ACL and filesystem behavior
+        # The fixture invokes Windows PowerShell 5.1 via Node. Keep its module path native.
+        shell: powershell
         working-directory: ${{ runner.temp }}/filesystem-qualification
         run: pnpm qualify
