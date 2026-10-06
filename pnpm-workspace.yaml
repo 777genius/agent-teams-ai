@@ -83,7 +83,7 @@ overrides:
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'
   'seroval': '1.6.8'
-  'shell-quote': '1.10.0'
+  'shell-quote': '1.12.0'
   'simple-git': '4.0.2'
   'smol-toml': '1.8.0'
   'source-map-js': '1.2.2'
