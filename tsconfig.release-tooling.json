@@ -18,6 +18,7 @@
     "test/scripts/sentryArtifactInventory*.ts",
     "scripts/ci/*existing-draft.ts",
     "scripts/ci/verify-updater-release.ts",
-    "test/scripts/partialReleaseStaging.test.ts"
+    "test/scripts/partialReleaseStaging.test.ts",
+    "test/scripts/recoverDraftPayloads.test.ts"
   ]
 }
