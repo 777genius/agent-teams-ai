@@ -237,7 +237,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
-    "simple-git": "^3.36.0",
+    "simple-git": "4.0.2",
     "ssh-config": "^5.0.4",
     "ssh2": "^1.17.0",
     "strip-markdown": "^6.0.0",
