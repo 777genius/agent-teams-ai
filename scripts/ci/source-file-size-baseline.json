@@ -125,7 +125,6 @@
     "src/renderer/components/team/members/MemberCard.tsx": 1586,
     "src/renderer/components/team/members/MemberDraftRow.tsx": 1001,
     "src/renderer/components/team/members/MemberList.tsx": 1364,
-    "src/renderer/components/team/members/MemberLogsTab.tsx": 985,
     "src/renderer/components/team/messages/MessageComposer.tsx": 1303,
     "src/renderer/components/team/messages/MessagesPanel.tsx": 1580,
     "src/renderer/components/team/ProvisioningProgressBlock.tsx": 862,
