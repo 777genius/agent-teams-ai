@@ -25,7 +25,7 @@ jobs:
   prepare-mac-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     name: prepare-mac-inputs
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 25
     permissions:
       contents: write
@@ -118,7 +118,7 @@ jobs:
           - { scenario: older, architecture: x64, runner: macos-15-intel }
           - { scenario: fresh, architecture: arm64, runner: macos-15 }
           - { scenario: fresh, architecture: x64, runner: macos-15-intel }
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner == 'macos-15' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.runner }}
     timeout-minutes: 45
     steps:
       - name: Require reviewed immutable tooling
