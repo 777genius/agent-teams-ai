@@ -162,10 +162,10 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
         ) {
           return;
         }
-        // Cleanup old tab's state if it was a session tab
+        // Invalidate the previous owner before reusing its ID (including team lead data).
+        state.cleanupTabSessionData(activeTab.id);
         if (activeTab.type === 'session') {
           state.cleanupTabUIState(activeTab.id);
-          state.cleanupTabSessionData(activeTab.id);
         }
 
         const replacementTab: Tab = {
@@ -266,7 +266,6 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
   setActiveTab: (tabId: string) => {
     const state = get();
     const { paneLayout } = state;
-
     // Sentry breadcrumb for tab navigation
     const prevTab = state.getActiveTab();
     const targetPane = findPaneByTabId(paneLayout, tabId);
@@ -274,34 +273,27 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     if (prevTab?.id !== tabId) {
       addNavigationBreadcrumb(prevTab?.label ?? 'none', targetTab?.label ?? tabId);
     }
-
     // Find which pane contains this tab
     const pane = findPaneByTabId(paneLayout, tabId);
     if (!pane) return;
-
     const tab = pane.tabs.find((t) => t.id === tabId);
     if (!tab) return;
-
     // Update pane's activeTabId and focus the pane
     const updatedPane = { ...pane, activeTabId: tabId };
     let newLayout = updatePane(paneLayout, updatedPane);
     newLayout = { ...newLayout, focusedPaneId: pane.id };
     set(syncFromLayout(newLayout));
-
     // For session tabs, sync sidebar state to match
     if (tab.type === 'session' && tab.sessionId && tab.projectId) {
       const sessionId = tab.sessionId;
       const projectId = tab.projectId;
       const sessionChanged = state.selectedSessionId !== sessionId;
-
       // Check if per-tab data is already cached
       const cachedTabData = state.tabSessionData[tabId];
       const hasCachedData = cachedTabData?.conversation != null;
-
       // Find the repository and worktree containing this session
       let foundRepo: string | null = null;
       let foundWorktree: string | null = null;
-
       for (const repo of state.repositoryGroups) {
         for (const wt of repo.worktrees) {
           if (wt.id === projectId) {
@@ -352,8 +344,14 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
         (p) => p.id === projectId || p.sessions.includes(sessionId)
       );
       if (project) {
+        if (get().getActiveTab()?.id !== tabId) return;
         const projectChanged = state.selectedProjectId !== project.id;
+        const resolvedLayout = updateTabInLayout(get().paneLayout, tabId, (ownerTab) => ({
+          ...ownerTab,
+          projectId: project.id,
+        }));
         set({
+          ...syncFromLayout(resolvedLayout),
           activeProjectId: project.id,
           selectedProjectId: project.id,
           selectedSessionId: sessionId,

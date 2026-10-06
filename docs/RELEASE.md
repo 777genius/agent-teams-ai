@@ -29,6 +29,56 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.17.3 (Draft)
+
+Application target (frozen): `acda6e3a0990aec3cd37b9bd696f36e78aaa4322`.
+
+Platform versions:
+
+- Windows x64/ARM64 and Linux x64: `2.17.3`.
+- macOS Apple Silicon/Intel: existing signed `2.17.1` builds, requiring macOS 12 or later.
+
+macOS source: `v2.17.1`, application commit `395572f9ff2a261cb28224754883a39d2c3c8827`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.3 -->
+Windows and Linux 2.17.3 introduce monthly usage budgets for teams and projects. macOS downloads remain the existing signed 2.17.1 builds.
+
+### What's New
+
+- Set monthly token and estimated API cost budgets for all teams, individual teams, or projects.
+- Choose custom budget thresholds for notifications.
+- Explore model breakdowns and activity calendars in the updated Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Fixes
+
+- Keep task Changes available after app restarts, including renamed files and interrupted recovery.
+- Retry failed update downloads or use manual download guidance when an update cannot finish.
+- Stop provider cards getting stuck loading and ignore stale Claude CLI settings that blocked sign-in.
+- Keep Linux maximize and restore controls aligned with the actual window state.
+- Install the Arch Linux package without requiring the obsolete http-parser dependency.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+| Platform | Version | Download |
+| --- | --- | --- |
+| Windows x64 | 2.17.3 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3.exe) |
+| Windows ARM64 | 2.17.3 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3-arm64.exe) |
+| Linux x64 | 2.17.3 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI-2.17.3.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai_2.17.3_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.pacman) |
+| macOS Apple Silicon | 2.17.1 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg) |
+| macOS Intel | 2.17.1 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg) |
+
+macOS downloads require macOS 12 or later. The What's New and Fixes sections apply to Windows and Linux 2.17.3.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+<!-- RELEASE_BODY_END v2.17.3 -->
+
 ## v2.17.2 (2026-10-01)
 
 Target branch: `main`.
