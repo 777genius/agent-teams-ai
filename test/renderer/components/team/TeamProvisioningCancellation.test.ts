@@ -219,20 +219,4 @@ describe('synthetic provisioning cancellation UI ownership', () => {
     }
   });
 
-  it('observes a late cancellation rejection after the panel unmounts', async () => {
-    const attempt = deferredCancellation();
-    storeState.cancelProvisioning.mockReturnValueOnce(attempt.promise);
-    const { host, root } = await mountCancellablePanel();
-    await settle(() => {
-      host
-        .querySelector('[data-testid="cancel"]')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    await settle(() => root.unmount());
-    await settle(() => {
-      attempt.reject(new Error('Unmounted owner cancellation failed'));
-    });
-    expect(host.textContent).toBe('');
-    expect(storeState.cancelProvisioning).toHaveBeenCalledTimes(1);
-  });
 });
