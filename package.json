@@ -92,6 +92,7 @@
     "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
     "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",
+    "test:sentry-inventory": "vitest run test/scripts/sentryArtifactInventory.test.ts test/scripts/sentryArtifactInventory.integration.test.ts",
     "test:chunks": "tsx test/test-chunk-building.ts",
     "test:semantic": "tsx test/test-semantic-steps.ts",
     "test:noise": "tsx test/test-noise-filtering.ts",
