@@ -1552,6 +1552,29 @@ describe('carried publication effects and reconciliation', () => {
     expect(f.store.visibilityWrites).toEqual([false]);
     expect(f.store.releases.get('v2.17.2')!.draft).toBe(false);
   });
+  it('rejects inventory added during the final origin read before any visibility write', async () => {
+    const f = await publicationFixture();
+    const numericRead = f.store.releaseById.bind(f.store);
+    let reads = 0;
+    vi.spyOn(f.store, 'releaseById').mockImplementation((repo, id) => {
+      reads++;
+      return numericRead(repo, id);
+    });
+    const originRead = f.store.release.bind(f.store);
+    let changed = false;
+    vi.spyOn(f.store, 'release').mockImplementation((repo, tag) => {
+      if (reads >= 2 && tag === 'v2.17.2' && !changed) {
+        changed = true;
+        f.store.add(tag, 'foreign-extra.exe', Buffer.from('unreviewed'));
+      }
+      return originRead(repo, tag);
+    });
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('final origin');
+    expect(changed).toBe(true);
+    expect(f.store.visibilityWrites).toEqual([]);
+  });
   it('retries a transient numeric read after publication without another visibility write', async () => {
     const f = await publicationFixture();
     const read = f.store.releaseById.bind(f.store);

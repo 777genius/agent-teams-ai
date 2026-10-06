@@ -211,6 +211,12 @@ export async function publishCarriedRelease(
   );
   // Latest and source checks are repeated immediately before the single visibility write.
   await validateOrigins(port, plan, true);
+  const finalDraft = await port.releaseById(plan.input.repository, plan.input.target.id);
+  exactIdentity(finalDraft, plan);
+  requireThat(
+    finalDraft.draft === true && inventory(finalDraft) === readiness.assetInventoryDigest,
+    'Reviewed draft changed during final origin checks'
+  );
   try {
     await port.setVisibility(plan.input.repository, plan.input.target, false);
   } catch {

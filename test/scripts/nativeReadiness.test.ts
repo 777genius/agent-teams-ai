@@ -269,7 +269,22 @@ function fixture() {
               planSha256: p,
               manifestSha256: manifest.sha256,
             },
-            inputs: plan.outputs,
+            inputs:
+              current.kind === 'appimage'
+                ? [
+                    {
+                      name: 'Agent.Teams.AI-2.17.1.AppImage',
+                      size: 273263953,
+                      sha256: '02c35d4497f019e02d6fca113ad25ffbd9b63c6ca3c7ae71286cd8af309799e6',
+                    },
+                    {
+                      name: 'agent-teams-ai_2.17.1_amd64.deb',
+                      size: 193985224,
+                      sha256: 'd2daf11bc93fde813d1df2fef25bfc5d6beebd419f7d47b8082d8da9e0ccf6ec',
+                    },
+                    plan.outputs.find((item) => item.name === 'Agent.Teams.AI-2.17.4.AppImage')!,
+                  ]
+                : plan.outputs,
             isolation: {},
             postUpdate: { noInstallerGet: true, preference: 'light' },
             automaticSuccessorProved: true,
@@ -392,6 +407,15 @@ describe('native readiness publication boundary', () => {
   it('accepts exactly 22 actual closed scenarios in 18 authenticated outcomes, with Linux historical flag false and Mac12 unclaimed', async () => {
     const f = fixture();
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+  });
+  it('rejects altered target AppImage bytes in the authentic three-entry producer ledger', async () => {
+    const f = fixture();
+    const value = f.values.get('linux-appimage-ota')!;
+    const inputs = value.inputs as { name: string; sha256: string }[];
+    expect(inputs).toHaveLength(3);
+    inputs.find((item) => item.name === 'Agent.Teams.AI-2.17.4.AppImage')!.sha256 = 'f'.repeat(64);
+    f.reseal('linux-appimage-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
   });
   it('rejects a skipped native execution even when preparation and upload succeeded', async () => {
     const f = fixture();

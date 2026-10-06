@@ -449,7 +449,9 @@ function checkLinux(value: Json, row: Row, plan: StagePlan, p: string, d: string
   byteLedger(
     list(value.inputs, 'Linux ledger'),
     plan.outputs.filter((item) =>
-      platformNames(version(plan.input.target.tag)).linux.includes(item.name)
+      row.kind === 'appimage'
+        ? item.name === platformNames(version(plan.input.target.tag)).linux[0]
+        : platformNames(version(plan.input.target.tag)).linux.includes(item.name)
     )
   );
   present(value, 'isolation', 'postUpdate');
