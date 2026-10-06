@@ -53,17 +53,20 @@ describe('MessagesThreadView floating footer', () => {
       footer.getBoundingClientRect = () => ({ height: footerHeight }) as DOMRect;
       const scroll = host.querySelector<HTMLElement>('[data-messages-thread-scroll]')!;
       const changeFooterHeight = async (height: number, expectedReserve: string): Promise<void> => {
+        const mutationDelivered = new Promise<void>((resolve) => {
+          const observer = new MutationObserver(() => {
+            observer.disconnect();
+            resolve();
+          });
+          observer.observe(footer, { attributes: true, attributeFilter: ['data-probe-height'] });
+        });
         await act(async () => {
           footerHeight = height;
           footer.setAttribute('data-probe-height', String(height));
+          // Await actual observer delivery before act flushes the resulting React update.
+          await mutationDelivered;
         });
-        await vi.waitFor(async () => {
-          // The component's MutationObserver and React commit are separate async steps.
-          await act(async () => {
-            await Promise.resolve();
-          });
-          expect(scroll.lastElementChild?.getAttribute('style')).toBe(expectedReserve);
-        });
+        expect(scroll.lastElementChild?.getAttribute('style')).toBe(expectedReserve);
       };
       await changeFooterHeight(160, 'height: 188px;');
       expect(scroll.className).toContain('relative z-0');
