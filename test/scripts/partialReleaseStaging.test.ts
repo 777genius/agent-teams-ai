@@ -18,16 +18,24 @@ import {
 } from '../../scripts/ci/release/assembly.js';
 import { releaseMain } from '../../scripts/ci/release/cli.js';
 import {
-  MAC_EVIDENCE,
-  MANIFEST,
   canonical,
   digest,
+  MAC_EVIDENCE,
   macAliases,
+  MANIFEST,
   manifestFor,
   platformNames,
   renderFeed,
   textProof,
 } from '../../scripts/ci/release/contract.js';
+import { GitHubReleasePort, validateNativeProducer } from '../../scripts/ci/release/github.js';
+import * as nativeReadiness from '../../scripts/ci/release/nativeReadiness.js';
+import {
+  publishCarriedRelease,
+  verifyCarryReadiness,
+} from '../../scripts/ci/release/publication.js';
+import { verifyPublished } from '../../scripts/ci/release/validation.js';
+
 import type {
   Asset,
   BuildProof,
@@ -39,9 +47,13 @@ import type {
   Release,
   ReleasePort,
 } from '../../scripts/ci/release/contract.js';
-import { GitHubReleasePort, validateNativeProducer } from '../../scripts/ci/release/github.js';
+import type { StagePlan } from '../../scripts/ci/release/contract.js';
 import type { GitHubBuildRun, NativeProducerMetadata } from '../../scripts/ci/release/github.js';
-import { verifyPublished } from '../../scripts/ci/release/validation.js';
+import type {
+  NativeReadinessPort,
+  NativeReadinessReceipt,
+} from '../../scripts/ci/release/nativeReadiness.js';
+import type { PublicationPort } from '../../scripts/ci/release/publication.js';
 
 const repository = '777genius/agent-teams-ai';
 const sourceSha = '1'.repeat(40);
@@ -1405,4 +1417,159 @@ describe.skipIf(process.platform === 'win32')('trusted build workflow producer t
       );
     }
   );
+});
+
+class TestPublicationStorage extends TestReleaseStorage implements PublicationPort {
+  readonly visibilityWrites: boolean[] = [];
+  lostVisibilityResponse = false;
+  afterVisibility: ((draft: boolean) => void) | null = null;
+  releaseById(_repository: string, id: number): Promise<Release> {
+    const release = [...this.releases.values()].find((value) => value.id === id);
+    if (!release) return Promise.reject(new Error('Numeric target missing'));
+    return Promise.resolve(structuredClone(release));
+  }
+  setVisibility(
+    _repository: string,
+    target: StagePlan['input']['target'],
+    draft: boolean
+  ): Promise<void> {
+    const release = this.releases.get(target.tag)!;
+    expect(release.id).toBe(target.id);
+    expect(release.target_commitish).toBe(target.applicationSha);
+    this.visibilityWrites.push(draft);
+    release.draft = draft;
+    this.afterVisibility?.(draft);
+    if (this.lostVisibilityResponse) {
+      this.lostVisibilityResponse = false;
+      return Promise.reject(new Error('Accepted visibility write but response lost'));
+    }
+    return Promise.resolve();
+  }
+}
+async function publicationFixture() {
+  const store = new TestPublicationStorage();
+  const { plan, planDigest } = await prepared(store);
+  await stageDraft(store, plan);
+  const manifest = manifestFor(plan);
+  const evidence: NativeEvidence = {
+    schemaVersion: 1,
+    reference: {
+      repository,
+      runId: 20,
+      runAttempt: 1,
+      jobId: 21,
+      artifactId: 22,
+      artifactName: 'mac-source-signature-evidence-20-1',
+      artifactSha256: 'a'.repeat(64),
+      toolingSha,
+      inputDigest: manifest.inputDigest,
+    },
+    assets: platformNames('2.17.1').mac.map((name) => {
+      const o = plan.input.originals.find((p) => p.name === name)!;
+      return {
+        assetId: o.assetId,
+        sha256: o.sha256,
+        version: '2.17.1',
+        architecture: name.includes('-arm64') ? 'arm64' : 'x64',
+        teamIdentifier: '6C84CW694S',
+        productMinimum: '12.0',
+        commands: [
+          'codesign --verify --deep --strict TEST.app',
+          'spctl --assess TEST.app',
+          'xcrun stapler validate TEST.app',
+          'lipo -archs TEST.app/executable',
+          'plutil CFBundleShortVersionString TEST.app/Info.plist',
+          'plutil LSMinimumSystemVersion TEST.app/Info.plist',
+        ].map((command) => ({ command, exitCode: 0, outputSha256: 'b'.repeat(64) })),
+      };
+    }),
+  };
+  store.nativeArtifact = {
+    schemaVersion: 1,
+    inputDigest: manifest.inputDigest,
+    toolingSha,
+    sourceTag: 'v2.17.1',
+    sourceApplicationSha: sourceSha,
+    assets: evidence.assets,
+  };
+  store.add('v2.17.2', MAC_EVIDENCE, Buffer.from(canonical(evidence)));
+
+  store.add(
+    'v2.17.2',
+    'build-provenance-10-1.json',
+    Buffer.from(
+      canonical({
+        schemaVersion: 1,
+        applicationSha: targetSha,
+        tag: 'v2.17.2',
+        runId: 10,
+        attempt: 1,
+        jobs: [11, 12, 13].map((id) => ({ id, conclusion: 'success', run_id: 10 })),
+      })
+    )
+  );
+  // The independent native adapter has its own forged/stale/outcome contract tests.
+  // These cases isolate publication ordering and actual persisted release effects.
+  const native = vi.spyOn(nativeReadiness, 'verifyNativeReadiness').mockResolvedValue(undefined);
+  const port = {} as NativeReadinessPort;
+  const receipt = {} as NativeReadinessReceipt;
+  return { store, plan, planDigest, native, port, receipt };
+}
+
+describe('carried publication effects and reconciliation', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('proves complete bytes and signatures without a visibility write in readiness mode', async () => {
+    const f = await publicationFixture();
+    const result = await verifyCarryReadiness(f.store, f.port, f.plan, f.planDigest, f.receipt);
+    expect(result.phase).toBe('ready');
+    expect(result.target.id).toBe(2);
+    expect(f.native).toHaveBeenCalledOnce();
+    expect(f.store.visibilityWrites).toEqual([]);
+    expect(f.store.releases.get('v2.17.2')!.draft).toBe(true);
+  });
+  it('never publishes after rejected native readiness or unexpected inventory', async () => {
+    const f = await publicationFixture();
+    f.native.mockRejectedValueOnce(new Error('Native outcome stale'));
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('stale');
+    expect(f.store.visibilityWrites).toEqual([]);
+    f.store.add('v2.17.2', 'foreign.exe', Buffer.from('unreviewed'));
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('inventory');
+    expect(f.store.visibilityWrites).toEqual([]);
+  });
+  it('reconciles an accepted publication with a lost response without another PATCH', async () => {
+    const f = await publicationFixture();
+    f.store.lostVisibilityResponse = true;
+    const result = await publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt);
+    expect(result.phase).toBe('published');
+    expect(f.store.visibilityWrites).toEqual([false]);
+    expect(f.store.releases.get('v2.17.2')!.draft).toBe(false);
+  });
+  it('redrafts the same ID after public availability fails, including a lost compensation response', async () => {
+    const f = await publicationFixture();
+    f.store.missingLatestFeed = 'latest-linux.yml';
+    f.store.afterVisibility = (draft) => {
+      if (draft) f.store.lostVisibilityResponse = true;
+    };
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('returned to draft');
+    expect(f.store.visibilityWrites).toEqual([false, true]);
+    expect(f.store.releases.get('v2.17.2')!.id).toBe(2);
+    expect(f.store.releases.get('v2.17.2')!.draft).toBe(true);
+  });
+  it('contains a corrupted published inventory without requiring the corrupt asset proof to pass', async () => {
+    const f = await publicationFixture();
+    f.store.afterVisibility = (draft) => {
+      if (!draft) f.store.releases.get('v2.17.2')!.assets[0]!.digest = `sha256:${'f'.repeat(64)}`;
+    };
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('returned to draft');
+    expect(f.store.visibilityWrites).toEqual([false, true]);
+    expect(f.store.releases.get('v2.17.2')!.draft).toBe(true);
+  });
 });
