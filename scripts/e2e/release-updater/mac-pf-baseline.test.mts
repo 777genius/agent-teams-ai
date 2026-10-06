@@ -91,8 +91,7 @@ void test('native macOS 15 anchor dumps retain normalization, NAT and filter byt
   // Actual x64 runner dumps from read-only workflow 37494162902. Concatenating
   // these without the parser option fails on the scrub-anchor after NAT rules.
   const nat = 'nat-anchor "com.apple/*" all\nrdr-anchor "com.apple/*" all\n';
-  const rules =
-    'scrub-anchor "com.apple/*" all fragment reassemble\nanchor "com.apple/*" all\n';
+  const rules = 'scrub-anchor "com.apple/*" all fragment reassemble\nanchor "com.apple/*" all\n';
   const baseline = serializeMacPfBaseline(nat, rules);
   assert.equal(baseline.split('\n')[0], 'set require-order no');
   assert.equal(baseline.slice(baseline.indexOf('\n') + 1), `${nat}\n${rules}`);

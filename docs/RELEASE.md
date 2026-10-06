@@ -91,7 +91,7 @@ Run normally. Administrator mode may be needed only if the app reports a specifi
 
 Not published. Native Arch OTA revealed missing upgrade permissions for the Chromium sandbox helper. Use the 2.17.5 candidate.
 
-## v2.17.4 (Draft)
+### Archived v2.17.4 release body (never published)
 
 Target branch: `main`.
 
