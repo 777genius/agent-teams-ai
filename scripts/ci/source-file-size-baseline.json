@@ -7,7 +7,7 @@
     "eslint.config.js": 1168,
     "landing/assets/styles/cyberpunk-hero.scss": 2343,
     "landing/components/layout/AppHeader.vue": 949,
-    "landing/components/sections/ComparisonSection.vue": 1168,
+    "landing/components/sections/ComparisonSection.vue": 1081,
     "landing/components/sections/DownloadSection.vue": 1024,
     "landing/product-docs/.vitepress/config.ts": 823,
     "packages/agent-graph/src/canvas/draw-agents.ts": 1201,

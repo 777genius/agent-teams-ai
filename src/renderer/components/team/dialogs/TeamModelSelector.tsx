@@ -1145,10 +1145,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
-  useOpenCodePassiveStatusPrefetch({
-    enabled: effectiveProviderId === 'opencode',
-    projectPath: openCodeCatalogScopeKey || null,
-  });
   const {
     cliStatus: effectiveCliStatus,
     sourceCliStatus,
@@ -1242,6 +1238,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       : passiveRuntimeProviderStatus;
   const scopedAuthorityIsFresh =
     openCodeScopedCatalog.status === 'ready' && openCodeScopedCatalog.catalogState === 'fresh';
+  useOpenCodePassiveStatusPrefetch({
+    enabled: effectiveProviderId === 'opencode',
+    projectPath: openCodeCatalogScopeKey || null,
+    catalogRecovery: scopedAuthorityIsFresh
+      ? {
+          projectPath: openCodeCatalogScopeKey || null,
+          freshUntil: runtimeProviderStatus?.modelCatalog?.staleAt ?? null,
+        }
+      : null,
+  });
   const passiveCatalogFreshForAuth = usePassiveOpenCodeAuthCatalogFreshness(
     openCodeScopedCatalog.sourceProviderId === null ? runtimeProviderStatus : null
   );

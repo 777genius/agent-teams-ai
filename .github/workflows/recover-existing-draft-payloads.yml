@@ -1,0 +1,55 @@
+name: Recover existing 2.17.3 draft payloads
+
+on:
+  workflow_dispatch:
+    inputs:
+      tooling_sha:
+        description: Exact reviewed main commit running this upload-only recovery
+        required: true
+        type: string
+
+permissions: {}
+concurrency:
+  group: recover-draft-404009045
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    env:
+      EXPECTED_TOOLING_SHA: ${{ inputs.tooling_sha }}
+    steps:
+      - name: Require exact reviewed tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXPECTED_TOOLING_SHA" == "$GITHUB_SHA" ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+      - name: Install frozen tooling without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Recover original run 37342668377 attempt 1 payloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec tsx scripts/ci/release/recoverDraftPayloads.ts "$RUNNER_TEMP/draft-payload-recovery"
+      - name: Preserve original producer provenance
+        uses: actions/upload-artifact@v7
+        with:
+          name: recovered-build-provenance-37342668377-1
+          path: ${{ runner.temp }}/draft-payload-recovery/build-provenance-37342668377-1.json
+          if-no-files-found: error
+          retention-days: 30

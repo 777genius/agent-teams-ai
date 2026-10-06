@@ -1,5 +1,23 @@
 const fs = require('fs');
 const path = require('path');
+const runtimeHelpers = require('./runtimeHelpers.js');
+const { buildMemberRosterContext } = require('./briefingProtocols.js');
+
+function getMemberRosterContext(context, memberName, launchMembers = []) {
+  const resolved = runtimeHelpers.resolveTeamMembers(context.paths);
+  const members = new Map(launchMembers.map((member) => [member.name.trim().toLowerCase(), member]));
+  for (const member of resolved.members) {
+    const key = member.name.toLowerCase();
+    members.set(key, { ...members.get(key), ...member });
+  }
+  for (const removedName of resolved.removedNames) members.delete(removedName);
+  return buildMemberRosterContext(
+    [...members.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    memberName,
+    runtimeHelpers.inferLeadName(context.paths),
+    48
+  );
+}
 
 const READY_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 const DEFAULT_WAIT_TIMEOUT_MS = 120000;
@@ -630,6 +648,7 @@ async function runtimeHeartbeat(context, flags = {}) {
 }
 
 module.exports = {
+  getMemberRosterContext,
   listTeams,
   getTeam,
   createTeam,

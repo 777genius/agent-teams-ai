@@ -12,6 +12,22 @@ describe('MessagesThreadView floating footer', () => {
 
   it('reserves its measured height without remounting the composer across Full Screen changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    let notifyMutation: () => void;
+    // Keep delivery explicit: happy-dom's weak mutation listener can be collected
+    // between measurements, unlike the browser's registered observer callback.
+    vi.stubGlobal(
+      'MutationObserver',
+      class implements MutationObserver {
+        constructor(callback: MutationCallback) {
+          notifyMutation = () => callback([], this);
+        }
+        observe = observe;
+        disconnect = disconnect;
+        takeRecords = (): MutationRecord[] => [];
+      }
+    );
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -32,54 +48,62 @@ describe('MessagesThreadView floating footer', () => {
       );
     };
 
-    await act(async () => {
-      render(false);
-      await Promise.resolve();
-    });
-    const footer = host.querySelector<HTMLElement>('[data-messages-thread-footer]')!;
-    const composer = host.querySelector('textarea');
+    try {
+      await act(async () => {
+        render(false);
+        await Promise.resolve();
+      });
+      const footer = host.querySelector<HTMLElement>('[data-messages-thread-footer]')!;
+      const composer = host.querySelector('textarea');
 
-    await act(async () => {
-      render(true);
-      await Promise.resolve();
-    });
-    expect(host.querySelector('[data-messages-thread-footer]')).toBe(footer);
-    expect(host.querySelector('textarea')).toBe(composer);
-    expect(footer.className).toContain('absolute');
-    expect(footer.className).toContain('bg-[var(--color-surface)]');
+      await act(async () => {
+        render(true);
+        await Promise.resolve();
+      });
+      expect(host.querySelector('[data-messages-thread-footer]')).toBe(footer);
+      expect(host.querySelector('textarea')).toBe(composer);
+      expect(footer.className).toContain('absolute');
+      expect(footer.className).toContain('bg-[var(--color-surface)]');
+      expect(observe).toHaveBeenCalledExactlyOnceWith(footer, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
 
-    let footerHeight = 160;
-    footer.getBoundingClientRect = () => ({ height: footerHeight }) as DOMRect;
-    await act(async () => {
-      footer.setAttribute('data-probe-height', '160');
-      await Promise.resolve();
-    });
-    const scroll = host.querySelector<HTMLElement>('[data-messages-thread-scroll]')!;
-    expect(scroll.className).toContain('relative z-0');
-    expect(scroll.lastElementChild?.getAttribute('style')).toBe('height: 188px;');
-    expect(host.querySelector('[data-messages-thread-footer-fade]')).not.toBeNull();
+      let footerHeight = 160;
+      footer.getBoundingClientRect = () => ({ height: footerHeight }) as DOMRect;
+      const scroll = host.querySelector<HTMLElement>('[data-messages-thread-scroll]')!;
+      const changeFooterHeight = async (height: number, expectedReserve: string): Promise<void> => {
+        await act(async () => {
+          footerHeight = height;
+          footer.setAttribute('data-probe-height', String(height));
+          notifyMutation();
+        });
+        expect(scroll.lastElementChild?.getAttribute('style')).toBe(expectedReserve);
+      };
+      await changeFooterHeight(160, 'height: 188px;');
+      expect(scroll.className).toContain('relative z-0');
+      expect(host.querySelector('[data-messages-thread-footer-fade]')).not.toBeNull();
 
-    footerHeight = 240;
-    await act(async () => {
-      footer.setAttribute('data-probe-height', '240');
-      await Promise.resolve();
-    });
-    expect(scroll.lastElementChild?.getAttribute('style')).toBe('height: 268px;');
-    expect(onFloatingFooterResize).toHaveBeenCalled();
+      await changeFooterHeight(240, 'height: 268px;');
+      expect(onFloatingFooterResize).toHaveBeenCalled();
 
-    await act(async () => {
-      render(false);
-      await Promise.resolve();
-    });
-    expect(host.querySelector('[data-messages-thread-footer]')).toBe(footer);
-    expect(host.querySelector('textarea')).toBe(composer);
-    expect(host.querySelector('[data-messages-thread-footer-fade]')).toBeNull();
-    expect(scroll.className).not.toContain('relative z-0');
-    expect(scroll.lastElementChild?.getAttribute('style')).not.toBe('height: 268px;');
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
+      await act(async () => {
+        render(false);
+        await Promise.resolve();
+      });
+      expect(host.querySelector('[data-messages-thread-footer]')).toBe(footer);
+      expect(host.querySelector('textarea')).toBe(composer);
+      expect(host.querySelector('[data-messages-thread-footer-fade]')).toBeNull();
+      expect(scroll.className).not.toContain('relative z-0');
+      expect(scroll.lastElementChild?.getAttribute('style')).not.toBe('height: 268px;');
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
   });
 });

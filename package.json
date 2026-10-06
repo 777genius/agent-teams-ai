@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.17.3",
+  "version": "2.17.4",
   "dynamicFlags": {
     "showSponsorFluxion": true
   },
@@ -68,7 +68,7 @@
     "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
     "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
     "preview": "electron-vite preview",
-    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-renderer.json",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.opencode-recovery-e2e.json",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
     "typecheck:workspace": "pnpm typecheck && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
     "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",
@@ -237,7 +237,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
-    "simple-git": "^3.36.0",
+    "simple-git": "4.0.2",
     "ssh-config": "^5.0.4",
     "ssh2": "^1.17.0",
     "strip-markdown": "^6.0.0",
@@ -291,7 +291,7 @@
     "i18next-cli": "1.58.0",
     "knip": "^5.82.1",
     "lint-staged": "^16.2.7",
-    "postcss": "^8.5.23",
+    "postcss": "^8.5.28",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^3.4.1",
