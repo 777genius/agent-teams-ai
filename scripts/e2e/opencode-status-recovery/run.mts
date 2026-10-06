@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { Cdp, waitFor } from '../release-updater/cdp.mts';
+import { cdpCallFunction } from '../release-updater/cdp-values.mts';
 import { processIdentity, stopOwnedGroup } from '../release-updater/native-window.mts';
 
 const repo = path.resolve(fileURLToPath(new URL('../../..', import.meta.url)));
@@ -156,8 +157,39 @@ async function click(expression: string) {
     node.scrollIntoView({block:'center'}); const r = node.getBoundingClientRect();
     return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
   assert(point, `Control unavailable: ${expression}`);
+  await clickPoint(point);
+}
+async function clickPoint(point: { x: number; y: number }) {
   for (const type of ['mousePressed', 'mouseReleased'])
     await cdp!.send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
+}
+async function sourceModelState(source: string) {
+  assert(cdp);
+  return (
+    (await cdpCallFunction<{
+      selectable: boolean;
+      selected: boolean;
+      point: { x: number; y: number } | null;
+    } | null>(
+      cdp,
+      `source => {
+        const normalized = source.replace(/[^a-z]/g, '');
+        const group = [...document.querySelectorAll('[data-testid="team-model-selector-opencode-group"]')]
+          .find(g => g.querySelector('h4')?.textContent.toLowerCase().replace(/[^a-z]/g, '').includes(normalized));
+        const model = [...(group?.querySelectorAll('[data-testid="team-model-selector-model-option"]') ?? [])]
+          .find(b => b.textContent.includes('recovery-model'));
+        if (!model) return null;
+        model.scrollIntoView({block:'center'});
+        const r = model.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+        return {
+          selectable: model.getAttribute('aria-disabled') === 'false',
+          selected: model.getAttribute('aria-pressed') === 'true',
+          point: r.width && r.height && model.contains(document.elementFromPoint(x, y)) ? {x, y} : null,
+        };
+      }`,
+      [source]
+    )) ?? null
+  );
 }
 async function snapshot(name: string) {
   const text = await evaluate<string>('document.body.innerText');
@@ -336,7 +368,6 @@ try {
       ['Opencode Zen', 'opencode-zen'],
       ['Agentrouter', 'agentrouter'],
     ]) {
-      const sourceGroup = `[...document.querySelectorAll('[data-testid="team-model-selector-opencode-group"]')].find(g => g.textContent.toLowerCase().replace(/[^a-z]/g, '').includes(${JSON.stringify(source.replace(/[^a-z]/g, ''))}))`;
       await click(
         `[...document.querySelectorAll('button')].find(b => b.getAttribute('role') === 'tab' && b.textContent.includes(${JSON.stringify(label)}))`
       );
@@ -352,23 +383,17 @@ try {
         `${source}: actual scoped catalog response`
       );
       await waitFor(
-        async () =>
-          (await evaluate<boolean>(
-            `(() => { const group = ${sourceGroup}; return !!group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-disabled') === 'false'); })()`
-          )) || null,
+        async () => (await sourceModelState(source))?.selectable || null,
         `${source}: selectable model`
       );
       await snapshot(`selectable-${source}`);
       // The default card can show the same resolved model name. Select the
       // explicit card inside this source's group, then verify its qualified route.
-      await click(
-        `(() => { const group = ${sourceGroup}; return group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].find(b => b.textContent.includes('recovery-model')); })()`
-      );
+      const model = await sourceModelState(source);
+      assert(model?.selectable && model.point, `${source}: explicit model must be clickable`);
+      await clickPoint(model.point);
       await waitFor(
-        async () =>
-          (await evaluate<boolean>(
-            `(() => { const group = ${sourceGroup}; return !!group && [...group.querySelectorAll('[data-testid="team-model-selector-model-option"]')].some(b => b.textContent.includes('recovery-model') && b.getAttribute('aria-pressed') === 'true'); })()`
-          )) || null,
+        async () => (await sourceModelState(source))?.selected || null,
         `${source}: model selection committed`
       );
       await waitFor(
