@@ -3,6 +3,7 @@ export function normalizeDetailReadOptions(options: unknown): { bypassCache: boo
   if (options === undefined) return { bypassCache: false };
   if (options === null || typeof options !== 'object' || Array.isArray(options)) return null;
   if ('bypassCache' in options) {
+    if (options.bypassCache === undefined) return { bypassCache: false };
     if (typeof options.bypassCache !== 'boolean') return null;
     return { bypassCache: options.bypassCache };
   }

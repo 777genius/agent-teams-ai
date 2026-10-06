@@ -260,6 +260,30 @@ describe('registered IPC detail read ownership', () => {
   });
 
   describe.each(['session', 'subagent'] as const)('%s cached reply ownership', (kind) => {
+    it('accepts an explicitly undefined optional bypass flag on cold and cached reads', async () => {
+      const { context, reads } = fixture();
+      const registry = new ServiceContextRegistry();
+      registry.registerContext(context);
+      const ipc = transport(registry);
+      const read = () =>
+        kind === 'session'
+          ? ipc.read({ bypassCache: undefined })
+          : ipc.readSubagent({ bypassCache: undefined });
+      const cold = read();
+      await vi.waitFor(() => expect(reads).toHaveLength(1));
+      reads[0].end(jsonl('optional-default'));
+      const detail = await cold;
+      if (kind === 'session') {
+        expect((detail as SessionDetail | null)?.messages.map((message) => message.uuid)).toEqual([
+          'optional-default',
+        ]);
+      } else {
+        expect((detail as SubagentDetail | null)?.description).toBe('observable-optional-default');
+      }
+      expect(await read()).toBe(detail);
+      expect(reads).toHaveLength(1);
+    });
+
     // Red if an already-fulfilled helper escapes retirement in the IPC await continuation.
     it.each(['replacement', 'disposal', 'adapter'] as const)(
       'rejects a cached reply retired by %s before handler settlement',
