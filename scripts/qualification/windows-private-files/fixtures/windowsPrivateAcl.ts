@@ -12,15 +12,18 @@ function isWindowsSid(sid: string): boolean {
   if (!/^S-1-(?:0|[1-9]\d{0,14}|0x[\da-fA-F]{12})(?:-(?:0|[1-9]\d{0,9})){1,15}$/.test(sid))
     return false;
   const [, , authority, ...subAuthorities] = sid.split('-');
-  return Number(authority) <= 0xffffffffffff &&
-    subAuthorities.every((part) => Number(part) <= 0xffffffff);
+  return (
+    Number(authority) <= 0xffffffffffff &&
+    subAuthorities.every((part) => Number(part) <= 0xffffffff)
+  );
 }
 
 /** Allow only the current user and Windows administrators/SYSTEM, never other users/groups. */
 export function validateWindowsAcl(snapshot: WindowsAclSnapshot): void {
   if (
     !isWindowsSid(snapshot.userSid) ||
-    snapshot.ownerSid !== snapshot.userSid ||
+    // Elevated Windows tokens can create objects owned by the already trusted Administrators group.
+    (snapshot.ownerSid !== snapshot.userSid && snapshot.ownerSid !== 'S-1-5-32-544') ||
     !snapshot.rules.length ||
     !snapshot.rules.some((rule) => rule.sid === snapshot.userSid && rule.type === 'Allow') ||
     snapshot.rules.some(

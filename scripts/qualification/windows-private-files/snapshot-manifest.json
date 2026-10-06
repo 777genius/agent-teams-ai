@@ -4,12 +4,12 @@
     {
       "source": "src/features/local-http-auth/main/infrastructure/privateFiles.ts",
       "fixture": "fixtures/privateFiles.ts",
-      "sha256": "a3a0eda69b8399dd845124ff5b46929bcfa815ff056dc2ab7d0ea233e46a5e30"
+      "sha256": "bf1809e2dba712ab23bcb908fd032e6599333555a63560106822e73aa5327a0d"
     },
     {
       "source": "src/features/local-http-auth/main/infrastructure/windowsPrivateAcl.ts",
       "fixture": "fixtures/windowsPrivateAcl.ts",
-      "sha256": "d95b3ef37aab5a03fd55ca2fee99f609012dc3fe41c5fcdb8a3dd2979e29c181"
+      "sha256": "838135a52e8fe58fe7aaa7c0560a55d583f91113a79540ac525dc231f4fba7e9"
     }
   ],
   "nativeWindows": "pending",

@@ -46,7 +46,8 @@ test('native filesystem qualification', { skip: process.platform !== 'win32' }, 
       const native = snapshot(profile);
       const category = (sid: string): string => sid === native.userSid ? 'current-user' : sid === 'S-1-5-18' ? 'system' : sid === 'S-1-5-32-544' ? 'administrators' : 'unexpected';
       sub.diagnostic(JSON.stringify({ defaultProfileAcl: { ownerMatchesCurrentUser: native.ownerSid === native.userSid, ownerCategory: category(native.ownerSid), protected: native.protected, inherited: native.inherited, principalCategories: native.rules.map(rule => ({ principal: category(rule.sid), type: rule.type })) } }));
-      // A runner whose default owner/grants differ must fail here, not be silently repaired.
+      // Native elevated owner may be Administrators; the exact private DACL is still required.
+      // Unsupported owners/grants fail here without silently repairing the default profile.
       const directory = await privateDirectory(profile);
       const file = path.join(directory, 'fixture.json');
       await writePrivateJson(file, { fixture: 'first' });
@@ -89,7 +90,7 @@ test('native filesystem qualification', { skip: process.platform !== 'win32' }, 
       await writePrivateJson(file, { fixture: 'first' });
       assert.deepEqual(await readPrivateJson(file), { fixture: 'first' });
       const acl = snapshot(file);
-      assert.equal(acl.ownerSid, acl.userSid);
+      assert([acl.userSid, 'S-1-5-32-544'].includes(acl.ownerSid), 'native owner must be current user or builtin Administrators');
       assert.equal(acl.protected, false);
       assert(acl.inherited.length > 0 && acl.inherited.every(Boolean));
       assertPrivateWindowsAcl(file); // actual native runner, never injected

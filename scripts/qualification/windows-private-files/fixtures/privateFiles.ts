@@ -94,8 +94,9 @@ export async function replacePrivateJson(
 ): Promise<void> {
   const inspect = async (): Promise<Stats | null> => {
     // Only a filesystem lstat absence can admit a new target, never an ACL/parse failure.
-    try { await lstat(file); }
-    catch (error) {
+    try {
+      await lstat(file);
+    } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
     }
