@@ -4844,6 +4844,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       let stopAllPromise: Promise<void> | undefined;
@@ -4915,6 +4916,7 @@ describe(
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob', 'tom']);
       const cancelledRun = createMixedLiveRun({ teamName, projectPath });
       cancelledRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
 
       try {
@@ -4948,6 +4950,7 @@ describe(
         freshRun.runId = `${cancelledRun.runId}-fresh`;
         freshRun.detectedSessionId = 'lead-session-fresh';
         freshRun.child = { kill: () => undefined };
+        blockedMixedLaunches.push({ adapter, run: freshRun, svc });
         trackLiveRun(svc, freshRun);
 
         await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
@@ -7503,6 +7506,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       let settled = false;
@@ -13582,7 +13586,9 @@ describe(
       addGeminiPrimaryToMixedRun(survivingRun);
       cancelledRun.child = { kill: () => undefined };
       survivingRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       trackLiveRun(svc, survivingRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
@@ -13616,6 +13622,7 @@ describe(
       freshRun.detectedSessionId = 'lead-session-fresh';
       freshRun.child = { kill: () => undefined };
       addGeminiPrimaryToMixedRun(freshRun);
+      blockedMixedLaunches.push({ adapter, run: freshRun, svc });
       trackLiveRun(svc, freshRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
@@ -13706,7 +13713,9 @@ describe(
       addGeminiPrimaryToMixedRun(survivingRun);
       cancelledRun.child = { kill: () => undefined };
       survivingRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       trackLiveRun(svc, survivingRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
@@ -17235,6 +17244,7 @@ describe(
         stdin: { writable: true },
       });
       trackLiveRun(svc, staleRun);
+      blockedMixedLaunches.push({ adapter, run: currentRun, svc });
       trackLiveRun(svc, currentRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
@@ -17315,6 +17325,7 @@ describe(
         stdin: createWritableStdin([]),
       });
       trackLiveRun(svc, staleRun);
+      blockedMixedLaunches.push({ adapter, run: currentRun, svc });
       trackLiveRun(svc, currentRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
@@ -19889,6 +19900,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       const initialSnapshot = await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -19945,6 +19957,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       const initialSnapshot = await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -20006,6 +20019,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -20057,6 +20071,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -20113,6 +20128,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;
@@ -20138,6 +20154,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;
@@ -20178,6 +20195,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;
