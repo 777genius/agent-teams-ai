@@ -145,7 +145,7 @@ PROCESS_INFORMATION startWriter(HANDLE job,HANDLE pipe,const std::wstring& mappi
   startup.StartupInfo.hStdOutput=handles[1]; startup.StartupInfo.hStdError=handles[2]; startup.lpAttributeList=list;
   PROCESS_INFORMATION process{};
   const BOOL created=CreateProcessW(executable.data(),command.data(),nullptr,nullptr,TRUE,
-    EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT,nullptr,nullptr,&startup,&process);
+    EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT,nullptr,nullptr,&startup.StartupInfo,&process);
   DeleteProcThreadAttributeList(list);
   if(!created) fatal(92);
   return process;
