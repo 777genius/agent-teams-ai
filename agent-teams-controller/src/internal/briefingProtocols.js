@@ -26,11 +26,12 @@ function buildMemberActionModeProtocol() {
     return buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION);
 }
 
-function buildMemberRosterContext(members, memberName, leadName) {
+function buildMemberRosterContext(members, memberName, leadName, maxRoleChars = Infinity) {
     const lines = members
         .filter((member) => member.removedAt == null && member.name.toLowerCase() !== 'user')
         .map((member) => {
-            const role = member.role || member.agentType || 'team member';
+            const fullRole = member.role || member.agentType || 'team member';
+            const role = fullRole.length > maxRoleChars ? `${fullRole.slice(0, maxRoleChars)}...` : fullRole;
             const labels = [];
             if (member.name.toLowerCase() === memberName.toLowerCase()) labels.push('[you]');
             if (member.name.toLowerCase() === leadName.toLowerCase()) labels.push('[team lead]');
