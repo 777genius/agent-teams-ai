@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { encodeFrame, encodeLaunch, FrameDecoder, Op } from '../../src/main/utils/ownedProcess/codec';
 import { createWindowsOwnedLaunchPort, verifyStagedBroker, type BrokerTransport } from '../../src/main/utils/ownedProcess/windowsBroker';
+import type { BrokerExit } from '../../src/main/utils/ownedProcess/contract';
 import type { Frame } from '../../src/main/utils/ownedProcess/codec';
 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';
 
@@ -16,24 +17,38 @@ const generation = '00112233-4455-6677-8899-aabbccddeeff';
 const owner = { teamIncarnation: 'sandbox-team', runId: 'sandbox-run', laneId: 'lead', processGeneration: generation };
 const spec = { executable: 'C:\\sandbox\\fixture.exe', commandLine: 'fixture.exe', cwd: 'C:\\sandbox', environment: [] };
 /** Synthetic trusted wire peer tests only bridge policy; it is not native tree authority proof. */
-function wirePeer() {
+function wirePeer(options: { holdLaunch?: boolean; holdWrite?: boolean; nativeFailed?: boolean; partialRelease?: boolean } = {}) {
   const requests: Frame[] = []; const decoder = new FrameDecoder(generation);
   const stdout = new PassThrough(), stderr = new PassThrough(), stdin = new PassThrough();
-  let exited = (): void => undefined;
+  let exited: (exit: BrokerExit) => void = (exit: BrokerExit) => {
+    throw new Error(`Exit observer missing (code=${exit.code ?? 'unknown'}, signal=${exit.signal ?? 'none'})`);
+  };
+  let completeWrite: (() => void) | undefined;
   const send = (opcode: number, requestId: bigint, payload = Buffer.alloc(0)): void => {
     control.push(encodeFrame({ opcode, requestId, generation, payload }));
   };
   const control = new Duplex({ read: () => undefined, write(chunk: Buffer, _encoding, done) {
     decoder.push(chunk, (frame) => {
       requests.push(frame);
-      if (frame.opcode === Op.launch) { const p = Buffer.alloc(12); p.writeUInt32LE(421); p.writeBigUInt64LE(0x1234n, 4); send(Op.prepared, frame.requestId, p); }
-      if (frame.opcode === Op.release) { send(Op.released, frame.requestId); control.push(null); exited(); }
-    }); done();
+      if (frame.opcode === Op.launch && !options.holdLaunch) {
+        if (options.nativeFailed) { const p = Buffer.alloc(5); p[0] = 1; p.writeUInt32LE(5, 1); send(Op.failed, frame.requestId, p); }
+        else { const p = Buffer.alloc(12); p.writeUInt32LE(421); p.writeBigUInt64LE(0x1234n, 4); send(Op.prepared, frame.requestId, p); }
+      }
+      if (frame.opcode === Op.release) {
+        if (options.partialRelease) control.push(encodeFrame({ opcode: Op.released, requestId: frame.requestId, generation, payload: Buffer.alloc(0) }).subarray(0, 8));
+        else send(Op.released, frame.requestId);
+        control.push(null); exited({ code: 0, signal: null });
+      }
+    }); if (options.holdWrite) completeWrite = done; else done();
   } });
   const transport: BrokerTransport = { stdin, stdout, stderr, control, onFailure: () => undefined, onExit(callback) { exited = callback; } };
   let connections = 0;
   const factory = { available: () => true, connect: () => { connections++; return transport; } };
   return { factory, requests, connections: () => connections, stdout, stderr,
+    exit: (fact: BrokerExit) => exited(fact),
+    completeWrite: () => { const done = completeWrite; completeWrite = undefined; done?.(); },
+    prepared() { const request = requests.find((frame) => frame.opcode === Op.launch); if (!request) throw new Error('No launch');
+      const p = Buffer.alloc(12); p.writeUInt32LE(421); p.writeBigUInt64LE(0x1234n, 4); send(Op.prepared, request.requestId, p); },
     stopped(dispatchError = 0) {
       const request = requests.findLast((frame) => frame.opcode === Op.stop); if (!request) throw new Error('No Stop request');
       const p = Buffer.alloc(26); p[0] = 2; p[1] = 1; p.writeUInt32LE(7, 6); p.writeBigUInt64LE(0x1234n, 10); p.writeUInt32LE(dispatchError, 18);
@@ -160,6 +175,91 @@ describe('bounded owned process protocol', () => {
       expect(() => encodeLaunch({ ...spec, environment })).toThrow('exceeds limit');
       expect(allocations).not.toHaveBeenCalled();
     } finally { allocations.mockRestore(); }
+  });
+  it('retains original broker exit independently of its immutable preparation cause', async () => {
+    const peer = wirePeer({ holdLaunch: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner); const preparing = port.prepare(pending, spec);
+    peer.exit({ code: 198, signal: null }); const failure = await preparing;
+    expect(failure).toMatchObject({ kind: 'failed', creation: 'uncertain', cleanup: pending });
+    expect(pending.diagnostics()).toMatchObject({ cause: { name: 'broker-exit', phase: 'prepare' },
+      brokerExit: { code: 198, signal: null }, nativeExitCategory: 'owner-eof', nativeCancelUndrained: true });
+    const cause = pending.diagnostics().cause; pending.abandonControl(owner);
+    expect(pending.diagnostics().cause).toBe(cause);
+    expect(peer.requests.map((frame) => frame.opcode)).toEqual([Op.launch]);
+  });
+  it('preserves actual native Failed creation/code when a later original exit is observed', async () => {
+    const peer = wirePeer({ nativeFailed: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner); const failure = await port.prepare(pending, spec);
+    expect(failure).toMatchObject({ kind: 'failed', creation: 'contained-suspended', cleanup: pending });
+    const cause = pending.diagnostics().cause; peer.exit({ code: 74, signal: null });
+    expect(pending.diagnostics()).toMatchObject({ cause: { name: 'native-failed', phase: 'prepare' },
+      nativeFailure: { creation: 'contained-suspended', code: 5 }, brokerExit: { code: 74 }, nativeExitCategory: 'write-deadline' });
+    expect(pending.diagnostics().cause).toBe(cause);
+    pending.abandonControl(owner);
+  });
+  it('latches write failure before a late completed callback/reply and keeps Stop unknown', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const peer = wirePeer({ holdLaunch: true, holdWrite: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner);
+    try {
+      const preparing = port.prepare(pending, spec); await vi.advanceTimersByTimeAsync(5001);
+      expect(await preparing).toMatchObject({ kind: 'failed', creation: 'uncertain', cleanup: pending });
+      const cause = pending.diagnostics().cause;
+      expect(cause).toEqual({ name: 'control-write-deadline', phase: 'prepare', writeCompleted: false });
+      const request = { expectedOwner: owner, attemptId: 'failed-wire', mode: 'force' as const, deadlineMs: performance.now() + 1000 };
+      const original = await pending.stop(request); expect(original.kind).toBe('unknown');
+      peer.completeWrite(); peer.prepared(); peer.exit({ code: 74, signal: null });
+      await Promise.resolve(); expect(await pending.stop(request)).toBe(original);
+      expect(pending.diagnostics().cause).toBe(cause);
+      expect((await port.prepare(pending, spec)).kind).toBe('failed');
+      await expect(pending.release({ owner, attemptId: 'fake', coverage: 'job-membership', rootExited: true, proofDigest: 'fake' }, 'job-membership')).rejects.toThrow('authority');
+      expect(peer.requests.map((frame) => frame.opcode)).toEqual([Op.launch]);
+    } finally { pending.abandonControl(owner); peer.completeWrite(); vi.useRealTimers(); }
+  });
+  it.each([false, true])('attributes overlapping Prepare/Stop to its own write (Launch completed: %s)', async (completeLaunch) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const peer = wirePeer({ holdLaunch: true, holdWrite: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner);
+    try {
+      const preparing = port.prepare(pending, spec);
+      const request = { expectedOwner: owner, attemptId: 'overlapping-stop', mode: 'force' as const, deadlineMs: performance.now() + 20000 };
+      const stopping = pending.stop(request); // legal while Prepare's earlier write is incomplete
+      await vi.advanceTimersByTimeAsync(3000);
+      if (completeLaunch) {
+        peer.completeWrite(); await Promise.resolve();
+        expect(peer.requests.map((frame) => frame.opcode)).toEqual([Op.launch, Op.stop]);
+        expect(pending.diagnostics().writeCompleted, 'Earlier Launch callback cannot complete queued Stop').toBe(false);
+      }
+      await vi.advanceTimersByTimeAsync(2001);
+      expect(await preparing).toMatchObject({ kind: 'failed', creation: 'uncertain', cleanup: pending });
+      const original = await stopping; expect(original.kind).toBe('unknown');
+      const cause = pending.diagnostics().cause;
+      expect(cause).toEqual({ name: 'control-write-deadline', phase: completeLaunch ? 'stop' : 'prepare', writeCompleted: false });
+      peer.completeWrite(); await Promise.resolve();
+      expect(await pending.stop(request)).toBe(original); expect(pending.diagnostics().cause).toBe(cause);
+      expect((await port.prepare(pending, spec)).kind).toBe('failed');
+      await expect(pending.release({ owner, attemptId: 'forged', coverage: 'job-membership', rootExited: true, proofDigest: 'fake' }, 'job-membership')).rejects.toThrow('authority');
+      expect(peer.requests.some((frame) => frame.opcode === Op.resume || frame.opcode === Op.release)).toBe(false);
+      expect(peer.connections()).toBe(1);
+    } finally { pending.abandonControl(owner); peer.completeWrite(); vi.useRealTimers(); }
+  });
+  it('partial Released bytes plus original exit0 never substitute for a complete acknowledgement', async () => {
+    const peer = wirePeer({ partialRelease: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const owned = port.allocate(owner); const preparation = await port.prepare(owned, spec);
+    if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+    const stopping = owned.stop({ expectedOwner: owner, attemptId: 'partial-ack', mode: 'force', deadlineMs: performance.now() + 1000 });
+    peer.stopped(); const stopped = await stopping;
+    preparation.process.stdout.resume(); preparation.process.stderr.resume(); peer.stdout.end(); peer.stderr.end();
+    expect((await preparation.process.drain(performance.now() + 1000)).kind).toBe('complete');
+    if (stopped.kind !== 'confirmed') throw new Error('Synthetic bridge facts missing');
+    await expect(owned.release(stopped.receipt, 'job-membership')).rejects.toThrow();
+    expect(owned.diagnostics()).toMatchObject({ cause: { name: 'protocol', phase: 'release' }, brokerExit: { code: 0, signal: null } });
+    owned.abandonControl(owner);
   });
   it('runtime staged admission rejects tampered bytes, schema/protocol and machine mismatch', () => {
     const sandbox = mkdtempSync(join(tmpdir(), 'owned-admission-')); const path = join(sandbox, 'owned-process-broker.exe');

@@ -28,6 +28,14 @@ Control writes time out after5s. Native admission and accounting do not depend o
 stdio consumption. Launch values remain on the private pipe, never diagnostics/argv.
 Birth tokens are fixed16-hex FILETIME values read through the original process handle.
 
+Only private fd3 uses Node's `overlapped` stdio option. Native reads and writes use separate
+OVERLAPPED/manual-reset events and terminal original-handle result queries. Partial writes
+share one5s whole-frame budget. Pending failure latches before exact-operation CancelIoEx;
+unproven terminal cancellation uses nonreturning self-termination without freeing storage.
+Accepted Release stops further command reads; complete in-budget ACK and original exit0
+are separate assertions. Fixed exit categories70-77 plus bit128 for unproven cancel drain
+and bounded bridge cause/phase facts expose no launch values. Later exit cannot replace failure.
+
 Host commands, from the repository root (source was not locally executed):
 
 ```text
@@ -58,6 +66,14 @@ then performs actual successful Job queries: first attempt remains unknown even 
 and only distinct fresh reconciliation can confirm. A release-delay fixture pauses the writer
 after a fully written ACK; the raw native gate reads Released, ends owner control and requires
 the original broker process to exit0, exercising reader/writer scheduling rather than a mock.
+This same unstaged variant requires an actual post-Launch ReadFile ERROR_IO_PENDING before
+Prepared, proving concurrent read/reply scheduling. Native pending-write timeout/cancellation
+storage races remain an explicit OPEN runtime gate; synthetic bridge tests cannot prove them.
+Its compile-guarded numeric `OWNED_PROCESS_TEST_TERMINAL_RACE=1` fixture toggle forces a
+failure CAS after genuine full ACK and before success CAS; the raw gate separately requires
+original exit74. A bounded two-way atomic handshake requires the actual losing success CAS
+and its observation before exit74; missing handshake exits75, so it cannot pass by elapsed time.
+Normal broker ignores this toggle. ACK alone is never this negative gate's success.
 Default product-side admission reads a maximum4KiB strict manifest, hashes a maximum16MiB
 PE file and verifies schema/platform/architecture/protocol/file/digest before starting the
 broker. Mutable filesystem check-to-spawn races are not a malicious-OS security guarantee.

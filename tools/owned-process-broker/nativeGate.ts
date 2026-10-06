@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import { encodeFrame, encodeLaunch, FrameDecoder, Op, type Frame } from '../../src/main/utils/ownedProcess/codec';
 import { connectPrivateBroker, createWindowsOwnedLaunchPort } from '../../src/main/utils/ownedProcess/windowsBroker';
-import type { PendingOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../src/main/utils/ownedProcess/contract';
+import type { PendingOwnedProcess, Preparation, ProcessOwner, ResolvedLaunchSpec } from '../../src/main/utils/ownedProcess/contract';
 
 function timeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
   return new Promise((resolvePromise, reject) => {
@@ -38,6 +38,14 @@ async function capturedWitness(fixture: string, pid: number, birth: string, trac
   }));
   return { process, exit };
 }
+function preparationError(failure: Extract<Preparation, { kind: 'failed' }>): Error {
+  console.error(JSON.stringify({ gateFailure: 'prepare', creation: failure.creation, diagnostics: failure.cleanup.diagnostics() }));
+  return new Error(failure.reason);
+}
+async function brokerReleased(pending: PendingOwnedProcess): Promise<void> {
+  await waitFor(() => pending.diagnostics().brokerExit !== undefined, 3000);
+  assert.deepEqual(pending.diagnostics().brokerExit, { code: 0, signal: null }, 'Original broker exits0 after full Released ACK');
+}
 interface StartMarker { path: string; nonce: string }
 interface GateContext {
   broker: string;
@@ -56,7 +64,7 @@ async function preResumeCancellation(context: GateContext): Promise<void> {
   const identity = owner(); const port = createWindowsOwnedLaunchPort(broker); const pending = port.allocate(identity);
   retain(pending); const start = marker();
   const preparation = await port.prepare(pending, spec('tree', start));
-  if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+  if (preparation.kind !== 'prepared') throw preparationError(preparation);
   assert.equal(existsSync(start.path), false, 'No target instruction effect before resume');
   preparation.process.stdout.resume(); preparation.process.stderr.resume();
   const witness = await capturedWitness(fixture, preparation.process.root.pid, preparation.process.root.birth, track);
@@ -65,7 +73,7 @@ async function preResumeCancellation(context: GateContext): Promise<void> {
   assert.equal(existsSync(start.path), false, 'Pre-resume cancelled target never executed marker');
   assert.equal((await preparation.process.drain(performance.now() + 3000)).kind, 'complete');
   if (stopped.kind !== 'confirmed') throw new Error('Pre-resume cleanup lacks native proof');
-  await pending.release(stopped.receipt, 'job-membership');
+  await pending.release(stopped.receipt, 'job-membership'); await brokerReleased(pending);
 }
 
 async function treeScenario(context: GateContext, mode: 'tree' | 'root-first', sentinel: ChildProcess): Promise<void> {
@@ -73,7 +81,7 @@ async function treeScenario(context: GateContext, mode: 'tree' | 'root-first', s
   const port = createWindowsOwnedLaunchPort(broker); const identity = owner(); const pending = port.allocate(identity);
   retain(pending);
   const start = marker(); const prepared = await port.prepare(pending, spec(mode, start));
-  if (prepared.kind !== 'prepared') throw new Error(prepared.reason);
+  if (prepared.kind !== 'prepared') throw preparationError(prepared);
   const target = prepared.process; let output = ''; const children: { pid: number; birth: string }[] = [];
   let releaseChildren!: () => void;
   const childLines = new Promise<void>((done) => { releaseChildren = done; });
@@ -107,7 +115,7 @@ async function treeScenario(context: GateContext, mode: 'tree' | 'root-first', s
   assert.equal((await target.drain(performance.now() + 3000)).kind, 'complete');
   assert.deepEqual(await timeout(Promise.all([root, ...descendants].map((value) => value.exit))), [0, 0, 0, 0, 0]);
   if (result.kind !== 'confirmed') throw new Error('Native accounting proof missing');
-  await pending.release(result.receipt, 'job-membership');
+  await pending.release(result.receipt, 'job-membership'); await brokerReleased(pending);
   assert.equal(sentinel.exitCode, null, 'Unrelated original sentinel remains alive');
 }
 
@@ -116,7 +124,7 @@ async function ioScenario(context: GateContext, mode: 'flood' | 'breakaway', sen
   const port = createWindowsOwnedLaunchPort(broker); const identity = owner();
   const pending = port.allocate(identity); retain(pending);
   const start = marker(); const prepared = await port.prepare(pending, spec(mode, start));
-  if (prepared.kind !== 'prepared') throw new Error(prepared.reason);
+  if (prepared.kind !== 'prepared') throw preparationError(prepared);
   const target = prepared.process; let output = '';
   target.stderr.resume();
   if (mode === 'breakaway') target.stdout.on('data', (data: Buffer) => { output += data.toString(); });
@@ -150,7 +158,7 @@ async function ioScenario(context: GateContext, mode: 'flood' | 'breakaway', sen
   target.stdout.off('readable', pausedReadiness);
   target.stdout.resume(); assert.equal((await target.drain(performance.now() + 3000)).kind, 'complete');
   if (result.kind !== 'confirmed') throw new Error('Native negative gate lacks proof');
-  await pending.release(result.receipt, 'job-membership'); assert.equal(sentinel.exitCode, null);
+  await pending.release(result.receipt, 'job-membership'); await brokerReleased(pending); assert.equal(sentinel.exitCode, null);
 }
 
 async function birthFailureScenario(context: GateContext): Promise<void> {
@@ -179,7 +187,7 @@ async function accountingFailureScenario(context: GateContext): Promise<void> {
   });
   const pending = port.allocate(identity); retain(pending); const start = marker();
   const prepared = await port.prepare(pending, spec('tree', start));
-  if (prepared.kind !== 'prepared') throw new Error(prepared.reason);
+  if (prepared.kind !== 'prepared') throw preparationError(prepared);
   const target = prepared.process; target.stdout.resume(); target.stderr.resume();
   const witness = await capturedWitness(fixture, target.root.pid, target.root.birth, track);
   const request = { expectedOwner: identity, attemptId: 'accounting-failed-attempt', mode: 'force' as const, deadlineMs: performance.now() + 10000 };
@@ -190,12 +198,13 @@ async function accountingFailureScenario(context: GateContext): Promise<void> {
   const reconciled = await pending.stop({ ...request, attemptId: 'fresh-accounting-reconciliation', deadlineMs: performance.now() + 10000 });
   if (reconciled.kind !== 'confirmed') throw new Error('Fresh distinct accounting reconciliation did not confirm');
   assert.equal((await target.drain(performance.now() + 3000)).kind, 'complete');
-  await pending.release(reconciled.receipt, 'job-membership');
+  await pending.release(reconciled.receipt, 'job-membership'); await brokerReleased(pending);
 }
 
-async function nativeReleaseScenario(context: GateContext, releaseBroker: string): Promise<void> {
+async function nativeReleaseScenario(context: GateContext, releaseBroker: string, terminalRace = false): Promise<void> {
   const { fixture, owner, marker, spec, track } = context;
-  const identity = owner(); const raw = spawn(releaseBroker, [], { stdio: ['pipe', 'pipe', 'pipe', 'pipe'], windowsHide: true });
+  const identity = owner(); const raw = spawn(releaseBroker, [], { stdio: ['pipe', 'pipe', 'pipe', 'overlapped'], windowsHide: true,
+    env: { ...process.env, OWNED_PROCESS_TEST_TERMINAL_RACE: terminalRace ? '1' : '0' } });
   track(raw); raw.stdout.resume(); raw.stderr.resume();
   const exited = new Promise<number | null>((done, reject) => { raw.once('exit', done); raw.once('error', reject); });
   const pipe = raw.stdio[3]; assert.ok(pipe instanceof Duplex); const decoder = new FrameDecoder(identity.processGeneration);
@@ -213,15 +222,24 @@ async function nativeReleaseScenario(context: GateContext, releaseBroker: string
   assert.equal(stopped.payload.length, 26); assert.equal(stopped.payload.readUInt32LE(2), 0); assert.equal(stopped.payload[1], 1);
   assert.equal(stopped.payload.readUInt32LE(18), 0); assert.equal(stopped.payload.readUInt32LE(22), 0);
   assert.equal(await timeout(witness.exit), 0); assert.equal(existsSync(start.path), false);
+  await waitFor(() => raw.stdout.readableEnded && raw.stderr.readableEnded, 3000);
   const released = await request(Op.release, Op.released, Buffer.alloc(0)); assert.equal(released.payload.length, 0);
-  pipe.end(); assert.equal(await timeout(exited), 0, 'Genuine Released ACK followed by owner EOF exits normally, including scheduling window');
+  pipe.end(); const originalExit = await timeout(exited);
+  if (terminalRace) {
+    assert.equal(originalExit, 74, 'Observed native failure winner cannot become exit0 after complete ACK');
+    console.log(JSON.stringify({ nativeNegative: 'failure-winner-after-complete-ack', completeAck: true, brokerExit: originalExit }));
+  } else assert.equal(originalExit, 0, 'Genuine Released ACK followed by owner EOF exits normally, including scheduling window');
 }
 
-async function nativeLossScenario(context: GateContext, faultMode: 'owner-eof' | 'broker-crash' | 'wrong-generation' | 'lost-prepared', sentinel: ChildProcess): Promise<void> {
+async function nativeLossScenario(context: GateContext, faultMode: 'owner-eof' | 'broker-crash' | 'wrong-generation' | 'lost-prepared' | 'malformed' | 'truncated', sentinel: ChildProcess): Promise<void> {
   const { broker, fixture, owner, marker, spec, track } = context;
-  const identity = owner(); const raw = spawn(broker, [], { stdio: ['pipe', 'pipe', 'pipe', 'pipe'], windowsHide: true });
+  const identity = owner(); const raw = spawn(broker, [], { stdio: ['pipe', 'pipe', 'pipe', 'overlapped'], windowsHide: true });
   track(raw); raw.stdout.resume(); raw.stderr.resume();
+  const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
+    raw.once('exit', (code, signal) => done({ code, signal })); raw.once('error', reject);
+  });
   const pipe = raw.stdio[3]; assert.ok(pipe instanceof Duplex);
+  pipe.on('error', () => undefined); // deliberate loss gate still requires original exit + independent root witness
   const decoder = new FrameDecoder(identity.processGeneration);
   let preparedReply!: (frame: Frame) => void;
   let stoppedReply!: (frame: Frame) => void;
@@ -244,11 +262,18 @@ async function nativeLossScenario(context: GateContext, faultMode: 'owner-eof' |
     const stopped = await timeout(nativeStopped); assert.equal(stopped.payload.readUInt32LE(2), 0); assert.equal(stopped.payload[1], 1);
     pipe.destroy();
   }
+  else if (faultMode === 'malformed') {
+    const invalid = encodeFrame({ opcode: Op.resume, requestId: 2n, generation: identity.processGeneration, payload: Buffer.alloc(0) });
+    invalid.writeUInt16LE(99, 4); pipe.write(invalid);
+  } else if (faultMode === 'truncated') { pipe.write(Buffer.alloc(8)); pipe.end(); }
   else if (faultMode === 'wrong-generation') pipe.write(encodeFrame({ opcode: Op.resume,
     requestId: 2n, generation: randomUUID(), payload: Buffer.alloc(0) }));
   else pipe.destroy();
   assert.equal(await timeout(witness.exit), 0, 'Original suspended target exits on broker/control loss');
   assert.equal(existsSync(start.path), false, 'Unacknowledged/cancelled target never executes first nonce');
+  const exit = await timeout(exited);
+  assert.ok(exit.code !== 0 || exit.signal !== null, 'Loss/malformed control never exits as successful release');
+  console.log(JSON.stringify({ nativeNegative: faultMode, brokerExit: exit }));
   assert.equal(sentinel.exitCode, null);
 }
 
@@ -283,15 +308,17 @@ export async function runNativeGate(broker: string, fixture: string, birthFailur
     await accountingFailureScenario(context);
     // Each real ACK/EOF gate captures target-handle exit and zero Job accounting before release.
     for (const releaseBroker of [broker, releaseDelayBroker]) await nativeReleaseScenario(context, releaseBroker);
+    await nativeReleaseScenario(context, releaseDelayBroker, true); // unstaged compile-guarded failure, never product release PASS
     // Containment fallback is independently witnessed; it never counts as a bridge receipt.
-    for (const mode of ['owner-eof', 'broker-crash', 'wrong-generation', 'lost-prepared'] as const) {
+    for (const mode of ['owner-eof', 'broker-crash', 'wrong-generation', 'lost-prepared', 'malformed', 'truncated'] as const) {
       await nativeLossScenario(context, mode, sentinel);
     }
     console.log(JSON.stringify({ gate: 'owned-process-native-scenarios-only', platform: process.platform, arch: process.arch,
       versions: process.versions, results: ['tree', 'root-first-tail-held-pipe', 'blocked-output-independent-stop',
         'breakaway-denied', 'pre-resume-cancel-first-nonce', 'birth-failure-unknown-first-nonce', 'owner-eof',
-        'accounting-failure-latched-unknown-distinct-reconciliation', 'released-ack-eof-exit-zero',
-        'broker-crash', 'wrong-generation', 'lost-prepared-no-resume-first-nonce', 'sentinel-isolation'] }));
+        'accounting-failure-latched-unknown-distinct-reconciliation', 'post-launch-pending-read-genuine-prepared', 'released-ack-eof-exit-zero',
+        'failure-winner-after-complete-ack-exit-74',
+        'broker-crash', 'wrong-generation', 'malformed', 'truncated', 'lost-prepared-no-resume-first-nonce', 'sentinel-isolation'] }));
   } finally {
     // Only children created by this disposable gate. No scans, taskkill, shared or product runtimes.
     for (const pending of pendingCapabilities) pending.abandonControl(pending.owner);

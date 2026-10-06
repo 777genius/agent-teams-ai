@@ -15,8 +15,13 @@ import {
   VERSION,
 } from './codec';
 import {
+  type BrokerExit,
+  type ControlCause,
+  type ControlDiagnostics,
+  type ControlPhase,
   type Coverage,
   type Creation,
+  type NativeExitCategory,
   type OwnedLaunchPort,
   type Preparation,
   type PreparedOwnedProcess,
@@ -30,6 +35,16 @@ import {
   type TreeReceipt,
 } from './contract';
 
+const nativeExitCategories: readonly NativeExitCategory[] = [
+  'owner-eof',
+  'bootstrap',
+  'read',
+  'write',
+  'write-deadline',
+  'protocol',
+  'cancel-undrained',
+  'pending-read-barrier',
+];
 const creations: readonly Creation[] = [
   'known-not-created',
   'contained-suspended',
@@ -38,8 +53,13 @@ const creations: readonly Creation[] = [
 ];
 interface Waiter {
   opcode: number;
+  observation: RequestObservation;
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
+}
+interface RequestObservation {
+  phase: ControlPhase;
+  writeCompleted: boolean;
 }
 interface StopFacts {
   creation: Creation;
@@ -80,14 +100,17 @@ export interface BrokerTransport {
   readonly stderr: Readable;
   readonly control: Duplex;
   onFailure(callback: () => void): void;
-  onExit(callback: () => void): void;
+  onExit(callback: (exit: BrokerExit) => void): void;
 }
 export interface BrokerTransportFactory {
   available(path: string): boolean;
   connect(path: string): BrokerTransport;
 }
 export function connectPrivateBroker(path: string): BrokerTransport {
-  const child = spawn(path, [], { stdio: ['pipe', 'pipe', 'pipe', 'pipe'], windowsHide: true });
+  const child = spawn(path, [], {
+    stdio: ['pipe', 'pipe', 'pipe', 'overlapped'],
+    windowsHide: true,
+  });
   const control = child.stdio[3];
   if (!(control instanceof Duplex) || !child.stdin || !child.stdout || !child.stderr) {
     throw new Error('Private control or target streams unavailable');
@@ -101,7 +124,7 @@ export function connectPrivateBroker(path: string): BrokerTransport {
       child.on('error', callback);
     },
     onExit: (callback) => {
-      child.on('exit', callback);
+      child.on('exit', (code, signal) => callback({ code, signal }));
     },
   };
 }
@@ -190,6 +213,10 @@ class WindowsCapability implements PreparedOwnedProcess {
   private rootWitness?: RootExit;
   private rootIdentity?: Readonly<{ pid: number; birth: string }>;
   private transportFailure?: string;
+  private firstCause?: ControlDiagnostics['cause'];
+  private latestRequest?: RequestObservation;
+  private brokerExit?: BrokerExit;
+  private nativeFailure?: ControlDiagnostics['nativeFailure'];
   private creation: Creation = 'known-not-created';
   private started = false;
   private sealed = false;
@@ -242,9 +269,36 @@ class WindowsCapability implements PreparedOwnedProcess {
     }
     return this.child.stderr;
   }
-  private fail(reason: string): void {
+  diagnostics(): ControlDiagnostics {
+    const code = this.brokerExit?.code;
+    const category =
+      code === undefined || code === null || code < 70 || code > 205
+        ? undefined
+        : nativeExitCategories[(code & 127) - 70];
+    return Object.freeze({
+      cause: this.firstCause,
+      writeCompleted: this.latestRequest?.writeCompleted ?? false,
+      brokerExit: this.brokerExit,
+      nativeExitCategory: category,
+      nativeCancelUndrained: category === undefined ? undefined : Boolean((code ?? 0) & 128),
+      nativeFailure: this.nativeFailure,
+    });
+  }
+  private recordCause(name: ControlCause, observation = this.latestRequest): void {
+    this.firstCause ??= Object.freeze({
+      name,
+      phase: observation?.phase ?? 'idle',
+      writeCompleted: observation?.writeCompleted ?? false,
+    });
+  }
+  private fail(
+    reason: string,
+    cause: ControlCause = 'protocol',
+    observation = this.latestRequest
+  ): void {
     if (this.released) return;
     if (this.transportFailure) return;
+    this.recordCause(cause, observation);
     this.transportFailure = reason;
     this.sealed = true;
     if (this.started && !this.rootIdentity) this.creation = 'uncertain';
@@ -302,6 +356,11 @@ class WindowsCapability implements PreparedOwnedProcess {
     if (frame.opcode === Op.failed) {
       if (frame.payload.length !== 5) throw new Error('Invalid preparation failure');
       this.creation = creationFromByte(frame.payload.readUInt8(0));
+      this.nativeFailure ??= Object.freeze({
+        creation: this.creation,
+        code: frame.payload.readUInt32LE(1),
+      });
+      this.recordCause('native-failed', waiter.observation);
       waiter.reject(new Error(`Broker operation failed (${frame.payload.readUInt32LE(1)})`));
     } else waiter.resolve(frame);
   }
@@ -320,16 +379,30 @@ class WindowsCapability implements PreparedOwnedProcess {
     ) {
       return Promise.reject(new Error('Broker transport unavailable'));
     }
+    const observation: RequestObservation = {
+      phase:
+        opcode === Op.launch
+          ? 'prepare'
+          : opcode === Op.resume
+            ? 'resume'
+            : opcode === Op.stop
+              ? 'stop'
+              : 'release',
+      writeCompleted: false,
+    };
+    this.latestRequest = observation;
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       let settled = false;
       const timer = setTimeout(() => {
         settled = true;
+        this.recordCause('request-deadline', observation);
         reject(new Error('Broker response deadline'));
         // Keep the bounded waiter so a late reply is consumed without changing the latched outcome.
       }, remaining(deadline));
       this.waiters.set(id, {
         opcode: response,
+        observation,
         resolve: (frame) => {
           clearTimeout(timer);
           if (!settled) resolve(frame);
@@ -345,14 +418,14 @@ class WindowsCapability implements PreparedOwnedProcess {
         generation: this.owner.processGeneration,
         payload,
       });
-      let written = false;
       const writeTimer = setTimeout(() => {
-        if (!written) this.fail('Control write deadline');
+        if (!observation.writeCompleted)
+          this.fail('Control write deadline', 'control-write-deadline', observation);
       }, 5000);
       this.control!.write(bytes, (error?: Error | null) => {
-        written = true;
+        observation.writeCompleted = true; // this callback cannot complete a newer request
         clearTimeout(writeTimer);
-        if (error) this.fail('Control write failure');
+        if (error) this.fail('Control write failure', 'control-write', observation);
       });
     });
   }
@@ -407,14 +480,16 @@ class WindowsCapability implements PreparedOwnedProcess {
         } catch {
           this.fail('Truncated broker protocol');
         }
-        this.fail('Broker control EOF');
+        this.fail('Broker control EOF', 'control-eof');
       });
-      pipe.on('error', () => this.fail('Broker control failure'));
-      this.child.onFailure(() => this.fail('Broker startup failure'));
-      this.child.onExit(() => {
+      pipe.on('error', () => this.fail('Broker control failure', 'control-read'));
+      this.child.onFailure(() => this.fail('Broker startup failure', 'startup'));
+      this.child.onExit((exit) => {
+        this.brokerExit ??= Object.freeze({ code: exit.code, signal: exit.signal });
         // Process exit can precede reading its fully written acknowledgement. A pending release
         // remains bounded by request deadline/EOF; exit alone is never an acknowledgement.
-        if (!this.released && !this.releaseRequested) this.fail('Broker exit without proof');
+        if (!this.released && !this.releaseRequested)
+          this.fail('Broker exit without proof', 'broker-exit');
       });
       const frame = await this.request(Op.launch, Op.prepared, payload, performance.now() + 15000);
       if (frame.payload.length !== 12 || !frame.payload.readUInt32LE(0))
@@ -659,7 +734,7 @@ class WindowsCapability implements PreparedOwnedProcess {
         if (frame.payload.length) throw new Error('Invalid release acknowledgement');
       } catch (error) {
         this.releaseRequested = false;
-        this.fail('Broker release acknowledgement unavailable');
+        this.fail('Broker release acknowledgement unavailable', 'release-unavailable');
         throw error;
       }
     }
@@ -669,7 +744,7 @@ class WindowsCapability implements PreparedOwnedProcess {
   }
   abandonControl(expectedOwner: ProcessOwner): void {
     if (!sameOwner(this.owner, expectedOwner)) throw new Error('Abandon owner mismatch');
-    this.fail('Owner abandoned control; containment unconfirmed');
+    this.fail('Owner abandoned control; containment unconfirmed', 'owner-abandoned');
     this.child?.stdin?.destroy();
     this.child?.stdout?.destroy();
     this.child?.stderr?.destroy();

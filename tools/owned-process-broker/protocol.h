@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <array>
+#include <atomic>
 #include <algorithm>
 #include <cwctype>
 #include <cstdint>
@@ -20,14 +21,116 @@ template<class T> T get(const uint8_t* p) { T v; std::memcpy(&v,p,sizeof(v)); re
 template<class T> void append(std::vector<uint8_t>& out,T v) {
   auto p=reinterpret_cast<const uint8_t*>(&v); out.insert(out.end(),p,p+sizeof(v));
 }
-inline bool readExact(HANDLE pipe,void* data,DWORD size) {
-  auto p=static_cast<uint8_t*>(data);
-  while(size) { DWORD n=0; if(!ReadFile(pipe,p,size,&n,nullptr)||!n) return false;
-    p+=n; size-=n; } return true;
+// Exit categories carry no launch values. Bit128 means cancellation was not proven drained.
+enum Exit : DWORD { OwnerEof=70, Bootstrap=71, ReadFailure=72, WriteFailure=73,
+  WriteDeadline=74, ProtocolFailure=75, CancelUndrained=76, PendingReadBarrier=77 };
+constexpr DWORD ReleasedTerminal=1;
+inline std::atomic<DWORD> terminalChoice{0}; // active -> first failure OR completed-ACK success
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+inline bool terminalRaceEnabled=false; // immutable bootstrap value, only in unstaged fixture
+inline std::atomic<bool> terminalRaceRejected{false}, terminalRaceObserved{false};
+#endif
+inline DWORD failureCause() {
+  const auto choice=terminalChoice.load(); return choice==ReleasedTerminal?0:choice;
 }
-inline bool read(HANDLE pipe,Frame& frame) {
+inline bool releaseWon() { return terminalChoice.load()==ReleasedTerminal; }
+inline bool chooseReleased() {
+  DWORD active=0; return terminalChoice.compare_exchange_strong(active,ReleasedTerminal);
+}
+inline void latchFailure(DWORD cause) {
+  DWORD active=0; terminalChoice.compare_exchange_strong(active,cause);
+}
+[[noreturn]] inline void terminateFailure(DWORD cause,bool undrained=false) {
+  latchFailure(cause);
+  const auto winner=terminalChoice.load();
+  DWORD status=winner;
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+  // Complete ACK bytes plus an unrelated early write deadline must not impersonate the CAS gate.
+  if(terminalRaceEnabled&&winner==WriteDeadline&&
+    (!terminalRaceRejected.load()||!terminalRaceObserved.load())) status=ProtocolFailure;
+#endif
+  if(winner!=ReleasedTerminal)
+    TerminateProcess(GetCurrentProcess(),status|(undrained?128u:0u));
+  // A stale failure losing to completed ACK cannot replace its winner; writer owns success exit.
+  // Even an unexpectedly failed self-termination cannot unwind live I/O storage.
+  for(;;) Sleep(INFINITE);
+}
+inline bool disconnected(DWORD error) {
+  return error==ERROR_BROKEN_PIPE||error==ERROR_PIPE_NOT_CONNECTED;
+}
+inline bool terminalIoError(DWORD error) {
+  return disconnected(error)||error==ERROR_OPERATION_ABORTED;
+}
+[[noreturn]] inline void cancelAndFail(HANDLE pipe,OVERLAPPED& operation,DWORD cause) {
+  latchFailure(cause); // cancellation/late success cannot replace the first terminal cause
+  CancelIoEx(pipe,&operation); // ERROR_NOT_FOUND is not completion evidence
+  DWORD ignored=0;
+  const bool completed=GetOverlappedResult(pipe,&operation,&ignored,FALSE)!=FALSE;
+  const DWORD error=completed?ERROR_SUCCESS:GetLastError();
+  const bool terminal=completed||terminalIoError(error);
+  if(terminal) CloseHandle(operation.hEvent);
+  terminateFailure(cause,!terminal);
+}
+struct Transfer { DWORD count,error; };
+inline Transfer transfer(HANDLE pipe,void* data,DWORD size,bool writing,ULONGLONG deadline=0,
+  void (*pendingRead)()=nullptr) {
+  if(failureCause()) terminateFailure(failureCause());
+  OVERLAPPED operation{};
+  operation.hEvent=CreateEventW(nullptr,TRUE,FALSE,nullptr); // private manual-reset event per operation
+  if(!operation.hEvent) terminateFailure(writing?WriteFailure:ReadFailure);
+  const BOOL immediate=writing?WriteFile(pipe,data,size,nullptr,&operation):
+    ReadFile(pipe,data,size,nullptr,&operation);
+  const DWORD issuedError=immediate?ERROR_SUCCESS:GetLastError();
+  if(!immediate&&issuedError!=ERROR_IO_PENDING) {
+    CloseHandle(operation.hEvent); return {0,issuedError}; // API rejected; no outstanding request
+  }
+  if(!immediate) {
+    if(!writing&&pendingRead) pendingRead(); // actual ERROR_IO_PENDING, with this read storage alive
+    const auto now=GetTickCount64();
+    if(deadline&&now>=deadline) cancelAndFail(pipe,operation,WriteDeadline);
+    const DWORD budget=deadline?static_cast<DWORD>(deadline-now):INFINITE;
+    const DWORD wait=WaitForSingleObject(operation.hEvent,budget);
+    if(wait!=WAIT_OBJECT_0) cancelAndFail(pipe,operation,
+      wait==WAIT_TIMEOUT?WriteDeadline:CancelUndrained);
+  }
+  DWORD count=0;
+  if(!GetOverlappedResult(pipe,&operation,&count,FALSE)) {
+    const DWORD error=GetLastError();
+    if(!terminalIoError(error)) cancelAndFail(pipe,operation,CancelUndrained);
+    CloseHandle(operation.hEvent); return {0,error};
+  }
+  CloseHandle(operation.hEvent); // result query proved terminal, never just event signal
+  if(deadline&&GetTickCount64()>=deadline) terminateFailure(WriteDeadline);
+  if(failureCause()) terminateFailure(failureCause());
+  if(count>size) terminateFailure(writing?WriteFailure:ReadFailure);
+  return {count,ERROR_SUCCESS};
+}
+inline bool readExact(HANDLE pipe,void* data,DWORD size,void (*pendingRead)()=nullptr) {
+  auto p=static_cast<uint8_t*>(data); bool partial=false;
+  while(size) {
+    const auto result=transfer(pipe,p,size,false,0,pendingRead);
+    if(result.error&&!disconnected(result.error)) terminateFailure(ReadFailure);
+    if(result.error||!result.count) {
+      if(partial) terminateFailure(ProtocolFailure); // only an untouched next header may end at EOF
+      return false;
+    }
+    p+=result.count; size-=result.count; partial=true;
+  }
+  return true;
+}
+inline void writeExact(HANDLE pipe,std::vector<uint8_t>& bytes,ULONGLONG deadline) {
+  size_t offset=0;
+  while(offset<bytes.size()) {
+    if(GetTickCount64()>=deadline) terminateFailure(WriteDeadline);
+    const auto result=transfer(pipe,bytes.data()+offset,
+      static_cast<DWORD>(bytes.size()-offset),true,deadline);
+    if(result.error||!result.count) terminateFailure(WriteFailure);
+    offset+=result.count;
+  }
+}
+inline bool read(HANDLE pipe,Frame& frame,void (*pendingRead)()=nullptr) {
   std::array<uint8_t,32> header{};
-  if(!readExact(pipe,header.data(),32)) return false;
+  if(!readExact(pipe,header.data(),32,pendingRead)) return false;
   uint32_t size=get<uint32_t>(header.data());
   frame.op=get<uint16_t>(header.data()+6);
   if(get<uint16_t>(header.data()+4)!=Version||frame.op<Launch||frame.op>Release||
@@ -35,7 +138,7 @@ inline bool read(HANDLE pipe,Frame& frame) {
   frame.id=get<uint64_t>(header.data()+8);
   std::copy(header.begin()+16,header.end(),frame.generation.begin());
   frame.payload.resize(size);
-  if(size&&!readExact(pipe,frame.payload.data(),size)) throw std::runtime_error("truncated");
+  if(size&&!readExact(pipe,frame.payload.data(),size,pendingRead)) throw std::runtime_error("truncated");
   return true;
 }
 inline std::vector<uint8_t> encode(const Frame& frame) {

@@ -22,22 +22,24 @@ std::deque<wire::Frame> replies;
 std::map<uint64_t,wire::Frame> cachedReplies;
 std::array<uint8_t,16> generation{};
 std::atomic<bool> sealed{false}, launched{false}, admissionDone{false}, stopBusy{false};
-std::atomic<bool> releaseAccepted{false}, releaseFlushed{false};
+std::atomic<bool> releaseAccepted{false};
 #ifdef OWNED_PROCESS_TEST_ACCOUNTING_FAILURE
 std::atomic<bool> accountingFailurePending{true};
 #endif
-std::atomic<ULONGLONG> writingSince{0};
+#ifdef OWNED_PROCESS_TEST_POST_LAUNCH_PENDING_READ
+std::atomic<bool> postLaunchReadPending{false};
+#endif
 Creation creation=Never;
 bool birthKnown=false, rootExited=false, rootPublished=false, confirmed=false;
 uint64_t birth=0;
 DWORD rootCode=0;
 wire::Frame confirmedStop{};
 
-[[noreturn]] void abandon() {
+[[noreturn]] void abandon(DWORD cause=wire::ProtocolFailure) {
   sealed=true;
   // Process teardown closes the sole private Job handle even if admission is blocked.
   // This contains; it never manufactures a termination receipt.
-  ExitProcess(70);
+  wire::terminateFailure(cause);
 }
 void reply(uint16_t op,uint64_t id,const std::vector<uint8_t>& payload={}) {
   std::lock_guard<std::mutex> lock(repliesMutex);
@@ -52,26 +54,50 @@ void failure(uint64_t id,Creation fact,DWORD code) {
   std::vector<uint8_t> p; wire::append(p,static_cast<uint8_t>(fact)); wire::append(p,code);
   reply(wire::Failed,id,p);
 }
+[[noreturn]] void exitReleased() {
+  if(!wire::releaseWon()) abandon(wire::failureCause()?wire::failureCause():wire::ProtocolFailure);
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+  Sleep(50); // both success paths preserve the fixture's post-ACK delay
+#endif
+  ExitProcess(0); // immutable CAS winner; no failure can replace it
+}
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+bool terminalRaceFixture() {
+  return wire::terminalRaceEnabled;
+}
+[[noreturn]] void terminalRaceBarrierFailed() {
+  // Fixture-only failure status; retain the immutable terminal winner, but never exit74 as proof.
+  TerminateProcess(GetCurrentProcess(),wire::ProtocolFailure);
+  for(;;) Sleep(INFINITE);
+}
+#endif
 void writer() {
   for(;;) {
     wire::Frame frame;
     { std::unique_lock<std::mutex> lock(repliesMutex);
       repliesReady.wait(lock,[]{return !replies.empty();});
       frame=std::move(replies.front()); replies.pop_front(); }
-    auto bytes=wire::encode(frame); writingSince=GetTickCount64(); size_t offset=0;
-    while(offset<bytes.size()) {
-      DWORD n=0;
-      if(!WriteFile(control,bytes.data()+offset,static_cast<DWORD>(bytes.size()-offset),&n,nullptr)||!n)
-        abandon();
-      offset+=n;
-    }
-    writingSince=0;
+    auto bytes=wire::encode(frame); const auto deadline=GetTickCount64()+5000;
+    wire::writeExact(control,bytes,deadline); // separate OVERLAPPED/event; one whole-frame budget
     if(frame.op==wire::Released) {
-      releaseFlushed=true; // EOF may already be waking the reader; only a complete write qualifies
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
-      Sleep(50); // separate native scheduling fixture, never staged as the product broker
+      if(terminalRaceFixture()) {
+        const auto barrierDeadline=GetTickCount64()+5000;
+        while(!wire::failureCause()&&GetTickCount64()<barrierDeadline) Sleep(1);
+        if(wire::failureCause()!=wire::WriteDeadline) terminalRaceBarrierFailed();
+      }
 #endif
-      ExitProcess(0);
+      const bool successWon=wire::chooseReleased();
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+      if(terminalRaceFixture()&&!successWon&&wire::failureCause()==wire::WriteDeadline) {
+        wire::terminalRaceRejected=true; // set only after the actual success CAS lost to failure
+        const auto observedDeadline=GetTickCount64()+5000;
+        while(!wire::terminalRaceObserved&&GetTickCount64()<observedDeadline) Sleep(1);
+        if(!wire::terminalRaceObserved) terminalRaceBarrierFailed();
+      }
+#endif
+      if(!successWon) abandon(wire::failureCause());
+      exitReleased(); // complete in-budget ACK chose success atomically against every failure
     }
   }
 }
@@ -91,8 +117,6 @@ void observeRoot() { // state lock required; no PID-based reopening
 }
 void watcher() {
   for(;;) {
-    auto writing=writingSince.load();
-    if(writing&&GetTickCount64()-writing>5000) abandon();
     if(state.try_lock()) {
       observeRoot();
       state.unlock();
@@ -106,7 +130,17 @@ void closeTargetCopies() {
   SetStdHandle(STD_INPUT_HANDLE,nullptr); SetStdHandle(STD_OUTPUT_HANDLE,nullptr);
   SetStdHandle(STD_ERROR_HANDLE,nullptr);
 }
+void pendingReadObserved() {
+#ifdef OWNED_PROCESS_TEST_POST_LAUNCH_PENDING_READ
+  if(launched.load()) postLaunchReadPending=true;
+#endif
+}
 void admit(wire::Frame frame) {
+#ifdef OWNED_PROCESS_TEST_POST_LAUNCH_PENDING_READ
+  const auto barrierDeadline=GetTickCount64()+5000;
+  while(!postLaunchReadPending.load()&&GetTickCount64()<barrierDeadline) Sleep(1);
+  if(!postLaunchReadPending.load()) abandon(wire::PendingReadBarrier);
+#endif
   std::unique_lock<std::timed_mutex> lock(state);
   if(sealed) { admissionDone=true; closeTargetCopies(); failure(frame.id,Never,ERROR_CANCELLED); return; }
   try {
@@ -225,13 +259,17 @@ void stop(wire::Frame frame) {
 
 int main() {
   control=reinterpret_cast<HANDLE>(_get_osfhandle(3));
-  if(control==INVALID_HANDLE_VALUE||!control||!SetHandleInformation(control,HANDLE_FLAG_INHERIT,0)) return 71;
+  if(control==INVALID_HANDLE_VALUE||!control||!SetHandleInformation(control,HANDLE_FLAG_INHERIT,0)) return wire::Bootstrap;
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+  wchar_t flag[2]{};
+  wire::terminalRaceEnabled=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_TERMINAL_RACE",flag,2)==1&&flag[0]==L'1';
+#endif
   std::thread(writer).detach(); std::thread(watcher).detach();
   uint64_t lastId=0; bool bound=false; size_t frames=0;
   std::map<uint64_t,wire::Frame> idempotentRequests;
   try {
     wire::Frame frame;
-    while(wire::read(control,frame)) {
+    while(wire::read(control,frame,pendingReadObserved)) {
       if(++frames>1024||!frame.id) abandon();
       if(!bound) { generation=frame.generation; bound=true; }
       if(frame.generation!=generation) abandon();
@@ -276,13 +314,24 @@ int main() {
         if(!confirmed||stopBusy) { failure(frame.id,creation,ERROR_INVALID_STATE); continue; }
         if(job&&!CloseHandle(job)) { failure(frame.id,creation,GetLastError()); continue; }
         job=nullptr; releaseAccepted=true; reply(wire::Released,frame.id);
+        break; // this command read completed; do not issue another read after accepted Release
       } else abandon();
     }
   } catch(...) { abandon(); }
   if(releaseAccepted) {
     const auto deadline=GetTickCount64()+5000;
-    while(!releaseFlushed&&GetTickCount64()<deadline) Sleep(1);
-    if(releaseFlushed) ExitProcess(0); // accepted release + complete ACK; never merely owner EOF
+    while(!wire::releaseWon()&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);
+    if(wire::releaseWon()) exitReleased();
+#ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+    if(terminalRaceFixture()) {
+      wire::latchFailure(wire::WriteDeadline);
+      if(wire::failureCause()!=wire::WriteDeadline) terminalRaceBarrierFailed();
+      const auto rejectedDeadline=GetTickCount64()+5000;
+      while(!wire::terminalRaceRejected&&GetTickCount64()<rejectedDeadline) Sleep(1);
+      if(!wire::terminalRaceRejected) terminalRaceBarrierFailed();
+      wire::terminalRaceObserved=true; // exit74 is now permitted: actual losing CAS was observed
+    }
+#endif
   }
-  abandon(); // pre-ACK owner EOF does not produce a receipt
+  abandon(releaseAccepted?wire::WriteDeadline:wire::OwnerEof); // no receipt from pre-release EOF
 }

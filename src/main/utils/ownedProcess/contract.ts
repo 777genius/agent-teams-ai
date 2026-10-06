@@ -40,9 +40,42 @@ export type ResolvedLaunchSpec = Readonly<{
   environment: readonly string[];
 }>;
 export type RootExit = Readonly<{ code: number; birth: string }>;
+export type BrokerExit = Readonly<{ code: number | null; signal: NodeJS.Signals | null }>;
+export type ControlCause =
+  | 'startup'
+  | 'control-eof'
+  | 'control-read'
+  | 'control-write'
+  | 'control-write-deadline'
+  | 'request-deadline'
+  | 'protocol'
+  | 'native-failed'
+  | 'broker-exit'
+  | 'owner-abandoned'
+  | 'release-unavailable';
+export type ControlPhase = 'idle' | 'prepare' | 'resume' | 'stop' | 'release';
+export type NativeExitCategory =
+  | 'owner-eof'
+  | 'bootstrap'
+  | 'read'
+  | 'write'
+  | 'write-deadline'
+  | 'protocol'
+  | 'cancel-undrained'
+  | 'pending-read-barrier';
+export type ControlDiagnostics = Readonly<{
+  cause?: Readonly<{ name: ControlCause; phase: ControlPhase; writeCompleted: boolean }>;
+  writeCompleted: boolean;
+  brokerExit?: BrokerExit;
+  nativeExitCategory?: NativeExitCategory;
+  nativeCancelUndrained?: boolean;
+  nativeFailure?: Readonly<{ creation: Creation; code: number }>;
+}>;
 export type TargetDrain = Readonly<{ kind: 'complete' | 'incomplete'; reason?: string }>;
 export interface PendingOwnedProcess {
   readonly owner: ProcessOwner;
+  /** Observed finite transport facts only; never a tree proof or new authority. */
+  diagnostics(): ControlDiagnostics;
   stop(request: StopRequest): Promise<TreeOutcome>;
   /** Last-handle containment fallback; retains unknown evidence, never releases ownership. */
   abandonControl(expectedOwner: ProcessOwner): void;
