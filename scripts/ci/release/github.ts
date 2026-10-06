@@ -212,6 +212,53 @@ export function validateNativeProducer(
   // is admitted. The attempt-specific immutable artifact name also remains mandatory.
 }
 export class GitHubReleasePort implements ReleasePort {
+  async releaseById(repository: string, id: number): Promise<Release> {
+    requireThat(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository), 'Unsafe repository');
+    requireThat(Number.isSafeInteger(id) && id > 0, 'Invalid numeric release identity');
+    const release = await api<Release>(`repos/${repository}/releases/${id}`);
+    requireThat(release.id === id, 'Numeric release endpoint returned another identity');
+    const pages = JSON.parse(
+      await command([
+        'api',
+        `repos/${repository}/releases/${id}/assets?per_page=100`,
+        '--paginate',
+        '--slurp',
+      ])
+    ) as Asset[][];
+    requireThat(Array.isArray(pages) && pages.every(Array.isArray), 'Invalid release asset pages');
+    return { ...release, assets: pages.flat() };
+  }
+  async setVisibility(
+    repository: string,
+    target: StageInput['target'],
+    draft: boolean
+  ): Promise<void> {
+    requireThat(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository), 'Unsafe repository');
+    requireThat(
+      Number.isSafeInteger(target.id) && target.id > 0,
+      'Invalid numeric release identity'
+    );
+    requireThat(
+      /^v\d+\.\d+\.\d+$/.test(target.tag) && /^[a-f0-9]{40}$/.test(target.applicationSha),
+      'Invalid pinned release tag/application SHA'
+    );
+    await command([
+      'api',
+      `repos/${repository}/releases/${target.id}`,
+      '--method',
+      'PATCH',
+      '-f',
+      `tag_name=${target.tag}`,
+      '-f',
+      `target_commitish=${target.applicationSha}`,
+      '-F',
+      `draft=${draft}`,
+      '-F',
+      'prerelease=false',
+      '-f',
+      `make_latest=${!draft}`,
+    ]);
+  }
   private async releaseByTag(repository: string, tag: string): Promise<Release> {
     try {
       const release = await api<Release>(`repos/${repository}/releases/tags/${tag}`);

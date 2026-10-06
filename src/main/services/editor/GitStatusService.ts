@@ -47,6 +47,7 @@ export class GitStatusService {
     this.notAGitRepo = false;
     this.git = simpleGit({
       baseDir: projectRoot,
+      allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
       timeout: { block: GIT_TIMEOUT_MS },
     }).env('GIT_OPTIONAL_LOCKS', '0');
     this.invalidateCache();

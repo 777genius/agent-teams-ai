@@ -29,7 +29,7 @@ jobs:
           - platform: darwin-arm64
             arch: arm64
             os: darwin
-            runner: macos-14
+            runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             pack: pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
           - platform: darwin-x64
@@ -53,7 +53,7 @@ jobs:
           - platform: linux-x64
             arch: x64
             os: linux
-            runner: ubuntu-24.04
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
             pack: pack:linux
             bundle: release/linux-unpacked
 

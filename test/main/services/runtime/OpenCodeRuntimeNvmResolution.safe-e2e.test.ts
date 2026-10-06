@@ -178,6 +178,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
     }
   });
 
+  // Allow the 15s fixture compiler, 30s version probe, and remaining status/launch checks.
   it('selects the native OpenCode executable behind an nvm cmd shim', async () => {
     const versionDir = path.join(process.env.NVM_HOME!, 'v20.20.0');
     const shimPath = path.join(versionDir, 'opencode.cmd');
@@ -255,7 +256,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       windowsHide: true,
     });
     expect(version.stdout.trim()).toBe('1.18.3');
-  });
+  }, 60_000);
 });
 
 function restoreEnvValue(name: string, value: string | undefined): void {
