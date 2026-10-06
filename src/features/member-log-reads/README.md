@@ -17,5 +17,18 @@ the registry retires their activation before switching or replacing contexts.
 Registered IPC integration tests use the real scanner, parser, builder and cache
 with a synthetic filesystem boundary.
 
-Renderer subscriptions, completion polling, recovery scheduling and full desktop
-acceptance remain separate work in the accepted PR6a/6b plan.
+`renderer/index.ts` exposes mounted subscriptions, context/root scope identity,
+completion-based polling and refreshing leases. The renderer shares pending
+reads without retaining completed DTO history. Each view projects raw detail
+chunks separately. Ordinary reads can share active work; explicit fresh demand
+uses the coordinator's successor contract. Automatic polls wait 5000ms after
+settlement. Background feedback retains its existing 250ms minimum lifetime.
+
+The optional presentation key allows an already completed summary to remain
+visible during a status-only policy update for the same task owner. It never
+permits a retired request to publish. New context/root/task/interval ownership,
+selection, hide, disable and unmount retire the relevant subscription.
+
+Tests exercise real registered IPC builders, pure coordination/cache ports,
+and mounted renderer components with synthetic API boundaries. They do not
+launch providers or inspect real user projects.

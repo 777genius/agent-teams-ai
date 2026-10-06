@@ -6,7 +6,7 @@ import { getAllTabs } from '../utils/paneHelpers';
 
 import type { AppState } from '../types';
 
-function connectionScope(state: AppState): string {
+export function captureSessionConnectionScope(state: AppState): string {
   // SessionAPI currently reads Claude transcripts only. Include its configurable
   // provider root as well as the transport identity, including reconnect epochs.
   return JSON.stringify([
@@ -32,7 +32,7 @@ export function createSessionRequestIdentity(get: () => AppState) {
   function captureScope(projectId: string, sessionId?: string, tabId?: string) {
     const state = get();
     const epoch = captureContextScopedRequestEpoch();
-    const connection = connectionScope(state);
+    const connection = captureSessionConnectionScope(state);
     const ownerTab = tabId ? getAllTabs(state.paneLayout).find((tab) => tab.id === tabId) : null;
     const owner = tabId ? tabScope(state, tabId) : null;
     const requestMatchesOwner =
@@ -42,7 +42,10 @@ export function createSessionRequestIdentity(get: () => AppState) {
     if (tabId && lifetime) lifetimes.set(tabId, lifetime);
     return () => {
       const latest = get();
-      if (!isContextScopedRequestEpochCurrent(epoch) || connectionScope(latest) !== connection) {
+      if (
+        !isContextScopedRequestEpochCurrent(epoch) ||
+        captureSessionConnectionScope(latest) !== connection
+      ) {
         return false;
       }
       // Inactive tabs remain valid. A missing or replaced owner never does.
@@ -67,7 +70,8 @@ export function createSessionRequestIdentity(get: () => AppState) {
       const scopeCurrent = captureScope(projectId, sessionId, tabId);
       return () => requests.get(key) === fetchToken && scopeCurrent();
     },
-    contextKey: () => JSON.stringify([captureContextScopedRequestEpoch(), connectionScope(get())]),
+    contextKey: () =>
+      JSON.stringify([captureContextScopedRequestEpoch(), captureSessionConnectionScope(get())]),
     begin(projectId: string, sessionId: string, tabId?: string) {
       const key = tabId ?? '__global__';
       const token = Symbol('session-request');
