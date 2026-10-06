@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { createWriteStream } from 'node:fs';
 import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 import { parse } from 'yaml';
 
@@ -368,6 +371,15 @@ export async function readMacInputs(
   evidence.inputs = { ...input, authenticatedArtifact: authority };
   return { source, files, feed, names };
 }
+export async function downloadAnonymousMacInstaller(url: string, destination: string) {
+  const signal = AbortSignal.timeout(300_000);
+  const response = await fetch(url, { credentials: 'omit', redirect: 'follow', signal });
+  assert(response.ok, `Anonymous old installer unavailable: HTTP ${response.status}`);
+  assert(response.body, 'Anonymous old installer body required');
+  await pipeline(Readable.fromWeb(response.body), createWriteStream(destination, { flags: 'wx' }), {
+    signal,
+  });
+}
 export async function oldMacInstaller(
   root: string,
   architecture: 'arm64' | 'x64',
@@ -377,7 +389,6 @@ export async function oldMacInstaller(
   assert.equal(old.id, 397802474);
   assert(!old.draft && !old.prerelease);
   assert.equal(await port.tagSha(repository, old.tag_name), oldSha);
-  await port.publicRelease(repository, old.tag_name);
   const name = `Agent.Teams.AI-2.17.0-${architecture}.dmg`;
   const asset = assetByName(old, name);
   const expected = oldDmg[architecture];
@@ -385,11 +396,15 @@ export async function oldMacInstaller(
   assert.equal(asset.size, expected.size);
   assert.equal(asset.digest, `sha256:${expected.sha256}`);
   const file = path.join(root, name);
-  await port.download(repository, asset, file);
+  const publicUrl = `https://github.com/${repository}/releases/download/v2.17.0/${encodeURIComponent(name)}`;
+  await downloadAnonymousMacInstaller(publicUrl, file);
   const proof = await fileProof(file, name);
   assert.equal(proof.sha256, expected.sha256);
   assert.equal(proof.size, expected.size);
   evidence.oldInstaller = {
+    metadataAuthority: 'authenticated gh CLI',
+    payloadAccess: 'anonymous canonical public release URL',
+    publicUrl,
     releaseId: old.id,
     assetId: asset.id,
     restDigest: asset.digest,

@@ -29,6 +29,7 @@ import {
   stopMacOwned,
 } from './mac-loopback.mts';
 import { readMacInputs } from './mac-inputs.mts';
+import { freshMacHome } from './mac-old-native.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
 import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
@@ -366,14 +367,16 @@ try {
   evidence.build = plan.input.build;
   assert(/^[a-f0-9]{40}$/.test(plan.input.target.applicationSha));
   const root = await mkdtemp(path.join(runnerRoot, 'TEST-mac-current-'));
-  const home = path.join(root, 'home');
+  const profile = await freshMacHome(commands, 'updater-mac-updater');
+  const home = profile.home;
+  const applications = path.join(root, 'Applications');
   const userData = path.join(root, 'user-data');
   const claude = path.join(home, '.claude');
   for (const directory of [
     home,
     userData,
     claude,
-    path.join(home, 'Applications'),
+    applications,
     path.join(root, 'tmp'),
     path.join(home, '.codex'),
   ])
@@ -400,7 +403,7 @@ try {
     mount,
     archive,
   ]);
-  installed = path.join(home, 'Applications', 'Agent Teams AI.app');
+  installed = path.join(applications, 'Agent Teams AI.app');
   try {
     await commands.checked('install-unmodified-dmg-app', '/usr/bin/ditto', [
       path.join(mount, 'Agent Teams AI.app'),
@@ -461,6 +464,7 @@ try {
     rejectInstallerGet: true,
   });
   evidence.isolation = {
+    ...profile,
     root,
     home,
     userData,
@@ -552,6 +556,20 @@ try {
   assert(frame);
   const entry = await main.evaluate<string>('__filename', frame.callFrameId);
   assert.equal(entry, path.join(resources, 'app.asar', 'dist-electron/main/index.cjs'));
+  const mainHome = await macCallFunction<{
+    environment: string;
+    node: string;
+    account: string;
+  }>(
+    main,
+    '(()=>{const os=require("node:os");return ()=>({environment:process.env.HOME,node:os.homedir(),account:os.userInfo().homedir});})()',
+    [],
+    frame.callFrameId
+  );
+  evidence.mainHome = mainHome;
+  assert(mainHome, 'Actual signed Mac main home observation required');
+  for (const field of ['environment', 'node', 'account'] as const)
+    assert.equal(mainHome[field], home);
   await macCallFunction(
     main,
     `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeMac)})(originalRequire('electron').app,getUpdater);};})()`,
