@@ -11,6 +11,7 @@
  * - SSH context: remote ~/.claude/projects/ over SFTP
  */
 
+import { DetailReadCoordinator } from '@features/member-log-reads/main';
 import { ChunkBuilder } from '@main/services/analysis/ChunkBuilder';
 import { ProjectScanner } from '@main/services/discovery/ProjectScanner';
 import { SubagentResolver } from '@main/services/discovery/SubagentResolver';
@@ -26,6 +27,7 @@ import { DataCache } from './DataCache';
 import { FileWatcher } from './FileWatcher';
 
 import type { FileSystemProvider } from './FileSystemProvider';
+import type { SessionDetail, SubagentDetail } from '@main/types';
 
 const logger = createLogger('Infrastructure:ServiceContext');
 
@@ -74,6 +76,10 @@ export class ServiceContext {
   readonly chunkBuilder: ChunkBuilder;
   readonly dataCache: DataCache;
   readonly fileWatcher: FileWatcher;
+  readonly sessionDetailReads = new DetailReadCoordinator<SessionDetail>();
+  readonly subagentDetailReads = new DetailReadCoordinator<SubagentDetail>();
+
+  private detailReadSource: object = {};
 
   private cleanupInterval: NodeJS.Timeout | null = null;
   private disposed = false;
@@ -186,6 +192,11 @@ export class ServiceContext {
 
     logger.info(`Disposing ServiceContext: ${this.id}`);
 
+    this.disposed = true;
+    this.detailReadSource = {};
+    this.sessionDetailReads.dispose();
+    this.subagentDetailReads.dispose();
+
     // Stop and dispose FileWatcher
     this.fileWatcher.dispose();
 
@@ -198,9 +209,23 @@ export class ServiceContext {
       this.cleanupInterval = null;
     }
 
-    this.disposed = true;
-
     logger.info(`ServiceContext disposed: ${this.id}`);
+  }
+
+  getDetailReadSource(): object {
+    return this.detailReadSource;
+  }
+
+  isDetailReadSourceCurrent(source: object): boolean {
+    return !this.disposed && source === this.detailReadSource;
+  }
+
+  /** Retire publication before watcher callbacks or admission in a different activation. */
+  retireDetailReads(): void {
+    this.detailReadSource = {};
+    this.sessionDetailReads.supersede();
+    this.subagentDetailReads.supersede();
+    this.dataCache.clear();
   }
 
   /**
