@@ -66,6 +66,7 @@ Cost figures are estimates, not provider invoices.
 - Retry failed update downloads or use manual download guidance when an update cannot finish.
 - Stop provider cards getting stuck loading and ignore stale Claude CLI settings that blocked sign-in.
 - Find Zen and OpenRouter models in the OpenCode provider catalog.
+- Restore OpenCode model selection after temporary runtime failures while keeping launch blocked if the failure continues.
 - Install the Arch Linux package without requiring the obsolete http-parser dependency.
 - Include security updates for bundled dependencies.
 
