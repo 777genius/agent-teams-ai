@@ -8,8 +8,10 @@ export async function downloadGithubFile(
   endpoint: string,
   file: string
 ): Promise<{ exitCode: number; stderr: string; error: string }> {
-  const actionsArchive = /^repos\/[^/]+\/[^/]+\/actions\/artifacts\/[1-9]\d*\/zip$/.test(endpoint);
-  const releaseAsset = /^repos\/[^/]+\/[^/]+\/releases\/assets\/[1-9]\d*$/.test(endpoint);
+  const actionsArchive = /^repos\/[^/?#]+\/[^/?#]+\/actions\/artifacts\/[1-9]\d*\/zip$/.test(
+    endpoint
+  );
+  const releaseAsset = /^repos\/[^/?#]+\/[^/?#]+\/releases\/assets\/[1-9]\d*$/.test(endpoint);
   if (!actionsArchive && !releaseAsset) throw new Error('Unsupported GitHub download endpoint');
   const accept = actionsArchive ? 'application/json' : 'application/octet-stream';
   const args = ['api', endpoint, '-H', `Accept: ${accept}`];

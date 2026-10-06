@@ -78,3 +78,25 @@ void test('unknown endpoints fail before spawning a command or creating a file',
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// URL delimiters must fail before an HTTP request can target a different resource.
+for (const endpoint of [
+  'repos/TEST/transport?x/actions/artifacts/101/zip',
+  'repos/TEST#fragment/transport/actions/artifacts/101/zip',
+  'repos/TEST/transport#fragment/releases/assets/201',
+  'repos/TEST?x/transport/releases/assets/201',
+]) {
+  void test(`URL delimiters are rejected: ${endpoint}`, async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-github-download-'));
+    try {
+      const destination = path.join(root, 'payload');
+      await assert.rejects(
+        downloadGithubFile('/does-not-exist', endpoint, destination),
+        /Unsupported GitHub download endpoint/
+      );
+      await assert.rejects(readFile(destination), { code: 'ENOENT' });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
