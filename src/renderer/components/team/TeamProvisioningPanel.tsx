@@ -61,7 +61,20 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   const [retryingOpenCode, setRetryingOpenCode] = useState(false);
   const [openCodeRetryMessage, setOpenCodeRetryMessage] = useState<string | null>(null);
   const [openCodeRetryError, setOpenCodeRetryError] = useState<string | null>(null);
+  const [cancelAttempt, setCancelAttempt] = useState<{
+    owner: string;
+    pending: boolean;
+    error: string | null;
+  } | null>(null);
+  const pendingCancelRef = useRef<{ owner: string } | null>(null);
   const lastActiveStepRef = useRef(-1);
+
+  useEffect(
+    () => () => {
+      pendingCancelRef.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     setDismissed(false);
@@ -70,8 +83,14 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
     setOpenCodeRetryError(null);
   }, [runInstanceKey]);
 
+  const currentCancel =
+    cancelAttempt?.owner === (runInstanceKey ?? undefined) ? cancelAttempt : null;
+  const cancelError = currentCancel?.error ?? null;
+  const cancelPending = currentCancel?.pending ?? false;
+
   if (!presentation) {
-    return provisioningError ? (
+    const visibleError = cancelError ?? provisioningError;
+    return visibleError ? (
       <div
         role="alert"
         className={cn(
@@ -80,7 +99,12 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
         )}
       >
         <p className="min-w-0 flex-1 whitespace-pre-wrap text-xs text-[var(--step-error-text)] [overflow-wrap:anywhere]">
-          {provisioningError}
+          {cancelError
+            ? t('provisioning.cancelFailed', {
+                defaultValue: 'Could not cancel launch: {{error}}',
+                error: cancelError,
+              })
+            : provisioningError}
         </p>
         {dismissible ? (
           <Button
@@ -88,7 +112,10 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
             size="sm"
             className="h-6 shrink-0 border-red-500/40 px-2 text-xs text-[var(--step-error-text)] hover:bg-red-500/10"
             aria-label={t('actions.close')}
-            onClick={() => clearProvisioningError(teamName)}
+            onClick={() => {
+              if (cancelError) setCancelAttempt(null);
+              else clearProvisioningError(teamName);
+            }}
           >
             <X size={12} />
           </Button>
@@ -178,9 +205,30 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
       defaultLiveOutputOpen={presentation.defaultLiveOutputOpen}
       defaultLogsOpen={defaultLogsOpen}
       onCancel={
-        presentation.canCancel && cancelProvisioning
+        presentation.canCancel && cancelProvisioning && runInstanceKey && !cancelPending
           ? () => {
-              void cancelProvisioning(presentation.progress.runId);
+              if (pendingCancelRef.current?.owner === runInstanceKey) return;
+              const attempt = { owner: runInstanceKey };
+              pendingCancelRef.current = attempt;
+              setCancelAttempt({ owner: attempt.owner, pending: true, error: null });
+              void (async () => {
+                try {
+                  await cancelProvisioning(presentation.progress.runId);
+                  if (pendingCancelRef.current === attempt) {
+                    setCancelAttempt({ owner: attempt.owner, pending: false, error: null });
+                  }
+                } catch (error: unknown) {
+                  if (pendingCancelRef.current === attempt) {
+                    setCancelAttempt({
+                      owner: attempt.owner,
+                      pending: false,
+                      error: error instanceof Error ? error.message : String(error),
+                    });
+                  }
+                } finally {
+                  if (pendingCancelRef.current === attempt) pendingCancelRef.current = null;
+                }
+              })();
             }
           : null
       }
@@ -193,13 +241,8 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
             }
           : null
       }
-      className={!presentation.isFailed && !retryOpenCodeAction ? className : undefined}
     />
   );
-
-  if (!presentation.isFailed && !retryOpenCodeAction) {
-    return block;
-  }
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -221,6 +264,19 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
         </div>
       ) : null}
       {block}
+      {cancelPending ? (
+        <p role="status" className="text-xs text-[var(--color-text-muted)]">
+          {t('provisioning.cancelling', { defaultValue: 'Cancelling...' })}
+        </p>
+      ) : null}
+      {cancelError ? (
+        <p role="alert" className="text-xs text-[var(--step-error-text)] [overflow-wrap:anywhere]">
+          {t('provisioning.cancelFailed', {
+            defaultValue: 'Could not cancel launch: {{error}}',
+            error: cancelError,
+          })}
+        </p>
+      ) : null}
       {retryOpenCodeAction}
     </div>
   );
