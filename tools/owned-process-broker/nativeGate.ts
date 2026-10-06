@@ -30,6 +30,7 @@ import {
   type GatePhase,
   type HelperRole,
 } from './nativeGateDiagnostics';
+import { createFixtureOutputCollector } from './nativeGateOutput';
 
 function timeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
   return new Promise((resolvePromise, reject) => {
@@ -172,23 +173,14 @@ async function treeScenario(
   const prepared = await port.prepare(pending, spec(mode, start));
   if (prepared.kind !== 'prepared') throw preparationError(prepared);
   const target = prepared.process;
-  let output = '';
-  const children: { pid: number; birth: string }[] = [];
+  const output = createFixtureOutputCollector();
+  const { children } = output;
   let releaseChildren!: () => void;
   const childLines = new Promise<void>((done) => {
     releaseChildren = done;
   });
   target.stdout.on('data', (chunk: Buffer) => {
-    if (output.length + chunk.length > 65536)
-      throw new Error('Fixture output exceeds bounded JSON-tail gate');
-    output += chunk.toString();
-    for (const line of output.split('\n')) {
-      if (line.startsWith('{"children"') && line.endsWith('}')) {
-        const parsed = JSON.parse(line) as { children: { pid: number; birth: string }[] };
-        for (const entry of parsed.children)
-          if (!children.some((value) => value.pid === entry.pid)) children.push(entry);
-      }
-    }
+    output.push(chunk);
     if (children.length === 4) releaseChildren(); // child + grandchild + two sibling leaves
   });
   target.stderr.resume();
@@ -217,7 +209,7 @@ async function treeScenario(
   if (mode === 'root-first') {
     phase('root-exit');
     await timeout(rootExit);
-    assert.ok(output.includes('{"final":true}\n'), 'Queued final JSON tail retained');
+    assert.ok(output.hasFinal(), 'Queued final JSON tail retained');
     phase('target-drain');
     assert.equal(
       (await target.drain(performance.now() + 100)).kind,
