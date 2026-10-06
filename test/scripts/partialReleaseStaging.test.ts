@@ -28,7 +28,11 @@ import {
   renderFeed,
   textProof,
 } from '../../scripts/ci/release/contract.js';
-import { GitHubReleasePort, validateNativeProducer } from '../../scripts/ci/release/github.js';
+import {
+  GitHubReleasePort,
+  ReleaseHttpError,
+  validateNativeProducer,
+} from '../../scripts/ci/release/github.js';
 import * as nativeReadiness from '../../scripts/ci/release/nativeReadiness.js';
 import {
   publishCarriedRelease,
@@ -1548,6 +1552,38 @@ describe('carried publication effects and reconciliation', () => {
     expect(f.store.visibilityWrites).toEqual([false]);
     expect(f.store.releases.get('v2.17.2')!.draft).toBe(false);
   });
+  it('retries a transient numeric read after publication without another visibility write', async () => {
+    const f = await publicationFixture();
+    const read = f.store.releaseById.bind(f.store);
+    let failed = false;
+    vi.spyOn(f.store, 'releaseById').mockImplementation((repo, id) => {
+      if (f.store.visibilityWrites.length && !failed) {
+        failed = true;
+        return Promise.reject(new Error('Temporary numeric read failure'));
+      }
+      return read(repo, id);
+    });
+    const result = await publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt);
+    expect(failed).toBe(true);
+    expect(result.phase).toBe('published');
+    expect(f.store.visibilityWrites).toEqual([false]);
+  });
+  it('retries transient anonymous latest reads without redrafting an intact release', async () => {
+    const f = await publicationFixture();
+    const read = f.store.publicLatestAsset.bind(f.store);
+    let failed = false;
+    vi.spyOn(f.store, 'publicLatestAsset').mockImplementation((repo, name) => {
+      if (f.store.visibilityWrites.length && !failed) {
+        failed = true;
+        return Promise.reject(new ReleaseHttpError('Latest has not propagated', 408));
+      }
+      return read(repo, name);
+    });
+    const result = await publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt);
+    expect(failed).toBe(true);
+    expect(result.phase).toBe('published');
+    expect(f.store.visibilityWrites).toEqual([false]);
+  }, 15_000);
   it('redrafts the same ID after public availability fails, including a lost compensation response', async () => {
     const f = await publicationFixture();
     f.store.missingLatestFeed = 'latest-linux.yml';

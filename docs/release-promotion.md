@@ -147,5 +147,5 @@ canonical bytes, all feeds, aliases and anonymous latest paths. A failure return
 release ID to draft after its identity is rechecked; corrupted assets do not prevent containment.
 An uncertain state is reported as uncertain and is never automatically republished.
 
-Native macOS15 execution proves the unchanged signed2.17.1 source and product floor12 metadata;
-it does not claim macOS12 execution or dependency updates inside the retained Mac app.
+Native macOS 15 execution proves the unchanged signed 2.17.1 source and product floor 12 metadata;
+it does not claim macOS 12 execution or dependency updates inside the retained Mac app.

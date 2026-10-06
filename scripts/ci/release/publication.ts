@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { setTimeout as pause } from 'node:timers/promises';
 
 import { checkPlan, validateOrigins, verifyDraftBytes } from './assembly.js';
 import {
@@ -17,6 +18,7 @@ import {
   version,
 } from './contract.js';
 import type { NativeEvidence, Release, ReleasePort, StagePlan } from './contract.js';
+import { ReleaseHttpError } from './github.js';
 import { verifyNativeReadiness } from './nativeReadiness.js';
 import type { NativeReadinessPort, NativeReadinessReceipt } from './nativeReadiness.js';
 import { validateNativeEvidence, verifyPublished } from './validation.js';
@@ -169,6 +171,7 @@ export async function verifyCarryReadiness(
 async function reconcileVisibility(port: PublicationPort, plan: StagePlan): Promise<Release> {
   let cause: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await pause(2_000 * attempt);
     try {
       const release = await port.releaseById(plan.input.repository, plan.input.target.id);
       exactIdentity(release, plan);
@@ -178,6 +181,18 @@ async function reconcileVisibility(port: PublicationPort, plan: StagePlan): Prom
     }
   }
   throw new Error('Release visibility uncertain after bounded numeric reads', { cause });
+}
+
+async function retryPublicRead<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!(error instanceof ReleaseHttpError) || error.httpStatus !== 408 || attempt >= 6)
+        throw error;
+      await pause(5_000 * attempt);
+    }
+  }
 }
 
 export async function publishCarriedRelease(
@@ -208,7 +223,9 @@ export async function publishCarriedRelease(
       inventory(visible) === readiness.assetInventoryDigest,
       'Published inventory changed'
     );
-    await verifyPublished(port, plan.input.repository, plan.input.target.tag, plan.input.target.id);
+    await retryPublicRead(() =>
+      verifyPublished(port, plan.input.repository, plan.input.target.tag, plan.input.target.id)
+    );
     const versions = manifestFor(plan).versions;
     const aliases = Object.keys(plan.aliases);
     for (const name of [
@@ -216,8 +233,10 @@ export async function publishCarriedRelease(
       ...platformNames(versions.linux).linux,
       ...aliases,
     ]) {
-      await port.publicAsset(plan.input.repository, plan.input.target.tag, name);
-      await port.publicLatestAsset(plan.input.repository, name);
+      await retryPublicRead(() =>
+        port.publicAsset(plan.input.repository, plan.input.target.tag, name)
+      );
+      await retryPublicRead(() => port.publicLatestAsset(plan.input.repository, name));
     }
     const final = await reconcileVisibility(port, plan);
     requireThat(

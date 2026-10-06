@@ -57,6 +57,10 @@ async function download(endpoint: string, destination: string): Promise<void> {
       pipeline(child.stdout, createWriteStream(destination, { flags: 'wx' })),
       completed,
     ]);
+  } catch (error) {
+    // A failed file stream must not leave gh downloading after its deadline is cleared.
+    child.kill('SIGKILL');
+    throw error;
   } finally {
     clearTimeout(deadline);
   }
