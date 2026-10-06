@@ -422,8 +422,8 @@
     "pacman": {
       "afterInstall": "resources/afterInstall.sh",
       "fpm": [
-        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai",
-        "--after-upgrade=resources/afterInstall.sh"
+        "--after-upgrade=resources/afterInstall.sh",
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
       ],
       "depends": [
         "c-ares",
