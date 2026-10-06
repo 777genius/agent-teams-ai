@@ -21,7 +21,7 @@ const home = path.join(root, 'home');
 const userData = path.join(root, 'user-data');
 const bin = path.join(root, 'bin');
 const output = path.resolve(process.argv[3] ?? path.join(root, 'evidence'));
-await mkdir(output, { recursive: true });
+await mkdir(output); // A new directory prevents stale passed evidence on a failed rerun.
 for (const directory of [project, home, userData, bin, path.join(root, 'tmp')])
   await mkdir(directory, { recursive: true });
 const fixture = fileURLToPath(new URL('./fixture.mts', import.meta.url));
@@ -99,6 +99,7 @@ Object.assign(environment, {
 let log = '';
 let cdp: Cdp | undefined;
 let owner: Awaited<ReturnType<typeof processIdentity>> = null;
+let failure: unknown;
 const evidence: Record<string, unknown> = {
   mode,
   root,
@@ -415,18 +416,38 @@ try {
   assert.equal(count, mode === 'red' ? 1 : 2, 'At most one automatic exact-project recovery retry');
   evidence.statusCountAfter = count;
   evidence.calls = finalCalls;
-  evidence.result = 'passed';
-  console.log(
-    JSON.stringify({ mode, output, statusCountBefore, statusCountAfter: count, result: 'passed' })
-  );
 } catch (error) {
-  evidence.result = 'failed';
+  failure = error;
   evidence.error = String(error);
   if (cdp) await snapshot('failure').catch(() => {});
-  throw error;
 } finally {
   cdp?.close();
-  if (owner) evidence.cleanup = await stopOwnedGroup(owner);
+  try {
+    if (owner) {
+      const cleanup = await stopOwnedGroup(owner);
+      evidence.cleanup = cleanup;
+      assert.equal(
+        cleanup.remaining.length,
+        0,
+        'Owned desktop processes must be stopped before success'
+      );
+    }
+  } catch (error) {
+    evidence.cleanupError = String(error);
+    failure ??= error;
+  }
+  evidence.result = failure ? 'failed' : 'passed';
   await writeFile(path.join(output, 'desktop.log'), log);
   await writeFile(path.join(output, 'evidence.json'), JSON.stringify(evidence, null, 2));
 }
+
+if (failure) throw failure;
+console.log(
+  JSON.stringify({
+    mode,
+    output,
+    statusCountBefore: evidence.statusCountBefore,
+    statusCountAfter: evidence.statusCountAfter,
+    result: evidence.result,
+  })
+);
