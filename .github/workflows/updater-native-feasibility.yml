@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: write
       actions: read
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
 
   linux-predecessor-availability:
     needs: verified-inputs
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -174,7 +174,7 @@ jobs:
 
   linux-native-ota:
     needs: verified-inputs
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     permissions:
       contents: read

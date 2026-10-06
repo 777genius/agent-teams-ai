@@ -48,7 +48,7 @@ jobs:
             runner: macos-15
           - architecture: x64
             runner: macos-15-intel
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner == 'macos-15' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.runner }}
     timeout-minutes: 35
     steps:
       - name: Require reviewed immutable tooling SHA
@@ -106,7 +106,7 @@ jobs:
     name: mac-source-signatures
     needs: mac-source-probe
     if: always() && github.repository == '777genius/agent-teams-ai'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - name: Require reviewed immutable tooling SHA
