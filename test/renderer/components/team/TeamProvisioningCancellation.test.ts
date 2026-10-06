@@ -218,5 +218,4 @@ describe('synthetic provisioning cancellation UI ownership', () => {
       await settle(() => root.unmount());
     }
   });
-
 });
