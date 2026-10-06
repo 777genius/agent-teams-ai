@@ -7,6 +7,26 @@ const showComparisonRobotBubble = ref(false)
 let comparisonRobotObserver: IntersectionObserver | null = null
 
 const ruNotes: Record<string, string> = {
+  'Persistent roles, delegation, owned-work queues, and review handoffs': 'Постоянные роли, делегирование, очередь работ с владельцами и передача на ревью',
+  'Native permissions, audited seat policies, typing guard, and stop controls': 'Нативные разрешения, аудит политик агентов, защита ручного ввода и остановка',
+  'TUI topology graph, seat state, missions, and activity feed': 'Граф команды в TUI, состояния агентов, миссии и лента активности',
+  'TUI coordination + tmux terminals; optional maintenance web UI': 'Координация в TUI и терминалы tmux; опциональный web UI в режиме поддержки',
+  'Node + tmux + provider login; guided setup on macOS/Linux': 'Node, tmux и вход к провайдеру; пошаговая настройка на macOS/Linux',
+  'Readiness checks, snapshots, and explicit per-seat restore outcomes': 'Проверки готовности, снимки состояния и явные результаты восстановления каждого агента',
+  'Owned-work queue and mission views; no Kanban board': 'Очередь работ с владельцами и представления миссий; без канбан-доски',
+  'Reviewer rigs and proof approvals; no task-level hunk review UI': 'Команды ревьюеров и подтверждение результатов; без интерфейса ревью фрагментов по задаче',
+  'Cross-rig messages, broadcasts, chatrooms, and queue handoffs': 'Сообщения между командами, рассылки, чаты и передача работ через очередь',
+  'Queue blockers, workflow dependencies, and transactional handoffs': 'Блокеры очереди, зависимости workflow и транзакционная передача',
+  'Activity feed, transcripts, queue audit, and runtime-dependent telemetry': 'Лента активности, транскрипты, аудит очереди и телеметрия с учётом runtime',
+  'Rigs, pods, seats, and topology graph; no editable company org map': 'Команды, группы, роли и граф связей; без редактируемой оргкарты компании',
+  'Claude Code, Codex, Pi, and Oh My Pi in mixed rigs': 'Claude Code, Codex, Pi и Oh My Pi в смешанных командах',
+  'Token-burn/provider-window monitoring; no documented spend cap': 'Мониторинг расхода токенов и лимитов провайдера; лимит расходов не документирован',
+  'Per-seat working directories; externally managed Git worktrees': 'Рабочие каталоги для каждого агента; Git worktree управляются отдельно',
+  'tmux + herdr/cmux integration; optional maintenance web terminal': 'tmux и интеграции herdr/cmux; опциональный web-терминал в режиме поддержки',
+  'Basic file editor in optional maintenance web UI': 'Базовый редактор файлов в опциональном web UI в режиме поддержки',
+  'Queue evidence refs, proof media, and Slack file attachments': 'Ссылки на результаты в очереди, медиа подтверждений и файловые вложения Slack',
+  'Apache-2.0 OSS; provider usage and hosting costs apply': 'OSS под Apache-2.0; использование провайдеров и хостинг оплачиваются отдельно',
+
   'Direct agent messages and shared task links across teams': 'Прямые сообщения агентов и общие ссылки на задачи между командами',
   'Coordination across groups': 'Координация между группами',
   'Company-scoped org work': 'Оргработа на уровне компании',
@@ -130,8 +150,8 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 22 сентября 2026; источники конкурентов проверены 22 сентября 2026:'
-    : 'Agent Teams product facts checked in local source on September 22, 2026; competitor sources checked on September 22, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 22 сентября 2026; источники остальных конкурентов проверены 22 сентября 2026; OpenRig v0.6.5 проверен 6 октября 2026:'
+    : 'Agent Teams product facts checked in local source on September 22, 2026; other competitor sources checked on September 22, 2026; OpenRig v0.6.5 checked on October 6, 2026:'
 ))
 
 const autonomyRatingNote = computed(() => (
@@ -206,6 +226,7 @@ interface ComparisonRow {
   paperclip: CellValue
   cursor: CellValue
   claudeCli: CellValue
+  openrig: CellValue
 }
 
 const rows = computed<ComparisonRow[]>(() => [
@@ -216,6 +237,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', power: 7, note: note('Durable scheduled and event-triggered agents, less live peer teamwork') },
     cursor: { status: 'partial', power: 6, note: note('Parallel agents + subagents, no peer team') },
     claudeCli: { status: 'partial', power: 7, note: note('Experimental teams + cross-session messaging; recovery limits') },
+    openrig: { status: 'yes', power: 8, note: note('Persistent roles, delegation, owned-work queues, and review handoffs') },
   },
   {
     feature: t('comparison.features.flexAutonomy'),
@@ -224,6 +246,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Board approvals, roles, pause, and stop') },
     cursor: { status: 'partial', note: note('Command controls and admin policies') },
     claudeCli: { status: 'yes', note: note('Permissions + hooks') },
+    openrig: { status: 'yes', note: note('Native permissions, audited seat policies, typing guard, and stop controls') },
   },
   {
     feature: t('comparison.features.liveWorkGraph'),
@@ -232,6 +255,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Org chart/status, not a task/log map') },
     cursor: { status: 'partial', note: note('Agents Window, no shared peer-team map') },
     claudeCli: { status: 'partial', note: note('Terminal team panel, no graphical UI') },
+    openrig: { status: 'yes', note: note('TUI topology graph, seat state, missions, and activity feed') },
   },
   {
     feature: t('comparison.features.teamWorkspace'),
@@ -240,6 +264,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Board + task chats, less live teammate view') },
     cursor: { status: 'partial', note: note('Agents Window, no peer team workspace') },
     claudeCli: { status: 'partial', note: note('Terminal agent view, no graphical workspace') },
+    openrig: { status: 'partial', note: note('TUI coordination + tmux terminals; optional maintenance web UI') },
   },
   {
     feature: t('comparison.features.zeroSetup'),
@@ -248,6 +273,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('npx onboarding + browser app') },
     cursor: { status: 'partial', note: note('App install + account') },
     claudeCli: { status: 'partial', note: note('CLI + env flag') },
+    openrig: { status: 'partial', note: note('Node + tmux + provider login; guided setup on macOS/Linux') },
   },
   {
     feature: t('comparison.features.launchProof'),
@@ -256,6 +282,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Run status and orphan recovery') },
     cursor: { status: 'partial', note: note('Agent status in Agents Window') },
     claudeCli: { status: 'partial', note: note('Agent view statuses, logs, stop/respawn in terminal') },
+    openrig: { status: 'yes', note: note('Readiness checks, snapshots, and explicit per-seat restore outcomes') },
   },
   {
     feature: t('comparison.features.kanban'),
@@ -264,6 +291,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('7 columns, drag-and-drop') },
     cursor: { status: 'no' },
     claudeCli: { status: 'no' },
+    openrig: { status: 'no', note: note('Owned-work queue and mission views; no Kanban board') },
   },
   {
     feature: t('comparison.features.reviewWorkflow'),
@@ -272,6 +300,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Review gates, not inline code review') },
     cursor: { status: 'yes', note: note('Local Agent Review + PR Bugbot') },
     claudeCli: { status: 'partial', note: note('Agent review, no review UI') },
+    openrig: { status: 'partial', note: note('Reviewer rigs and proof approvals; no task-level hunk review UI') },
   },
   {
     feature: t('comparison.features.crossTeam'),
@@ -280,6 +309,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Comments + @mentions') },
     cursor: { status: 'na' },
     claudeCli: { status: 'partial', note: note('Cross-machine/cloud session messaging, no shared cross-team task graph') },
+    openrig: { status: 'yes', note: note('Cross-rig messages, broadcasts, chatrooms, and queue handoffs') },
   },
   {
     feature: t('comparison.features.linkedTasks'),
@@ -288,6 +318,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Goals, parent tasks, blockers') },
     cursor: { status: 'no' },
     claudeCli: { status: 'yes', note: note('Shared task list') },
+    openrig: { status: 'yes', note: note('Queue blockers, workflow dependencies, and transactional handoffs') },
   },
   {
     feature: t('comparison.features.sessionAnalysis'),
@@ -296,6 +327,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Run transcripts + cost audit') },
     cursor: { status: 'partial', note: note('Agent chat, diffs, artifacts, and cloud diagnostics') },
     claudeCli: { status: 'partial', note: note('Transcripts, background logs, /usage, and /insights') },
+    openrig: { status: 'yes', note: note('Activity feed, transcripts, queue audit, and runtime-dependent telemetry') },
   },
   {
     feature: t('comparison.features.orgGovernance'),
@@ -304,6 +336,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Org chart + board governance') },
     cursor: { status: 'partial', note: note('Team admin only') },
     claudeCli: { status: 'no' },
+    openrig: { status: 'partial', note: note('Rigs, pods, seats, and topology graph; no editable company org map') },
   },
   {
     feature: t('comparison.features.multiAgent'),
@@ -312,6 +345,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Bring your own agents/runtimes') },
     cursor: { status: 'partial', note: note('Multi-model parent + subagents, no peer team') },
     claudeCli: { status: 'partial', note: note('Claude-only experimental teams') },
+    openrig: { status: 'yes', note: note('Claude Code, Codex, Pi, and Oh My Pi in mixed rigs') },
   },
   {
     feature: t('comparison.features.budgetControls'),
@@ -320,6 +354,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Per-agent budgets + hard stops') },
     cursor: { status: 'yes', note: note('User/team spend caps + cloud-agent spend limits') },
     claudeCli: { status: 'yes', note: note('Org/member spend limits + print-mode hard cap') },
+    openrig: { status: 'partial', note: note('Token-burn/provider-window monitoring; no documented spend cap') },
   },
   {
     feature: t('comparison.features.worktree'),
@@ -328,6 +363,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Worktrees / branches') },
     cursor: { status: 'yes', note: note('Agents Window worktrees') },
     claudeCli: { status: 'yes', note: note('Built-in for sessions and subagents') },
+    openrig: { status: 'partial', note: note('Per-seat working directories; externally managed Git worktrees') },
   },
   {
     feature: t('comparison.features.integratedTerminal'),
@@ -336,6 +372,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'partial', note: note('Runs commands, no interactive terminal') },
     cursor: { status: 'yes', note: note('Built-in IDE terminal') },
     claudeCli: { status: 'partial', note: note('Runs in your terminal') },
+    openrig: { status: 'yes', note: note('tmux + herdr/cmux integration; optional maintenance web terminal') },
   },
   {
     feature: t('comparison.features.codeEditor'),
@@ -344,6 +381,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'no', note: note('Control plane, not editor') },
     cursor: { status: 'yes', note: note('Full IDE') },
     claudeCli: { status: 'no' },
+    openrig: { status: 'partial', note: note('Basic file editor in optional maintenance web UI') },
   },
   {
     feature: t('comparison.features.taskAttachments'),
@@ -352,6 +390,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'yes', note: note('Docs, attachments, work products') },
     cursor: { status: 'partial', note: note('Prompt context, not task attachments') },
     claudeCli: { status: 'partial', note: note('Prompt files/images, not task attachments') },
+    openrig: { status: 'partial', note: note('Queue evidence refs, proof media, and Slack file attachments') },
   },
   {
     feature: t('comparison.features.price'),
@@ -360,6 +399,7 @@ const rows = computed<ComparisonRow[]>(() => [
     paperclip: { status: 'free', note: note('OSS, self-hosted + infra') },
     cursor: { status: 'text', note: note('Free + paid usage') },
     claudeCli: { status: 'text', note: note('Claude plan or API usage') },
+    openrig: { status: 'free', note: note('Apache-2.0 OSS; provider usage and hosting costs apply') },
   },
 ])
 
@@ -369,9 +409,17 @@ const competitors = [
   { key: 'paperclip', name: 'Paperclip' },
   { key: 'cursor', name: 'Cursor' },
   { key: 'claudeCli', name: 'Claude Code CLI' },
+  { key: 'openrig', name: 'OpenRig' },
 ]
 
 const sourceLinks = [
+  { label: 'OpenRig v0.6.5 README', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/README.md' },
+  { label: 'OpenRig coordination and queue', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/coordination-primitive.md' },
+  { label: 'OpenRig snapshot and restore', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/lifecycle-snapshot-restore.md' },
+  { label: 'OpenRig workspace model', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/workspace-primitive.md' },
+  { label: 'OpenRig basic web editor', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/packages/ui/src/components/files/FilesWorkspace.tsx' },
+  { label: 'OpenRig comparison evidence', href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/openrig-comparison-2026-10-06.md' },
+
   { label: 'Agent Teams organizations feature', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md' },
   { label: 'Agent Teams mixed-provider team lanes', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts' },
   { label: 'Agent Teams cross-team messaging', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/main/services/team/CrossTeamService.ts' },
@@ -809,7 +857,7 @@ function getPowerLabel(power: number): string {
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: 1100px;
   font-size: 0.85rem;
 }
 
