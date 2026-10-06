@@ -17,6 +17,7 @@ peerDependencyRules:
     '@nuxt/schema': '3.21.11'
 
 overrides:
+  '@modelcontextprotocol/sdk': '1.32.0'
   '@terminal-platform/design-tokens': 'file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz'
   '@terminal-platform/foundation': 'file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz'
   '@terminal-platform/runtime-types': 'file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz'
@@ -83,7 +84,7 @@ overrides:
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'
   'seroval': '1.6.8'
-  'shell-quote': '1.10.0'
+  'shell-quote': '1.12.0'
   'simple-git': '4.0.2'
   'smol-toml': '1.8.0'
   'source-map-js': '1.2.2'
