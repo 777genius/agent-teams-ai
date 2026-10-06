@@ -140,6 +140,26 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(result.diagnostics.warning).toMatch(/Large native team startup context/);
   });
 
+  it('retains own workflow and action-mode rules when a colleague has an oversized role', async () => {
+    const teamName = 'peer-role-budget-sandbox';
+    const members = [
+      { name: 'alice', role: 'Reviewer', workflow: 'OWN_WORKFLOW_SENTINEL' },
+      { name: 'bob', role: 'x'.repeat(40_000) },
+      { name: 'lead', providerId: 'opencode' as const, role: 'team-lead' },
+    ];
+    await new TeamMembersMetaStore().writeMembers(teamName, members);
+    const specs = await buildNativeAppManagedBootstrapSpecs({
+      teamName,
+      cwd: '/tmp/workspace',
+      members,
+    });
+    const context = specs.get('alice')?.contextText ?? '';
+    expect(context).toContain('- bob (role:');
+    expect(context).toContain('- lead (role: team-lead)');
+    expect(context).toContain('OWN_WORKFLOW_SENTINEL');
+    expect(context).toContain('TURN ACTION MODE PROTOCOL');
+  });
+
   it('compacts thirty large native contexts within the aggregate budget', async () => {
     const hugeRole = 'x'.repeat(40_000);
     await new TeamMetaStore().writeMeta('large-native-team', {

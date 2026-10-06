@@ -26,7 +26,7 @@ function buildMemberActionModeProtocol() {
     return buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION);
 }
 
-function buildMemberRosterContext(members, memberName, leadName, maxRoleChars = Infinity) {
+function buildMemberRosterContext(members, memberName, leadName, maxRoleChars = 120) {
     const lines = members
         .filter((member) => member.removedAt == null && member.name.toLowerCase() !== 'user')
         .map((member) => {
