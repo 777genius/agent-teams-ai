@@ -81,7 +81,7 @@ if (operation === 'retrieve') {
   assert.equal(digest(canonical(plan.input)), inputDigest);
   assert.equal(plan.input.toolingSha, toolingSha);
   assert.equal(plan.input.repository, '777genius/agent-teams-ai');
-  assert.equal(plan.input.target.tag, 'v2.17.3');
+  assert.equal(plan.input.target.tag, 'v2.17.4');
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(
     plan.input.macSource?.release.applicationSha,

@@ -370,6 +370,10 @@ try {
     ).stdout.trim(),
     toolingSha
   );
+  evidence.testedOperatingSystem = (
+    await commands.checked('tested-macos-version', '/usr/bin/sw_vers', ['-productVersion'])
+  ).stdout.trim();
+  assert(/^15\.\d+(?:\.\d+)?$/.test(String(evidence.testedOperatingSystem)));
   const plan = await loadPlan(required('plan'), required('plan-sha256'));
   assert.equal(digest(canonical(plan.input)), required('input-digest'));
   assert.equal(plan.input.toolingSha, toolingSha);
@@ -377,7 +381,7 @@ try {
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(plan.input.macSource?.release.applicationSha, sourceSha);
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
-  assert.equal(plan.input.target.tag, 'v2.17.3');
+  assert.equal(plan.input.target.tag, 'v2.17.4');
   commonTag = plan.input.target.tag;
   commonVersion = version(commonTag);
   evidence.previewCommonTag = commonTag;

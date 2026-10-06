@@ -29,17 +29,17 @@ async function fixture() {
     body: 'Synthetic transport fixture only',
     assets: [],
   };
-  const target: Release = { ...source, id: 2, tag_name: 'v2.17.3', draft: true };
+  const target: Release = { ...source, id: 2, tag_name: 'v2.17.4', draft: true };
   const inputs: WindowsInputSet = {
     source,
     target,
     verified: [],
-    feed: 'version: 2.17.3\n',
+    feed: 'version: 2.17.4\n',
     inputDigest: '2'.repeat(64),
-    targetVersion: '2.17.3',
+    targetVersion: '2.17.4',
     legacyFixture: false,
   };
-  const name = 'Agent.Teams.AI.Setup.2.17.3.exe';
+  const name = 'Agent.Teams.AI.Setup.2.17.4.exe';
   const priorMap = 'Agent.Teams.AI.Setup.2.17.1.exe.blockmap';
   const bytes = Buffer.from(Array.from({ length: 1024 }, (_, index) => index % 256));
   for (const [filename, tag, data] of [
@@ -139,7 +139,7 @@ await test('provider proof needs completed actual requests from both session par
     for (const url of [
       `${f.prefix}.atom`,
       `${f.prefix}/latest`,
-      `${f.prefix}/download/v2.17.3/latest.yml`,
+      `${f.prefix}/download/v2.17.4/latest.yml`,
     ])
       await f.get(url);
     const head = await fetch(`${f.mirror.origin}${f.installer}?TEST_session=default`, {
@@ -148,18 +148,18 @@ await test('provider proof needs completed actual requests from both session par
     });
     assert.equal(head.status, 200);
     assert.equal((await head.arrayBuffer()).byteLength, 0);
-    await f.get('/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.3', 'default');
-    proveWindowsProvider(f.mirror.requests, '2.17.3', f.name);
+    await f.get('/api/repos/777genius/agent-teams-ai/releases/tags/v2.17.4', 'default');
+    proveWindowsProvider(f.mirror.requests, '2.17.4', f.name);
     assert.throws(() => proveWindowsProvider(f.mirror.requests, '2.17.2', f.name));
     const wrongSession = f.mirror.requests.map((entry) => ({
       ...entry,
       session: 'electron-updater',
     }));
-    assert.throws(() => proveWindowsProvider(wrongSession, '2.17.3', f.name));
+    assert.throws(() => proveWindowsProvider(wrongSession, '2.17.4', f.name));
     assert.throws(() =>
       proveWindowsProvider(
         f.mirror.requests.map((entry) => ({ ...entry, completed: false })),
-        '2.17.3',
+        '2.17.4',
         f.name
       )
     );

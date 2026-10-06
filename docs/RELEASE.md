@@ -43,6 +43,7 @@ macOS source: `v2.17.1`, application commit `395572f9ff2a261cb28224754883a39d2c3
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.17.3 -->
+
 Windows and Linux 2.17.3 introduce monthly usage budgets for teams and projects. macOS downloads remain the existing signed 2.17.1 builds.
 
 ### What's New
@@ -64,19 +65,20 @@ Cost figures are estimates, not provider invoices.
 
 ### Downloads
 
-| Platform | Version | Download |
-| --- | --- | --- |
-| Windows x64 | 2.17.3 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3.exe) |
-| Windows ARM64 | 2.17.3 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3-arm64.exe) |
-| Linux x64 | 2.17.3 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI-2.17.3.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai_2.17.3_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.pacman) |
-| macOS Apple Silicon | 2.17.1 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg) |
-| macOS Intel | 2.17.1 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg) |
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.3  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.3  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.3  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI-2.17.3.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai_2.17.3_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.pacman) |
+| macOS Apple Silicon | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
 
 macOS downloads require macOS 12 or later. The What's New and Fixes sections apply to Windows and Linux 2.17.3.
 
 Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
 
 Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
 <!-- RELEASE_BODY_END v2.17.3 -->
 
 ## v2.17.2 (2026-10-01)
@@ -91,6 +93,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.17.2 -->
+
 Claude models can start without outdated client-version errors, and provider checks finish instead of leaving the dashboard loading indefinitely.
 
 ### Fixes
@@ -160,6 +163,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.17.1 -->
+
 OpenCode users can keep choosing models when optional Cursor tools are unavailable.
 
 ### Improvements
@@ -228,6 +232,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.17.0 -->
+
 OpenCode setup errors now explain what to do next. Messages keeps drafts when switching chats and sender avatars visible while scrolling.
 
 ### What's New
@@ -304,6 +309,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.15.0 -->
+
 Recover stalled teammate work from the team page, chat 1:1 in Messages, use extra local catalog models, and keep Cursor CLI detection honest.
 
 ### What's New
@@ -383,6 +389,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.4 -->
+
 Keeps local OpenCode models such as Ollama visible after a catalog refresh, and lets you test them from Provider Settings.
 
 ### Fixes
@@ -451,6 +458,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.3 -->
+
 Keeps local OpenCode models such as Ollama visible after a catalog refresh, and shows them as ready instead of missing.
 
 ### Fixes
@@ -518,6 +526,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.2 -->
+
 Fixes OpenCode startup, stop, and catalog errors, and keeps teammate models after relaunch.
 
 ### What's New
@@ -595,6 +604,7 @@ Owner approved publication of v2.14.1 after the fresh draft passes the required 
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.1 -->
+
 Fixes startup and recovery for existing Cursor, GLM (Z.AI), and SuperGrok integrations, with safer team stopping and individual teammate retries.
 
 ### Improvements
@@ -668,6 +678,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.2 -->
+
 This update fixes OpenCode startup checks and makes provider sign-in failures easier to identify.
 
 ### Fixes
@@ -735,6 +746,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.1 -->
+
 Fixes team launches for Z.AI Coding Plan models. On 2.13.0 their model check always failed, which blocked every team that included an OpenCode member.
 
 ### Fixes
@@ -802,6 +814,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.0 -->
+
 This update makes mixed-provider teams easier to set up and manage, with clearer model checks and fixes for startup, task delivery, and duplicate messages.
 
 ### What's New
@@ -886,6 +899,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.12.0 -->
+
 Use self-hosted OpenAI-compatible models with team members.
 
 ### What's New
@@ -965,6 +979,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.11.0 -->
+
 This release focuses on fixes and stability.
 
 ### Fixes and Stability
@@ -1039,6 +1054,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.10.0 -->
+
 Improved local model setup, team launches, Changes recovery, and provider error messages.
 
 ### What's New
@@ -1119,6 +1135,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
+
 Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 <img width="2624" height="1652" alt="image" src="https://github.com/user-attachments/assets/b23a09f3-0f08-446f-824d-5623ff111574" />
@@ -1205,6 +1222,7 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.8.0 -->
+
 Use more of the AI subscriptions you already pay for in the same Agent Team. Guided setup connects supported plans, lets you choose a provider and model for each teammate, and keeps the whole flow in one place. This release also adds safe team-folder import, newer Codex models, and fuller usage and cost reporting.
 
 ### What's New
@@ -1296,6 +1314,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
+
 Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
 ### What's New
@@ -1367,6 +1386,7 @@ GitHub release: [v2.5.0](https://github.com/777genius/agent-teams-ai/releases/ta
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.0 -->
+
 Built-in terminal for command and graph screens.
 
 <img width="762" height="338" alt="image" src="https://github.com/user-attachments/assets/c8aa4e93-1223-4caa-b3be-cf22852f1c10" />
@@ -1438,6 +1458,7 @@ Target commit: `ad5a2dc5808eeddde30ab17eecf3afbb32b24214` (`origin/dev`).
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.4.0 -->
+
 Minor release focused on more capable team runtime workflows, better Agent Graph controls, faster team screens, and stronger recovery for OpenCode, Codex, and member work sync. It also refreshes onboarding docs, screenshots, and Simplified Chinese localization.
 
 ### What's New
@@ -1602,17 +1623,18 @@ Format: `MAJOR.MINOR.PATCH`
 ### Critical stable-release invariant
 
 > [!CAUTION]
-> A draft becoming public is not enough to complete a stable release. The only
-> supported publication path is a successful `release.yml` run for the exact
-> release tag with `publish_release=true`. Publishing through GitHub's
+> A draft becoming public is not enough to complete a stable release. The supported full publication path is a successful `release.yml` run for the exact
+> release tag with `publish_release=true`. A carried Mac release instead requires
+> `publish-carried-release.yml` at the immutable reviewed tooling commit with
+> `publish_release=true` and all native readiness evidence verified. Publishing through GitHub's
 > **Publish release** button or `gh release edit --draft=false` skips the updater
 > feed job. Existing installations then receive no update event, dialog, or
 > banner.
 
 A stable release is complete only when all of these are true:
 
-- The final `release.yml` run used `publish_release=true`.
-- Its publication job succeeded: `promote-existing-draft` for reviewed draft reuse, or `upload-stable-links` for a full rebuild.
+- The final supported publication run used `publish_release=true`: `release.yml` for full releases or `publish-carried-release.yml` for a reviewed carried Mac release.
+- Its publication job succeeded: `promote-existing-draft` for full draft reuse, `upload-stable-links` for a full rebuild, or `publish-reviewed-carry` for a carried Mac release.
 - The release is public, non-prerelease, and selected as GitHub's latest release.
 - The release assets contain `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 - All three `/releases/latest/download/latest*.yml` URLs return successfully.
