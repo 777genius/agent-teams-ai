@@ -31,6 +31,7 @@ std::atomic<bool> postLaunchReadPending{false};
 #endif
 Creation creation=Never;
 bool birthKnown=false, rootExited=false, rootPublished=false, confirmed=false;
+bool targetCopiesClosed=false; // single admission owns CRT copies; state lock required
 uint64_t birth=0;
 DWORD rootCode=0;
 wire::Frame confirmedStop{};
@@ -125,6 +126,8 @@ void watcher() {
   }
 }
 void closeTargetCopies() {
+  if(targetCopiesClosed) return;
+  targetCopiesClosed=true; // claim before closing; later failure cleanup must not close reused fds
   // CRT owns fd0-2. _close closes its OS handle too; do not CloseHandle it again.
   _close(0); _close(1); _close(2);
   SetStdHandle(STD_INPUT_HANDLE,nullptr); SetStdHandle(STD_OUTPUT_HANDLE,nullptr);
