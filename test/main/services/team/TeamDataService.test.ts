@@ -606,15 +606,21 @@ describe('TeamDataService draft metadata', () => {
     tempPaths.push(claudeRoot);
     setClaudeBasePathOverride(claudeRoot);
     const service = new TeamDataService();
-    await service.createTeamConfig({ teamName: 'inheritance-team', members: [{ name: 'inherited' }] });
+    await service.createTeamConfig({
+      teamName: 'inheritance-team',
+      members: [{ name: 'inherited' }],
+    });
     const metaPath = path.join(claudeRoot, 'teams', 'inheritance-team', 'members.meta.json');
     const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
     meta.members.push({ name: 'team-lead', model: 'old-lead' });
     meta.members.push({ name: 'legacy-lead', role: 'Team Lead', model: 'old-lead' });
     meta.members.push({ name: 'feature-owner', role: 'Lead', model: 'teammate-model' });
     await fs.writeFile(metaPath, JSON.stringify(meta));
-    expect((await service.getSavedRequest('inheritance-team'))?.members.map(member => member.name).sort())
-      .toEqual(['feature-owner', 'inherited']);
+    expect(
+      (await service.getSavedRequest('inheritance-team'))?.members
+        .map((member) => member.name)
+        .sort()
+    ).toEqual(['feature-owner', 'inherited']);
   });
 
   it('round-trips create config metadata through getSavedRequest', async () => {
@@ -745,7 +751,9 @@ describe('TeamDataService draft metadata', () => {
     await expect(
       fs.access(path.join(claudeRoot, 'teams', 'fixteam-test', 'team.meta.json'))
     ).resolves.toBeUndefined();
-    await expect(fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))
+    ).resolves.toBeUndefined();
 
     await expect(service.getSavedRequest('signal-ops')).resolves.toBeNull();
     await expect(service.getSavedRequest('fixteam-test')).resolves.toMatchObject({
@@ -994,7 +1002,9 @@ function createGetTeamDataHarness(
     getTeamMeta?: () => Promise<TeamMetaFile | null>;
     getState?: () => Promise<KanbanState>;
     readMessages?: () => Promise<InboxMessage[]>;
-    resolveMembers?: (...args: Parameters<TeamMemberResolver['resolveMembers']>) => ResolvedTeamMember[];
+    resolveMembers?: (
+      ...args: Parameters<TeamMemberResolver['resolveMembers']>
+    ) => ResolvedTeamMember[];
     listProcesses?: () => TeamProcess[];
     getMemberAdvisories?: () => Promise<Map<string, unknown>>;
   } = {}
@@ -8190,7 +8200,7 @@ describe('TeamDataService', () => {
       const fillerMessages = Array.from({ length: 55 }, (_, index) => ({
         from: 'alice',
         text: `filler-${index}`,
-        timestamp: `2026-01-01T00:00:${String(10 + index).padStart(2, '0')}.000Z`,
+        timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, 10 + index)).toISOString(),
         messageId: `filler-${index}`,
         source: 'inbox' as const,
       }));
