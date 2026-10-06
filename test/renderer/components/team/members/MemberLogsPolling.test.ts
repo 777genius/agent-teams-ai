@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DetailReadCoordinator, useCompletionRead } from '@features/member-log-reads/renderer';
+
 import type { EnhancedUserChunk, ParsedMessage, MemberLogSummary } from '@shared/types';
 
 const fixtures = vi.hoisted(() => ({
@@ -282,6 +284,69 @@ describe('mounted synthetic member-log read ownership', () => {
     await advance(15_000);
     expect(fixtures.summary).toHaveBeenCalledTimes(2);
     expect(refreshing).toHaveBeenLastCalledWith(false);
+  });
+
+  it('shows summary polling errors and waits for the next scheduled retry', async () => {
+    fixtures.summary
+      .mockResolvedValueOnce([log('before-summary-error')])
+      .mockRejectedValueOnce(new Error('observable-summary-poll-error'))
+      .mockResolvedValue([log('after-summary-retry')]);
+    await render({ taskStatus: 'in_progress' });
+    await advance(5000);
+    expect(container.textContent).toContain('observable-summary-poll-error');
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    await advance(4999);
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    await advance(1);
+    expect(container.textContent).not.toContain('observable-summary-poll-error');
+    expect(container.textContent).toContain('after-summary-retry');
+  });
+
+  it('shows refreshing feedback for a status-only request with retained completed rows', async () => {
+    fixtures.summary.mockResolvedValue([log('status-policy-row')]);
+    const refreshing = vi.fn();
+    await render({ taskStatus: 'pending', onRefreshingChange: refreshing });
+    expect(refreshing).toHaveBeenLastCalledWith(false);
+    await render({ taskStatus: 'in_progress', onRefreshingChange: refreshing });
+    expect(container.textContent).toContain('status-policy-row');
+    expect(refreshing).toHaveBeenLastCalledWith(true);
+    await advance(250);
+    expect(refreshing).toHaveBeenLastCalledWith(false);
+  });
+
+  it('releases the completed closed owner before a replacement read settles', async () => {
+    const coordinator = new DetailReadCoordinator<EnhancedUserChunk[]>();
+    const scope = { key: 'synthetic-closed-view-scope', source: {}, isCurrent: () => true };
+    const replacement = deferred<EnhancedUserChunk[]>();
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce([chunk('closed-owner-payload')])
+      .mockReturnValueOnce(replacement.promise);
+    function Probe({ open }: { open: boolean }): React.JSX.Element {
+      const result = useCompletionRead({
+        coordinator,
+        scope,
+        key: open ? 'synthetic-selected-source' : null,
+        active: true,
+        poll: false,
+        read,
+        beginRefreshing: () => () => undefined,
+      });
+      return React.createElement(
+        'div',
+        { 'data-testid': 'owned-payload' },
+        result.value?.map((value) => value.id).join(',') ?? 'no-owned-payload'
+      );
+    }
+    await flush(() => root.render(React.createElement(Probe, { open: true })));
+    expect(container.textContent).toBe('closed-owner-payload');
+    await flush(() => root.render(React.createElement(Probe, { open: false })));
+    expect(container.textContent).toBe('no-owned-payload');
+    await flush(() => root.render(React.createElement(Probe, { open: true })));
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toBe('no-owned-payload');
+    await flush(() => replacement.resolve([chunk('replacement-owner-payload')]));
+    expect(container.textContent).toBe('replacement-owner-payload');
   });
 
   it('keeps another mounted subscriber and its projection when one view leaves', async () => {

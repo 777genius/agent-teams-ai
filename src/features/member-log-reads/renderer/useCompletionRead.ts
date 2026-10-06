@@ -16,6 +16,7 @@ interface Options<T> {
   readonly active: boolean;
   readonly poll: boolean;
   readonly initialFresh?: boolean;
+  readonly showBackgroundErrors?: boolean;
   readonly read: (fresh: boolean) => Promise<T | null>;
   readonly beginRefreshing: () => () => void;
 }
@@ -77,7 +78,22 @@ export function useCompletionRead<T>(options: Options<T>): ReadResult<T> {
     key === null ? null : JSON.stringify([scope.key, options.presentationKey ?? key]);
 
   useEffect(() => {
-    if (!active || key === null) return;
+    if (key === null) {
+      setState((previous) =>
+        previous.key === null
+          ? previous
+          : {
+              key: null,
+              presentationKey: null,
+              value: null,
+              loading: false,
+              error: null,
+              settledAt: null,
+            }
+      );
+      return;
+    }
+    if (!active) return;
     const owner: Owner<T> = {
       alive: true,
       running: false,
@@ -102,8 +118,14 @@ export function useCompletionRead<T>(options: Options<T>): ReadResult<T> {
       if (!current() || owner.running) return;
       clearTimer();
       owner.running = true;
-      const finishRefreshing = background ? latest.current.beginRefreshing() : () => undefined;
+      const hasCompletedPresentation =
+        state.presentationKey === presentationKey && state.value !== null;
+      const finishRefreshing =
+        background || hasCompletedPresentation ? latest.current.beginRefreshing() : () => undefined;
       const read = latest.current.read;
+      if (background && latest.current.showBackgroundErrors) {
+        setState((previous) => ({ ...previous, error: null }));
+      }
       if (!background)
         setState((previous) => ({
           key: address,
@@ -133,15 +155,21 @@ export function useCompletionRead<T>(options: Options<T>): ReadResult<T> {
             error: null,
             settledAt: Date.now(),
           });
-        } else if (outcome.status === 'failure' && !background) {
-          setState({
+        } else if (
+          outcome.status === 'failure' &&
+          (!background || latest.current.showBackgroundErrors)
+        ) {
+          setState((previous) => ({
             key: address,
             presentationKey,
-            value: null,
+            value:
+              latest.current.showBackgroundErrors && previous.presentationKey === presentationKey
+                ? previous.value
+                : null,
             loading: false,
             error: outcome.error,
             settledAt: Date.now(),
-          });
+          }));
         }
       } finally {
         subscription.dispose();

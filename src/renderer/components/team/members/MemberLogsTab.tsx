@@ -175,6 +175,7 @@ export const MemberLogsTab = ({
     scope,
     key: taskId != null || memberName ? summaryKey : null,
     presentationKey: summaryPresentationKey,
+    showBackgroundErrors: true,
     active,
     poll: taskId != null && taskStatus === 'in_progress',
     beginRefreshing,
