@@ -63,6 +63,7 @@ void failure(uint64_t id,Creation fact,DWORD code) {
   ExitProcess(0); // immutable CAS winner; no failure can replace it
 }
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
+std::atomic<bool> terminalRaceAckComplete{false}; // private full-ACK fact, never authority
 bool terminalRaceFixture() {
   return wire::terminalRaceEnabled;
 }
@@ -83,6 +84,7 @@ void writer() {
     if(frame.op==wire::Released) {
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
       if(terminalRaceFixture()) {
+        terminalRaceAckComplete=true; // only after genuine whole-frame writeExact returned
         const auto barrierDeadline=GetTickCount64()+5000;
         while(!wire::failureCause()&&GetTickCount64()<barrierDeadline) Sleep(1);
         if(wire::failureCause()!=wire::WriteDeadline) terminalRaceBarrierFailed();
@@ -323,18 +325,22 @@ int main() {
   } catch(...) { abandon(); }
   if(releaseAccepted) {
     const auto deadline=GetTickCount64()+5000;
-    while(!wire::releaseWon()&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);
-    if(wire::releaseWon()) exitReleased();
 #ifdef OWNED_PROCESS_TEST_RELEASE_DELAY
     if(terminalRaceFixture()) {
-      wire::latchFailure(wire::WriteDeadline);
-      if(wire::failureCause()!=wire::WriteDeadline) terminalRaceBarrierFailed();
-      const auto rejectedDeadline=GetTickCount64()+5000;
-      while(!wire::terminalRaceRejected&&GetTickCount64()<rejectedDeadline) Sleep(1);
-      if(!wire::terminalRaceRejected) terminalRaceBarrierFailed();
+      while(!terminalRaceAckComplete&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);
+      if(!terminalRaceAckComplete||GetTickCount64()>=deadline) terminalRaceBarrierFailed();
+      DWORD active=0;
+      if(!wire::terminalChoice.compare_exchange_strong(active,wire::WriteDeadline))
+        terminalRaceBarrierFailed(); // this main thread must actually win the first-failure CAS
+      while(!wire::terminalRaceRejected&&GetTickCount64()<deadline) Sleep(1);
+      if(!wire::terminalRaceRejected||GetTickCount64()>=deadline) terminalRaceBarrierFailed();
       wire::terminalRaceObserved=true; // exit74 is now permitted: actual losing CAS was observed
-    }
+    } else
 #endif
+    {
+      while(!wire::releaseWon()&&!wire::failureCause()&&GetTickCount64()<deadline) Sleep(1);
+      if(wire::releaseWon()) exitReleased();
+    }
   }
   abandon(releaseAccepted?wire::WriteDeadline:wire::OwnerEof); // no receipt from pre-release EOF
 }
