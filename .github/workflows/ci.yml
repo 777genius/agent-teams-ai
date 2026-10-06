@@ -123,6 +123,9 @@ jobs:
       - name: Audit dependencies
         run: node ./scripts/ci/audit-dependencies.mjs
 
+      - name: Verify release download transport protocol
+        run: node --test scripts/e2e/release-updater/github-download.test.mts
+
       - name: Validate workspace truth gate
         env:
           NODE_OPTIONS: --max-old-space-size=8192
