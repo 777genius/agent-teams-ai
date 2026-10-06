@@ -12,6 +12,17 @@ describe('MessagesThreadView floating footer', () => {
 
   it('reserves its measured height without remounting the composer across Full Screen changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    // Happy DOM keeps only a WeakRef to callbacks. Retain the real callback for
+    // the observer's lifetime so GC cannot silently disable later measurements.
+    const NativeMutationObserver = globalThis.MutationObserver;
+    class RetainedMutationObserver extends NativeMutationObserver {
+      readonly retainedCallback: MutationCallback;
+      constructor(callback: MutationCallback) {
+        super(callback);
+        this.retainedCallback = callback;
+      }
+    }
+    vi.stubGlobal('MutationObserver', RetainedMutationObserver);
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -69,8 +80,9 @@ describe('MessagesThreadView floating footer', () => {
       expect(scroll.className).toContain('relative z-0');
       expect(host.querySelector('[data-messages-thread-footer-fade]')).not.toBeNull();
 
+      const resizeCount = onFloatingFooterResize.mock.calls.length;
       await changeFooterHeight(240, 'height: 268px;');
-      expect(onFloatingFooterResize).toHaveBeenCalled();
+      expect(onFloatingFooterResize.mock.calls.length).toBeGreaterThan(resizeCount);
 
       await act(async () => {
         render(false);

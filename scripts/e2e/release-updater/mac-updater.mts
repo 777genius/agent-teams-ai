@@ -358,7 +358,7 @@ try {
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
   assert.equal(plan.input.macSource?.release.applicationSha, sourceSha);
-  assert.equal(plan.input.target.tag, 'v2.17.4');
+  assert.equal(plan.input.target.tag, 'v2.17.5');
   commonTag = plan.input.target.tag;
   commonVersion = version(commonTag);
   evidence.previewCommonTag = commonTag;

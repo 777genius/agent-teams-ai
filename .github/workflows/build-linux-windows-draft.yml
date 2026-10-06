@@ -7,7 +7,7 @@ on:
         description: New Linux/Windows draft tag
         type: string
         required: true
-        default: v2.17.4
+        default: v2.17.5
       application_sha:
         description: Reviewed immutable application and workflow commit (40 hex characters)
         type: string
@@ -63,7 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" ]]
-          [[ "$RELEASE_TAG" == 'v2.17.4' ]]
+          [[ "$RELEASE_TAG" == 'v2.17.5' ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.application_sha }}
@@ -245,7 +245,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" && "$RELEASE_TAG" == v2.17.4 ]]
+          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" && "$RELEASE_TAG" == v2.17.5 ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > run.json
           jq -e --arg sha "$APPLICATION_SHA" --argjson attempt "$GITHUB_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .event == "workflow_dispatch" and .path == ".github/workflows/build-linux-windows-draft.yml"' run.json
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > jobs.json

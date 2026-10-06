@@ -22,12 +22,12 @@ on:
         options: [availability, ota]
         default: availability
       target_mode:
-        description: '2.17.4 requires exact prepared stage; 2.17.2 is historical infrastructure evidence only'
+        description: '2.17.5 requires exact prepared stage; 2.17.2 is historical infrastructure evidence only'
         type: choice
-        options: [staged-2.17.4, historical-2.17.2]
-        default: staged-2.17.4
+        options: [staged-2.17.5, historical-2.17.2]
+        default: staged-2.17.5
       stage_artifact:
-        description: 'Required immutable prepared stage artifact for 2.17.4'
+        description: 'Required immutable prepared stage artifact for 2.17.5'
         type: string
       stage_run_id:
         description: 'Producer run ID for that prepared stage artifact'
@@ -60,7 +60,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Require explicit prepared artifact identity
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.5'
         env:
           TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
           TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
@@ -71,7 +71,7 @@ jobs:
           [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
           [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
       - name: Download immutable prepared stage for the current target
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.5'
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.stage_artifact }}
@@ -93,7 +93,7 @@ jobs:
             gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern "$old" --output "$inputs/$old"
           done
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.4; then
+          if test "$TEST_TARGET_MODE" = staged-2.17.5; then
             node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
             release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
             gh api "repos/777genius/agent-teams-ai/releases/$release" > "$inputs/draft-api.json"
@@ -254,8 +254,8 @@ jobs:
                 node --version > /evidence/node-version.txt
                 target=2.17.2
                 stage=(--historical-preview)
-                if test "$TEST_TARGET_MODE" = staged-2.17.4; then
-                  target=2.17.4
+                if test "$TEST_TARGET_MODE" = staged-2.17.5; then
+                  target=2.17.5
                   stage=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
                 else test "$TEST_TARGET_MODE" = historical-2.17.2; fi
                 node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs" "${stage[@]}" --readonly
@@ -273,7 +273,7 @@ jobs:
                   # The clean prepared current Arch image contains no legacy
                   # package. New target metadata cannot declare the removed dep.
                   if pacman -Q http-parser > /evidence/legacy-before.txt 2>&1; then exit 1; fi
-                  if test "$target" = 2.17.4; then
+                  if test "$target" = 2.17.5; then
                     if grep -Eq "^depend = http-parser([<>=].*)?$" "/reference/$target/.PKGINFO"; then exit 1; fi
                   fi
                   if test "$TEST_MODE" != fresh; then

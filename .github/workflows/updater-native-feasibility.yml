@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
     inputs:
       target_mode:
-        description: '2.17.4 requires exact prepared stage; 2.17.2 is historical evidence only'
+        description: '2.17.5 requires exact prepared stage; 2.17.2 is historical evidence only'
         type: choice
-        options: [staged-2.17.4, historical-2.17.2]
-        default: staged-2.17.4
+        options: [staged-2.17.5, historical-2.17.2]
+        default: staged-2.17.5
       stage_artifact:
         description: 'Prepared stage artifact name'
         type: string
@@ -54,7 +54,7 @@ jobs:
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
       - name: Require explicit prepared artifact identity
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.5'
         env:
           TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
           TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
@@ -65,7 +65,7 @@ jobs:
           [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
           [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
       - name: Download immutable prepared stage
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.5'
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.stage_artifact }}
@@ -84,7 +84,7 @@ jobs:
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.1.AppImage --output "$inputs/old.AppImage"
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern agent-teams-ai_2.17.1_amd64.deb --output "$inputs/old.deb"
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.4; then
+          if test "$TEST_TARGET_MODE" = staged-2.17.5; then
             node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
             release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
             target_asset=$(jq -er '.assets[0].id' "$inputs/target-download-identities.json")
@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.4; then flags=(--stage .artifacts/TEST-updater-inputs/stage --plan-sha256 "$TEST_PLAN_SHA"); fi
+          if test "$TEST_TARGET_MODE" = staged-2.17.5; then flags=(--stage .artifacts/TEST-updater-inputs/stage --plan-sha256 "$TEST_PLAN_SHA"); fi
           xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' --error-file=.artifacts/TEST-updater-evidence/xvfb.log \
             node scripts/e2e/release-updater/linux-feasibility.mts \
               --inputs .artifacts/TEST-updater-inputs \
@@ -224,7 +224,7 @@ jobs:
                 set -euo pipefail
                 ip link set lo up
                 flags=(--historical-preview)
-                if test "$TEST_TARGET_MODE" = staged-2.17.4; then flags=(--stage "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs/stage" --plan-sha256 "$TEST_PLAN_SHA"); fi
+                if test "$TEST_TARGET_MODE" = staged-2.17.5; then flags=(--stage "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs/stage" --plan-sha256 "$TEST_PLAN_SHA"); fi
                 if test "$TEST_CASE_MODE" = fresh; then flags+=(--fresh); fi
                 runuser -u "$TEST_RUNNER_USER" -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
                   "$TEST_NODE_BIN" "$TEST_WORKSPACE/scripts/e2e/release-updater/linux-ota.mts" \

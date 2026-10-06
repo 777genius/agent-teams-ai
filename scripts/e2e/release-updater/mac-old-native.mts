@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { canonical, digest } from '../../ci/release/contract.ts';
 import { waitFor } from './cdp.mts';
 import { macProcesses } from './mac-loopback.mts';
+import { serializeMacPfBaseline } from './mac-pf-baseline.mts';
 
 import type { MacCommands } from './mac-loopback.mts';
 
@@ -507,10 +508,16 @@ export async function containOldMacNetwork(
   );
   const rules = await pf(commands, 'pf-baseline-rules', ['-sr']);
   const nat = await pf(commands, 'pf-baseline-nat', ['-sn']);
-  const originalPolicy = `${nat.stdout}\n${rules.stdout}`;
+  const originalPolicy = serializeMacPfBaseline(nat.stdout, rules.stdout);
   await writeFile(path.join(commands.output, 'pf-baseline-active.conf'), originalPolicy, {
     flag: 'wx',
   });
+  // Prove the captured active baseline can be restored before mutating PF.
+  await pf(commands, 'pf-parse-active-baseline', [
+    '-n',
+    '-f',
+    path.join(commands.output, 'pf-baseline-active.conf'),
+  ]);
   await writeFile(path.join(commands.output, 'pf-original.conf'), await readFile('/etc/pf.conf'), {
     flag: 'wx',
   });

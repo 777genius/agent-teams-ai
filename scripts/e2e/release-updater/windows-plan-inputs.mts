@@ -89,7 +89,7 @@ export async function readWindowsStagePlan(planFile: string): Promise<StagePlan>
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(
     plan.input.target.tag,
-    'v2.17.4',
+    'v2.17.5',
     'Only the owner-selected new target is final-release evidence'
   );
   assert.equal(plan.input.latest.tag, 'v2.17.1');

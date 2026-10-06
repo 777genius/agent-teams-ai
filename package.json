@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.17.4",
+  "version": "2.17.5",
   "dynamicFlags": {
     "showSponsorFluxion": true
   },
@@ -422,7 +422,8 @@
     "pacman": {
       "afterInstall": "resources/afterInstall.sh",
       "fpm": [
-        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai",
+        "--after-upgrade=resources/afterInstall.sh"
       ],
       "depends": [
         "c-ares",

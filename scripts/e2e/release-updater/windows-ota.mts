@@ -957,7 +957,7 @@ async function run() {
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
     evidence.finalReleaseProved =
       inputs.legacyFixture === false &&
-      targetVersion === '2.17.4' &&
+      targetVersion === '2.17.5' &&
       Boolean(inputs.stagedMetadata);
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);

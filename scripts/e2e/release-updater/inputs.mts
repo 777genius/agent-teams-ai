@@ -135,7 +135,7 @@ export async function readLinuxPlan(stage: StageReference) {
   checkInput(plan.input);
   assert.equal(plan.input.repository, repository);
   assert.equal(plan.input.mode, 'carry-mac');
-  assert.equal(plan.input.target.tag, 'v2.17.4', 'Current native release acceptance is 2.17.4');
+  assert.equal(plan.input.target.tag, 'v2.17.5', 'Current native release acceptance is 2.17.5');
   assert(plan.input.macSource);
   assert.equal(plan.input.macSource.release.id, 398386033);
   assert.equal(plan.input.macSource.release.tag, 'v2.17.1');
@@ -143,7 +143,7 @@ export async function readLinuxPlan(stage: StageReference) {
     plan.input.macSource.release.applicationSha,
     '395572f9ff2a261cb28224754883a39d2c3c8827'
   );
-  const names = platformNames('2.17.4').linux;
+  const names = platformNames('2.17.5').linux;
   const assets = names.map((name) => {
     const matches = plan.input.originals.filter(
       (item) =>
@@ -170,7 +170,7 @@ export async function readLinuxStage(stage: StageReference) {
   assert.equal(canonical(manifest), canonical(manifestFor(plan)), 'Manifest binds exact plan');
   const feed = await readFile(path.join(stage.directory, 'latest-linux.yml'), 'utf8');
   assert.equal(feed, plan.feeds['latest-linux.yml'], 'Raw feed is the prepared artifact');
-  validateFeed(feed, '2.17.4', assets);
+  validateFeed(feed, '2.17.5', assets);
   const feedProof = manifest.feeds.find((item) => item.name === 'latest-linux.yml');
   assert(feedProof);
   sameProof(textProof('latest-linux.yml', feed), feedProof);
@@ -206,7 +206,7 @@ export async function boundLinuxInputs(directory: string, stage: StageReference)
     checkMetadata(assetByName(target, metadata.name), metadata);
   for (const original of prepared.assets)
     checkMetadata(assetByName(target, original.name), original, original.assetId);
-  return { ...prepared, source, target, targetVersion: '2.17.4', targetTag: target.tag_name };
+  return { ...prepared, source, target, targetVersion: '2.17.5', targetTag: target.tag_name };
 }
 export async function verifyLinuxFile(
   directory: string,
@@ -256,7 +256,7 @@ export async function loadInputs(
   }
   assert(
     historicalPreview,
-    '2.17.4 requires authenticated staged inputs; use --historical-preview only for old 2.17.2 evidence'
+    '2.17.5 requires authenticated staged inputs; use --historical-preview only for old 2.17.2 evidence'
   );
   const catalog = JSON.parse(
     await readFile(path.join(directory, 'input-catalog.json'), 'utf8')

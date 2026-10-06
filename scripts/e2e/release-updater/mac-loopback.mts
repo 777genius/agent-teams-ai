@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 import { canonical, digest } from '../../ci/release/contract.ts';
 import { waitFor } from './cdp.mts';
+import { serializeMacPfBaseline } from './mac-pf-baseline.mts';
 
 import type { ChildProcess } from 'node:child_process';
 
@@ -67,7 +68,10 @@ export class MacCommands {
   }
   async checked(label: string, binary: string, args: string[], timeout?: number) {
     const result = await this.run(label, binary, args, timeout);
-    assert.equal(result.exitCode, 0, `${label} failed; see ${result.logFile}`);
+    const diagnostics = label.startsWith('pf-')
+      ? `\nPF stderr: ${result.stderr.slice(0, 4096)}\nPF stdout: ${result.stdout.slice(0, 4096)}`
+      : '';
+    assert.equal(result.exitCode, 0, `${label} failed; see ${result.logFile}${diagnostics}`);
     return result;
   }
 }
@@ -269,10 +273,19 @@ export async function containMacNetwork(commands: MacCommands, applicationRoot: 
   ]);
   // Disabled PF may have an empty active ruleset even when /etc/pf.conf contains anchors.
   // Restore the actual active baseline, not a newly loaded approximation of it.
-  const originalPolicy = `${nat.stdout}\n${rules.stdout}`;
+  const originalPolicy = serializeMacPfBaseline(nat.stdout, rules.stdout);
   await writeFile(path.join(commands.output, 'pf-baseline-active.conf'), originalPolicy, {
     flag: 'wx',
   });
+  // A rendered pfctl dump is not necessarily a reloadable config. Reject an
+  // unparseable baseline before replacing any active PF policy.
+  await commands.checked('pf-parse-active-baseline', '/usr/bin/sudo', [
+    '-n',
+    '/sbin/pfctl',
+    '-n',
+    '-f',
+    path.join(commands.output, 'pf-baseline-active.conf'),
+  ]);
   const conf = await readFile('/etc/pf.conf');
   await writeFile(path.join(commands.output, 'pf-original.conf'), conf, { flag: 'wx' });
   // Resolve the public control before PF blocks DNS, then reuse those exact addresses.

@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import {
   selectedWindowsPowerShell,
   windowsShellCompilerReferences,
+  windowsProfileCaptureEnvironment,
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
 import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
@@ -117,6 +118,17 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
 public static class TestWindowsNative {
+  [DllImport("shell32.dll")] static extern int SHGetKnownFolderPath(ref Guid id, uint flags, IntPtr token, out IntPtr value);
+  public static string KnownFolder(string id) {
+    Guid folder = new Guid(id); IntPtr value = IntPtr.Zero;
+    try {
+      int result = SHGetKnownFolderPath(ref folder, 0, IntPtr.Zero, out value);
+      if (result != 0) Marshal.ThrowExceptionForHR(result);
+      string path = Marshal.PtrToStringUni(value);
+      if (String.IsNullOrEmpty(path)) throw new Exception("Known folder is empty");
+      return path;
+    } finally { if (value != IntPtr.Zero) Marshal.FreeCoTaskMem(value); }
+  }
   public delegate bool EnumProc(IntPtr hwnd, IntPtr param);
   [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll")] public static extern IntPtr GetProcessWindowStation();
@@ -173,7 +185,8 @@ switch ($data.operation) {
         if ($installed.Count) { throw 'Disposable OS profile already has an Agent Teams AI installation' }
       }
     }
-    $result=@{ home=[Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile); roaming=[Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData); local=[Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData) }
+    # Native token-based Known Folders avoid PS7/.NET environment-first shortcuts.
+    $result=@{ home=[TestWindowsNative]::KnownFolder('5E6C858F-0E22-4760-9AFE-EA3317B67173'); roaming=[TestWindowsNative]::KnownFolder('3EB685DB-65F9-4CF6-A03A-E3EF65729F3D'); local=[TestWindowsNative]::KnownFolder('F1B32785-6FBA-4FCF-9D55-7B8E7F157091') }
   }
   'session' {
     $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
@@ -280,7 +293,11 @@ export async function windowsNative(root: string, evidence: string) {
           '-TrustedModulePath',
           shell.modules.join(path.delimiter),
         ],
-        { env, timeout: 20_000, maxBuffer: 2_097_152 }
+        {
+          env: operation === 'profile' ? windowsProfileCaptureEnvironment(env) : env,
+          timeout: 20_000,
+          maxBuffer: 2_097_152,
+        }
       );
       // Input is passed via -InputFile. Close the unused pipe before awaiting completion.
       pending.child.stdin?.end();

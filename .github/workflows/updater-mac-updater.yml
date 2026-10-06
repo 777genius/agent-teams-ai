@@ -54,7 +54,7 @@ jobs:
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
           pnpm lint:ci:files -- scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
-          ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts
+          ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts
       - name: Retrieve only the authenticated immutable prepared metadata plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -185,6 +185,18 @@ jobs:
               --restore-network --evidence "$RUNNER_TEMP/TEST-mac-updater-evidence"
           fi
           echo "upload_safe=true" >> "$GITHUB_OUTPUT"
+      - name: Capture bounded PF diagnostics after cleanup failure
+        if: always() && steps.network-cleanup.outcome == 'failure'
+        run: pnpm exec tsx scripts/e2e/release-updater/mac-cleanup-diagnostics.mts TEST-mac-updater-evidence
+      - name: Preserve only PF diagnostics when native cleanup is unproven
+        if: always() && steps.network-cleanup.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        timeout-minutes: 2
+        with:
+          name: TEST-mac-cleanup-failure-${{ matrix.architecture }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/TEST-mac-cleanup-diagnostics-TEST-mac-updater-evidence/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Preserve native UI, Aqua capture, logs, source hashes and failure gates
         if: always() && steps.network-cleanup.outputs.upload_safe == 'true'
         uses: actions/upload-artifact@v7

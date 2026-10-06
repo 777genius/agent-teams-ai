@@ -301,7 +301,10 @@ export async function readMacInputs(
   checkRelease(prepared.source, plan.input.macSource.release, false);
   assert.equal(await port.tagSha(repository, source.tag_name), sourceSha);
   assert.equal(await port.minimum(repository, sourceSha), plan.input.macProductMinimum);
-  await port.publicRelease(repository, source.tag_name);
+  // The authenticated same-SHA producer already proved anonymous source availability
+  // before hashing these inputs. Keep live identity/metadata and local byte checks
+  // here; repeating anonymous REST on every consumer exhausts shared runner IP quota.
+  evidence.sourcePublicAvailabilityProducerJobId = authority.job.id;
   for (const original of plan.input.originals.filter((item) => item.tag === source.tag_name)) {
     checkMetadata(assetByName(source, original.name), original, original.assetId);
     checkMetadata(assetByName(prepared.source, original.name), original, original.assetId);
