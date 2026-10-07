@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "react"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["scripts/e2e/external-agent-shared-root.ts", "src/types/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "dist-electron"]
+}
