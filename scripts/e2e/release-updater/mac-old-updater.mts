@@ -23,6 +23,7 @@ import {
   sourceSha,
 } from './mac-inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { checkExecutorIdentity } from './execution-provenance.mts';
 import { MacCommands, macLaunchOwner } from './mac-loopback.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import {
@@ -79,6 +80,7 @@ const { values } = parseArgs({
         'evidence',
       ].map((name) => [name, { type: 'string' as const }])
     ),
+    'execution-sha': { type: 'string' },
     'restore-network': { type: 'boolean' },
   },
   strict: true,
@@ -376,13 +378,15 @@ async function noUpdate(version: string, label: string, requestStart: number) {
 try {
   const toolingSha = required('tooling-sha');
   assert(/^[a-f0-9]{40}$/.test(toolingSha));
-  assert.equal(process.env.GITHUB_SHA, toolingSha);
-  assert.equal(
+  const execution = checkExecutorIdentity(
+    toolingSha,
+    values['execution-sha'] ?? toolingSha,
+    process.env.GITHUB_SHA,
     (
       await commands.checked('tooling-checkout', '/usr/bin/git', ['rev-parse', 'HEAD'])
-    ).stdout.trim(),
-    toolingSha
+    ).stdout.trim()
   );
+  evidence.executionSha = execution.executionSha;
   evidence.testedOperatingSystem = (
     await commands.checked('tested-macos-version', '/usr/bin/sw_vers', ['-productVersion'])
   ).stdout.trim();
@@ -413,6 +417,7 @@ try {
     planSha256: required('plan-sha256'),
     inputDigest: required('input-digest'),
     toolingSha,
+    executionSha: execution.executionSha,
     artifactId: Number(required('input-artifact-id')),
     artifactSha256: required('input-artifact-sha256'),
   });

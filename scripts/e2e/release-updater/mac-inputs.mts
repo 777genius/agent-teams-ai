@@ -258,6 +258,7 @@ export async function readMacInputs(
     inputDigest: string;
     toolingSha: string;
     artifactId: number;
+    executionSha?: string;
     artifactSha256: string;
   }
 ) {
@@ -270,6 +271,7 @@ export async function readMacInputs(
     artifactId: expected.artifactId,
     artifactSha256: expected.artifactSha256,
     toolingSha: expected.toolingSha,
+    executionSha: expected.executionSha,
     runId: Number(process.env.GITHUB_RUN_ID),
     attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
     workflowPath:
@@ -284,6 +286,10 @@ export async function readMacInputs(
   assert.equal(bundle.planSha256, expected.planSha256);
   assert.equal(bundle.inputDigest, expected.inputDigest);
   assert.equal(bundle.toolingSha, expected.toolingSha);
+  assert.equal(
+    bundle.executionSha ?? bundle.toolingSha,
+    expected.executionSha ?? expected.toolingSha
+  );
   assert.equal(bundle.runId, authority.run.id);
   assert.equal(bundle.attempt, authority.run.run_attempt);
   assert.equal(digest(await readFile(path.join(root, 'stage-plan.json'))), expected.planSha256);

@@ -423,18 +423,53 @@ export async function oldMacStopApps(commands: MacCommands) {
     assert(owner);
     await safeSignal(commands, owner, 'SIGKILL', termSent);
   }
+  const additionalMains = (await macProcesses(commands)).filter(
+    (entry) =>
+      !before.some((owner) => owner.pid === entry.pid) && entry.command === executable(value.app)
+  );
+  for (const entry of additionalMains) {
+    owns(value, entry);
+    assert(Number.isSafeInteger(entry.pid) && entry.pid > 0 && entry.group === entry.pid);
+    assert(
+      Date.parse(entry.start) <= Date.now(),
+      'Additional TEST main is outside the observed launch interval'
+    );
+    const registered = value.attempts.find((attempt) => attempt.pid === entry.pid);
+    if (registered)
+      assert.deepEqual(entry, registered.owner, 'Registered TEST main identity changed');
+    else value.attempts.push({ attempted: true, pid: entry.pid, owner: entry });
+  }
+  // Bind newly discovered main groups to the same receipt before any additional signal.
+  await save(commands, value);
+  const proof = {
+    app: value.app,
+    toolingSha: value.toolingSha,
+    before,
+    additionalMains,
+    stopped: false,
+  };
+  const proofFile = path.join(
+    commands.output,
+    `mac-old-stop-${process.pid}-${commands.commands.length}.json`
+  );
+  await writeFile(proofFile, `${canonical(proof)}\n`, { flag: 'wx' });
+  for (const entry of additionalMains) await safeSignal(commands, entry, 'SIGTERM');
   await waitFor(
     async () =>
       (await macProcesses(commands)).some(
         (entry) =>
-          entry.command.startsWith(`${value.app}/Contents/`) && !entry.command.endsWith('/ShipIt')
+          (entry.command.startsWith(`${value.app}/Contents/`) &&
+            !entry.command.endsWith('/ShipIt')) ||
+          additionalMains.some((owner) => entry.pid === owner.pid || entry.group === owner.group)
       )
         ? null
         : true,
     'TEST Mac applications exited',
     5000
   );
-  return { before, stopped: true };
+  proof.stopped = true;
+  await writeFile(proofFile, `${canonical(proof)}\n`);
+  return proof;
 }
 export async function retireOldMacShipIt(commands: MacCommands) {
   const value = await receipt(commands);

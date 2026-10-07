@@ -26,6 +26,7 @@ export interface MacInputBundle {
   repository: string;
   mode: 'preview' | 'staged';
   toolingSha: string;
+  executionSha?: string;
   planSha256: string;
   inputDigest: string;
   runId: number;
@@ -73,6 +74,7 @@ export interface MacArtifactExpected {
   artifactId: number;
   artifactSha256: string;
   toolingSha: string;
+  executionSha?: string;
   runId: number;
   attempt: number;
   workflowPath: string;
@@ -85,10 +87,12 @@ export function checkMacArtifactAuthority(
   for (const id of [expected.artifactId, expected.runId, expected.attempt])
     assert(Number.isSafeInteger(id) && id > 0);
   assert(/^[a-f0-9]{40}$/.test(expected.toolingSha));
+  const executionSha = expected.executionSha ?? expected.toolingSha;
+  assert(/^[a-f0-9]{40}$/.test(executionSha));
   assert(/^[a-f0-9]{64}$/.test(expected.artifactSha256));
   assert.equal(value.run.id, expected.runId);
   assert.equal(value.run.run_attempt, expected.attempt);
-  assert.equal(value.run.head_sha, expected.toolingSha);
+  assert.equal(value.run.head_sha, executionSha);
   assert.equal(value.run.path.split('@')[0], expected.workflowPath);
   assert.equal(value.run.event, 'workflow_dispatch');
   // GitHub can report the aggregate run as queued while dependent matrix jobs execute.
@@ -100,7 +104,7 @@ export function checkMacArtifactAuthority(
   assert.equal(value.archiveSha256, expected.artifactSha256);
   assert.equal(value.artifact.expired, false);
   assert.equal(value.artifact.workflow_run.id, expected.runId);
-  assert.equal(value.artifact.workflow_run.head_sha, expected.toolingSha);
+  assert.equal(value.artifact.workflow_run.head_sha, executionSha);
   assert(value.attemptJobIds.includes(value.job.id));
   assert.equal(value.job.run_id, expected.runId);
   assert.equal(value.job.name, macInputProducerJob);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -257,4 +257,91 @@ void test('blank frames time out and foreign window ownership is rejected', asyn
   f.setWindow(f.owner.pid + 1);
   await assert.rejects(paintedMacDesktop(f.commands, f.reader, f.owner, 'TEST-foreign', false));
   assert.deepEqual(f.signals, []);
+});
+
+// T80 new main 17919 was outside the initial stop snapshot and survived its 5s wait.
+void test('one additional owned main receives TERM and binds its group before actual absence', async (context) => {
+  const f = await fixture(context);
+  const additional = { ...f.owner, pid: 17919, group: 17919, start: 'Wed Oct 7 12:27:46 2026' };
+  let afterTerm = 0;
+  f.setScan(() => {
+    if (!f.signals.length) return [f.owner];
+    if (!f.signals.some(([pid, signal]) => pid === f.owner.pid && signal === 'SIGKILL'))
+      return [f.owner, additional];
+    if (!f.signals.some(([pid]) => pid === additional.pid))
+      return [additional, { ...f.sibling, pid: 17920, group: additional.group }];
+    const pending = { ...additional, pid: 17921, uid: 0, command: '(ps)' };
+    if (afterTerm++ === 0) return [{ ...additional, command: '(Agent Teams AI)' }, pending];
+    return afterTerm === 2 ? [pending] : [];
+  });
+  const stopped = await oldMacStopApps(f.commands);
+  assert.deepEqual(f.signals, [
+    [f.owner.pid, 'SIGTERM'],
+    [f.owner.pid, 'SIGKILL'],
+    [additional.pid, 'SIGTERM'],
+  ]);
+  assert.deepEqual(stopped.before, [f.owner]);
+  assert.deepEqual(stopped.additionalMains, [additional]);
+  assert.equal(stopped.stopped, true);
+  const receipt = JSON.parse(
+    await readFile(path.join(f.commands.output, 'pf-owned.json'), 'utf8')
+  ) as { attempts: { pid: number; owner: MacIdentity }[] };
+  assert.deepEqual(
+    receipt.attempts.find((entry) => entry.pid === additional.pid)?.owner,
+    additional
+  );
+  const files = (await readdir(f.commands.output)).filter((name) =>
+    name.startsWith('mac-old-stop-')
+  );
+  assert.equal(files.length, 1);
+  const proofName = files[0];
+  assert(proofName);
+  assert.deepEqual(
+    JSON.parse(await readFile(path.join(f.commands.output, proofName), 'utf8')),
+    stopped
+  );
+  assert(afterTerm >= 3, 'fallback and unknown group members block until actual disappearance');
+});
+
+void test('additional foreign or changed main is never signalled', async (context) => {
+  for (const scenario of [
+    'foreign-uid',
+    'foreign-group',
+    'predates-install',
+    'changed-after-admission',
+  ] as const) {
+    await context.test(scenario, async (child) => {
+      const f = await fixture(child);
+      const additional = {
+        ...f.owner,
+        pid: 17919,
+        group: scenario === 'foreign-group' ? 999 : 17919,
+        uid: scenario === 'foreign-uid' ? f.owner.uid + 1 : f.owner.uid,
+        start:
+          scenario === 'predates-install' ? 'Wed Oct 7 12:27:46 1966' : 'Wed Oct 7 12:27:46 2026',
+      };
+      let reads = 0;
+      f.setScan(() => {
+        if (reads++ < 2) return [];
+        return scenario === 'changed-after-admission' && reads > 3
+          ? [{ ...additional, start: 'Wed Oct 7 12:27:47 2026' }]
+          : [additional];
+      });
+      await assert.rejects(oldMacStopApps(f.commands));
+      assert.deepEqual(f.signals, []);
+    });
+  }
+});
+
+void test('one additional pass does not signal a further new main', async (context) => {
+  const f = await fixture(context);
+  const additional = { ...f.owner, pid: 17919, group: 17919, start: 'Wed Oct 7 12:27:46 2026' };
+  const later = { ...additional, pid: 18000, group: 18000 };
+  let reads = 0;
+  f.setScan(() => {
+    if (reads++ < 2) return [];
+    return f.signals.length ? [later] : [additional];
+  });
+  await assert.rejects(oldMacStopApps(f.commands), /timed out: TEST Mac applications exited/);
+  assert.deepEqual(f.signals, [[additional.pid, 'SIGTERM']]);
 });
