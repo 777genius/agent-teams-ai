@@ -127,7 +127,7 @@ export const ProjectEditorOverlay = ({
 
   // Markdown preview state
   const [mdPreviewMode, setMdPreviewMode] = useState<MdPreviewMode>('off');
-  const [liveContent, setLiveContent] = useState('');
+  const [liveContent, setLiveContent] = useState<{ filePath: string; content: string } | null>(null);
   const [splitRatio, setSplitRatio] = useState(() => {
     try {
       const stored = localStorage.getItem('editor:mdSplitRatio');
@@ -178,8 +178,8 @@ export const ProjectEditorOverlay = ({
   }, []);
 
   const handleLiveContent = useCallback((content: string) => {
-    setLiveContent(content);
-  }, []);
+    if (activeTabId) setLiveContent({ filePath: activeTabId, content });
+  }, [activeTabId]);
 
   const toggleMdSplit = useCallback(() => {
     setMdPreviewMode((m) => (m === 'split' ? 'off' : 'split'));
@@ -189,15 +189,9 @@ export const ProjectEditorOverlay = ({
     setMdPreviewMode((m) => (m === 'preview' ? 'off' : 'preview'));
   }, []);
 
-  // Initialize live content when entering preview mode or switching files
-  useEffect(() => {
-    if (mdPreviewMode !== 'off' && fileContent?.content) {
-      setLiveContent(fileContent.content);
-    }
-  }, [mdPreviewMode, fileContent?.content]);
-
-  // Content for preview: use live content when available, fallback to file content
-  const previewContent = liveContent || fileContent?.content || '';
+  // The mounted editor publishes its cached document; an empty draft is valid preview content.
+  const previewContent = liveContent && liveContent.filePath === activeTabId
+    ? liveContent.content : fileContent?.content ?? '';
 
   // Active tab save error
   const activeSaveError = activeTabId ? (saveErrors[activeTabId] ?? null) : null;
@@ -274,7 +268,7 @@ export const ProjectEditorOverlay = ({
     overlayRef.current?.focus();
   }, []);
 
-  useEffect(() => { setSelectionInfo(null); setLiveContent(''); }, [activeTabId]);
+  useEffect(() => { setSelectionInfo(null); }, [activeTabId]);
 
   // Clear draft recovery banner when switching tabs
   useEffect(() => {

@@ -17,6 +17,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** JSON literals embedded in evaluated JavaScript also escape HTML/script separators. */
+function jsLiteral(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) throw new Error('Cannot serialize undefined as JavaScript literal');
+  return serialized.replace(/[<>&\u2028\u2029]/g,
+    (character) => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 interface CdpResult {
   result?: { value?: unknown };
   exceptionDetails?: { exception?: { description?: string }; text?: string };
@@ -198,20 +206,20 @@ async function mountEditor(client: Cdp): Promise<void> {
     if (!createRoot) throw new Error('ReactDOM createRoot export missing');
     const { ProjectEditorOverlay } = await window.__editorSourceImport('components/team/editor/ProjectEditorOverlay.tsx');
     const { TooltipProvider } = await window.__editorSourceImport('components/ui/tooltip.tsx');
-    const { LocalizationProvider } = await import(${JSON.stringify('/@fs' + repo + '/src/features/localization/renderer/ui/LocalizationProvider.tsx')});
+    const { LocalizationProvider } = await import(${jsLiteral('/@fs' + repo + '/src/features/localization/renderer/ui/LocalizationProvider.tsx')});
     const container = document.createElement('div'); container.id = 'editor-large-e2e'; document.body.append(container);
     const root = createRoot(container); window.__editorE2eRoot = root;
     root.render(React.createElement(LocalizationProvider, { appConfig: null },
       React.createElement(TooltipProvider, {}, React.createElement(ProjectEditorOverlay, {
-        projectPath: ${JSON.stringify(project)}, onClose: () => root.unmount()
+        projectPath: ${jsLiteral(project)}, onClose: () => root.unmount()
       }))));
   })()`);
-  await client.wait(`(async () => { const s = ${storeExpression}.getState(); return s.editorProjectPath === ${JSON.stringify(project)} && !s.editorFileTreeLoading && !!s.editorFileTree; })()`, 'sandbox editor initialization');
+  await client.wait(`(async () => { const s = ${storeExpression}.getState(); return s.editorProjectPath === ${jsLiteral(project)} && !s.editorFileTreeLoading && !!s.editorFileTree; })()`, 'sandbox editor initialization');
 }
 async function open(client: Cdp, file: string, editable = true): Promise<number> {
   const start = Date.now();
-  await client.evaluate(`(async () => { ${storeExpression}.getState().openFile(${JSON.stringify(file)}); })()`);
-  if (editable) await client.wait(`(async () => { const view = ${viewExpression}; const store = ${storeExpression}.getState(); return store.editorActiveTabId === ${JSON.stringify(file)} && !!view && document.querySelector('#editor-large-e2e [data-editor-file]')?.getAttribute('data-editor-file') === ${JSON.stringify(file)} && document.querySelector('#editor-large-e2e .cm-content'); })()`, `CodeMirror ${path.basename(file)}`);
+  await client.evaluate(`(async () => { ${storeExpression}.getState().openFile(${jsLiteral(file)}); })()`);
+  if (editable) await client.wait(`(async () => { const view = ${viewExpression}; const store = ${storeExpression}.getState(); return store.editorActiveTabId === ${jsLiteral(file)} && !!view && document.querySelector('#editor-large-e2e [data-editor-file]')?.getAttribute('data-editor-file') === ${jsLiteral(file)} && document.querySelector('#editor-large-e2e .cm-content'); })()`, `CodeMirror ${path.basename(file)}`);
   if (!editable) await client.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
   return Date.now() - start;
 }
@@ -231,7 +239,7 @@ async function editAndSave(client: Cdp, item: Awaited<ReturnType<typeof fixture>
   assert(restored.endsWith('EDIT-proof'), 'unsaved text must survive tab switch');
   await client.evaluate(`(async () => { (${viewExpression}).focus(); })()`);
   await client.shortcut('s');
-  await client.wait(`(async () => { const s = ${storeExpression}.getState(); return !s.editorSaving[${JSON.stringify(item.file)}] && !s.editorModifiedFiles[${JSON.stringify(item.file)}] && !s.editorSaveError[${JSON.stringify(item.file)}]; })()`, 'successful keyboard save');
+  await client.wait(`(async () => { const s = ${storeExpression}.getState(); return !s.editorSaving[${jsLiteral(item.file)}] && !s.editorModifiedFiles[${jsLiteral(item.file)}] && !s.editorSaveError[${jsLiteral(item.file)}]; })()`, 'successful keyboard save');
   const saved = await readFile(item.file);
   assert.equal(hash(saved), await client.evaluate<string>(`(async () => {
     const content = (${viewExpression}).state.sliceDoc();
@@ -292,6 +300,52 @@ try {
     receipt.reproducedUnhandledRejection = true;
     await screenshot(cdp, 'baseline-rejection');
   } else {
+    // Initial parsing recognizes each newline convention; saving uses one explicit separator.
+    for (const newlineCase of [
+      { name: 'mixed-eol.txt', content: 'alpha\r\nbeta\ngamma\rdelta',
+        lines: ['alpha', 'beta', 'gamma', 'delta'], separator: '\r\n', saved: 'alpha\r\nbeta\r\ngamma\r\ndelta' },
+      { name: 'cr-only.txt', content: 'alpha\rbeta\rgamma',
+        lines: ['alpha', 'beta', 'gamma'], separator: '\r', saved: 'alpha\rbeta\rgamma' },
+      { name: 'lf-cr-mixed.txt', content: 'alpha\nbeta\rgamma',
+        lines: ['alpha', 'beta', 'gamma'], separator: '\n', saved: 'alpha\nbeta\ngamma' },
+    ]) {
+      const file = path.join(project, newlineCase.name);
+      await writeFile(file, newlineCase.content);
+      await open(cdp, file);
+      const newlineResult: { lines: string[]; separator: string } = await cdp.evaluate<{ lines: string[]; separator: string }>(`(async () => {
+        const view = ${viewExpression};
+        return { lines: Array.from({length:view.state.doc.lines}, (_,index)=>view.state.doc.line(index+1).text), separator:view.state.lineBreak };
+      })()`);
+      assert.deepEqual(newlineResult.lines, newlineCase.lines, 'all CRLF/CR/LF boundaries are logical lines');
+      assert.equal(newlineResult.separator, newlineCase.separator, 'uniform serialization follows detected separator policy');
+      await cdp.evaluate(`(async () => { await ${storeExpression}.getState().saveFile(${jsLiteral(file)}); })()`);
+      assert.equal(await readFile(file, 'utf8'), newlineCase.saved);
+      cases.push({ name: newlineCase.name, newlineParsing: true, separator: newlineCase.separator });
+      console.log(`Case-pass: ${newlineCase.name} parsed ${newlineResult.lines.length} lines`);
+    }
+    const markdownFile = path.join(project, 'dirty-preview.md');
+    await writeFile(markdownFile, '# Preview\n\noriginal-preview-paragraph\n');
+    await open(cdp, markdownFile);
+    const previewParagraph = (text: string): string => `Array.from(document.querySelectorAll('#editor-large-e2e .p-4 p')).some(paragraph=>paragraph.textContent===${jsLiteral(text)})`;
+    await cdp.wait(previewParagraph('original-preview-paragraph'), 'original Markdown rendered paragraph');
+    await cdp.evaluate(`(async () => {
+      const view = ${viewExpression}; view.dispatch({changes:{from:0,to:view.state.doc.length,insert:${jsLiteral('# Preview\n\ndirty-preview-paragraph\n')}}});
+    })()`);
+    await cdp.wait(previewParagraph('dirty-preview-paragraph'), 'dirty Markdown rendered paragraph');
+    await open(cdp, small.file);
+    await open(cdp, markdownFile);
+    await cdp.wait(previewParagraph('dirty-preview-paragraph'), 'cached dirty Markdown rendered paragraph on tab return');
+    assert.equal(await cdp.evaluate<boolean>(previewParagraph('original-preview-paragraph')), false);
+    await cdp.evaluate(`(async () => { const view = ${viewExpression}; view.dispatch({changes:{from:0,to:view.state.doc.length,insert:''}}); })()`);
+    const emptyPreview = `document.querySelector('#editor-large-e2e .p-4') && !document.querySelector('#editor-large-e2e .p-4 p')`;
+    await cdp.wait(emptyPreview, 'empty dirty Markdown preview');
+    await open(cdp, small.file);
+    await open(cdp, markdownFile);
+    await cdp.wait(`(async () => (${viewExpression}).state.doc.length === 0)()`, 'cached empty dirty Markdown document');
+    await cdp.wait(emptyPreview, 'cached empty dirty Markdown preview on tab return');
+    assert.equal(await readFile(markdownFile, 'utf8'), '# Preview\n\noriginal-preview-paragraph\n', 'dirty preview checks must not save original disk content');
+    receipt.dirtyMarkdownPreview = true; receipt.emptyMarkdownPreview = true;
+    await screenshot(cdp, 'dirty-markdown-empty-preview');
     await open(cdp, small.file);
     // Actual search panel + document navigation use existing CodeMirror commands/UI.
     await cdp.evaluate(`(async () => { (${viewExpression}).focus(); })()`);
@@ -307,14 +361,14 @@ try {
     const pasted = await cdp.evaluate<{ addedLines: number; tail: string }>(`(async () => {
       const view = ${viewExpression}; const before = view.state.doc.lines;
       view.dispatch({ selection:{anchor:view.state.doc.length} }); view.focus();
-      const clipboard = new DataTransfer(); clipboard.setData('text/plain', ${JSON.stringify('\nLF-paste-a\nLF-paste-b')});
+      const clipboard = new DataTransfer(); clipboard.setData('text/plain', ${jsLiteral('\nLF-paste-a\nLF-paste-b')});
       view.contentDOM.dispatchEvent(new ClipboardEvent('paste',{clipboardData:clipboard,bubbles:true,cancelable:true}));
       return { addedLines:view.state.doc.lines-before, tail:view.state.sliceDoc(view.state.doc.length-40) };
     })()`);
     assert.equal(pasted.addedLines, 2, 'LF clipboard input becomes real CRLF document lines');
     assert(pasted.tail.endsWith('\r\nLF-paste-a\r\nLF-paste-b'));
     await cdp.shortcut('s');
-    await cdp.wait(`(async () => !${storeExpression}.getState().editorModifiedFiles[${JSON.stringify(crlfFile)}])()`, 'CRLF pasted content save');
+    await cdp.wait(`(async () => !${storeExpression}.getState().editorModifiedFiles[${jsLiteral(crlfFile)}])()`, 'CRLF pasted content save');
     assert(!/(^|[^\r])\n/.test(await readFile(crlfFile,'utf8')));
     receipt.crlfPaste = true;
     // An acknowledgement for one full document must leave newer edits dirty.
@@ -322,17 +376,17 @@ try {
     await open(cdp, concurrentFile);
     const concurrent = await cdp.evaluate<{ dirty: boolean; contentTail: string }>(`(async () => {
       const store = ${storeExpression}; const view = ${viewExpression};
-      const pending = store.getState().saveFile(${JSON.stringify(concurrentFile)});
+      const pending = store.getState().saveFile(${jsLiteral(concurrentFile)});
       view.dispatch({ changes: { from: view.state.doc.length, insert: '-CONCURRENT' } });
       await pending;
-      return { dirty:!!store.getState().editorModifiedFiles[${JSON.stringify(concurrentFile)}], contentTail:view.state.sliceDoc(view.state.doc.length-40) };
+      return { dirty:!!store.getState().editorModifiedFiles[${jsLiteral(concurrentFile)}], contentTail:view.state.sliceDoc(view.state.doc.length-40) };
     })()`);
     assert(concurrent.dirty, 'newer edit must remain dirty after save acknowledgement');
     assert(concurrent.contentTail.endsWith('-CONCURRENT'));
     assert(!(await readFile(concurrentFile, 'utf8')).endsWith('-CONCURRENT'), 'disk acknowledges original snapshot only');
     await cdp.evaluate(`(async () => { (${viewExpression}).focus(); })()`);
     await cdp.shortcut('s');
-    await cdp.wait(`(async () => !${storeExpression}.getState().editorModifiedFiles[${JSON.stringify(concurrentFile)}])()`, 'second concurrent save');
+    await cdp.wait(`(async () => !${storeExpression}.getState().editorModifiedFiles[${jsLiteral(concurrentFile)}])()`, 'second concurrent save');
     assert((await readFile(concurrentFile, 'utf8')).endsWith('-CONCURRENT'));
     const beforeRejectedSave = hash(await readFile(concurrentFile));
     await cdp.evaluate(`(async () => {
@@ -341,10 +395,10 @@ try {
     await cdp.shortcut('w');
     await cdp.wait(`Array.from(document.querySelectorAll('[role="dialog"] button')).some(button=>button.textContent?.trim()==='Save')`, 'unsaved tab close dialog');
     await cdp.evaluate(`Array.from(document.querySelectorAll('[role="dialog"] button')).find(button=>button.textContent?.trim()==='Save').click()`);
-    await cdp.wait(`(async () => !!${storeExpression}.getState().editorSaveError[${JSON.stringify(concurrentFile)}])()`, 'oversized save rejected');
+    await cdp.wait(`(async () => !!${storeExpression}.getState().editorSaveError[${jsLiteral(concurrentFile)}])()`, 'oversized save rejected');
     const retained = await cdp.evaluate<boolean>(`(async () => {
       const state = ${storeExpression}.getState();
-      return state.editorOpenTabs.some(tab=>tab.id===${JSON.stringify(concurrentFile)}) && !!state.editorModifiedFiles[${JSON.stringify(concurrentFile)}] && (${viewExpression}).state.doc.length>32*1024*1024;
+      return state.editorOpenTabs.some(tab=>tab.id===${jsLiteral(concurrentFile)}) && !!state.editorModifiedFiles[${jsLiteral(concurrentFile)}] && (${viewExpression}).state.doc.length>32*1024*1024;
     })()`);
     assert(retained, 'failed Save-and-Close must retain unsaved document and tab');
     assert.equal(hash(await readFile(concurrentFile)), beforeRejectedSave);
@@ -353,7 +407,7 @@ try {
     await cdp.evaluate(`(async () => { (${viewExpression}).focus(); })()`);
     await cdp.shortcut('z');
     await cdp.shortcut('s');
-    await cdp.wait(`(async () => { const state=${storeExpression}.getState(); return !state.editorModifiedFiles[${JSON.stringify(concurrentFile)}] && !state.editorSaveError[${JSON.stringify(concurrentFile)}]; })()`, 'recovered from oversized edit');
+    await cdp.wait(`(async () => { const state=${storeExpression}.getState(); return !state.editorModifiedFiles[${jsLiteral(concurrentFile)}] && !state.editorSaveError[${jsLiteral(concurrentFile)}]; })()`, 'recovered from oversized edit');
     receipt.concurrentSave = true; receipt.failedCloseRetainsDirtyTab = true;
     const oversized = await fixture('oversized.txt', 33 * 1024 * 1024, 'single');
     const originalHash = oversized.hash;
@@ -362,12 +416,12 @@ try {
     const preview = await cdp.evaluate<{ chars: number; readOnly: boolean; saveContent: string | null }>(`(async () => {
       const { editorBridge } = await window.__editorSourceImport('utils/editorBridge.ts');
       const view = editorBridge.getView(); view.dispatch({changes:{from:0,insert:'SHOULD-NOT-EDIT'}});
-      return { chars:view.state.doc.length, readOnly:view.state.readOnly, saveContent:editorBridge.getContent(${JSON.stringify(oversized.file)}) };
+      return { chars:view.state.doc.length, readOnly:view.state.readOnly, saveContent:editorBridge.getContent(${jsLiteral(oversized.file)}) };
     })()`);
     assert(preview.chars <= 256 * 1024); assert(preview.readOnly); assert.equal(preview.saveContent, null);
-    await cdp.evaluate(`(async () => { ${storeExpression}.getState().saveFile(${JSON.stringify(oversized.file)}); })()`);
+    await cdp.evaluate(`(async () => { ${storeExpression}.getState().saveFile(${jsLiteral(oversized.file)}); })()`);
     const bridgeBypass = await cdp.evaluate<string>(`(async () => {
-      try { await window.electronAPI.editor.writeFile(${JSON.stringify(oversized.file)}, 'partial'); return 'unexpected success'; }
+      try { await window.electronAPI.editor.writeFile(${jsLiteral(oversized.file)}, 'partial'); return 'unexpected success'; }
       catch(error) { return String(error); }
     })()`);
     assert(bridgeBypass.includes('Read-only')); assert.equal(hash(await readFile(oversized.file)), originalHash);

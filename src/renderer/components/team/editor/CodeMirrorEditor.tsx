@@ -17,7 +17,7 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { gotoLine, search, searchKeymap } from '@codemirror/search';
-import { Compartment, EditorState, StateEffect } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect, Text } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import {
   EditorView,
@@ -388,9 +388,12 @@ export const CodeMirrorEditor = ({
         // ignore
       }
 
+      const lineSeparator = content.includes('\r\n') ? '\r\n'
+        : content.includes('\r') && !content.includes('\n') ? '\r' : '\n';
       initialState = EditorState.create({
-        doc: initialContent,
-        extensions: [extensions, EditorState.lineSeparator.of(content.includes('\r\n') ? '\r\n' : '\n')],
+        // Parse every input newline independently of the uniform serialization separator.
+        doc: Text.of(initialContent.split(/\r\n|\r|\n/)),
+        extensions: [extensions, EditorState.lineSeparator.of(lineSeparator)],
       });
       stateCacheRef.current.set(filePath, initialState);
 
@@ -464,6 +467,12 @@ export const CodeMirrorEditor = ({
       effects: lineWrapCompartment.reconfigure(!reduced && lineWrap ? EditorView.lineWrapping : []),
     });
   }, [lineWrap, reduced]);
+
+  // Publish cached/draft text on tab return and when preview is enabled, including empty text.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (view && !reduced && onDocChange) onDocChange(view.state.sliceDoc());
+  }, [filePath, onDocChange, reduced]);
 
   // Scroll to pending line (from search-in-files result click)
   const pendingGoToLine = useStore((s) => s.editorPendingGoToLine);
