@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -492,7 +491,6 @@ export const ProjectEditorOverlay = ({
           <span className="truncate text-text-muted">{projectPath}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <AnnouncementNewsButton />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
