@@ -116,6 +116,42 @@ describe('external prompt freshness and clipboard fallback', () => {
     }
   );
 
+  // RED when editing the task bypasses connection invalidation for a pending read.
+  it('withdraws a foreign-root prompt even if the task was edited during discovery', async () => {
+    let finishRead!: (info: ConnectionInfoV1) => void;
+    const pendingRead = new Promise<ConnectionInfoV1>((resolve) => {
+      finishRead = resolve;
+    });
+    await render({
+      getConnectionInfo: vi.fn().mockReturnValue(pendingRead),
+      retryConnection: vi.fn(),
+    });
+    const reveal = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'View final prompt'
+    )!;
+    await act(async () => reveal.click());
+    await copy();
+    const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        task,
+        'Create another team for this sandbox'
+      );
+      task.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(preview()?.value).toContain('Create another team for this sandbox');
+    const foreign = snapshot();
+    foreign.context.dataRootFingerprint = 'another-root';
+    await act(async () => finishRead(foreign));
+    expect(preview()?.value ?? '').toBe('');
+    expect(reveal.disabled).toBe(true);
+    expect(task.value).toBe('Create another team for this sandbox');
+    expect(writeText).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain(
+      'The app or data root changed. Refresh the connection before copying.'
+    );
+  });
+
   // RED when a valid fresh snapshot cannot recover preview after discovery failure,
   // or when clipboard failure fails to offer the exact freshly generated prompt.
   it('recovers with the fresh selectable prompt on clipboard failure, then copies it successfully', async () => {
