@@ -7,6 +7,12 @@
  */
 
 import { APP_RELEASE } from './buildMetadata';
+import {
+  isSentryFramePath,
+  isSentryImagePath,
+  type SentryArtifactPolicy,
+  sentryRecord,
+} from './sentryArtifactPolicy';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention -- Vite `define` injects this global.
 declare const __SENTRY_ENVIRONMENT__: string;
@@ -139,7 +145,14 @@ function redactSentryEnvAssignments(value: string): string {
   });
 }
 
-function redactSentryValue(value: unknown, depth: number, seen: WeakSet<object>): unknown {
+function redactSentryValue(
+  value: unknown,
+  depth: number,
+  seen: WeakSet<object>,
+  policy: SentryArtifactPolicy | null,
+  path: readonly string[],
+  arrays: readonly number[]
+): unknown {
   if (typeof value === 'string') {
     return redactSentryString(value);
   }
@@ -155,18 +168,55 @@ function redactSentryValue(value: unknown, depth: number, seen: WeakSet<object>)
   seen.add(value);
 
   if (Array.isArray(value)) {
-    return value.map((entry) => redactSentryValue(entry, depth + 1, seen));
+    const entries =
+      policy && path.length === 2 && path[0] === 'debug_meta' && path[1] === 'images'
+        ? value.filter(
+            (entry) =>
+              sentryRecord(entry) &&
+              typeof entry.type === 'string' &&
+              (entry.type !== 'sourcemap' || policy.image(entry) !== null)
+          )
+        : value;
+    return entries.map((entry, index) =>
+      redactSentryValue(
+        entry,
+        depth + 1,
+        seen,
+        policy,
+        [...path, String(index)],
+        [...arrays, path.length]
+      )
+    );
   }
 
   const redacted: Record<string, unknown> = {};
+  const row =
+    policy && sentryRecord(value)
+      ? isSentryImagePath(path, arrays)
+        ? policy.image(value)
+        : isSentryFramePath(path, arrays)
+          ? policy.frame(value)
+          : null
+      : null;
   for (const [key, entry] of Object.entries(value)) {
+    if (
+      row &&
+      ((isSentryImagePath(path, arrays) && (key === 'code_file' || key === 'debug_id')) ||
+        (isSentryFramePath(path, arrays) && (key === 'filename' || key === 'abs_path')))
+    ) {
+      redacted[key] = key === 'debug_id' ? row.debugId : row.locator;
+      continue;
+    }
     redacted[key] = isSensitiveSentryKey(key)
       ? REDACTED
-      : redactSentryValue(entry, depth + 1, seen);
+      : redactSentryValue(entry, depth + 1, seen, policy, [...path, key], arrays);
   }
   return redacted;
 }
 
-export function redactSentryEvent(event: unknown): unknown {
-  return redactSentryValue(event, 0, new WeakSet<object>());
+export function redactSentryEvent(
+  event: unknown,
+  policy: SentryArtifactPolicy | null = null
+): unknown {
+  return redactSentryValue(event, 0, new WeakSet<object>(), policy, [], []);
 }
