@@ -32,6 +32,10 @@ import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs } from './windows-mirror.mts';
 import { assertCaptionProof, readPeArchitecture, windowsNative } from './windows-native.mts';
 import {
+  windowsNativePaintContentReady,
+  type WindowsNativePaintPhase,
+} from './windows-native-paint-content.mts';
+import {
   proveWindowsDownload,
   proveWindowsProvider,
   windowsOtaMirror,
@@ -461,7 +465,7 @@ async function run() {
     assert.equal(observed.cache?.base.toLowerCase(), physical.local.toLowerCase());
     return { owner, arguments: arguments_, roots };
   }
-  async function nativePaint(owner: WindowsProcess, name: string) {
+  async function nativePaint(owner: WindowsProcess, name: WindowsNativePaintPhase) {
     const directory = path.join(root, `capture-${name}`);
     await mkdir(directory);
     const deadline = Date.now() + 45_000;
@@ -509,12 +513,7 @@ async function run() {
           await persist(); // Includes UIA Error/HResult and partial owned subtree counters.
           assertNativeNames(owner.pid, window.hwnd, attempt.observation);
           const names = attempt.observation.Names;
-          const text = names.join('\n');
-          const contentReady =
-            name === 'available'
-              ? text.includes(targetVersion) && /^Download$/imu.test(text)
-              : /Providers\s*&\s*plans/iu.test(text) && /^Tasks$/imu.test(text);
-          attempt.ready = contentReady && !/Preparing workspace/iu.test(text);
+          attempt.ready = windowsNativePaintContentReady(name, names, targetVersion);
           await persist();
           if (!attempt.ready) return null;
           assert(Date.now() <= deadline, 'Automatic real desktop must paint within 45 seconds');
