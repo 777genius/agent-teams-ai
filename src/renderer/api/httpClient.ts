@@ -1712,6 +1712,7 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   editor: EditorAPI = {
+    readDocumentPreview: async () => { throw new Error('Editor not available in browser mode'); },
     open: async () => {
       throw new Error('Editor not available in browser mode');
     },

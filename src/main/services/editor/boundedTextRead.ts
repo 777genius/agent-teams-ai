@@ -3,6 +3,7 @@ import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 
 import { isDevicePath, isGitInternalPath, isPathWithinRoot, validateFilePath } from '@main/utils/pathValidation';
+import { getDocumentFormat } from '@features/document-preview';
 import { EDITOR_FULL_MAX_BYTES, EDITOR_PREVIEW_MAX_BYTES, EDITOR_REDUCED_MODE_BYTES } from '@shared/editorPolicy';
 import fs from 'fs/promises';
 import { isBinaryFile } from 'isbinaryfile';
@@ -63,7 +64,7 @@ export async function boundedTextRead(filePath: string): Promise<ReadFileResult>
     const chunks: Buffer[] = [];
     const head = Buffer.allocUnsafe(512);
     const first = await handle.read(head, 0, head.length, 0);
-    const binary = await isBinaryFile(head.subarray(0, first.bytesRead));
+    const binary = getDocumentFormat(filePath) !== null || await isBinaryFile(head.subarray(0, first.bytesRead));
     let length = first.bytesRead;
     chunks.push(head.subarray(0, length));
     while (!binary && length < budget) {
