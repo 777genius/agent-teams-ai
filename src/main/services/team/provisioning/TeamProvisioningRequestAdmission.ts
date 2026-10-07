@@ -1,3 +1,4 @@
+import { TeamConfigReader } from '../TeamConfigReader';
 import {
   normalizeRuntimeSelectionVersion,
   requireTeamRuntimeSelection,
@@ -81,6 +82,10 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
     if (!publicationIsAuthorized()) throw new Error('Launch admission superseded by Stop');
     normalizeRuntimeSelectionVersion(request.runtimeSelectionVersion);
     const meta = await readTeamMeta(lockKey);
+    const config = await new TeamConfigReader().getConfig(lockKey);
+    if (config?.deletedAt || (!config && meta?.deletedAt)) {
+      throw new Error('TEAM_TRASHED: Restore the team before launching');
+    }
     const runtimeSelectionVersion = normalizeRuntimeSelectionVersion(
       meta?.runtimeSelectionVersion ?? request.runtimeSelectionVersion
     );
@@ -124,7 +129,14 @@ export function createTeamProvisioningRequestAdmissionBoundary(
         service,
         admissionContext,
         request,
-        (runtime) => launchTeamInnerWithService(service, { ...request, ...runtime }, onProgress),
+        async (runtime) => {
+          const meta = await readTeamMeta(request.teamName);
+          return launchTeamInnerWithService(
+            service,
+            { ...request, prompt: request.prompt ?? meta?.prompt, ...runtime },
+            onProgress
+          );
+        },
         readTeamMeta
       ),
   };

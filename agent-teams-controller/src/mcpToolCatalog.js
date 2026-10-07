@@ -3,6 +3,8 @@ const AGENT_TEAMS_TEAM_TOOL_NAMES = [
   'team_list',
   'team_get',
   'team_create',
+  'team_update',
+  'team_trash',
 ];
 
 const AGENT_TEAMS_TASK_TOOL_NAMES = [

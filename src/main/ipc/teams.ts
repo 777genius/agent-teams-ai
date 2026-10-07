@@ -2044,6 +2044,21 @@ async function handleLaunchTeam(
   event: IpcMainInvokeEvent,
   request: unknown
 ): Promise<IpcResult<TeamLaunchResponse>> {
+  const name =
+    request && typeof request === 'object'
+      ? (request as Partial<TeamLaunchRequest>).teamName
+      : undefined;
+  const validation = validateTeamName(name);
+  if (!validation.valid) return { success: false, error: validation.error ?? 'Invalid teamName' };
+  return getTeamDataService().runConfigurationOperation(validation.value!, () =>
+    handleLaunchTeamUnlocked(event, request)
+  );
+}
+
+async function handleLaunchTeamUnlocked(
+  event: IpcMainInvokeEvent,
+  request: unknown
+): Promise<IpcResult<TeamLaunchResponse>> {
   if (!request || typeof request !== 'object') {
     return { success: false, error: 'Invalid team launch request' };
   }
@@ -2118,6 +2133,8 @@ async function handleLaunchTeam(
       throw error;
     });
     if (meta instanceof TeamRuntimeSelectionError) return { success: false, error: meta.message };
+    if (meta?.deletedAt)
+      return { success: false, error: 'TEAM_TRASHED: Restore the team before launching' };
     if (meta) isDraft = true;
   }
 

@@ -8,7 +8,7 @@ import { configureDesktopMcpEnvironment } from '../desktopMcpEnvironment';
 import { ExternalAgentConnection } from '../ExternalAgentConnection';
 import { registerBoundControlHttp } from '../registerBoundControlHttp';
 
-import type { ExternalAgentConnectionApi } from '../../contracts';
+import type { AppConnectionContext, ExternalAgentConnectionApi } from '../../contracts';
 import type { NativeRendererCdp } from '../NativeRendererCdp';
 import type { WebContents } from 'electron';
 import type { FastifyInstance } from 'fastify';
@@ -33,11 +33,13 @@ interface Dependencies {
     appContext: { bind(env: Record<string, string | undefined>, httpEnabled: boolean): () => void };
   };
   httpEnabled: boolean;
+  hasTeamManagement?(): boolean;
   assertNoLiveRuntimeConsumers?(): void;
 }
 
 export interface DesktopExternalAgentConnection extends ExternalAgentConnectionApi {
   registerHttp(app: FastifyInstance): void;
+  withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   assertLaunchAdmission(): void;
   updateRoot(applyConfig: () => void): Promise<void>;
   changeContext(operation: () => Promise<void> | void): Promise<void>;
@@ -158,6 +160,15 @@ export function createDesktopExternalAgentConnection(
     return shutdownDrain;
   };
   return {
+    async withExpectedContext(expected, operation) {
+      if (!deps.isLocalContext()) throw new Error('APP_CONTEXT_MISMATCH: Local context required');
+      const release = context.admit(expected);
+      try {
+        return await operation();
+      } finally {
+        release();
+      }
+    },
     assertLaunchAdmission() {
       if (stopping || !context.isOpen) {
         throw new Error('App connection is changing context. Retry the team launch.');

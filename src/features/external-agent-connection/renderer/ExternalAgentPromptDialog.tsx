@@ -28,6 +28,7 @@ interface Props {
 function createPrompt(task: string, connection: ConnectionInfoV1): string {
   return buildExternalAgentPrompt({
     task,
+    intent: 'manage',
     templates: TEAM_TEMPLATES,
     connection,
     includeCdp: connection.cdp.status === 'ready' && connection.capabilities.rendererControl,
@@ -166,7 +167,10 @@ export function ExternalAgentPromptDialog({
           aria-describedby="external-agent-task-help"
         />
         <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
-          {taskPresent ? t('externalPrompt.createOnly') : t('externalPrompt.taskRequired')}
+          {t('externalPrompt.requestHelp')}{' '}
+          {currentConnection.capabilities.configurationEdit ? t('externalPrompt.editAvailable') : ''}{' '}
+          {currentConnection.capabilities.reversibleTrash ? t('externalPrompt.trashAvailable') : ''}
+          {!currentConnection.capabilities.configurationEdit && !currentConnection.capabilities.reversibleTrash ? t('externalPrompt.createOnly') : ''}
         </p>
       </div>
       <TeamTemplateReferences isLight={isLight} />

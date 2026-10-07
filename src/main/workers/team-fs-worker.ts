@@ -1174,7 +1174,6 @@ async function readDraftTeamMeta(
     const raw = await readFileUtf8WithTimeout(metaPath, options.maxConfigReadMs);
     const meta = JSON.parse(raw) as Record<string, unknown>;
     if (meta?.version !== 1 || typeof meta?.cwd !== 'string') return null;
-
     const displayName =
       typeof meta.displayName === 'string' && meta.displayName.trim()
         ? meta.displayName.trim()
@@ -1226,6 +1225,7 @@ async function readDraftTeamMeta(
       ...(leadColor ? { leadColor } : {}),
       projectPath: typeof meta.cwd === 'string' ? meta.cwd : undefined,
       pendingCreate: true,
+      deletedAt: typeof meta.deletedAt === 'string' ? meta.deletedAt : undefined,
     };
   } catch {
     return null;

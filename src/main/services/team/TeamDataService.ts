@@ -1,3 +1,4 @@
+import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
@@ -44,7 +45,7 @@ import {
 } from './cache/LeadSessionParseCache';
 import { atomicWriteAsync } from './atomicWrite';
 import { createDraftTeamConfig } from './createDraftTeamConfig';
-import { renameDraftTeamDirectory } from './draftTeamRename';
+import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
 import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
@@ -322,7 +323,6 @@ async function mapLimitLocal<T, R>(
 
   return results;
 }
-
 
 function readConfigForUiSnapshot(
   configReader: TeamConfigReader & {
@@ -1239,37 +1239,56 @@ export class TeamDataService {
     return out;
   }
 
+  private configurationGate: (teamName: string, operation: () => Promise<void>) => Promise<void> = (
+    _name,
+    operation
+  ) => operation();
+
+  setConfigurationGate(
+    gate: (teamName: string, operation: () => Promise<void>) => Promise<void>
+  ): void {
+    this.configurationGate = gate;
+  }
+
+  async runConfigurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    let result!: T;
+    await this.configurationGate(teamName, async () => {
+      result = await operation();
+    });
+    return result;
+  }
+
   async updateConfig(
     teamName: string,
     updates: { name?: string; description?: string; color?: string }
   ): Promise<TeamConfig | null> {
-    const updated = await this.configReader.updateConfig(teamName, updates);
-    this.invalidateNotificationContext(teamName);
-    return updated;
+    return this.runConfigurationOperation(teamName, () =>
+      updateTeamConfiguration(teamName, updates, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async deleteTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    config.deletedAt = new Date().toISOString();
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.runConfigurationOperation(teamName, () =>
+      setTeamDeleted(teamName, true, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async restoreTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    delete config.deletedAt;
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.runConfigurationOperation(teamName, () =>
+      setTeamDeleted(teamName, false, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async permanentlyDeleteTeam(
@@ -1959,6 +1978,15 @@ export class TeamDataService {
   }
 
   async replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void> {
+    return this.runConfigurationOperation(teamName, () =>
+      this.replaceMembersUnlocked(teamName, request)
+    );
+  }
+
+  private async replaceMembersUnlocked(
+    teamName: string,
+    request: ReplaceMembersRequest
+  ): Promise<void> {
     const existing = await this.membersMetaStore.getMembers(teamName);
     const existingLead = existing.find(isLeadMember) ?? null;
     const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
@@ -2009,6 +2037,7 @@ export class TeamDataService {
               ? member.fastMode
               : undefined,
           mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+          cwd: isSameActiveMember ? prev?.cwd : undefined,
           agentType: prev?.agentType ?? 'general-purpose',
           agentId: isSameActiveMember ? prev?.agentId : undefined,
           color: prev?.color,
@@ -3362,10 +3391,22 @@ export class TeamDataService {
   }
 
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    return createDraftTeamConfig(request, { teamMetaStore: this.teamMetaStore, membersMetaStore: this.membersMetaStore });
+    return this.runConfigurationOperation(request.teamName, () =>
+      createDraftTeamConfig(request, {
+        teamMetaStore: this.teamMetaStore,
+        membersMetaStore: this.membersMetaStore,
+      })
+    );
   }
 
-  readonly renameDraftTeam = renameDraftTeamDirectory;
+  readonly renameDraftTeam = (oldName: string, newName: string): Promise<void> =>
+    this.runConfigurationOperation(oldName, async () => {
+      if (oldName === newName) return;
+      await assertDraftRenameDestinationAvailable(newName);
+      return this.runConfigurationOperation(newName, () =>
+        renameDraftTeamDirectory(oldName, newName)
+      );
+    });
 
   async reconcileTeamArtifacts(
     teamName: string,

@@ -1,3 +1,4 @@
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
 /**
  * HTTP Route Registration Orchestrator.
  *
@@ -63,11 +64,14 @@ export interface HttpServices {
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
   workspaceTrust?: WorkspaceTrustStatusFeatureFacade;
-  externalAgentConnection?: DesktopExternalAgentConnection;
+  externalAgentConnection?: DesktopExternalAgentConnection & {
+    teamPromptManagement?: TeamPromptManagement;
+  };
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
+  teamPromptManagement?: TeamPromptManagement;
 }
 
 export function registerHttpRoutes(

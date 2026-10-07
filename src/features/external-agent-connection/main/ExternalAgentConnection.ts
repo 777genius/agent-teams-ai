@@ -13,6 +13,7 @@ interface ConnectionDependencies {
   isLocalContext(): boolean;
   getControlUrl(): string | null;
   getBoundControlUrl(): string | null;
+  hasTeamManagement?(): boolean;
   startControl(): Promise<void>;
   mcp: {
     getCurrentHandle(): { url: string; generation: number } | null;
@@ -113,6 +114,8 @@ export class ExternalAgentConnection {
           },
       capabilities: {
         draftCreation: ready,
+        configurationEdit: ready && this.deps.hasTeamManagement?.() === true,
+        reversibleTrash: ready && this.deps.hasTeamManagement?.() === true,
         rendererControl: local && stable && cdp.status === 'ready',
       },
       errorCode: !local

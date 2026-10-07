@@ -61,6 +61,7 @@ export function getProjectSelectionResetState(): Partial<AppState> {
 export function getContextScopedTeamResetState(): Partial<AppState> {
   return {
     teams: [],
+    teamManagementNoticeByTeam: {},
     teamByName: {},
     teamBySessionId: {},
     branchByPath: {},

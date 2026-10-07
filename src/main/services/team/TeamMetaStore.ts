@@ -19,6 +19,7 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
 export interface TeamMetaFile {
   version: 1;
   runtimeSelectionVersion?: 1;
+  deletedAt?: string;
   displayName?: string;
   description?: string;
   color?: string;
@@ -196,6 +197,7 @@ export class TeamMetaStore {
 
     return {
       version: 1,
+      deletedAt: typeof file.deletedAt === 'string' ? file.deletedAt : undefined,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
       displayName:
         typeof file.displayName === 'string' ? file.displayName.trim() || undefined : undefined,
@@ -260,6 +262,7 @@ export class TeamMetaStore {
   ): Promise<void> {
     const payload: TeamMetaFile = {
       version: 1,
+      deletedAt: data.deletedAt,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,
       description: data.description?.trim() || undefined,

@@ -1,3 +1,4 @@
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { createHash } from 'crypto';
 import * as nodeFs from 'fs';
 import * as fs from 'fs/promises';
@@ -545,6 +546,31 @@ describe('TeamDataService task projection cache invalidation', () => {
 });
 
 describe('TeamDataService draft metadata', () => {
+  // Catches two draft renames acquiring each other's destination lock before rejecting occupied targets.
+  it('rejects concurrent occupied draft destinations before waiting for a second team lock', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-draft-rename-admission-'));
+    tempPaths.push(root);
+    setClaudeBasePathOverride(root);
+    const service = new TeamDataService();
+    const lifecycle = new TeamProvisioningService();
+    service.setConfigurationGate((name, operation) =>
+      lifecycle.runLiveRosterMutation(name, operation)
+    );
+    await service.createTeamConfig({ teamName: 'draft-a', members: [] });
+    await service.createTeamConfig({ teamName: 'draft-b', members: [] });
+    const outcomes = await Promise.allSettled([
+      service.renameDraftTeam('draft-a', 'draft-b'),
+      service.renameDraftTeam('draft-b', 'draft-a'),
+    ]);
+    for (const outcome of outcomes) {
+      expect(outcome.status).toBe('rejected');
+      if (outcome.status === 'rejected')
+        expect(outcome.reason.message).toMatch(/^Team already exists:/);
+    }
+    expect(await service.getSavedRequest('draft-a')).toMatchObject({ teamName: 'draft-a' });
+    expect(await service.getSavedRequest('draft-b')).toMatchObject({ teamName: 'draft-b' });
+  });
+
   it('makes fresh app-owned inbox history readable before publishing draft metadata', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-empty-inbox-'));
     tempPaths.push(claudeRoot);

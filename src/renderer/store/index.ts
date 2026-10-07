@@ -1588,6 +1588,10 @@ export function initializeNotificationListeners(): () => void {
 
   if (api.teams?.onTeamChange) {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+      if (event.management) {
+        void useStore.getState().receiveTeamManagementChange(event.teamName, event.management);
+        return;
+      }
       const messageRefreshRelevant =
         Boolean(event.teamName) && shouldRefreshTeamMessages(event.teamName);
       noteTeamChangeEventBurst(event.teamName, event.type, messageRefreshRelevant);

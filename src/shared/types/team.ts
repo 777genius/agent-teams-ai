@@ -1,3 +1,4 @@
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
@@ -1182,6 +1183,7 @@ export interface TeamAgentRuntimeSnapshot {
 }
 
 export interface TeamChangeEvent {
+  management?: TeamManagementCommittedChange;
   type:
     | 'config'
     | 'inbox'

@@ -95,6 +95,16 @@ function boundRequestOptions(baseUrl) {
   return { headers: binding.headers, redirect: 'error' };
 }
 
+function assertManagementExpectation(flags) {
+  const expected = assertConnectionContext(flags.expectedContext);
+  if (binding && Object.keys(expected).some((key) => expected[key] !== binding.context[key])) {
+    throw mismatch('expectedContext differs from desktop binding');
+  }
+  if (typeof flags.expectedRevision !== 'string' || !flags.expectedRevision.trim()) {
+    throw new Error('expectedRevision from a fresh team_get is required');
+  }
+}
+
 function assertDraftExpectation(flags) {
   if (flags.runtimeSelectionVersion === undefined) return;
   if (flags.runtimeSelectionVersion !== 1) throw new Error('UNSUPPORTED_RUNTIME_SELECTION_VERSION');
@@ -109,5 +119,6 @@ module.exports = {
   boundControlBaseUrls,
   boundRequestOptions,
   assertDraftExpectation,
+  assertManagementExpectation,
   isDesktopBound: () => binding !== null,
 };

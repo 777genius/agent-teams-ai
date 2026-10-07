@@ -242,6 +242,7 @@ export class TeamProvisioningTransientRunState {
   }
 
   async withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
+    teamName = teamName.trim().toLowerCase();
     const ownedTeamLocks = this.teamLockOwnership.getStore();
     const ownedToken = ownedTeamLocks?.get(teamName);
     if (ownedToken && this.activeTeamLockTokens.get(teamName) === ownedToken) {

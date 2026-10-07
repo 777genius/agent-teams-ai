@@ -1,3 +1,5 @@
+import { buildExternalAgentPrompt } from '@features/external-agent-connection';
+import { TEAM_TEMPLATES } from '@features/team-templates';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -181,5 +183,31 @@ describe('external prompt freshness and clipboard fallback', () => {
     await copy();
     expect(writeText).toHaveBeenLastCalledWith(freshPrompt);
     expect(host.textContent).toContain('Copied');
+  });
+});
+
+// RED if a legacy create caller gains edit powers, or manage copy promises unwired tools.
+describe('external prompt operation intent', () => {
+  it('keeps create callers creation-only even when management tools are wired', () => {
+    const connection = snapshot();
+    connection.capabilities.configurationEdit = true;
+    connection.capabilities.reversibleTrash = true;
+    const prompt = buildExternalAgentPrompt({ task: 'Create a test team', template: TEAM_TEMPLATES[0], connection, includeCdp: false });
+    expect(prompt).toContain('Configuration editing is unavailable');
+    expect(prompt).toContain('Trash is unavailable');
+    expect(prompt).not.toContain('Use team_update');
+    expect(prompt).not.toContain('Use team_trash');
+  });
+  it('advertises independently wired manage tools with fresh revision and no runtime bypass', () => {
+    const connection = snapshot();
+    connection.capabilities.configurationEdit = true;
+    const prompt = buildExternalAgentPrompt({ task: 'Edit a test team', templates: TEAM_TEMPLATES, intent: 'manage', connection, includeCdp: false });
+    expect(prompt).toContain('Use team_update with exactly one group');
+    expect(prompt).toContain('configurationRevision as expectedRevision');
+    expect(prompt).toContain('Never launch, stop, permanently delete or automatically restore');
+    expect(prompt).toContain('never blindly retry a write');
+    expect(prompt).not.toContain('Use team_trash');
+    connection.capabilities.reversibleTrash = true;
+    expect(buildExternalAgentPrompt({ task: 'Trash a test team', templates: TEAM_TEMPLATES, intent: 'manage', connection, includeCdp: false })).toContain('Use team_trash for reversible trash only');
   });
 });

@@ -1,5 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { TeamManagementNotice } from './TeamManagementNotice';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
+
 import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
@@ -260,6 +263,7 @@ function renderTeamRecentPaths(
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
 
 interface ActiveTeamCardProps {
+  managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
   status: TeamStatus;
   teamColorSet: TeamColorSet;
@@ -284,6 +288,7 @@ interface ActiveTeamCardProps {
 }
 
 const ActiveTeamCard = ({
+  managementChange,
   team,
   status,
   teamColorSet,
@@ -330,6 +335,7 @@ const ActiveTeamCard = ({
         }
       }}
     >
+      <TeamManagementNotice change={managementChange} />
       <div className="flex flex-1 flex-col">
         <div className="space-y-2">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -491,6 +497,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const {
     teams,
     teamsLoading,
+    teamManagementNoticeByTeam,
     teamsError,
     fetchTeams,
     openTab,
@@ -511,6 +518,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   } = useStore(
     useShallow((s) => ({
       teams: s.teams,
+      teamManagementNoticeByTeam: s.teamManagementNoticeByTeam,
       teamsLoading: s.teamsLoading,
       teamsError: s.teamsError,
       fetchTeams: s.fetchTeams,
@@ -1200,6 +1208,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           </Button>
         </div>
       </div>
+      {teams.some((team) => !team.deletedAt && teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' && teamManagementNoticeByTeam[team.teamName] && !filteredTeams.includes(team)) ? (
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('managementChanges.hidden')}{' '}
+          <Button variant="link" size="sm" onClick={() => { setSearchQuery(''); setFilter(EMPTY_TEAM_FILTER); }}>{t('list.filter.clearAll')}</Button>
+        </p>
+      ) : null}
       {!canCreate ? (
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('list.localOnly')}</p>
       ) : null}
@@ -1281,7 +1294,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       );
     }
 
-    const activeFiltered = filteredTeams.filter((t) => !t.deletedAt);
+    const recentTeams = filteredTeams.filter((team) => !team.deletedAt && teams.includes(team) && teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' && teamManagementNoticeByTeam[team.teamName])
+      .sort((a, b) => Date.parse(teamManagementNoticeByTeam[b.teamName].committedAt) - Date.parse(teamManagementNoticeByTeam[a.teamName].committedAt) || a.teamName.localeCompare(b.teamName));
+    const recentNames = new Set(recentTeams.map((team) => team.teamName));
+    const activeFiltered = filteredTeams.filter((t) => !t.deletedAt && !recentNames.has(t.teamName));
     const deletedFiltered = filteredTeams.filter((t) => t.deletedAt);
     const shouldPageTeamSections = !searchQuery.trim() && !hasActiveFilters;
     const selectedProjectSectionKey = currentProjectPath
@@ -1316,6 +1332,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             teams: activeFiltered,
           },
         ];
+
+    if (recentTeams.length) activeSections.unshift({ key: 'recent-management', title: t('managementChanges.title'), teams: recentTeams });
 
     return (
       <>
@@ -1364,6 +1382,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                         <ActiveTeamCard
                           key={team.teamName}
                           team={team}
+                          managementChange={teamManagementNoticeByTeam[team.teamName]}
                           status={status}
                           teamColorSet={teamColorSet}
                           isLight={isLight}

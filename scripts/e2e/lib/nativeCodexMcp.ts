@@ -163,9 +163,18 @@ function nativeRpc(child: ChildProcessWithoutNullStreams) {
 }
 
 /** Native Codex MCP calls only: never starts an inference turn or consumes provider auth. */
-export async function verifyNativeCodexMcp(
-  input: NativeCodexMcpInput
-): Promise<NativeCodexMcpEvidence> {
+export interface NativeCodexMcpClient {
+  call(tool: string, args: Record<string, unknown>): Promise<Record<string, unknown>>;
+  toolNames: string[];
+  nativeVersion: string;
+}
+
+/** Shared native discovery/call session; consumers never need a second RPC implementation. */
+export async function withNativeCodexMcp<T>(
+  input: Omit<NativeCodexMcpInput, 'teamName'> & { requiredTools?: readonly string[] },
+  use: (client: NativeCodexMcpClient) => Promise<T>
+): Promise<T> {
+  const requiredTools = input.requiredTools ?? REQUIRED_TOOLS;
   const endpoint = new URL(input.url);
   assert(
     endpoint.protocol === 'http:' &&
@@ -186,6 +195,7 @@ export async function verifyNativeCodexMcp(
     LANG: 'C.UTF-8',
     HOME: home,
     CODEX_HOME: codexHome,
+    TMPDIR: input.workRoot,
     XDG_CONFIG_HOME: path.join(home, '.config'),
     XDG_DATA_HOME: path.join(home, '.local/share'),
   };
@@ -245,12 +255,12 @@ export async function verifyNativeCodexMcp(
         toolNames = Object.values(record(server.tools, 'Native MCP tools missing'))
           .map((tool) => String(record(tool, 'Invalid native MCP tool').name))
           .sort();
-        if (REQUIRED_TOOLS.every((name) => toolNames.includes(name))) break;
+        if (requiredTools.every((name) => toolNames.includes(name))) break;
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     assert(
-      REQUIRED_TOOLS.every((name) => toolNames.includes(name)),
+      requiredTools.every((name) => toolNames.includes(name)),
       'Native MCP required tools unavailable'
     );
     const call = async (tool: string, args: Record<string, unknown>) =>
@@ -272,6 +282,15 @@ export async function verifyNativeCodexMcp(
         `Native discovery changed ${field}`
       );
     }
+    return await use({ call, nativeVersion, toolNames });
+  } finally {
+    await rpc.close();
+  }
+}
+
+/** Existing create-only proof retains its exact native calls and assertions. */
+export async function verifyNativeCodexMcp(input: NativeCodexMcpInput): Promise<NativeCodexMcpEvidence> {
+  return withNativeCodexMcp(input, async ({ call, nativeVersion, toolNames }) => {
     const created = await call('team_create', {
       teamName: input.teamName,
       cwd: input.cwd,
@@ -299,7 +318,5 @@ export async function verifyNativeCodexMcp(
     assert.equal(member.workflow, 'Implement scoped sandbox work.');
     assert.equal(member.providerId, undefined, 'Native readback invented member provider');
     return { client: 'codex-cli-app-server', nativeVersion, toolNames, created, readback };
-  } finally {
-    await rpc.close();
-  }
+  });
 }

@@ -81,6 +81,79 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
     },
   });
 
+  const managementContextSchema = z
+    .object({
+      appInstanceId: z.string().min(1),
+      dataRootFingerprint: z.string().min(1),
+      connectionGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    })
+    .strict();
+  const managementTargetSchema = {
+    ...teamContextSchema,
+    teamName: z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/),
+    expectedContext: managementContextSchema,
+    expectedRevision: z.string().min(1),
+  };
+  server.addTool({
+    name: 'team_update',
+    description:
+      'Edit exactly one configuration group of a stopped or draft team. Get its current configurationRevision first. Does not launch or stop agents.',
+    parameters: z
+      .object({
+        ...managementTargetSchema,
+        metadata: z
+          .object({
+            displayName: z.string().trim().min(1).optional(),
+            description: z.string().optional(),
+            color: z.string().optional(),
+          })
+          .strict()
+          .refine((value) => Object.keys(value).length > 0, 'Specify at least one metadata field')
+          .optional(),
+        leadInstructions: z.string().optional(),
+        members: z
+          .array(
+            z
+              .object({
+                name: z.string().min(1),
+                role: z.string().optional(),
+                workflow: z.string().optional(),
+              })
+              .strict()
+          )
+          .max(100)
+          .optional(),
+      })
+      .strict()
+      .refine(
+        (value) =>
+          ['metadata', 'leadInstructions', 'members'].filter(
+            (key) => value[key as keyof typeof value] !== undefined
+          ).length === 1,
+        'Specify exactly one configuration group'
+      ),
+    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) =>
+      jsonTextContent(
+        await getController(teamName, claudeDir).runtime.updateTeam({
+          ...controlFlags({ controlUrl, waitTimeoutMs }),
+          ...payload,
+        })
+      ),
+  });
+  server.addTool({
+    name: 'team_trash',
+    description:
+      'Move a stopped or draft team to reversible Trash using a fresh configurationRevision. Never permanently deletes files or stops agents.',
+    parameters: z.object(managementTargetSchema).strict(),
+    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) =>
+      jsonTextContent(
+        await getController(teamName, claudeDir).runtime.trashTeam({
+          ...controlFlags({ controlUrl, waitTimeoutMs }),
+          ...payload,
+        })
+      ),
+  });
+
   server.addTool({
     name: 'team_create',
     description:

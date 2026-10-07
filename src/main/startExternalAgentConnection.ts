@@ -1,4 +1,11 @@
 import {
+  composeTeamPromptManagement,
+  type TeamPromptManagementData,
+  type TeamPromptManagementLifecycle,
+} from './startTeamPromptManagement';
+import type { TeamChangeEvent } from '@shared/types';
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import {
   createDesktopExternalAgentConnection,
   type NativeRendererCdp,
 } from '@features/external-agent-connection/main';
@@ -25,9 +32,16 @@ export function composeExternalAgentConnection(options: {
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void>;
   hasLiveRuntimeConsumers?(): boolean;
+  teamManagement?: [
+    data: TeamPromptManagementData,
+    lifecycle: TeamPromptManagementLifecycle,
+    emit: (event: TeamChangeEvent) => void,
+  ];
 }) {
+  let teamPromptManagement: TeamPromptManagement | undefined;
   const connection = createDesktopExternalAgentConnection({
     ...options,
+    hasTeamManagement: () => Boolean(teamPromptManagement),
     userDataPath: app.getPath('userData'),
     getRoot: getClaudeBasePath,
     getCdpEnabled: () => configManager.getConfig().general.externalAgentCdpEnabled === true,
@@ -40,8 +54,13 @@ export function composeExternalAgentConnection(options: {
       }
     },
   });
+  if (options.teamManagement) {
+    const [data, lifecycle, emit] = options.teamManagement;
+    teamPromptManagement = composeTeamPromptManagement(data, lifecycle, connection, emit);
+  }
   return {
     ...connection,
+    teamPromptManagement,
     async start(): Promise<void> {
       if (!isOpenCodeMcpHttpBridgeEnabled() && configManager.getConfig().httpServer?.enabled) {
         await options.startControl().catch(() => undefined);

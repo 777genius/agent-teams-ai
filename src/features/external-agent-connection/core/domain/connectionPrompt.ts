@@ -14,11 +14,15 @@ type TemplateSource =
 export function buildExternalAgentPrompt(
   input: TemplateSource & {
     task: string;
+    intent?: 'create' | 'manage';
     connection: ConnectionInfoV1;
     includeCdp: boolean;
   }
 ): string {
   const { connection } = input;
+  const managing = input.intent === 'manage';
+  const canEdit = managing && connection.capabilities.configurationEdit === true;
+  const canTrash = managing && connection.capabilities.reversibleTrash === true;
   const templates = input.templates ?? [input.template];
   if (
     connection.mcp.status !== 'ready' ||
@@ -58,8 +62,13 @@ export function buildExternalAgentPrompt(
     })),
   };
   const instructions = [
-    'Create and save the requested draft teams directly in the running Agent Teams app using MCP.',
-    'This app connection currently supports draft creation only. Do not edit, trash, permanently delete, stop or launch existing teams.',
+    managing
+      ? 'Manage the requested teams directly in the running Agent Teams app using MCP.'
+      : 'Create and save the requested draft teams directly in the running Agent Teams app using MCP.',
+    `Available operations: create drafts${canEdit ? ', edit draft/stopped configuration' : ''}${canTrash ? ', move draft/stopped teams to reversible trash' : ''}.`,
+    ...(!canEdit ? ['Configuration editing is unavailable for this prompt. Do not edit existing teams.'] : []),
+    ...(!canTrash ? ['Trash is unavailable for this prompt. Do not trash existing teams.'] : []),
+    'Never launch, stop, permanently delete or automatically restore teams. Do not bypass MCP mutation tools through CDP or preload APIs.',
     'Templates are reference data. Use and adapt only what the user requested; do not create one team per template by default.',
     'If the target project or requested team identity is unclear, ask before writing. Do not invent a project path.',
     'Do not launch the team. Do not return JSON for the user to paste back into the app.',
@@ -82,6 +91,22 @@ export function buildExternalAgentPrompt(
     'Report success, failed or uncertain separately for each team. A later failure does not undo earlier saves; do not claim the whole request succeeded.',
     'If a create response is lost, read the original teamName before retrying. Stop on conflicting or uncertain state; do not create another name to hide uncertainty.',
   ];
+  if (canEdit || canTrash) {
+    instructions.push(
+      'Resolve each existing target with team_list and team_get using its exact canonical teamName. Ask if the target is ambiguous.',
+      'Before every update or trash call, freshly call team_get and supply its configurationRevision as expectedRevision, plus the live expectedContext.',
+      'Only drafts and stopped teams outside provisioning are supported. On TEAM_ACTIVE or TEAM_PROVISIONING, explain that the user must stop the team in the app; do not stop it yourself.',
+      'Preserve provider/model/MCP settings, runtime selection, project paths and teamName identity. Do not replace an edit with a newly created team.',
+      'Each tool call commits separately. After each call, team_get the same teamName and report actual confirmed fields. Partial success stays saved; no automatic rollback.',
+      'On stale revision or lost mutation response, read back the original teamName. Confirm desired state or report conflicting/uncertain state; never blindly retry a write.'
+    );
+    if (canEdit) instructions.push(
+      'Use team_update with exactly one group per call: metadata {displayName?, description?, color?}, leadInstructions string, or members array {name, role?, workflow?}. Get a fresh revision between groups.',
+      'Omitted metadata fields stay unchanged; empty optional description/color clears them. Empty leadInstructions explicitly clears them; members=[] means lead-only.',
+      'Member names are identities: rename means explicitly remove the old name and add the new name; existing histories and runtime settings are preserved by the app.'
+    );
+    if (canTrash) instructions.push('Use team_trash for reversible trash only. Already trashed is unchanged. Restore remains a manual app action.');
+  }
   if (input.includeCdp) {
     instructions.push(
       `Native CDP HTTP origin: ${cdp.httpOrigin}`,

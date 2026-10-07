@@ -1,10 +1,17 @@
 // @vitest-environment node
 
+import { BoundControlContext } from '@features/external-agent-connection/main';
+import { TeamPromptManagement } from '@features/team-prompt-management/main';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { vi } from 'vitest';
 import { registerTeamRoutes } from '@main/http/teams';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -27,6 +34,7 @@ import type {
   TeamLaunchResponse,
   TeamProvisioningProgress,
   TeamRuntimeState,
+  TeamChangeEvent,
 } from '@shared/types/team';
 
 interface RegisteredTool {
@@ -164,6 +172,7 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  teamDataService: TeamDataService;
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
@@ -317,6 +326,7 @@ function createServices(claudeRoot: string): {
 
   return {
     createTeamCalls,
+    teamDataService,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
       sessionParser: {} as HttpServices['sessionParser'],
@@ -338,6 +348,38 @@ function createServices(claudeRoot: string): {
   };
 }
 
+function enableManagement(services: HttpServices, teamDataService: TeamDataService, root: string) {
+  const lifecycle = new TeamProvisioningService();
+  teamDataService.setConfigurationGate((name, operation) =>
+    lifecycle.runLiveRosterMutation(name, operation)
+  );
+  const context = new BoundControlContext('management-test-app', root);
+  const events: TeamChangeEvent[] = [];
+  services.teamPromptManagement = new TeamPromptManagement({
+    run: (name, operation) => teamDataService.runConfigurationOperation(name, operation),
+    async withExpectedContext(expected, operation) {
+      const release = context.admit(expected);
+      try {
+        return await operation();
+      } finally {
+        release();
+      }
+    },
+    getContext: async () => context.snapshot(),
+    getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
+    getSavedRequest: (name) => teamDataService.getSavedRequest(name),
+    getTeamData: (name) => teamDataService.getTeamData(name),
+    createTeamConfig: (request) => teamDataService.createTeamConfig(request),
+    updateConfig: (name, updates) => teamDataService.updateConfig(name, updates),
+    replaceMembers: (name, request) => teamDataService.replaceMembers(name, request),
+    deleteTeam: (name) => teamDataService.deleteTeam(name),
+    emit: (event) => {
+      events.push(event);
+    },
+  });
+  return { context, events, lifecycle };
+}
+
 describe('MCP team tools over the local REST control API', () => {
   const tools = collectTools();
 
@@ -346,6 +388,333 @@ describe('MCP team tools over the local REST control API', () => {
     expect(tool).toBeDefined();
     return tool!;
   }
+
+  // Catches management writes bypassing immutable context/revision, runtime flags being lost,
+  // roster removal resurrecting old identities, or draft trash accidentally deleting artifacts.
+  it('manages providerless drafts through MCP, preserving saved runtime fields and reversible trash', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService, createTeamCalls } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    const expectedContext = context.snapshot();
+    registerTeamRoutes(app, services);
+    const controlUrl = 'http://team-management.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    const teamName = 'managed-draft';
+    const base = { claudeDir: root, controlUrl, teamName, expectedContext };
+    const get = async () =>
+      parseJsonToolResult(await getTool('team_get').execute(base)) as {
+        configurationRevision: string;
+        deletedAt?: string;
+        savedRequest: TeamCreateRequest;
+      };
+    try {
+      const created = parseJsonToolResult(
+        await getTool('team_create').execute({
+          ...base,
+          runtimeSelectionVersion: 1,
+          description: 'Initial',
+          prompt: 'Saved lead instructions',
+          members: [
+            {
+              name: 'builder',
+              role: 'Developer',
+              workflow: 'Implement',
+              providerId: 'codex',
+              model: 'test-model',
+              isolation: 'worktree',
+              mcpPolicy: { mode: 'appOnly' },
+            },
+          ],
+        })
+      ) as { change: { kind: string; context: unknown } };
+      expect(created.change).toMatchObject({ kind: 'created', context: expectedContext });
+      const initial = await get();
+      expect(initial.savedRequest).toMatchObject({
+        runtimeSelectionVersion: 1,
+        prompt: 'Saved lead instructions',
+      });
+      const edited = parseJsonToolResult(
+        await getTool('team_update').execute({
+          ...base,
+          expectedRevision: initial.configurationRevision,
+          metadata: { displayName: 'Readable name', description: '' },
+        })
+      ) as { configurationRevision: string; change: { changedFields: string[] } };
+      expect(edited.change.changedFields).toEqual(['displayName', 'description']);
+      expect(edited.configurationRevision).not.toBe(initial.configurationRevision);
+      const stale = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: {
+          expectedContext,
+          expectedRevision: initial.configurationRevision,
+          leadInstructions: 'Stale overwrite',
+        },
+      });
+      expect(stale.statusCode).toBe(409);
+      expect(stale.json().code).toBe('TEAM_REVISION_MISMATCH');
+      const current = await get();
+      const noOp = parseJsonToolResult(
+        await getTool('team_update').execute({
+          ...base,
+          expectedRevision: current.configurationRevision,
+          metadata: { displayName: 'Readable name' },
+        })
+      ) as { changed: boolean };
+      expect(noOp.changed).toBe(false);
+      expect(events).toHaveLength(2);
+      const savedMember = (await new TeamMembersMetaStore().getMembers(teamName))[0];
+      await new TeamMembersMetaStore().writeMembers(teamName, [
+        { ...savedMember, agentId: 'old-builder-id', cwd: '/sandbox/worktree' },
+      ]);
+      let snapshot = await get();
+      await getTool('team_update').execute({
+        ...base,
+        expectedRevision: snapshot.configurationRevision,
+        members: [{ name: 'builder', role: 'Reviewer', workflow: 'Review' }],
+      });
+      expect((await new TeamMembersMetaStore().getMembers(teamName))[0]).toMatchObject({
+        agentId: 'old-builder-id',
+        cwd: '/sandbox/worktree',
+        providerId: 'codex',
+        model: 'test-model',
+        isolation: 'worktree',
+        mcpPolicy: { mode: 'appOnly' },
+        role: 'Reviewer',
+      });
+      snapshot = await get();
+      await getTool('team_update').execute({
+        ...base,
+        expectedRevision: snapshot.configurationRevision,
+        members: [{ name: 'new-builder', role: 'Developer' }],
+      });
+      const renamed = await new TeamMembersMetaStore().getMembers(teamName);
+      expect(renamed.find((member) => member.name === 'builder')).toMatchObject({
+        removedAt: expect.any(Number),
+        agentId: 'old-builder-id',
+      });
+      expect(renamed.find((member) => member.name === 'new-builder')?.agentId).toBeUndefined();
+      snapshot = await get();
+      const invalid = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: {
+          expectedContext,
+          expectedRevision: snapshot.configurationRevision,
+          metadata: { providerId: 'anthropic' },
+        },
+      });
+      expect(invalid.statusCode).toBe(400);
+      const foreign = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/trash`,
+        payload: {
+          expectedContext: { ...expectedContext, appInstanceId: 'foreign-app' },
+          expectedRevision: snapshot.configurationRevision,
+        },
+      });
+      expect(foreign.statusCode).toBe(409);
+      expect(foreign.json().code).toBe('APP_CONTEXT_MISMATCH');
+      await getTool('team_update').execute({
+        ...base,
+        expectedRevision: snapshot.configurationRevision,
+        leadInstructions: '',
+      });
+      snapshot = await get();
+      expect(snapshot.savedRequest.prompt).toBeUndefined();
+      await getTool('team_trash').execute({
+        ...base,
+        expectedRevision: snapshot.configurationRevision,
+      });
+      const trashed = await get();
+      expect(trashed.deletedAt).toEqual(expect.any(String));
+      expect(
+        (await teamDataService.listTeams()).find((team) => team.teamName === teamName)?.deletedAt
+      ).toBe(trashed.deletedAt);
+      const repeated = parseJsonToolResult(
+        await getTool('team_trash').execute({
+          ...base,
+          expectedRevision: trashed.configurationRevision,
+        })
+      ) as { changed: boolean };
+      expect(repeated.changed).toBe(false);
+      const rejectedUpdate = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: { expectedContext, expectedRevision: trashed.configurationRevision, members: [] },
+      });
+      expect(rejectedUpdate.json().code).toBe('TEAM_TRASHED');
+      const launch = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/launch`,
+        payload: { cwd: root, providerId: 'codex' },
+      });
+      expect(launch.statusCode).toBe(409);
+      expect(createTeamCalls).toHaveLength(0);
+      expect(
+        JSON.parse(await readFile(path.join(root, 'teams', teamName, 'members.meta.json'), 'utf8'))
+          .members
+      ).toHaveLength(2);
+      await expect(
+        readFile(path.join(root, 'teams', teamName, 'config.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+      await teamDataService.restoreTeam(teamName);
+      expect((await get()).deletedAt).toBeUndefined();
+      expect(await new TeamMetaStore().getMeta(teamName)).toMatchObject({
+        runtimeSelectionVersion: 1,
+        displayName: 'Readable name',
+      });
+      expect(events.filter((event) => event.management?.kind === 'trashed')).toHaveLength(1);
+    } finally {
+      restoreFetch();
+      await app.close();
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Catches admission checked before a queued launch, stale overwrites, and claiming a failed
+  // mutation after its canonical writer committed but an observer/read response failed.
+  it('fences stopped edits against launch and returns confirmed commits despite post-write faults', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-race-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events, lifecycle } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'stopped-team';
+    const expectedContext = context.snapshot();
+    const configPath = path.join(root, 'teams', teamName, 'config.json');
+    const get = async () =>
+      (await app.inject({ method: 'GET', url: `/api/teams/${teamName}` })).json() as {
+        configurationRevision: string;
+      };
+    const update = (expectedRevision: string, metadata: Record<string, string>) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: { expectedContext, expectedRevision, metadata },
+      });
+    try {
+      await teamDataService.createTeamConfig({
+        teamName,
+        runtimeSelectionVersion: 1,
+        members: [],
+        prompt: 'Preserve saved lead instructions',
+        description: 'Initial',
+        cwd: root,
+      });
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          name: 'Initial',
+          description: 'Initial',
+          projectPath: root,
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })
+      );
+      let snapshot = await get();
+      const originalWriter = teamDataService.updateConfig.bind(teamDataService);
+      const writer = vi
+        .spyOn(teamDataService, 'updateConfig')
+        .mockImplementation(async (name, metadata) => {
+          await originalWriter(name, metadata);
+          throw new Error('Simulated post-commit observer failure');
+        });
+      const confirmed = await update(snapshot.configurationRevision, {
+        description: 'Saved after fault',
+      });
+      expect(confirmed.statusCode).toBe(200);
+      expect(confirmed.json()).toMatchObject({
+        changed: true,
+        change: { kind: 'edited', changedFields: ['description'] },
+      });
+      expect(await new TeamMetaStore().getMeta(teamName)).toMatchObject({
+        description: 'Saved after fault',
+        prompt: 'Preserve saved lead instructions',
+        runtimeSelectionVersion: 1,
+      });
+      writer.mockRestore();
+      snapshot = await get();
+      const observer = vi.spyOn(events, 'push').mockImplementation(() => {
+        throw new Error('Simulated event delivery failure');
+      });
+      expect((await update(snapshot.configurationRevision, { color: 'blue' })).statusCode).toBe(
+        200
+      );
+      observer.mockRestore();
+      snapshot = await get();
+      let release!: () => void;
+      const launch = lifecycle.runLiveRosterMutation(teamName, async () => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        await originalWriter(teamName, { name: 'Launch won' });
+      });
+      const staleEdit = update(snapshot.configurationRevision, { description: 'Overwrite launch' });
+      release();
+      await launch;
+      const staleResult = await staleEdit;
+      expect(staleResult.statusCode).toBe(409);
+      expect(staleResult.json().code).toBe('TEAM_REVISION_MISMATCH');
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toMatchObject({
+        name: 'Launch won',
+        description: 'Saved after fault',
+      });
+      const idle = services.teamApis!.runtime.getRuntimeState;
+      services.teamApis!.runtime.getRuntimeState = async (name) => ({
+        teamName: name,
+        isAlive: true,
+        runId: 'test-alive',
+        progress: null,
+      });
+      snapshot = await get();
+      const active = await update(snapshot.configurationRevision, {
+        description: 'Active overwrite',
+      });
+      expect(active.json().code).toBe('TEAM_ACTIVE');
+      services.teamApis!.runtime.getRuntimeState = async (name) => ({
+        teamName: name,
+        isAlive: false,
+        runId: 'test-provisioning',
+        progress: {
+          teamName: name,
+          runId: 'test-provisioning',
+          state: 'assembling',
+          message: 'Test fixture',
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      const provisioning = await update(snapshot.configurationRevision, {
+        description: 'Provisioning overwrite',
+      });
+      expect(provisioning.json().code).toBe('TEAM_PROVISIONING');
+      services.teamApis!.runtime.getRuntimeState = idle;
+      const failure = vi
+        .spyOn(teamDataService, 'updateConfig')
+        .mockRejectedValueOnce(new Error('Write failed before commit'));
+      const unconfirmed = await update(snapshot.configurationRevision, {
+        description: 'Not saved',
+      });
+      expect(unconfirmed.statusCode).toBe(409);
+      expect(unconfirmed.json()).toMatchObject({
+        code: 'TEAM_MUTATION_UNCERTAIN',
+        outcome: { state: 'partial', configurationRevision: snapshot.configurationRevision },
+      });
+      failure.mockRestore();
+      expect(JSON.parse(await readFile(configPath, 'utf8')).description).toBe('Saved after fault');
+    } finally {
+      vi.restoreAllMocks();
+      await app.close();
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));

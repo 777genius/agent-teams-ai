@@ -2056,6 +2056,7 @@ async function initializeServices(): Promise<void> {
   // Bind desktop authority before exposing any runtime bridge consumer.
   externalAgentConnection = composeExternalAgentConnection({
     appInstanceId: openCodeManagedHostInstanceId,
+    teamManagement: [teamDataService, teamProvisioningService, forwardTeamChangeToRendererAndHttp],
     hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
     cdp: nativeRendererCdp,
     getMainContents: () => mainWindow?.webContents ?? null,

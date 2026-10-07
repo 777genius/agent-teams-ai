@@ -519,6 +519,38 @@ async function getTeam(context, flags = {}) {
   });
 }
 
+async function updateTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/update`,
+    {
+      method: 'POST',
+      body: compactBody(flags, [
+        'expectedContext',
+        'expectedRevision',
+        'metadata',
+        'leadInstructions',
+        'members',
+      ]),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function trashTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/trash`,
+    {
+      method: 'POST',
+      body: compactBody(flags, ['expectedContext', 'expectedRevision']),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
 async function createTeam(context, flags = {}) {
   desktopBinding.assertDraftExpectation(flags);
   const baseUrls = resolveControlBaseUrls(context, flags);
@@ -669,6 +701,8 @@ module.exports = {
   getConnectionInfo,
   getTeam,
   createTeam,
+  updateTeam,
+  trashTeam,
   launchTeam,
   stopTeam,
   getRuntimeState,

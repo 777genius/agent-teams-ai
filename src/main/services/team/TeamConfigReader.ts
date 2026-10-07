@@ -741,7 +741,6 @@ export class TeamConfigReader {
       if (meta?.version !== 1 || typeof meta?.cwd !== 'string') {
         return null;
       }
-
       const displayName =
         typeof meta.displayName === 'string' && meta.displayName.trim()
           ? meta.displayName.trim()
@@ -785,6 +784,7 @@ export class TeamConfigReader {
         ...(leadColor ? { leadColor } : {}),
         projectPath: typeof meta.cwd === 'string' ? meta.cwd : undefined,
         pendingCreate: true,
+        deletedAt: typeof meta.deletedAt === 'string' ? meta.deletedAt : undefined,
       };
     } catch {
       return null;
