@@ -36,7 +36,7 @@ permissions:
 jobs:
   tooling-quality:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -49,11 +49,11 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - name: Require the exact reviewed tooling SHA
@@ -71,6 +71,8 @@ jobs:
           node-version: '26.10.0'
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify native helper imports do not intercept controller cleanup
+        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts
       - name: Verify immutable native producer and extract exact plan-bound inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,7 +98,7 @@ jobs:
     # credential and has only contents:read in its independent native job.
     permissions:
       contents: write
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -192,6 +194,8 @@ jobs:
           node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-evidence
           if ($LASTEXITCODE -ne 0) { throw 'Windows startup diagnostic harness failed' }
       - name: Install and inspect official predecessor on its real native desktop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force .artifacts/TEST-windows-evidence | Out-Null
@@ -217,8 +221,8 @@ jobs:
           retention-days: 14
 
   fresh-windows:
-    needs: [verified-windows-inputs, legacy-windows-inputs, windows-predecessor]
-    if: ${{ !cancelled() && needs.windows-predecessor.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    needs: [verified-windows-inputs, legacy-windows-inputs]
+    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -349,6 +353,8 @@ jobs:
           node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-ota
           if ($LASTEXITCODE -ne 0) { throw 'Selected native PS7 discovery health failed' }
       - name: Original updater download install and automatic native restart
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Native runner architecture mismatch' }
           node scripts/e2e/release-updater/windows-ota.mts --mode '${{ matrix.mode }}' ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-ota --fresh-reference .artifacts/TEST-windows-reference/fresh-reference.json 2>&1 | Tee-Object .artifacts/TEST-windows-ota/probe.log

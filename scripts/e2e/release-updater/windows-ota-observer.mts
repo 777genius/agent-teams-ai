@@ -12,6 +12,42 @@ import {
 
 import type { WindowsProcess } from './windows-native.mts';
 
+export interface NativeNames {
+  Names: string[];
+  Error: string | null;
+  HResult: number;
+  Visited: number;
+  RootChildren: number;
+  MaxDepth: number;
+  Characters: number;
+  ProcessIds: number[];
+  RootHwnd: string;
+  RootPid: number;
+  RootThread: number;
+}
+export function assertNativeNames(ownerPid: number, hwnd: string, observation: NativeNames) {
+  assert.equal(observation.Error, null, observation.Error ?? 'Native UIA error');
+  assert.equal(observation.HResult, 0);
+  assert.equal(observation.RootPid, ownerPid);
+  assert.equal(observation.RootHwnd, hwnd);
+  assert(Number.isInteger(observation.RootThread) && observation.RootThread > 0);
+  assert(
+    Number.isInteger(observation.Visited) &&
+      observation.Visited > 0 &&
+      observation.Visited <= 20_000
+  );
+  assert(
+    Number.isInteger(observation.MaxDepth) &&
+      observation.MaxDepth >= 0 &&
+      observation.MaxDepth <= 64
+  );
+  assert(observation.RootChildren >= 0 && observation.RootChildren < observation.Visited);
+  assert(observation.Characters >= 0 && observation.Characters <= 1_000_000);
+  assert(observation.Names.length <= observation.Visited);
+  assert(observation.Names.every((name) => typeof name === 'string' && name.length <= 4096));
+  assert(observation.ProcessIds.length <= observation.Visited);
+  assert(observation.ProcessIds.every((pid) => Number.isInteger(pid) && pid > 0));
+}
 const execute = promisify(execFile);
 const script = String.raw`
 param([string]$InputFile,[string]$TrustedModulePath)
@@ -24,28 +60,40 @@ if ($refs.Count -lt 4) { throw 'Installed PSHOME references required' }
 Add-Type -TypeDefinition @'
 using System;
 using System.Text;
+using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
-// The IAccessible vtable prefix: IUnknown, four IDispatch slots, then
-// get_accParent/get_accChildCount/get_accChild/get_accName (oleacc.h).
-[ComImport,Guid("618736E0-3C3D-11CF-810C-00AA00389B71"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-public interface TestAccessible {
-  [PreserveSig] int GetTypeInfoCount(out uint count);
-  [PreserveSig] int GetTypeInfo(uint index,uint locale,out IntPtr info);
-  [PreserveSig] int GetIDsOfNames(ref Guid iid,IntPtr names,uint count,uint locale,IntPtr ids);
-  [PreserveSig] int Invoke(int id,ref Guid iid,uint locale,ushort flags,IntPtr arguments,IntPtr result,IntPtr exception,IntPtr argumentError);
-  [PreserveSig] int Parent(out IntPtr parent);
-  [PreserveSig] int ChildCount(out int count);
-  [PreserveSig] int Child([MarshalAs(UnmanagedType.Struct)] object id,out IntPtr child);
-  [PreserveSig] int Name([MarshalAs(UnmanagedType.Struct)] object id,[MarshalAs(UnmanagedType.BStr)] out string name);
+// Exact IUnknown prefixes from Microsoft's UIAutomationClient.h; unused slots are never called.
+[ComImport,Guid("30cbe57d-d9d0-452a-ab13-7ac5ac4825ee"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface TestAutomation {
+  void CompareElements(); void CompareRuntimeIds(); void GetRootElement();
+  [PreserveSig] int ElementFromHandle(IntPtr hwnd,out TestElement element);
+  void ElementFromPoint(); void GetFocusedElement(); void GetRootElementBuildCache();
+  void ElementFromHandleBuildCache(); void ElementFromPointBuildCache(); void GetFocusedElementBuildCache();
+  void CreateTreeWalker(); void ControlViewWalker(); void ContentViewWalker();
+  [PreserveSig] int RawViewWalker(out TestWalker walker);
+}
+[ComImport,Guid("d22108aa-8ac5-49a5-837b-37bbb3d7591e"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface TestElement {
+  void SetFocus(); void GetRuntimeId(); void FindFirst(); void FindAll();
+  void FindFirstBuildCache(); void FindAllBuildCache(); void BuildUpdatedCache();
+  [PreserveSig] int GetCurrentPropertyValue(int id,[MarshalAs(UnmanagedType.Struct)] out object value);
+}
+[ComImport,Guid("4042c624-389c-4afc-a630-9df854a541fc"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface TestWalker {
+  void GetParentElement();
+  [PreserveSig] int FirstChild(TestElement element,out TestElement child);
+  void GetLastChildElement();
+  [PreserveSig] int NextSibling(TestElement element,out TestElement sibling);
 }
 public static class TestOtaObserver {
   [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern SafeFileHandle CreateFile(string file,uint access,uint share,IntPtr security,uint creation,uint flags,IntPtr template);
   [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern uint GetFinalPathNameByHandle(SafeFileHandle file,StringBuilder path,uint count,uint flags);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
-  [DllImport("oleacc.dll")] static extern int AccessibleObjectFromWindow(IntPtr window,uint objectId,ref Guid iid,out IntPtr result);
-  [DllImport("oleacc.dll")] static extern int AccessibleChildren([MarshalAs(UnmanagedType.Interface)] TestAccessible parent,int start,int count,[Out,MarshalAs(UnmanagedType.LPArray,ArraySubType=UnmanagedType.Struct,SizeParamIndex=2)] object[] children,out int obtained);
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr window,uint flags);
+  [DllImport("ole32.dll")] static extern int CoInitializeEx(IntPtr reserved,uint flags);
+  [DllImport("ole32.dll")] static extern void CoUninitialize();
   public static string Canonical(string file) {
     using(SafeFileHandle handle=CreateFile(file,0,7,IntPtr.Zero,3,0x02000000,IntPtr.Zero)) {
       if(handle.IsInvalid) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
@@ -58,40 +106,85 @@ public static class TestOtaObserver {
       return value;
     }
   }
-  static void AddName(TestAccessible accessible,object id,List<string> names) {
-    string name;
-    int result=accessible.Name(id,out name);
-    if(result<0) Marshal.ThrowExceptionForHR(result);
-    if(!String.IsNullOrWhiteSpace(name)) names.Add(name);
+  public sealed class Observation {
+    public string[] Names=new string[0]; public string Error;
+    public int HResult,Visited,RootChildren,MaxDepth,Characters;
+    public int[] ProcessIds=new int[0]; public string RootHwnd; public uint RootPid,RootThread;
   }
-  static void Walk(TestAccessible accessible,List<string> names,int depth,ref int visited) {
-    if(depth>64 || ++visited>20000) throw new Exception("Accessibility tree exceeds bounded TEST observer");
-    AddName(accessible,0,names);
-    int count; Marshal.ThrowExceptionForHR(accessible.ChildCount(out count));
-    if(count<0 || count>20000) throw new Exception("Invalid accessibility child count");
-    if(count==0) return;
-    object[] children=new object[count]; int obtained;
-    Marshal.ThrowExceptionForHR(AccessibleChildren(accessible,0,count,children,out obtained));
-    for(int index=0;index<obtained;index++) {
-      object child=children[index];
-      if(child is int) AddName(accessible,child,names);
-      else if(child!=null) {
-        try { Walk((TestAccessible)child,names,depth+1,ref visited); }
-        finally { if(Marshal.IsComObject(child)) Marshal.ReleaseComObject(child); }
-      }
+  static object Property(TestElement element,int id) {
+    object value; Marshal.ThrowExceptionForHR(element.GetCurrentPropertyValue(id,out value)); return value;
+  }
+  static IntPtr ElementHandle(TestElement element) {
+    return new IntPtr(unchecked((long)(uint)Convert.ToInt32(Property(element,30020))));
+  }
+  static void RootOwner(IntPtr hwnd,uint pid,uint thread) {
+    uint actual; uint current=GetWindowThreadProcessId(hwnd,out actual);
+    if(actual!=pid || current==0 || (thread!=0 && current!=thread)) throw new Exception("Native UIA HWND identity changed");
+  }
+  static void Walk(TestElement element,TestWalker walker,IntPtr window,List<string> names,HashSet<int> pids,Observation result,int depth) {
+    if(depth>64 || ++result.Visited>20000) throw new Exception("Native UIA subtree exceeds observer bounds");
+    result.MaxDepth=Math.Max(result.MaxDepth,depth);
+    IntPtr handle=ElementHandle(element);
+    if(handle!=IntPtr.Zero && GetAncestor(handle,2)!=window) throw new Exception("Native UIA element outside owned HWND root");
+    pids.Add(Convert.ToInt32(Property(element,30002)));
+    string name=Property(element,30005) as string;
+    if(name!=null) {
+      result.Characters+=name.Length;
+      if(name.Length>4096 || result.Characters>1000000) throw new Exception("Native UIA name budget exceeded");
+      if(!String.IsNullOrWhiteSpace(name)) names.Add(name);
     }
+    TestElement child=null;
+    try {
+      Marshal.ThrowExceptionForHR(walker.FirstChild(element,out child));
+      while(child!=null) {
+        if(depth==0) result.RootChildren++;
+        Walk(child,walker,window,names,pids,result,depth+1);
+        TestElement next=null;
+        try { Marshal.ThrowExceptionForHR(walker.NextSibling(child,out next)); }
+        catch { if(next!=null) Marshal.ReleaseComObject(next); throw; }
+        Marshal.ReleaseComObject(child); child=next;
+      }
+    } finally { if(child!=null) Marshal.ReleaseComObject(child); }
   }
-  public static string[] WindowNames(long handle,uint expectedPid) {
-    IntPtr window=new IntPtr(handle); uint pid;
-    GetWindowThreadProcessId(window,out pid);
-    if(pid!=expectedPid) throw new Exception("Accessibility HWND ownership changed");
-    Guid iid=new Guid("618736E0-3C3D-11CF-810C-00AA00389B71"); IntPtr pointer;
-    Marshal.ThrowExceptionForHR(AccessibleObjectFromWindow(window,0xFFFFFFFC,ref iid,out pointer));
-    if(pointer==IntPtr.Zero) throw new Exception("Owned native window has no accessibility client");
-    object root=Marshal.GetObjectForIUnknown(pointer); Marshal.Release(pointer);
-    try { List<string> names=new List<string>(); int visited=0; Walk((TestAccessible)root,names,0,ref visited); return names.ToArray(); }
-    finally { Marshal.ReleaseComObject(root); }
+  static void Release(object value,Observation result) {
+    if(value==null) return;
+    try { Marshal.ReleaseComObject(value); }
+    catch(Exception error) { if(result.Error==null) { result.Error=error.Message; result.HResult=error.HResult; } }
   }
+  static Observation Observe(IntPtr window,uint pid,bool compileOnly) {
+    Observation result=new Observation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid };
+    Exception failure=null;
+    Thread worker=new Thread(()=> {
+      TestAutomation automation=null; TestWalker walker=null; TestElement root=null;
+      bool initialized=false; List<string> names=new List<string>(); HashSet<int> pids=new HashSet<int>();
+      try {
+        Marshal.ThrowExceptionForHR(CoInitializeEx(IntPtr.Zero,0)); initialized=true;
+        automation=(TestAutomation)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("ff48dba4-60ef-4201-aa87-54103eef594e"),true));
+        Marshal.ThrowExceptionForHR(automation.RawViewWalker(out walker));
+        if(walker==null) throw new Exception("Native UIA RawViewWalker unavailable");
+        if(!compileOnly) {
+          uint actual; result.RootThread=GetWindowThreadProcessId(window,out actual);
+          RootOwner(window,pid,result.RootThread);
+          Marshal.ThrowExceptionForHR(automation.ElementFromHandle(window,out root));
+          if(root==null || ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root HWND/PID mismatch");
+          Walk(root,walker,window,names,pids,result,0);
+          if(ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root changed after traversal");
+          RootOwner(window,pid,result.RootThread);
+        }
+      } catch(Exception error) { failure=error; result.Error=error.Message; result.HResult=error.HResult; }
+      finally {
+        result.Names=names.ToArray(); result.ProcessIds=new List<int>(pids).ToArray();
+        Release(root,result); Release(walker,result); Release(automation,result);
+        if(initialized) CoUninitialize();
+      }
+    });
+    worker.IsBackground=true; worker.SetApartmentState(ApartmentState.MTA); worker.Start();
+    if(!worker.Join(15000)) throw new Exception("Native UIA MTA observation exceeded15seconds");
+    if(compileOnly && result.Error!=null) throw new Exception(result.Error,failure);
+    return result;
+  }
+  public static Observation Compile() { return Observe(IntPtr.Zero,0,true); }
+  public static Observation WindowNames(long handle,uint pid) { return Observe(new IntPtr(handle),pid,false); }
 }
 '@ -ReferencedAssemblies $refs
 function Get-StartUtcTicks([object]$value) {
@@ -128,6 +221,7 @@ function Read-Owned([string]$file) {
   })
 }
 switch ($data.operation) {
+  'compile' { $result=[TestOtaObserver]::Compile() }
   'processes' { $result=@(Read-Owned $data.file) }
   'watch-installer' {
     $result=@(); $deadline=[DateTime]::UtcNow.AddSeconds(5)
@@ -147,10 +241,10 @@ switch ($data.operation) {
   }
   'names' {
     $owner=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and (Test-SameStart $_.start $data.owner.start) })
-    if ($owner.Count -ne 1) { throw 'Native window PID identity changed' }
-    $result=@([TestOtaObserver]::WindowNames([Convert]::ToInt64($data.hwnd,16),[uint32]$data.owner.pid))
+    if ($owner.Count -ne 1 -or $owner[0].sid -ne $data.owner.sid -or $owner[0].session -ne $data.owner.session) { throw 'Native window PID identity changed' }
+    $result=[TestOtaObserver]::WindowNames([Convert]::ToInt64($data.hwnd,16),[uint32]$data.owner.pid)
     $again=@(Read-Owned $data.owner.executable | Where-Object { $_.pid -eq $data.owner.pid -and (Test-SameStart $_.start $data.owner.start) })
-    if ($again.Count -ne 1) { throw 'Native window identity changed during accessibility read' }
+    if ($again.Count -ne 1 -or $again[0].sid -ne $data.owner.sid -or $again[0].session -ne $data.owner.session) { throw 'Native window identity changed during accessibility read' }
   }
   'stop' {
     foreach($owner in $data.owners) {
@@ -250,13 +344,14 @@ export async function windowsOtaObserver(root: string, evidence: string) {
       throw error;
     }
   }
+  await call('compile');
   return {
     watchReadyFile: path.join(root, 'ota-installer-observer.ready'),
     processes: (file: string) => call<WindowsProcess[]>('processes', { file }),
     watchInstaller: (file: string) => call<WindowsProcess[]>('watch-installer', { file }),
     addPendingFirewall: (group: string, name: string, file: string, canonical: string) =>
       call('firewall-add', { group, name, file, canonical }),
-    names: (owner: WindowsProcess, hwnd: string) => call<string[]>('names', { owner, hwnd }),
+    names: (owner: WindowsProcess, hwnd: string) => call<NativeNames>('names', { owner, hwnd }),
     stop: (owners: WindowsProcess[]) => call<never[]>('stop', { owners }),
   };
 }

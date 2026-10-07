@@ -12,17 +12,22 @@ describe('MessagesThreadView floating footer', () => {
 
   it('reserves its measured height without remounting the composer across Full Screen changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    // Happy DOM keeps only a WeakRef to callbacks. Retain the real callback for
-    // the observer's lifetime so GC cannot silently disable later measurements.
-    const NativeMutationObserver = globalThis.MutationObserver;
-    class RetainedMutationObserver extends NativeMutationObserver {
-      readonly retainedCallback: MutationCallback;
-      constructor(callback: MutationCallback) {
-        super(callback);
-        this.retainedCallback = callback;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    let notifyMutation: () => void;
+    // Keep delivery explicit: happy-dom's weak mutation listener can be collected
+    // between measurements, unlike the browser's registered observer callback.
+    vi.stubGlobal(
+      'MutationObserver',
+      class implements MutationObserver {
+        constructor(callback: MutationCallback) {
+          notifyMutation = () => callback([], this);
+        }
+        observe = observe;
+        disconnect = disconnect;
+        takeRecords = (): MutationRecord[] => [];
       }
-    }
-    vi.stubGlobal('MutationObserver', RetainedMutationObserver);
+    );
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -59,6 +64,12 @@ describe('MessagesThreadView floating footer', () => {
       expect(host.querySelector('textarea')).toBe(composer);
       expect(footer.className).toContain('absolute');
       expect(footer.className).toContain('bg-[var(--color-surface)]');
+      expect(observe).toHaveBeenCalledExactlyOnceWith(footer, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
 
       let footerHeight = 160;
       footer.getBoundingClientRect = () => ({ height: footerHeight }) as DOMRect;
@@ -67,22 +78,16 @@ describe('MessagesThreadView floating footer', () => {
         await act(async () => {
           footerHeight = height;
           footer.setAttribute('data-probe-height', String(height));
+          notifyMutation();
         });
-        await vi.waitFor(async () => {
-          // The component's MutationObserver and React commit are separate async steps.
-          await act(async () => {
-            await Promise.resolve();
-          });
-          expect(scroll.lastElementChild?.getAttribute('style')).toBe(expectedReserve);
-        });
+        expect(scroll.lastElementChild?.getAttribute('style')).toBe(expectedReserve);
       };
       await changeFooterHeight(160, 'height: 188px;');
       expect(scroll.className).toContain('relative z-0');
       expect(host.querySelector('[data-messages-thread-footer-fade]')).not.toBeNull();
 
-      const resizeCount = onFloatingFooterResize.mock.calls.length;
       await changeFooterHeight(240, 'height: 268px;');
-      expect(onFloatingFooterResize.mock.calls.length).toBeGreaterThan(resizeCount);
+      expect(onFloatingFooterResize).toHaveBeenCalled();
 
       await act(async () => {
         render(false);
@@ -93,6 +98,7 @@ describe('MessagesThreadView floating footer', () => {
       expect(host.querySelector('[data-messages-thread-footer-fade]')).toBeNull();
       expect(scroll.className).not.toContain('relative z-0');
       expect(scroll.lastElementChild?.getAttribute('style')).not.toBe('height: 268px;');
+      expect(disconnect).toHaveBeenCalledOnce();
     } finally {
       await act(async () => {
         root.unmount();

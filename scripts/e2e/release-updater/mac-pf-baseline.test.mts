@@ -13,17 +13,17 @@ import type { CommandResult } from './mac-loopback.mts';
 // This command boundary records intent and executes no OS commands or network calls.
 class UnparseableBaselineCommands extends MacCommands {
   readonly calls: { label: string; args: string[] }[] = [];
-  override async run(label: string, _binary: string, args: string[]): Promise<CommandResult> {
+  override run(label: string, _binary: string, args: string[]): Promise<CommandResult> {
     this.calls.push({ label, args });
     const rejected = label === 'pf-parse-active-baseline';
-    return {
+    return Promise.resolve({
       command: 'test-only command boundary',
       exitCode: rejected ? 1 : 0,
       stdout: label.endsWith('status') ? 'Status: Disabled\n' : 'captured active dump\n',
       stderr: rejected ? 'baseline cannot parse' : '',
       outputSha256: 'a'.repeat(64),
       logFile: `${label}.log`,
-    };
+    });
   }
 }
 

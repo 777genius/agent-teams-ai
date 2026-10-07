@@ -29,11 +29,10 @@ void test('failed cleanup diagnostics retain PF stderr and baseline without app 
     await writeFile(path.join(source, 'environment.json'), 'private environment');
     await writeFile(path.join(source, 'pf-owned.json'), 'private ownership data');
     await captureMacCleanupDiagnostics(root, sourceName, outputName);
-    assert.deepEqual((await readdir(path.join(root, outputName))).sort(), [
-      '7470-099-pf-restore-active-baseline.log',
-      'diagnostics.json',
-      'pf-baseline-active.conf',
-    ]);
+    assert.deepEqual(
+      (await readdir(path.join(root, outputName))).toSorted((a, b) => a.localeCompare(b, 'en')),
+      ['7470-099-pf-restore-active-baseline.log', 'diagnostics.json', 'pf-baseline-active.conf']
+    );
     assert.equal(
       await readFile(
         path.join(root, outputName, '7470-099-pf-restore-active-baseline.log'),

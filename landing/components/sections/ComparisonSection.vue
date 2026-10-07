@@ -1,128 +1,43 @@
 <script setup lang="ts">
+import { comparisonRuNotes as ruNotes } from "~/data/comparisonNotes";
+import { createComparisonRows, type CellValue, type ComparisonRow } from "~/data/comparisonRows";
 import robotAvatarCyan from "~/assets/images/hero/robots/robot-avatar-cyan-v1.webp";
 
 const { t, locale } = useI18n()
 const comparisonRobotRef = ref<HTMLElement | null>(null)
 const showComparisonRobotBubble = ref(false)
 let comparisonRobotObserver: IntersectionObserver | null = null
+const comparisonScrollRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+let comparisonResizeObserver: ResizeObserver | null = null
+const scrollLabels = computed(() => locale.value === 'ru'
+  ? { hint: 'Прокрутите таблицу, чтобы увидеть все инструменты.', left: 'Влево', right: 'Вправо' }
+  : { hint: 'Scroll the table to see every tool.', left: 'Left', right: 'Right' })
 
-const ruNotes: Record<string, string> = {
-  'Direct agent messages and shared task links across teams': 'Прямые сообщения агентов и общие ссылки на задачи между командами',
-  'Coordination across groups': 'Координация между группами',
-  'Company-scoped org work': 'Оргработа на уровне компании',
-  'Native real-time mailbox': 'Нативный mailbox в реальном времени',
-  'Mailboxes + handoffs': 'Mailbox и handoff',
-  'Comments + @mentions': 'Комментарии и @mentions',
-  'Cross-machine/cloud session messaging, no shared cross-team task graph': 'Сообщения между машинами и cloud-сессиями без общего межкомандного графа задач',
-  'Team mailbox, no UI': 'Командный mailbox, без UI',
-  'Tasks can link to and block each other': 'Задачи могут связываться и блокировать друг друга',
-  'Task deps + grouped work': 'Зависимости задач и группировка работ',
-  'Goals, parent tasks, blockers': 'Цели, родительские задачи, блокеры',
-  'Shared task list': 'Общий список задач',
-  'Agent messages, tool calls, timeline, token use, and cost': 'Сообщения агентов, действия, таймлайн, токены и стоимость',
-  'Session recall, feed, metrics': 'Память сессий, лента, метрики',
-  'Run transcripts + cost audit': 'Транскрипты запусков и аудит стоимости',
-  'Run transcripts + audit log': 'Транскрипты запусков и журнал аудита',
-  'Usage command, no UI': 'Команда usage, без UI',
-  'Auto-attach, agents read & attach': 'Автоприкрепление, агенты читают и добавляют вложения',
-  'Not task-level': 'Не на уровне задач',
-  'Docs, attachments, work products': 'Документы, вложения, рабочие артефакты',
-  'Prompt context, not task attachments': 'Контекст промпта, не вложения задачи',
-  'Prompt files/images, not task attachments': 'Файлы/изображения в промпте, не вложения задачи',
-  'Accept / reject individual hunks': 'Принятие или отклонение отдельных фрагментов',
-  'Bring your own review': 'Ревью нужно делать отдельно',
-  'With Git support': 'С поддержкой Git',
-  'Control plane, not editor': 'Панель управления, не редактор',
-  'Full IDE': 'Полная IDE',
-  'Built-in visual terminal for team and local commands': 'Встроенный визуальный терминал для командных и локальных команд',
-  'Terminal-based workflow, no built-in terminal': 'Работа через внешний терминал, без встроенного терминала',
-  'Runs commands, no interactive terminal': 'Запускает команды, но без интерактивного терминала',
-  'Built-in IDE terminal': 'Встроенный терминал в IDE',
-  'Runs in your terminal': 'Работает в вашем терминале',
-  'Live agents plan, delegate, work, and review together': 'Живые агенты вместе планируют, делят работу и проводят ревью',
-  'Persistent teams with coordination and recovery': 'Постоянные команды с координацией и восстановлением',
-  'Durable scheduled and event-triggered agents, less live peer teamwork': 'Надёжные агенты по расписанию и событиям, но меньше живой командной работы',
-  'Parallel agents + subagents, no peer team': 'Параллельные агенты и субагенты, без равноправной команды',
-  'Experimental teams + cross-session messaging; recovery limits': 'Экспериментальные команды и cross-session messaging; ограничения восстановления',
-  'Tasks wait for blockers automatically': 'Задачи автоматически ждут блокеры',
-  'Dependency waves': 'Волны зависимостей',
-  'Blockers + execution locks': 'Блокеры и execution locks',
-  'Team task deps, no UI': 'Зависимости командных задач, без UI',
-  'Built-in Changes viewer with file/hunk accept, reject, edit, undo, and feedback': 'Встроенный Changes viewer: принятие и отклонение файлов/фрагментов, редактирование, отмена и feedback',
-  'Merge queue': 'Merge queue',
-  'Merge queue, no diff UI': 'Merge queue, без diff UI',
-  'Approvals + governance': 'Подтверждения и управление',
-  'Review gates, not inline code review': 'Review gates, но без встроенного inline code review',
-  'Local Agent Review + PR Bugbot': 'Локальный Agent Review и Bugbot для PR',
-  'PR/BugBot only': 'Только PR/BugBot',
-  'Agent review, no review UI': 'Ревью агентами, без интерфейса ревью',
-  'Start free, no signup or API key': 'Бесплатный старт без регистрации и API-ключа',
-  'Manual CLI stack': 'Ручной CLI-стек',
-  'npx onboarding + browser app': 'Onboarding через npx и приложение в браузере',
-  'CLI + env flag': 'CLI и env-флаг',
-  'App install + account': 'Установка приложения и аккаунт',
-  '5-column task board with review states and drag-and-drop ordering': 'Доска задач из 5 колонок со статусами ревью и drag-and-drop сортировкой',
-  'Dashboard, not Kanban': 'Панель, не канбан',
-  '7 columns, drag-and-drop': '7 колонок, перетаскивание',
-  'Tools, reasoning trace, and timeline': 'Инструменты, ход рассуждений и таймлайн',
-  'Feed, metrics, dashboard': 'Лента, метрики, панель',
-  'Agent chat, diffs, artifacts, and cloud diagnostics': 'Чат агента, diff, артефакты и cloud-диагностика',
-  'Transcripts, background logs, /usage, and /insights': 'Транскрипты, фоновые логи, /usage и /insights',
-  'CPU/RAM history for each live teammate': 'История CPU/RAM для каждого живого участника',
-  'Activity/health, not CPU/RAM': 'Активность/здоровье, не CPU/RAM',
-  'Run status/cost, not CPU/RAM': 'Статус/стоимость запуска, не CPU/RAM',
-  'Remote agent/terminal only': 'Только remote agent/terminal',
-  'Accept / reject / comment': 'Принять, отклонить или прокомментировать',
-  'PR/work products, no diff UI': 'PR/рабочие артефакты, без diff UI',
-  'BugBot on PRs': 'BugBot для PR',
-  'Per-action approvals, roles, and notifications': 'Подтверждения действий, роли и уведомления',
-  'Gates, roles, escalation, and recovery': 'Проверки, роли, эскалация и восстановление',
-  'Board approvals, roles, pause, and stop': 'Подтверждения, роли, пауза и остановка',
-  'Cloud agents run commands': 'Cloud agents запускают команды',
-  'Command controls and admin policies': 'Контроль команд и политики администратора',
-  'Permissions + hooks': 'Permissions и hooks',
-  'Optional separate workspace per teammate': 'Отдельное рабочее пространство для каждого участника по желанию',
-  'Core primitive': 'Ключевая примитивная модель',
-  'Worktrees / branches': 'Worktrees / branches',
-  'Agents Window worktrees': 'Worktrees в Agents Window',
-  'Built-in for sessions and subagents': 'Встроено для сессий и субагентов',
-  'Provider-aware teams with per-member models and mixed OpenCode side lanes': 'Provider-aware команды с моделями на участника и смешанными OpenCode side lanes',
-  'Many providers, terminal-first': 'Много провайдеров, terminal-first',
-  'Bring your own agents/runtimes': 'Подключайте своих агентов и runtimes',
-  'Multi-model parent + subagents, no peer team': 'Мультимодельный родитель и субагенты, без равноправной команды',
-  'Claude-only experimental teams': 'Экспериментальные команды только для Claude',
-  'Teammates, tasks, blockers, handoffs, activity, logs': 'Участники, задачи, блокеры, передачи, активность, логи',
-  'Agent tree + feed panels': 'Дерево агентов и панели ленты',
-  'Org chart/status, not a task/log map': 'Оргструктура/статус, не карта задач и логов',
-  'Agents Window, no shared peer-team map': 'Agents Window, без общей карты равноправной команды',
-  'Terminal team panel, no graphical UI': 'Командная панель в терминале, без графического UI',
-  'Tasks, code, terminal, review, and teammates in one app': 'Задачи, код, терминал, ревью и участники в одном приложении',
-  'Mail/feed/dashboard across tools': 'Почта, лента и панель между tools',
-  'Board + task chats, less live teammate view': 'Доска и чаты задач, меньше live-вида участников',
-  'Agents Window, no peer team workspace': 'Agents Window, без workspace равноправной команды',
-  'Terminal agent view, no graphical workspace': 'Agent view в терминале, без графического workspace',
-  'Clear ready/stuck status with launch diagnostics': 'Понятный статус готовности и проблем с диагностикой запуска',
-  'Working, stalled, and failed health with recovery controls': 'Статусы работы, зависания и ошибок с управлением восстановлением',
-  'Run status and orphan recovery': 'Статус запусков и восстановление потерянных запусков',
-  'Agent status in Agents Window': 'Статус агентов в Agents Window',
-  'Agent view statuses, logs, stop/respawn in terminal': 'Статусы Agent view, логи, остановка и respawn в терминале',
-  'Nested organizations with live team, task, relation, and communication map': 'Вложенные организации с живой картой команд, задач, связей и общения',
-  'Roles + approvals, no org chart': 'Роли и подтверждения, без оргструктуры',
-  'Roles + escalation': 'Роли и эскалация',
-  'Org chart + board governance': 'Оргструктура и управление доской',
-  'Team admin only': 'Только администрирование команды',
-  'Monthly budget alerts + optional cap for supported scheduled one-shot runs': 'Месячные бюджетные уведомления и опциональный лимит для поддерживаемых разовых запусков по расписанию',
-  'Cost/token visibility, no hard caps': 'Видимость стоимости/токенов, без жёстких лимитов',
-  'Cost tiers + digest, no hard caps': 'Тарифные уровни и дайджест, без жёстких лимитов',
-  'Per-agent budgets + hard stops': 'Бюджеты на агента и жёсткие остановки',
-  'User/team spend caps + cloud-agent spend limits': 'Лимиты расходов пользователя/команды и cloud agents',
-  'Org/member spend limits + print-mode hard cap': 'Лимиты расходов организации/участника и жёсткий лимит print mode',
-  'OSS + free model with no auth, paid providers optional': 'OSS и бесплатная модель без авторизации, платные провайдеры опциональны',
-  'OSS, runtime plans needed': 'OSS, нужны тарифы runtime',
-  'OSS, self-hosted + infra': 'OSS, self-hosted и инфраструктура',
-  'Free + paid usage': 'Бесплатно плюс платное использование',
-  'Claude plan or API usage': 'Claude plan или API usage',
+function updateScrollState(): void {
+  const scroller = comparisonScrollRef.value
+  if (!scroller) return
+  canScrollLeft.value = scroller.scrollLeft > 1
+  canScrollRight.value = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
 }
+
+function scrollComparison(direction: -1 | 1, edge = false): void {
+  const scroller = comparisonScrollRef.value
+  if (!scroller) return
+  const featureWidth = scroller.querySelector('th')?.getBoundingClientRect().width ?? 0
+  const step = Math.max(40, scroller.clientWidth - featureWidth - 24)
+  const left = edge ? (direction === -1 ? 0 : scroller.scrollWidth) : scroller.scrollLeft + direction * step
+  scroller.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+}
+
+function onComparisonKeydown(event: KeyboardEvent): void {
+  if (event.altKey || event.ctrlKey || event.metaKey) return
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  scrollComparison(event.key === 'ArrowLeft' || event.key === 'Home' ? -1 : 1, event.key === 'Home' || event.key === 'End')
+}
+
 
 function note(text: string): string {
   return locale.value === 'ru' ? (ruNotes[text] ?? text) : text
@@ -130,8 +45,8 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 22 сентября 2026; источники конкурентов проверены 22 сентября 2026:'
-    : 'Agent Teams product facts checked in local source on September 22, 2026; competitor sources checked on September 22, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 22 сентября 2026; источники остальных конкурентов проверены 22 сентября 2026; OpenRig v0.6.5 проверен 6 октября 2026:'
+    : 'Agent Teams product facts checked in local source on September 22, 2026; other competitor sources checked on September 22, 2026; OpenRig v0.6.5 checked on October 6, 2026:'
 ))
 
 const autonomyRatingNote = computed(() => (
@@ -192,176 +107,7 @@ function sourceLabel(label: string): string {
 }
 
 
-interface CellValue {
-  status: string
-  note?: string
-  noteLink?: string
-  power?: number
-}
-
-interface ComparisonRow {
-  feature: string
-  us: CellValue
-  gastown: CellValue
-  paperclip: CellValue
-  cursor: CellValue
-  claudeCli: CellValue
-}
-
-const rows = computed<ComparisonRow[]>(() => [
-  {
-    feature: t('comparison.features.teamAutonomy'),
-    us: { status: 'yes', power: 9, note: note('Live agents plan, delegate, work, and review together') },
-    gastown: { status: 'yes', power: 8, note: note('Persistent teams with coordination and recovery') },
-    paperclip: { status: 'partial', power: 7, note: note('Durable scheduled and event-triggered agents, less live peer teamwork') },
-    cursor: { status: 'partial', power: 6, note: note('Parallel agents + subagents, no peer team') },
-    claudeCli: { status: 'partial', power: 7, note: note('Experimental teams + cross-session messaging; recovery limits') },
-  },
-  {
-    feature: t('comparison.features.flexAutonomy'),
-    us: { status: 'yes', note: note('Per-action approvals, roles, and notifications') },
-    gastown: { status: 'yes', note: note('Gates, roles, escalation, and recovery') },
-    paperclip: { status: 'yes', note: note('Board approvals, roles, pause, and stop') },
-    cursor: { status: 'partial', note: note('Command controls and admin policies') },
-    claudeCli: { status: 'yes', note: note('Permissions + hooks') },
-  },
-  {
-    feature: t('comparison.features.liveWorkGraph'),
-    us: { status: 'yes', note: note('Teammates, tasks, blockers, handoffs, activity, logs') },
-    gastown: { status: 'partial', note: note('Agent tree + feed panels') },
-    paperclip: { status: 'partial', note: note('Org chart/status, not a task/log map') },
-    cursor: { status: 'partial', note: note('Agents Window, no shared peer-team map') },
-    claudeCli: { status: 'partial', note: note('Terminal team panel, no graphical UI') },
-  },
-  {
-    feature: t('comparison.features.teamWorkspace'),
-    us: { status: 'yes', note: note('Tasks, code, terminal, review, and teammates in one app') },
-    gastown: { status: 'partial', note: note('Mail/feed/dashboard across tools') },
-    paperclip: { status: 'partial', note: note('Board + task chats, less live teammate view') },
-    cursor: { status: 'partial', note: note('Agents Window, no peer team workspace') },
-    claudeCli: { status: 'partial', note: note('Terminal agent view, no graphical workspace') },
-  },
-  {
-    feature: t('comparison.features.zeroSetup'),
-    us: { status: 'yes', note: note('Start free, no signup or API key') },
-    gastown: { status: 'no', note: note('Manual CLI stack') },
-    paperclip: { status: 'partial', note: note('npx onboarding + browser app') },
-    cursor: { status: 'partial', note: note('App install + account') },
-    claudeCli: { status: 'partial', note: note('CLI + env flag') },
-  },
-  {
-    feature: t('comparison.features.launchProof'),
-    us: { status: 'yes', note: note('Clear ready/stuck status with launch diagnostics') },
-    gastown: { status: 'yes', note: note('Working, stalled, and failed health with recovery controls') },
-    paperclip: { status: 'partial', note: note('Run status and orphan recovery') },
-    cursor: { status: 'partial', note: note('Agent status in Agents Window') },
-    claudeCli: { status: 'partial', note: note('Agent view statuses, logs, stop/respawn in terminal') },
-  },
-  {
-    feature: t('comparison.features.kanban'),
-    us: { status: 'yes', note: note('5-column task board with review states and drag-and-drop ordering') },
-    gastown: { status: 'no', note: note('Dashboard, not Kanban') },
-    paperclip: { status: 'yes', note: note('7 columns, drag-and-drop') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.reviewWorkflow'),
-    us: { status: 'yes', note: note('Built-in Changes viewer with file/hunk accept, reject, edit, undo, and feedback') },
-    gastown: { status: 'partial', note: note('Merge queue, no diff UI') },
-    paperclip: { status: 'partial', note: note('Review gates, not inline code review') },
-    cursor: { status: 'yes', note: note('Local Agent Review + PR Bugbot') },
-    claudeCli: { status: 'partial', note: note('Agent review, no review UI') },
-  },
-  {
-    feature: t('comparison.features.crossTeam'),
-    us: { status: 'yes', note: note('Direct agent messages and shared task links across teams') },
-    gastown: { status: 'partial', note: note('Mailboxes + handoffs') },
-    paperclip: { status: 'partial', note: note('Comments + @mentions') },
-    cursor: { status: 'na' },
-    claudeCli: { status: 'partial', note: note('Cross-machine/cloud session messaging, no shared cross-team task graph') },
-  },
-  {
-    feature: t('comparison.features.linkedTasks'),
-    us: { status: 'yes', note: note('Tasks can link to and block each other') },
-    gastown: { status: 'yes', note: note('Task deps + grouped work') },
-    paperclip: { status: 'yes', note: note('Goals, parent tasks, blockers') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'yes', note: note('Shared task list') },
-  },
-  {
-    feature: t('comparison.features.sessionAnalysis'),
-    us: { status: 'yes', note: note('Agent messages, tool calls, timeline, token use, and cost') },
-    gastown: { status: 'partial', note: note('Session recall, feed, metrics') },
-    paperclip: { status: 'partial', note: note('Run transcripts + cost audit') },
-    cursor: { status: 'partial', note: note('Agent chat, diffs, artifacts, and cloud diagnostics') },
-    claudeCli: { status: 'partial', note: note('Transcripts, background logs, /usage, and /insights') },
-  },
-  {
-    feature: t('comparison.features.orgGovernance'),
-    us: { status: 'yes', note: note('Nested organizations with live team, task, relation, and communication map') },
-    gastown: { status: 'partial', note: note('Roles + escalation, no org chart') },
-    paperclip: { status: 'yes', note: note('Org chart + board governance') },
-    cursor: { status: 'partial', note: note('Team admin only') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.multiAgent'),
-    us: { status: 'yes', note: note('Provider-aware teams with per-member models and mixed OpenCode side lanes') },
-    gastown: { status: 'yes', note: note('Many providers, terminal-first') },
-    paperclip: { status: 'yes', note: note('Bring your own agents/runtimes') },
-    cursor: { status: 'partial', note: note('Multi-model parent + subagents, no peer team') },
-    claudeCli: { status: 'partial', note: note('Claude-only experimental teams') },
-  },
-  {
-    feature: t('comparison.features.budgetControls'),
-    us: { status: 'yes', note: note('Monthly budget alerts + optional cap for supported scheduled one-shot runs') },
-    gastown: { status: 'partial', note: note('Cost tiers + digest, no hard caps') },
-    paperclip: { status: 'yes', note: note('Per-agent budgets + hard stops') },
-    cursor: { status: 'yes', note: note('User/team spend caps + cloud-agent spend limits') },
-    claudeCli: { status: 'yes', note: note('Org/member spend limits + print-mode hard cap') },
-  },
-  {
-    feature: t('comparison.features.worktree'),
-    us: { status: 'yes', note: note('Optional separate workspace per teammate') },
-    gastown: { status: 'yes', note: note('Core primitive') },
-    paperclip: { status: 'yes', note: note('Worktrees / branches') },
-    cursor: { status: 'yes', note: note('Agents Window worktrees') },
-    claudeCli: { status: 'yes', note: note('Built-in for sessions and subagents') },
-  },
-  {
-    feature: t('comparison.features.integratedTerminal'),
-    us: { status: 'yes', note: note('Built-in visual terminal for team and local commands') },
-    gastown: { status: 'partial', note: note('Terminal-based workflow, no built-in terminal') },
-    paperclip: { status: 'partial', note: note('Runs commands, no interactive terminal') },
-    cursor: { status: 'yes', note: note('Built-in IDE terminal') },
-    claudeCli: { status: 'partial', note: note('Runs in your terminal') },
-  },
-  {
-    feature: t('comparison.features.codeEditor'),
-    us: { status: 'yes', note: note('With Git support') },
-    gastown: { status: 'no' },
-    paperclip: { status: 'no', note: note('Control plane, not editor') },
-    cursor: { status: 'yes', note: note('Full IDE') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.taskAttachments'),
-    us: { status: 'yes', note: note('Auto-attach, agents read & attach') },
-    gastown: { status: 'no', note: note('Not task-level') },
-    paperclip: { status: 'yes', note: note('Docs, attachments, work products') },
-    cursor: { status: 'partial', note: note('Prompt context, not task attachments') },
-    claudeCli: { status: 'partial', note: note('Prompt files/images, not task attachments') },
-  },
-  {
-    feature: t('comparison.features.price'),
-    us: { status: 'free', note: note('OSS + free model with no auth, paid providers optional') },
-    gastown: { status: 'free', note: note('OSS, runtime plans needed') },
-    paperclip: { status: 'free', note: note('OSS, self-hosted + infra') },
-    cursor: { status: 'text', note: note('Free + paid usage') },
-    claudeCli: { status: 'text', note: note('Claude plan or API usage') },
-  },
-])
+const rows = computed<ComparisonRow[]>(() => createComparisonRows(t, note))
 
 const competitors = [
   { key: 'us', name: 'Agent Teams', highlight: true },
@@ -369,9 +115,17 @@ const competitors = [
   { key: 'paperclip', name: 'Paperclip' },
   { key: 'cursor', name: 'Cursor' },
   { key: 'claudeCli', name: 'Claude Code CLI' },
+  { key: 'openrig', name: 'OpenRig' },
 ]
 
 const sourceLinks = [
+  { label: 'OpenRig v0.6.5 README', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/README.md' },
+  { label: 'OpenRig coordination and queue', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/coordination-primitive.md' },
+  { label: 'OpenRig snapshot and restore', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/lifecycle-snapshot-restore.md' },
+  { label: 'OpenRig workspace model', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/workspace-primitive.md' },
+  { label: 'OpenRig basic web editor', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/packages/ui/src/components/files/FilesWorkspace.tsx' },
+  { label: 'OpenRig comparison evidence', href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/openrig-comparison-2026-10-06.md' },
+
   { label: 'Agent Teams organizations feature', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md' },
   { label: 'Agent Teams mixed-provider team lanes', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts' },
   { label: 'Agent Teams cross-team messaging', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/main/services/team/CrossTeamService.ts' },
@@ -446,6 +200,11 @@ const sourceLinks = [
 ]
 
 onMounted(() => {
+  if (comparisonScrollRef.value) {
+    comparisonResizeObserver = new ResizeObserver(updateScrollState)
+    comparisonResizeObserver.observe(comparisonScrollRef.value)
+    updateScrollState()
+  }
   if (!comparisonRobotRef.value) return
 
   comparisonRobotObserver = new IntersectionObserver(
@@ -465,6 +224,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  comparisonResizeObserver?.disconnect()
+  comparisonResizeObserver = null
   comparisonRobotObserver?.disconnect()
   comparisonRobotObserver = null
 })
@@ -542,7 +303,33 @@ function getPowerLabel(power: number): string {
             draggable="false"
           >
         </span>
+        <div class="comparison-table__toolbar">
+          <p id="comparison-scroll-hint" class="comparison-table__scroll-hint">{{ scrollLabels.hint }}</p>
+          <div class="comparison-table__scroll-controls">
+            <button type="button" class="comparison-table__scroll-button" aria-controls="comparison-scroll" :disabled="!canScrollLeft" @click="scrollComparison(-1)">
+              <span aria-hidden="true">←</span> {{ scrollLabels.left }}
+            </button>
+            <button type="button" class="comparison-table__scroll-button" aria-controls="comparison-scroll" :disabled="!canScrollRight" @click="scrollComparison(1)">
+              {{ scrollLabels.right }} <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+        <div
+          id="comparison-scroll"
+          ref="comparisonScrollRef"
+          class="comparison-table__scroll"
+          role="region"
+          :aria-label="t('comparison.sectionTitle')"
+          aria-describedby="comparison-scroll-hint"
+          tabindex="0"
+          @scroll.passive="updateScrollState"
+          @keydown.self="onComparisonKeydown"
+        >
         <table class="comparison-table">
+          <colgroup>
+            <col class="comparison-table__feature-col">
+            <col v-for="comp in competitors" :key="comp.key" class="comparison-table__tool-col">
+          </colgroup>
           <thead>
             <tr>
               <th class="comparison-table__th comparison-table__th--feature">
@@ -612,6 +399,7 @@ function getPowerLabel(power: number): string {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <p class="comparison-section__rating-note">
@@ -633,7 +421,8 @@ function getPowerLabel(power: number): string {
 <style scoped>
 .comparison-section {
   position: relative;
-  --comparison-sticky-header-offset: 76px;
+  --comparison-feature-width: 200px;
+  --comparison-tool-width: 280px;
 }
 
 .comparison-section__header {
@@ -665,7 +454,6 @@ function getPowerLabel(power: number): string {
 
 /* Table wrapper */
 .comparison-table__wrap {
-  overflow-x: clip;
   border-radius: 16px;
   border: 1px solid rgba(0, 240, 255, 0.15);
   background: rgba(10, 10, 15, 0.6);
@@ -674,10 +462,68 @@ function getPowerLabel(power: number): string {
   z-index: 1;
 }
 
+.comparison-table__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  color: #a8b4cf;
+}
+
+.comparison-table__scroll-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.comparison-table__scroll-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.comparison-table__scroll-button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: #00d4e6;
+  background: transparent;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.comparison-table__scroll-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.comparison-table__scroll {
+  max-height: min(72vh, 820px);
+  overflow: auto;
+  scroll-padding-left: var(--comparison-feature-width);
+  border-radius: 0 0 16px 16px;
+  scrollbar-color: #0891b2 transparent;
+}
+
+.comparison-table__scroll:focus-visible,
+.comparison-table__scroll-button:focus-visible {
+  outline: 2px solid #0891b2;
+  outline-offset: -2px;
+}
+
+.comparison-table__feature-col {
+  width: var(--comparison-feature-width);
+}
+
+.comparison-table__tool-col {
+  width: var(--comparison-tool-width);
+}
+
 .comparison-table__robot {
   position: absolute;
   right: clamp(28px, 7vw, 96px);
-  bottom: calc(100% - 20px);
+  bottom: calc(100% - 4px);
   z-index: 4;
   width: clamp(82px, 7.2vw, 124px);
   height: auto;
@@ -809,7 +655,8 @@ function getPowerLabel(power: number): string {
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: calc(var(--comparison-feature-width) + 6 * var(--comparison-tool-width));
+  table-layout: fixed;
   font-size: 0.85rem;
 }
 
@@ -820,7 +667,7 @@ function getPowerLabel(power: number): string {
 
 .comparison-table__th {
   position: sticky;
-  top: var(--comparison-sticky-header-offset);
+  top: 0;
   z-index: 3;
   padding: 16px 12px;
   text-align: center;
@@ -838,7 +685,7 @@ function getPowerLabel(power: number): string {
 .comparison-table__th--feature {
   text-align: left;
   padding-left: 20px;
-  min-width: 180px;
+  white-space: normal;
 }
 
 .comparison-table__th--highlight {
@@ -885,6 +732,19 @@ function getPowerLabel(power: number): string {
   font-size: 0.85rem;
 }
 
+.comparison-table__th--feature,
+.comparison-table__td--feature {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: rgb(10, 10, 15);
+  box-shadow: 1px 0 rgba(0, 240, 255, 0.15);
+}
+
+.comparison-table__th--feature {
+  z-index: 5;
+}
+
 .comparison-table__td--highlight-col {
   background: rgba(0, 240, 255, 0.04);
 }
@@ -911,7 +771,7 @@ function getPowerLabel(power: number): string {
   font-size: 0.78rem;
   color: #6b7994;
   line-height: 1.3;
-  max-width: 140px;
+  max-width: calc(var(--comparison-tool-width) - 32px);
   text-align: center;
   white-space: normal;
 }
@@ -1010,6 +870,19 @@ function getPowerLabel(power: number): string {
   color: #475569;
 }
 
+.v-theme--light .comparison-table__toolbar {
+  color: #475569;
+}
+
+.v-theme--light .comparison-table__scroll-button {
+  color: #0e7490;
+}
+
+.v-theme--light .comparison-table__th--feature,
+.v-theme--light .comparison-table__td--feature {
+  background: #fff;
+}
+
 .v-theme--light .comparison-table__wrap {
   background: rgba(255, 255, 255, 0.8);
   border-color: rgba(0, 180, 200, 0.2);
@@ -1030,7 +903,7 @@ function getPowerLabel(power: number): string {
 .v-theme--light .comparison-table__th {
   color: #64748b;
   border-bottom-color: rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.95);
+  background: #fff;
 }
 
 .v-theme--light .comparison-table__th--highlight {
@@ -1059,7 +932,7 @@ function getPowerLabel(power: number): string {
 }
 
 .v-theme--light .comparison-table__cell-note {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .v-theme--light .comparison-table__cell-note--link {
@@ -1106,14 +979,6 @@ function getPowerLabel(power: number): string {
 
 /* Responsive */
 @media (max-width: 960px) {
-  .comparison-section {
-    --comparison-sticky-header-offset: 60px;
-  }
-
-  .comparison-table__wrap {
-    overflow-x: auto;
-  }
-
   .comparison-section__title {
     font-size: 1.85rem;
   }
@@ -1127,13 +992,16 @@ function getPowerLabel(power: number): string {
   }
 }
 
-@media (min-width: 1600px) {
-  .comparison-section {
-    --comparison-sticky-header-offset: 124px;
-  }
-}
-
 @media (max-width: 600px) {
+  .comparison-table__robot {
+    display: none;
+  }
+
+  .comparison-section {
+    --comparison-feature-width: 144px;
+    --comparison-tool-width: 220px;
+  }
+
   .comparison-section__title {
     font-size: 1.6rem;
   }
@@ -1162,7 +1030,6 @@ function getPowerLabel(power: number): string {
 
   .comparison-table__cell-note {
     font-size: 0.7rem;
-    max-width: 110px;
   }
 }
 </style>

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify-stable-release:
     if: ${{ github.event.release.prerelease == false }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
 
     steps:

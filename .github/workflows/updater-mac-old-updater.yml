@@ -25,7 +25,7 @@ jobs:
   prepare-mac-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     name: prepare-mac-inputs
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 25
     permissions:
       contents: write
@@ -118,7 +118,7 @@ jobs:
           - { scenario: older, architecture: x64, runner: macos-15-intel }
           - { scenario: fresh, architecture: arm64, runner: macos-15 }
           - { scenario: fresh, architecture: x64, runner: macos-15-intel }
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner == 'macos-15' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.runner }}
     timeout-minutes: 45
     steps:
       - name: Require reviewed immutable tooling
@@ -141,9 +141,9 @@ jobs:
       - name: Check typed native Mac harness
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/mac-old-native.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-old-ui.mts scripts/e2e/release-updater/mac-old-observer.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/mac-old-native.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-old-ui.mts scripts/e2e/release-updater/mac-old-observer.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-old-stop-paint.test.mts
       - name: Verify compiler-independent observer serialization
-        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts
+        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-old-stop-paint.test.mts
       - name: Retrieve and verify only this completed authenticated producer job's immutable artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -157,6 +157,7 @@ jobs:
             --artifact-id "$INPUT_ARTIFACT_ID" --artifact-sha256 "$INPUT_ARTIFACT_SHA256" \
             --output "$RUNNER_TEMP/TEST-mac-authenticated-inputs"
       - name: Real signed Squirrel OTA or fresh carried install in a separate Aqua VM
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-inputs.outputs.artifact_id }}

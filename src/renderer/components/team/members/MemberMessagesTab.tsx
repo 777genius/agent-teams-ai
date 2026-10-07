@@ -15,6 +15,8 @@ import { selectMemberMessagesForTeamMember } from '@renderer/store/slices/teamSl
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useShallow } from 'zustand/react/shallow';
 
+import { MessageHistoryNotice } from '../messages/MessageHistoryNotice';
+
 import { buildMemberActivityEntries } from './memberActivityEntries';
 
 import type { MemberActivityFilter } from './memberDetailTypes';
@@ -149,6 +151,7 @@ export const MemberMessagesTab = ({
 
   return (
     <div className="space-y-3">
+      <MessageHistoryNotice error={messagesState?.messagesError} />
       <div className="flex flex-wrap items-center gap-2">
         {FILTER_OPTIONS.map((option) => {
           const isActive = activityFilter === option.value;

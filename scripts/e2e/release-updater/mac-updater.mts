@@ -29,6 +29,8 @@ import {
   stopMacOwned,
 } from './mac-loopback.mts';
 import { readMacInputs } from './mac-inputs.mts';
+import { macAbout, macAboutHasVersion, macAboutParagraphs } from './mac-old-ui.mts';
+import { freshMacHome } from './mac-old-native.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
 import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
@@ -166,6 +168,17 @@ let log: ReturnType<typeof createWriteStream> | undefined;
 let logError: Error | undefined;
 let commonTag: string | undefined;
 let commonVersion: string | undefined;
+let phaseSequence = 0;
+async function phase(label: string, state: 'START' | 'COMPLETE') {
+  await writeFile(
+    path.join(
+      output,
+      `${process.pid}-phase-${++phaseSequence}-${label}-${state.toLowerCase()}.json`
+    ),
+    `${canonical({ label, state, at: new Date().toISOString() })}\n`,
+    { flag: 'wx', mode: 0o600 }
+  ).catch(() => undefined);
+}
 
 async function freePort() {
   const server = portServer();
@@ -241,10 +254,7 @@ async function clickButton(label: string, lookup: string) {
   return point;
 }
 // The pinned 2.17.1 About block distinguishes the app updater from runtime/provider controls.
-const aboutBlock = `(() => {
-  const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');
-  return name?.parentElement?.parentElement??null;
-})()`;
+const aboutBlock = macAbout;
 async function clickCheck() {
   const controls = [];
   controls.push(
@@ -265,10 +275,11 @@ async function clickCheck() {
       "[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Advanced')"
     )
   );
+  evidence.aboutVersionParagraphs = await renderer?.evaluate(macAboutParagraphs);
   controls.push(
     await clickButton(
       'application About Check for Updates',
-      `(() => {const block=${aboutBlock};if(!block||!/Version\\s+2\\.17\\.1\\b/.test(block.textContent))return null;return [...block.querySelectorAll('button')].find(b=>b.textContent.trim()==='Check for Updates')??null;})()`
+      `(() => {const block=${aboutBlock};if(!${macAboutHasVersion('2.17.1')})return null;return [...block.querySelectorAll('button')].find(b=>['Check for Updates','Up to date'].includes(b.textContent.trim()))??null;})()`
     )
   );
   return controls;
@@ -358,7 +369,7 @@ try {
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
   assert.equal(plan.input.macSource?.release.applicationSha, sourceSha);
-  assert.equal(plan.input.target.tag, 'v2.17.5');
+  assert.equal(plan.input.target.tag, 'v2.17.6');
   commonTag = plan.input.target.tag;
   commonVersion = version(commonTag);
   evidence.previewCommonTag = commonTag;
@@ -366,18 +377,23 @@ try {
   evidence.build = plan.input.build;
   assert(/^[a-f0-9]{40}$/.test(plan.input.target.applicationSha));
   const root = await mkdtemp(path.join(runnerRoot, 'TEST-mac-current-'));
-  const home = path.join(root, 'home');
+  await phase('fresh-home', 'START');
+  const profile = await freshMacHome(commands, 'updater-mac-updater');
+  await phase('fresh-home', 'COMPLETE');
+  const home = profile.home;
+  const applications = path.join(root, 'Applications');
   const userData = path.join(root, 'user-data');
   const claude = path.join(home, '.claude');
   for (const directory of [
     home,
     userData,
     claude,
-    path.join(home, 'Applications'),
+    applications,
     path.join(root, 'tmp'),
     path.join(home, '.codex'),
   ])
     await mkdir(directory, { recursive: true });
+  await phase('input-qualification', 'START');
   const inputs = await readMacInputs(plan, required('inputs'), feedMode, architecture, evidence, {
     planSha256: required('plan-sha256'),
     inputDigest: required('input-digest'),
@@ -385,6 +401,8 @@ try {
     artifactId: Number(required('input-artifact-id')),
     artifactSha256: required('input-artifact-sha256'),
   });
+  await phase('input-qualification', 'COMPLETE');
+  await phase('dmg-gatekeeper', 'START');
   const selected = inputs.files.get(inputs.names.dmg);
   assert(selected);
   const archive = selected.file;
@@ -400,7 +418,7 @@ try {
     mount,
     archive,
   ]);
-  installed = path.join(home, 'Applications', 'Agent Teams AI.app');
+  installed = path.join(applications, 'Agent Teams AI.app');
   try {
     await commands.checked('install-unmodified-dmg-app', '/usr/bin/ditto', [
       path.join(mount, 'Agent Teams AI.app'),
@@ -456,11 +474,14 @@ try {
   const packageBytes = sources.get('package.json');
   assert(packageBytes);
   assert.equal((JSON.parse(packageBytes.toString()) as { version: string }).version, '2.17.1');
+  await phase('dmg-gatekeeper', 'COMPLETE');
+  await phase('mirror-pf', 'START');
   const windowReader = await prepareMacWindow(commands);
   mirror = await macReleaseMirror(plan, inputs.source, inputs.files, inputs.feed, {
     rejectInstallerGet: true,
   });
   evidence.isolation = {
+    ...profile,
     root,
     home,
     userData,
@@ -472,10 +493,13 @@ try {
   networkOwned = true;
   evidence.network = await containMacNetwork(commands, installed);
   const loopback = await fetch(
-    `${mirror.origin}/github/${repository}/releases/download/${commonTag}/latest-mac.yml`
+    `${mirror.origin}/github/${repository}/releases/download/${commonTag}/latest-mac.yml`,
+    { signal: AbortSignal.timeout(30_000) }
   );
   assert(loopback.ok);
   assert.equal(await loopback.text(), plan.feeds['latest-mac.yml']);
+  await phase('mirror-pf', 'COMPLETE');
+  await phase('spawn-cdp', 'START');
   const env: NodeJS.ProcessEnv = {
     PATH: '/usr/bin:/bin:/usr/sbin:/sbin',
     LANG: 'en_US.UTF-8',
@@ -552,6 +576,20 @@ try {
   assert(frame);
   const entry = await main.evaluate<string>('__filename', frame.callFrameId);
   assert.equal(entry, path.join(resources, 'app.asar', 'dist-electron/main/index.cjs'));
+  const mainHome = await macCallFunction<{
+    environment: string;
+    node: string;
+    account: string;
+  }>(
+    main,
+    '(()=>{const os=require("node:os");return ()=>({environment:process.env.HOME,node:os.homedir(),account:os.userInfo().homedir});})()',
+    [],
+    frame.callFrameId
+  );
+  evidence.mainHome = mainHome;
+  assert(mainHome, 'Actual signed Mac main home observation required');
+  for (const field of ['environment', 'node', 'account'] as const)
+    assert.equal(mainHome[field], home);
   await macCallFunction(
     main,
     `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${macSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${macSerializedFunction(observeMac)})(originalRequire('electron').app,getUpdater);};})()`,
@@ -596,6 +634,8 @@ try {
     'rendered Mac desktop',
     45_000
   );
+  await phase('spawn-cdp', 'COMPLETE');
+  await phase('no-update-capture', 'START');
   const startup = await waitFor(
     async () => {
       const state = await observation();
@@ -685,14 +725,19 @@ try {
   evidence.signatureAfter = await signature(installed, architecture, 'after');
   sameProof(await fileProof(asar, 'app.asar'), asarBefore);
   assert(!logError, 'Desktop log stream failed');
+  await phase('no-update-capture', 'COMPLETE');
   evidence.passed = true;
 } catch (error) {
+  evidence.failureAboutVersionParagraphs = await renderer
+    ?.evaluate(macAboutParagraphs)
+    .catch(() => null);
   evidence.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
   process.exitCode = 1;
   evidence.transport = await transport().catch(() => undefined);
   evidence.observation = await observation().catch(() => undefined);
   await screenshot('failure-renderer').catch(() => undefined);
 } finally {
+  await phase('cleanup', 'START');
   if (child && !owner) {
     // No signal is safe without PID/group proof. Release only our pipes and child handle.
     child.stdout?.destroy();
@@ -741,6 +786,7 @@ try {
     evidence.passed = false;
     process.exitCode = 1;
   }
+  await phase('cleanup', 'COMPLETE');
   evidence.requests = mirror?.requests ?? [];
   evidence.finishedAt = new Date().toISOString();
   await writeFile(

@@ -19,6 +19,7 @@ export function registerSubagentRoutes(app: FastifyInstance, services: HttpServi
     Params: { projectId: string; sessionId: string; subagentId: string };
     Querystring: { bypassCache?: string };
   }>('/api/projects/:projectId/sessions/:sessionId/subagents/:subagentId', async (request) => {
+    let fill: ReturnType<HttpServices['dataCache']['beginSubagentFill']> | undefined;
     try {
       const validatedProject = validateProjectId(request.params.projectId);
       const validatedSession = validateSessionId(request.params.sessionId);
@@ -48,6 +49,8 @@ export function registerSubagentRoutes(app: FastifyInstance, services: HttpServi
         return subagentDetail;
       }
 
+      fill = services.dataCache.beginSubagentFill(safeProjectId, safeSessionId, safeSubagentId);
+
       const fsProvider = services.projectScanner.getFileSystemProvider();
       const projectsDir = services.projectScanner.getProjectsDir();
 
@@ -67,12 +70,15 @@ export function registerSubagentRoutes(app: FastifyInstance, services: HttpServi
       }
 
       subagentDetail = builtDetail;
-      services.dataCache.setSubagent(cacheKey, subagentDetail);
+      if (!fill.isSourceCurrent()) return null;
+      fill.commit(subagentDetail);
 
       return subagentDetail;
     } catch (error) {
       logger.error(`Error in GET subagent-detail for ${request.params.subagentId}:`, error);
       return null;
+    } finally {
+      fill?.release();
     }
   });
 }

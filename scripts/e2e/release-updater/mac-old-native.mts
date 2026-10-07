@@ -20,15 +20,16 @@ async function pf(commands: MacCommands, label: string, args: string[]) {
   return commands.checked(label, '/usr/bin/sudo', ['-n', '/sbin/pfctl', ...args]);
 }
 const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-export function oldMacCiOnly() {
+type MacNativeWorkflow = 'updater-mac-old-updater' | 'updater-mac-updater';
+export function checkMacNativeWorkflow(workflow: MacNativeWorkflow, reference: string | undefined) {
+  assert(workflow === 'updater-mac-old-updater' || workflow === 'updater-mac-updater');
+  assert(reference?.startsWith(`777genius/agent-teams-ai/.github/workflows/${workflow}.yml@`));
+}
+export function oldMacCiOnly(workflow: MacNativeWorkflow = 'updater-mac-old-updater') {
   assert.equal(process.platform, 'darwin');
   assert.equal(process.env.GITHUB_ACTIONS, 'true');
   assert.equal(process.env.GITHUB_REPOSITORY, '777genius/agent-teams-ai');
-  assert(
-    process.env.GITHUB_WORKFLOW_REF?.startsWith(
-      '777genius/agent-teams-ai/.github/workflows/updater-mac-old-updater.yml@'
-    )
-  );
+  checkMacNativeWorkflow(workflow, process.env.GITHUB_WORKFLOW_REF);
   assert(process.getuid?.() !== 0, 'The existing disposable Aqua account must be unprivileged');
 }
 async function absent(file: string) {
@@ -40,8 +41,8 @@ async function absent(file: string) {
     throw error;
   }
 }
-export async function freshMacHome(commands: MacCommands) {
-  oldMacCiOnly();
+export async function freshMacHome(commands: MacCommands, workflow?: MacNativeWorkflow) {
+  oldMacCiOnly(workflow);
   const user = (await commands.checked('aqua-account', '/usr/bin/id', ['-un'])).stdout.trim();
   assert.equal(
     (
@@ -366,18 +367,37 @@ async function validatedJob(commands: MacCommands, value: Receipt, requireState:
 export async function oldMacDownloadedState(commands: MacCommands) {
   return validatedJob(commands, await receipt(commands), true);
 }
-async function safeSignal(commands: MacCommands, owner: MacIdentity, signal: NodeJS.Signals) {
+async function safeSignal(
+  commands: MacCommands,
+  owner: MacIdentity,
+  signal: NodeJS.Signals,
+  priorTerm = false
+) {
   const current = (await macProcesses(commands)).find((entry) => entry.pid === owner.pid);
-  if (!current) return;
+  if (!current) return false;
+  if (priorTerm && current.command !== owner.command) {
+    assert.deepEqual({ ...current, command: owner.command }, owner, 'PID identity changed');
+    assert(current.command === '<defunct>' || /^\([^()]+\)$/.test(current.command));
+    // A prior TERM can change sibling presentation. Never signal this uncertain PID.
+    await waitFor(
+      async () =>
+        (await macProcesses(commands)).some((entry) => entry.pid === owner.pid) ? null : true,
+      'post-TERM uncertain PID exited',
+      5000
+    );
+    return false;
+  }
   assert.deepEqual(current, owner, 'PID identity changed; no signal is safe');
   try {
     process.kill(owner.pid, signal);
+    return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
     assert(
       !(await macProcesses(commands)).some((entry) => entry.pid === owner.pid),
       'Signal raced a reused PID'
     );
+    return false;
   }
 }
 export async function oldMacStopApps(commands: MacCommands) {
@@ -390,9 +410,10 @@ export async function oldMacStopApps(commands: MacCommands) {
     (entry) =>
       entry.command.startsWith(`${value.app}/Contents/`) && !entry.command.endsWith('/ShipIt')
   );
+  let termSent = false;
   for (const entry of before) {
     owns(value, entry);
-    await safeSignal(commands, entry, 'SIGTERM');
+    termSent = (await safeSignal(commands, entry, 'SIGTERM', termSent)) || termSent;
   }
   await pause(1000);
   for (const entry of (await macProcesses(commands)).filter((item) =>
@@ -400,8 +421,7 @@ export async function oldMacStopApps(commands: MacCommands) {
   )) {
     const owner = before.find((item) => item.pid === entry.pid);
     assert(owner);
-    assert.deepEqual(entry, owner);
-    await safeSignal(commands, owner, 'SIGKILL');
+    await safeSignal(commands, owner, 'SIGKILL', termSent);
   }
   await waitFor(
     async () =>
@@ -416,7 +436,7 @@ export async function oldMacStopApps(commands: MacCommands) {
   );
   return { before, stopped: true };
 }
-export async function restoreOldMacNetwork(commands: MacCommands) {
+export async function retireOldMacShipIt(commands: MacCommands) {
   const value = await receipt(commands);
   assert(
     value.attempts.every((attempt) => attempt.pid !== undefined && attempt.owner),
@@ -425,6 +445,16 @@ export async function restoreOldMacNetwork(commands: MacCommands) {
   const job = await validatedJob(commands, value, false);
   if (job.present)
     await commands.checked('remove-owned-shipit-job', value.native.job, ['--remove-job']);
+  assert.equal(
+    (await jobStatus(commands, value.native.job)).present,
+    false,
+    'Owned ShipIt job must be absent before stopping TEST apps'
+  );
+  return job;
+}
+export async function restoreOldMacNetwork(commands: MacCommands) {
+  const value = await receipt(commands);
+  const job = await retireOldMacShipIt(commands);
   await oldMacStopApps(commands);
   // No unknown group members are signalled. They block restoration even if the original main exited.
   let since: number | undefined;
@@ -772,7 +802,7 @@ export async function paintedMacDesktop(
   const pixels = JSON.parse(
     (await commands.checked('read-painted-aqua-ocr', reader, ['--image', screenshot])).stdout
   ) as { width: number; height: number; distinctColors: number; meanRgb: number; text: string };
-  assert(pixels.width >= 300 && pixels.height >= 200 && pixels.distinctColors >= 32);
+  if (!(pixels.width >= 300 && pixels.height >= 200 && pixels.distinctColors >= 32)) return null;
   if (
     /Preparing (?:your )?workspace/i.test(pixels.text) ||
     !/Providers\s*[&+]\s*plans/i.test(pixels.text) ||
