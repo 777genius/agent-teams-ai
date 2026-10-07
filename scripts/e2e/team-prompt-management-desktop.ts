@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createWriteStream } from 'node:fs';
 import {
@@ -143,7 +143,9 @@ let mainPid: number | null = null;
 interface OwnedProcess {
   pid: number;
   startTicks: string;
+  processGroup: number;
 }
+let spawnLease: OwnedProcess | null = null;
 const ownedProcesses = new Map<number, OwnedProcess>();
 
 function getClient(): Cdp {
@@ -266,29 +268,64 @@ async function listFacts() {
     text: document.body.innerText,
   }));
 }
-async function ownedIdentity(pid: number): Promise<OwnedProcess | null> {
+async function processIdentity(pid: number): Promise<OwnedProcess | null> {
   try {
-    const environment = await readFile(`/proc/${pid}/environ`, 'utf8');
-    if (!environment.split('\0').includes(`TEAM_MANAGEMENT_E2E_OWNER=${owner}`)) return null;
     const value = await readFile(`/proc/${pid}/stat`, 'utf8');
     const fields = value.slice(value.lastIndexOf(')') + 2).split(' ');
-    return fields[0] === 'Z' ? null : { pid, startTicks: fields[19]! };
+    if (fields[0] === 'Z') return null;
+    assert(fields[19] && /^\d+$/.test(fields[19]), 'Process start lease required');
+    return { pid, startTicks: fields[19], processGroup: Number(fields[2]) };
   } catch (error) {
-    if (['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? ''))
-      return null;
+    if (['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) return null;
+    throw error;
+  }
+}
+async function groupLeaseCurrent(): Promise<boolean> {
+  if (!spawnLease) return false;
+  // A surviving previously captured member keeps the exact fresh process group leased.
+  for (const captured of [spawnLease, ...ownedProcesses.values()]) {
+    if (captured.processGroup !== spawnLease.processGroup) continue;
+    const live = await processIdentity(captured.pid);
+    if (live?.processGroup === captured.processGroup && live.startTicks === captured.startTicks) return true;
+  }
+  return false;
+}
+async function ownedIdentity(pid: number): Promise<OwnedProcess | null> {
+  const identity = await processIdentity(pid);
+  if (!identity) return null;
+  if (identity.processGroup === spawnLease?.processGroup && await groupLeaseCurrent()) return identity;
+  // Only consulted for an already-known owned PID or the MCP state in our new userData.
+  try {
+    const environment = await readFile(`/proc/${pid}/environ`, 'utf8');
+    return environment.split('\0').includes(`TEAM_MANAGEMENT_E2E_OWNER=${owner}`) ? identity : null;
+  } catch (error) {
+    if (['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) return null;
     throw error;
   }
 }
 async function captureOwnedProcesses() {
-  for (const entry of await readdir('/proc'))
-    if (/^\d+$/.test(entry)) {
-      const identity = await ownedIdentity(Number(entry));
+  if (await groupLeaseCurrent()) {
+    for (const entry of await readdir('/proc')) {
+      if (!/^\d+$/.test(entry)) continue;
+      const identity = await processIdentity(Number(entry));
+      if (identity?.processGroup === spawnLease?.processGroup && await groupLeaseCurrent()) ownedProcesses.set(identity.pid, identity);
+    }
+  }
+  // MCP can detach from the Vite group; its state path and unique marker both remain scoped.
+  try {
+    const state = object(JSON.parse(await readFile(path.join(userData, 'data/mcp-http-server/state.json'), 'utf8')));
+    if (Number.isSafeInteger(state.pid) && Number(state.pid) > 0) {
+      const identity = await ownedIdentity(Number(state.pid));
       if (identity) ownedProcesses.set(identity.pid, identity);
     }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 }
 async function cleanup() {
   await captureOwnedProcesses();
   const facts = {
+    ownedLeases: [...ownedProcesses.values()],
     gracefulRequested: false,
     mainExitedNormally: false,
     fallbackPids: [] as number[],
@@ -315,6 +352,7 @@ async function cleanup() {
   client = null;
   // dev:mcp's Vite/pnpm supervisors can remain after the normal app quit.
   await captureOwnedProcesses();
+  facts.ownedLeases = [...ownedProcesses.values()];
   for (const signal of ['SIGTERM', 'SIGKILL'] as const) {
     for (const identity of ownedProcesses.values()) {
       const live = await ownedIdentity(identity.pid);
@@ -348,7 +386,16 @@ async function attach(): Promise<ConnectionInfoV1> {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
         throw error;
       }
-      if (!(await ownedIdentity(state.pid))) return false;
+      const mainIdentity = await ownedIdentity(state.pid);
+      if (!mainIdentity) return false;
+      assert(spawnLease);
+      assert.equal(mainIdentity.processGroup, spawnLease.processGroup, 'Main must belong to the fresh detached source group');
+      const mainCwd = await realpath(`/proc/${state.pid}/cwd`);
+      assert(mainCwd === repo || mainCwd.startsWith(`${repo}/`), 'Main cwd must belong to exact source checkout');
+      const mainArgs = (await readFile(`/proc/${state.pid}/cmdline`, 'utf8')).split('\0');
+      assert(mainArgs.some((arg) => arg.startsWith(`${repo}/`) || arg === '.' || arg.startsWith('dist-electron/')), 'Main command must identify source checkout');
+      ownedProcesses.set(mainIdentity.pid, mainIdentity);
+      evidence.mainIdentity = { ...mainIdentity, cwd: mainCwd, ownership: 'fresh source process-group lease' };
       const control = new URL(state.baseUrl);
       assert.equal(control.hostname, '127.0.0.1');
       let response: Response;
@@ -361,7 +408,12 @@ async function attach(): Promise<ConnectionInfoV1> {
       }
       if (!response.ok) return false;
       const expected = (await response.json()) as ConnectionInfoV1;
-      if (!expected.cdp.httpOrigin) return false;
+      if (
+        expected.mcp.status !== 'ready' || expected.control.status !== 'ready' ||
+        expected.cdp.status !== 'ready' || !expected.cdp.httpOrigin ||
+        !expected.cdp.browserWsUrl || !expected.cdp.rendererWsUrl || !expected.cdp.rendererTargetId
+      ) return false;
+      assert.equal(expected.context.dataRootFingerprint, createHash('sha256').update(claude).digest('hex'), 'Discovery must be bound to the fresh TEST root');
       const inspector = new URL(expected.cdp.httpOrigin);
       assert.equal(inspector.protocol, 'http:');
       assert.equal(inspector.hostname, '127.0.0.1');
@@ -369,7 +421,6 @@ async function attach(): Promise<ConnectionInfoV1> {
       assert.equal(inspector.pathname, '/');
       const inspectorPort = Number(inspector.port);
       assert(Number.isInteger(inspectorPort) && inspectorPort > 0 && inspectorPort < 65536);
-      if (!expected.cdp.browserWsUrl) return false;
       const browserWs = new URL(expected.cdp.browserWsUrl);
       assert.equal(browserWs.protocol, 'ws:');
       assert.equal(browserWs.hostname, inspector.hostname);
@@ -452,7 +503,7 @@ async function attach(): Promise<ConnectionInfoV1> {
 async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: boolean) {
   assert(client);
   await getClient().send('Emulation.setDeviceMetricsOverride', {
-    width: narrow ? 320 : 1280,
+    width: 1280,
     height: 900,
     deviceScaleFactor: 1,
     mobile: false,
@@ -462,6 +513,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     () => evaluate(() => document.activeElement?.id === 'external-agent-task'),
     'free request autofocus'
   );
+  if (narrow) await getClient().send('Emulation.setDeviceMetricsOverride', { width: 320, height: 900, deviceScaleFactor: 1, mobile: false });
   const request = `Use feature and review templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
   if (theme === 'light')
     await waitFor(
@@ -616,6 +668,12 @@ try {
   child.stderr?.pipe(log, { end: false });
   child.once('close', () => log.end());
   await once(child, 'spawn');
+  assert(child.pid);
+  spawnLease = await processIdentity(child.pid);
+  assert(spawnLease && spawnLease.processGroup === child.pid, 'Fresh detached pnpm group lease required');
+  ownedProcesses.set(spawnLease.pid, spawnLease);
+  evidence.spawnIdentity = { ...spawnLease, detached: true, ownership: 'spawned child PID/startTicks/processGroup' };
+  await captureOwnedProcesses();
   const info = await attach();
   await openTeams();
   await popup(info, 'dark', true);
