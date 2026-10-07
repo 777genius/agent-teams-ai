@@ -501,6 +501,8 @@ export const createEditorSlice = withEditorTabSession<EditorSlice>((set, get, ta
       }
       const message = error instanceof Error ? error.message : String(error);
       log.error('Failed to open editor:', message);
+      const restoredTabs = tabSession.restore(savedTabs);
+      if (restoredTabs) set(restoredTabs);
       set({
         editorFileTreeLoading: false,
         editorFileTreeError: message,

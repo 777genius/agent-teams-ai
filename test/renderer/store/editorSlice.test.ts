@@ -196,6 +196,44 @@ describe('editorSlice', () => {
       expect(store.getState().editorOpenTabs.map((tab) => tab.filePath)).toEqual(['/a/file.txt']);
     });
 
+    it('persists later tab actions after the current IPC open fails', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/old.txt');
+      store.getState().closeEditor();
+      mockEditorAPI.open.mockRejectedValueOnce(new Error('unavailable'));
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/new.txt');
+      store.getState().closeEditorTab('/a/old.txt');
+      store.getState().closeEditor();
+      const restarted = createTestStore();
+      await restarted.getState().openEditor('/a');
+      expect(restarted.getState().editorOpenTabs.map((tab) => tab.filePath)).toEqual(['/a/new.txt']);
+      expect(restarted.getState().editorActiveTabId).toBe('/a/new.txt');
+    });
+
+    it('does not replay restored tabs when reading the tree fails after user tab actions', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/old.txt');
+      store.getState().closeEditor();
+      let rejectTree!: (error: Error) => void;
+      mockEditorAPI.readDir.mockReturnValueOnce(new Promise<ReadDirResult>((_resolve, reject) => {
+        rejectTree = reject;
+      }));
+      const opening = store.getState().openEditor('/a');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(store.getState().editorOpenTabs.map((tab) => tab.filePath)).toEqual(['/a/old.txt']);
+      store.getState().closeEditorTab('/a/old.txt');
+      store.getState().openFile('/a/new.txt');
+      rejectTree(new Error('tree unavailable'));
+      await opening;
+      expect(store.getState().editorOpenTabs.map((tab) => tab.filePath)).toEqual(['/a/new.txt']);
+      store.getState().closeEditor();
+      const restarted = createTestStore();
+      await restarted.getState().openEditor('/a');
+      expect(restarted.getState().editorOpenTabs.map((tab) => tab.filePath)).toEqual(['/a/new.txt']);
+    });
+
     it('does not restore stale project A into B and preserves user actions during tree loading', async () => {
       await store.getState().openEditor('/a');
       store.getState().openFile('/a/a.txt');

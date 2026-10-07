@@ -74,6 +74,7 @@ export function createEditorTabSession(
         }));
       const tabs = computeDisambiguatedTabs([...restored, ...current.editorOpenTabs]);
       suspended = false;
+      generation = null;
       return {
         editorOpenTabs: tabs,
         editorActiveTabId: current.editorActiveTabId ?? open.saved.active ?? tabs[0]?.id ?? null,
