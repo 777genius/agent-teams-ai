@@ -41,8 +41,16 @@ import {
   paintedMacDesktop,
   prepareOldMacNative,
   restoreOldMacNetwork,
+  retireOldMacShipIt,
 } from './mac-old-native.mts';
-import { MacOldUi, macAbout, macDebugPort, macDebugTargets } from './mac-old-ui.mts';
+import {
+  MacOldUi,
+  macAbout,
+  macAboutHasVersion,
+  macAboutParagraphs,
+  macDebugPort,
+  macDebugTargets,
+} from './mac-old-ui.mts';
 import { transportHook } from './transport.mts';
 import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
 
@@ -302,21 +310,26 @@ async function noUpdate(version: string, label: string, requestStart: number) {
   );
   await view().settings();
   await view().click('^Advanced$');
-  assert(renderer);
-  assert(
-    await renderer.evaluate<boolean>(
-      `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.1\\b/.test(block.textContent));})()`
-    )
+  const aboutRenderer = renderer;
+  assert(aboutRenderer);
+  await waitFor(
+    () => aboutRenderer.evaluate<boolean>(macAboutHasVersion('2.17.1')),
+    'painted About version 2.17.1',
+    10_000
   );
-  await view().click('^Check for Updates$', 'about');
+  evidence.aboutVersionParagraphs = await aboutRenderer.evaluate(macAboutParagraphs);
+  evidence.noUpdateCheckControl = await view().click('^(?:Check for Updates|Up to date)$', 'about');
   const checked = await waitFor(
     async () => {
       const state = await observation();
       assert(
         !state.events.some((event) => ['available', 'downloaded', 'progress'].includes(event.type))
       );
-      return state.events.filter((event) => event.type === 'not-available').length >
-        startup.events.filter((event) => event.type === 'not-available').length && state.provider
+      return state.events.filter((event) => event.type === 'checking').length >
+        startup.events.filter((event) => event.type === 'checking').length &&
+        state.events.filter((event) => event.type === 'not-available').length >
+          startup.events.filter((event) => event.type === 'not-available').length &&
+        state.provider
         ? state
         : null;
     },
@@ -381,7 +394,7 @@ try {
   assert.equal(plan.input.mode, 'carry-mac');
   assert.equal(plan.input.macSource?.release.applicationSha, sourceSha);
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
-  assert.equal(plan.input.target.tag, 'v2.17.4');
+  assert.equal(plan.input.target.tag, 'v2.17.6');
   commonTag = plan.input.target.tag;
   commonVersion = version(commonTag);
   evidence.previewCommonTag = commonTag;
@@ -468,7 +481,8 @@ try {
   assert.equal(
     await (
       await fetch(
-        `${mirror.origin}/github/${repository}/releases/download/${plan.input.target.tag}/latest-mac.yml`
+        `${mirror.origin}/github/${repository}/releases/download/${plan.input.target.tag}/latest-mac.yml`,
+        { signal: AbortSignal.timeout(30_000) }
       )
     ).text(),
     inputs.feed
@@ -476,12 +490,12 @@ try {
   const initial = await launch('initial', initialVersion);
   evidence.initialLaunch = initial;
   if (scenario === 'fresh') {
-    evidence.noUpdate = await noUpdate('2.17.1', 'fresh-no-update', initial.mirrorRequestStart);
     evidence.nativeWindow = await waitFor(
       () => paintedMacDesktop(commands, native!.aqua, initial.owner, 'fresh-aqua', false),
       'fresh painted Aqua desktop',
       30_000
     );
+    evidence.noUpdate = await noUpdate('2.17.1', 'fresh-no-update', initial.mirrorRequestStart);
   } else {
     const available = await waitFor(
       async () => {
@@ -513,14 +527,19 @@ try {
     }, 'real Settings Light preference persisted');
     evidence.preferenceBefore = await config();
     await view().click('^Advanced$');
-    assert(renderer);
-    assert(
-      await renderer.evaluate<boolean>(
-        `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.0\\b/.test(block.textContent));})()`
-      )
+    const aboutRenderer = renderer;
+    assert(aboutRenderer);
+    await waitFor(
+      () => aboutRenderer.evaluate<boolean>(macAboutHasVersion('2.17.0')),
+      'painted About version 2.17.0',
+      10_000
     );
     const checks = available.events.filter((event) => event.type === 'available').length;
-    await view().click('^(?:Check for Updates|v?2\\.17\\.1 available)$', 'about');
+    evidence.aboutVersionParagraphs = await aboutRenderer.evaluate(macAboutParagraphs);
+    evidence.predecessorCheckControl = await view().click(
+      '^(?:Check for Updates|v?2\\.17\\.1 available)$',
+      'about'
+    );
     await waitFor(
       async () =>
         (await observation()).events.filter((event) => event.type === 'available').length > checks
@@ -697,6 +716,8 @@ try {
       !(evidence.automaticArguments as string).includes('--inspect'),
       'Automatic native proof must precede diagnostic launch'
     );
+    // Retire only this TEST install's validated job before transitioning to diagnostics.
+    evidence.transitionShipIt = await retireOldMacShipIt(commands);
     await oldMacStopApps(commands);
     const diagnostic = await launch('post-update-diagnostic', '2.17.1');
     assert.equal(diagnostic.roots.userData, initial.roots.userData);
@@ -721,6 +742,9 @@ try {
   assert.equal(streamErrors.length, 0);
   evidence.passed = true;
 } catch (error) {
+  evidence.failureAboutVersionParagraphs = await renderer
+    ?.evaluate(macAboutParagraphs)
+    .catch(() => null);
   evidence.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
   process.exitCode = 1;
   evidence.lastTransport = await transport().catch(() => undefined);

@@ -21302,7 +21302,8 @@ describe('TeamProvisioningService', () => {
       );
 
       const run = (svc as any).runs.get(runId);
-      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      // This verifies cwd after launch completion, not cancellation during session persistence.
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run, { waitForCompletion: true });
       await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(1));
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
