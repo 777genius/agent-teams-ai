@@ -52,7 +52,9 @@ export async function assertEditorFilePathUnchanged(
 
 /** Read through one descriptor, with an actual byte ceiling even if the path grows. */
 export async function boundedTextRead(filePath: string): Promise<ReadFileResult> {
-  const handle = await fs.open(filePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  // Nonblocking open reaches the type check even if a validated path became a FIFO.
+  const handle = await fs.open(filePath,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const before = await handle.stat();
     if (!before.isFile()) throw new Error('Not a regular file');

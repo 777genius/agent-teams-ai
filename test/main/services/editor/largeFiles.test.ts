@@ -1,14 +1,18 @@
+import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import fs from 'fs/promises';
+import { constants } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
+
+import fs from 'fs/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ shell: { trashItem: vi.fn() } }));
 
-import { ProjectFileService } from '../../../../src/main/services/editor/ProjectFileService';
 import { boundedTextRead } from '../../../../src/main/services/editor/boundedTextRead';
 import { checkFileConflict } from '../../../../src/main/services/editor/conflictDetection';
+import { ProjectFileService } from '../../../../src/main/services/editor/ProjectFileService';
 
 let root: string;
 const service = new ProjectFileService();
@@ -19,6 +23,25 @@ afterEach(async () => { vi.restoreAllMocks(); await fs.rm(root, { recursive: tru
 // Regressions: the former 5MiB rejection/2MiB write ceiling, truncated editable text,
 // split UTF-8 at a bounded preview, growth beyond the read budget, and preview overwrite.
 describe('large editor files on disk', () => {
+  it.skipIf(process.platform === 'win32')('rejects a FIFO promptly instead of blocking before the type check', async () => {
+    const fifo = path.join(root, 'pipe');
+    await promisify(execFile)('mkfifo', [fifo]);
+    const reading = boundedTextRead(fifo);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('FIFO read timed out')), 1000);
+      });
+      await expect(Promise.race([reading, timeout])).rejects.toThrow('Not a regular file');
+    } finally {
+      clearTimeout(timer);
+      // Unblock an old blocking implementation so a failing test cannot leak a libuv worker.
+      const release = await fs.open(fifo, constants.O_RDWR | constants.O_NONBLOCK);
+      await release.close();
+      await reading.catch(() => undefined);
+    }
+  });
+
   // These fail if safe links are rejected/replaced, or canonical targets bypass containment.
   it('opens and saves an in-project file symlink without replacing the link', async () => {
     const target = path.join(root, 'target.txt');
