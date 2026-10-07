@@ -723,6 +723,65 @@ describe('TeamDataWorkerClient', () => {
     client.dispose();
   });
 
+  it('shares the worker-owned cooldown episode and changes it on a later fatal failure', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    hoisted.skipResponsesForOps.add('getTeamData');
+    const client = new TeamDataWorkerClient();
+    const first = client.getTeamData('TEST-team').catch((error: unknown) => error);
+    hoisted.workers[0].handlers.get('error')?.(new Error('Worker call timeout after 30000ms'));
+    const firstError = (await first) as {
+      message: string;
+      failure: { kind: string; retryAt: number; recoveryId: string };
+    };
+    expect(firstError.message).toBe('Worker call timeout after 30000ms');
+    expect(firstError.failure).toMatchObject({ kind: 'recovering', retryAt: 31000 });
+    expect(firstError.failure.recoveryId).toMatch(/^[a-zA-Z0-9-]+$/);
+    const second = await client.getTeamData('TEST-team').catch((error: unknown) => error);
+    expect(second).toMatchObject({ failure: firstError.failure });
+    expect(hoisted.workers).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(30000);
+    const third = client.getTeamData('TEST-team').catch((error: unknown) => error);
+    expect(hoisted.workers).toHaveLength(2);
+    hoisted.workers[1].handlers.get('error')?.(new Error('Worker call timeout after 30000ms'));
+    const thirdError = (await third) as { failure: { recoveryId: string; retryAt: number } };
+    expect(thirdError.failure.retryAt).toBe(61000);
+    expect(thirdError.failure.recoveryId).not.toBe(firstError.failure.recoveryId);
+    client.dispose();
+  });
+
+  it('ignores a retired worker message even when it names a current request', async () => {
+    hoisted.skipResponsesForOps.add('getTeamData');
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    const client = new TeamDataWorkerClient();
+    const first = client.getTeamData('TEST-team').catch((error: unknown) => error);
+    hoisted.workers[0].handlers.get('exit')?.(0);
+    await first;
+    let settled = false;
+    const second = client.getTeamData('TEST-team').then((value) => {
+      settled = true;
+      return value;
+    });
+    const current = hoisted.workers[1].messages[0] as { id: string };
+    hoisted.workers[0].handlers.get('message')?.({
+      id: current.id,
+      ok: true,
+      result: { teamName: 'TEST-stale' },
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    hoisted.workers[1].handlers.get('message')?.({
+      id: current.id,
+      ok: true,
+      result: { teamName: 'TEST-current' },
+    });
+    await expect(second).resolves.toMatchObject({ teamName: 'TEST-current' });
+    client.dispose();
+  });
+
   it('classifies worker exits as fatal only for non-zero exit codes', async () => {
     const { isTeamDataWorkerFatalError } =
       await import('../../../../src/main/services/team/TeamDataWorkerClient');

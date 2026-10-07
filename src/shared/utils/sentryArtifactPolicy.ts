@@ -135,6 +135,33 @@ export function isSentryImagePath(path: readonly string[], arrays: readonly numb
     /^\d+$/.test(path[2] ?? '')
   );
 }
+// Exact runtime pseudo-files, not a `node:` prefix exception or artifact authorization.
+// Keep this list bounded: unknown pseudo-files still fail closed.
+const SAFE_RUNTIME_FILENAMES = new Set([
+  'node:events',
+  'node:timers',
+  'node:internal/async_hooks',
+  'node:internal/event_target',
+  'node:internal/main/run_main_module',
+  'node:internal/modules/cjs/loader',
+  'node:internal/modules/esm/loader',
+  'node:internal/modules/esm/module_job',
+  'node:internal/modules/run_main',
+  'node:internal/process/execution',
+  'node:internal/process/task_queues',
+  'node:internal/timers',
+  'node:internal/worker',
+  'node:internal/worker/io',
+  'node:electron/js2c/browser_init',
+  'node:electron/js2c/renderer_init',
+]);
+function hasSafeRuntimeFilename(frame: RecordValue): boolean {
+  return (
+    typeof frame.filename === 'string' &&
+    SAFE_RUNTIME_FILENAMES.has(frame.filename) &&
+    (frame.abs_path === undefined || frame.abs_path === frame.filename)
+  );
+}
 /** Before NormalizePaths/applyDebugMeta: remove unconfirmed raw spellings and transient IDs. */
 export function guardSentryArtifactEvent<T>(event: T, policy: SentryArtifactPolicy | null): T {
   if (!sentryRecord(event)) return event;
@@ -173,9 +200,10 @@ export function guardSentryArtifactEvent<T>(event: T, policy: SentryArtifactPoli
               if (!sentryRecord(input)) return input;
               const frame: RecordValue = { ...input };
               const row = policy?.frame(input);
+              const runtimeFilename = hasSafeRuntimeFilename(input);
               for (const key of ['filename', 'abs_path']) {
                 if (row && input[key] !== undefined) frame[key] = row.locator;
-                else delete frame[key];
+                else if (key !== 'filename' || !runtimeFilename) delete frame[key];
               }
               if (!row || input.debug_id !== row.debugId) delete frame.debug_id;
               return frame;

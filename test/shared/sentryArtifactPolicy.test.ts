@@ -80,6 +80,72 @@ describe('inventory-bound Sentry metadata', () => {
       guardSentryArtifactEvent(missing, policy).exception.values[0]!.stacktrace.frames[0]
     ).not.toHaveProperty('debug_id');
   });
+  // FAIL condition: normal builtin frames vanish, or a builtin lookalike gains artifact/PII trust.
+  it.each(['exception', 'threads'] as const)(
+    'keeps exact runtime filenames in %s with ordinary redaction, even without inventory',
+    (section) => {
+      for (const admittedPolicy of [policy, null]) {
+        const frame = {
+          filename: 'node:internal/process/task_queues',
+          abs_path: 'node:internal/process/task_queues',
+          debug_id: rows[0].debugId,
+          function: 'resume /Users/sdk-sandbox/private.log',
+          lineno: 105,
+        };
+        const input = { [section]: { values: [{ stacktrace: { frames: [frame] } }] } };
+        const guarded = guardSentryArtifactEvent(input, admittedPolicy);
+        const output = redactSentryEvent(guarded, admittedPolicy) as typeof input;
+        expect(output[section].values[0].stacktrace.frames[0]).toEqual({
+          filename: 'node:internal/process/task_queues',
+          function: 'resume /Users/[redacted]/[redacted-path]',
+          lineno: 105,
+        });
+        expect(policy.artifact(frame.filename)).toBeNull();
+        expect(input[section].values[0].stacktrace.frames[0]).toEqual(frame);
+        expect(redactSentryEvent(output, admittedPolicy)).toEqual(output);
+      }
+    }
+  );
+  it.each([
+    'node:internal/process/task_queues?token=private',
+    'node:internal/process/task_queues#private',
+    'node:internal/process/task_queues/private',
+    'node:internal/process/task_queues\n/Users/sdk-sandbox/private',
+    'node:internal/process/task_queues%00',
+    'node:internal/process/../task_queues',
+    'node:internal/process/private_session',
+    'node:/Users/sdk-sandbox/private',
+    'node:events/secret',
+  ])('removes runtime impostor %s and its debug ID', (filename) => {
+    const event = {
+      exception: {
+        values: [{ stacktrace: { frames: [{ filename, debug_id: rows[0].debugId }] } }],
+      },
+    };
+    const output = guardSentryArtifactEvent(event, policy);
+    expect(output.exception.values[0].stacktrace.frames[0]).toEqual({});
+  });
+  it('rejects builtin filenames with conflicting locators and never grants debug image trust', () => {
+    const event = {
+      exception: {
+        values: [
+          {
+            stacktrace: {
+              frames: [
+                { filename: 'node:events', abs_path: rows[0].locator, debug_id: rows[0].debugId },
+              ],
+            },
+          },
+        ],
+      },
+      debug_meta: {
+        images: [{ type: 'sourcemap', code_file: 'node:events', debug_id: rows[0].debugId }],
+      },
+    };
+    const output = guardSentryArtifactEvent(event, policy);
+    expect(output.exception.values[0].stacktrace.frames[0]).toEqual({});
+    expect(output.debug_meta.images).toEqual([]);
+  });
   it.each([
     '../assets/',
     '%2e%2e/assets/',

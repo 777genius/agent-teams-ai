@@ -270,7 +270,7 @@
     "autoprefixer": "^10.4.17",
     "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
     "electron": "^44.4.5",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "26.17.0",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",

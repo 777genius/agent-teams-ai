@@ -14,6 +14,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
+import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { formatCurrentProcessMemorySnapshot } from '../../utils/startupTelemetry';
@@ -236,6 +237,7 @@ export class TeamDataWorkerClient {
   private getMemberActivityMetaInFlight = new Map<string, Promise<TeamMemberActivityMeta>>();
   private fatalRestartCooldownUntilMs = 0;
   private lastFatalWorkerError: string | null = null;
+  private recoveryFailure: TeamReadFailureError | null = null;
   /**
    * Advisory run-scope floors, mirrored on the main thread.
    *
@@ -255,6 +257,12 @@ export class TeamDataWorkerClient {
     if (isTeamDataWorkerFatalError(error)) {
       this.lastFatalWorkerError = error.message;
       this.fatalRestartCooldownUntilMs = Date.now() + WORKER_FATAL_RESTART_COOLDOWN_MS;
+      this.recoveryFailure = new TeamReadFailureError(error.message, {
+        kind: 'recovering',
+        retryAt: this.fatalRestartCooldownUntilMs,
+        recoveryId: crypto.randomUUID(),
+      });
+      error = this.recoveryFailure;
       const pendingSummary = [
         ...Array.from(this.pending.values()).map((entry) => ({ ...entry, state: 'active' })),
         ...this.queue.map((entry) => ({ ...entry, state: 'queued' })),
@@ -300,15 +308,18 @@ export class TeamDataWorkerClient {
     if (!this.workerPath) throw new Error('Worker not available');
     if (this.worker) return this.worker;
     if (Date.now() < this.fatalRestartCooldownUntilMs) {
-      throw new Error(
-        `Team data worker recovering after fatal failure: ${this.lastFatalWorkerError ?? 'unknown'}`
+      throw new TeamReadFailureError(
+        `Team data worker recovering after fatal failure: ${this.lastFatalWorkerError ?? 'unknown'}`,
+        this.recoveryFailure!.failure
       );
     }
 
     const w = new Worker(this.workerPath);
     this.worker = w;
+    this.recoveryFailure = null;
 
     w.on('message', (msg: TeamDataWorkerResponse) => {
+      if (this.worker !== w) return;
       const entry = this.pending.get(msg.id);
       if (!entry) return;
       this.pending.delete(msg.id);
@@ -651,10 +662,10 @@ export class TeamDataWorkerClient {
     this.advisoryRunFloorMsByTeam.clear();
     this.clearActiveCall();
     for (const [, entry] of this.pending) {
-      entry.reject(new Error('Client disposed'));
+      entry.reject(new TeamReadFailureError('Client disposed', { kind: 'disposed' }));
     }
     for (const entry of this.queue) {
-      entry.reject(new Error('Client disposed'));
+      entry.reject(new TeamReadFailureError('Client disposed', { kind: 'disposed' }));
     }
     this.pending.clear();
     this.queue = [];
