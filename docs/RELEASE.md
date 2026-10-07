@@ -31,7 +31,7 @@ Before publishing:
 
 ## v2.17.7 (Prepared draft)
 
-Source base: `main` at `54fb653b1f21d07ffaf991553c731558335fc350`.
+Source base: `main` at `1a24b5b7a470ff9604a47ee8cbb051eecb651612`.
 All five platforms use freshly built `2.17.7` apps. Publish `2.17.6` before preparing this release's GitHub draft.
 Existing runtime locks remain unchanged. Verify the final reviewed source and native installer evidence before publication.
 
@@ -45,6 +45,7 @@ Agent Teams 2.17.7 brings the current desktop release to macOS, Windows and Linu
 
 - Preview PDF, Word, Excel and PowerPoint documents directly in the project editor.
 - Start from ready-made team templates and save drafts before choosing a provider for launch.
+- Copy a team prompt with its roster and connect external agents to the desktop app.
 - On macOS, set monthly token and estimated API cost budgets for teams and projects.
 - On macOS, explore model breakdowns and activity calendars in the Usage dashboard.
 
