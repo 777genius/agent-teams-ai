@@ -11,7 +11,7 @@ export function createLocalEditorTabsStorage(
 ): EditorTabsStorage {
   let memory: string | null = null;
   let unavailable = false;
-  const useMemory = (): void => {
+  const fallbackToMemory = (): void => {
     unavailable = true;
     log.warn('Persistent editor tab storage unavailable; using session memory');
   };
@@ -22,7 +22,7 @@ export function createLocalEditorTabsStorage(
           memory = getStorage().getItem(EDITOR_TABS_STORAGE_KEY);
           return memory;
         } catch {
-          useMemory();
+          fallbackToMemory();
         }
       }
       return memory;
@@ -33,7 +33,7 @@ export function createLocalEditorTabsStorage(
         try {
           getStorage().setItem(EDITOR_TABS_STORAGE_KEY, value);
         } catch {
-          useMemory();
+          fallbackToMemory();
         }
       }
     },

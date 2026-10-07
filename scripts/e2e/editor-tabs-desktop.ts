@@ -172,7 +172,7 @@ async function launch(): Promise<Cdp> {
  }
  throw Error('startup timeout');
 }
-async function stop():Promise<void>{client?.socket.close();client=null;if(app?.pid){try{process.kill(-app.pid,'SIGTERM');}catch{}await new Promise<void>(resolve=>{if(app?.exitCode!==null)return resolve();app?.once('exit',()=>resolve());setTimeout(resolve,5000);});}app=null;}
+async function stop():Promise<void>{client?.socket.close();client=null;if(app?.pid){try{process.kill(-app.pid,'SIGTERM');}catch{ /* owned app already exited */ }await new Promise<void>(resolve=>{if(app?.exitCode!==null)return resolve();app?.once('exit',()=>resolve());setTimeout(resolve,5000);});}app=null;}
 async function state(c:Cdp):Promise<{paths:string[];active:string|null}>{return c.evaluate(`(async()=>{const s=${storeExpression}.getState();return {paths:s.editorOpenTabs.map(t=>t.filePath),active:s.editorActiveTabId};})()`);}
 async function action(c:Cdp,method:string,...args:unknown[]):Promise<unknown>{return c.evaluate(`(async()=>${storeExpression}.getState()[${jsLiteral(method)}](...${jsLiteral(args)}))()`);}
 async function shot(c:Cdp,name:string):Promise<void>{await c.evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');const data=await c.send('Page.captureScreenshot',{format:'png'});assert(data.data);await writeFile(path.join(artifacts,name+'.png'),Buffer.from(data.data,'base64'));}
