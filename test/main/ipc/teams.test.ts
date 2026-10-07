@@ -1,3 +1,4 @@
+import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
   beginOpenCodeStartupRuntimeSweep,
@@ -34,10 +35,16 @@ vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsR
   persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
 }));
 
-const cleanupPreload = vi.hoisted(() => ({
-  exposeInMainWorld: vi.fn(),
-  invoke: vi.fn(),
-}));
+const cleanupPreload = vi.hoisted(() => {
+  const exposed: { current?: ElectronAPI } = {};
+  return {
+    exposed,
+    exposeInMainWorld: vi.fn((name: string, value: unknown) => {
+      if (name === 'electronAPI') exposed.current = value as ElectronAPI;
+    }),
+    invoke: vi.fn(),
+  };
+});
 vi.mock('@preload/installRendererLogForwarding', () => ({
   installRendererLogForwarding: vi.fn(),
 }));
@@ -2271,7 +2278,10 @@ describe('ipc teams handlers', () => {
       messageId: '../escape',
     });
 
-    expect(result).toMatchObject({ success: false, error: 'messageId contains invalid characters' });
+    expect(result).toMatchObject({
+      success: false,
+      error: 'messageId contains invalid characters',
+    });
     expect(service.sendMessage).not.toHaveBeenCalled();
   });
 
@@ -2851,22 +2861,79 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_DATA to main after worker OOM', async () => {
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_DATA to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getTeamData.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
+
+      const handler = handlers.get(TEAM_GET_DATA)!;
+      const result = (await handler({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getTeamData).not.toHaveBeenCalled();
+    }
+  );
+
+  it('preserves worker recovery through registered IPC, actual preload and renderer unwrap', async () => {
+    const failure = {
+      kind: 'recovering',
+      retryAt: 30001,
+      recoveryId: 'TEST-transport-episode',
+    } as const;
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
     mockTeamDataWorkerClient.getTeamData.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      new TeamReadFailureError('TEST-recovery', failure)
     );
-
-    const handler = handlers.get(TEAM_GET_DATA)!;
-    const result = (await handler({} as never, 'my-team')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getTeamData).not.toHaveBeenCalled();
+    await import('../../../src/preload/index');
+    expect(cleanupPreload.exposed.current?.teams.readRecovery).toBeDefined();
+    cleanupPreload.invoke.mockImplementation(async (channel: string, ...args: unknown[]) => {
+      const result = await handlers.get(channel)!({ sender: {} } as never, ...args);
+      return JSON.parse(JSON.stringify(result)) as unknown;
+    });
+    vi.stubGlobal('window', { electronAPI: cleanupPreload.exposed.current });
+    try {
+      const { readTeamData } = await import('@features/team-read-recovery/renderer');
+      const { unwrapIpc } = await import('@renderer/utils/unwrapIpc');
+      await expect(unwrapIpc('team:getData', () => readTeamData('my-team'))).rejects.toMatchObject({
+        name: 'IpcError',
+        operation: 'team:getData',
+        message: 'TEAM_DATA_WORKER_FAILED: TEST-recovery',
+        failure,
+      });
+      expect(service.getTeamData).not.toHaveBeenCalled();
+      expect(cleanupPreload.invoke).toHaveBeenCalledExactlyOnceWith(TEAM_GET_DATA, 'my-team');
+      expect(vi.mocked(console.error).mock.calls).toHaveLength(2);
+      expect(
+        vi
+          .mocked(console.error)
+          .mock.calls.every((call) => call.join(' ').includes('TEST-recovery'))
+      ).toBe(true);
+      vi.mocked(console.error).mockClear();
+    } finally {
+      vi.unstubAllGlobals();
+      cleanupPreload.invoke.mockReset();
+    }
   });
 
   it('forwards thin TEAM_GET_DATA options to the worker without changing full request shape', async () => {
@@ -3498,31 +3565,46 @@ describe('ipc teams handlers', () => {
     expect(service.getMessagesPage).not.toHaveBeenCalled();
   });
 
-  it('does not fall back live TEAM_GET_MESSAGES_PAGE overlay to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    const liveMessage: InboxMessage = {
-      from: 'team-lead',
-      text: 'Команда поднята, приступаю к раздаче задач.',
-      timestamp: '2026-02-23T10:00:01.000Z',
-      read: true,
-      source: 'lead_process' as const,
-      messageId: 'live-1',
-    };
-    mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
-    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back live TEAM_GET_MESSAGES_PAGE overlay to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      const liveMessage: InboxMessage = {
+        from: 'team-lead',
+        text: 'Команда поднята, приступаю к раздаче задач.',
+        timestamp: '2026-02-23T10:00:01.000Z',
+        read: true,
+        source: 'lead_process' as const,
+        messageId: 'live-1',
+      };
+      mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
+      teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
-    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
-    const result = (await handler({} as never, 'my-team', {
-      limit: 20,
-    })) as { success: boolean; error?: string };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+      const result = (await handler({} as never, 'my-team', {
+        limit: 20,
+      })) as { success: boolean; error?: string; failure?: unknown };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMessagesPage).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMessagesPage).not.toHaveBeenCalled();
+    }
+  );
 
   it('scans rate-limit notifications from message-page results without hydrating TEAM_GET_DATA feed', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
@@ -3624,22 +3706,37 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_MESSAGES_PAGE to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_MESSAGES_PAGE to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
-    const result = (await handler({} as never, 'my-team', {
-      limit: 50,
-    })) as { success: boolean; error?: string };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+      const result = (await handler({} as never, 'my-team', {
+        limit: 50,
+      })) as { success: boolean; error?: string; failure?: unknown };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMessagesPage).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMessagesPage).not.toHaveBeenCalled();
+    }
+  );
 
   it('uses the team-data worker for TEAM_GET_MEMBER_ACTIVITY_META when available', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
@@ -3688,40 +3785,69 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_MEMBER_ACTIVITY_META to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.getMemberActivityMeta.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_MEMBER_ACTIVITY_META to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getMemberActivityMeta.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
-    const result = (await handler({} as never, 'my-team')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
+      const result = (await handler({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
+    }
+  );
 
-  it('does not fall back TEAM_GET_LOGS_FOR_TASK to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.findLogsForTask.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_LOGS_FOR_TASK to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.findLogsForTask.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_LOGS_FOR_TASK)!;
-    const result = (await handler({} as never, 'my-team', 'task-1')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_LOGS_FOR_TASK)!;
+      const result = (await handler({} as never, 'my-team', 'task-1')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) expect(vi.mocked(console.error).mock.calls).toHaveLength(0);
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+    }
+  );
 
   it('does not rebuild legacy auto-resume from persisted rate-limit history', async () => {
     vi.useFakeTimers();

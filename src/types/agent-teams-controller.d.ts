@@ -184,6 +184,10 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerRuntimeApi {
+    getMemberRosterContext(
+      memberName: string,
+      launchMembers?: { name: string; role?: string; agentType?: string; removedAt?: number }[]
+    ): string;
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;

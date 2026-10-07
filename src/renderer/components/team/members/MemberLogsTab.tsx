@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  DetailReadCoordinator,
+  readMemberLogDetail,
+  useCompletionRead,
+  useMemberLogReadScope,
+  useReadRefreshing,
+} from '@features/member-log-reads/renderer';
+import { readTeamTaskLogs } from '@features/team-read-recovery/renderer';
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -11,7 +19,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
 import { useStore } from '@renderer/store';
-import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { formatDuration } from '@renderer/utils/formatters';
 import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
@@ -116,6 +123,9 @@ interface MemberLogsTabProps {
 }
 
 const PREVIEW_PAGE_SIZE = 8;
+const EMPTY_LOGS: MemberLogSummary[] = [];
+const summaryReads = new DetailReadCoordinator<MemberLogSummary[]>();
+const detailReads = new DetailReadCoordinator<EnhancedChunk[]>();
 
 export const MemberLogsTab = ({
   teamName,
@@ -137,74 +147,63 @@ export const MemberLogsTab = ({
   const activeTabId = useStore((s) => s.activeTabId);
   const isTabActive = tabId ? activeTabId === tabId : true; // default true when no tab context (e.g. standalone dialog)
 
-  const MIN_REFRESH_VISIBLE_MS = 250;
-  const intervalsKey = useMemo(
-    () => (taskWorkIntervals ? JSON.stringify(taskWorkIntervals) : ''),
-    [taskWorkIntervals]
+  const scope = useMemberLogReadScope();
+  const active = enabled && isTabActive;
+  const intervalsKey = JSON.stringify(taskWorkIntervals ?? null);
+  const summaryKey = JSON.stringify([
+    teamName,
+    memberName ?? null,
+    taskId ?? null,
+    taskOwner ?? null,
+    taskStatus ?? null,
+    intervalsKey,
+    taskSince ?? null,
+  ]);
+  const summaryPresentationKey = JSON.stringify([
+    teamName,
+    memberName ?? null,
+    taskId ?? null,
+    taskOwner ?? null,
+    intervalsKey,
+    taskSince ?? null,
+  ]);
+  const { refreshing, beginRefreshing } = useReadRefreshing(
+    JSON.stringify([scope.key, summaryPresentationKey]),
+    active
   );
-  const isMountedRef = useRef(true);
-  const hasLoadedRef = useRef(false);
-
-  const [logs, setLogs] = useState<MemberLogSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshCountRef = useRef(0);
-  const refreshBeganAtRef = useRef<number | null>(null);
-  const refreshHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const summary = useCompletionRead({
+    coordinator: summaryReads,
+    scope,
+    key: taskId != null || memberName ? summaryKey : null,
+    presentationKey: summaryPresentationKey,
+    showBackgroundErrors: true,
+    active,
+    poll: taskId != null && taskStatus === 'in_progress',
+    beginRefreshing,
+    read: async () => {
+      const result =
+        taskId != null
+          ? await readTeamTaskLogs(teamName, taskId, {
+              owner: taskOwner,
+              status: taskStatus,
+              intervals: taskWorkIntervals,
+              since: taskSince,
+            })
+          : await api.teams.getMemberLogs(teamName, memberName!);
+      return Array.isArray(result) ? result : [];
+    },
+  });
+  const logs = summary.value ?? EMPTY_LOGS;
+  const [initialNow] = useState(() => Date.now());
+  const summaryNow = summary.settledAt ?? initialNow;
+  const loading = summary.loading;
+  const error = summary.error
+    ? summary.error instanceof Error
+      ? summary.error.message
+      : 'Unknown error'
+    : null;
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [detailChunks, setDetailChunks] = useState<EnhancedChunk[] | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [previewChunks, setPreviewChunks] = useState<EnhancedChunk[] | null>(null);
   const [previewVisibleCount, setPreviewVisibleCount] = useState(PREVIEW_PAGE_SIZE);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      if (refreshHideTimeoutRef.current) {
-        clearTimeout(refreshHideTimeoutRef.current);
-        refreshHideTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  const beginRefreshing = useCallback((): void => {
-    if (refreshCountRef.current === 0) {
-      refreshBeganAtRef.current = Date.now();
-      if (refreshHideTimeoutRef.current) {
-        clearTimeout(refreshHideTimeoutRef.current);
-        refreshHideTimeoutRef.current = null;
-      }
-    }
-    refreshCountRef.current += 1;
-    if (isMountedRef.current) setRefreshing(true);
-  }, []);
-
-  const endRefreshing = useCallback((): void => {
-    refreshCountRef.current = Math.max(0, refreshCountRef.current - 1);
-    if (refreshCountRef.current > 0) {
-      if (isMountedRef.current) setRefreshing(true);
-      return;
-    }
-
-    const beganAt = refreshBeganAtRef.current;
-    refreshBeganAtRef.current = null;
-    const elapsed = beganAt ? Date.now() - beganAt : Number.POSITIVE_INFINITY;
-
-    if (!isMountedRef.current) return;
-    if (elapsed >= MIN_REFRESH_VISIBLE_MS) {
-      setRefreshing(false);
-      return;
-    }
-
-    const remaining = Math.max(0, MIN_REFRESH_VISIBLE_MS - elapsed);
-    refreshHideTimeoutRef.current = setTimeout(() => {
-      refreshHideTimeoutRef.current = null;
-      if (!isMountedRef.current) return;
-      if (refreshCountRef.current === 0) setRefreshing(false);
-    }, remaining);
-  }, []);
-
   const getRowId = useCallback((log: MemberLogSummary): string => {
     if (log.kind === 'subagent') {
       return `subagent:${log.sessionId}:${log.subagentId}`;
@@ -216,7 +215,7 @@ export const MemberLogsTab = ({
   }, []);
 
   const sortedLogs = useMemo(() => {
-    const nowMs = Date.now();
+    const nowMs = summaryNow;
     const getLastActivityMs = (log: MemberLogSummary): number => {
       const startMs = new Date(log.startTime).getTime();
       if (!Number.isFinite(startMs)) return Number.NaN;
@@ -268,7 +267,7 @@ export const MemberLogsTab = ({
       return a.index - b.index;
     });
     return withIndex.map((x) => x.log);
-  }, [logs, taskWorkIntervals]);
+  }, [logs, taskWorkIntervals, summaryNow]);
 
   const shouldShowPreview = useMemo(() => {
     return taskId != null && (showSubagentPreview || showLeadPreview);
@@ -302,6 +301,31 @@ export const MemberLogsTab = ({
     return null;
   }, [shouldShowPreview, showLeadPreview, showSubagentPreview, sortedLogs, taskOwner]);
 
+  const detailKey = (log: MemberLogSummary | null): string | null =>
+    log
+      ? JSON.stringify([
+          log.kind === 'subagent' ? 'subagent' : 'session',
+          log.projectId,
+          log.sessionId,
+          log.kind === 'subagent' ? log.subagentId : null,
+        ])
+      : null;
+  const preview = useCompletionRead({
+    coordinator: detailReads,
+    scope,
+    key: detailKey(previewLog),
+    active: active && shouldShowPreview,
+    poll: taskStatus === 'in_progress' || Boolean(previewLog?.isOngoing),
+    beginRefreshing,
+    read: (fresh) => (previewLog ? readMemberLogDetail(previewLog, fresh) : Promise.resolve(null)),
+  });
+  const previewChunks = useMemo(
+    () => (taskId ? filterChunksByWorkIntervals(preview.value, taskWorkIntervals) : preview.value),
+    [preview.value, taskId, taskWorkIntervals]
+  );
+
+  const previewNow = Math.max(summaryNow, preview.settledAt ?? initialNow);
+
   const allPreviewMessages = useMemo((): SubagentPreviewMessage[] => {
     // Build lead messages from recentPreviews, filtered by taskWorkIntervals.
     const buildLeadPreviewMessages = (): SubagentPreviewMessage[] => {
@@ -316,7 +340,7 @@ export const MemberLogsTab = ({
       ) {
         const GRACE_BEFORE = 30_000;
         const GRACE_AFTER = 15_000;
-        const nowMs = Date.now();
+        const nowMs = previewNow;
         const intervals = taskWorkIntervals
           .map((interval) =>
             getWorkIntervalWindow(interval, {
@@ -388,7 +412,7 @@ export const MemberLogsTab = ({
       return raw; // ultimate fallback: show everything including user messages
     }
     return raw;
-  }, [previewChunks, showLeadPreview, previewLog, taskWorkIntervals]);
+  }, [previewChunks, showLeadPreview, previewLog, taskWorkIntervals, previewNow]);
 
   const previewMessages = useMemo((): SubagentPreviewMessage[] => {
     return allPreviewMessages.slice(0, previewVisibleCount);
@@ -397,7 +421,7 @@ export const MemberLogsTab = ({
   const previewHasMore = allPreviewMessages.length > previewVisibleCount;
 
   const previewOnline = useMemo((): boolean => {
-    if (!enabled) return false;
+    if (!active) return false;
     if (!previewLog) return false;
     // Determine the most recent activity timestamp from preview messages
     const newest = previewMessages[0];
@@ -405,7 +429,7 @@ export const MemberLogsTab = ({
     // Fallback: use session start time when no preview messages exist
     const lastActivityMs = newestMs || new Date(previewLog.startTime).getTime() || 0;
     if (!lastActivityMs) return false;
-    const ageMs = Date.now() - lastActivityMs;
+    const ageMs = previewNow - lastActivityMs;
     // isOngoing (file still being written) grants a longer freshness window,
     // but does NOT bypass age checks — the file may be updated by system messages
     // even while the agent is idle
@@ -421,7 +445,7 @@ export const MemberLogsTab = ({
     if (taskStatus === 'in_progress') return ageMs <= 60_000;
     // Completed/other tasks — shorter window
     return ageMs <= 15_000;
-  }, [enabled, previewLog, previewMessages, taskStatus]);
+  }, [active, previewLog, previewMessages, taskStatus, previewNow]);
 
   const expandedLogSummary = useMemo(() => {
     if (!expandedId) return null;
@@ -455,265 +479,33 @@ export const MemberLogsTab = ({
     return () => onPreviewOnlineChange?.(false);
   }, [onPreviewOnlineChange]);
 
+  const detail = useCompletionRead({
+    coordinator: detailReads,
+    scope,
+    key: detailKey(expandedLogSummary),
+    active,
+    poll: taskStatus === 'in_progress' || Boolean(expandedLogSummary?.isOngoing),
+    initialFresh: taskStatus === 'in_progress' || Boolean(expandedLogSummary?.isOngoing),
+    beginRefreshing,
+    read: (fresh) =>
+      expandedLogSummary ? readMemberLogDetail(expandedLogSummary, fresh) : Promise.resolve(null),
+  });
+  const detailChunks = useMemo(
+    () => (taskId ? filterChunksByWorkIntervals(detail.value, taskWorkIntervals) : detail.value),
+    [detail.value, taskId, taskWorkIntervals]
+  );
+  const detailLoading = detail.loading;
+
   useEffect(() => {
-    if (!expandedId) return;
-    if (expandedLogSummary) return;
-    setExpandedId(null);
-    setDetailChunks(null);
-    setDetailLoading(false);
+    if (expandedId && !expandedLogSummary) setExpandedId(null);
   }, [expandedId, expandedLogSummary]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const shouldAutoRefresh = taskId != null && taskStatus === 'in_progress';
-    if (!enabled) {
-      return () => {
-        cancelled = true;
-        refreshCountRef.current = 0;
-        if (refreshHideTimeoutRef.current) {
-          clearTimeout(refreshHideTimeoutRef.current);
-          refreshHideTimeoutRef.current = null;
-        }
-        setRefreshing(false);
-      };
-    }
-
-    const load = async (): Promise<void> => {
-      let didBeginRefreshing = false;
-      try {
-        if (taskId == null && !memberName) {
-          if (!cancelled) setLogs([]);
-          return;
-        }
-        if (!hasLoadedRef.current) {
-          setLoading(true);
-        } else {
-          beginRefreshing();
-          didBeginRefreshing = true;
-        }
-        setError(null);
-
-        const result =
-          taskId != null
-            ? await api.teams.getLogsForTask(teamName, taskId, {
-                owner: taskOwner,
-                status: taskStatus,
-                intervals: taskWorkIntervals,
-                since: taskSince,
-              })
-            : await api.teams.getMemberLogs(teamName, memberName!);
-        const nextLogs = Array.isArray(result) ? [...result] : [];
-
-        if (!cancelled) {
-          setLogs(nextLogs);
-          hasLoadedRef.current = true;
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Unknown error');
-        }
-      } finally {
-        if (didBeginRefreshing) endRefreshing();
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (isTabActive || !hasLoadedRef.current) {
-      void load();
-    }
-
-    const interval = shouldAutoRefresh && isTabActive ? setInterval(() => void load(), 5000) : null;
-
-    return () => {
-      cancelled = true;
-      if (interval) clearInterval(interval);
-      // Reset refresh state so the indicator doesn't stay latched
-      // when the effect tears down mid-refresh (e.g. tab switch).
-      refreshCountRef.current = 0;
-      if (refreshHideTimeoutRef.current) {
-        clearTimeout(refreshHideTimeoutRef.current);
-        refreshHideTimeoutRef.current = null;
-      }
-      setRefreshing(false);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intervalsKey + taskSince drive refresh; deps intentionally minimal to avoid refetch loops
-  }, [
-    enabled,
-    teamName,
-    memberName,
-    taskId,
-    taskOwner,
-    taskStatus,
-    intervalsKey,
-    taskSince,
-    isTabActive,
-  ]);
-
-  const fetchDetailForLog = useCallback(
-    async (
-      log: MemberLogSummary,
-      options?: { bypassCache?: boolean }
-    ): Promise<EnhancedChunk[] | null> => {
-      if (log.kind === 'subagent') {
-        const d = await api.getSubagentDetail(
-          log.projectId,
-          log.sessionId,
-          log.subagentId,
-          options
-        );
-        return d?.chunks ?? null;
-      }
-      if (log.kind === 'member_session') {
-        const d = await api.getSessionDetail(log.projectId, log.sessionId, options);
-        return d ? asEnhancedChunkArray(d.chunks) : null;
-      }
-      const d = await api.getSessionDetail(log.projectId, log.sessionId, options);
-      return d ? asEnhancedChunkArray(d.chunks) : null;
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    if (!shouldShowPreview) {
-      setPreviewChunks(null);
-      return;
-    }
-    if (!previewLog) {
-      setPreviewChunks(null);
-      return;
-    }
-
-    let cancelled = false;
-    const run = async (): Promise<void> => {
-      try {
-        const next = await fetchDetailForLog(previewLog);
-        if (cancelled) return;
-        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
-        setPreviewChunks(filtered ? [...filtered] : null);
-      } catch {
-        if (cancelled) return;
-        setPreviewChunks(null);
-      }
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, fetchDetailForLog, previewLog, shouldShowPreview, intervalsKey]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    if (!shouldShowPreview) return;
-    if (!previewLog) return;
-
-    const shouldAutoRefreshPreview = taskStatus === 'in_progress' || previewLog.isOngoing;
-    if (!shouldAutoRefreshPreview || !isTabActive) return;
-
-    let cancelled = false;
-    const interval = setInterval(async () => {
-      beginRefreshing();
-      try {
-        const next = await fetchDetailForLog(previewLog, { bypassCache: true });
-        if (cancelled) return;
-        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
-        setPreviewChunks(filtered ? [...filtered] : null);
-      } catch {
-        // keep last successful preview
-      } finally {
-        endRefreshing();
-      }
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [
-    beginRefreshing,
-    endRefreshing,
-    fetchDetailForLog,
-    previewLog,
-    shouldShowPreview,
-    taskStatus,
-    intervalsKey,
-    isTabActive,
-    enabled,
-  ]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const shouldAutoRefreshSummary = taskId != null && taskStatus === 'in_progress';
-    if (!expandedLogSummary) return;
-    if (!shouldAutoRefreshSummary && !expandedLogSummary.isOngoing) return;
-    if (!isTabActive) return;
-
-    let cancelled = false;
-
-    const refreshDetail = async (): Promise<void> => {
-      beginRefreshing();
-      try {
-        const next = await fetchDetailForLog(expandedLogSummary, { bypassCache: true });
-        if (cancelled) return;
-        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
-        setDetailChunks(filtered ? [...filtered] : null);
-      } catch {
-        // Keep last successful data; avoid flicker during transient errors.
-      } finally {
-        endRefreshing();
-      }
-    };
-
-    void refreshDetail();
-    const interval = setInterval(() => void refreshDetail(), 5000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [
-    beginRefreshing,
-    endRefreshing,
-    expandedLogSummary,
-    fetchDetailForLog,
-    taskId,
-    taskStatus,
-    intervalsKey,
-    isTabActive,
-    enabled,
-  ]);
-
   const handleExpand = useCallback(
-    async (log: MemberLogSummary) => {
+    (log: MemberLogSummary) => {
       const rowId = getRowId(log);
-
-      if (expandedId === rowId) {
-        setExpandedId(null);
-        setDetailChunks(null);
-        return;
-      }
-      setExpandedId(rowId);
-      setDetailChunks(null);
-      setDetailLoading(true);
-      try {
-        const shouldBypassCache = log.isOngoing || taskStatus === 'in_progress';
-        const chunks = await fetchDetailForLog(
-          log,
-          shouldBypassCache ? { bypassCache: true } : undefined
-        );
-        const filtered = taskId ? filterChunksByWorkIntervals(chunks, taskWorkIntervals) : chunks;
-        setDetailChunks(filtered ? [...filtered] : null);
-      } catch {
-        setDetailChunks(null);
-      } finally {
-        setDetailLoading(false);
-      }
+      setExpandedId((previous) => (previous === rowId ? null : rowId));
     },
-    [expandedId, fetchDetailForLog, getRowId, taskStatus, intervalsKey]
+    [getRowId]
   );
 
   if (loading && logs.length === 0) {
@@ -767,7 +559,7 @@ export const MemberLogsTab = ({
           expanded={expandedId === getRowId(log)}
           detailChunks={expandedId === getRowId(log) ? detailChunks : null}
           detailLoading={expandedId === getRowId(log) && detailLoading}
-          onToggle={() => void handleExpand(log)}
+          onToggle={() => handleExpand(log)}
         />
       ))}
     </div>

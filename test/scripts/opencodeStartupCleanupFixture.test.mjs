@@ -63,8 +63,12 @@ async function setup(t) {
     });
     return { done };
   };
-  const events = async () =>
-    (await readFile(path.join(root, 'calls.ndjson'), 'utf8')).trim().split('\n').map(JSON.parse);
+  const events = async () => {
+    const lines = (await readFile(path.join(root, 'calls.ndjson'), 'utf8')).split('\n');
+    // The final segment may still be in flight while the fixture appends a record.
+    lines.pop();
+    return lines.map(JSON.parse);
+  };
   const waitAccepted = async () => {
     for (let i = 0; i < 100; i++) {
       try {
@@ -83,6 +87,19 @@ async function setup(t) {
   };
   return { root, input, output, request, args, run, events, waitAccepted, release };
 }
+test('event reader ignores an incomplete trailing record', async (t) => {
+  const f = await setup(t);
+  const calls = path.join(f.root, 'calls.ndjson');
+  await writeFile(calls, '{"event":"accepted"}\n{"event":');
+  assert.deepEqual(await f.events(), [{ event: 'accepted' }]);
+  await writeFile(calls, '{"event":"accepted"}\n{"event":"exit"}\n');
+  assert.deepEqual(await f.events(), [{ event: 'accepted' }, { event: 'exit' }]);
+});
+test('event reader rejects a malformed completed record', async (t) => {
+  const f = await setup(t);
+  await writeFile(path.join(f.root, 'calls.ndjson'), '{"event":"accepted"}\n{"event":\n');
+  await assert.rejects(f.events(), SyntaxError);
+});
 for (const coverage of ['partial', 'complete'])
   test(`held ${coverage} response and correlated normal exit`, async (t) => {
     const f = await setup(t);

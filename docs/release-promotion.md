@@ -90,7 +90,7 @@ All four source ZIP/DMG probes must bind source asset ID/SHA-256, bundle version
 architecture, product minimum 12.0, TeamIdentifier `6C84CW694S` and successful
 codesign, spctl, stapler, lipo and bundle metadata command output hashes. The
 trusted producer is `.github/workflows/updater-mac-source.yml`.
-Signature evidence and the ten-scenario native OTA matrix remain
+Signature evidence and the 22-scenario native updater matrix remain
 separate evidence requirements; assembly tests replace neither.
 
 The default-branch publication guard checks the producing job and artifact
@@ -126,3 +126,26 @@ Use only disposable TEST state for runtime/native checks. Never test updater
 or agent actions on real user projects. Source replacement, changed metadata,
 missing architectures or digest conflicts require investigation; they are not
 permission to bypass validation or replace draft assets.
+
+## Reviewed carried publication
+
+Carry publication uses `publish-carried-release.yml` at the final reviewed tooling SHA.
+The legacy full-release workflow and assembly entrypoint retain their existing contracts.
+The carried workflow defaults to readiness only. Pass the immutable prepared run/artifact,
+raw plan digest and native receipt JSON; use `publish_release=true` only after owner authorization.
+
+Readiness authenticates all 22 native scenarios from 18 immutable outcome artifacts,
+the separate four original Mac signature probes, the exact staged payload/feed bytes,
+complete release inventory and successful build producers. It binds the same StagePlan,
+tooling commit, app commit, numeric release ID and asset IDs/digests. No installer is rebuilt
+or uploaded by this operation.
+
+Publication rechecks the frozen graph and public predecessor immediately before one numeric
+visibility PATCH, with pinned tag/application SHA included. A lost response is reconciled by
+bounded reads without a repeated publication request. The post-publication audit checks
+canonical bytes, all feeds, aliases and anonymous latest paths. A failure returns that same
+release ID to draft after its identity is rechecked; corrupted assets do not prevent containment.
+An uncertain state is reported as uncertain and is never automatically republished.
+
+Native macOS 15 execution proves the unchanged signed 2.17.1 source and product floor 12 metadata;
+it does not claim macOS 12 execution or dependency updates inside the retained Mac app.

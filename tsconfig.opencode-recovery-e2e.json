@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "react"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["scripts/e2e/opencode-status-recovery/**/*.mts", "src/types/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "dist-electron"]
+}

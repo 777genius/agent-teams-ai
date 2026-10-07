@@ -278,6 +278,9 @@ try {
   await call('install');
   await call('open');
   let value = await idle();
+  assert(value.gate?.calls.some(call => !call.cursor && call.fulfilled &&
+    call.page?.feedRevision === value.revision),
+  'Initial head must be observed at the actual IPC boundary before paging scenarios');
   assertHead(value);
   assert.equal(value.pages.length, 0);
   await click('Group chat');

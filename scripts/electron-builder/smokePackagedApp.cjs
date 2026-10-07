@@ -388,7 +388,12 @@ async function main() {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
       await terminateChild(child, closePromise, platform);
-      fs.rmSync(testRoot, { recursive: true, force: true });
+      fs.rmSync(testRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: platform === 'win32' ? 5 : 0,
+        retryDelay: 100,
+      });
     } catch (cleanupError) {
       console.error(`[smokePackagedApp] Preserved TEST sandbox after cleanup failure: ${testRoot}`);
       if (startupError) {

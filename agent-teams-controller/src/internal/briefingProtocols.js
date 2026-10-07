@@ -26,6 +26,25 @@ function buildMemberActionModeProtocol() {
     return buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION);
 }
 
+function buildMemberRosterContext(members, memberName, leadName, maxRoleChars = 120) {
+    const lines = members
+        .filter((member) => member.removedAt == null && member.name.toLowerCase() !== 'user')
+        .map((member) => {
+            const fullRole = member.role || member.agentType || 'team member';
+            const role = fullRole.length > maxRoleChars ? `${fullRole.slice(0, maxRoleChars)}...` : fullRole;
+            const labels = [];
+            if (member.name.toLowerCase() === memberName.toLowerCase()) labels.push('[you]');
+            if (member.name.toLowerCase() === leadName.toLowerCase()) labels.push('[team lead]');
+            return `- ${member.name} (role: ${role})${labels.length ? ` ${labels.join(' ')}` : ''}`;
+        });
+    return [
+        'Current team roster (names and roles):',
+        ...lines,
+        'Use these exact names when choosing whom to message based on their role. Do not invent recipients.',
+        'This is a membership snapshot, not proof that a member is online. Refresh with team_get when membership may have changed.',
+    ].join('\n');
+}
+
 /**
  * Raw process-registration protocol text (no agent-block wrapping).
  * Shared between member briefing and lead provisioning prompt (DRY).
@@ -65,6 +84,7 @@ module.exports = {
     MEMBER_DELEGATE_DESCRIPTION,
     buildActionModeProtocolText,
     buildMemberActionModeProtocol,
+    buildMemberRosterContext,
     buildMemberFormattingProtocol,
     buildMemberProcessProtocol,
     buildProcessProtocolText,
