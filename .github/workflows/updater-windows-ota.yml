@@ -19,7 +19,7 @@ on:
     inputs:
       input_mode:
         type: choice
-        options: [plan, legacy-2172]
+        options: [plan, legacy-2172, serializer]
         default: plan
         required: true
       native_run_id: { type: string, required: false }
@@ -28,12 +28,74 @@ on:
       native_artifact_sha256: { type: string, required: false }
       plan_digest: { type: string, required: false }
       tooling_sha: { type: string, required: false }
+      execution_sha:
+        {
+          type: string,
+          required: false,
+          description: Actual immutable executor SHA; defaults to tooling SHA,
+        }
+      cloud_experience_preflight:
+        type: boolean
+        default: false
+        description: TEST ARM VM fixture; close one exact CloudExperienceHost window or record verified no-action
+      owned_uia_diagnostic:
+        type: boolean
+        default: false
+        description: Read-only ARM window diagnostic; never qualifies release readiness
 
 permissions:
   contents: read
   actions: read
 
 jobs:
+  windows-serializer-contract:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'serializer'
+    runs-on: windows-2025
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Require the exact reviewed serializer source
+        env:
+          EXECUTION_SHA: ${{ inputs.execution_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:EXECUTION_SHA -notmatch '^[a-f0-9]{40}$' -or $env:GITHUB_SHA -ne $env:EXECUTION_SHA) { throw 'Exact serializer execution SHA required' }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Pin the already-running installed PowerShell 7 native helper
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-serializer'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Native helper must be the already-running installed ProgramFiles/PowerShell pwsh.exe' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Verify the actual producer without UI or installer execution
+        run: |
+          node --import tsx --test --test-concurrency=1 --test-name-pattern '^selected PS7 observer producer' scripts/e2e/release-updater/windows-native-owners.test.mts 2>&1 | Tee-Object .artifacts/TEST-windows-serializer/contract.log
+          if ($LASTEXITCODE -ne 0) { throw 'Selected PowerShell serializer contract failed' }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: TEST-windows-serializer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-serializer/
+          if-no-files-found: error
+
   tooling-quality:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -49,18 +111,19 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - name: Require the exact reviewed tooling SHA
         env:
           TOOLING_SHA: ${{ inputs.tooling_sha }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
         run: |
-          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$EXECUTION_SHA" ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -82,8 +145,9 @@ jobs:
           NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
           PLAN_DIGEST: ${{ inputs.plan_digest }}
           TOOLING_SHA: ${{ inputs.tooling_sha }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
         run: |
-          node scripts/e2e/release-updater/windows-plan-download.mts --kind native --output .artifacts/TEST-windows-inputs --run-id "$NATIVE_RUN_ID" --run-attempt "$NATIVE_ATTEMPT" --artifact-id "$NATIVE_ARTIFACT_ID" --artifact-sha256 "$NATIVE_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA"
+          node scripts/e2e/release-updater/windows-plan-download.mts --kind native --output .artifacts/TEST-windows-inputs --run-id "$NATIVE_RUN_ID" --run-attempt "$NATIVE_ATTEMPT" --artifact-id "$NATIVE_ARTIFACT_ID" --artifact-sha256 "$NATIVE_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA" --execution-sha "$EXECUTION_SHA"
       - uses: actions/upload-artifact@v7
         with:
           name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
@@ -137,7 +201,7 @@ jobs:
 
   windows-predecessor:
     needs: [verified-windows-inputs, legacy-windows-inputs]
-    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -147,6 +211,8 @@ jobs:
           - os: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.os }}
+    env:
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     timeout-minutes: 25
     permissions:
       contents: read
@@ -225,13 +291,11 @@ jobs:
     if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-2025
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
+      matrix: ${{ fromJSON(inputs.owned_uia_diagnostic && '{"include":[{"os":"windows-11-arm","arch":"arm64"}]}' || '{"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
+    env:
+      TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic && '1' || '0' }}
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     timeout-minutes: 25
     defaults:
       run:
@@ -299,7 +363,7 @@ jobs:
 
   windows-ota:
     needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
-    if: ${{ !cancelled() && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -312,6 +376,8 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     defaults:
       run:
         shell: pwsh
