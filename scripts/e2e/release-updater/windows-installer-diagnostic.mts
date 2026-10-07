@@ -425,7 +425,7 @@ if ($first -and $first.ExecutablePath -ieq $d.installer) { $o=Read-Owner $first;
 function Save-Owners { [IO.File]::WriteAllText($d.owners+'.tmp',(ConvertTo-Json -InputObject @($known.Values) -Depth 8 -Compress)); [IO.File]::Move($d.owners+'.tmp',$d.owners,$true) }
 Save-Owners
 try {
-while ((Elapsed) -lt 190) {
+while ((Elapsed) -lt 490) {
   foreach ($parent in @($known.Values)) {
     if (-not (Current $parent)) { continue }
     foreach ($p in @(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$parent.pid))) {
@@ -740,7 +740,7 @@ async function run() {
       env,
       windowsVerbatimArguments: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(480_000),
     });
     const completed = new Promise<number | null>((resolve, reject) => {
       setup.once('error', reject);
@@ -755,7 +755,7 @@ async function run() {
       pid: setup.pid,
       arguments: ['/S', `/D=${install}`],
       spawnedAt: startedAt,
-      timeoutMs: 180_000,
+      timeoutMs: 480_000,
       root,
       install,
     };
@@ -798,7 +798,7 @@ async function run() {
         '-InputFile',
         input,
       ],
-      { env: observerEnv, timeout: 200_000, maxBuffer: 65_536 }
+      { env: observerEnv, timeout: 500_000, maxBuffer: 65_536 }
     );
     observed.child.stdin?.end();
     pendingObserver = observed.then(

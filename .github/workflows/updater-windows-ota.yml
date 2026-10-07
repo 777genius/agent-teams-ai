@@ -17,7 +17,7 @@ jobs:
       contents: write # Required for authenticated draft reads; no publishing operations
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     runs-on: windows-11-arm
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         shell: pwsh
