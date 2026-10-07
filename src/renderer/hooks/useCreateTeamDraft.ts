@@ -37,9 +37,11 @@ import type { MemberDraft } from '@renderer/components/team/members/membersEdito
 export interface UseCreateTeamDraftResult {
   runtimeSelectionVersion?: 1;
   runtimeProviderId?: import('@shared/types').TeamProviderId;
+  runtimeModel?: string;
   setRuntimeSelection: (
     version: 1 | undefined,
-    providerId?: import('@shared/types').TeamProviderId
+    providerId?: import('@shared/types').TeamProviderId,
+    model?: string
   ) => void;
   teamName: string;
   setTeamName: (v: string) => void;
@@ -140,6 +142,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const [runtimeSelection, setRuntimeSelectionState] = useState<{
     version?: 1;
     providerId?: import('@shared/types').TeamProviderId;
+    model?: string;
   }>({});
   const runtimeSelectionRef = useRef(runtimeSelection);
   const [teamName, setTeamNameState] = useState('');
@@ -185,6 +188,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       teamName: teamNameRef.current,
       runtimeSelectionVersion: runtimeSelectionRef.current.version,
       runtimeProviderId: runtimeSelectionRef.current.providerId,
+      runtimeModel: runtimeSelectionRef.current.model,
       members: serializeMembers(membersRef.current),
       syncModelsWithLead: syncModelsWithLeadRef.current,
       teammateWorktreeDefault: teammateWorktreeDefaultRef.current,
@@ -255,6 +259,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     runtimeSelectionRef.current = {
       version: snap.runtimeSelectionVersion,
       providerId: snap.runtimeProviderId,
+      model: snap.runtimeProviderId ? snap.runtimeModel : undefined,
     };
     setRuntimeSelectionState(runtimeSelectionRef.current);
     teamNameRef.current = snap.teamName;
@@ -317,9 +322,13 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   // ── Setters ────────────────────────────────────────────────────────────
 
   const setRuntimeSelection = useCallback(
-    (version: 1 | undefined, providerId?: import('@shared/types').TeamProviderId) => {
+    (
+      version: 1 | undefined,
+      providerId?: import('@shared/types').TeamProviderId,
+      model?: string
+    ) => {
       userTouchedRef.current = true;
-      runtimeSelectionRef.current = { version, providerId };
+      runtimeSelectionRef.current = { version, providerId, model: providerId ? model : undefined };
       setRuntimeSelectionState(runtimeSelectionRef.current);
       scheduleSave();
     },
@@ -472,6 +481,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   return {
     runtimeSelectionVersion: runtimeSelection.version,
     runtimeProviderId: runtimeSelection.providerId,
+    runtimeModel: runtimeSelection.model,
     setRuntimeSelection,
     teamName,
     setTeamName,

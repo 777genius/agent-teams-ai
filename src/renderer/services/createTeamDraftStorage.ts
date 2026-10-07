@@ -51,6 +51,7 @@ export interface CreateTeamDraftSnapshot {
   teamName: string;
   runtimeSelectionVersion?: 1;
   runtimeProviderId?: TeamProviderId;
+  runtimeModel?: string;
   members: SerializedMemberDraft[];
   syncModelsWithLead?: boolean;
   teammateWorktreeDefault?: boolean;
@@ -111,6 +112,7 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     typeof obj.teamName === 'string' &&
     (obj.runtimeSelectionVersion === undefined || obj.runtimeSelectionVersion === 1) &&
     (obj.runtimeProviderId === undefined || isTeamProviderId(obj.runtimeProviderId)) &&
+    (obj.runtimeModel === undefined || typeof obj.runtimeModel === 'string') &&
     Array.isArray(obj.members) &&
     obj.members.every(isValidMember) &&
     (obj.syncModelsWithLead === undefined || typeof obj.syncModelsWithLead === 'boolean') &&
