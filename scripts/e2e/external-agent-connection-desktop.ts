@@ -807,7 +807,35 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         launchChecked === 'checked' || launchChecked === 'unchecked',
         'Initialized Copy dialog must expose a launch choice'
       );
-      if (launchChecked === 'checked') await button('#launch-team', true);
+      if (launchChecked === 'checked') {
+        assert.equal(
+          await evaluate(active, () => {
+            const checkbox = document.getElementById('launch-team');
+            if (
+              !(checkbox instanceof HTMLButtonElement) ||
+              checkbox.disabled ||
+              checkbox.getAttribute('aria-disabled') === 'true'
+            )
+              return false;
+            checkbox.focus();
+            return document.activeElement === checkbox;
+          }),
+          true,
+          'Launch checkbox must accept keyboard focus before opting out'
+        );
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key: ' ',
+          code: 'Space',
+          windowsVirtualKeyCode: 32,
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyUp',
+          key: ' ',
+          code: 'Space',
+          windowsVirtualKeyCode: 32,
+        });
+      }
       await waitFor(
         () =>
           evaluate(
