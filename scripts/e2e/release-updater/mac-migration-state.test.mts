@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { runInNewContext } from 'node:vm';
+import { compileFunction, createContext } from 'node:vm';
 
 import { macMigrationState } from './mac-migration-state.mts';
 
@@ -26,12 +26,14 @@ function peer(fail = false) {
         projects.push(value);
       },
       async get() {
+        await Promise.resolve();
         if (fail) throw new Error('public config failure');
         return { general: { theme, customProjectPaths: projects } };
       },
     },
     teams: {
       async list() {
+        await Promise.resolve();
         return [{ teamName, projectPath, memberCount: 0 }];
       },
     },
@@ -50,12 +52,16 @@ function peer(fail = false) {
       assert.equal(method, 'Runtime.callFunctionOn');
       assert.equal(params.awaitPromise, true);
       assert.equal(params.returnByValue, true);
-      const call = runInNewContext('(' + String(params.functionDeclaration) + ')') as (
-        ...args: unknown[]
-      ) => Promise<unknown>;
+      // Only the imported harness supplies source; caller data remains in CDP value arguments.
+      const call = compileFunction(
+        'return (' + String(params.functionDeclaration) + ').apply(api,args)',
+        ['api', 'args'],
+        { parsingContext: createContext({}) }
+      ) as (publicApi: typeof api, args: unknown[]) => Promise<unknown>;
       try {
         const args = (params.arguments as { value: unknown }[]).map((item) => item.value);
-        return { result: { value: JSON.parse(JSON.stringify(await call.apply(api, args))) } } as T;
+        const value: unknown = JSON.parse(JSON.stringify(await call(api, args)));
+        return { result: { value } } as T;
       } catch (error) {
         return { exceptionDetails: String(error), result: {} } as T;
       }
@@ -63,7 +69,7 @@ function peer(fail = false) {
   };
   return { client, projectPath, teamName, released: () => released };
 }
-test('seeds and reads passive migration state through value-only CDP arguments', async () => {
+void test('seeds and reads passive migration state through value-only CDP arguments', async () => {
   const p = peer();
   const expected = {
     theme: 'light',
@@ -80,7 +86,7 @@ test('seeds and reads passive migration state through value-only CDP arguments',
   assert.deepEqual(await macMigrationState(p.client, p.teamName), expected);
   assert.equal(p.released(), 2);
 });
-test('public API errors fail migration proof and still release the remote object', async () => {
+void test('public API errors fail migration proof and still release the remote object', async () => {
   const p = peer(true);
   await assert.rejects(macMigrationState(p.client, p.teamName), /public config failure/);
   assert.equal(p.released(), 1);

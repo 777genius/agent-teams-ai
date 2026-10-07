@@ -471,7 +471,7 @@ async function launch(
   const seededTheme = before === 'light' ? 'dark' : 'light';
   const theme = seed ? seededTheme : (expectedTheme ?? before);
   if (seed) {
-    await macMigrationState(renderer!, passiveTeam, { theme, projectPath: passiveProject });
+    await macMigrationState(renderer, passiveTeam, { theme, projectPath: passiveProject });
     await waitFor(
       async () => {
         try {
@@ -497,7 +497,7 @@ async function launch(
   assert.equal(after, theme);
   const retainedState =
     seed || expectedTheme !== undefined
-      ? await macMigrationState(renderer!, passiveTeam)
+      ? await macMigrationState(renderer, passiveTeam)
       : undefined;
   if (retainedState) {
     assert.equal(retainedState.theme, theme);
