@@ -2192,7 +2192,7 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 ## macOS Code Signing
 
-macOS builds are signed and notarized via GitHub Actions secrets:
+macOS builds are signed and notarized via the `macos-signing` environment secrets:
 
 | Secret | Description |
 | --- | --- |
@@ -2209,10 +2209,19 @@ credentials are not used. CI writes the API key to a mode-600 temporary file;
 the packaged app and transported ZIP/DMG app must pass signature and notarization
 checks before upload.
 
-For artifact-only qualification on a reviewed source ref:
+Signing secrets are available only on `release/macos-signing`, whose updates
+are restricted to the repository administrator. There are no required environment
+reviewers and no per-build approval. Repository-level copies of these signing
+secrets must be absent. Pull request builds remain unsigned.
+
+Before signing, the owner fast-forwards `release/macos-signing` to the reviewed
+and CI-qualified source SHA, then confirms the remote branch SHA matches it.
+The same protected ref is required for the Release workflow's macOS jobs.
+
+For artifact-only qualification on that reviewed source:
 
 ```bash
-gh workflow run macos-signing-qualification.yml --ref REVIEWED_REF
+gh workflow run macos-signing-qualification.yml --ref release/macos-signing -f use_github_runner=true
 ```
 
 This manual workflow verifies both architectures and uploads Actions artifacts;

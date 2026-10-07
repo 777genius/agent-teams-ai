@@ -1,12 +1,6 @@
 name: macOS Signing Qualification
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/macos-signing-qualification.yml'
-      - '.github/workflows/release.yml'
-      - 'scripts/ci/verify-macos-signing.sh'
-      - 'scripts/ci/verify-macos-archives.sh'
   workflow_dispatch:
     inputs:
       use_github_runner:
@@ -15,8 +9,8 @@ on:
         default: false
 
 concurrency:
-  group: macos-signing-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: macos-signing-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -25,15 +19,31 @@ env:
   IS_RELEASE_BUILD: 'false'
 
 jobs:
+  signing-custody:
+    name: Require owner dispatch from the trusted signing branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject untrusted signing dispatch
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$GITHUB_REF" = refs/heads/release/macos-signing
+
   release-mac:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: signing-custody
+    if: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
+    environment: macos-signing
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: arm64
-            runner: ${{ (github.event_name == 'pull_request' || inputs.use_github_runner) && 'macos-15' || vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
+            runner: ${{ inputs.use_github_runner && 'macos-15' || vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
           - arch: x64
@@ -45,6 +55,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -72,6 +84,9 @@ jobs:
 
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+
+      - name: Verify active signing preflight
+        run: node --test scripts/electron-builder/mac-signing-preflight.test.mts
 
       - name: Set version from release tag
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -179,7 +194,6 @@ jobs:
 
       - name: Package (macOS ${{ matrix.arch }})
         env:
-          CSC_FOR_PULL_REQUEST: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
