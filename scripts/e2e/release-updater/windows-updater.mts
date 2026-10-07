@@ -268,7 +268,8 @@ try {
         path.join(output, 'nsis-spawn-lineage.json'),
         JSON.stringify(receipt, null, 2)
       );
-    }
+    },
+    env
   );
   const setupCode = await new Promise<number | null>((resolve, reject) => {
     setup.once('error', reject);

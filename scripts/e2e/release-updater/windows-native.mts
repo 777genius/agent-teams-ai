@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict';
+import { windowsInstallerLineageSource } from './windows-installer-lineage.mts';
+import {
+  observeInstallerPs5Control,
+  type InstallerLineage,
+} from './windows-installer-ps5-diagnostic.mts';
 import { testCloudExperiencePreflight } from './windows-cloud-preflight.mts';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/promises';
@@ -484,41 +489,7 @@ switch ($data.operation) {
     $result=@{ station=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetProcessWindowStation()); desktop=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetThreadDesktop([TestWindowsNative]::GetCurrentThreadId())); session=(Get-Process -Id $PID).SessionId; sid=$identity.User.Value; administrator=$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
   }
   'processes' { $result=@(Read-Owned $data.executable) }
-  'installer-lineage' {
-    function Read-LineageRow([int]$processId) {
-      $item=@(Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction Stop)
-      if ($item.Count -ne 1 -or -not $item[0].ExecutablePath) { throw 'Lineage identity unavailable' }
-      $sid=Invoke-CimMethod -InputObject $item[0] -MethodName GetOwnerSid -ErrorAction Stop
-      if ($sid.ReturnValue -ne 0) { throw 'Lineage SID unavailable' }
-      @{ pid=$processId; parent=[int]$item[0].ParentProcessId; executable=$item[0].ExecutablePath; start=$item[0].CreationDate.ToUniversalTime().ToString('o'); sid=$sid.Sid; session=[int]$item[0].SessionId }
-    }
-    function Test-LineageParent($expected) {
-      $fresh=Read-LineageRow $expected.pid
-      if ($fresh.executable -ne $expected.executable -or -not (Test-SameStart $fresh.start $expected.start) -or $fresh.sid -ne $expected.sid -or $fresh.session -ne $expected.session) { throw 'Lineage parent identity changed' }
-    }
-    $owner=$data.owner; Test-OwnedPath $owner.executable | Out-Null
-    if ($owner.sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $owner.session -ne (Get-Process -Id $PID).SessionId) { throw 'Installer owner/session mismatch' }
-    Test-LineageParent $owner
-    $rows=New-Object 'Collections.Generic.List[object]'; $queue=New-Object 'Collections.Generic.Queue[object]'
-    $queue.Enqueue(@{ identity=$owner; depth=0 }); $limited=$false
-    while ($queue.Count -gt 0 -and $rows.Count -lt 16) {
-      $parent=$queue.Dequeue(); Test-LineageParent $parent.identity
-      if ($parent.depth -ge 3) { $limited=$true; continue }
-      $children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($parent.identity.pid)" -ErrorAction Stop | Select-Object -First 17)
-      foreach ($item in $children) {
-        if ($rows.Count -ge 16) { $limited=$true; break }
-        $child=Read-LineageRow $item.ProcessId; Test-LineageParent $parent.identity
-        if ($child.parent -ne $parent.identity.pid -or $child.sid -ne $owner.sid -or $child.session -ne $owner.session -or (Get-StartUtcTicks $child.start) -lt (Get-StartUtcTicks $parent.identity.start)) { throw 'Lineage child relation changed' }
-        $allowed=$child.executable.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $child.executable -in @([IO.Path]::Combine($data.shell.systemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),[IO.Path]::Combine($data.shell.systemRoot,'SysWOW64','WindowsPowerShell','v1.0','powershell.exe'))
-        if (-not $allowed) { $rows.Add(@{ pid=$child.pid; parent=$child.parent; rejected='Image outside TEST/systemPS bounds'; stopEligible=$false }); continue }
-        $rows.Add(@{ identity=$child; depth=$parent.depth+1; stopEligible=$false })
-        $queue.Enqueue(@{ identity=$child; depth=$parent.depth+1 })
-      }
-      Test-LineageParent $parent.identity
-    }
-    Test-LineageParent $owner
-    $result=@{ root=$owner; descendants=@($rows.ToArray()); truncated=($limited -or $queue.Count -gt 0); source='CIM read-only ancestry observation'; ownershipAdopted=$false }
-  }
+${windowsInstallerLineageSource}
   'capture' {
     if ($data.diagnosticOnly -isnot [bool]) { throw 'Explicit Boolean diagnostic mode required' }
     $validate=[Action] {
@@ -704,8 +675,18 @@ export async function windowsNative(root: string, evidence: string, purpose: Nat
     physicalProfile: () => call<PhysicalProfile>('profile'),
     session: () => call<DesktopSession>('session'),
     processes: (executable: string) => call<WindowsProcess[]>('processes', { executable }),
-    installerLineage: (owner: Omit<WindowsProcess, 'command'>) =>
-      call<unknown>('installer-lineage', { owner }),
+    installerLineage: async (
+      owner: Omit<WindowsProcess, 'command'>,
+      spawnEnv?: NodeJS.ProcessEnv
+    ) => {
+      const lineage = await call<InstallerLineage>('installer-lineage', { owner });
+      return {
+        ...lineage,
+        diagnostic: spawnEnv
+          ? await observeInstallerPs5Control(lineage, shell.systemRoot, root, spawnEnv)
+          : null,
+      };
+    },
     capture: async (owner: WindowsProcess, screenshot: string) => {
       const window = await call<NativeWindow | null>(
         'capture',
