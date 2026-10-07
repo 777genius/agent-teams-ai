@@ -1,9 +1,9 @@
-import { TeamConfigReader } from '../TeamConfigReader';
 import {
   normalizeRuntimeSelectionVersion,
   requireTeamRuntimeSelection,
 } from '@shared/utils/teamRuntimeSelection';
 
+import { TeamConfigReader } from '../TeamConfigReader';
 import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 import { TeamMetaStore } from '../TeamMetaStore';
 

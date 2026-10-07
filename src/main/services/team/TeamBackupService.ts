@@ -41,9 +41,9 @@ import { loadTeamBackupStartupRegistry, readTeamBackupRegistry } from './TeamBac
 import { TeamBackupWorkSyncRestoreCoordinator } from './TeamBackupWorkSyncRestoreCoordinator';
 import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
-import type { TeamDataService } from './TeamDataService';
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
+import type { TeamDataService } from './TeamDataService';
 import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
 import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
 

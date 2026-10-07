@@ -273,7 +273,10 @@ export async function withNativeCodexMcp<T>(
         }),
         tool
       );
-    const discovered = record(await call('app_get_connection_info', {}), 'Native discovery must return an object');
+    const discovered = record(
+      await call('app_get_connection_info', {}),
+      'Native discovery must return an object'
+    );
     const liveContext = record(discovered.context, 'Native discovery context missing');
     for (const field of ['appInstanceId', 'dataRootFingerprint', 'connectionGeneration'] as const) {
       assert.equal(
@@ -289,7 +292,9 @@ export async function withNativeCodexMcp<T>(
 }
 
 /** Existing create-only proof retains its exact native calls and assertions. */
-export async function verifyNativeCodexMcp(input: NativeCodexMcpInput): Promise<NativeCodexMcpEvidence> {
+export async function verifyNativeCodexMcp(
+  input: NativeCodexMcpInput
+): Promise<NativeCodexMcpEvidence> {
   return withNativeCodexMcp(input, async ({ call: nativeCall, nativeVersion, toolNames }) => {
     const call = async (tool: string, args: Record<string, unknown>) =>
       record(await nativeCall(tool, args), `${tool}: non-object tool result`);

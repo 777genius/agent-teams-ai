@@ -1,4 +1,3 @@
-import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
@@ -14,6 +13,7 @@ import { access } from 'fs/promises';
 import { join } from 'path';
 
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,

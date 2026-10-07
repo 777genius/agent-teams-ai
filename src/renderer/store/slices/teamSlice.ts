@@ -17,8 +17,6 @@ import {
 } from '@renderer/analytics/productAnalytics';
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
-import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
-import { retainTeamManagementNotice, reconcileTeamManagementNotices } from '../team/teamManagementNotices';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import {
   buildOpenCodeRuntimeDeliveryDiagnostics,
@@ -94,6 +92,10 @@ import {
   invalidateTeamLocalStateEpoch,
   isTeamLocalStateEpochCurrent,
 } from '../team/teamLocalStateEpoch';
+import {
+  reconcileTeamManagementNotices,
+  retainTeamManagementNotice,
+} from '../team/teamManagementNotices';
 import {
   isMemberActivityMetaStale,
   structurallyShareMemberActivityFacts,
@@ -189,6 +191,7 @@ import type {
 } from '../team/teamMessagesCache';
 import type { AppState } from '../types';
 import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -1474,7 +1477,10 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
   teamManagementNoticeByTeam: Record<string, TeamManagementCommittedChange>;
-  receiveTeamManagementChange: (teamName: string, change: TeamManagementCommittedChange) => Promise<void>;
+  receiveTeamManagementChange: (
+    teamName: string,
+    change: TeamManagementCommittedChange
+  ) => Promise<void>;
   clearDeletedTeamLocalState: (teamName: string) => void;
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
@@ -2041,9 +2047,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (get().connectionMode !== 'local') return;
     try {
       const live = await api.externalAgentConnection.getConnectionInfo();
-      if (!isContextRequestScopeCurrent(get, scope) ||
-          live.context.appInstanceId !== change.context.appInstanceId ||
-          live.context.dataRootFingerprint !== change.context.dataRootFingerprint) return;
+      if (
+        !isContextRequestScopeCurrent(get, scope) ||
+        live.context.appInstanceId !== change.context.appInstanceId ||
+        live.context.dataRootFingerprint !== change.context.dataRootFingerprint
+      )
+        return;
       const current = get().teamManagementNoticeByTeam;
       const next = retainTeamManagementNotice(current, teamName, change);
       if (next === current) return;
@@ -2054,7 +2063,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       await get().fetchTeams();
       if (!isContextRequestScopeCurrent(get, scope)) return;
-      if (get().selectedTeamName === teamName) void get().refreshTeamData(teamName, { withDedup: true });
+      if (get().selectedTeamName === teamName)
+        void get().refreshTeamData(teamName, { withDedup: true });
     } catch (error) {
       logger.warn('Management notice refresh failed', error);
       if (isContextRequestScopeCurrent(get, scope)) void get().fetchTeams();
@@ -2109,7 +2119,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         );
 
         if (
-          reconcileTeamManagementNotices(state.teamManagementNoticeByTeam, noticesAtStart, nextTeams) === state.teamManagementNoticeByTeam &&
+          reconcileTeamManagementNotices(
+            state.teamManagementNoticeByTeam,
+            noticesAtStart,
+            nextTeams
+          ) === state.teamManagementNoticeByTeam &&
           nextTeams === state.teams &&
           nextTeamByName === state.teamByName &&
           nextTeamBySessionId === state.teamBySessionId &&
@@ -2127,7 +2141,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamsLoading: false,
           teamsError: null,
           provisioningSnapshotByTeam: nextSnapshots,
-          teamManagementNoticeByTeam: reconcileTeamManagementNotices(state.teamManagementNoticeByTeam, noticesAtStart, nextTeams),
+          teamManagementNoticeByTeam: reconcileTeamManagementNotices(
+            state.teamManagementNoticeByTeam,
+            noticesAtStart,
+            nextTeams
+          ),
         };
       });
     } catch (error) {

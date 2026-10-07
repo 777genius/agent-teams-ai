@@ -46,12 +46,12 @@ function snapshotSignature(connection: ConnectionInfoV1): string {
 }
 
 /** Mounted per live app/root. Its persistent task key deliberately excludes appInstanceId. */
-export function ExternalAgentPromptDialog({
+export const ExternalAgentPromptDialog = ({
   api,
   connection,
   isLight,
   onSettings,
-}: Readonly<Props>): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: settingsT } = useAppTranslation('settings');
   const request = useDraftPersistence({
@@ -168,9 +168,14 @@ export function ExternalAgentPromptDialog({
         />
         <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
           {t('externalPrompt.requestHelp')}{' '}
-          {currentConnection.capabilities.configurationEdit ? t('externalPrompt.editAvailable') : ''}{' '}
+          {currentConnection.capabilities.configurationEdit
+            ? t('externalPrompt.editAvailable')
+            : ''}{' '}
           {currentConnection.capabilities.reversibleTrash ? t('externalPrompt.trashAvailable') : ''}
-          {!currentConnection.capabilities.configurationEdit && !currentConnection.capabilities.reversibleTrash ? t('externalPrompt.createOnly') : ''}
+          {!currentConnection.capabilities.configurationEdit &&
+          !currentConnection.capabilities.reversibleTrash
+            ? t('externalPrompt.createOnly')
+            : ''}
         </p>
       </div>
       <TeamTemplateReferences isLight={isLight} />
@@ -238,4 +243,4 @@ export function ExternalAgentPromptDialog({
       </p>
     </div>
   );
-}
+};

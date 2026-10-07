@@ -1,4 +1,3 @@
-import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
@@ -64,6 +63,7 @@ import {
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
+import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
 import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';

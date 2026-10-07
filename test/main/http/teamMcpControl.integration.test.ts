@@ -2,19 +2,19 @@
 
 import { BoundControlContext } from '@features/external-agent-connection/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
-import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { TeamBackupService } from '@main/services/team/TeamBackupService';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
-import { vi } from 'vitest';
 import { registerTeamRoutes } from '@main/http/teams';
+import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamDataService } from '@main/services/team/TeamDataService';
-import { setClaudeBasePathOverride, setAppDataBasePath } from '@main/utils/pathDecoder';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
+import { vi } from 'vitest';
 
 import { registerTools } from '../../../mcp-server/src/tools';
 
@@ -30,12 +30,12 @@ import type {
   TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
+  TeamChangeEvent,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningProgress,
   TeamRuntimeState,
-  TeamChangeEvent,
 } from '@shared/types/team';
 
 interface RegisteredTool {

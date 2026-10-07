@@ -1,7 +1,8 @@
-import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { getContextScopedTeamResetState } from '@renderer/store/utils/stateResetHelpers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 const hoisted = vi.hoisted(() => ({
   onTeamChangeCb: null as
@@ -27,7 +28,13 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('@renderer/api', () => ({
   api: {
     externalAgentConnection: {
-      getConnectionInfo: vi.fn(async () => ({ context: { appInstanceId: 'test-app', dataRootFingerprint: 'test-root', connectionGeneration: 1 } })),
+      getConnectionInfo: vi.fn(async () => ({
+        context: {
+          appInstanceId: 'test-app',
+          dataRootFingerprint: 'test-root',
+          connectionGeneration: 1,
+        },
+      })),
     },
     config: {
       get: vi.fn(async () => ({
@@ -64,7 +71,7 @@ vi.mock('@renderer/api', () => ({
               runId?: string;
               taskId?: string;
               taskSignalKind?: 'log' | 'change';
-          management?: TeamManagementCommittedChange;
+              management?: TeamManagementCommittedChange;
             }
           ) => void
         ): (() => void) => {
@@ -2040,22 +2047,42 @@ describe('team change throttling', () => {
     expect(useStore.getState().activeToolsByTeam['my-team']?.alice?.['tool-b']).toBeDefined();
   });
 
-  const committedChange = (kind: TeamManagementCommittedChange['kind'], operationId = 'op-1'): TeamManagementCommittedChange => ({
-    operationId, kind, committedAt: '2026-10-08T12:00:00.000Z', changedFields: kind === 'trashed' ? ['deletedAt'] : ['description'],
-    context: { appInstanceId: 'test-app', dataRootFingerprint: 'test-root', connectionGeneration: 1 },
+  const committedChange = (
+    kind: TeamManagementCommittedChange['kind'],
+    operationId = 'op-1'
+  ): TeamManagementCommittedChange => ({
+    operationId,
+    kind,
+    committedAt: '2026-10-08T12:00:00.000Z',
+    changedFields: kind === 'trashed' ? ['deletedAt'] : ['description'],
+    context: {
+      appInstanceId: 'test-app',
+      dataRootFingerprint: 'test-root',
+      connectionGeneration: 1,
+    },
   });
 
   // RED if an in-flight initial list drops the event refresh or erases a pending new team.
   it('keeps an event-before-list notice and follows initial fetch with a fresh canonical list', async () => {
-    const team = { teamName: 'new-test-team', displayName: 'New test team', members: [], projectPath: '/sandbox/test' } as never;
+    const team = {
+      teamName: 'new-test-team',
+      displayName: 'New test team',
+      members: [],
+      projectPath: '/sandbox/test',
+    } as never;
     let release!: (teams: never[]) => void;
-    const first = new Promise<never[]>((resolve) => { release = resolve; });
+    const first = new Promise<never[]>((resolve) => {
+      release = resolve;
+    });
     const list = vi.mocked(api.teams.list);
     list.mockReset();
     list.mockImplementationOnce(() => first).mockResolvedValueOnce([team]);
     useStore.setState({ fetchTeams: actualFetchTeams, teams: [], teamsLoading: false });
     const loading = actualFetchTeams();
-    hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'new-test-team', management: committedChange('created') });
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'config', teamName: 'new-test-team', management: committedChange('created') }
+    );
     await vi.advanceTimersByTimeAsync(0);
     expect(useStore.getState().teamManagementNoticeByTeam['new-test-team']?.kind).toBe('created');
     expect(useStore.getState().teams).toEqual([]);
@@ -2073,7 +2100,11 @@ describe('team change throttling', () => {
     const change = committedChange('edited');
     await state.receiveTeamManagementChange('my-team', change);
     await state.receiveTeamManagementChange('my-team', change);
-    await state.receiveTeamManagementChange('my-team', { ...change, operationId: 'old-op', committedAt: '2026-10-07T12:00:00.000Z' });
+    await state.receiveTeamManagementChange('my-team', {
+      ...change,
+      operationId: 'old-op',
+      committedAt: '2026-10-07T12:00:00.000Z',
+    });
     expect(useStore.getState().teamManagementNoticeByTeam['my-team']?.operationId).toBe('op-1');
     expect(state.fetchTeams).toHaveBeenCalledTimes(2); // startup + one committed refresh
   });
@@ -2081,10 +2112,19 @@ describe('team change throttling', () => {
   // RED if root reset leaves details or accepts discovery responses begun before reset.
   it('clears management details on context reset and ignores late context discovery', async () => {
     const info = vi.mocked(api.externalAgentConnection.getConnectionInfo);
-    let release!: (value: Awaited<ReturnType<typeof api.externalAgentConnection.getConnectionInfo>>) => void;
-    info.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    let release!: (
+      value: Awaited<ReturnType<typeof api.externalAgentConnection.getConnectionInfo>>
+    ) => void;
+    info.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
     useStore.setState({ teamManagementNoticeByTeam: { 'prior-team': committedChange('edited') } });
-    const receiving = useStore.getState().receiveTeamManagementChange('my-team', committedChange('created'));
+    const receiving = useStore
+      .getState()
+      .receiveTeamManagementChange('my-team', committedChange('created'));
     invalidateContextScopedRequestEpoch();
     useStore.setState(getContextScopedTeamResetState());
     release({ context: committedChange('created').context } as never);
@@ -2095,7 +2135,10 @@ describe('team change throttling', () => {
   // RED if external trash preserves selection/transient runtime state or invokes another mutation.
   it('cleans external trash through the existing team-local cleanup without deleting again', async () => {
     const cleanupSpy = vi.spyOn(useStore.getState(), 'clearDeletedTeamLocalState');
-    useStore.setState({ selectedTeamName: 'my-team', selectedTeamData: { teamName: 'my-team' } as never });
+    useStore.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: { teamName: 'my-team' } as never,
+    });
     await useStore.getState().receiveTeamManagementChange('my-team', committedChange('trashed'));
     expect(cleanupSpy).toHaveBeenCalledWith('my-team');
     expect(useStore.getState().selectedTeamName).toBeNull();

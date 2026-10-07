@@ -29,13 +29,13 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 
 import { TeamPermanentDeletionLock } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
 
 import type {
   PermanentDeletionTarget,
   TeamPermanentDeletionIntent,
 } from '../../../../src/main/services/team/TeamBackupService';
-import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 
 async function removePreparedDeletionTargets(
   service: TeamBackupService,

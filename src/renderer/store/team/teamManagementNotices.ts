@@ -9,13 +9,15 @@ export function retainTeamManagementNotice(
   teamName: string,
   change: TeamManagementCommittedChange
 ): Notices {
-  if (Object.values(current).some((notice) => notice.operationId === change.operationId)) return current;
+  if (Object.values(current).some((notice) => notice.operationId === change.operationId))
+    return current;
   const previous = current[teamName];
   if (previous && Date.parse(previous.committedAt) > Date.parse(change.committedAt)) return current;
   return Object.fromEntries(
     Object.entries({ ...current, [teamName]: change })
-      .sort(([a, left], [b, right]) =>
-        Date.parse(right.committedAt) - Date.parse(left.committedAt) || a.localeCompare(b)
+      .sort(
+        ([a, left], [b, right]) =>
+          Date.parse(right.committedAt) - Date.parse(left.committedAt) || a.localeCompare(b)
       )
       .slice(0, 20)
   );
@@ -28,8 +30,9 @@ export function reconcileTeamManagementNotices(
   teams: readonly TeamSummary[]
 ): Notices {
   const names = new Set(teams.map((team) => team.teamName));
-  const stale = Object.keys(current).filter((name) =>
-    current[name] === atReadStart[name] && !names.has(name) && current[name].kind !== 'trashed'
+  const stale = Object.keys(current).filter(
+    (name) =>
+      current[name] === atReadStart[name] && !names.has(name) && current[name].kind !== 'trashed'
   );
   if (!stale.length) return current;
   const next = { ...current };

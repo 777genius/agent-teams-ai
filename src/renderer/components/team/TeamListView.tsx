@@ -1,8 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { TeamManagementNotice } from './TeamManagementNotice';
-import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
-
 import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
@@ -74,6 +71,7 @@ import { buildCopiedTeamMembers } from './teamCopyData';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { TeamManagementNotice } from './TeamManagementNotice';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
@@ -89,6 +87,7 @@ import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
   ResolvedTeamMember,
@@ -1208,9 +1207,25 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           </Button>
         </div>
       </div>
-      {teams.some((team) => !team.deletedAt && teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' && teamManagementNoticeByTeam[team.teamName] && !filteredTeams.includes(team)) ? (
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('managementChanges.hidden')}{' '}
-          <Button variant="link" size="sm" onClick={() => { setSearchQuery(''); setFilter(EMPTY_TEAM_FILTER); }}>{t('list.filter.clearAll')}</Button>
+      {teams.some(
+        (team) =>
+          !team.deletedAt &&
+          teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' &&
+          teamManagementNoticeByTeam[team.teamName] &&
+          !filteredTeams.includes(team)
+      ) ? (
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          {t('managementChanges.hidden')}{' '}
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => {
+              setSearchQuery('');
+              setFilter(EMPTY_TEAM_FILTER);
+            }}
+          >
+            {t('list.filter.clearAll')}
+          </Button>
         </p>
       ) : null}
       {!canCreate ? (
@@ -1294,10 +1309,24 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       );
     }
 
-    const recentTeams = filteredTeams.filter((team) => !team.deletedAt && teams.includes(team) && teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' && teamManagementNoticeByTeam[team.teamName])
-      .sort((a, b) => Date.parse(teamManagementNoticeByTeam[b.teamName].committedAt) - Date.parse(teamManagementNoticeByTeam[a.teamName].committedAt) || a.teamName.localeCompare(b.teamName));
+    const recentTeams = filteredTeams
+      .filter(
+        (team) =>
+          !team.deletedAt &&
+          teams.includes(team) &&
+          teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' &&
+          teamManagementNoticeByTeam[team.teamName]
+      )
+      .sort(
+        (a, b) =>
+          Date.parse(teamManagementNoticeByTeam[b.teamName].committedAt) -
+            Date.parse(teamManagementNoticeByTeam[a.teamName].committedAt) ||
+          a.teamName.localeCompare(b.teamName)
+      );
     const recentNames = new Set(recentTeams.map((team) => team.teamName));
-    const activeFiltered = filteredTeams.filter((t) => !t.deletedAt && !recentNames.has(t.teamName));
+    const activeFiltered = filteredTeams.filter(
+      (t) => !t.deletedAt && !recentNames.has(t.teamName)
+    );
     const deletedFiltered = filteredTeams.filter((t) => t.deletedAt);
     const shouldPageTeamSections = !searchQuery.trim() && !hasActiveFilters;
     const selectedProjectSectionKey = currentProjectPath
@@ -1306,34 +1335,40 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     const otherTeamsSectionKey = currentProjectPath
       ? `other:${normalizePath(currentProjectPath)}`
       : 'other';
-    const activeSections: { key: string; title: string | null; teams: TeamSummary[] }[] = currentProjectPath
-      ? [
-          {
-            key: selectedProjectSectionKey,
-            title: t('list.sections.projectTeams', {
-              project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
-            }),
-            teams: activeFiltered.filter((team) =>
-              teamMatchesProjectSelection(team, currentProjectPath)
-            ),
-          },
-          {
-            key: otherTeamsSectionKey,
-            title: t('list.sections.otherTeams'),
-            teams: activeFiltered.filter(
-              (team) => !teamMatchesProjectSelection(team, currentProjectPath)
-            ),
-          },
-        ].filter((section) => section.teams.length > 0)
-      : [
-          {
-            key: 'all',
-            title: null,
-            teams: activeFiltered,
-          },
-        ];
+    const activeSections: { key: string; title: string | null; teams: TeamSummary[] }[] =
+      currentProjectPath
+        ? [
+            {
+              key: selectedProjectSectionKey,
+              title: t('list.sections.projectTeams', {
+                project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
+              }),
+              teams: activeFiltered.filter((team) =>
+                teamMatchesProjectSelection(team, currentProjectPath)
+              ),
+            },
+            {
+              key: otherTeamsSectionKey,
+              title: t('list.sections.otherTeams'),
+              teams: activeFiltered.filter(
+                (team) => !teamMatchesProjectSelection(team, currentProjectPath)
+              ),
+            },
+          ].filter((section) => section.teams.length > 0)
+        : [
+            {
+              key: 'all',
+              title: null,
+              teams: activeFiltered,
+            },
+          ];
 
-    if (recentTeams.length) activeSections.unshift({ key: 'recent-management', title: t('managementChanges.title'), teams: recentTeams });
+    if (recentTeams.length)
+      activeSections.unshift({
+        key: 'recent-management',
+        title: t('managementChanges.title'),
+        teams: recentTeams,
+      });
 
     return (
       <>

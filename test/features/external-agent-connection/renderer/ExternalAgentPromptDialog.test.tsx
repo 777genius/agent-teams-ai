@@ -1,10 +1,11 @@
-import { buildExternalAgentPrompt } from '@features/external-agent-connection';
-import { TEAM_TEMPLATES } from '@features/team-templates';
+import '@features/localization/renderer/composition/createI18nextInstance';
+
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { ExternalAgentPromptDialog } from '@features/external-agent-connection/renderer/ExternalAgentPromptDialog';
-import '@features/localization/renderer/composition/createI18nextInstance';
+import { TEAM_TEMPLATES } from '@features/team-templates';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -192,7 +193,12 @@ describe('external prompt operation intent', () => {
     const connection = snapshot();
     connection.capabilities.configurationEdit = true;
     connection.capabilities.reversibleTrash = true;
-    const prompt = buildExternalAgentPrompt({ task: 'Create a test team', template: TEAM_TEMPLATES[0], connection, includeCdp: false });
+    const prompt = buildExternalAgentPrompt({
+      task: 'Create a test team',
+      template: TEAM_TEMPLATES[0],
+      connection,
+      includeCdp: false,
+    });
     expect(prompt).toContain('Configuration editing is unavailable');
     expect(prompt).toContain('Trash is unavailable');
     expect(prompt).not.toContain('Use team_update');
@@ -201,13 +207,27 @@ describe('external prompt operation intent', () => {
   it('advertises independently wired manage tools with fresh revision and no runtime bypass', () => {
     const connection = snapshot();
     connection.capabilities.configurationEdit = true;
-    const prompt = buildExternalAgentPrompt({ task: 'Edit a test team', templates: TEAM_TEMPLATES, intent: 'manage', connection, includeCdp: false });
+    const prompt = buildExternalAgentPrompt({
+      task: 'Edit a test team',
+      templates: TEAM_TEMPLATES,
+      intent: 'manage',
+      connection,
+      includeCdp: false,
+    });
     expect(prompt).toContain('Use team_update with exactly one group');
     expect(prompt).toContain('configurationRevision as expectedRevision');
     expect(prompt).toContain('Never launch, stop, permanently delete or automatically restore');
     expect(prompt).toContain('never blindly retry a write');
     expect(prompt).not.toContain('Use team_trash');
     connection.capabilities.reversibleTrash = true;
-    expect(buildExternalAgentPrompt({ task: 'Trash a test team', templates: TEAM_TEMPLATES, intent: 'manage', connection, includeCdp: false })).toContain('Use team_trash for reversible trash only');
+    expect(
+      buildExternalAgentPrompt({
+        task: 'Trash a test team',
+        templates: TEAM_TEMPLATES,
+        intent: 'manage',
+        connection,
+        includeCdp: false,
+      })
+    ).toContain('Use team_trash for reversible trash only');
   });
 });

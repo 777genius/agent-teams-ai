@@ -1,14 +1,15 @@
-import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { TeamMetadataTooLargeError } from '@main/services/team/TeamMetadataSerialization';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, lstat } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { TeamManagementError, parseTeamManagementRequest } from '../core/managementPolicy';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { TeamMetadataTooLargeError } from '@main/services/team/TeamMetadataSerialization';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isLeadMember } from '@shared/utils/leadDetection';
+
+import { parseTeamManagementRequest, TeamManagementError } from '../core/managementPolicy';
 
 import type {
   TeamManagementCommittedChange,
@@ -17,13 +18,13 @@ import type {
 } from '../contracts';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
 import type {
-  TeamCreateConfigRequest,
-  TeamCreateRequest,
-  TeamViewSnapshot,
-  TeamRuntimeState,
   ReplaceMembersRequest,
   TeamChangeEvent,
+  TeamCreateConfigRequest,
+  TeamCreateRequest,
   TeamMember,
+  TeamRuntimeState,
+  TeamViewSnapshot,
 } from '@shared/types';
 
 export interface TeamPromptManagementPorts {

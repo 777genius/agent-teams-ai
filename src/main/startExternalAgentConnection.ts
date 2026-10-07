@@ -1,11 +1,4 @@
 import {
-  composeTeamPromptManagement,
-  type TeamPromptManagementData,
-  type TeamPromptManagementLifecycle,
-} from './startTeamPromptManagement';
-import type { TeamChangeEvent } from '@shared/types';
-import type { TeamPromptManagement } from '@features/team-prompt-management/main';
-import {
   createDesktopExternalAgentConnection,
   type NativeRendererCdp,
 } from '@features/external-agent-connection/main';
@@ -19,6 +12,15 @@ import {
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { app, type WebContents } from 'electron';
+
+import {
+  composeTeamPromptManagement,
+  type TeamPromptManagementData,
+  type TeamPromptManagementLifecycle,
+} from './startTeamPromptManagement';
+
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import type { TeamChangeEvent } from '@shared/types';
 
 const configManager = ConfigManager.getInstance();
 
