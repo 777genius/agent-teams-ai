@@ -1,6 +1,12 @@
+import * as fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMessageFeedService } from '../../../../src/main/services/team/TeamMessageFeedService';
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import type { InboxMessage, TeamConfig } from '../../../../src/shared/types/team';
 
@@ -657,6 +663,67 @@ Messages:
       'TEAM_HISTORY_UNAVAILABLE:read_failed'
     );
     expect(getInboxMessages).not.toHaveBeenCalled();
+  });
+
+  it('revalidates the first explicit older read after a head observes rewritten inbox history', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-history-source-rewrite-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const teamName = 'TEST-history-source-rewrite';
+    const inboxDir = path.join(claudeRoot, 'teams', teamName, 'inboxes');
+    const inboxPath = path.join(inboxDir, 'user.json');
+    const messages = [
+      makeMessage({
+        source: 'inbox',
+        messageId: 'TEST-head',
+        text: 'TEST unchanged head',
+        timestamp: '2026-04-19T18:46:45.000Z',
+      }),
+      makeMessage({
+        source: 'inbox',
+        messageId: 'TEST-older',
+        text: 'TEST original older',
+        timestamp: '2026-04-19T18:46:35.000Z',
+      }),
+    ];
+    const reader = new TeamInboxReader();
+    const service = new TeamMessageFeedService({
+      getConfig: () => Promise.resolve(config),
+      getInboxMessages: () => Promise.resolve([]),
+      getInboxMessagesWindow: (team, options) => reader.getMessagesWindow(team, options),
+      getLeadSessionMessages: () => Promise.resolve([]),
+      getSentMessages: () => Promise.resolve([]),
+    });
+
+    try {
+      await fs.mkdir(inboxDir, { recursive: true });
+      await fs.writeFile(inboxPath, JSON.stringify(messages));
+      const initialHead = await service.getPage(teamName, { limit: 1 });
+      vi.setSystemTime(new Date('2026-04-19T18:46:44.000Z'));
+      const initialOlder = await service.getPage(teamName, {
+        cursor: initialHead.nextCursor,
+        limit: 1,
+      });
+      expect(initialOlder.messages[0]?.text).toBe('TEST original older');
+
+      const previousFile = await fs.stat(inboxPath);
+      messages[1].text = 'TEST rewritten older';
+      await fs.writeFile(inboxPath, JSON.stringify(messages));
+      expect((await fs.stat(inboxPath)).size).not.toBe(previousFile.size);
+      vi.setSystemTime(new Date('2026-04-19T18:46:45.000Z'));
+      const refreshedHead = await service.getPage(teamName, { limit: 1 });
+      expect(refreshedHead.feedRevision).not.toBe(initialHead.feedRevision);
+      expect(refreshedHead.nextCursor).toBe(initialHead.nextCursor);
+
+      const refreshedOlder = await service.getPage(teamName, {
+        cursor: refreshedHead.nextCursor,
+        limit: 1,
+      });
+      expect(refreshedOlder.feedRevision).toBe(refreshedHead.feedRevision);
+      expect(refreshedOlder.messages[0]?.text).toBe('TEST rewritten older');
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(claudeRoot, { recursive: true, force: true });
+    }
   });
 
   it('keeps page feedRevision stable across cursor changes when bounded sources are unchanged', async () => {

@@ -1,4 +1,5 @@
 import type { ElectronAPI } from '../../../src/shared/types/api.ts';
+import type { IpcResult } from '../../../src/shared/types/ipc.ts';
 import type { InboxMessage, MessagesPage, TeamChangeEvent, TeamViewSnapshot } from '../../../src/shared/types/team.ts';
 import type { TeamMessagesCacheEntry } from '../../../src/renderer/store/team/teamMessagesCache.ts';
 
@@ -17,6 +18,7 @@ interface State {
 }
 export interface PageCall {
   cursor: string | null;
+  transport: 'legacy' | 'readRecovery';
   limit: number;
   fulfilled: boolean;
   page?: MessagesPage;
@@ -78,36 +80,53 @@ export async function renderer(action: string, input: RendererInput) {
         ...(gate.sourceFailurePhase ? { sourceFailurePhase: gate.sourceFailurePhase } : {}) });
       if (gate.inboxChanges.length > 120) { gate.inboxChanges.shift(); gate.droppedInboxChanges++; }
     });
-    // Proxy an empty facade, never the frozen bridge object: returning an
-    // overridden nonconfigurable bridge method would violate Proxy invariants.
+    // Proxy empty facades, never the frozen bridge objects: overridden
+    // nonconfigurable methods on the original targets violate Proxy invariants.
+    const observePage = (owner: object, value: unknown, raw: boolean) => {
+      return async (team: string, options?: { cursor?: string | null; limit?: number }) => {
+        if (team !== input.team) throw new Error('IPC observer rejected a non-fixture team');
+        const call: PageCall = { cursor: options?.cursor ?? null, transport: raw ? 'readRecovery' : 'legacy', limit: options?.limit ?? 50, fulfilled: false,
+          ...(gate.sourceFailurePhase ? { sourceFailurePhase: gate.sourceFailurePhase } : {}) };
+        const hold = Boolean(call.cursor && gate.holdNextOlder);
+        if (hold) gate.holdNextOlder = false;
+        gate.calls.push(call);
+        if (gate.calls.length > 120) { gate.calls.shift(); gate.droppedCalls++; }
+        gate.pending++;
+        try {
+          const read = value as (team: string, options?: { cursor?: string | null; limit?: number }) => Promise<MessagesPage | IpcResult<MessagesPage>>;
+          const result = await read.call(owner, team, options);
+          if (raw) {
+            const envelope = result as IpcResult<MessagesPage>;
+            if (envelope.success) { call.fulfilled = true; call.page = envelope.data; }
+            // Match legacy observation text without changing the raw envelope.
+            else call.error = String(new Error(envelope.error ?? 'Unknown error'));
+          } else { call.fulfilled = true; call.page = result as MessagesPage; }
+          if (hold && call.fulfilled) {
+            gate.waiting++;
+            await new Promise<void>(resolve => { gate.release = resolve; });
+            gate.waiting--;
+          }
+          // Preserve the exact raw success/failure envelope, including metadata.
+          // The application transport alone owns unwrapping and error handling.
+          return result;
+        } catch (error) { call.error = String(error); throw error; }
+        finally { gate.pending--; }
+      };
+    };
+    const recovery = teams.readRecovery;
+    const recoveryFacade = recovery ? new Proxy({}, {
+      get(_target, prop) {
+        const value: unknown = originalGet(recovery, prop);
+        return prop === 'getMessagesPage' && typeof value === 'function'
+          ? observePage(recovery, value, true) : value;
+      },
+    }) : undefined;
     const facade = new Proxy({}, {
       get(_target, prop) {
+        if (prop === 'readRecovery') return recoveryFacade;
         const value: unknown = originalGet(teams, prop);
-        if (prop !== 'getMessagesPage' || typeof value !== 'function') return value;
-        return async (team: string, options?: { cursor?: string | null; limit?: number }) => {
-          if (team !== input.team) throw new Error('IPC observer rejected a non-fixture team');
-          const call: PageCall = { cursor: options?.cursor ?? null, limit: options?.limit ?? 50, fulfilled: false,
-            ...(gate.sourceFailurePhase ? { sourceFailurePhase: gate.sourceFailurePhase } : {}) };
-          const hold = Boolean(call.cursor && gate.holdNextOlder);
-          if (hold) gate.holdNextOlder = false;
-          gate.calls.push(call);
-          if (gate.calls.length > 120) { gate.calls.shift(); gate.droppedCalls++; }
-          gate.pending++;
-          try {
-            // invokeIpcWithResult unwraps the main-process IpcResult envelope
-            // in preload; the public typed bridge returns MessagesPage directly.
-            const result = await (value as ElectronAPI['teams']['getMessagesPage']).call(teams, team, options);
-            call.fulfilled = true;
-            call.page = result;
-            if (hold) {
-              gate.waiting++;
-              await new Promise<void>(resolve => { gate.release = resolve; });
-              gate.waiting--;
-            }
-            return result;
-          } catch (error) { call.error = String(error); throw error; }
-          finally { gate.pending--; }
-        };
+        return prop === 'getMessagesPage' && typeof value === 'function'
+          ? observePage(teams, value, false) : value;
       },
     });
     Reflect.get = function(target: object, prop: PropertyKey, receiver?: unknown): unknown {

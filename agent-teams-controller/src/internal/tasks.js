@@ -32,6 +32,7 @@ const {
     MEMBER_DELEGATE_DESCRIPTION,
     buildActionModeProtocolText,
     buildMemberActionModeProtocol,
+    buildMemberRosterContext,
     buildMemberFormattingProtocol,
     buildMemberProcessProtocol,
     buildProcessProtocolText,
@@ -1053,6 +1054,7 @@ async function memberBriefing(context, memberName, options = {}) {
             : []),
         `CRITICAL: A newly assigned task must NOT remain silently pending/TODO. If you are idle and the task is ready to start, start it now. If it must wait because you are already finishing another task, blocked, or still need more context, leave a short task comment on the waiting task immediately with the reason and your best ETA or what you are waiting on, keep it in pending/TODO, and only move it to in_progress with task_start when you truly begin.`,
         `Team lead: ${leadName}.`,
+        buildMemberRosterContext(resolved.members, requestedMemberName, leadName),
         buildMemberLanguageInstruction(config),
         `You must NOT start work, claim tasks, or improvise task/process protocol before reading and following this briefing.`,
     ];

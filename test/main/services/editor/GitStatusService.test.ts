@@ -82,6 +82,7 @@ describe('GitStatusService', () => {
 
       expect(vi.mocked(simpleGit)).toHaveBeenCalledWith({
         baseDir: '/Users/test/project',
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
         timeout: { block: 10_000 },
       });
       expect(mockEnv).toHaveBeenCalledWith('GIT_OPTIONAL_LOCKS', '0');

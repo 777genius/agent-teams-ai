@@ -196,6 +196,7 @@ function buildLocalNativeMemberBriefing(params: {
   providerId?: TeamProviderId;
   member: TeamCreateRequest['members'][number];
   unavailableReason: string;
+  rosterContext: string;
 }): string {
   const member = params.member;
   return [
@@ -206,6 +207,7 @@ function buildLocalNativeMemberBriefing(params: {
     member.workflow ? `Workflow: ${member.workflow}` : '',
     member.model ? `Model: ${member.model}` : '',
     member.effort ? `Effort: ${member.effort}` : '',
+    params.rosterContext,
     '',
     'The app loaded this startup context from the current team launch request because canonical member_briefing metadata was not available yet.',
     `Diagnostic: ${params.unavailableReason}`,
@@ -247,6 +249,7 @@ function buildCompactNativeMemberBriefing(params: {
   member: TeamCreateRequest['members'][number];
   taskBriefing: string;
   maxContextChars: number;
+  rosterContext: string;
 }): string {
   const member = params.member;
   const taskBriefingLimit = Math.max(1_200, Math.floor(params.maxContextChars * 0.55));
@@ -258,6 +261,7 @@ function buildCompactNativeMemberBriefing(params: {
     formatCompactField('Workflow', member.workflow, 1_200),
     formatCompactField('Model', member.model, 300),
     formatCompactField('Effort', member.effort, 100),
+    params.rosterContext,
     '',
     'The app loaded compact startup context for a large native team.',
     '',
@@ -319,6 +323,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
         member,
         taskBriefing: await readCompactTaskBriefing({ controller, memberName: member.name }),
         maxContextChars,
+        rosterContext: controller.runtime.getMemberRosterContext(member.name, params.members),
       });
     } else {
       try {
@@ -343,6 +348,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
           providerId,
           member,
           unavailableReason: message,
+          rosterContext: controller.runtime.getMemberRosterContext(member.name, params.members),
         });
       }
     }

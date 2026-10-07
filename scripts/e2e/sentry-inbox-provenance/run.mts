@@ -383,6 +383,9 @@ try {
   await call('install');
   await call('open');
   let value = await idle();
+  assert(value.gate?.calls.some(call => !call.cursor && call.fulfilled &&
+    call.page?.feedRevision === value.revision),
+  'Initial head must be observed at the actual IPC boundary before paging scenarios');
   assertHead(value);
   assert.equal(value.pages.length, 0);
   await click('Group chat');
@@ -431,7 +434,17 @@ try {
   assert(value.visibleText.includes('SENTRY_ALICE_0069'));
   await checkpoint('alice-explicit-reload', value);
   const previousRevision = value.revision;
+  const fingerprintInbox = async () => {
+    const [fileStat, bytes] = await Promise.all([stat(fixture.inbox), readFile(fixture.inbox)]);
+    return { ino: fileStat.ino, size: fileStat.size, mtimeMs: fileStat.mtimeMs,
+      sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const inboxBeforeRewrite = await fingerprintInbox();
   fixture.rewriteAlice(); await fixture.persist();
+  const inboxAfterRewrite = await fingerprintInbox();
+  evidence.aliceRewrite = { inbox: fixture.inbox, before: inboxBeforeRewrite, after: inboxAfterRewrite };
+  assert.notEqual(inboxAfterRewrite.sha256, inboxBeforeRewrite.sha256, 'Persisted Alice rewrite must change the actual inbox bytes');
+  assert.equal(inboxAfterRewrite.size, inboxBeforeRewrite.size + 10, 'Fixture Alice rewrite must grow the actual inbox by ten bytes');
   await waitFor(async () => { await call('refresh'); const next = await idle(); return next.revision !== previousRevision ? next : null; }, 'actual older-source rewrite changes revision');
   value = await idle();
   assert.equal(value.pages.length, 0); assert.equal(value.historyReloadRequired, true);

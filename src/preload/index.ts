@@ -10,6 +10,7 @@ import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
+import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -469,10 +470,6 @@ interface IpcFileChangePayload {
   isSubagent: boolean;
 }
 
-/**
- * Type-safe IPC invoker for operations that return IpcResult<T>.
- * Throws an Error if the IPC call fails, otherwise returns the typed data.
- */
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
@@ -911,6 +908,9 @@ const electronAPI: ElectronAPI = {
   },
   teams: {
     ...createTeamMemberSettingsBridge(invokeIpcWithResult),
+    readRecovery: createTeamReadRecoveryBridge((channel, ...args) =>
+      ipcRenderer.invoke(channel, ...args)
+    ),
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },

@@ -1,12 +1,18 @@
+import * as fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+
+import { TeamInboxReader } from '../../TeamInboxReader';
+import { setClaudeBasePathOverride } from '../../../../utils/pathDecoder';
 
 import {
   assertCreateTeamDoesNotExist,
   buildCreateTeamMetaPayload,
   buildDeterministicCreateSpawnArgs,
   createDeterministicCreateProvisioningRun,
+  materializeDeterministicCreateTeamBootstrapFiles,
 } from '../TeamProvisioningCreateTeamFlow';
 
 import type {
@@ -87,6 +93,55 @@ function buildCreateRunInput(overrides: Partial<TeamCreateRequest> = {}) {
 }
 
 describe('TeamProvisioningCreateTeamFlow', () => {
+  it.each([false, true])(
+    'initializes only fresh inbox history before pre-spawn metadata (existing=%s)',
+    async (existing) => {
+      const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-native-create-inboxes-'));
+      setClaudeBasePathOverride(claudeRoot);
+      const request = buildRequest({ teamName: 'TEST-native-create', cwd: claudeRoot });
+      const run = createDeterministicCreateProvisioningRun(buildCreateRunInput(request));
+      const inboxReader = new TeamInboxReader();
+      const stopBeforeRuntime = new Error('TEST stop before runtime materialization');
+
+      try {
+        if (existing)
+          await fs.mkdir(path.join(claudeRoot, 'teams', request.teamName), { recursive: true });
+        await expect(
+          materializeDeterministicCreateTeamBootstrapFiles({
+            request,
+            run,
+            effectiveMemberSpecs: [],
+            allEffectiveMemberSpecs: [],
+            launchIdentity: null,
+            initialUserPrompt: '',
+            teamMetaStore: {
+              writeMeta: async (teamName) => {
+                const history = inboxReader.getMessagesWindow(teamName, { limit: 20 });
+                if (existing) {
+                  await expect(history).rejects.toMatchObject({ reason: 'listing_failed' });
+                } else {
+                  await expect(history).resolves.toMatchObject({
+                    messages: [],
+                    truncated: false,
+                    sourceMessageCount: 0,
+                  });
+                }
+                throw stopBeforeRuntime;
+              },
+            },
+            membersMetaStore: { writeMembers: async () => undefined },
+            mcpConfigBuilder: { writeConfigFile: async () => TEST_MCP_CONFIG_PATH },
+            buildMemberMcpLaunchConfigs: async () => new Map(),
+            validateAgentTeamsMcpRuntime: async () => undefined,
+          })
+        ).rejects.toBe(stopBeforeRuntime);
+      } finally {
+        setClaudeBasePathOverride(null);
+        await fs.rm(claudeRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('rejects an existing team from any configured base path', async () => {
     await expect(
       assertCreateTeamDoesNotExist(

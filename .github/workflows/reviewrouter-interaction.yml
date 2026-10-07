@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   interaction:
     name: interaction
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     permissions:
       contents: read

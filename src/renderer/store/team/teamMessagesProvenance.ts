@@ -1,4 +1,9 @@
-import { api } from '@renderer/api';
+import {
+  type QueuedMessagesHeadRead,
+  queueMessagesHeadRead,
+  readTeamMessagesPage,
+  type ScopedReadRequests,
+} from '@features/team-read-recovery/renderer';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 
@@ -27,10 +32,12 @@ interface MessageActionPorts {
     teamName: string,
     scope: TeamMessagesRequestScope
   ) => boolean;
-  inFlightTeamMessagesHeadRequests: Map<string, Promise<RefreshTeamMessagesHeadResult>>;
-  inFlightTeamMessagesOlderRequests: Map<string, Promise<void>>;
-  queuedTeamMessagesHeadRefreshesAfterOlder: Map<string, Promise<RefreshTeamMessagesHeadResult>>;
-  pendingFreshTeamMessagesHeadRefreshes: Set<string>;
+  inFlightTeamMessagesHeadRequests: ScopedReadRequests<RefreshTeamMessagesHeadResult>;
+  inFlightTeamMessagesOlderRequests: ScopedReadRequests<void>;
+  queuedTeamMessagesHeadRefreshesAfterOlder: Map<
+    string,
+    QueuedMessagesHeadRead & { scope: TeamMessagesRequestScope }
+  >;
 }
 
 /** Paging is fire-and-forget in the UI; expected head IPC failures already have a scoped notice. */
@@ -56,7 +63,6 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
     inFlightTeamMessagesHeadRequests,
     inFlightTeamMessagesOlderRequests,
     queuedTeamMessagesHeadRefreshesAfterOlder,
-    pendingFreshTeamMessagesHeadRefreshes,
   } = ports;
   const hasCurrentProvenance = (teamName: string, entry: TeamMessagesCacheEntry): boolean => {
     // Legacy entries have no page claims; their canonical array is treated as one head.
@@ -72,53 +78,59 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
   };
   return {
     refreshTeamMessagesHead: async (teamName: string) => {
-      const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName);
+      const requestScope = captureTeamRequestScope(get, teamName);
+      const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestScope);
       if (existingRequest) {
-        pendingFreshTeamMessagesHeadRefreshes.add(teamName);
-        return existingRequest;
+        return inFlightTeamMessagesHeadRequests.queueFresh(
+          teamName,
+          requestScope,
+          () => get().refreshTeamMessagesHead(teamName),
+          () => isTeamRequestScopeCurrent(get, teamName, requestScope)
+        );
       }
       const queuedAfterOlder = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
       if (queuedAfterOlder) {
-        return queuedAfterOlder;
+        if (isTeamRequestScopeCurrent(get, teamName, queuedAfterOlder.scope))
+          return queuedAfterOlder.result;
+        queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+        queuedAfterOlder.cancel();
       }
 
-      const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName);
+      const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestScope);
       if (existingOlderRequest) {
-        const queuedScope = captureTeamRequestScope(get, teamName);
-        const queuedRequest: Promise<RefreshTeamMessagesHeadResult> = existingOlderRequest
-          .then(() => {
-            if (!isTeamRequestScopeCurrent(get, teamName, queuedScope)) {
-              return {
-                feedChanged: false,
-                headChanged: false,
-                feedRevision: null,
-              };
-            }
-            if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
+        const queuedRequest = {
+          scope: requestScope,
+          ...queueMessagesHeadRead(
+            existingOlderRequest,
+            () => {
+              if (
+                !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
+                queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) !== queuedRequest
+              ) {
+                return Promise.resolve({
+                  feedChanged: false,
+                  headChanged: false,
+                  feedRevision: null,
+                });
+              }
               queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-            } else {
-              return {
-                feedChanged: false,
-                headChanged: false,
-                feedRevision: null,
-              };
+              return get().refreshTeamMessagesHead(teamName);
+            },
+            () => {
+              if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
+                queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+              }
             }
-            return get().refreshTeamMessagesHead(teamName);
-          })
-          .finally(() => {
-            if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
-              queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-            }
-          });
+          ),
+        };
         queuedTeamMessagesHeadRefreshesAfterOlder.set(teamName, queuedRequest);
-        return queuedRequest;
+        return queuedRequest.result;
       }
 
       const requestRef: { current: Promise<RefreshTeamMessagesHeadResult> | null } = {
         current: null,
       };
       requestRef.current = (async (): Promise<RefreshTeamMessagesHeadResult> => {
-        const requestScope = captureTeamRequestScope(get, teamName);
         const startingRevision = getTeamMessagesCacheEntry(get(), teamName).feedRevision;
         set((state) => ({
           teamMessagesByName: {
@@ -132,11 +144,11 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
 
         try {
           const page = await unwrapIpc('team:getMessagesPage', () =>
-            api.teams.getMessagesPage(teamName, { limit: 50 })
+            readTeamMessagesPage(teamName, { limit: 50 })
           );
           if (
             !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
-            inFlightTeamMessagesHeadRequests.get(teamName) !== requestRef.current
+            inFlightTeamMessagesHeadRequests.get(teamName, requestScope) !== requestRef.current
           ) {
             return {
               feedChanged: false,
@@ -232,7 +244,7 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
         } catch (error) {
           if (
             !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
-            inFlightTeamMessagesHeadRequests.get(teamName) !== requestRef.current
+            inFlightTeamMessagesHeadRequests.get(teamName, requestScope) !== requestRef.current
           ) {
             return {
               feedChanged: false,
@@ -260,33 +272,23 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
             return { feedChanged: false, headChanged: false, feedRevision: null };
           throw error;
         } finally {
-          if (inFlightTeamMessagesHeadRequests.get(teamName) === requestRef.current) {
-            inFlightTeamMessagesHeadRequests.delete(teamName);
-            if (
-              pendingFreshTeamMessagesHeadRefreshes.delete(teamName) &&
-              isTeamRequestScopeCurrent(get, teamName, requestScope)
-            ) {
-              void get()
-                .refreshTeamMessagesHead(teamName)
-                .catch(() => undefined);
-            }
-          }
+          inFlightTeamMessagesHeadRequests.release(teamName, requestRef.current);
         }
       })();
 
       const request = requestRef.current;
-      inFlightTeamMessagesHeadRequests.set(teamName, request);
+      inFlightTeamMessagesHeadRequests.set(teamName, request, requestScope);
       return request;
     },
 
     loadOlderTeamMessages: async (teamName: string) => {
       const requestedScope = captureTeamRequestScope(get, teamName);
-      const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName);
+      const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestedScope);
       if (existingRequest) {
         return existingRequest;
       }
 
-      const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName);
+      const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestedScope);
       if (existingHeadRequest) {
         if (!(await observeHeadForPaging(existingHeadRequest))) return;
         if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
@@ -314,7 +316,6 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
       }
 
       const inputCursor = entry.nextCursor;
-      let refreshRequired = false;
       const requestRef: { current: Promise<void> | null } = { current: null };
       requestRef.current = (async (): Promise<void> => {
         const requestScope = captureTeamRequestScope(get, teamName);
@@ -331,20 +332,23 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
         try {
           const baseFeedRevision = entry.feedRevision;
           const page = await unwrapIpc('team:getMessagesPage', () =>
-            api.teams.getMessagesPage(teamName, {
+            readTeamMessagesPage(teamName, {
               cursor: inputCursor,
               limit: 50,
             })
           );
           if (
             !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
-            inFlightTeamMessagesOlderRequests.get(teamName) !== requestRef.current
+            inFlightTeamMessagesOlderRequests.get(teamName, requestScope) !== requestRef.current
           ) {
             return;
           }
 
           const current = getTeamMessagesCacheEntry(get(), teamName);
-          if (current.feedRevision !== baseFeedRevision) {
+          if (
+            current.feedRevision !== baseFeedRevision ||
+            (current.feedRevision && current.feedRevision !== page.feedRevision)
+          ) {
             set((state) => ({
               teamMessagesByName: {
                 ...state.teamMessagesByName,
@@ -357,24 +361,15 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
                 },
               },
             }));
-            refreshRequired = true;
-            return;
-          }
-
-          if (current.feedRevision && current.feedRevision !== page.feedRevision) {
-            set((state) => ({
-              teamMessagesByName: {
-                ...state.teamMessagesByName,
-                [teamName]: {
-                  ...getTeamMessagesCacheEntry(state, teamName),
-                  loadingOlder: false,
-                  historyReloadRequired: true,
-                  messagesError:
-                    'Message history changed. Load older messages again to refresh it.',
-                },
-              },
-            }));
-            refreshRequired = true;
+            // Release the older owner before starting its queued head; neither may
+            // await a head that is still waiting for this older request to settle.
+            inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
+            const queuedHead = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
+            await observeHeadForPaging(
+              queuedHead && isTeamRequestScopeCurrent(get, teamName, queuedHead.scope)
+                ? queuedHead.start()
+                : get().refreshTeamMessagesHead(teamName)
+            );
             return;
           }
 
@@ -420,7 +415,7 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
         } catch (error) {
           if (
             !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
-            inFlightTeamMessagesOlderRequests.get(teamName) !== requestRef.current
+            inFlightTeamMessagesOlderRequests.get(teamName, requestScope) !== requestRef.current
           ) {
             return;
           }
@@ -444,18 +439,13 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
             },
           }));
         } finally {
-          if (inFlightTeamMessagesOlderRequests.get(teamName) === requestRef.current) {
-            inFlightTeamMessagesOlderRequests.delete(teamName);
-          }
+          inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
         }
       })();
 
       const request = requestRef.current;
-      inFlightTeamMessagesOlderRequests.set(teamName, request);
-      await request;
-      if (refreshRequired && isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        await observeHeadForPaging(get().refreshTeamMessagesHead(teamName));
-      }
+      inFlightTeamMessagesOlderRequests.set(teamName, request, requestedScope);
+      return request;
     },
   };
 }

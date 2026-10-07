@@ -628,7 +628,7 @@ export class TeamMessageFeedService {
   ): Promise<MessagePageSourcePayload> {
     const cursorKey = cursor ? `${cursor.timestampMs}|${cursor.messageId}` : '';
     const key = `${teamName}\0${cursorKey}\0${sourceWindowLimit}`;
-    const cached = this.pageSourceCacheByKey.get(key);
+    const cached = cursor ? undefined : this.pageSourceCacheByKey.get(key);
     if (
       cached?.generationAtStart === generationAtStart &&
       Date.now() - cached.cachedAt < MESSAGE_PAGE_SOURCE_CACHE_MAX_AGE_MS
@@ -643,7 +643,7 @@ export class TeamMessageFeedService {
 
     const promise = this.buildPageSources(teamName, cursor, sourceWindowLimit)
       .then((payload) => {
-        if (this.getGeneration(teamName) === generationAtStart) {
+        if (!cursor && this.getGeneration(teamName) === generationAtStart) {
           this.pageSourceCacheByKey.set(key, {
             payload: cloneMessagePageSourcePayload(payload),
             generationAtStart,

@@ -319,6 +319,8 @@ describe(
     let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
     let runtimePidProbe: ReturnType<typeof stubFakeOpenCodeRuntimePidProbes> | undefined;
 
+    const launchStateQueuesToDrain: { svc: TeamProvisioningService; teamName: string }[] = [];
+
     const blockedMixedLaunches: {
       adapter: { releaseLaunches(): void };
       run: { teamName: string; mixedSecondaryLaneLaunchQueue?: Promise<void> };
@@ -346,13 +348,16 @@ describe(
         adapter.releaseLaunches();
       }
       const launchResults = await Promise.allSettled(
-        launchesToDrain.map(({ run }) => run.mixedSecondaryLaneLaunchQueue)
+        launchesToDrain.map(({ run }) => Promise.resolve(run.mixedSecondaryLaneLaunchQueue))
       );
       // Lane status publishes are fire-and-forget: a launch-state persist can still be in
       // flight after the lane queue above settles. Drain it before the temp dir it writes
       // into is removed, so a straggling write cannot race the cleanup below.
-      await Promise.allSettled(
-        launchesToDrain.map(({ svc, run }) => waitForLaunchStateQueueIdle(svc, run.teamName))
+      const persistenceResults = await Promise.allSettled(
+        [
+          ...launchesToDrain.map(({ svc, run }) => ({ svc, teamName: run.teamName })),
+          ...launchStateQueuesToDrain.splice(0),
+        ].map(({ svc, teamName }) => waitForLaunchStateQueueIdle(svc, teamName))
       );
       runtimePidProbe?.restore();
       runtimePidProbe = undefined;
@@ -366,7 +371,7 @@ describe(
       ClaudeBinaryResolver.clearCache();
       setClaudeBasePathOverride(null);
       await removeTempDirWithRetries(tempDir);
-      for (const result of launchResults) {
+      for (const result of [...launchResults, ...persistenceResults]) {
         if (result.status === 'rejected') {
           throw result.reason;
         }
@@ -4839,6 +4844,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       let stopAllPromise: Promise<void> | undefined;
@@ -4910,6 +4916,7 @@ describe(
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob', 'tom']);
       const cancelledRun = createMixedLiveRun({ teamName, projectPath });
       cancelledRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
 
       try {
@@ -4943,6 +4950,7 @@ describe(
         freshRun.runId = `${cancelledRun.runId}-fresh`;
         freshRun.detectedSessionId = 'lead-session-fresh';
         freshRun.child = { kill: () => undefined };
+        blockedMixedLaunches.push({ adapter, run: freshRun, svc });
         trackLiveRun(svc, freshRun);
 
         await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
@@ -5050,6 +5058,8 @@ describe(
       const secondRun = createMixedLiveRun({ teamName: secondTeamName, projectPath });
       firstRun.child = { kill: () => undefined };
       secondRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: firstRun, svc });
+      blockedMixedLaunches.push({ adapter, run: secondRun, svc });
       trackLiveRun(svc, firstRun);
       trackLiveRun(svc, secondRun);
 
@@ -5057,7 +5067,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(secondRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
@@ -5072,6 +5082,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 2);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), firstTeamName)
@@ -7495,6 +7506,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       let settled = false;
@@ -13187,6 +13199,8 @@ describe(
         },
       ]);
       const svc = new TeamProvisioningService();
+      // Permission status persists in the background after delivery resolves.
+      launchStateQueuesToDrain.push({ svc, teamName });
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
@@ -13572,7 +13586,9 @@ describe(
       addGeminiPrimaryToMixedRun(survivingRun);
       cancelledRun.child = { kill: () => undefined };
       survivingRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       trackLiveRun(svc, survivingRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
@@ -13606,6 +13622,7 @@ describe(
       freshRun.detectedSessionId = 'lead-session-fresh';
       freshRun.child = { kill: () => undefined };
       addGeminiPrimaryToMixedRun(freshRun);
+      blockedMixedLaunches.push({ adapter, run: freshRun, svc });
       trackLiveRun(svc, freshRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
@@ -13696,7 +13713,9 @@ describe(
       addGeminiPrimaryToMixedRun(survivingRun);
       cancelledRun.child = { kill: () => undefined };
       survivingRun.child = { kill: () => undefined };
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       trackLiveRun(svc, cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       trackLiveRun(svc, survivingRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
@@ -17225,6 +17244,7 @@ describe(
         stdin: { writable: true },
       });
       trackLiveRun(svc, staleRun);
+      blockedMixedLaunches.push({ adapter, run: currentRun, svc });
       trackLiveRun(svc, currentRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
@@ -17305,6 +17325,7 @@ describe(
         stdin: createWritableStdin([]),
       });
       trackLiveRun(svc, staleRun);
+      blockedMixedLaunches.push({ adapter, run: currentRun, svc });
       trackLiveRun(svc, currentRun);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
@@ -19879,6 +19900,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       const initialSnapshot = await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -19935,6 +19957,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       const initialSnapshot = await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -19996,6 +20019,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -20047,6 +20071,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
@@ -20103,6 +20128,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;
@@ -20128,6 +20154,7 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;
@@ -20168,6 +20195,7 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
+      blockedMixedLaunches.push({ adapter, run, svc });
       trackLiveRun(svc, run);
       run.cancelRequested = true;
       run.processKilled = true;

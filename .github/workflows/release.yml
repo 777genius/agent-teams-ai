@@ -33,7 +33,7 @@ env:
 jobs:
   build:
     if: ${{ !inputs.reuse_existing_draft_assets }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
 
     steps:
@@ -158,7 +158,7 @@ jobs:
 
   prepare-runtime:
     if: ${{ !inputs.reuse_existing_draft_assets }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
 
     steps:
@@ -333,7 +333,7 @@ jobs:
 
   prepare-terminal-platform-runtime:
     if: ${{ !inputs.reuse_existing_draft_assets }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
 
     steps:
@@ -484,13 +484,13 @@ jobs:
       matrix:
         include:
           - platform: linux-x64
-            runner: ubuntu-24.04
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
           - platform: win32-x64
             runner: windows-2022
           - platform: win32-arm64
             runner: windows-11-arm
           - platform: darwin-arm64
-            runner: macos-14
+            runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
           - platform: darwin-x64
             runner: macos-15-intel
 
@@ -533,7 +533,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-14
+            runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
           - arch: x64
             runner: macos-15-intel
@@ -839,7 +839,7 @@ jobs:
 
   release-linux:
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
 
     steps:
@@ -987,7 +987,7 @@ jobs:
 
   upload-stable-links:
     needs: [release-mac, release-win, release-linux]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && !inputs.reuse_existing_draft_assets }}
 
@@ -1015,7 +1015,7 @@ jobs:
 
   promote-existing-draft:
     needs: verify-public-runtime
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
     if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets && needs.verify-public-runtime.result == 'success' }}
 

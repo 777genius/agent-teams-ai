@@ -47,7 +47,7 @@ export function useDownloadAssetPresentation() {
 
     if (asset.os === "macos") {
       const macArchLabel = archLabel === "Apple Silicon / Intel" ? "Apple Silicon & Intel" : archLabel;
-      return `macOS 13+ · ${macArchLabel}`;
+      return `macOS 12+ · ${macArchLabel}`;
     }
 
     if (asset.os === "windows") return `Windows 10+ · ${archLabel}`;
