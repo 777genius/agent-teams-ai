@@ -333,8 +333,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
 
       const teamName = validatedTeamName.value!;
-      if (managementFeature) return reply.send(await managementFeature.get(teamName));
-      const draftSavedRequest = await getDraftSavedRequest(services, teamName);
+      const draftSavedRequest = managementFeature
+        ? null
+        : await getDraftSavedRequest(services, teamName);
       if (draftSavedRequest) {
         return reply.send({
           teamName,
@@ -345,7 +346,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
 
       const taskActivityApi = services.teamApis?.taskActivity;
       await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
-      return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
+      return reply.send(
+        managementFeature
+          ? await managementFeature.get(teamName)
+          : await getTeamDataWithRuntimeOverlay(services, teamName)
+      );
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));

@@ -805,6 +805,79 @@ describe('MCP team tools over the local REST control API', () => {
     }
   );
 
+  // Catches managed GET returning stale open work/review intervals because crash repair is skipped
+  // or occurs only after the snapshot. Uses real persisted sandbox tasks and the existing repair facade.
+  it('repairs crash-stale task intervals before returning a managed team snapshot', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-task-repair-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { lifecycle } = enableManagement(services, teamDataService, root);
+    services.teamApis!.taskActivity = {
+      repairStaleTaskActivityIntervalsBeforeSnapshot:
+        lifecycle.repairStaleTaskActivityIntervalsBeforeSnapshot.bind(lifecycle),
+    };
+    registerTeamRoutes(app, services);
+    const teamName = 'managed-task-repair';
+    const taskPath = path.join(root, 'tasks', teamName, '1.json');
+    const work = { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:00:05.000Z' };
+    const review = {
+      reviewer: 'reviewer',
+      startedAt: '2026-05-08T10:10:00.000Z',
+      completedAt: '2026-05-08T10:10:05.000Z',
+    };
+    try {
+      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await writeFile(
+        path.join(root, 'teams', teamName, 'config.json'),
+        JSON.stringify({
+          name: 'Stopped after crash',
+          projectPath: root,
+          members: [{ name: 'builder' }],
+        })
+      );
+      await writeFile(
+        taskPath,
+        JSON.stringify({
+          id: '1',
+          subject: 'Sandbox interrupted task',
+          owner: 'builder',
+          status: 'in_progress',
+          historyEvents: [],
+          workIntervals: [{ startedAt: work.startedAt }],
+          reviewIntervals: [{ reviewer: review.reviewer, startedAt: review.startedAt }],
+        })
+      );
+      const before = await services.teamPromptManagement!.get(teamName);
+      expect(before).toMatchObject({
+        tasks: [
+          expect.objectContaining({
+            workIntervals: [{ startedAt: work.startedAt }],
+            reviewIntervals: [{ reviewer: review.reviewer, startedAt: review.startedAt }],
+          }),
+        ],
+      });
+      const response = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        configurationRevision: before.configurationRevision,
+        tasks: [
+          expect.objectContaining({ id: '1', workIntervals: [work], reviewIntervals: [review] }),
+        ],
+      });
+      expect(JSON.parse(await readFile(taskPath, 'utf8'))).toMatchObject({
+        workIntervals: [work],
+        reviewIntervals: [review],
+      });
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // Catches admission checked before a queued launch, stale overwrites, and claiming a failed
   // mutation after its canonical writer committed but an observer/read response failed.
   it('fences stopped edits against launch and returns confirmed commits despite post-write faults', async () => {
