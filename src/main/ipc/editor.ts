@@ -5,6 +5,7 @@
  * Renderer cannot override it — it's set only via `editor:open` with full validation (SEC-5).
  */
 
+import { registerDocumentPreviewHandlers, removeDocumentPreviewHandlers } from '@features/document-preview/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
@@ -453,6 +454,7 @@ export function setEditorMainWindow(win: BrowserWindow | null): void {
 }
 
 export function registerEditorHandlers(ipcMain: IpcMain): void {
+  registerDocumentPreviewHandlers(ipcMain, () => activeProjectRoot);
   ipcMain.handle(EDITOR_OPEN, handleEditorOpen);
   ipcMain.handle(EDITOR_CLOSE, handleEditorClose);
   ipcMain.handle(EDITOR_READ_DIR, handleEditorReadDir);
@@ -474,6 +476,7 @@ export function registerEditorHandlers(ipcMain: IpcMain): void {
 }
 
 export function removeEditorHandlers(ipcMain: IpcMain): void {
+  removeDocumentPreviewHandlers(ipcMain);
   ipcMain.removeHandler(EDITOR_OPEN);
   ipcMain.removeHandler(EDITOR_CLOSE);
   ipcMain.removeHandler(EDITOR_READ_DIR);

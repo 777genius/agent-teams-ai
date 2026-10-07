@@ -1,3 +1,4 @@
+import type { DocumentPreviewAPI } from '@features/document-preview/contracts';
 import type { EditorDocumentMode } from '@shared/editorPolicy';
 
 /**
@@ -180,7 +181,7 @@ export interface QuickOpenFile {
   relativePath: string;
 }
 
-export interface EditorAPI {
+export interface EditorAPI extends DocumentPreviewAPI {
   open: (projectPath: string) => Promise<void>;
   close: () => Promise<void>;
   readDir: (dirPath: string, maxEntries?: number) => Promise<ReadDirResult>;
