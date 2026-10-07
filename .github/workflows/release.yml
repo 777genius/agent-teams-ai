@@ -35,6 +35,8 @@ jobs:
     name: Validate signing source before release builds
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Reject untrusted new-build dispatch
         env:
@@ -50,6 +52,20 @@ jobs:
           test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
           test "$TRIGGERING_ACTOR" = "$REPOSITORY_OWNER"
           test "$GITHUB_REF" = refs/heads/release/macos-signing
+
+      - name: Checkout signing source
+        if: ${{ !inputs.reuse_existing_draft_assets }}
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Require selected release tag to match workflow commit
+        if: ${{ !inputs.reuse_existing_draft_assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse FETCH_HEAD^{commit})" = "$GITHUB_SHA"
 
   build:
     needs: signing-custody
