@@ -376,9 +376,27 @@ export async function downloadAnonymousMacInstaller(url: string, destination: st
   const response = await fetch(url, { credentials: 'omit', redirect: 'follow', signal });
   assert(response.ok, `Anonymous old installer unavailable: HTTP ${response.status}`);
   assert(response.body, 'Anonymous old installer body required');
-  await pipeline(Readable.fromWeb(response.body), createWriteStream(destination, { flags: 'wx' }), {
-    signal,
+  const reader = response.body.getReader();
+  async function* chunks() {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) return;
+      yield chunk.value;
+    }
+  }
+  const destinationStream = createWriteStream(destination, { flags: 'wx' });
+  // Unblock a pending web read before Node closes the iterator after a sink error.
+  destinationStream.once('error', () => {
+    void reader.cancel().catch(() => undefined);
   });
+  try {
+    await pipeline(Readable.from(chunks()), destinationStream, {
+      signal,
+    });
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
 }
 export async function oldMacInstaller(
   root: string,
