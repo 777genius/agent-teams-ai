@@ -152,7 +152,7 @@ export class TeamMembersMetaStore {
   async writeMembers(
     teamName: string,
     members: TeamMember[],
-    options?: { providerBackendId?: string }
+    options?: { providerBackendId?: string; teamsBasePath?: string }
   ): Promise<void> {
     const deduped = new Map<string, TeamMember>();
     for (const member of members) {
@@ -180,6 +180,9 @@ export class TeamMembersMetaStore {
       members: Array.from(deduped.values()).sort((a, b) => a.name.localeCompare(b.name)),
     };
 
-    await atomicWriteAsync(this.getMetaPath(teamName), JSON.stringify(payload, null, 2));
+    await atomicWriteAsync(
+      path.join(options?.teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json'),
+      JSON.stringify(payload, null, 2)
+    );
   }
 }

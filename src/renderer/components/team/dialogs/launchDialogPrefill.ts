@@ -5,6 +5,7 @@ import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { resolveTeamRuntimeSelection } from '@shared/utils/teamRuntimeSelection';
 
 import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
@@ -30,6 +31,7 @@ interface LaunchDialogPrefillInput {
 }
 
 interface LaunchDialogPrefillResult {
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   providerBackendId?: string;
   model: string;
@@ -79,6 +81,9 @@ export function resolveLaunchDialogPrefill({
   storedLimitContext,
   getStoredModel,
 }: LaunchDialogPrefillInput): LaunchDialogPrefillResult {
+  if (savedRequest && resolveTeamRuntimeSelection(savedRequest).status === 'unresolved') {
+    return { runtimeSelectionUnresolved: true, providerId: storedProviderId, model: '', effort: '', fastMode: 'inherit', limitContext: false };
+  }
   const currentLead = members.find((member) => isLeadMember(member));
   const currentLeadProviderId = normalizeOptionalTeamProviderId(currentLead?.providerId);
   const savedRequestProviderId = normalizeOptionalTeamProviderId(savedRequest?.providerId);

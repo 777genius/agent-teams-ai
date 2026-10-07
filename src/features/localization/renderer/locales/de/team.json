@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Name muss mindestens einen Buchstaben oder eine Ziffer enthalten",
-      "nameTooLong": "Name ist zu lang (max 128 Zeichen)",
+      "nameTooLong": "Name ist zu lang (max 64 Zeichen)",
       "selectWorkingDirectory": "Arbeitsverzeichnis auswählen (cwd)",
       "memberNameRequired": "Mitgliedsname kann nicht leer sein",
       "memberNameInvalid": "Mitgliedsname muss mit alphanumerisch beginnen, nur [a-zA-Z0-9. -], max 128 Zeichen",

@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Numele trebuie să conțină cel puțin o literă sau o cifră",
-      "nameTooLong": "Numele este prea lung (max 128 de caractere)",
+      "nameTooLong": "Numele este prea lung (max 64 de caractere)",
       "selectWorkingDirectory": "Selectează directorul de lucru (cwd)",
       "memberNameRequired": "Numele membrului nu poate fi gol",
       "memberNameInvalid": "Numele membrului trebuie să înceapă cu un caracter alfanumeric, să folosească doar [a-zA-Z0-9._-], max 128 de caractere",

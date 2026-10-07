@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Ang pangalan ay dapat maglaman ng kahit isang letra o numero",
-      "nameTooLong": "Masyadong mahaba ang pangalan (max 128 chars)",
+      "nameTooLong": "Masyadong mahaba ang pangalan (max 64 chars)",
       "selectWorkingDirectory": "Pumili ng working directory (cwd)",
       "memberNameRequired": "Hindi maaaring blangko ang pangalan ng miyembro",
       "memberNameInvalid": "Ang pangalan ng miyembro ay dapat magsimula sa alphanumeric, gumamit lang ng [a-zA-Z0-9._-], max 128 chars",

@@ -113,6 +113,7 @@ export function buildCreateTeamMetaPayload(
   launchIdentity: ProviderModelLaunchIdentity | null,
   createdAt: number = Date.now()
 ): {
+  runtimeSelectionVersion: TeamCreateRequest['runtimeSelectionVersion'];
   displayName: TeamCreateRequest['displayName'];
   description: TeamCreateRequest['description'];
   color: TeamCreateRequest['color'];
@@ -132,6 +133,7 @@ export function buildCreateTeamMetaPayload(
   createdAt: number;
 } {
   return {
+    runtimeSelectionVersion: request.runtimeSelectionVersion,
     displayName: request.displayName,
     description: request.description,
     color: request.color,

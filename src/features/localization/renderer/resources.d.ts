@@ -3862,7 +3862,7 @@ export default interface Resources {
         "memberNameRequired": "Member name cannot be empty",
         "memberNamesUnique": "Member names must be unique",
         "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
-        "nameTooLong": "Name is too long (max 128 chars)",
+        "nameTooLong": "Name is too long (max 64 chars)",
         "openCodeLeadModelRequired": "OpenCode lead requires a selected model.",
         "openCodeTeammateRequired": "OpenCode lead requires at least one OpenCode teammate.",
         "selectWorkingDirectory": "Select working directory (cwd)",

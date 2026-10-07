@@ -35,6 +35,7 @@ interface TeamRosterEditorSectionProps {
   teammatesInheritLeadModel?: boolean;
   lockProviderModel?: boolean;
   modelLockReason?: string;
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
@@ -99,6 +100,7 @@ const TeamRosterEditorSectionImpl = ({
   teammatesInheritLeadModel,
   lockProviderModel = false,
   modelLockReason,
+  runtimeSelectionUnresolved = false,
   providerId,
   model,
   effort,
@@ -169,6 +171,7 @@ const TeamRosterEditorSectionImpl = ({
     // Create/Launch launch OpenCode Default as its concrete route (see the context).
     <OpenCodeDefaultMaterializationContext.Provider value={defaultMaterialization}>
       <MembersEditorSection
+        runtimeSelectionUnresolved={runtimeSelectionUnresolved}
         members={members}
         onChange={onMembersChange}
         fieldError={fieldError}
@@ -212,6 +215,7 @@ const TeamRosterEditorSectionImpl = ({
           <div className="space-y-3">
             <LeadModelRow
               projectPath={projectPath}
+              runtimeSelectionUnresolved={runtimeSelectionUnresolved}
               providerId={providerId}
               model={model}
               effort={effort}

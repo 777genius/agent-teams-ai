@@ -35,6 +35,12 @@ import type { MemberDraft } from '@renderer/components/team/members/membersEdito
 // ---------------------------------------------------------------------------
 
 export interface UseCreateTeamDraftResult {
+  runtimeSelectionVersion?: 1;
+  runtimeProviderId?: import('@shared/types').TeamProviderId;
+  setRuntimeSelection: (
+    version: 1 | undefined,
+    providerId?: import('@shared/types').TeamProviderId
+  ) => void;
   teamName: string;
   setTeamName: (v: string) => void;
   members: MemberDraft[];
@@ -131,6 +137,11 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const storedSyncModelsWithLead = getStoredCreateTeamSyncModelsWithLead();
 
   // ── State ──────────────────────────────────────────────────────────────
+  const [runtimeSelection, setRuntimeSelectionState] = useState<{
+    version?: 1;
+    providerId?: import('@shared/types').TeamProviderId;
+  }>({});
+  const runtimeSelectionRef = useRef(runtimeSelection);
   const [teamName, setTeamNameState] = useState('');
   const [members, setMembersState] = useState<MemberDraft[]>([]);
   const [syncModelsWithLead, setSyncModelsWithLeadState] = useState(storedSyncModelsWithLead);
@@ -172,6 +183,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     return {
       version: 1,
       teamName: teamNameRef.current,
+      runtimeSelectionVersion: runtimeSelectionRef.current.version,
+      runtimeProviderId: runtimeSelectionRef.current.providerId,
       members: serializeMembers(membersRef.current),
       syncModelsWithLead: syncModelsWithLeadRef.current,
       teammateWorktreeDefault: teammateWorktreeDefaultRef.current,
@@ -239,6 +252,11 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       setStoredCreateTeamMemberRuntimePreferences(deserialized);
     }
 
+    runtimeSelectionRef.current = {
+      version: snap.runtimeSelectionVersion,
+      providerId: snap.runtimeProviderId,
+    };
+    setRuntimeSelectionState(runtimeSelectionRef.current);
     teamNameRef.current = snap.teamName;
     membersRef.current = deserialized;
     syncModelsWithLeadRef.current = nextSyncModelsWithLead;
@@ -297,6 +315,16 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   }, [flushPending]);
 
   // ── Setters ────────────────────────────────────────────────────────────
+
+  const setRuntimeSelection = useCallback(
+    (version: 1 | undefined, providerId?: import('@shared/types').TeamProviderId) => {
+      userTouchedRef.current = true;
+      runtimeSelectionRef.current = { version, providerId };
+      setRuntimeSelectionState(runtimeSelectionRef.current);
+      scheduleSave();
+    },
+    [scheduleSave]
+  );
 
   const setTeamName = useCallback(
     (v: string) => {
@@ -414,6 +442,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     // since isLoaded gates submit, but defensive) cannot resurrect deleted data.
     userTouchedRef.current = true;
 
+    runtimeSelectionRef.current = {};
+    setRuntimeSelectionState({});
     teamNameRef.current = '';
     membersRef.current = [];
     syncModelsWithLeadRef.current = nextStoredSyncModelsWithLead;
@@ -440,6 +470,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   }, []);
 
   return {
+    runtimeSelectionVersion: runtimeSelection.version,
+    runtimeProviderId: runtimeSelection.providerId,
+    setRuntimeSelection,
     teamName,
     setTeamName,
     members,

@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Nazwa musi zawierać co najmniej jedną literę lub cyfrę",
-      "nameTooLong": "Nazwa jest za długa (maks. 128 znaków)",
+      "nameTooLong": "Nazwa jest za długa (maks. 64 znaków)",
       "selectWorkingDirectory": "Wybierz katalog roboczy (cwd)",
       "memberNameRequired": "Nazwa członka nie może być pusta",
       "memberNameInvalid": "Nazwa członka musi zaczynać się od znaku alfanumerycznego, używać tylko [a-zA-Z0-9._-], maks. 128 znaków",

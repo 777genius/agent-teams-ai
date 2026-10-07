@@ -7,8 +7,6 @@ import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitCon
 import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
 import {
   formatTeamModelSummary,
-  getProviderScopedTeamModelLabel,
-  getTeamProviderLabel,
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
@@ -64,6 +62,7 @@ import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import {
   formatMemberMcpButtonLabel,
   MEMBER_MCP_SCOPE_LABEL_KEYS,
+  resolveMemberModelButtonLabels,
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
 import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
@@ -108,6 +107,7 @@ interface MemberDraftRowProps {
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
   onWorkflowSuggestionsNeeded?: () => void;
+  runtimeSelectionUnresolved?: boolean;
   lockProviderModel?: boolean;
   providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   lockRole?: boolean;
@@ -170,6 +170,7 @@ export const MemberDraftRow = ({
   taskSuggestions,
   teamSuggestions,
   onWorkflowSuggestionsNeeded,
+  runtimeSelectionUnresolved = false,
   lockProviderModel = false,
   providerDisabledReasonById,
   lockRole = false,
@@ -359,21 +360,15 @@ export const MemberDraftRow = ({
     ? inheritedEffort
     : (member.effort ??
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
-  const modelButtonLabelBase = effectiveModel?.trim()
-    ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : openCodeDefaultRoute
-      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
-      : t('memberDraft.model.default');
-  const modelButtonLabel = inheritsLeadModel
-    ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
-    : modelButtonLabelBase;
-  const modelButtonText = openCodeDefaultRoute
-    ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
-    : modelButtonLabel;
-  const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
-    provider: getTeamProviderLabel(effectiveProviderId),
-    model: modelButtonLabel,
-  });
+  const { modelButtonLabel, modelButtonText, modelButtonAriaLabel } =
+    resolveMemberModelButtonLabels({
+      effectiveProviderId,
+      effectiveModel,
+      openCodeDefaultRoute,
+      inheritsLeadModel,
+      unresolved: runtimeSelectionUnresolved,
+      t,
+    });
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
   const modelTooltipText = forceInheritedModelSettings
     ? t('memberDraft.model.inheritedTooltip')
@@ -570,10 +565,12 @@ export const MemberDraftRow = ({
                       ) : (
                         <ChevronRight className="size-3.5" />
                       )}
-                      <TeamModelBrandIcon
-                        providerId={effectiveProviderId}
-                        model={effectiveModel ?? ''}
-                      />
+                      {!runtimeSelectionUnresolved && (
+                        <TeamModelBrandIcon
+                          providerId={effectiveProviderId}
+                          model={effectiveModel ?? ''}
+                        />
+                      )}
                       <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                       {hasModelIssue ? (
                         <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />

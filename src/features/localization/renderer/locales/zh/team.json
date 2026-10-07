@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "名称必须包含至少一个字母或数字",
-      "nameTooLong": "名称太长（最多 128 个字符）",
+      "nameTooLong": "名称太长（最多 64 个字符）",
       "selectWorkingDirectory": "选择工作目录（cwd）",
       "memberNameRequired": "成员名不能为空",
       "memberNameInvalid": "成员名称必须以字母数字开头，仅使用 [a-zA-Z0-9._-]，最多 128 个字符",

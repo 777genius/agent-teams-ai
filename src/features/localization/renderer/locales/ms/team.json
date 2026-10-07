@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Nama mesti mengandungi sekurang-kurangnya satu huruf atau digit",
-      "nameTooLong": "Nama terlalu panjang (maksimum 128 aksara)",
+      "nameTooLong": "Nama terlalu panjang (maksimum 64 aksara)",
       "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
       "memberNameRequired": "Nama ahli tidak boleh kosong",
       "memberNameInvalid": "Nama ahli mesti bermula dengan alfanumerik, gunakan hanya [a-zA-Z0-9._-], maksimum 128 aksara",

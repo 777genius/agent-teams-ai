@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Naam moet minstens één letter of cijfer bevatten",
-      "nameTooLong": "Naam is te lang (max. 128 tekens)",
+      "nameTooLong": "Naam is te lang (max. 64 tekens)",
       "selectWorkingDirectory": "Selecteer werkdirectory (cwd)",
       "memberNameRequired": "Ledennaam mag niet leeg zijn",
       "memberNameInvalid": "Ledennaam moet beginnen met een alfanumeriek teken, gebruik alleen [a-zA-Z0-9._-], max. 128 tekens",

@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Jina lazima liwe na angalau herufi moja au tarakimu moja",
-      "nameTooLong": "Jina ni refu mno (kiwango cha juu herufi 128)",
+      "nameTooLong": "Jina ni refu mno (kiwango cha juu herufi 64)",
       "selectWorkingDirectory": "Chagua saraka ya kazi (cwd)",
       "memberNameRequired": "Jina la mwanachama haliwezi kuwa tupu",
       "memberNameInvalid": "Jina la mwanachama lazima lianze na alfanumeriki, litumie [a-zA-Z0-9._-] pekee, kiwango cha juu herufi 128",

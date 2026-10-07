@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "이름은 적어도 1개의 편지 또는 손가락을 포함해야 합니다",
-      "nameTooLong": "이름은 너무 길다 (최대 128 숯)",
+      "nameTooLong": "이름은 너무 길다 (최대 64 숯)",
       "selectWorkingDirectory": "작업 디렉토리 선택 (cwd)",
       "memberNameRequired": "회원 이름은 비어있을 수 없습니다.",
       "memberNameInvalid": "회원 이름은 알파벳으로 시작해야합니다, 만 사용 [a-zA-Z0-9. -], 최대 128 숯",

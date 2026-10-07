@@ -39,7 +39,7 @@ export function validateRequest(
       },
     };
   }
-  if (sanitized.length > 128) {
+  if (sanitized.length > 64) {
     return {
       valid: false,
       errors: {
