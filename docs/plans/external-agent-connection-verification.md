@@ -4,10 +4,10 @@
 
 ## Tested source and artifact
 
-- Latest packaged source: `7a5a6bd48a84782621a9dbc63130f392dfb2a43f`, including the reviewed consumer-query extraction and current-main document-preview integration. Delivery PR4 tree `2821e838a07ff9c11e097ef2176f8776e3516317` is identical; subsequent documentation does not change the tested source. Earlier shared-root/crash evidence uses source `5e3f16baf146661d705e84a685cdd8ae99cb94d2`.
+- Latest packaged source: `a3c57203c8fc04b633344c6bd1ce97b56dbb1cd7`, including current-main integration and reviewed recovery/preview fixes. Delivery PR4 tree `d0b6036e449a1b901f41b186370cf81921baa03a` is identical; subsequent documentation does not change the tested source. Earlier shared-root/crash evidence uses source `5e3f16baf146661d705e84a685cdd8ae99cb94d2`.
 - Linux unpacked Electron 44.4.5, application 2.17.6. No remote-debugging or main-inspector launch flags; the saved application setting enables renderer CDP with port 0.
 - Executable SHA256: `ee9faf5bb9fe78a750cc5099863c85c4459e7f04c387fd1f111c83e4e8c57c97`.
-- Latest `app.asar` SHA256: `0a25d30031586215cf3814f7b3abdf580bfc2b947216f8fd55487fdea83f5829`. Earlier shared-root/crash artifact: `95db6b844566ecb93c373ac8f02c7644cfbc13cb761a1e745729ccbfe0d4060d`.
+- Latest `app.asar` SHA256: `b3bc0f02b71c401f2f73a94658877b29988c96ae5ade67ef4935400a5561dee4`. Earlier shared-root/crash artifact: `95db6b844566ecb93c373ac8f02c7644cfbc13cb761a1e745729ccbfe0d4060d`.
 - Packaged `resources/mcp-server/index.js` SHA256: `9bfd6034a8373cd977fcb69ff482fb0d4c621817c05b0145c9475caa130a640a`.
 - Fuse values were read without modification from the same executable hash. The Linux harness uses `--no-sandbox --disable-gpu` under isolated Xvfb; this does not prove sandboxed macOS/Windows behavior or signing.
 
@@ -30,6 +30,7 @@
 
 Preserved hosted evidence under `/srv/workers/ea-cdp-20261007-5adf8c/`:
 
+- `external-agent-desktop-TEST-lcum8i/evidence.json`: latest packaged acceptance passes after recovery/preview fixes; log `final-recovery-e2e.log`. Local manifest: `/tmp/external-agent-mcp-cdp-20261007/desktop-recovery-final-evidence.json`.
 - `external-agent-desktop-TEST-W0hD7A/evidence.json`: current-main integrated packaged acceptance passes; log `main-integration-e2e.log`. Local manifest: `/tmp/external-agent-mcp-cdp-20261007/desktop-main-integration-evidence.json`.
 - `external-agent-desktop-TEST-bMwdE8/evidence.json`, screenshots and prompt; log `final-main-e2e.log`.
 - `external-agent-shared-root-TEST-rOfYns/evidence.json`; log `final-shared-root-e2e.log`.
@@ -43,6 +44,8 @@ Project typecheck, desktop build and unpacked packaging pass. Typed lint of the 
 Final relevant suites: IPC/supervisor/actual HTTP lifecycle **290**; dialog/OpenCode model authority/draft persistence **124**; corrected host fixtures **19**. Counts include existing tests. Old-code RED was reproduced for IPC early admission, expected pre-ready stop, failed context recovery, draft model intent, inherited-member materialization and launch opt-out. After the final assertion-only adjustment, six affected UI cases pass. Native adapter probes on Linux and macOS verify the portable `ps axeww` argument with their own test marker without emitting environment contents.
 
 Post-package source review extracted the unchanged MCP-consumer predicate from the provisioning facade into an explicit-input synchronous query (`0767493810`, formatting `c72d94e607`). Independent review accepted behavior equivalence and the architecture boundary. Existing provisioning service tests **479**, full project typecheck, focused lint and architecture/size guards pass; no tests were added for the extraction. Logs: `consumer-extraction-{tests,types,lint}.log`. After merging current main, independent conflict/ancestry review, fresh frozen install, typecheck, build, package and main desktop acceptance pass again (`main-integration-{fresh-install,types,build,package,e2e}.log`).
+
+Final recovery/preview review fixes clear stale startup errors only after matching transport is healthy and withdraw stale selectable prompts on discovery failure, including edits during a pending read. RED is demonstrated in `stale-error-red.log`, `stale-preview-red.log` and `stale-preview-race-red.log`; final **12** feature tests, project typecheck, build/package and desktop acceptance pass (`final-recovery-{green,types,build,package,e2e}.log`). Independent review accepted both fixes. Partial remote setup continues to fail closed; automatic SSH rollback remains outside this connection scope.
 
 Earlier broad providerless/controller/MCP suites and installation/build checks remain historical evidence; they are not substituted for current-head CI of changed code. Hosted logs for final checks are `backend-final-{red,green}.log`, `ui-intent-{red,green}.log`, `copy-preflight-{red-corrected,green-suite}.log`, `ci-fixtures-green.log`, `ui-intent-contract-final.log`, `final-source-types.log`, `final-production-lint.log`, `final-build.log`, and `final-package.log` in the same scratch directory.
 
