@@ -8,6 +8,8 @@ import {
   assertOwnedUiaMetadata,
 } from './windows-ota-observer.mts';
 
+import { assertForegroundIdentity } from './windows-owned-uia-metadata.mts';
+
 import type { CaptionProof } from './windows-native.mts';
 import type { NativeNames, NativeRootFocus, OwnedUiaMetadata } from './windows-ota-observer.mts';
 
@@ -228,12 +230,37 @@ const metadata: OwnedUiaMetadata = {
   StopReason: null,
   Error: null,
   ElapsedMs: 150,
+  Owners: [
+    {
+      Index: 0,
+      ParentPid: focusOwner.parent,
+      CimTicks: cimTicks,
+      Before: { ...heldOwner },
+      After: { ...heldOwner },
+    },
+  ],
+  Foreground: {
+    Hwnd: 'def',
+    AfterHwnd: 'def',
+    Pid: 99,
+    AfterPid: 99,
+    Thread: 100,
+    AfterThread: 100,
+    Before: { ...heldOwner, Pid: 99, Executable: 'C:\\Windows\\ShellOverlay.exe' },
+    After: { ...heldOwner, Pid: 99, Executable: 'C:\\Windows\\ShellOverlay.exe' },
+    PackageBefore: null,
+    PackageAfter: null,
+    PackageBeforeStatus: 15700,
+    PackageAfterStatus: 15700,
+    Error: null,
+  },
   Nodes: [
     {
       Index: 0,
       ParentIndex: -1,
       Depth: 0,
       Pid: 41,
+      OwnerIndex: 0,
       Hwnd: 'abc',
       NativePid: 41,
       RootAncestor: 'abc',
@@ -246,6 +273,7 @@ const metadata: OwnedUiaMetadata = {
       ParentIndex: 0,
       Depth: 1,
       Pid: 41,
+      OwnerIndex: 0,
       Hwnd: '0',
       NativePid: 0,
       RootAncestor: null,
@@ -383,6 +411,7 @@ void test('foreign boundary receipt records only PID and never admits traversal 
   Object.assign(metadataNode(receipt), {
     Pid: 99,
     Boundary: true,
+    OwnerIndex: -1,
     Hwnd: null,
     RootAncestor: null,
     NativePid: 0,
@@ -405,4 +434,153 @@ void test('capture request serialization requires exact diagnostic opt-in and pr
     assert.equal(typeof diagnosticOnly, 'boolean');
     assert.equal(diagnosticOnly, flag === '1');
   }
+});
+
+function directChildReceipt() {
+  const receipt = structuredClone(metadata);
+  const child = {
+    ...heldOwner,
+    Pid: 63,
+    BirthFileTime: (BigInt(heldOwner.BirthFileTime) + 100000n).toString(),
+  };
+  receipt.Owners.push({
+    Index: 1,
+    ParentPid: 41,
+    CimTicks: (BigInt(cimTicks) + 100000n).toString(),
+    Before: { ...child },
+    After: { ...child },
+  });
+  Object.assign(metadataNode(receipt), { Pid: 63, OwnerIndex: 1 });
+  return receipt;
+}
+void test('metadata permits only pinned direct child identity and root-anchored HWNDs', () => {
+  const receipt = directChildReceipt();
+  assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt);
+  Object.assign(metadataNode(receipt), { Hwnd: '123', NativePid: 63, RootAncestor: 'abc' });
+  assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt);
+  metadataNode(receipt).NativePid = 999;
+  assert.throws(() => assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt));
+});
+function metadataOwner(receipt: OwnedUiaMetadata, index = 1) {
+  const owner = receipt.Owners.at(index);
+  assert(owner);
+  return owner;
+}
+const invalidChild: [string, (receipt: OwnedUiaMetadata) => void][] = [
+  [
+    'reused child birth',
+    (r) => {
+      metadataOwner(r).After.BirthFileTime = '134358493948043208';
+    },
+  ],
+  [
+    'non-direct parent',
+    (r) => {
+      metadataOwner(r).ParentPid = 63;
+    },
+  ],
+  [
+    'foreign path',
+    (r) => {
+      metadataOwner(r).Before.Executable = 'C:\\Other.exe';
+      metadataOwner(r).After.Executable = 'C:\\Other.exe';
+    },
+  ],
+  [
+    'foreign SID',
+    (r) => {
+      metadataOwner(r).Before.Sid = 'S-FOREIGN';
+      metadataOwner(r).After.Sid = 'S-FOREIGN';
+    },
+  ],
+  [
+    'foreign session',
+    (r) => {
+      metadataOwner(r).Before.Session = 3;
+      metadataOwner(r).After.Session = 3;
+    },
+  ],
+  [
+    'CIM birth mismatch',
+    (r) => {
+      metadataOwner(r).CimTicks = (BigInt(cimTicks) + 100010n).toString();
+    },
+  ],
+  [
+    'child older than root',
+    (r) => {
+      metadataOwner(r).Before.BirthFileTime = '134358493947843207';
+      metadataOwner(r).After.BirthFileTime = '134358493947843207';
+    },
+  ],
+  [
+    'duplicate PID adoption',
+    (r) => {
+      metadataOwner(r).Before.Pid = 41;
+      metadataOwner(r).After.Pid = 41;
+    },
+  ],
+  [
+    'unmapped child owner index',
+    (r) => {
+      metadataNode(r).OwnerIndex = 7;
+    },
+  ],
+  [
+    'root parent changed',
+    (r) => {
+      metadataOwner(r, 0).ParentPid = 99;
+    },
+  ],
+];
+for (const [name, change] of invalidChild)
+  void test(`pinned metadata rejects ${name}`, () => {
+    const receipt = directChildReceipt();
+    change(receipt);
+    assert.throws(() => assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt));
+  });
+void test('foreground identity permits explicit no-package and stable packaged processes', () => {
+  assertForegroundIdentity(metadata.Foreground);
+  assertForegroundIdentity({
+    ...metadata.Foreground,
+    PackageBefore: 'Test_1.0_arm64__family',
+    PackageAfter: 'Test_1.0_arm64__family',
+    PackageBeforeStatus: 0,
+    PackageAfterStatus: 0,
+  });
+});
+const foregroundHeld = metadata.Foreground.After;
+assert(foregroundHeld);
+const invalidForeground = [
+  { Error: 'Access denied', Before: null, After: null },
+  { AfterHwnd: '123' },
+  { AfterPid: 100 },
+  { AfterThread: 101 },
+  { After: { ...foregroundHeld, BirthFileTime: '134358493947943208' } },
+  { After: { ...foregroundHeld, Executable: 'C:\\Other.exe' } },
+  { PackageAfterStatus: 5 },
+  { PackageBeforeStatus: 5, PackageAfterStatus: 5 },
+  { PackageAfter: 'unexpected-package' },
+];
+for (const [index, change] of invalidForeground.entries())
+  void test(`foreground receipt rejects unstable/unknown identity ${index}`, () => {
+    assert.throws(() => assertForegroundIdentity({ ...metadata.Foreground, ...change }));
+  });
+
+void test('direct process inventory accepts eight held identities but rejects a ninth', () => {
+  const receipt = directChildReceipt();
+  for (let index = 2; index <= 7; index++) {
+    const proof = structuredClone(metadataOwner(receipt));
+    proof.Index = index;
+    proof.Before.Pid = 62 + index;
+    proof.After.Pid = 62 + index;
+    receipt.Owners.push(proof);
+  }
+  assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt);
+  const ninth = structuredClone(metadataOwner(receipt));
+  ninth.Index = 8;
+  ninth.Before.Pid = 70;
+  ninth.After.Pid = 70;
+  receipt.Owners.push(ninth);
+  assert.throws(() => assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt));
 });

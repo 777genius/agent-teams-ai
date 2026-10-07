@@ -11,6 +11,7 @@ import {
   windowsProfileCaptureEnvironment,
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
+import { windowsMetadataInventorySource } from './windows-owned-uia-metadata.mts';
 import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
 import { assertNativeRootFocus, windowsUiaSource } from './windows-ota-observer.mts';
 
@@ -195,6 +196,7 @@ function Read-Owned([string]$file) {
     @{ pid=$ownedId; parent=[int]$item.ParentProcessId; executable=$item.ExecutablePath; command=$item.CommandLine; start=$item.CreationDate.ToUniversalTime().ToString('o'); session=[int]$item.SessionId; sid=$owner.Sid }
   })
 }
+${windowsMetadataInventorySource}
 if ($data.operation -eq 'prior-fixture-guard') {
   if (@($data.files).Count -lt 1 -or @($data.files).Count -gt 32 -or $data.registry -isnot [bool]) { throw 'Invalid prior fixture guard request' }
   $rootAttributes=[IO.File]::GetAttributes($root)
@@ -409,7 +411,7 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks,bool diagnosticOnly) {
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks,bool diagnosticOnly,Func<TestOtaObserver.FocusRequest[]> inventory) {
     CaptionTrace=null; RootFocusTrace=null; OwnedMetadataTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
     ShowWindow(hwnd, 9);
@@ -429,7 +431,7 @@ public static class TestWindowsNative {
       catch(OwnedFocusRequired) {
         SameThread(hwnd,expectedPid,thread,validate);
         if(diagnosticOnly) {
-          try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks); }
+          try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks,inventory); }
           catch(Exception error) { OwnedMetadataTrace=new TestOtaObserver.Observation { Error=error.Message,HResult=error.HResult }; }
           throw; // Metadata cannot qualify native capture or replace its original failure.
         }
@@ -525,8 +527,9 @@ switch ($data.operation) {
     $handle=[TestWindowsNative]::VisibleWindow($data.pid)
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
+    $inventory=[Func[TestOtaObserver+FocusRequest[]]] { Get-MetadataOwners }
     $attemptProgress=[Action] { Write-TestProgress 'caption-before-effects' @{ trace=[TestWindowsNative]::CaptionTrace } }
-    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start),$data.diagnosticOnly) }
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start),$data.diagnosticOnly,$inventory) }
     finally {
       Write-TestProgress 'caption-attempt' @{ trace=[TestWindowsNative]::CaptionTrace }
       Write-TestProgress 'capture-uia-focus' @{ observation=[TestWindowsNative]::RootFocusTrace }
