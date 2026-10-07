@@ -18,7 +18,7 @@ interface PendingRead<T> extends ActiveRead<T> {
   settle(outcome: ReadOutcome<T>): void;
 }
 
-function sameScope(left: TeamReadScope, right: TeamReadScope): boolean {
+export function sameScope(left: TeamReadScope, right: TeamReadScope): boolean {
   return (
     left.contextId === right.contextId &&
     left.contextEpoch === right.contextEpoch &&
