@@ -13,17 +13,17 @@ import type { CommandResult } from './mac-loopback.mts';
 // This command boundary records intent and executes no OS commands or network calls.
 class UnparseableBaselineCommands extends MacCommands {
   readonly calls: { label: string; args: string[] }[] = [];
-  override async run(label: string, _binary: string, args: string[]): Promise<CommandResult> {
+  override run(label: string, _binary: string, args: string[]): Promise<CommandResult> {
     this.calls.push({ label, args });
     const rejected = label === 'pf-parse-active-baseline';
-    return {
+    return Promise.resolve({
       command: 'test-only command boundary',
       exitCode: rejected ? 1 : 0,
       stdout: label.endsWith('status') ? 'Status: Disabled\n' : 'captured active dump\n',
       stderr: rejected ? 'baseline cannot parse' : '',
       outputSha256: 'a'.repeat(64),
       logFile: `${label}.log`,
-    };
+    });
   }
 }
 
@@ -91,8 +91,7 @@ void test('native macOS 15 anchor dumps retain normalization, NAT and filter byt
   // Actual x64 runner dumps from read-only workflow 37494162902. Concatenating
   // these without the parser option fails on the scrub-anchor after NAT rules.
   const nat = 'nat-anchor "com.apple/*" all\nrdr-anchor "com.apple/*" all\n';
-  const rules =
-    'scrub-anchor "com.apple/*" all fragment reassemble\nanchor "com.apple/*" all\n';
+  const rules = 'scrub-anchor "com.apple/*" all fragment reassemble\nanchor "com.apple/*" all\n';
   const baseline = serializeMacPfBaseline(nat, rules);
   assert.equal(baseline.split('\n')[0], 'set require-order no');
   assert.equal(baseline.slice(baseline.indexOf('\n') + 1), `${nat}\n${rules}`);

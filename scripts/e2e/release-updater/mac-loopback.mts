@@ -24,6 +24,7 @@ export interface CommandResult {
 export class MacCommands {
   readonly commands: CommandResult[] = [];
   readonly output: string;
+  private progressSequence = 0;
   constructor(output: string) {
     this.output = output;
   }
@@ -35,6 +36,14 @@ export class MacCommands {
   ): Promise<CommandResult> {
     assert(binary.startsWith('/'), 'Native command must use an absolute executable path');
     assert(/^[a-z0-9-]+$/.test(label));
+    // Diagnostic write failures must not change command execution or block cleanup.
+    const progressId = `${process.pid}-command-${++this.progressSequence}-${label}`;
+    const progress = { label, executable: binary, timeout, startedAt: new Date().toISOString() };
+    await writeFile(
+      path.join(this.output, `${progressId}-start.json`),
+      `${canonical({ ...progress, state: 'START' })}\n`,
+      { flag: 'wx', mode: 0o600 }
+    ).catch(() => undefined);
     let stdout = '';
     let stderr = '';
     let exitCode = 0;
@@ -64,6 +73,11 @@ export class MacCommands {
     };
     await writeFile(path.join(this.output, logFile), bytes, { flag: 'wx' });
     this.commands.push(result);
+    await writeFile(
+      path.join(this.output, `${progressId}-complete.json`),
+      `${canonical({ ...progress, state: 'COMPLETE' })}\n`,
+      { flag: 'wx', mode: 0o600 }
+    ).catch(() => undefined);
     return result;
   }
   async checked(label: string, binary: string, args: string[], timeout?: number) {

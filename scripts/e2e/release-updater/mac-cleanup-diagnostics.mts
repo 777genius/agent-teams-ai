@@ -31,7 +31,7 @@ export async function captureMacCleanupDiagnostics(
     entries = [];
   }
   const files = [];
-  for (const name of entries.sort()) {
+  for (const name of entries.toSorted((a, b) => a.localeCompare(b, 'en'))) {
     if (name !== 'pf-baseline-active.conf' && !/^[1-9]\d*-\d{3,}-pf-[a-z0-9-]+\.log$/u.test(name))
       continue;
     const sourceFile = path.join(source, name);

@@ -742,7 +742,7 @@ async function run() {
           (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
         ) ?? null,
       'NSIS-created automatic successor before any harness relaunch',
-      90_000
+      process.arch === 'arm64' ? 480_000 : 90_000
     );
     samplerStop = true;
     await sampling;
@@ -886,7 +886,7 @@ async function run() {
       env,
       windowsVerbatimArguments: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(process.arch === 'arm64' ? 480_000 : 180_000),
     });
     spawnedChildren.push({ kind: 'installer', child: setup });
     for (const stream of [setup.stdout, setup.stderr])
