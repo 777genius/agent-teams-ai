@@ -8,6 +8,7 @@ on:
       - 'scripts/e2e/release-updater/archive.mts'
       - 'scripts/e2e/release-updater/cdp.mts'
       - 'scripts/e2e/release-updater/inputs.mts'
+      - 'scripts/e2e/release-updater/native-release-scenario.mts'
       - 'scripts/e2e/release-updater/native-window.mts'
       - 'scripts/e2e/release-updater/transport.mts'
       - 'scripts/ci/release/contract.ts'
@@ -22,12 +23,12 @@ on:
         options: [availability, ota]
         default: availability
       target_mode:
-        description: '2.17.6 requires exact prepared stage; 2.17.2 is historical infrastructure evidence only'
+        description: '2.17.6/2.17.7 require exact prepared stage; 2.17.2 is historical infrastructure evidence only'
         type: choice
-        options: [staged-2.17.6, historical-2.17.2]
-        default: staged-2.17.6
+        options: [staged-2.17.7, staged-2.17.6, historical-2.17.2]
+        default: staged-2.17.7
       stage_artifact:
-        description: 'Required immutable prepared stage artifact for 2.17.6'
+        description: 'Required immutable prepared stage artifact for 2.17.6/2.17.7'
         type: string
       stage_run_id:
         description: 'Producer run ID for that prepared stage artifact'
@@ -57,7 +58,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/linux-packages*.mts
       - run: pnpm exec prettier --check scripts/e2e/release-updater/linux-packages*.mts .github/workflows/updater-linux-packages.yml
-      - run: node --test scripts/e2e/release-updater/linux-packages-seal.test.mts
+      - run: node --test scripts/e2e/release-updater/linux-packages-seal.test.mts scripts/e2e/release-updater/linux-packages-inputs.test.mts
 
   inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
@@ -79,7 +80,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Require explicit prepared artifact identity
-        if: inputs.target_mode == 'staged-2.17.6'
+        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.7'
         env:
           TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
           TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
@@ -90,7 +91,7 @@ jobs:
           [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
           [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
       - name: Download immutable prepared stage for the current target
-        if: inputs.target_mode == 'staged-2.17.6'
+        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.7'
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.stage_artifact }}
@@ -112,9 +113,11 @@ jobs:
             gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern "$old" --output "$inputs/$old"
           done
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.6; then
+          if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.7 ]]; then
             node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
             release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
+            target=$(jq -er '.targetVersion' "$inputs/target-download-identities.json")
+            test "$TEST_TARGET_MODE" = "staged-$target"
             gh api "repos/777genius/agent-teams-ai/releases/$release" > "$inputs/draft-api.json"
             # Consume actual stage-draft upload bytes, rather than rebuilding
             # its generated metadata inside the native harness.
@@ -274,8 +277,9 @@ jobs:
                 node --version > /evidence/node-version.txt
                 target=2.17.2
                 stage=(--historical-preview)
-                if test "$TEST_TARGET_MODE" = staged-2.17.6; then
-                  target=2.17.6
+                if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.7 ]]; then
+                  target=$(node /workspace/scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" | jq -er .targetVersion)
+                  test "$TEST_TARGET_MODE" = "staged-$target"
                   stage=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
                 else test "$TEST_TARGET_MODE" = historical-2.17.2; fi
                 node /workspace/scripts/e2e/release-updater/linux-packages-inputs.mts --verify-inputs "$inputs" "${stage[@]}" --readonly
@@ -293,7 +297,7 @@ jobs:
                   # The clean prepared current Arch image contains no legacy
                   # package. New target metadata cannot declare the removed dep.
                   if pacman -Q http-parser > /evidence/legacy-before.txt 2>&1; then exit 1; fi
-                  if test "$target" = 2.17.6; then
+                  if test "$TEST_TARGET_MODE" != historical-2.17.2; then
                     if grep -Eq "^depend = http-parser([<>=].*)?$" "/reference/$target/.PKGINFO"; then exit 1; fi
                   fi
                   if test "$TEST_MODE" != fresh; then

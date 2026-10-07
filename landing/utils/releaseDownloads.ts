@@ -1,5 +1,6 @@
 import type { DownloadArch, DownloadOs } from '../data/downloads';
 
+export type MacProductMinimum = '12.0' | '13.0';
 export type ReleaseAsset = { name: string; browser_download_url: string; url?: string };
 export type GitHubRelease = {
   tag_name: string;
@@ -12,6 +13,7 @@ type Variant = {
   platformKey: string | null;
   version: string | null;
   pubDate: string | null;
+  macProductMinimum?: MacProductMinimum | null;
 };
 export type DownloadsApiResponse = {
   ok: boolean;
@@ -37,8 +39,12 @@ type Candidate = {
 type PlatformManifest = {
   versions: { windows: string; linux: string; mac: string };
   macDate: string | null;
+  macProductMinimum: MacProductMinimum;
 };
-export type ResolvedDownload = { url: string; version: string | null; pubDate: string | null };
+export type ResolvedDownload = {
+  url: string; version: string | null; pubDate: string | null;
+  macProductMinimum?: MacProductMinimum | null;
+};
 const CACHE_SCHEMA = 2;
 const CACHE_TTL = 10 * 60 * 1000;
 const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -171,6 +177,8 @@ function readManifest(
 ): PlatformManifest | null {
   const manifest = record(value);
   const input = record(manifest?.input);
+  const macProductMinimum = input?.macProductMinimum;
+  if (macProductMinimum !== '12.0' && macProductMinimum !== '13.0') return null;
   const target = record(input?.target);
   const versions = record(manifest?.versions);
   const windows = version(versions?.windows);
@@ -193,6 +201,7 @@ function readManifest(
   if (input.mode === 'full' && mac !== latest) return null;
   let macDate = release.published_at;
   if (input.mode === 'carry-mac') {
+    if (macProductMinimum !== '12.0' || record(input.macSource)?.productMinimum !== macProductMinimum) return null;
     const source = record(record(input.macSource)?.release);
     if (mac === latest || source?.tag !== `v${mac}` || !date(source.createdAt)) return null;
     macDate = date(source.publishedAt);
@@ -218,7 +227,7 @@ function readManifest(
     )
   )
     return null;
-  return { versions: { windows, linux, mac }, macDate };
+  return { versions: { windows, linux, mac }, macDate, macProductMinimum };
 }
 
 function selectVariant(
@@ -227,7 +236,8 @@ function selectVariant(
   manifest: PlatformManifest | null,
   os: DownloadOs,
   slot: string,
-  aliases: string[]
+  aliases: string[],
+  allowLegacyMinimum: boolean
 ): Variant {
   const matching = candidates
     .filter((item) => item.os === os && item.slot === slot)
@@ -248,6 +258,11 @@ function selectVariant(
       platformKey: item.asset.name,
       version: item.version,
       pubDate,
+      ...(os === 'macos' ? {
+        // The verified historical 2.17.1 payload predates platform manifests.
+        macProductMinimum: manifest?.macProductMinimum
+          ?? (allowLegacyMinimum && item.rank === 0 && item.version === '2.17.1' ? '12.0' : null),
+      } : {}),
     };
   }
   // Ambiguous canonical payloads cannot acquire a version from a generic alias.
@@ -271,7 +286,8 @@ export function parseReleaseDownloads(
     .filter((item): item is Candidate => item !== null);
   const manifest = readManifest(manifestValue, release, repository, candidates);
   const select = (os: DownloadOs, slot: string, aliases: string[]) =>
-    selectVariant(candidates, release, manifest, os, slot, aliases);
+    selectVariant(candidates, release, manifest, os, slot, aliases,
+      manifestValue === null && repository === '777genius/agent-teams-ai');
   return {
     ok: release.assets.length > 0,
     source: 'github-releases',
@@ -326,20 +342,26 @@ export function resolveReleaseDownload(
         ? variants[os][arch]
         : null;
   return selected?.url
-    ? { url: selected.url, version: selected.version, pubDate: selected.pubDate }
+    ? { url: selected.url, version: selected.version, pubDate: selected.pubDate,
+      ...(os === 'macos' ? { macProductMinimum: selected.macProductMinimum ?? null } : {}) }
     : null;
 }
 
 export function platformReleaseInfo(
   data: DownloadsApiResponse | null | undefined,
   os: DownloadOs
-): { version: string | null; pubDate: string | null } {
+): { version: string | null; pubDate: string | null; macProductMinimum?: MacProductMinimum | null } {
   const variants = data ? Object.values(data.variants[os]).filter((item) => item.url !== null) : [];
   const versions = new Set(variants.map((item) => item.version));
   const dates = new Set(variants.map((item) => item.pubDate));
+  const minimums = new Set(variants.map((item) => item.macProductMinimum));
   return {
     version: versions.size === 1 ? (variants[0]?.version ?? null) : null,
     pubDate: versions.size === 1 && dates.size === 1 ? (variants[0]?.pubDate ?? null) : null,
+    ...(os === 'macos' ? {
+      macProductMinimum: versions.size === 1 && minimums.size === 1
+        ? (variants[0]?.macProductMinimum ?? null) : null,
+    } : {}),
   };
 }
 
