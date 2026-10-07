@@ -4,12 +4,11 @@
  */
 
 import { withEditorTabSession } from '@features/editor-tab-sessions/renderer';
-import { createEditorTabActions, omitKey } from '@renderer/utils/editorTabActions';
-
 import { api } from '@renderer/api';
 import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { createEditorSaveActions } from '@renderer/utils/editorSaveActions';
+import { createEditorTabActions, omitKey } from '@renderer/utils/editorTabActions';
 import { invalidateQuickOpenCache } from '@renderer/utils/quickOpenCache';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { createLogger } from '@shared/utils/logger';

@@ -1,10 +1,11 @@
-import { editorBridge } from '@renderer/utils/editorBridge';
 import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
+import { editorBridge } from '@renderer/utils/editorBridge';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { getBasename, normalizePathForComparison } from '@shared/utils/platformPath';
+
+import type { EditorSlice } from '@renderer/store/slices/editorSlice';
 import type { AppState } from '@renderer/store/types';
 import type { EditorFileTab } from '@shared/types/editor';
-import type { EditorSlice } from '@renderer/store/slices/editorSlice';
 import type { StoreApi } from 'zustand';
 
 /** Remove a key from a record. Returns the same reference if key doesn't exist. */

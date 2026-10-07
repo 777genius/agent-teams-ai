@@ -2,9 +2,8 @@
  * Tests for fileIcons utility — extension-to-icon mapping with Devicon support.
  */
 
-import { describe, expect, it } from 'vitest';
-
 import { getDeviconUrl, getFileIcon } from '@renderer/components/team/editor/fileIcons';
+import { describe, expect, it } from 'vitest';
 
 describe('getFileIcon', () => {
   it('provides local distinct colorful document icons without CDN dependencies', () => {

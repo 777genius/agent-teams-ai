@@ -1,10 +1,10 @@
 import {
   decodeEditorTabSessions,
   editorSessionPathKey,
+  type EditorTabSession,
   MAX_SESSION_PROJECTS,
   MAX_SESSION_STORAGE_BYTES,
   normalizeEditorTabSession,
-  type EditorTabSession,
 } from '../domain/tabSession';
 
 export interface EditorTabsStorage {
