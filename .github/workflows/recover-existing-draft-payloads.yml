@@ -1,21 +1,29 @@
-name: Recover existing 2.17.3 draft payloads
+name: Recover existing 2.17.6 draft payloads
 
 on:
   workflow_dispatch:
     inputs:
       tooling_sha:
-        description: Exact reviewed main commit running this upload-only recovery
+        description: Exact reviewed commit at release-tooling-v2.17.6-recovery-payloads
+        required: true
+        type: string
+      draft_id:
+        description: Freshly reviewed numeric ID of the authorized existing 2.17.6 draft
+        required: true
+        type: string
+      draft_body_sha256:
+        description: SHA256 of the exact freshly reviewed draft body
         required: true
         type: string
 
 permissions: {}
 concurrency:
-  group: recover-draft-404009045
+  group: recover-draft-2.17.6
   cancel-in-progress: false
 
 jobs:
   upload:
-    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/tags/release-tooling-v2.17.6-recovery-payloads'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -23,12 +31,16 @@ jobs:
       actions: read
     env:
       EXPECTED_TOOLING_SHA: ${{ inputs.tooling_sha }}
+      EXPECTED_DRAFT_ID: ${{ inputs.draft_id }}
+      EXPECTED_BODY_SHA256: ${{ inputs.draft_body_sha256 }}
     steps:
       - name: Require exact reviewed tooling
         shell: bash
         run: |
           set -euo pipefail
           [[ "$EXPECTED_TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXPECTED_TOOLING_SHA" == "$GITHUB_SHA" ]]
+          [[ "$GITHUB_REF" == refs/tags/release-tooling-v2.17.6-recovery-payloads ]]
+          [[ "$EXPECTED_DRAFT_ID" =~ ^[1-9][0-9]*$ && "$EXPECTED_BODY_SHA256" =~ ^[a-f0-9]{64}$ ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -42,14 +54,14 @@ jobs:
           version: 11.22.0
       - name: Install frozen tooling without lifecycle scripts
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Recover original run 37342668377 attempt 1 payloads
+      - name: Recover original run 37577692624 attempt 1 payloads
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm exec tsx scripts/ci/release/recoverDraftPayloads.ts "$RUNNER_TEMP/draft-payload-recovery"
       - name: Preserve original producer provenance
         uses: actions/upload-artifact@v7
         with:
-          name: recovered-build-provenance-37342668377-1
-          path: ${{ runner.temp }}/draft-payload-recovery/build-provenance-37342668377-1.json
+          name: recovered-build-provenance-37577692624-1
+          path: ${{ runner.temp }}/draft-payload-recovery/build-provenance-37577692624-1.json
           if-no-files-found: error
           retention-days: 30

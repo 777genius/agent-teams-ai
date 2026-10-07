@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -42,6 +43,89 @@ export const RECOVERY = {
     },
   ],
 } as const;
+
+export interface RecoveryBinding {
+  repository: string;
+  tag: string;
+  releaseId: number;
+  applicationSha: string;
+  runId: number;
+  attempt: number;
+  workflowPath: string;
+  producers: readonly {
+    jobId: number;
+    jobName: string;
+    artifactId: number;
+    name: string;
+    sha256: string;
+  }[];
+  bodySha256?: string;
+}
+export const RECOVERY_TOOLING_TAG = 'release-tooling-v2.17.6-recovery-payloads';
+export const RECOVERY_216 = {
+  repository: RECOVERY.repository,
+  tag: 'v2.17.6',
+  applicationSha: 'b54020c17cc2624668fed77d5c8e98698866da59',
+  runId: 37577692624,
+  attempt: 1,
+  workflowPath: RECOVERY.workflowPath,
+  producers: [
+    {
+      jobId: 112650170287,
+      jobName: 'release-win x64',
+      artifactId: 11462824999,
+      name: 'draft-win32-x64-1',
+      sha256: '92a6b30ec214240df1f2742060cfe993d858526b11c42f0ef51b0ac6b3a2ea91',
+    },
+    {
+      jobId: 112650170504,
+      jobName: 'release-linux x64',
+      artifactId: 11463970958,
+      name: 'draft-linux-x64-1',
+      sha256: '8333136e6a2302635d3d115f1e1b0f91d4258e8c0af08c0c138ca505aab550be',
+    },
+    {
+      jobId: 112650170568,
+      jobName: 'release-win arm64',
+      artifactId: 11464495471,
+      name: 'draft-win32-arm64-1',
+      sha256: '25fa49f05f668bcc2ac38e0960391c9c811c2ec3186bdf506768a04d0c8714c8',
+    },
+  ],
+} as const;
+export function recovery216Binding(
+  draftId: string | undefined,
+  bodySha256: string | undefined
+): RecoveryBinding {
+  requireThat(
+    /^[1-9]\d*$/.test(draftId ?? '') && Number.isSafeInteger(Number(draftId)),
+    'Reviewed positive numeric draft ID required'
+  );
+  requireThat(/^[a-f0-9]{64}$/.test(bodySha256 ?? ''), 'Reviewed draft body SHA256 required');
+  requireThat(
+    draftId === '405470107' &&
+      bodySha256 === '766d954f403784e210bd868875487511a70b2851b9c3b6aa01b5882ebf119926',
+    'Authorized draft ID/body pins required'
+  );
+  return { ...RECOVERY_216, releaseId: Number(draftId), bodySha256 };
+}
+export async function validateRecoveryTooling(
+  port: RecoveryPort,
+  env: NodeJS.ProcessEnv
+): Promise<void> {
+  requireThat(
+    env.GITHUB_REPOSITORY === RECOVERY.repository &&
+      env.GITHUB_EVENT_NAME === 'workflow_dispatch' &&
+      env.GITHUB_REF === `refs/tags/${RECOVERY_TOOLING_TAG}` &&
+      /^[a-f0-9]{40}$/.test(env.EXPECTED_TOOLING_SHA ?? '') &&
+      env.GITHUB_SHA === env.EXPECTED_TOOLING_SHA,
+    'Canonical recovery workflow/tooling SHA required'
+  );
+  const tooling = await port.json<{ sha: string }>(
+    `repos/${RECOVERY.repository}/commits/${RECOVERY_TOOLING_TAG}`
+  );
+  requireThat(tooling.sha === env.EXPECTED_TOOLING_SHA, 'Recovery tooling tag changed');
+}
 type StoredAsset = Asset & { state: string };
 interface ProducerJob {
   id: number;
@@ -138,26 +222,30 @@ export function recoveryPort(): RecoveryPort {
     upload: (repository, id, file) => release.upload(repository, id, file),
   };
 }
-function payloadNames(index: number): string[] {
-  const names = platformNames('2.17.3');
+function payloadNames(index: number, binding: RecoveryBinding): string[] {
+  const names = platformNames(binding.tag.slice(1));
   if (index === 1) return names.linux;
   const name = names.windows[index === 0 ? 0 : 1];
   requireThat(name, 'Windows payload name missing');
   return [name, `${name}.blockmap`];
 }
-export async function validateProducer(port: RecoveryPort, index: number): Promise<void> {
-  const pin = RECOVERY.producers[index];
+export async function validateProducer(
+  port: RecoveryPort,
+  index: number,
+  binding: RecoveryBinding = RECOVERY
+): Promise<void> {
+  const pin = binding.producers[index];
   requireThat(pin, 'Unknown producer');
-  const prefix = `repos/${RECOVERY.repository}`;
+  const prefix = `repos/${binding.repository}`;
   const job = await port.json<ProducerJob>(`${prefix}/actions/jobs/${pin.jobId}`);
   const artifact = await port.json<ProducerArtifact>(
     `${prefix}/actions/artifacts/${pin.artifactId}`
   );
   requireThat(
     job.id === pin.jobId &&
-      job.run_id === RECOVERY.runId &&
-      job.run_attempt === 1 &&
-      job.head_sha === RECOVERY.applicationSha &&
+      job.run_id === binding.runId &&
+      job.run_attempt === binding.attempt &&
+      job.head_sha === binding.applicationSha &&
       job.name === pin.jobName &&
       job.status === 'completed' &&
       job.conclusion === 'success',
@@ -184,40 +272,62 @@ export async function validateProducer(port: RecoveryPort, index: number): Promi
       artifact.name === pin.name &&
       artifact.digest === `sha256:${pin.sha256}` &&
       !artifact.expired &&
-      artifact.workflow_run.id === RECOVERY.runId &&
-      artifact.workflow_run.head_sha === RECOVERY.applicationSha &&
+      artifact.workflow_run.id === binding.runId &&
+      artifact.workflow_run.head_sha === binding.applicationSha &&
       artifact.workflow_run.repository_id === 1163183284 &&
       artifact.workflow_run.head_repository_id === 1163183284,
     'Original producer artifact identity mismatch'
   );
 }
-async function boundDraft(port: RecoveryPort): Promise<StoredAsset[]> {
-  const prefix = `repos/${RECOVERY.repository}`;
-  const release = await port.json<Release>(`${prefix}/releases/${RECOVERY.releaseId}`);
+async function boundDraft(port: RecoveryPort, binding: RecoveryBinding): Promise<StoredAsset[]> {
+  const prefix = `repos/${binding.repository}`;
+  const release = await port.json<Release>(`${prefix}/releases/${binding.releaseId}`);
   requireThat(
-    release.id === RECOVERY.releaseId &&
-      release.tag_name === RECOVERY.tag &&
-      release.target_commitish === RECOVERY.applicationSha &&
+    release.id === binding.releaseId &&
+      release.tag_name === binding.tag &&
+      release.target_commitish === binding.applicationSha &&
       release.draft === true &&
-      release.prerelease === false,
+      release.prerelease === false &&
+      (!binding.bodySha256 ||
+        (release.name === binding.tag &&
+          typeof release.body === 'string' &&
+          createHash('sha256').update(release.body).digest('hex') === binding.bodySha256)),
     'Bound draft identity changed'
   );
   const refs = await port.json<{ ref: string }[]>(
-    `${prefix}/git/matching-refs/tags/${RECOVERY.tag}`
+    `${prefix}/git/matching-refs/tags/${binding.tag}`
   );
-  if (refs.some((ref) => ref.ref === `refs/tags/${RECOVERY.tag}`)) {
-    const tag = await port.json<{ sha: string }>(`${prefix}/commits/${RECOVERY.tag}`);
-    requireThat(tag.sha === RECOVERY.applicationSha, 'Existing target tag application SHA changed');
+  const tagExists = refs.some((ref) => ref.ref === `refs/tags/${binding.tag}`);
+  requireThat(!binding.bodySha256 || tagExists, 'Existing target application tag required');
+  if (tagExists) {
+    const tag = await port.json<{ sha: string }>(`${prefix}/commits/${binding.tag}`);
+    requireThat(tag.sha === binding.applicationSha, 'Existing target tag application SHA changed');
   }
   const assets: StoredAsset[] = [];
   for (let page = 1; ; page++) {
     const batch = await port.json<StoredAsset[]>(
-      `${prefix}/releases/${RECOVERY.releaseId}/assets?per_page=100&page=${page}`
+      `${prefix}/releases/${binding.releaseId}/assets?per_page=100&page=${page}`
     );
     requireThat(Array.isArray(batch), 'Invalid asset list');
     assets.push(...batch);
     if (batch.length < 100) break;
   }
+  requireThat(
+    assets.every(
+      (asset) =>
+        Number.isSafeInteger(asset.id) &&
+        asset.id > 0 &&
+        Number.isSafeInteger(asset.size) &&
+        asset.size >= 0 &&
+        typeof asset.name === 'string' &&
+        asset.name.length > 0 &&
+        /^sha256:[a-f0-9]{64}$/.test(asset.digest) &&
+        asset.state === 'uploaded'
+    ) &&
+      new Set(assets.map((asset) => asset.id)).size === assets.length &&
+      new Set(assets.map((asset) => asset.name)).size === assets.length,
+    'Draft contains incomplete or ambiguous asset metadata'
+  );
   return assets;
 }
 function snapshot(assets: StoredAsset[]): string {
@@ -227,37 +337,42 @@ function snapshot(assets: StoredAsset[]): string {
       .sort((a, b) => a.id - b.id)
   );
 }
-export async function recoverDraftPayloads(port: RecoveryPort, directory: string): Promise<void> {
+export async function recoverDraftPayloads(
+  port: RecoveryPort,
+  directory: string,
+  binding: RecoveryBinding = RECOVERY
+): Promise<void> {
   const proof = {
-    runId: RECOVERY.runId,
-    attempt: RECOVERY.attempt,
-    jobIds: RECOVERY.producers.map((pin) => pin.jobId),
+    runId: binding.runId,
+    attempt: binding.attempt,
+    jobIds: binding.producers.map((pin) => pin.jobId),
   };
-  await port.verifyBuild(RECOVERY.repository, RECOVERY.applicationSha, proof, 'carry-mac');
-  const run = await port.json<GitHubBuildRun & { id: number; status: string }>(
-    `repos/${RECOVERY.repository}/actions/runs/${RECOVERY.runId}`
+  await port.verifyBuild(binding.repository, binding.applicationSha, proof, 'carry-mac');
+  const run = await port.json<GitHubBuildRun & { id: number; status: string; conclusion: string }>(
+    `repos/${binding.repository}/actions/runs/${binding.runId}`
   );
   requireThat(
-    run.id === RECOVERY.runId &&
-      run.path === RECOVERY.workflowPath &&
+    run.id === binding.runId &&
+      run.path === binding.workflowPath &&
       run.event === 'workflow_dispatch' &&
-      run.head_sha === RECOVERY.applicationSha &&
-      run.run_attempt === 1 &&
-      run.status === 'completed',
+      run.head_sha === binding.applicationSha &&
+      run.run_attempt === binding.attempt &&
+      run.status === 'completed' &&
+      (!binding.bodySha256 || run.conclusion === 'success'),
     'Original build run identity mismatch'
   );
-  const baseline = await boundDraft(port);
+  const baseline = await boundDraft(port, binding);
   const payloads = path.join(directory, 'payloads');
   await mkdir(payloads, { recursive: true });
-  for (const [index, pin] of RECOVERY.producers.entries()) {
-    await validateProducer(port, index);
+  for (const [index, pin] of binding.producers.entries()) {
+    await validateProducer(port, index, binding);
     const archive = path.join(directory, `${pin.artifactId}.zip`);
     await port.archive(pin.artifactId, archive);
     await verifyArtifactArchive(archive, pin.sha256);
-    await port.extract(archive, payloads, payloadNames(index));
+    await port.extract(archive, payloads, payloadNames(index, binding));
   }
-  await port.verifyBuild(RECOVERY.repository, RECOVERY.applicationSha, proof, 'carry-mac');
-  await appendDraftPayloads(port, directory, baseline);
+  await port.verifyBuild(binding.repository, binding.applicationSha, proof, 'carry-mac');
+  await appendDraftPayloads(port, directory, baseline, binding);
 }
 export async function verifyArtifactArchive(archive: string, sha256: string): Promise<void> {
   requireThat(
@@ -268,15 +383,16 @@ export async function verifyArtifactArchive(archive: string, sha256: string): Pr
 export async function appendDraftPayloads(
   port: RecoveryPort,
   directory: string,
-  baseline: StoredAsset[]
+  baseline: StoredAsset[],
+  binding: RecoveryBinding = RECOVERY
 ): Promise<void> {
   requireThat(
-    snapshot(await boundDraft(port)) === snapshot(baseline),
+    snapshot(await boundDraft(port, binding)) === snapshot(baseline),
     'Draft assets changed while recovering archives'
   );
   const payloads = path.join(directory, 'payloads');
-  const names = RECOVERY.producers
-    .flatMap((_, index) => payloadNames(index))
+  const names = binding.producers
+    .flatMap((_, index) => payloadNames(index, binding))
     .sort((a, b) => a.localeCompare(b, 'en'));
   requireThat(
     canonical((await readdir(payloads)).sort((a, b) => a.localeCompare(b, 'en'))) ===
@@ -293,20 +409,20 @@ export async function appendDraftPayloads(
   }
   const provenance = {
     schemaVersion: 1,
-    applicationSha: RECOVERY.applicationSha,
-    tag: RECOVERY.tag,
-    runId: RECOVERY.runId,
-    attempt: RECOVERY.attempt,
-    jobs: RECOVERY.producers.map((pin) => ({
+    applicationSha: binding.applicationSha,
+    tag: binding.tag,
+    runId: binding.runId,
+    attempt: binding.attempt,
+    jobs: binding.producers.map((pin) => ({
       id: pin.jobId,
       name: pin.jobName,
       conclusion: 'success',
-      run_id: RECOVERY.runId,
+      run_id: binding.runId,
     })),
-    workflowPath: RECOVERY.workflowPath,
+    workflowPath: binding.workflowPath,
     payloads: proofs.map(({ name, sha256 }) => ({ name, sha256 })),
   };
-  const evidence = path.join(directory, `build-provenance-${RECOVERY.runId}-1.json`);
+  const evidence = path.join(directory, `build-provenance-${binding.runId}-1.json`);
   await writeFile(evidence, `${canonical(provenance)}\n`, { flag: 'wx' });
   const files = [
     ...proofs.map((item) => ({ proof: item, file: path.join(payloads, item.name) })),
@@ -327,16 +443,16 @@ export async function appendDraftPayloads(
   }
   let expected = baseline;
   for (const { proof: item, file } of files) {
-    const before = await boundDraft(port);
+    const before = await boundDraft(port, binding);
     requireThat(snapshot(before) === snapshot(expected), 'Draft asset snapshot changed');
     if (before.some((asset) => asset.name === item.name)) continue;
     let uploadError: unknown;
     try {
-      await port.upload(RECOVERY.repository, RECOVERY.releaseId, file);
+      await port.upload(binding.repository, binding.releaseId, file);
     } catch (error) {
       uploadError = error;
     }
-    const after = await boundDraft(port),
+    const after = await boundDraft(port, binding),
       added = after.filter((asset) => !before.some((old) => old.id === asset.id));
     const asset = added[0];
     requireThat(
@@ -356,19 +472,17 @@ export async function appendDraftPayloads(
     );
   }
   requireThat(
-    snapshot(await boundDraft(port)) === snapshot(expected),
+    snapshot(await boundDraft(port, binding)) === snapshot(expected),
     'Final draft snapshot changed'
   );
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  requireThat(
-    process.env.GITHUB_REPOSITORY === RECOVERY.repository &&
-      process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' &&
-      process.env.GITHUB_REF === 'refs/heads/main' &&
-      /^[a-f0-9]{40}$/.test(process.env.EXPECTED_TOOLING_SHA ?? '') &&
-      process.env.GITHUB_SHA === process.env.EXPECTED_TOOLING_SHA,
-    'Canonical recovery workflow/tooling SHA required'
+  const binding = recovery216Binding(
+    process.env.EXPECTED_DRAFT_ID,
+    process.env.EXPECTED_BODY_SHA256
   );
+  const port = recoveryPort();
+  await validateRecoveryTooling(port, process.env);
   requireThat(process.argv[2], 'Recovery directory required');
-  await recoverDraftPayloads(recoveryPort(), process.argv[2]);
+  await recoverDraftPayloads(port, process.argv[2], binding);
 }
