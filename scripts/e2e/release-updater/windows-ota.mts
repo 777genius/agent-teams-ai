@@ -17,6 +17,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { parse } from 'yaml';
 
+import { finalWindowsReleaseProved } from '../../ci/release/windowsReleaseScenario.ts';
+
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import {
@@ -30,11 +32,19 @@ import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs } from './windows-mirror.mts';
 import { assertCaptionProof, readPeArchitecture, windowsNative } from './windows-native.mts';
 import {
+  windowsNativePaintContentReady,
+  type WindowsNativePaintPhase,
+} from './windows-native-paint-content.mts';
+import {
   proveWindowsDownload,
   proveWindowsProvider,
   windowsOtaMirror,
 } from './windows-ota-mirror.mts';
-import { assertNativeNames, windowsOtaObserver } from './windows-ota-observer.mts';
+import {
+  assertNativeNames,
+  observeInstallerChild,
+  windowsOtaObserver,
+} from './windows-ota-observer.mts';
 import {
   absent,
   appEnvironment,
@@ -151,7 +161,7 @@ async function cleanupOwned(file: string) {
   assert.equal(path.basename(owned.profileFile), 'profile-ownership.json');
   assert.equal(path.dirname(path.resolve(owned.profileFile)), path.dirname(path.resolve(file)));
   const output = path.dirname(path.resolve(file));
-  const native = await windowsNative(owned.root, output);
+  const native = await windowsNative(owned.root, output, 'cleanup');
   // Stop every installer before the app: NSIS --force-run can create a late
   // successor while installer cleanup is still running.
   for (const executable of owned.installers) {
@@ -246,6 +256,7 @@ async function run() {
   let logError: Error | undefined;
   let targetVersion = '';
   let samplerStop = false;
+  let finalReleaseProof: (() => boolean) | undefined;
   let sampler: Promise<void> | undefined;
   const installerSamples: WindowsProcess[] = [];
   const spawnedChildren: { kind: 'app' | 'installer'; child: ChildProcess }[] = [];
@@ -455,7 +466,7 @@ async function run() {
     assert.equal(observed.cache?.base.toLowerCase(), physical.local.toLowerCase());
     return { owner, arguments: arguments_, roots };
   }
-  async function nativePaint(owner: WindowsProcess, name: string) {
+  async function nativePaint(owner: WindowsProcess, name: WindowsNativePaintPhase) {
     const directory = path.join(root, `capture-${name}`);
     await mkdir(directory);
     const deadline = Date.now() + 45_000;
@@ -498,17 +509,12 @@ async function run() {
           attempts.push(attempt);
           await persist(); // Actual pixels survive any subsequent UIA/content failure.
           assert((await stat(image)).size > 1000);
-          assertCaptionProof(owner.pid, window.hwnd, window.caption);
+          if (!window.uiaFocus) assertCaptionProof(owner.pid, window.hwnd, window.caption);
           attempt.observation = await observer.names(owner, window.hwnd);
           await persist(); // Includes UIA Error/HResult and partial owned subtree counters.
           assertNativeNames(owner.pid, window.hwnd, attempt.observation);
           const names = attempt.observation.Names;
-          const text = names.join('\n');
-          const contentReady =
-            name === 'available'
-              ? text.includes(targetVersion) && /^Download$/imu.test(text)
-              : /Providers\s*&\s*plans/iu.test(text) && /^Tasks$/imu.test(text);
-          attempt.ready = contentReady && !/Preparing workspace/iu.test(text);
+          attempt.ready = windowsNativePaintContentReady(name, names, targetVersion);
           await persist();
           if (!attempt.ready) return null;
           assert(Date.now() <= deadline, 'Automatic real desktop must paint within 45 seconds');
@@ -546,6 +552,7 @@ async function run() {
       evidence.passed = false;
       process.exitCode = 1;
     }
+    evidence.finalReleaseProved = finalReleaseProof?.() ?? false;
     evidence.finishedAt = new Date().toISOString();
     await writeFile(path.join(output, 'summary.json'), JSON.stringify(evidence, null, 2));
     if (
@@ -667,6 +674,31 @@ async function run() {
     if (!(await point('^Download$'))) await click('^(?:Update app|View details)$');
     await waitFor(() => point('^Download$'), 'original Download button');
     await screenshot('available');
+    // Original 211 fixed update overlays are no-drag; establish owned foreground first.
+    assert.equal(
+      await renderer!.evaluate<number>('document.querySelectorAll("[role=dialog]").length'),
+      1
+    );
+    await renderer!.evaluate(
+      'document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape", bubbles:true}))'
+    );
+    await waitFor(
+      () => renderer!.evaluate<boolean>('!document.querySelector("[role=dialog]")'),
+      'original update dialog closes before owned caption proof'
+    );
+    evidence.captionReadyNative = await nativePaint(initial.owner, 'caption-ready');
+    await click('^(?:Update app|View details)$');
+    await waitFor(() => point('^Download$'), 'reopened original Download button');
+    const reopened = await renderer!.evaluate<string>(
+      'document.querySelector("[role=dialog]").innerText'
+    );
+    assert(reopened.includes(targetVersion));
+    assert(
+      (await state()).events.some(
+        (event) => event.type === 'available' && event.version === targetVersion
+      )
+    );
+    evidence.reopenedAvailableDialog = reopened;
     evidence.availableNative = await nativePaint(initial.owner, 'available');
     const cachedInstaller = path.join(root, 'cache', 'installer.exe');
     const cachedBlockmap = path.join(root, 'cache', 'current.blockmap');
@@ -937,10 +969,22 @@ async function run() {
     spawnedChildren.push({ kind: 'installer', child: setup });
     for (const stream of [setup.stdout, setup.stderr])
       stream?.on('data', (chunk: Buffer) => log.write(chunk));
+    const finishInstallObservation = observeInstallerChild(
+      setup,
+      installer,
+      native,
+      async (receipt) => {
+        await writeFile(
+          path.join(output, 'nsis-spawn-lineage.json'),
+          JSON.stringify(receipt, null, 2)
+        );
+      },
+      env
+    );
     const setupCode = await new Promise<number | null>((resolve, reject) => {
       setup.once('error', reject);
       setup.once('exit', resolve);
-    });
+    }).finally(finishInstallObservation);
     assert.equal(setupCode, 0);
     assert.equal(
       (await native.processes(executable)).length,
@@ -957,6 +1001,12 @@ async function run() {
       actualNsisExitCode: setupCode,
       env,
       native,
+      recordListing: async (receipt) => {
+        await writeFile(
+          path.join(output, 'prior-archive-listing.json'),
+          JSON.stringify(receipt, null, 2)
+        );
+      },
       recordDecoded: async (ledger) => {
         await writeFile(
           path.join(output, 'prior-decoded-pe.json'),
@@ -1024,10 +1074,18 @@ async function run() {
     assert(!logError);
     evidence.passed = true;
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
-    evidence.finalReleaseProved =
-      inputs.legacyFixture === false &&
-      targetVersion === '2.17.6' &&
-      Boolean(inputs.stagedMetadata);
+    finalReleaseProof = () =>
+      finalWindowsReleaseProved({
+        architecture: process.arch,
+        mode,
+        targetVersion,
+        legacyFixture: inputs.legacyFixture,
+        plan: inputs.plan,
+        stagedMetadata: inputs.stagedMetadata,
+        passed: evidence.passed === true,
+        freshInstallProved: evidence.freshInstallProved === true,
+        fullOtaProved: evidence.fullOtaProved === true,
+      });
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);
     process.exitCode = 1;

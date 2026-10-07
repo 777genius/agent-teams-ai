@@ -1,4 +1,10 @@
 import assert from 'node:assert/strict';
+import { windowsInstallerLineageSource } from './windows-installer-lineage.mts';
+import {
+  observeInstallerPs5Control,
+  type InstallerLineage,
+} from './windows-installer-ps5-diagnostic.mts';
+import { testCloudExperiencePreflight } from './windows-cloud-preflight.mts';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,11 +17,15 @@ import {
   windowsProfileCaptureEnvironment,
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
+import { windowsMetadataInventorySource } from './windows-owned-uia-metadata.mts';
 import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
+import { assertNativeRootFocus, windowsUiaSource } from './windows-ota-observer.mts';
 
 import type { ExecFileException } from 'node:child_process';
+import type { NativeRootFocus } from './windows-ota-observer.mts';
 import type { PhysicalProfile, ProfileOwnership } from './windows-ota-profile.mts';
 
+type NativeMode = 'probe' | 'cleanup';
 const execute = promisify(execFile);
 export interface WindowsProcess {
   pid: number;
@@ -25,6 +35,13 @@ export interface WindowsProcess {
   start: string;
   session: number;
   sid: string;
+}
+export function windowsCaptureRequest(
+  owner: WindowsProcess,
+  screenshot: string,
+  diagnostic?: string
+) {
+  return { ...owner, screenshot, diagnosticOnly: diagnostic === '1' };
 }
 export function uniqueWindowsOwners(owners: WindowsProcess[]) {
   const unique = new Map<number, WindowsProcess>();
@@ -108,6 +125,7 @@ interface NativeWindow {
   foreground: boolean;
   screenshot: string;
   caption: CaptionProof | null;
+  uiaFocus: NativeRootFocus | null;
 }
 interface DesktopSession {
   station: string;
@@ -142,7 +160,7 @@ $progress = $InputFile + '.progress.jsonl'
 function Write-TestProgress([string]$phase, [hashtable]$details=$null) {
   $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
   if ($null -ne $details) { $record.details=$details }
-  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
+  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Depth 12 -Compress) + [Environment]::NewLine)
 }
 Write-TestProgress 'after-input-and-shell-validation'
 function Get-StartUtcTicks([object]$value) {
@@ -185,6 +203,7 @@ function Read-Owned([string]$file) {
     @{ pid=$ownedId; parent=[int]$item.ParentProcessId; executable=$item.ExecutablePath; command=$item.CommandLine; start=$item.CreationDate.ToUniversalTime().ToString('o'); session=[int]$item.SessionId; sid=$owner.Sid }
   })
 }
+${windowsMetadataInventorySource}
 if ($data.operation -eq 'prior-fixture-guard') {
   if (@($data.files).Count -lt 1 -or @($data.files).Count -gt 32 -or $data.registry -isnot [bool]) { throw 'Invalid prior fixture guard request' }
   $rootAttributes=[IO.File]::GetAttributes($root)
@@ -238,6 +257,10 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading;
+using System.Collections.Generic;
+using Microsoft.Win32.SafeHandles;
+${windowsUiaSource}
 public static class TestWindowsNative {
   [DllImport("shell32.dll")] static extern int SHGetKnownFolderPath(ref Guid id, uint flags, IntPtr token, out IntPtr value);
   public static string KnownFolder(string id) {
@@ -276,6 +299,9 @@ public static class TestWindowsNative {
   [DllImport("user32.dll",SetLastError=true)] static extern bool SetWindowPos(IntPtr hwnd,IntPtr after,int x,int y,int width,int height,uint flags);
   [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] inputs,int size);
   public static object CaptionTrace;
+  public static TestOtaObserver.Observation RootFocusTrace;
+  public static TestOtaObserver.Observation OwnedMetadataTrace;
+  public sealed class OwnedFocusRequired:Exception { public OwnedFocusRequired(string reason):base(reason) {} }
   public static int InputSize() {
     int size=Marshal.SizeOf(typeof(Input));
     if(IntPtr.Size!=8 || size!=40) throw new Exception("Unexpected native INPUT ABI");
@@ -336,14 +362,14 @@ public static class TestWindowsNative {
     try {
       SameThread(hwnd,pid,thread,validate);
       if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) {
-        if(original || !occluded) throw new Exception("No accessible owned HTCAPTION point");
+        if(original || !occluded) throw new OwnedFocusRequired("No accessible owned HTCAPTION point");
         SameThread(hwnd,pid,thread,validate); promoted=true;
         if(!SetWindowPos(hwnd,new IntPtr(-1),0,0,0,0,0x213) || !Topmost(hwnd)) throw new Exception("Owned TOPMOST promotion failed");
         SameThread(hwnd,pid,thread,validate);
         if(!GetWindowRect(hwnd,out r)) throw new Exception("Owned rectangle unavailable after promotion");
       }
       SameThread(hwnd,pid,thread,validate);
-      if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) throw new Exception("Owned caption occluded or no HTCAPTION point");
+      if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) throw new OwnedFocusRequired("Owned caption occluded or no HTCAPTION point");
       searchElapsedMs=Environment.TickCount64-searchStart;
       Input[] inputs=new Input[] {
         new Input { Mouse=new Mouse { X=(int)((long)point.X*65536/width)+1,Y=(int)((long)point.Y*65536/height)+1,Flags=0x8001 } },
@@ -392,9 +418,15 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress) {
-    CaptionTrace=null; validate();
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks,bool diagnosticOnly,Func<TestOtaObserver.FocusRequest[]> inventory) {
+    CaptionTrace=null; RootFocusTrace=null; OwnedMetadataTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
+    if(diagnosticOnly) {
+      SameThread(hwnd,expectedPid,thread,validate);
+      try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks,inventory); }
+      catch(Exception error) { OwnedMetadataTrace=new TestOtaObserver.Observation { Error=error.Message,HResult=error.HResult }; }
+      throw new OwnedFocusRequired("Metadata-only diagnostic cannot qualify native capture");
+    }
     ShowWindow(hwnd, 9);
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
     bool accepted=SetForegroundWindow(hwnd), synchronized=false;
@@ -408,7 +440,16 @@ public static class TestWindowsNative {
     FocusTrace=new object[] { hwnd.ToInt64().ToString("x"), expectedPid, thread, foreground.ToInt64().ToString("x"), foregroundPid, foregroundThread, GetCurrentThreadId(), accepted, synchronized, WindowMetrics(foreground), WindowMetrics(hwnd) };
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
     if ((accepted && !synchronized) || foreground != hwnd) {
-      CaptionClick(hwnd,expectedPid,thread,validate,progress);
+      try { CaptionClick(hwnd,expectedPid,thread,validate,progress); }
+      catch(OwnedFocusRequired) {
+        SameThread(hwnd,expectedPid,thread,validate);
+        RootFocusTrace=new TestOtaObserver.Observation { RootHwnd=hwnd.ToInt64().ToString("x"),RootPid=expectedPid,RootThread=thread };
+        try {
+          RootFocusTrace=TestOtaObserver.Focus(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks);
+          if(RootFocusTrace.Error!=null) throw new Exception(RootFocusTrace.Error);
+        } catch(Exception error) { if(RootFocusTrace.Error==null) { RootFocusTrace.Error=error.Message; RootFocusTrace.HResult=error.HResult; } throw; }
+        SameThread(hwnd,expectedPid,thread,validate);
+      }
       if(GetForegroundWindow()!=hwnd) throw new Exception("Owned foreground changed after caption fallback");
     }
     SameThread(hwnd,expectedPid,thread,validate);
@@ -432,7 +473,7 @@ Write-TestProgress 'after-native-compile'
 Write-TestProgress 'operation-entry'
 $result = $null
 switch ($data.operation) {
-  'compile' { $result=@{ inputSize=[TestWindowsNative]::InputSize(); pointerSize=[IntPtr]::Size } }
+  'compile' { $uia=[TestOtaObserver]::Compile(); $result=@{ uia=$uia; inputSize=[TestWindowsNative]::InputSize(); pointerSize=[IntPtr]::Size } }
   'profile' {
     foreach($registry in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
       if (Test-Path -LiteralPath $registry) {
@@ -449,7 +490,9 @@ switch ($data.operation) {
     $result=@{ station=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetProcessWindowStation()); desktop=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetThreadDesktop([TestWindowsNative]::GetCurrentThreadId())); session=(Get-Process -Id $PID).SessionId; sid=$identity.User.Value; administrator=$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
   }
   'processes' { $result=@(Read-Owned $data.executable) }
+${windowsInstallerLineageSource}
   'capture' {
+    if ($data.diagnosticOnly -isnot [bool]) { throw 'Explicit Boolean diagnostic mode required' }
     $validate=[Action] {
       $process=@(Read-Owned $data.executable | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) -and $_.sid -eq $data.sid -and $_.session -eq $data.session })
       if ($process.Count -ne 1) { throw 'Owned process identity changed during native capture' }
@@ -458,16 +501,19 @@ switch ($data.operation) {
     $handle=[TestWindowsNative]::VisibleWindow($data.pid)
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
+    $inventory=[Func[TestOtaObserver+FocusRequest[]]] { Get-MetadataOwners }
     $attemptProgress=[Action] { Write-TestProgress 'caption-before-effects' @{ trace=[TestWindowsNative]::CaptionTrace } }
-    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress) }
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start),$data.diagnosticOnly,$inventory) }
     finally {
       Write-TestProgress 'caption-attempt' @{ trace=[TestWindowsNative]::CaptionTrace }
+      Write-TestProgress 'capture-uia-focus' @{ observation=[TestWindowsNative]::RootFocusTrace }
+      if ($null -ne [TestWindowsNative]::OwnedMetadataTrace) { Write-TestProgress 'capture-owned-uia-metadata' @{ observation=[TestWindowsNative]::OwnedMetadataTrace } }
       $focus=[TestWindowsNative]::FocusTrace
       if ($null -ne $focus) { Write-TestProgress 'capture-focus' @{ desiredHwnd=$focus[0]; desiredPid=$focus[1]; desiredThread=$focus[2]; foregroundHwnd=$focus[3]; foregroundPid=$focus[4]; foregroundThread=$focus[5]; callerThread=$focus[6]; setForegroundAccepted=$focus[7]; synchronizationSucceeded=$focus[8]; foregroundGeometry=$focus[9]; ownedGeometry=$focus[10] } }
     }
     if ($null -eq $pixels) { Write-TestProgress 'capture-foreground-pending'; $result=$null; break }
     if ($pixels[0] -ne $data.pid) { throw 'HWND owner changed' }
-    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file; caption=[TestWindowsNative]::CaptionTrace }
+    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file; caption=[TestWindowsNative]::CaptionTrace; uiaFocus=[TestWindowsNative]::RootFocusTrace }
   }
   'signature' {
     $file=Test-OwnedPath $data.file
@@ -512,7 +558,7 @@ if ($data.operation -eq 'stop') {
 ConvertTo-Json -InputObject $result -Depth 12 -Compress
 `;
 
-export async function windowsNative(root: string, evidence: string) {
+export async function windowsNative(root: string, evidence: string, purpose: NativeMode = 'probe') {
   assert.equal(process.platform, 'win32');
   assert(path.basename(root).startsWith('TEST-updater-windows-'));
   const shell = await selectedWindowsPowerShell();
@@ -615,6 +661,7 @@ export async function windowsNative(root: string, evidence: string) {
     return JSON.parse(result.stdout.trim()) as T;
   }
   await call('compile');
+  await testCloudExperiencePreflight(root, evidence, shell, compilerReferences, env, purpose);
   return {
     priorFixtureGuard: (files: string[], registry: boolean) =>
       call<{
@@ -629,8 +676,29 @@ export async function windowsNative(root: string, evidence: string) {
     physicalProfile: () => call<PhysicalProfile>('profile'),
     session: () => call<DesktopSession>('session'),
     processes: (executable: string) => call<WindowsProcess[]>('processes', { executable }),
-    capture: (owner: WindowsProcess, screenshot: string) =>
-      call<NativeWindow | null>('capture', { ...owner, screenshot }),
+    installerLineage: async (
+      owner: Omit<WindowsProcess, 'command'>,
+      spawnEnv?: NodeJS.ProcessEnv
+    ) => {
+      const lineage = await call<InstallerLineage>('installer-lineage', { owner });
+      return {
+        ...lineage,
+        diagnostic: spawnEnv
+          ? await observeInstallerPs5Control(lineage, shell.systemRoot, root, spawnEnv)
+          : null,
+      };
+    },
+    capture: async (owner: WindowsProcess, screenshot: string) => {
+      const window = await call<NativeWindow | null>(
+        'capture',
+        windowsCaptureRequest(owner, screenshot, process.env.TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC)
+      );
+      if (window?.uiaFocus) {
+        assert(window.caption);
+        assertNativeRootFocus(owner, window.hwnd, window.caption, window.uiaFocus);
+      }
+      return window;
+    },
     signature: (file: string) =>
       call<{
         status: string;
@@ -648,7 +716,6 @@ export async function windowsNative(root: string, evidence: string) {
       call<never[]>('stop', { owners: uniqueWindowsOwners(owners) }),
   };
 }
-
 export async function readPeArchitecture(file: string) {
   const handle = await open(file, 'r');
   try {
@@ -690,7 +757,7 @@ if (
   };
   assert(/^TEST-updater-windows-[a-f0-9-]+$/.test(owned.firewallGroup));
   assert(owned.firewallNames.every((name) => name.startsWith(`${owned.firewallGroup}-`)));
-  const native = await windowsNative(owned.root, path.dirname(path.resolve(file)));
+  const native = await windowsNative(owned.root, path.dirname(path.resolve(file)), 'cleanup');
   const files = [owned.executable, owned.priorInstaller, owned.targetInstaller];
   if (owned.fixtureDecoder) {
     assert.equal(owned.fixtureDecoder, path.join(owned.root, 'prior-fixture', '7za.exe'));
