@@ -52,13 +52,13 @@ describe('project editor tab metadata', () => {
   });
 
   it('bounds metadata without persisting document contents', () => {
-    let disk: string | null = null;
-    const repository = createEditorTabsRepository({ read: () => disk, write: value => { disk = value; } });
+    const disk: { raw: string | null } = { raw: null };
+    const repository = createEditorTabsRepository({ read: () => disk.raw, write: value => { disk.raw = value; } });
     for (let index = 0; index < 40; index++) repository.save('/p' + index, { paths: Array.from({ length: 100 }, (_, file) => `/p${index}/${file}.txt`), active: null });
-    const projects = decodeEditorTabSessions(disk);
+    const projects = decodeEditorTabSessions(disk.raw);
     expect(projects).toHaveLength(32);
     expect(projects[0].paths).toHaveLength(64);
     expect(repository.load('/p0').paths).toEqual([]);
-    expect(disk?.length).toBeLessThanOrEqual(512 * 1024);
+    expect(disk.raw?.length).toBeLessThanOrEqual(512 * 1024);
   });
 });
