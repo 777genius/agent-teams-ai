@@ -5,9 +5,12 @@ export const MessageHistoryNotice = ({
   error?: string | null;
 }): React.JSX.Element | null => {
   if (!error) return null;
+  const message = error.startsWith('TEAM_HISTORY_UNAVAILABLE:')
+    ? 'Could not load message history. Previously loaded messages are still available.'
+    : error;
   return (
     <p role="status" className="px-3 py-1 text-xs text-amber-400">
-      {error}
+      {message}
     </p>
   );
 };

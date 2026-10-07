@@ -1,8 +1,15 @@
+import {
+  isMessageAfterCursor,
+  parseHistoryCursor,
+  provenPagePrefix,
+  TeamHistoryError,
+  toFeedRevision,
+  toSourceRevision,
+} from '@features/team-message-history/main';
 import { resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
-import { createHash } from 'crypto';
 
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import { linkPassiveUserReplySummaries } from './linkPassiveUserReplySummaries';
@@ -371,126 +378,6 @@ function attachLeadSessionIds(config: TeamConfig, messages: InboxMessage[]): voi
   }
 }
 
-function toFeedRevision(messages: readonly InboxMessage[]): string {
-  const stableMessages = messages.map((message) => ({
-    messageId: message.messageId ?? null,
-    relayOfMessageId: message.relayOfMessageId ?? null,
-    from: message.from,
-    to: message.to ?? null,
-    text: message.text,
-    timestamp: message.timestamp,
-    read: message.read,
-    summary: message.summary ?? null,
-    color: message.color ?? null,
-    source: message.source ?? null,
-    attachments: message.attachments ?? null,
-    leadSessionId: message.leadSessionId ?? null,
-    conversationId: message.conversationId ?? null,
-    replyToConversationId: message.replyToConversationId ?? null,
-    toolSummary: message.toolSummary ?? null,
-    toolCalls: message.toolCalls ?? null,
-    messageKind: message.messageKind ?? null,
-    slashCommand: message.slashCommand ?? null,
-    commandOutput: message.commandOutput ?? null,
-  }));
-
-  return createHash('sha256').update(JSON.stringify(stableMessages)).digest('hex').slice(0, 24);
-}
-
-function addSourceRevisionMessage(
-  hash: ReturnType<typeof createHash>,
-  message: InboxMessage
-): void {
-  const messageId =
-    typeof message.messageId === 'string' && message.messageId.trim().length > 0
-      ? message.messageId.trim()
-      : (getEffectiveInboxMessageId(message) ?? '');
-  hash.update(messageId);
-  hash.update('\0');
-  hash.update(message.timestamp ?? '');
-  hash.update('\0');
-  hash.update(message.from ?? '');
-  hash.update('\0');
-  hash.update(message.to ?? '');
-  hash.update('\0');
-  hash.update(message.source ?? '');
-  hash.update('\0');
-  hash.update(message.text ?? '');
-  hash.update('\n');
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function toErrorSourceRevision(sourceName: string, error: unknown): string {
-  return createHash('sha256')
-    .update(`${sourceName}:error:${getErrorMessage(error)}`)
-    .digest('hex')
-    .slice(0, 24);
-}
-
-function addSourceMessagesRevision(
-  hash: ReturnType<typeof createHash>,
-  sourceName: string,
-  messages: readonly InboxMessage[]
-): void {
-  hash.update(`${sourceName}:${messages.length}\n`);
-  for (const message of messages) {
-    if (!isVisibleTeamMessage(message)) {
-      continue;
-    }
-    addSourceRevisionMessage(hash, message);
-  }
-}
-
-function toSourceRevision(
-  sources: Record<string, readonly InboxMessage[]>,
-  precomputedSources: Record<string, string> = {}
-): string {
-  const hash = createHash('sha256');
-  const sourceNames = Array.from(
-    new Set([...Object.keys(sources), ...Object.keys(precomputedSources)])
-  ).sort();
-  for (const sourceName of sourceNames) {
-    const precomputed = precomputedSources[sourceName];
-    if (precomputed) {
-      hash.update(`${sourceName}:precomputed:${precomputed}\n`);
-      continue;
-    }
-    addSourceMessagesRevision(hash, sourceName, sources[sourceName] ?? []);
-  }
-  return hash.digest('hex').slice(0, 24);
-}
-
-function parseMessageCursor(cursor: string | null | undefined): MessageCursor | null {
-  if (!cursor) {
-    return null;
-  }
-
-  const [timestamp, ...messageIdParts] = cursor.split('|');
-  const timestampMs = Date.parse(timestamp ?? '');
-  if (!Number.isFinite(timestampMs)) {
-    return null;
-  }
-  return {
-    timestampMs,
-    messageId: messageIdParts.join('|'),
-  };
-}
-
-function isMessageAfterCursor(message: InboxMessage, cursor: MessageCursor | null): boolean {
-  if (!cursor) {
-    return true;
-  }
-
-  const messageMs = Date.parse(message.timestamp);
-  if (messageMs < cursor.timestampMs) return true;
-  if (messageMs > cursor.timestampMs) return false;
-  if (!cursor.messageId) return false;
-  return requireCanonicalMessageId(message).localeCompare(cursor.messageId) > 0;
-}
-
 function sortNewestFirst(messages: InboxMessage[]): InboxMessage[] {
   messages.sort((left, right) => {
     const diff = Date.parse(right.timestamp) - Date.parse(left.timestamp);
@@ -616,7 +503,9 @@ export class TeamMessageFeedService {
     const liveReserve = liveMessages.length ? Math.max(liveMessages.length, 100) : 0;
     const durableWindowLimit = limit + liveReserve + 1;
     const sourceWindowLimit = Math.max(durableWindowLimit * 2, 200);
-    const cursor = parseMessageCursor(options.cursor);
+    const parsedCursor = parseHistoryCursor(options.cursor);
+    if (parsedCursor.kind === 'invalid-request') throw new TeamHistoryError(parsedCursor.reason);
+    const cursor = parsedCursor.cursor;
     const generationAtStart = this.getGeneration(teamName);
     const { config, inboxPayload, leadSource, sentSource, syntheticSource, sourceMs } =
       await this.loadPageSources(teamName, cursor, sourceWindowLimit, generationAtStart);
@@ -665,23 +554,32 @@ export class TeamMessageFeedService {
               sent: sentSource,
               synthetic: syntheticSource,
             },
-            { inbox: inboxPayload.window.sourceRevision }
+            { inbox: inboxPayload.window.sourceRevision },
+            { leadSessionId: config.leadSessionId }
           )
-        : toSourceRevision({
-            inbox: inboxPayload.messages,
-            lead: leadSource,
-            sent: sentSource,
-            synthetic: syntheticSource,
-          });
+        : toSourceRevision(
+            {
+              inbox: inboxPayload.messages,
+              lead: leadSource,
+              sent: sentSource,
+              synthetic: syntheticSource,
+            },
+            {},
+            { leadSessionId: config.leadSessionId }
+          );
 
     const normalizeStartedAt = Date.now();
-    let messages = [
-      ...inboxWindow.messages,
-      ...leadWindow.messages,
-      ...sentWindow.messages,
-      ...syntheticWindow.messages,
-    ];
-    messages = dedupeLeadProcessCopies(messages, leadWindow.messages);
+    const sourceWindows = [inboxWindow, leadWindow, sentWindow, syntheticWindow].map((window) => ({
+      ...window,
+      messages: ensureEffectiveMessageIds(window.messages),
+    }));
+    const prefix = provenPagePrefix(sourceWindows);
+    if (prefix.kind !== 'prefix') throw new TeamHistoryError(prefix.reason);
+    let messages = prefix.messages.filter(isVisibleTeamMessage);
+    messages = dedupeLeadProcessCopies(
+      messages,
+      sourceWindows[1].messages.filter((message) => prefix.messages.includes(message))
+    );
     messages = ensureEffectiveMessageIds(messages);
     messages = dedupeByMessageId(messages);
     messages = linkPassiveUserReplySummaries(messages);
@@ -690,15 +588,11 @@ export class TeamMessageFeedService {
     messages = messages.filter((message) => isMessageAfterCursor(message, cursor));
     sortNewestFirst(messages);
 
-    const sourceTruncated =
-      inboxWindow.truncated ||
-      leadWindow.truncated ||
-      sentWindow.truncated ||
-      syntheticWindow.truncated;
+    const sourceTruncated = prefix.sourceTruncated;
+    if (sourceTruncated && !messages.length) throw new TeamHistoryError('no_progress');
     const durableWindowMessages = messages.slice(0, durableWindowLimit);
     const page = durableWindowMessages.slice(0, limit);
-    const durableHasMoreAfterWindow =
-      messages.length > durableWindowLimit || (sourceTruncated && page.length === limit);
+    const durableHasMoreAfterWindow = messages.length > durableWindowLimit || sourceTruncated;
     const hasMore = messages.length > limit || durableHasMoreAfterWindow;
     const lastMsg = page[page.length - 1];
     const nextCursor =
@@ -734,7 +628,7 @@ export class TeamMessageFeedService {
   ): Promise<MessagePageSourcePayload> {
     const cursorKey = cursor ? `${cursor.timestampMs}|${cursor.messageId}` : '';
     const key = `${teamName}\0${cursorKey}\0${sourceWindowLimit}`;
-    const cached = this.pageSourceCacheByKey.get(key);
+    const cached = cursor ? undefined : this.pageSourceCacheByKey.get(key);
     if (
       cached?.generationAtStart === generationAtStart &&
       Date.now() - cached.cachedAt < MESSAGE_PAGE_SOURCE_CACHE_MAX_AGE_MS
@@ -749,7 +643,7 @@ export class TeamMessageFeedService {
 
     const promise = this.buildPageSources(teamName, cursor, sourceWindowLimit)
       .then((payload) => {
-        if (this.getGeneration(teamName) === generationAtStart) {
+        if (!cursor && this.getGeneration(teamName) === generationAtStart) {
           this.pageSourceCacheByKey.set(key, {
             payload: cloneMessagePageSourcePayload(payload),
             generationAtStart,
@@ -806,30 +700,24 @@ export class TeamMessageFeedService {
             limit: sourceWindowLimit,
           })
           .then((window) => ({ kind: 'window' as const, window }))
-          .catch((error) => {
-            logger.warn(
-              `[${teamName}] message page inbox window failed; omitting inbox source instead of falling back to full read: ${getErrorMessage(
-                error
-              )}`
-            );
-            return {
-              kind: 'window' as const,
-              window: {
-                messages: [],
-                truncated: false,
-                sourceRevision: toErrorSourceRevision('inbox', error),
-                sourceMessageCount: 0,
-              },
-            };
+          .catch((error: unknown) => {
+            if (error instanceof TeamHistoryError) throw error;
+            throw new TeamHistoryError('read_failed');
           })
       : this.deps
           .getInboxMessages(teamName)
           .then((messages) => ({ kind: 'full' as const, messages }))
-          .catch(() => ({ kind: 'full' as const, messages: [] as InboxMessage[] }));
+          .catch(() => {
+            throw new TeamHistoryError('read_failed');
+          });
     const [inboxPayload, leadSource, sentSource] = await Promise.all([
       inboxSourcePromise,
-      this.deps.getLeadSessionMessages(teamName, config).catch(() => [] as InboxMessage[]),
-      this.deps.getSentMessages(teamName).catch(() => [] as InboxMessage[]),
+      this.deps.getLeadSessionMessages(teamName, config).catch(() => {
+        throw new TeamHistoryError('read_failed');
+      }),
+      this.deps.getSentMessages(teamName).catch(() => {
+        throw new TeamHistoryError('read_failed');
+      }),
     ]);
     const syntheticSource = buildSyntheticBootstrapMessages(config, (messageId) =>
       this.getSyntheticBootstrapFallbackTimestamp(messageId)

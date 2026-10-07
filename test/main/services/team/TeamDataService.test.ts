@@ -10,7 +10,9 @@ import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/i
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
+import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
@@ -543,6 +545,60 @@ describe('TeamDataService task projection cache invalidation', () => {
 });
 
 describe('TeamDataService draft metadata', () => {
+  it('makes fresh app-owned inbox history readable before publishing draft metadata', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-empty-inbox-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxReader = new TeamInboxReader();
+    const writeMeta = TeamMetaStore.prototype.writeMeta;
+    const publishDraft = vi
+      .spyOn(TeamMetaStore.prototype, 'writeMeta')
+      .mockImplementation(async function (this: TeamMetaStore, teamName, meta) {
+        await expect(inboxReader.getMessagesWindow(teamName, { limit: 20 })).resolves.toMatchObject(
+          {
+            messages: [],
+            truncated: false,
+            sourceMessageCount: 0,
+          }
+        );
+        await writeMeta.call(this, teamName, meta);
+      });
+
+    await new TeamDataService().createTeamConfig({
+      teamName: 'TEST-empty-inbox',
+      providerId: 'opencode',
+      members: [{ name: 'researcher' }],
+    });
+
+    expect(publishDraft).toHaveBeenCalledTimes(1);
+    await expect(
+      fs.access(path.join(claudeRoot, 'teams', 'TEST-empty-inbox', 'team.meta.json'))
+    ).resolves.toBeUndefined();
+  });
+
+  it('rolls back a fresh draft when its inbox directory cannot be initialized', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-inbox-rollback-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'TEST-inbox-rollback');
+    const tasksDir = path.join(claudeRoot, 'tasks', 'TEST-inbox-rollback');
+    const inboxDir = path.join(teamDir, 'inboxes');
+    const mkdir = nodeFs.promises.mkdir;
+    vi.spyOn(nodeFs.promises, 'mkdir').mockImplementation(async (directoryPath, options) => {
+      if (directoryPath === inboxDir) throw new Error('TEST inbox initialization failed');
+      return mkdir(directoryPath, options);
+    });
+    const publishDraft = vi.spyOn(TeamMetaStore.prototype, 'writeMeta');
+
+    await expect(
+      new TeamDataService().createTeamConfig({ teamName: 'TEST-inbox-rollback', members: [] })
+    ).rejects.toThrow('TEST inbox initialization failed');
+
+    expect(publishDraft).not.toHaveBeenCalled();
+    await expect(fs.access(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.access(tasksDir)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('rejects an existing draft without overwriting its artifacts', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-collision-'));
     tempPaths.push(claudeRoot);
@@ -606,15 +662,21 @@ describe('TeamDataService draft metadata', () => {
     tempPaths.push(claudeRoot);
     setClaudeBasePathOverride(claudeRoot);
     const service = new TeamDataService();
-    await service.createTeamConfig({ teamName: 'inheritance-team', members: [{ name: 'inherited' }] });
+    await service.createTeamConfig({
+      teamName: 'inheritance-team',
+      members: [{ name: 'inherited' }],
+    });
     const metaPath = path.join(claudeRoot, 'teams', 'inheritance-team', 'members.meta.json');
     const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
     meta.members.push({ name: 'team-lead', model: 'old-lead' });
     meta.members.push({ name: 'legacy-lead', role: 'Team Lead', model: 'old-lead' });
     meta.members.push({ name: 'feature-owner', role: 'Lead', model: 'teammate-model' });
     await fs.writeFile(metaPath, JSON.stringify(meta));
-    expect((await service.getSavedRequest('inheritance-team'))?.members.map(member => member.name).sort())
-      .toEqual(['feature-owner', 'inherited']);
+    expect(
+      (await service.getSavedRequest('inheritance-team'))?.members
+        .map((member) => member.name)
+        .sort()
+    ).toEqual(['feature-owner', 'inherited']);
   });
 
   it('round-trips create config metadata through getSavedRequest', async () => {
@@ -745,7 +807,9 @@ describe('TeamDataService draft metadata', () => {
     await expect(
       fs.access(path.join(claudeRoot, 'teams', 'fixteam-test', 'team.meta.json'))
     ).resolves.toBeUndefined();
-    await expect(fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))
+    ).resolves.toBeUndefined();
 
     await expect(service.getSavedRequest('signal-ops')).resolves.toBeNull();
     await expect(service.getSavedRequest('fixteam-test')).resolves.toMatchObject({
@@ -994,7 +1058,9 @@ function createGetTeamDataHarness(
     getTeamMeta?: () => Promise<TeamMetaFile | null>;
     getState?: () => Promise<KanbanState>;
     readMessages?: () => Promise<InboxMessage[]>;
-    resolveMembers?: (...args: Parameters<TeamMemberResolver['resolveMembers']>) => ResolvedTeamMember[];
+    resolveMembers?: (
+      ...args: Parameters<TeamMemberResolver['resolveMembers']>
+    ) => ResolvedTeamMember[];
     listProcesses?: () => TeamProcess[];
     getMemberAdvisories?: () => Promise<Map<string, unknown>>;
   } = {}
@@ -8190,7 +8256,7 @@ describe('TeamDataService', () => {
       const fillerMessages = Array.from({ length: 55 }, (_, index) => ({
         from: 'alice',
         text: `filler-${index}`,
-        timestamp: `2026-01-01T00:00:${String(10 + index).padStart(2, '0')}.000Z`,
+        timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, 10 + index)).toISOString(),
         messageId: `filler-${index}`,
         source: 'inbox' as const,
       }));

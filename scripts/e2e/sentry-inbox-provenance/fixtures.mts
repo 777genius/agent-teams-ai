@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -72,8 +72,16 @@ export class Fixtures {
     }
   }
   async persist() {
+    await this.writeInbox(JSON.stringify(this.messages));
+  }
+  async corruptInbox(kind: 'malformed-suffix' | 'non-array') {
+    const raw = kind === 'malformed-suffix' ? `${JSON.stringify(this.messages)}\nINVALID_SUFFIX` : '{"fixture":"not-an-array"}';
+    await this.writeInbox(raw);
+    return { kind, bytes: Buffer.byteLength(raw), sha256: createHash('sha256').update(raw).digest('hex') };
+  }
+  private async writeInbox(raw: string) {
     const temporary = `${this.inbox}.${randomUUID()}.tmp`;
-    await writeFile(temporary, JSON.stringify(this.messages));
+    await writeFile(temporary, raw);
     await rename(temporary, this.inbox);
   }
   rewriteAlice() {
