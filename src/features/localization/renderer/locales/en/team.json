@@ -1292,6 +1292,13 @@
     }
   },
   "editor": {
+    "documentPreview": {
+      "limit": "Preview is available for documents up to {{size}} MiB.",
+      "readOnly": "Read-only document preview",
+      "loading": "Loading document preview...",
+      "unavailable": "Preview unavailable. The document may be encrypted, damaged, or unsupported.",
+      "title": "Document preview"
+    },
     "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
     "showInFolder": "Show in folder",
     "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
