@@ -273,7 +273,7 @@ describe('editorSlice', () => {
   });
 
   describe('closeEditor', () => {
-    it('resets all editor state', async () => {
+    it('resets all editor state', () => {
       // Setup non-default state
       store.setState({
         editorProjectPath: PROJECT_PATH,
@@ -295,7 +295,7 @@ describe('editorSlice', () => {
       expect(state.editorExpandedDirs).toEqual({});
     });
 
-    it('still resets local state even if IPC close fails', async () => {
+    it('still resets local state even if IPC close fails', () => {
       store.setState({ editorProjectPath: PROJECT_PATH });
       mockEditorAPI.close.mockRejectedValue(new Error('IPC error'));
 
@@ -548,9 +548,9 @@ describe('editorSlice', () => {
       let savingDuringCall = false;
 
       mockBridge.getContent.mockReturnValue('content');
-      mockEditorAPI.writeFile.mockImplementation(async () => {
+      mockEditorAPI.writeFile.mockImplementation(() => {
         savingDuringCall = !!store.getState().editorSaving[filePath];
-        return { mtimeMs: Date.now(), size: 7 };
+        return Promise.resolve({ mtimeMs: Date.now(), size: 7 });
       });
 
       await store.getState().saveFile(filePath);

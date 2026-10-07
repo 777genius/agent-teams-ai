@@ -177,7 +177,7 @@ async function stop():Promise<void>{client?.socket.close();client=null;if(app?.p
 async function state(c:Cdp):Promise<{paths:string[];active:string|null}>{return c.evaluate(`(async()=>{const s=${storeExpression}.getState();return {paths:s.editorOpenTabs.map(t=>t.filePath),active:s.editorActiveTabId};})()`);}
 async function action(c:Cdp,method:string,...args:unknown[]):Promise<unknown>{return c.evaluate(`(async()=>${storeExpression}.getState()[${jsLiteral(method)}](...${jsLiteral(args)}))()`);}
 async function shot(c:Cdp,name:string):Promise<void>{await c.evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');const data=await c.send('Page.captureScreenshot',{format:'png'});assert(data.data);await writeFile(path.join(artifacts,name+'.png'),Buffer.from(data.data,'base64'));}
-async function expectSession(c:Cdp,paths:string[],active:string|null,label:string):Promise<void>{assert.deepEqual(await state(c),{paths,active},label);cases.push({case:label,result:'PASS',paths,active});}
+async function expectSession(c:Cdp,paths:string[],active:string|null,label:string):Promise<void>{assert.deepEqual(await state(c),{paths,active},label);cases.push({case:label,result:'PASS',paths:[...paths],active});}
 async function waitView(c:Cdp,file:string):Promise<void>{await c.wait(`(async()=>{const view=${viewExpression};return !!view&&document.querySelector('#editor-large-e2e [data-editor-file]')?.getAttribute('data-editor-file')===${jsLiteral(file)};})()`,'actual CodeMirror '+path.basename(file));}
 async function closeDialog(c:Cdp,button:string):Promise<void>{await c.evaluate(`document.querySelector('#editor-large-e2e button[aria-label="Close editor"]').click()`);await c.wait('!!document.querySelector("[role=dialog]")','unsaved dialog');await c.evaluate(`(()=>{const button=[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent===${jsLiteral(button)});if(!button)throw Error('button missing');button.click();})()`);}
 const started=Date.now();
@@ -209,8 +209,11 @@ try{
  await closeDialog(client,'Save All & Close');await client.wait(`(async()=>${storeExpression}.getState().editorProjectPath===null)()`,'save all close');assert.equal(await readFile(renamed,'utf8'),'sandbox-original\nSAVED');cases.push({case:'Save All and Close writes actual sandbox content',result:'PASS'});
  await mountEditor(client,projectA);await waitView(client,renamed);
  await shot(client,'project-a-restored');
+ receipt.beforeRestart=await client.evaluate(`({origin:location.origin,raw:localStorage.getItem('editor-project-tabs:v1')})`);
  assert.deepEqual(client.exceptions,[],'first process has no uncaught renderer exceptions');
- await stop();client=await launch();await mountEditor(client,projectA);await expectSession(client,[...aPaths,missing],renamed,'full Electron process restart restores renamed/deleted/missing A tabs');
+ await client.send('Runtime.evaluate',{expression:'void window.electronAPI.windowControls.close()'});
+ await new Promise<void>((resolve,reject)=>{if(client!.socket.readyState===WebSocket.CLOSED)return resolve();const timer=setTimeout(()=>reject(Error('graceful app quit timed out')),30000);client!.socket.addEventListener('close',()=>{clearTimeout(timer);resolve();},{once:true});});
+ await stop();client=await launch();receipt.afterRestart=await client.evaluate(`({origin:location.origin,raw:localStorage.getItem('editor-project-tabs:v1')})`);await mountEditor(client,projectA);await expectSession(client,[...aPaths,missing],renamed,'full Electron process restart restores renamed/deleted/missing A tabs');
  await mountEditor(client,projectB);await expectSession(client,[bFiles[1],bFiles[0]],bFiles[0],'full Electron restart preserves independent B session');await shot(client,'project-b-restarted');
  assert.deepEqual(client.exceptions,[],'restarted process has no uncaught renderer exceptions');
  receipt.status='PASS';receipt.durationMs=Date.now()-started;

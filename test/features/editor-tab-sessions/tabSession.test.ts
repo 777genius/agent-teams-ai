@@ -41,7 +41,10 @@ describe('project editor tab metadata', () => {
     let failing = false;
     const storage = createLocalEditorTabsStorage(() => ({
       getItem: () => disk,
-      setItem: (_key, value) => { if (failing) throw new Error('quota'); disk = value; },
+      setItem: (_key, value) => {
+        if (failing) throw new Error('quota');
+        disk = value;
+      },
     }));
     const repository = createEditorTabsRepository(storage);
     repository.save('/a', { paths: ['/a/old.txt'], active: '/a/old.txt' });
