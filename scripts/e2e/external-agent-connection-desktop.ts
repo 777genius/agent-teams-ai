@@ -1413,7 +1413,53 @@ try {
       'renderer crash and automatic recovery in the same main target; new BrowserWindow recreation not exercised',
   };
   await openMenu('Settings');
-  await button('#external-agent-cdp', true);
+  await waitFor(
+    () =>
+      evaluate(active, () => {
+        const toggle = document.getElementById('external-agent-cdp');
+        if (
+          !(toggle instanceof HTMLButtonElement) ||
+          toggle.disabled ||
+          toggle.getAttribute('aria-disabled') === 'true'
+        )
+          return false;
+        toggle.scrollIntoView({ block: 'center' });
+        const rect = toggle.getBoundingClientRect();
+        const style = getComputedStyle(toggle);
+        if (
+          !rect.width ||
+          !rect.height ||
+          rect.top < 0 ||
+          rect.bottom > innerHeight ||
+          style.display === 'none' ||
+          style.visibility === 'hidden'
+        )
+          return false;
+        if (
+          toggle.getAttribute('role') !== 'switch' ||
+          toggle.getAttribute('aria-checked') !== 'true'
+        )
+          throw new Error(
+            'Expected enabled checked external-agent CDP switch before single keyboard toggle'
+          );
+        toggle.focus();
+        return document.activeElement === toggle;
+      }),
+    'visible enabled checked CDP switch has exact keyboard focus after renderer recovery'
+  );
+  await active.send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: ' ',
+    code: 'Space',
+    windowsVirtualKeyCode: 32,
+  });
+  await active.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: ' ',
+    code: 'Space',
+    windowsVirtualKeyCode: 32,
+  });
+  evidence.disabledSettingInput = 'one native Space down/up on verified focused checked CDP switch';
   const disabledLive = await waitFor(async () => {
     const next = await evaluate(client!, rendererSnapshot, [EXTERNAL_AGENT_RENDERER_MARKER]);
     return next?.info.cdp.status === 'restart-required' ? next : false;
