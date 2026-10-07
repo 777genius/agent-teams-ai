@@ -597,6 +597,47 @@ async function screenshot(label: string): Promise<void> {
   });
   await writeFile(path.join(root, `${label}.png`), Buffer.from(capture.data, 'base64'));
 }
+async function captureDomEvidence(label: string): Promise<void> {
+  if (!client) return;
+  try {
+    const dom = await evaluate(client, () => ({
+      url: location.href,
+      text: document.body.innerText.slice(0, 8000),
+      dialogText: [...document.querySelectorAll('[role="dialog"]')].map((dialog) =>
+        (dialog as HTMLElement).innerText.slice(-8000)
+      ),
+      controls: [
+        ...document.querySelectorAll('button, input, textarea, [role="menuitem"], [role="dialog"]'),
+      ]
+        .slice(0, 160)
+        .map((node) => {
+          const rect = node.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return {
+            tag: node.tagName,
+            role: node.getAttribute('role'),
+            id: node.id,
+            label: node.getAttribute('aria-label'),
+            text: node.textContent?.replace(/\s+/g, ' ').trim().slice(0, 160),
+            value:
+              node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement
+                ? node.value
+                : undefined,
+            disabled: node.hasAttribute('disabled'),
+            state: node.getAttribute('data-state'),
+            pointerEvents: getComputedStyle(node).pointerEvents,
+            visible: Boolean(rect.width && rect.height),
+            unobstructed: Boolean(hit && (hit === node || node.contains(hit))),
+          };
+        }),
+    }));
+    await writeFile(path.join(root, `${label}-dom.json`), JSON.stringify(dom, null, 2) + '\n');
+    await screenshot(label);
+    evidence[`${label}Diagnostics`] = { dom: `${label}-dom.json`, screenshot: `${label}.png` };
+  } catch (error) {
+    evidence[`${label}DiagnosticsError`] = String(error);
+  }
+}
 async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
   const active = getClient();
   const selectedName = 'external-e2e-copy-codex-source';
@@ -608,6 +649,10 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
       await api.teams.createConfig({
         teamName: name,
         displayName: 'External E2E selected copy source',
+        description:
+          'Sandbox fixture for copying explicit runtime selection with multimodel disabled.',
+        prompt:
+          'Coordinate this disposable Copy verification. Preserve the saved provider selection and never launch agents.',
         cwd,
         runtimeSelectionVersion: 1,
         providerId: 'codex',
@@ -741,6 +786,16 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         windowsVirtualKeyCode: 65,
       });
       await active.send('Input.insertText', { text: testCase.destination });
+      await waitFor(
+        () =>
+          evaluate(
+            active,
+            (name: string) =>
+              (document.getElementById('team-name') as HTMLInputElement | null)?.value === name,
+            [testCase.destination]
+          ),
+        'native input sets exact copied destination name'
+      );
       assert.equal(
         await evaluate(active, () =>
           document.getElementById('launch-team')?.getAttribute('data-state')
@@ -748,6 +803,7 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         'unchecked',
         'Copy proof must save only, never launch'
       );
+      await captureDomEvidence('copy-provider-mode-before-save');
       await button('Create');
       const saved = await waitFor(
         async () =>
@@ -775,6 +831,9 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         noLaunch: true,
       };
     }
+  } catch (error) {
+    await captureDomEvidence('copy-provider-mode-failure');
+    throw error;
   } finally {
     await evaluate(active, async () =>
       (window as unknown as { electronAPI: HarnessApi }).electronAPI.config.update('general', {
@@ -1321,30 +1380,7 @@ try {
 } catch (error) {
   evidence.status = 'failed';
   evidence.error = error instanceof Error ? error.stack : String(error);
-  if (client) {
-    try {
-      const dom = await evaluate(client, () => ({
-        url: location.href,
-        text: document.body.innerText.slice(0, 8000),
-        controls: [...document.querySelectorAll('button, [role="menuitem"], [role="dialog"]')]
-          .slice(0, 120)
-          .map((node) => ({
-            tag: node.tagName,
-            role: node.getAttribute('role'),
-            label: node.getAttribute('aria-label'),
-            text: node.textContent?.replace(/\s+/g, ' ').trim().slice(0, 160),
-            visible: Boolean(
-              node.getBoundingClientRect().width && node.getBoundingClientRect().height
-            ),
-          })),
-      }));
-      await writeFile(path.join(root, 'failure-dom.json'), JSON.stringify(dom, null, 2) + '\n');
-      await screenshot('failure');
-      evidence.failureDiagnostics = { dom: 'failure-dom.json', screenshot: 'failure.png' };
-    } catch (diagnosticError) {
-      evidence.failureDiagnosticsError = String(diagnosticError);
-    }
-  }
+  await captureDomEvidence('failure');
   throw error;
 } finally {
   try {
