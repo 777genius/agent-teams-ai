@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `2309168842184b98a979ab9076397dc40fa8f2f0`.
+- Source: `e9f0a800904ee43db71db8d4496b1bcdeb0818c6`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-GwMzcK/evidence.json`.
-- Evidence SHA256: `ac41c0aa1bbb95eb60ddbfecba05b207512b81b03024b8e7f1a5daf96d99adb2`.
-- Later integration of `cbd4267cb5602eee6857f33fe42f7d7ba774bf37` changes release tooling and existing tests; application, MCP, controller and this desktop harness are identical to the tested source.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-7S40u0/evidence.json`.
+- Evidence SHA256: `186c4e59691b54e4b667e36cd1806bd9f8759582eb63ffbad3911f7ca4b5b3d6`.
+- Integration of current main release tooling does not change application, MCP, controller or this desktop harness relative to the tested source.
 
 ## Actual desktop and native MCP proof
 
@@ -22,7 +22,7 @@ Passed:
 - Read-only shared template roster, 14 identities across four references, no member editing controls.
 - Real clipboard copy contains the request, templates, MCP and independent CDP endpoints.
 - Dark 320px and light 1280px popup screenshots; manual visual inspection passed.
-- Normal application quit: `mainExitedNormally=true`; three residual owned dev-wrapper/watch processes stopped through verified PID/start-time leases, with no remaining owned processes.
+- Normal application quit: `mainExitedNormally=true`, no fallback kills and no remaining owned processes.
 
 ## Focused validation and review
 
@@ -34,6 +34,7 @@ Passed:
 - Two independent plan reviews accepted the bounded implementation plan.
 - The first full CI exposed four outdated fixtures (prototype-only service instances, missing mock/AST ports, and metadata already above the existing reader limit). Only these fixtures were corrected; all 283 tests in those suites and full project typecheck then passed on the worker. Native desktop product/harness source above remained unchanged.
 - A later P2 review found unreadable roster metadata could be normalized to empty and overwritten. Existing-file presence plus the canonical metadata reader now rejects this before writes/events. All seven focused HTTP tests passed, including malformed/oversized byte-preservation proofs and genuinely missing metadata support.
+- A later P1 review found destination admission ended between draft rename and provisioning. An existing rename continuation now holds destination identity/lifecycle gates through provisioning; occupied-destination preflight and reentry remain intact. The new deterministic HTTP regression failed on prior production code (interleaved edit returned 200) and passed on the fix (409 TEAM_ACTIVE). All 217 tests in the nearest HTTP/data suites, project typecheck and focused lint passed. Independent review accepted the final five-file fix. No real agent/runtime launch was used for this concurrency proof.
 
 ## Limits
 
