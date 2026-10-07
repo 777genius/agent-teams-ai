@@ -201,10 +201,14 @@ const env = {
   GITHUB_EVENT_NAME: 'workflow_dispatch',
   GITHUB_JOB: 'fresh-windows',
 };
-void test('explicit GHA ARM fresh and predecessor TEST routes enable preflight', () => {
+void test('explicit GHA ARM fresh, predecessor and OTA TEST routes enable preflight', () => {
   assert.equal(cloudPreflightEnabled(root, env, 'win32', 'arm64'), true);
   assert.equal(
     cloudPreflightEnabled(root, { ...env, GITHUB_JOB: 'windows-predecessor' }, 'win32', 'arm64'),
+    true
+  );
+  assert.equal(
+    cloudPreflightEnabled(root, { ...env, GITHUB_JOB: 'windows-ota' }, 'win32', 'arm64'),
     true
   );
   assert.equal(cloudPreflightEnabled('/real/project', {}, 'darwin', 'arm64'), false);
@@ -223,7 +227,7 @@ for (const [name, change] of Object.entries({
   local: { GITHUB_ACTIONS: 'false' },
   repository: { GITHUB_REPOSITORY: 'other/repo' },
   event: { GITHUB_EVENT_NAME: 'pull_request' },
-  job: { GITHUB_JOB: 'windows-ota' },
+  job: { GITHUB_JOB: 'unreviewed-windows-job' },
 }))
   void test(`preflight rejects enabled wrong ${name}`, () =>
     assert.throws(() => cloudPreflightEnabled(root, { ...env, ...change }, 'win32', 'arm64')));
@@ -233,6 +237,15 @@ void test('preflight rejects real project, non-Windows and x64 execution', () =>
   );
   assert.throws(() => cloudPreflightEnabled(root, env, 'darwin', 'arm64'));
   assert.throws(() => cloudPreflightEnabled(root, env, 'win32', 'x64'));
+  const ota = { ...env, GITHUB_JOB: 'windows-ota' };
+  assert.throws(() => cloudPreflightEnabled(root, ota, 'win32', 'x64'));
+  assert.throws(() =>
+    cloudPreflightEnabled(root, { ...ota, GITHUB_ACTIONS: 'false' }, 'win32', 'arm64')
+  );
+  assert.throws(() =>
+    cloudPreflightEnabled(path.resolve('non-test-project'), ota, 'win32', 'arm64')
+  );
+  assert.equal(cloudPreflightEnabled(root, ota, 'win32', 'arm64', 'cleanup'), false);
 });
 
 // A skip must contain stable, independently read non-Cloud identity and zero effects.
