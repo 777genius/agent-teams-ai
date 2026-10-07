@@ -28,12 +28,14 @@ const patterns = [...validation.run!.matchAll(/-c?notmatch '([^']+)'/g)].map(
 
 describe('Windows draft backfill workflow contract', () => {
   it('exposes only an optional all-or-none manual tuple, validated before checkout/download', () => {
-    expect(Object.keys(workflow.on.workflow_dispatch.inputs)).toEqual([
+    const { arm_archive_listing_only, ...runtimeInputs } = workflow.on.workflow_dispatch.inputs;
+    expect(arm_archive_listing_only).toMatchObject({ type: 'boolean', default: false });
+    expect(Object.keys(runtimeInputs)).toEqual([
       'runtime_version',
       'runtime_archive_sha256',
       'runtime_source_sha',
     ]);
-    for (const input of Object.values(workflow.on.workflow_dispatch.inputs)) {
+    for (const input of Object.values(runtimeInputs)) {
       expect(input).toMatchObject({ type: 'string', required: false });
     }
     expect(steps.indexOf(validation)).toBe(1);
@@ -89,7 +91,7 @@ describe('Windows draft backfill workflow contract', () => {
 
   it('confines draft credentials and keeps repository, tag and asset construction fixed', () => {
     expect(job.if).toBe(
-      "github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+      "inputs.arm_archive_listing_only != true && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
     );
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(download.env!.GH_TOKEN).toBe(

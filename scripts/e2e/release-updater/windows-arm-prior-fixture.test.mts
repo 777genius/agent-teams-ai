@@ -41,6 +41,29 @@ void test('archive boundary rejects changed entry set, foreign names, links and 
     Object.assign(invalid[0], changed);
     assert.throws(() => assertRepairManifest(invalid));
   }
+  const invalid = structuredClone(valid);
+  assert(invalid[0]);
+  invalid[0].name = `C:\\outside\n${'x'.repeat(600)}`;
+  invalid[0].method = 'y'.repeat(200);
+  invalid[0].link = true;
+  assert.throws(
+    () => assertRepairManifest(invalid),
+    (error: unknown) => {
+      assert(error instanceof Error);
+      assert(!error.message.includes('\n'), 'Diagnostic must escape control characters');
+      const details = JSON.parse(
+        error.message.split('Invalid original archive member: ')[1] ?? ''
+      ) as {
+        name: string;
+        method: string;
+        link: boolean;
+      };
+      assert.equal(details.name, invalid[0]?.name.slice(0, 512));
+      assert.equal(details.method.length, 128);
+      assert.equal(details.link, true);
+      return true;
+    }
+  );
 });
 void test('copy proves original bytes/ARM PE and never overwrites, even a destination created after validation', async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-arm211-files-')));

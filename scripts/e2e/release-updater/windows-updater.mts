@@ -278,6 +278,12 @@ try {
     actualNsisExitCode: setupCode,
     env,
     native,
+    recordListing: async (receipt) => {
+      await writeFile(
+        path.join(output, 'prior-archive-listing.json'),
+        JSON.stringify(receipt, null, 2)
+      );
+    },
     recordDecoded: async (ledger) => {
       await writeFile(path.join(output, 'prior-decoded-pe.json'), JSON.stringify(ledger, null, 2));
     },

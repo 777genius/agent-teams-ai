@@ -142,7 +142,7 @@ $progress = $InputFile + '.progress.jsonl'
 function Write-TestProgress([string]$phase, [hashtable]$details=$null) {
   $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
   if ($null -ne $details) { $record.details=$details }
-  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
+  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Depth 12 -Compress) + [Environment]::NewLine)
 }
 Write-TestProgress 'after-input-and-shell-validation'
 function Get-StartUtcTicks([object]$value) {

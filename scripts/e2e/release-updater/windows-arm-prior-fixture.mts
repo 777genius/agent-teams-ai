@@ -29,8 +29,19 @@ export function assertRepairManifest(entries: { name: string; method: string; li
   const names = entries.map((entry) => entry.name.toLowerCase());
   assert.equal(new Set(names).size, names.length, 'Archive name collision');
   for (const entry of entries) {
-    assert(!entry.link && entry.name.length < 512 && !/[\\:\0]/u.test(entry.name));
-    assert(entry.name.split('/').every((part) => part && part !== '.' && part !== '..'));
+    const valid =
+      !entry.link &&
+      entry.name.length < 512 &&
+      !/[\\:\0]/u.test(entry.name) &&
+      entry.name.split('/').every((part) => part && part !== '.' && part !== '..');
+    assert(
+      valid,
+      `Invalid original archive member: ${JSON.stringify({
+        name: entry.name.slice(0, 512),
+        method: entry.method.slice(0, 128),
+        link: entry.link,
+      })}`
+    );
   }
   assert.deepEqual(
     entries
@@ -116,7 +127,7 @@ export function decoderMember(compressed: Buffer) {
   assert(result && result.length > 0, 'Pinned decoder member unavailable');
   return result;
 }
-async function acquireDecoder(directory: string) {
+export async function acquireDecoder(directory: string) {
   const shell = await selectedWindowsPowerShell();
   const gh = await realpath(path.join(shell.programFiles, 'GitHub CLI', 'gh.exe'));
   assert.equal(
@@ -167,6 +178,41 @@ async function acquireDecoder(directory: string) {
   await writeFile(executable, decoderMember(transfer.stdout), { flag: 'wx' });
   return { executable, archive: proof, binary: await hashFile(executable) };
 }
+export function embeddedArm211Archive(bytes: Buffer) {
+  const offset = 282639;
+  assert.equal(bytes.subarray(offset, offset + 6).toString('hex'), '377abcaf271c');
+  const end =
+    offset +
+    32 +
+    Number(bytes.readBigUInt64LE(offset + 12)) +
+    Number(bytes.readBigUInt64LE(offset + 20));
+  assert(Number.isSafeInteger(end) && end <= bytes.length && end > offset + 32);
+  return bytes.subarray(offset, end);
+}
+export function arm211ListingEntries(listing: string) {
+  const sections = listing.split('----------');
+  assert.equal(sections.length, 2);
+  const body = sections[1];
+  assert(body);
+  const entries = body
+    .trim()
+    .split(/\r?\n\r?\n/u)
+    .map((entry) => {
+      const fields = Object.fromEntries<string>(
+        entry.split(/\r?\n/u).map((line): [string, string] => {
+          const separator = line.indexOf(' = ');
+          assert(separator > 0);
+          return [line.slice(0, separator), line.slice(separator + 3)];
+        })
+      );
+      return {
+        name: String(fields.Path),
+        method: String(fields.Method ?? ''),
+        link: Object.keys(fields).some((key) => /link/iu.test(key)),
+      };
+    });
+  return entries;
+}
 export async function prepareArmPriorFixture(options: {
   mode: string;
   targetVersion: string;
@@ -178,6 +224,7 @@ export async function prepareArmPriorFixture(options: {
   native: Native;
   ownDecoder: (file: string) => Promise<void>;
   recordDecoded: (ledger: unknown) => Promise<void>;
+  recordListing: (receipt: unknown) => Promise<void>;
 }): Promise<ArmPriorFixture | undefined> {
   if (!usesRepairedArm211(process.arch, options.mode, options.targetVersion)) return undefined;
   const { root, install, priorInstaller, native } = options;
@@ -242,18 +289,11 @@ export async function prepareArmPriorFixture(options: {
   assert.equal(preserved['cache/installer.exe']?.sha256, ARM211_SHA);
   await guarded(priorInstaller);
   const bytes = await readFile(priorInstaller);
-  const offset = 282639;
-  assert.equal(bytes.subarray(offset, offset + 6).toString('hex'), '377abcaf271c');
-  const end =
-    offset +
-    32 +
-    Number(bytes.readBigUInt64LE(offset + 12)) +
-    Number(bytes.readBigUInt64LE(offset + 20));
-  assert(Number.isSafeInteger(end) && end <= bytes.length && end > offset + 32);
+  const embedded = embeddedArm211Archive(bytes);
   await guarded(priorInstaller);
   assert.deepEqual(await hashFile(priorInstaller), source);
   const archive = path.join(directory, 'app-arm64.7z');
-  await writeFile(archive, bytes.subarray(offset, end), { flag: 'wx' });
+  await writeFile(archive, embedded, { flag: 'wx' });
   const archiveProof = await hashFile(archive);
   const decoder = await acquireDecoder(directory);
   await guarded(decoder.executable);
@@ -276,27 +316,8 @@ export async function prepareArmPriorFixture(options: {
     return result.stdout;
   };
   const listing = await decode(['l', '-slt', archive]);
-  const sections = listing.split('----------');
-  assert.equal(sections.length, 2);
-  const body = sections[1];
-  assert(body);
-  const entries = body
-    .trim()
-    .split(/\r?\n\r?\n/u)
-    .map((entry) => {
-      const fields = Object.fromEntries<string>(
-        entry.split(/\r?\n/u).map((line): [string, string] => {
-          const separator = line.indexOf(' = ');
-          assert(separator > 0);
-          return [line.slice(0, separator), line.slice(separator + 3)];
-        })
-      );
-      return {
-        name: String(fields.Path),
-        method: String(fields.Method ?? ''),
-        link: Object.keys(fields).some((key) => /link/iu.test(key)),
-      };
-    });
+  await options.recordListing({ installer: source, archive: archiveProof, decoder, listing });
+  const entries = arm211ListingEntries(listing);
   assertRepairManifest(entries);
   await decode(['x', '-y', `-o${staging}`, archive, ...ARM211_FILES, ...unchanged]);
   for (const name of unchanged) {

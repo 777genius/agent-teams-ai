@@ -3,6 +3,10 @@ name: Windows packaged backfill diagnostic
 on:
   workflow_dispatch:
     inputs:
+      arm_archive_listing_only:
+        description: 'Only authenticate and list the original ARM211 archive; no installer or app'
+        type: boolean
+        default: false
       runtime_version:
         description: 'Manual qualification: exact X.Y.Z (no v); leave all three blank for shipped 0.0.87'
         type: string
@@ -40,7 +44,7 @@ concurrency:
 
 jobs:
   packaged-backfill:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: inputs.arm_archive_listing_only != true && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: windows-latest
     timeout-minutes: 35
     env:
@@ -224,5 +228,61 @@ jobs:
         with:
           name: windows-app-backfill-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.WINDOWS_BACKFILL_EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 14
+
+  arm-archive-listing:
+    if: github.event_name == 'workflow_dispatch' && inputs.arm_archive_listing_only == true
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install only frozen tooling dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check exact diagnostic source
+        run: |
+          if ((git rev-parse HEAD) -ne $env:GITHUB_SHA) { throw 'Diagnostic checkout mismatch' }
+          pnpm typecheck
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical typecheck failed' }
+          pnpm lint:ci:files scripts/e2e/release-updater/windows-arm-archive-listing.mts scripts/e2e/release-updater/windows-arm-prior-fixture.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Changed helper lint failed' }
+      - name: Pin already-running installed PowerShell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $env:RUNNER_TEMP 'TEST-arm211-listing-shell'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME -or $PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'Installed PowerShell 7 required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" >> $env:GITHUB_ENV
+      - name: List authenticated original embedded archive only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'TEST-arm211-archive-listing'
+          pnpm exec tsx scripts/e2e/release-updater/windows-arm-archive-listing.mts $output
+          if ($LASTEXITCODE -ne 0) { throw 'Archive listing diagnostic failed; see retained evidence' }
+      - name: Retain raw listing and honest failure receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEST-arm211-archive-listing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/TEST-arm211-archive-listing/
           if-no-files-found: error
           retention-days: 14
