@@ -52,7 +52,8 @@ describe('project editor tab metadata', () => {
     repository.save('/a', { paths: ['/a/latest.txt'], active: '/a/latest.txt' });
     expect(repository.load('/a').paths).toEqual(['/a/latest.txt']);
     expect(console.warn).toHaveBeenCalledExactlyOnceWith(
-      '[EditorTabSessions:storage] Persistent editor tab storage unavailable; using session memory'
+      '[EditorTabSessions:storage]',
+      'Persistent editor tab storage unavailable; using session memory'
     );
     vi.mocked(console.warn).mockClear();
   });

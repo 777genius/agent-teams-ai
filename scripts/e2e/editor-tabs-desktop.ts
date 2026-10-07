@@ -87,6 +87,7 @@ const repo = process.env.EDITOR_TABS_TEST_REPO ?? path.resolve(path.dirname(file
 const viewExpression = `(await window.__editorSourceImport('utils/editorBridge.ts')).editorBridge.getView()`;
 const storeExpression = `(await window.__editorSourceImport('store/index.ts')).useStore`;
 async function mountEditor(client: Cdp, project: string): Promise<void> {
+  await client.wait(`!document.getElementById('splash') && performance.getEntriesByType('resource').some(entry => new URL(entry.name).pathname.endsWith('/deps/react.js'))`, 'React dependency after full app boot');
   // Mount the real overlay with its normal providers via dev imports. No production
   // test hooks, native picker, runtime, or team provisioning are involved.
   await client.evaluate(`(async () => {
