@@ -63,8 +63,9 @@ $root = [IO.Path]::GetFullPath($data.root)
 if ((Split-Path -Leaf $root) -notlike 'TEST-updater-windows-*') { throw 'Not a TEST root' }
 if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($InputFile)) -ne $root) { throw 'Input outside TEST root' }
 $progress = $InputFile + '.progress.jsonl'
-function Write-TestProgress([string]$phase) {
+function Write-TestProgress([string]$phase, [hashtable]$details=$null) {
   $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
+  if ($null -ne $details) { $record.details=$details }
   [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
 }
 Write-TestProgress 'after-input-and-shell-validation'
@@ -186,7 +187,14 @@ public static class TestWindowsNative {
   [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hwnd, int command);
   [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
   [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
   [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+  public static object[] FocusTrace;
+  static uint OwnedThread(IntPtr hwnd, uint expectedPid) {
+    uint pid; uint thread=GetWindowThreadProcessId(hwnd, out pid);
+    if (thread == 0 || pid != expectedPid) throw new Exception("HWND owner changed");
+    return thread;
+  }
   public static string ObjectName(IntPtr obj) {
     StringBuilder result = new StringBuilder(256); uint needed;
     if (!GetUserObjectInformation(obj, 2, result, 512, out needed)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
@@ -201,13 +209,22 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, string file) {
-    ShowWindow(hwnd, 9); SetForegroundWindow(hwnd);
-    // Foreground activation is asynchronous. The caller's existing deadline retries
-    // only this pending state; actual foreground ownership is still required for pixels.
-    if (GetForegroundWindow() != hwnd) return null;
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file) {
+    uint thread=OwnedThread(hwnd,expectedPid);
+    ShowWindow(hwnd, 9);
+    if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
+    bool accepted=SetForegroundWindow(hwnd), synchronized=false;
+    if (accepted) {
+      if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
+      // WM_NULL waits for this owned window's asynchronous activation, without joining input queues.
+      UIntPtr ignored; synchronized=SendMessageTimeout(hwnd,0,UIntPtr.Zero,IntPtr.Zero,0x22,500,out ignored) != IntPtr.Zero;
+    }
+    IntPtr foreground=GetForegroundWindow(); uint foregroundPid;
+    uint foregroundThread=GetWindowThreadProcessId(foreground,out foregroundPid);
+    FocusTrace=new object[] { hwnd.ToInt64().ToString("x"), expectedPid, thread, foreground.ToInt64().ToString("x"), foregroundPid, foregroundThread, GetCurrentThreadId(), accepted, synchronized };
+    if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
+    if ((accepted && !synchronized) || foreground != hwnd) return null;
     Rect r; if (!GetWindowRect(hwnd, out r)) throw new Exception("Window disappeared");
-    uint pid; GetWindowThreadProcessId(hwnd, out pid);
     // Copy actual desktop pixels belonging to this visible foreground HWND.
     int left=Math.Max(0,r.Left), top=Math.Max(0,r.Top);
     int width=Math.Min(r.Right,GetSystemMetrics(0))-left, height=Math.Min(r.Bottom,GetSystemMetrics(1))-top;
@@ -216,7 +233,7 @@ public static class TestWindowsNative {
       using (Graphics graphics = Graphics.FromImage(image)) graphics.CopyFromScreen(left,top,0,0,new Size(width,height));
       image.Save(file,ImageFormat.Png);
     }
-    return new int[] { (int)pid, width, height };
+    return new int[] { (int)expectedPid, width, height };
   }
 }
 '@ -ReferencedAssemblies $compilerReferences
@@ -246,7 +263,11 @@ switch ($data.operation) {
     $handle=[TestWindowsNative]::VisibleWindow($data.pid)
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
-    $pixels=[TestWindowsNative]::Capture($handle,$file)
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file) }
+    finally {
+      $focus=[TestWindowsNative]::FocusTrace
+      if ($null -ne $focus) { Write-TestProgress 'capture-focus' @{ desiredHwnd=$focus[0]; desiredPid=$focus[1]; desiredThread=$focus[2]; foregroundHwnd=$focus[3]; foregroundPid=$focus[4]; foregroundThread=$focus[5]; callerThread=$focus[6]; setForegroundAccepted=$focus[7]; synchronizationSucceeded=$focus[8] } }
+    }
     if ($null -eq $pixels) { Write-TestProgress 'capture-foreground-pending'; $result=$null; break }
     if ($pixels[0] -ne $data.pid) { throw 'HWND owner changed' }
     $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file }
