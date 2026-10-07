@@ -1,4 +1,6 @@
 // @vitest-environment node
+import assert from 'node:assert/strict';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -10,9 +12,111 @@ import {
   textProof,
 } from '../../scripts/ci/release/contract.js';
 import {
+  checkWindowsPriorFixture,
   nativeScenarioRows,
   verifyNativeReadiness,
 } from '../../scripts/ci/release/nativeReadiness.js';
+import {
+  ARM211_FILES,
+  ARM211_SHA,
+  DECODER_ARCHIVE_SHA,
+} from '../../scripts/ci/release/windowsArmPriorFixture.js';
+
+// Receipt policy only: these synthetic claims never qualify a native run.
+it('requires honest byte-bound repaired ARM211 receipts only for216 predecessor cases', () => {
+  const bytes = {
+    size: 100,
+    sha256: 'a'.repeat(64),
+    sha512: Buffer.alloc(64, 2).toString('base64'),
+  };
+  const prior = { ...bytes, size: 196906862, sha256: ARM211_SHA };
+  const install = String.raw`C:\TEST-updater-windows-fixture\install`;
+  const receipt = {
+    fixtureKind: 'repaired-original-arm64-211',
+    originalPriorFreshInstallProved: false,
+    actualNsisExitCode: 0,
+    source: prior,
+    sourceApplicationSha: '395572f9ff2a261cb28224754883a39d2c3c8827',
+    archive: bytes,
+    decoder: {
+      archive: { ...bytes, size: 491981, sha256: DECODER_ARCHIVE_SHA },
+      executable: bytes,
+    },
+    preserved: {
+      'resources/app.asar': bytes,
+      'resources/app-update.yml': bytes,
+      'cache/installer.exe': prior,
+      'Uninstall AgentTeamsAI.exe': bytes,
+    },
+    registry: {
+      installLocation: install,
+      uninstallString: `"${install}\\Uninstall AgentTeamsAI.exe" /currentuser`,
+      quietUninstallString: `"${install}\\Uninstall AgentTeamsAI.exe" /currentuser /S`,
+      version: '2.17.1',
+    },
+    files: ARM211_FILES.map((name) => ({
+      name: String(name),
+      source: { ...bytes },
+      installed: { ...bytes },
+      architecture: 'arm64',
+    })),
+  };
+  const value = {
+    predecessorFixture: receipt,
+    initialInstall: { code: 0, arguments: ['/S', `/D=${install}`] },
+    installedBefore: { packageVersion: '2.17.1' },
+  };
+  expect(() => checkWindowsPriorFixture(value, 'arm64', 'cold', '2.17.6')).not.toThrow();
+  const mutations = [
+    (v: typeof value) => {
+      v.predecessorFixture.originalPriorFreshInstallProved = true;
+    },
+    (v: typeof value) => {
+      v.predecessorFixture.source.sha256 = '0'.repeat(64);
+    },
+    (v: typeof value) => {
+      v.predecessorFixture.decoder.archive.sha256 = '0'.repeat(64);
+    },
+    (v: typeof value) => {
+      const file = v.predecessorFixture.files[0];
+      assert(file);
+      file.architecture = 'x64';
+    },
+    (v: typeof value) => {
+      const file = v.predecessorFixture.files[0];
+      assert(file);
+      file.installed.sha256 = '0'.repeat(64);
+    },
+    (v: typeof value) => {
+      const file = v.predecessorFixture.files[0];
+      assert(file);
+      file.name = 'unexpected.exe';
+    },
+    (v: typeof value) => {
+      v.predecessorFixture.registry.installLocation = 'C:\\foreign';
+    },
+    (v: typeof value) => {
+      v.predecessorFixture.registry.uninstallString = '"C:\\foreign\\uninstall.exe" /currentuser';
+    },
+    (v: typeof value) => {
+      v.initialInstall.code = 1;
+    },
+  ];
+  for (const mutate of mutations) {
+    const invalid = structuredClone(value);
+    mutate(invalid);
+    expect(() => checkWindowsPriorFixture(invalid, 'arm64', 'cold', '2.17.6')).toThrow();
+  }
+  expect(() => checkWindowsPriorFixture({}, 'arm64', 'cold', '2.17.6')).toThrow();
+  for (const [arch, mode, version] of [
+    ['x64', 'cold', '2.17.6'],
+    ['arm64', 'fresh', '2.17.6'],
+    ['arm64', 'cold', '2.17.5'],
+  ] as const) {
+    expect(() => checkWindowsPriorFixture(value, arch, mode, version)).toThrow();
+    expect(() => checkWindowsPriorFixture({}, arch, mode, version)).not.toThrow();
+  }
+});
 
 import type { StagePlan } from '../../scripts/ci/release/contract.js';
 import type {

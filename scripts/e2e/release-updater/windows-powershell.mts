@@ -14,8 +14,11 @@ interface ShellManifest {
   systemRoot: string;
 }
 
-export function inheritedWindowsEnvironment(name: string): string | undefined {
-  return Object.entries(process.env).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
+export function inheritedWindowsEnvironment(
+  name: string,
+  environment: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  return Object.entries(environment).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
 }
 
 // The workflow names its already-running installed PS7 explicitly. Never search
@@ -112,6 +115,27 @@ export async function windowsShellTestEnvironment(
     if (value && path.isAbsolute(value)) env[name] = value;
   }
   return env;
+}
+
+// The read-only physical-profile probe must see the runner's inherited profile,
+// not the TEST shell profile. Keep all shell caches, modules and temporary writes
+// isolated; every other native operation still uses windowsShellTestEnvironment.
+export function windowsProfileCaptureEnvironment(
+  isolated: NodeJS.ProcessEnv,
+  inherited: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const result = { ...isolated };
+  for (const name of ['USERPROFILE', 'APPDATA', 'LOCALAPPDATA']) {
+    const value = inheritedWindowsEnvironment(name, inherited);
+    assert(value && path.isAbsolute(value), `Inherited physical ${name} required`);
+    result[name] = value;
+  }
+  const home = result.USERPROFILE;
+  assert(home);
+  result.HOME = home;
+  result.HOMEDRIVE = path.parse(home).root.slice(0, 2);
+  result.HOMEPATH = home.slice(2);
+  return result;
 }
 
 // Explicit Add-Type references replace its default .NET reference set on PS7.
