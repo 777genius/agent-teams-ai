@@ -30,6 +30,7 @@ import {
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
 import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
@@ -1207,12 +1208,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           </Button>
         </div>
       </div>
-      {teams.some(
-        (team) =>
-          !team.deletedAt &&
-          teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' &&
-          teamManagementNoticeByTeam[team.teamName] &&
-          !filteredTeams.includes(team)
+      {selectRecentManagedTeams(teams, teams, teamManagementNoticeByTeam).some(
+        (team) => !filteredTeams.includes(team)
       ) ? (
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">
           {t('managementChanges.hidden')}{' '}
@@ -1309,20 +1306,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       );
     }
 
-    const recentTeams = filteredTeams
-      .filter(
-        (team) =>
-          !team.deletedAt &&
-          teams.includes(team) &&
-          teamManagementNoticeByTeam[team.teamName]?.kind !== 'trashed' &&
-          teamManagementNoticeByTeam[team.teamName]
-      )
-      .sort(
-        (a, b) =>
-          Date.parse(teamManagementNoticeByTeam[b.teamName].committedAt) -
-            Date.parse(teamManagementNoticeByTeam[a.teamName].committedAt) ||
-          a.teamName.localeCompare(b.teamName)
-      );
+    const recentTeams = selectRecentManagedTeams(
+      filteredTeams,
+      teams,
+      teamManagementNoticeByTeam
+    );
     const recentNames = new Set(recentTeams.map((team) => team.teamName));
     const activeFiltered = filteredTeams.filter(
       (t) => !t.deletedAt && !recentNames.has(t.teamName)

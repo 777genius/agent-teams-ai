@@ -39,3 +39,20 @@ export function reconcileTeamManagementNotices(
   for (const name of stale) delete next[name];
   return next;
 }
+
+/** Recent changes use only canonical cards that already pass the current view filters. */
+export function selectRecentManagedTeams(
+  filteredTeams: readonly TeamSummary[],
+  canonicalTeams: readonly TeamSummary[],
+  notices: Notices
+): TeamSummary[] {
+  return filteredTeams
+    .filter((team) =>
+      !team.deletedAt && canonicalTeams.includes(team) &&
+      notices[team.teamName]?.kind !== 'trashed' && notices[team.teamName]
+    )
+    .sort((a, b) =>
+      Date.parse(notices[b.teamName].committedAt) - Date.parse(notices[a.teamName].committedAt) ||
+      a.teamName.localeCompare(b.teamName)
+    );
+}

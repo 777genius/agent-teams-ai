@@ -12,6 +12,7 @@ import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigR
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
+import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
@@ -2009,6 +2010,9 @@ describe('TeamDataService', () => {
         },
       ]),
       writeMembers,
+      serializeMembers: TeamMembersMetaStore.prototype.serializeMembers.bind(
+        new TeamMembersMetaStore()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -2181,7 +2185,13 @@ describe('TeamDataService', () => {
       .mockResolvedValue(undefined);
     const service = new TeamDataService();
     Object.assign(service as unknown as { membersMetaStore: unknown }, {
-      membersMetaStore: { getMembers: vi.fn(async () => []), writeMembers },
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+        writeMembers,
+        serializeMembers: TeamMembersMetaStore.prototype.serializeMembers.bind(
+          new TeamMembersMetaStore()
+        ),
+      },
     });
 
     await expect(service.restoreMember('runtime-team', 'alice')).rejects.toThrow(
