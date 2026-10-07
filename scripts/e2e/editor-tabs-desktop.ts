@@ -4,7 +4,7 @@
  * Launches the dev:mcp wrapper with an isolated CDP port and user data; never agents.
  */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
@@ -148,14 +148,14 @@ await Promise.all([first,...office,...bFiles].map(file=>writeFile(file,'sandbox-
 let app: ChildProcess|null = null;
 let client: Cdp|null = null;
 const logs: string[] = [];
-const receipt: Record<string,unknown> = {sandbox,repo,userDataRoot,cases:[],launches:[]};
+const receipt: Record<string,unknown> = {sandbox,repo,commit:spawnSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).stdout.trim(),userDataRoot,cases:[],launches:[]};
 const cases=receipt.cases as Record<string,unknown>[];
 async function freePort(): Promise<number> {
  return await new Promise((resolve,reject)=>{const server=net.createServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const address=server.address();if(!address||typeof address==='string')return reject(Error('No port'));server.close(()=>resolve(address.port));});});
 }
 async function launch(): Promise<Cdp> {
  const port=await freePort();
- const args=[path.join(repo,'scripts/dev-with-runtime.mjs'),'--remoteDebuggingPort',String(port), ...(process.getuid?.()===0?['--noSandbox']:[])];
+ const args=[path.join(repo,'scripts/dev-with-runtime.mjs'),'--remoteDebuggingPort',String(port), ...(process.platform==='linux'?['--noSandbox']:[])];
  (receipt.launches as unknown[]).push({command:[process.execPath,...args],port});
  app=spawn(process.execPath,args,{cwd:repo,detached:true,stdio:['ignore','pipe','pipe'],env:{...process.env,NODE_ENV:'development',AGENT_TEAMS_DISABLE_SOURCEMAPS:'1',AGENT_TEAMS_ELECTRON_CLAUDE_ROOT:claudeRoot,AGENT_TEAMS_ELECTRON_USER_DATA_DIR:userDataRoot,CLAUDE_CONFIG_DIR:claudeRoot,CLAUDE_TEAM_OPENCODE_MCP_HTTP:'0',NODE_BINARY:process.execPath,CLAUDE_DEV_RUNTIME_CACHE_ROOT:path.join(repo,'.test-tmp-dev-mcp/runtime-cache')}});
  app.stdout?.on('data',(chunk:Buffer)=>logs.push(chunk.toString()));app.stderr?.on('data',(chunk:Buffer)=>logs.push(chunk.toString()));
@@ -208,8 +208,10 @@ try{
  await closeDialog(client,'Save All & Close');await client.wait(`(async()=>${storeExpression}.getState().editorProjectPath===null)()`,'save all close');assert.equal(await readFile(renamed,'utf8'),'sandbox-original\nSAVED');cases.push({case:'Save All and Close writes actual sandbox content',result:'PASS'});
  await mountEditor(client,projectA);await waitView(client,renamed);
  await shot(client,'project-a-restored');
+ assert.deepEqual(client.exceptions,[],'first process has no uncaught renderer exceptions');
  await stop();client=await launch();await mountEditor(client,projectA);await expectSession(client,[...aPaths,missing],renamed,'full Electron process restart restores renamed/deleted/missing A tabs');
  await mountEditor(client,projectB);await expectSession(client,[bFiles[1],bFiles[0]],bFiles[0],'full Electron restart preserves independent B session');await shot(client,'project-b-restarted');
+ assert.deepEqual(client.exceptions,[],'restarted process has no uncaught renderer exceptions');
  receipt.status='PASS';receipt.durationMs=Date.now()-started;
 }catch(error){receipt.status='FAIL';receipt.error=String(error);if(client)await shot(client,'failure').catch(()=>{});throw error;}
 finally{await stop();await writeFile(path.join(artifacts,'receipt.json'),JSON.stringify(receipt,null,2));await writeFile(path.join(artifacts,'electron.log'),logs.join(''));console.log(JSON.stringify({status:receipt.status,durationMs:receipt.durationMs,artifacts,error:receipt.error}));}

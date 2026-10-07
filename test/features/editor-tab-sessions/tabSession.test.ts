@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createEditorTabsRepository } from '../../../src/features/editor-tab-sessions/core/application/editorTabsRepository';
 import { decodeEditorTabSessions, editorSessionPathKey, normalizeEditorTabSession } from '../../../src/features/editor-tab-sessions/core/domain/tabSession';
@@ -49,6 +49,12 @@ describe('project editor tab metadata', () => {
     repository.save('/a', { paths: ['/a/new.txt'], active: '/a/new.txt' });
     expect(repository.load('/a').paths).toEqual(['/a/new.txt']);
     expect(disk).toContain('old.txt');
+    repository.save('/a', { paths: ['/a/latest.txt'], active: '/a/latest.txt' });
+    expect(repository.load('/a').paths).toEqual(['/a/latest.txt']);
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+      '[EditorTabSessions:storage] Persistent editor tab storage unavailable; using session memory'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('bounds metadata without persisting document contents', () => {
