@@ -341,7 +341,28 @@ async function packageCandidate(
     return null;
   }
   const identity = candidate.identity;
-  // Only exact installed TEST binary candidates are eligible for env reads.
+  const rawCommand = await processFile(pid, 'cmdline');
+  if (rawCommand === null) {
+    record('command-unavailable');
+    return null;
+  }
+  const command = decodeProcCommand(rawCommand);
+  if (!command) {
+    record('command-terminator-rejected');
+    return null;
+  }
+  updateCandidateDiagnostic(
+    diagnostic,
+    { command },
+    {
+      mainCommand: !command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument)),
+    }
+  );
+  if (command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument))) {
+    record('child-role-rejected');
+    return null;
+  }
+  // Only exact installed TEST main processes are eligible for env reads.
   const environment = await readFile(`/proc/${pid}/environ`, 'utf8').catch((error) => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
@@ -379,27 +400,6 @@ async function packageCandidate(
   );
   if (profile === 'conflict' || (profile === 'provisional' && !automatic)) {
     record('profile-marker-rejected');
-    return null;
-  }
-  const rawCommand = await processFile(pid, 'cmdline');
-  if (rawCommand === null) {
-    record('command-unavailable');
-    return null;
-  }
-  const command = decodeProcCommand(rawCommand);
-  if (!command) {
-    record('command-terminator-rejected');
-    return null;
-  }
-  updateCandidateDiagnostic(
-    diagnostic,
-    { command },
-    {
-      mainCommand: !command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument)),
-    }
-  );
-  if (command.some((argument) => /(?:^|\s)--type(?:=|\s|$)/.test(argument))) {
-    record('child-role-rejected');
     return null;
   }
   const current = await processIdentity(pid);

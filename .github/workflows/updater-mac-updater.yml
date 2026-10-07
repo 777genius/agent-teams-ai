@@ -54,7 +54,7 @@ jobs:
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
           pnpm lint:ci:files -- scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
-          ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts
+          ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts scripts/e2e/release-updater/mac-lifecycle.test.mts
       - name: Retrieve only the authenticated immutable prepared metadata plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -141,9 +141,9 @@ jobs:
       - name: Check typed native Mac harness
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
       - name: Verify compiler-independent observer serialization
-        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts
+        run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts
       - name: Retrieve and verify only this completed authenticated producer job's immutable artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -157,6 +157,7 @@ jobs:
             --artifact-id "$INPUT_ARTIFACT_ID" --artifact-sha256 "$INPUT_ARTIFACT_SHA256" \
             --output "$RUNNER_TEMP/TEST-mac-authenticated-inputs"
       - name: Native signed current Mac app completes genuine no-update with OS containment
+        timeout-minutes: 16
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-inputs.outputs.artifact_id }}

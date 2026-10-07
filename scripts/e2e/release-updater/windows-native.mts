@@ -92,10 +92,54 @@ function Read-Owned([string]$file) {
   $full = Test-OwnedPath $file
   $items = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $full })
   return @($items | ForEach-Object {
-    $owner = Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid
+    $item = $_
+    $ownedId = [int]$item.ProcessId
+    try { $owner = Invoke-CimMethod -InputObject $item -MethodName GetOwnerSid -ErrorAction Stop }
+    catch [Microsoft.Management.Infrastructure.CimException] {
+      if ($_.Exception.NativeErrorCode -ne [Microsoft.Management.Infrastructure.NativeErrorCode]::NotFound) { throw }
+      # Only an independently absent exact PID proves the enumerated item exited.
+      # A live/reused PID, query error, or ambiguous result remains a hard failure.
+      $remaining = @(Get-CimInstance Win32_Process -Filter "ProcessId = $ownedId" -ErrorAction Stop)
+      if ($remaining.Count -ne 0) { throw }
+      Write-TestProgress "owner-exited-before-sid-$ownedId"
+      return
+    }
     if ($owner.ReturnValue -ne 0) { throw 'Cannot verify TEST process owner' }
-    @{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; executable=$_.ExecutablePath; command=$_.CommandLine; start=$_.CreationDate.ToUniversalTime().ToString('o'); session=[int]$_.SessionId; sid=$owner.Sid }
+    @{ pid=$ownedId; parent=[int]$item.ParentProcessId; executable=$item.ExecutablePath; command=$item.CommandLine; start=$item.CreationDate.ToUniversalTime().ToString('o'); session=[int]$item.SessionId; sid=$owner.Sid }
   })
+}
+if ($data.operation -eq 'prior-fixture-guard') {
+  if (@($data.files).Count -lt 1 -or @($data.files).Count -gt 32 -or $data.registry -isnot [bool]) { throw 'Invalid prior fixture guard request' }
+  $rootAttributes=[IO.File]::GetAttributes($root)
+  if (($rootAttributes -band [IO.FileAttributes]::ReparsePoint) -or -not ($rootAttributes -band [IO.FileAttributes]::Directory)) { throw 'Fixture root is not an ordinary directory' }
+  $files=@(foreach ($file in $data.files) {
+    $full=Test-OwnedPath $file; $current=$root; $exists=$true
+    $parts=$full.Substring($root.Length+1).Split([IO.Path]::DirectorySeparatorChar)
+    if ($parts.Count -gt 24) { throw 'Fixture path depth exceeded' }
+    foreach ($part in $parts) {
+      $current=[IO.Path]::Combine($current,$part)
+      try { $attributes=[IO.File]::GetAttributes($current) } catch {
+        if ($_.Exception.InnerException -isnot [IO.FileNotFoundException] -and $_.Exception.InnerException -isnot [IO.DirectoryNotFoundException]) { throw }
+        $exists=$false; break
+      }
+      if ($attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Fixture reparse point rejected' }
+    }
+    @{ path=$full; exists=$exists }
+  })
+  $registry=$null
+  if ($data.registry) {
+    $base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser,[Microsoft.Win32.RegistryView]::Registry64)
+    $app=$null; $uninstall=$null
+    try {
+      $app=$base.OpenSubKey('Software\dba9559a-8e73-5eee-b6e5-a4142f9e2702')
+      $uninstall=$base.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Uninstall\dba9559a-8e73-5eee-b6e5-a4142f9e2702')
+      if (-not $app -or -not $uninstall) { throw 'Actual original NSIS registry metadata unavailable' }
+      $registry=@{ installLocation=[string]$app.GetValue('InstallLocation'); uninstallString=[string]$uninstall.GetValue('UninstallString'); quietUninstallString=[string]$uninstall.GetValue('QuietUninstallString'); version=[string]$uninstall.GetValue('DisplayVersion') }
+    } finally { if ($app) { $app.Dispose() }; if ($uninstall) { $uninstall.Dispose() }; $base.Dispose() }
+  }
+  Write-TestProgress 'prior-fixture-guard-complete'
+  ConvertTo-Json -InputObject @{ files=$files; registry=$registry } -Depth 8 -Compress
+  exit
 }
 Write-TestProgress 'before-system-drawing'
 $drawingRuntimeNames = @('System.Drawing.Common.dll', 'System.Private.Windows.Core.dll', 'System.Private.Windows.GdiPlus.dll')
@@ -159,7 +203,9 @@ public static class TestWindowsNative {
   }
   public static int[] Capture(IntPtr hwnd, string file) {
     ShowWindow(hwnd, 9); SetForegroundWindow(hwnd);
-    if (GetForegroundWindow() != hwnd) throw new Exception("Owned native window is not foreground on interactive desktop");
+    // Foreground activation is asynchronous. The caller's existing deadline retries
+    // only this pending state; actual foreground ownership is still required for pixels.
+    if (GetForegroundWindow() != hwnd) return null;
     Rect r; if (!GetWindowRect(hwnd, out r)) throw new Exception("Window disappeared");
     uint pid; GetWindowThreadProcessId(hwnd, out pid);
     // Copy actual desktop pixels belonging to this visible foreground HWND.
@@ -201,6 +247,7 @@ switch ($data.operation) {
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
     $pixels=[TestWindowsNative]::Capture($handle,$file)
+    if ($null -eq $pixels) { Write-TestProgress 'capture-foreground-pending'; $result=$null; break }
     if ($pixels[0] -ne $data.pid) { throw 'HWND owner changed' }
     $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file }
   }
@@ -346,6 +393,16 @@ export async function windowsNative(root: string, evidence: string) {
     return JSON.parse(result.stdout.trim()) as T;
   }
   return {
+    priorFixtureGuard: (files: string[], registry: boolean) =>
+      call<{
+        files: { path: string; exists: boolean }[];
+        registry: null | {
+          installLocation: string;
+          uninstallString: string;
+          quietUninstallString: string;
+          version: string;
+        };
+      }>('prior-fixture-guard', { files, registry }),
     physicalProfile: () => call<PhysicalProfile>('profile'),
     session: () => call<DesktopSession>('session'),
     processes: (executable: string) => call<WindowsProcess[]>('processes', { executable }),
@@ -401,11 +458,16 @@ if (process.argv.includes('--cleanup')) {
     firewallGroup: string;
     firewallNames: string[];
     profileFile?: string;
+    fixtureDecoder?: string;
   };
   assert(/^TEST-updater-windows-[a-f0-9-]+$/.test(owned.firewallGroup));
   assert(owned.firewallNames.every((name) => name.startsWith(`${owned.firewallGroup}-`)));
   const native = await windowsNative(owned.root, path.dirname(path.resolve(file)));
   const files = [owned.executable, owned.priorInstaller, owned.targetInstaller];
+  if (owned.fixtureDecoder) {
+    assert.equal(owned.fixtureDecoder, path.join(owned.root, 'prior-fixture', '7za.exe'));
+    files.push(owned.fixtureDecoder);
+  }
   for (const executable of files) {
     await native.stop(await native.processes(executable));
     assert.equal(

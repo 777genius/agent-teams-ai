@@ -157,6 +157,7 @@ jobs:
             --artifact-id "$INPUT_ARTIFACT_ID" --artifact-sha256 "$INPUT_ARTIFACT_SHA256" \
             --output "$RUNNER_TEMP/TEST-mac-authenticated-inputs"
       - name: Real signed Squirrel OTA or fresh carried install in a separate Aqua VM
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-inputs.outputs.artifact_id }}

@@ -36,7 +36,7 @@ async function fixture() {
   };
   const target: Release = {
     id: 499999999,
-    tag_name: 'v2.17.5',
+    tag_name: 'v2.17.6',
     target_commitish: '1'.repeat(40),
     created_at: '2026-10-05T15:27:10Z',
     draft: true,
@@ -53,7 +53,7 @@ async function fixture() {
     name: release.name,
     body: release.body,
   });
-  const t = platformNames('2.17.5');
+  const t = platformNames('2.17.6');
   const mac = [
     ...platformNames('2.17.1').mac,
     ...Object.keys(macAliases('2.17.1')),
@@ -99,7 +99,7 @@ async function fixture() {
     },
     feeds: {
       'latest.yml': renderFeed(
-        '2.17.5',
+        '2.17.6',
         originals.filter((entry) => t.windows.includes(entry.name)),
         target.created_at
       ),
@@ -146,7 +146,7 @@ void test('bundle accepts matching actual byte proofs and preserves the prepared
   const input = await fixture();
   try {
     const result = await input.verify();
-    assert.equal(result.targetVersion, '2.17.5');
+    assert.equal(result.targetVersion, '2.17.6');
     assert.equal(result.legacyFixture, false);
     assert.equal(result.verified.length, 8);
     assert.equal(result.feed, input.plan.feeds['latest.yml']);
@@ -180,7 +180,7 @@ for (const variant of [
       if (variant === 'feed-version') {
         const feed = input.plan.feeds['latest.yml'];
         assert(typeof feed === 'string');
-        input.plan.feeds['latest.yml'] = feed.replace('version: 2.17.5', 'version: 2.17.1');
+        input.plan.feeds['latest.yml'] = feed.replace('version: 2.17.6', 'version: 2.17.1');
       }
       if (variant === 'source-id') input.source.id++;
       if (variant === 'skip-updater') {

@@ -172,7 +172,7 @@ async function downloadTrustedArtifact(
   } else {
     const names = [
       ...windowsPredecessorPins.map((pin) => pin.name),
-      ...platformNames('2.17.5').windows.flatMap((name) => [name, `${name}.blockmap`]),
+      ...platformNames('2.17.6').windows.flatMap((name) => [name, `${name}.blockmap`]),
       'source-api.json',
       'draft-api.json',
       'latest.yml',
@@ -231,7 +231,7 @@ async function prepare() {
   const receipt = await downloadTrustedArtifact(output, kind);
   const planFile = path.join(output, 'plan.json');
   const plan = await readWindowsStagePlan(planFile);
-  assert.equal(plan.input.target.tag, 'v2.17.5');
+  assert.equal(plan.input.target.tag, 'v2.17.6');
   assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
   if (kind === 'prepared') {
     assert(plan.input.macSource);
@@ -260,7 +260,7 @@ async function prepare() {
       await downloadAsset(target, expected.name, output);
     }
     const sourceNames: string[] = windowsPredecessorPins.map((pin) => pin.name);
-    const targetNames = platformNames('2.17.5').windows.flatMap((name) => [
+    const targetNames = platformNames('2.17.6').windows.flatMap((name) => [
       name,
       `${name}.blockmap`,
     ]);

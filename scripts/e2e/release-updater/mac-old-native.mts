@@ -20,15 +20,16 @@ async function pf(commands: MacCommands, label: string, args: string[]) {
   return commands.checked(label, '/usr/bin/sudo', ['-n', '/sbin/pfctl', ...args]);
 }
 const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-export function oldMacCiOnly() {
+type MacNativeWorkflow = 'updater-mac-old-updater' | 'updater-mac-updater';
+export function checkMacNativeWorkflow(workflow: MacNativeWorkflow, reference: string | undefined) {
+  assert(workflow === 'updater-mac-old-updater' || workflow === 'updater-mac-updater');
+  assert(reference?.startsWith(`777genius/agent-teams-ai/.github/workflows/${workflow}.yml@`));
+}
+export function oldMacCiOnly(workflow: MacNativeWorkflow = 'updater-mac-old-updater') {
   assert.equal(process.platform, 'darwin');
   assert.equal(process.env.GITHUB_ACTIONS, 'true');
   assert.equal(process.env.GITHUB_REPOSITORY, '777genius/agent-teams-ai');
-  assert(
-    process.env.GITHUB_WORKFLOW_REF?.startsWith(
-      '777genius/agent-teams-ai/.github/workflows/updater-mac-old-updater.yml@'
-    )
-  );
+  checkMacNativeWorkflow(workflow, process.env.GITHUB_WORKFLOW_REF);
   assert(process.getuid?.() !== 0, 'The existing disposable Aqua account must be unprivileged');
 }
 async function absent(file: string) {
@@ -40,8 +41,8 @@ async function absent(file: string) {
     throw error;
   }
 }
-export async function freshMacHome(commands: MacCommands) {
-  oldMacCiOnly();
+export async function freshMacHome(commands: MacCommands, workflow?: MacNativeWorkflow) {
+  oldMacCiOnly(workflow);
   const user = (await commands.checked('aqua-account', '/usr/bin/id', ['-un'])).stdout.trim();
   assert.equal(
     (
@@ -416,7 +417,7 @@ export async function oldMacStopApps(commands: MacCommands) {
   );
   return { before, stopped: true };
 }
-export async function restoreOldMacNetwork(commands: MacCommands) {
+export async function retireOldMacShipIt(commands: MacCommands) {
   const value = await receipt(commands);
   assert(
     value.attempts.every((attempt) => attempt.pid !== undefined && attempt.owner),
@@ -425,6 +426,16 @@ export async function restoreOldMacNetwork(commands: MacCommands) {
   const job = await validatedJob(commands, value, false);
   if (job.present)
     await commands.checked('remove-owned-shipit-job', value.native.job, ['--remove-job']);
+  assert.equal(
+    (await jobStatus(commands, value.native.job)).present,
+    false,
+    'Owned ShipIt job must be absent before stopping TEST apps'
+  );
+  return job;
+}
+export async function restoreOldMacNetwork(commands: MacCommands) {
+  const value = await receipt(commands);
+  const job = await retireOldMacShipIt(commands);
   await oldMacStopApps(commands);
   // No unknown group members are signalled. They block restoration even if the original main exited.
   let since: number | undefined;

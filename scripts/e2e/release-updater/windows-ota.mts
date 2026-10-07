@@ -42,6 +42,7 @@ import {
   releasePhysicalProfile,
 } from './windows-ota-profile.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
+import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
 
 import type { App } from 'electron';
 import type { ChildProcess } from 'node:child_process';
@@ -742,7 +743,7 @@ async function run() {
           (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
         ) ?? null,
       'NSIS-created automatic successor before any harness relaunch',
-      90_000
+      process.arch === 'arm64' ? 480_000 : 90_000
     );
     samplerStop = true;
     await sampling;
@@ -886,7 +887,7 @@ async function run() {
       env,
       windowsVerbatimArguments: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(process.arch === 'arm64' ? 480_000 : 180_000),
     });
     spawnedChildren.push({ kind: 'installer', child: setup });
     for (const stream of [setup.stdout, setup.stderr])
@@ -902,6 +903,29 @@ async function run() {
       'Initial installer must not auto-launch'
     );
     evidence.initialInstall = { installer, code: setupCode, arguments: ['/S', `/D=${install}`] };
+    evidence.predecessorFixture = await prepareArmPriorFixture({
+      mode: mode,
+      targetVersion: targetVersion,
+      root,
+      install,
+      priorInstaller,
+      actualNsisExitCode: setupCode,
+      env,
+      native,
+      recordDecoded: async (ledger) => {
+        await writeFile(
+          path.join(output, 'prior-decoded-pe.json'),
+          JSON.stringify(ledger, null, 2)
+        );
+      },
+      ownDecoder: async (file) => {
+        owned.installers.push(file);
+        const name = `${firewallGroup}-${owned.firewallNames.length}`;
+        owned.firewallNames.push(name);
+        await saveOwnership();
+        await native.addFirewall(firewallGroup, name, file);
+      },
+    });
     const version = mode === 'fresh' ? targetVersion : '2.17.1';
     evidence.installedBefore = await proveInstalled(version);
     const originalFiles = [
@@ -957,7 +981,7 @@ async function run() {
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
     evidence.finalReleaseProved =
       inputs.legacyFixture === false &&
-      targetVersion === '2.17.5' &&
+      targetVersion === '2.17.6' &&
       Boolean(inputs.stagedMetadata);
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);
