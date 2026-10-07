@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useDownloadAssetPresentation } from '../composables/useDownloadAssetPresentation';
 import { parseReleaseDownloads, platformReleaseInfo, resolveReleaseDownload } from './releaseDownloads';
-import type { DownloadArch } from '../data/downloads';
+import type { DownloadArch, DownloadOs } from '../data/downloads';
 
 const repository = '777genius/agent-teams-ai';
 
@@ -16,7 +16,7 @@ function presentation(
       ? `Agent.Teams.AI-${arch}.dmg`
       : `Agent.Teams.AI-${payloads[arch]}-${arch}.dmg`
   );
-  const data = parseReleaseDownloads({
+  const data = ref(parseReleaseDownloads({
     tag_name: `v${channel}`,
     body: null,
     published_at: '2026-10-07T12:00:00Z',
@@ -24,7 +24,7 @@ function presentation(
       name,
       browser_download_url: `https://github.com/${repository}/releases/download/v${channel}/${name}`,
     })),
-  }, repository);
+  }, repository));
   const store = reactive({
     macArch: architecture,
     windowsArch: 'x64',
@@ -35,19 +35,34 @@ function presentation(
     },
   });
   vi.stubGlobal('useDownloadStore', () => store);
-  vi.stubGlobal('useReleaseDownloads', () => ({
-    platformInfo: (os: 'macos', arch: DownloadArch | 'unknown') =>
-      arch === 'unknown' || arch === 'universal'
-        ? platformReleaseInfo(data, os)
-        : resolveReleaseDownload(data, os, arch),
-  }));
+  const platformInfo = (os: DownloadOs, arch: DownloadArch | 'unknown') =>
+    arch === 'unknown' || arch === 'universal'
+      ? platformReleaseInfo(data.value, os)
+      : (resolveReleaseDownload(data.value, os, arch) ?? { version: null, pubDate: null });
+  const registerReleaseData = vi.fn(() => ({ platformInfo }));
+  vi.stubGlobal('useReleaseDownloads', registerReleaseData);
   vi.stubGlobal('computed', computed);
-  return { store, result: useDownloadAssetPresentation() };
+  return { store, releaseData: data, registerReleaseData, result: useDownloadAssetPresentation(platformInfo) };
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Mac download requirement presentation', () => {
+  it('uses the existing release resolver without registering another async-data consumer', () => {
+    const { result, registerReleaseData } = presentation('2.17.7', { arm64: '2.17.7', x64: '2.17.7' }, 'arm64');
+    expect(result.selectedDownloadAsset.value?.actionSubtitle).toBe('macOS 13+ · Apple Silicon');
+    expect(registerReleaseData).not.toHaveBeenCalled();
+  });
+
+  it('updates the requirement when the existing consumer receives release metadata', () => {
+    const pending = presentation('2.17.7', { arm64: null, x64: null }, 'arm64');
+    const resolved = presentation('2.17.7', { arm64: '2.17.7', x64: '2.17.7' }, 'arm64');
+    expect(pending.result.selectedDownloadAsset.value?.actionSubtitle).toBe('macOS · Apple Silicon');
+    pending.releaseData.value = resolved.releaseData.value;
+    expect(pending.result.selectedDownloadAsset.value?.actionSubtitle).toBe('macOS 13+ · Apple Silicon');
+    expect(pending.registerReleaseData).not.toHaveBeenCalled();
+  });
+
   it.each(['arm64', 'x64'] as const)('shows macOS 13 for the actual 2.17.7 %s payload', (arch) => {
     const { result } = presentation('2.17.7', { arm64: '2.17.7', x64: '2.17.7' }, arch);
     expect(result.selectedDownloadAsset.value?.actionSubtitle).toBe(

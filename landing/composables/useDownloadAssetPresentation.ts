@@ -10,9 +10,10 @@ export type PresentedDownloadAsset = Omit<DownloadAsset, "archLabel" | "fileName
   resolvedArch: DownloadArch | "unknown";
 };
 
-export function useDownloadAssetPresentation() {
+export function useDownloadAssetPresentation(
+  platformInfo: ReturnType<typeof useReleaseDownloads>["platformInfo"]
+) {
   const downloadStore = useDownloadStore();
-  const { platformInfo } = useReleaseDownloads();
 
   const getDownloadArch = (asset: Pick<DownloadAsset, "os" | "arch">): DownloadArch | "unknown" => (
     asset.os === "macos"

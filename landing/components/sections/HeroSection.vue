@@ -23,7 +23,7 @@ const downloadStore = useDownloadStore();
 const { resolve, platformInfo, data: releaseData } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
-const { selectedDownloadAsset } = useDownloadAssetPresentation();
+const { selectedDownloadAsset } = useDownloadAssetPresentation(platformInfo);
 
 useCyberHeroParallax(heroRef);
 
