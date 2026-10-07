@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { mkdir, mkdtemp, open, readFile, realpath, writeFile } from 'node:fs/promises';
+import { constants, createWriteStream } from 'node:fs';
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rm,
+  rmdir,
+  writeFile,
+} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -27,14 +37,16 @@ import type { ProfileOwnership } from './windows-ota-profile.mts';
 
 const execute = promisify(execFile);
 const repository = '777genius/agent-teams-ai';
-const sourceSha = '395572f9ff2a261cb28224754883a39d2c3c8827';
+const sourceSha = '36c48514bce010d50d5b74660d2c2ab5a00d233b';
+const sourceTagSha = '27fcfeeb10b9ab0fc781a7bdcf65fd70aa631c5c';
 const pin = {
-  id: 595803042,
-  name: 'Agent.Teams.AI.Setup.2.17.1-arm64.exe',
-  size: 196906862,
-  sha256: 'd7bbfe282cba0467f389b24ca3f0cc0404efbbd21c0ce0d09a0e0080c9abfc43',
+  id: 616289950,
+  name: 'Agent.Teams.AI.Setup.2.17.5-arm64.exe',
+  size: 218412277,
+  sha256: '8df843439e8120612804d8ee00667af546c9b7839c2b080083a30e2874e1ebfb',
 };
-const publicUrl = `https://github.com/${repository}/releases/download/v2.17.1/${pin.name}`;
+const assetRoute = `repos/${repository}/releases/assets/${pin.id}`;
+const assetApiUrl = `https://api.github.com/${assetRoute}`;
 interface SourceRelease {
   id: number;
   tag_name: string;
@@ -46,19 +58,22 @@ interface SourceRelease {
     name: string;
     size: number;
     digest: string;
-    browser_download_url: string;
+    state: string;
+    url: string;
   }[];
 }
 export function checkSource(
   release: SourceRelease,
-  tag: { ref: string; object: { type: string; sha: string } }
+  tag: { ref: string; object: { type: string; sha: string } },
+  annotated: { tag: string; object: { type: string; sha: string } }
 ) {
-  assert.equal(release.id, 398386033);
-  assert.equal(release.tag_name, 'v2.17.1');
+  assert.equal(release.id, 404985707);
+  assert.equal(release.tag_name, 'v2.17.5');
   assert.equal(release.target_commitish, sourceSha);
-  assert.equal(release.draft, false);
+  assert.equal(release.draft, true);
   assert.equal(release.prerelease, false);
-  assert.deepEqual(tag, { ref: 'refs/tags/v2.17.1', object: { type: 'commit', sha: sourceSha } });
+  assert.deepEqual(tag, { ref: 'refs/tags/v2.17.5', object: { type: 'tag', sha: sourceTagSha } });
+  assert.deepEqual(annotated, { tag: 'v2.17.5', object: { type: 'commit', sha: sourceSha } });
   const assets = release.assets.filter((asset) => asset.name === pin.name);
   assert.equal(assets.length, 1);
   const asset = assets[0];
@@ -69,17 +84,27 @@ export function checkSource(
       name: asset.name,
       size: asset.size,
       digest: asset.digest,
-      browser_download_url: asset.browser_download_url,
+      state: asset.state,
+      url: asset.url,
     },
     {
       id: pin.id,
       name: pin.name,
       size: pin.size,
       digest: `sha256:${pin.sha256}`,
-      browser_download_url: publicUrl,
+      state: 'uploaded',
+      url: assetApiUrl,
     }
   );
-  return { releaseId: release.id, sourceSha, tag: release.tag_name, ...pin, publicUrl };
+  return {
+    releaseId: release.id,
+    sourceSha,
+    tagObjectSha: sourceTagSha,
+    tag: release.tag_name,
+    draft: true,
+    ...pin,
+    assetApiUrl,
+  };
 }
 export function checkOwner(
   root: string,
@@ -224,47 +249,88 @@ Save-Owners
 `;
 
 async function sourceGuard() {
-  async function api(route: string) {
+  async function api(route: string, paginate = false) {
     return JSON.parse(
       (
-        await execute('gh', ['api', `repos/${repository}/${route}`], {
-          timeout: 30_000,
-          maxBuffer: 1_048_576,
-        })
+        await execute(
+          'gh',
+          ['api', `repos/${repository}/${route}`, ...(paginate ? ['--paginate', '--slurp'] : [])],
+          {
+            timeout: 30_000,
+            maxBuffer: 1_048_576,
+          }
+        )
       ).stdout
     ) as unknown;
   }
-  const release = (await api('releases/398386033')) as SourceRelease;
-  const ref = (await api('git/ref/tags/v2.17.1')) as {
+  const release = (await api('releases/404985707')) as SourceRelease;
+  release.assets = (
+    (await api('releases/404985707/assets', true)) as SourceRelease['assets'][]
+  ).flat();
+  const ref = (await api('git/ref/tags/v2.17.5')) as {
     ref: string;
     object: { type: string; sha: string };
   };
-  return checkSource(release, {
-    ref: ref.ref,
-    object: { type: ref.object.type, sha: ref.object.sha },
-  });
+  const annotated = (await api(`git/tags/${sourceTagSha}`)) as {
+    tag: string;
+    object: { type: string; sha: string };
+  };
+  return checkSource(
+    release,
+    { ref: ref.ref, object: { type: ref.object.type, sha: ref.object.sha } },
+    { tag: annotated.tag, object: { type: annotated.object.type, sha: annotated.object.sha } }
+  );
 }
 
 async function download(priorInstaller: string) {
-  const response = await fetch(publicUrl, { signal: AbortSignal.timeout(120_000) });
-  assert(response.ok && response.body);
-  const file = await open(priorInstaller, 'wx');
-  let size = 0;
+  const staging = await mkdtemp(path.join(os.tmpdir(), 'TEST-windows-arm-draft-input-'));
+  const transferred = path.join(staging, pin.name);
   try {
-    const reader = response.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      assert(size <= pin.size);
-      await file.writeFile(value);
+    const shell = await selectedWindowsPowerShell();
+    const lookupEnv = await windowsShellTestEnvironment(path.dirname(priorInstaller), shell);
+    lookupEnv.PATH = inheritedWindowsEnvironment('PATH');
+    const command = await execute(
+      shell.executable,
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '(Get-Command gh -CommandType Application -ErrorAction Stop).Source',
+      ],
+      { env: lookupEnv, timeout: 20_000, maxBuffer: 16_384 }
+    );
+    const ghExecutable = await realpath(command.stdout.trim());
+    assert.equal(
+      ghExecutable.toLowerCase(),
+      path.join(shell.programFiles, 'GitHub CLI', 'gh.exe').toLowerCase(),
+      'Unexpected installed GitHub CLI path'
+    );
+    const file = await open(transferred, 'wx');
+    try {
+      const transfer = spawn(
+        ghExecutable,
+        ['api', assetRoute, '--header', 'Accept: application/octet-stream'],
+        {
+          stdio: ['ignore', file.fd, 'ignore'],
+          signal: AbortSignal.timeout(120_000),
+        }
+      );
+      const code = await new Promise<number | null>((resolve, reject) => {
+        transfer.once('error', reject);
+        transfer.once('exit', resolve);
+      });
+      assert.equal(code, 0, 'Authenticated draft asset transfer failed');
+    } finally {
+      await file.close();
     }
+    await copyFile(transferred, priorInstaller, constants.COPYFILE_EXCL);
+    const actual = await hashFile(priorInstaller);
+    assert.equal(actual.size, pin.size);
+    assert.equal(actual.sha256, pin.sha256);
   } finally {
-    await file.close();
+    await rm(transferred, { force: true });
+    await rmdir(staging);
   }
-  const actual = await hashFile(priorInstaller);
-  assert.equal(actual.size, pin.size);
-  assert.equal(actual.sha256, pin.sha256);
 }
 
 async function cleanup(
@@ -345,7 +411,7 @@ async function run() {
   assert(process.argv.includes('--evidence') && path.basename(output).startsWith('TEST-'));
   await mkdir(output, { recursive: true });
   const evidence: Record<string, unknown> = {
-    scope: 'DIAGNOSTIC ONLY: old 2.17.1 ARM NSIS observer',
+    scope: 'DIAGNOSTIC ONLY: fresh target 2.17.5 ARM NSIS observer',
     qualifying: false,
     fullOtaProved: false,
     diagnosticHead: process.env.GITHUB_SHA,

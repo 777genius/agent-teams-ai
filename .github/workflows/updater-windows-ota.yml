@@ -1,4 +1,4 @@
-name: DIAGNOSTIC ONLY old 2.17.1 ARM installer
+name: DIAGNOSTIC ONLY fresh target 2.17.5 ARM installer
 
 on:
   workflow_dispatch:
@@ -12,7 +12,9 @@ permissions:
   contents: read
 
 jobs:
-  old-arm-installer-diagnostic:
+  target-arm-installer-diagnostic:
+    permissions:
+      contents: write # Required for authenticated draft reads; no publishing operations
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     runs-on: windows-11-arm
     timeout-minutes: 15
@@ -56,7 +58,7 @@ jobs:
           $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
           [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
           "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Observe one unchanged predecessor installation attempt
+      - name: Observe one fresh target 2.17.5 installation attempt
         env:
           GH_TOKEN: ${{ github.token }}
           DIAGNOSTIC_SHA: ${{ inputs.diagnostic_sha }}
@@ -64,12 +66,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           if ((node -p process.arch) -ne 'arm64') { throw 'Native ARM runner/Node required' }
           node scripts/e2e/release-updater/windows-installer-diagnostic.mts --evidence .artifacts/TEST-windows-evidence 2>&1 | Tee-Object .artifacts/TEST-windows-evidence/probe.log
-          if ($LASTEXITCODE -ne 0) { throw 'Old installer failed; nonqualifying diagnostic evidence retained' }
+          if ($LASTEXITCODE -ne 0) { throw 'Target installer failed; nonqualifying diagnostic evidence retained' }
       - name: Preserve nonqualifying owned installer evidence (no screenshots)
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: TEST-windows-arm-installer-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          name: TEST-windows-arm-target215-installer-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-evidence/
           if-no-files-found: warn
           retention-days: 14
