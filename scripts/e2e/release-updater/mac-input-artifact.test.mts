@@ -58,6 +58,11 @@ function fixture(): MacArtifactAuthority {
 void test('a successful authenticated job is usable while its dependent native workflow remains active', () => {
   assert.doesNotThrow(() => checkMacArtifactAuthority(fixture(), expected));
 });
+void test('a queued aggregate run accepts only its completed successful input producer', () => {
+  const value = fixture();
+  value.run.status = 'queued';
+  assert.doesNotThrow(() => checkMacArtifactAuthority(value, expected));
+});
 void test('a documented ref-suffixed workflow path retains exact producer authority', () => {
   const value = fixture();
   value.run.path = `${expected.workflowPath}@main`;
@@ -132,6 +137,12 @@ const invalid: { name: string; mutate: (value: MacArtifactAuthority) => void }[]
     },
   },
   {
+    name: 'foreign producer job',
+    mutate: (value) => {
+      value.job.name = 'native-matrix';
+    },
+  },
+  {
     name: 'unfinished producer job',
     mutate: (value) => {
       value.job.status = 'in_progress';
@@ -164,9 +175,12 @@ const invalid: { name: string; mutate: (value: MacArtifactAuthority) => void }[]
 ];
 for (const { name, mutate } of invalid)
   void test(`reject ${name} before native installation`, () => {
-    const value = fixture();
-    mutate(value);
-    assert.throws(() => checkMacArtifactAuthority(value, expected));
+    for (const status of ['queued', 'in_progress', 'completed']) {
+      const value = fixture();
+      value.run.status = status;
+      mutate(value);
+      assert.throws(() => checkMacArtifactAuthority(value, expected));
+    }
   });
 
 function assetFixture(): Asset & { state: string; download_count: number } {

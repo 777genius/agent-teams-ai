@@ -7,7 +7,12 @@ on:
         description: New Linux/Windows draft tag
         type: string
         required: true
-        default: v2.17.4
+        default: v2.17.6
+      build_only:
+        description: Preserve verified payloads and provenance as Actions artifacts without draft writes
+        type: boolean
+        required: true
+        default: false
       application_sha:
         description: Reviewed immutable application and workflow commit (40 hex characters)
         type: string
@@ -24,6 +29,7 @@ concurrency:
 env:
   RELEASE_TAG: ${{ inputs.release_tag }}
   APPLICATION_SHA: ${{ inputs.application_sha }}
+  BUILD_ONLY: ${{ inputs.build_only }}
 
 jobs:
   package:
@@ -63,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" ]]
-          [[ "$RELEASE_TAG" == 'v2.17.4' ]]
+          [[ "$RELEASE_TAG" == 'v2.17.6' ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.application_sha }}
@@ -245,13 +251,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" && "$RELEASE_TAG" == v2.17.4 ]]
+          [[ "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" == "$GITHUB_SHA" && "$RELEASE_TAG" == v2.17.6 ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > run.json
           jq -e --arg sha "$APPLICATION_SHA" --argjson attempt "$GITHUB_RUN_ATTEMPT" '.head_sha == $sha and .run_attempt == $attempt and .event == "workflow_dispatch" and .path == ".github/workflows/build-linux-windows-draft.yml"' run.json
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > jobs.json
           jq -e '.jobs | [.[] | select(.name == "release-linux x64" or .name == "release-win x64" or .name == "release-win arm64")] | length == 3 and all(.[]; .conclusion == "success")' jobs.json
           mkdir -p evidence
           jq --arg sha "$APPLICATION_SHA" --arg tag "$RELEASE_TAG" --argjson attempt "$GITHUB_RUN_ATTEMPT" --slurpfile run run.json '{schemaVersion:1, applicationSha:$sha, tag:$tag, runId:$run[0].id, attempt:$attempt, jobs:[.jobs[] | select(.name == "release-linux x64" or .name == "release-win x64" or .name == "release-win arm64") | {id,name,conclusion,run_id}], workflowPath:$run[0].path}' jobs.json > "evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          version=${RELEASE_TAG#v}
+          for name in "Agent.Teams.AI.Setup.$version.exe" "Agent.Teams.AI.Setup.$version-arm64.exe" "Agent.Teams.AI-$version.AppImage" "agent-teams-ai_${version}_amd64.deb" "agent-teams-ai-$version.x86_64.rpm" "agent-teams-ai-$version.pacman"; do
+            test -f "payloads/$name"
+          done
+          for file in payloads/*; do
+            jq -n --arg name "$(basename "$file")" --arg sha256 "$(sha256sum "$file" | cut -d' ' -f1)" '{name:$name,sha256:$sha256}'
+          done | jq -s . > payload-digests.json
+          proof="evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          jq --slurpfile payloads payload-digests.json '. + {payloads:$payloads[0]}' "$proof" > provenance.json
+          mv provenance.json "$proof"
+          for file in payloads/* evidence/*.json; do
+            [[ -f "$file" ]]
+            name=$(basename "$file")
+            case "$name" in *.exe|*.blockmap|*.AppImage|*.deb|*.rpm|*.pacman|build-provenance-*.json) ;; *) exit 1 ;; esac
+          done
+          if [[ "$BUILD_ONLY" == true ]]; then
+            cat "$proof" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           discover_draft() {
             gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --slurp | jq --arg tag "$RELEASE_TAG" '[.[][] | select(.tag_name == $tag)]' > existing.json
           }
@@ -287,16 +312,6 @@ jobs:
           verify_bound_draft
           list_bound_assets
           cp fresh-assets.json expected-assets.json
-          version=${RELEASE_TAG#v}
-          for name in "Agent.Teams.AI.Setup.$version.exe" "Agent.Teams.AI.Setup.$version-arm64.exe" "Agent.Teams.AI-$version.AppImage" "agent-teams-ai_${version}_amd64.deb" "agent-teams-ai-$version.x86_64.rpm" "agent-teams-ai-$version.pacman"; do
-            test -f "payloads/$name"
-          done
-          for file in payloads/*; do
-            jq -n --arg name "$(basename "$file")" --arg sha256 "$(sha256sum "$file" | cut -d' ' -f1)" '{name:$name,sha256:$sha256}'
-          done | jq -s . > payload-digests.json
-          proof="evidence/build-provenance-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
-          jq --slurpfile payloads payload-digests.json '. + {payloads:$payloads[0]}' "$proof" > provenance.json
-          mv provenance.json "$proof"
           for file in payloads/* evidence/*.json; do
             [[ -f "$file" ]]
             name=$(basename "$file")
