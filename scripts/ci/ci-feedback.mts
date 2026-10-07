@@ -12,9 +12,11 @@ import {
   WORKFLOW,
 } from './ci-feedback-reuse.mts';
 import type { GitHubRead } from './ci-feedback-reuse.mts';
+import { proveMetadataProducer } from './ci-feedback-metadata-proof.mts';
 
 export type Plan = {
   full: boolean;
+  metadata: boolean;
   reuse: boolean;
   source_run: string;
   image: string;
@@ -70,6 +72,64 @@ export function selectFeedbackMode(eventName: unknown, event: unknown): 'fast' |
   }
 }
 
+/** Only proven title/body edits may preserve existing current-code checks. */
+export function isMetadataOnlyPrEdit(eventName: unknown, event: unknown): boolean {
+  try {
+    if (eventName !== 'pull_request') return false;
+    const payload = object(event);
+    const pr = object(payload.pull_request);
+    const repository = object(payload.repository);
+    const head = object(pr.head);
+    const base = object(pr.base);
+    const headRepo = object(head.repo);
+    const baseRepo = object(base.repo);
+    const positive = (value: unknown): boolean =>
+      typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+    const title = (value: unknown): boolean =>
+      typeof value === 'string' && value.trim().length > 0 && !/[\p{Cc}\p{Cf}]/u.test(value);
+    if (
+      payload.action !== 'edited' ||
+      repository.full_name !== REPOSITORY ||
+      !positive(repository.id) ||
+      !positive(pr.id) ||
+      !positive(pr.number) ||
+      payload.number !== pr.number ||
+      pr.state !== 'open' ||
+      typeof pr.draft !== 'boolean' ||
+      !title(pr.title) ||
+      (typeof pr.body !== 'string' && pr.body !== null) ||
+      baseRepo.id !== repository.id ||
+      baseRepo.full_name !== REPOSITORY ||
+      !positive(headRepo.id) ||
+      typeof headRepo.full_name !== 'string' ||
+      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(headRepo.full_name) ||
+      (headRepo.id === repository.id) !== (headRepo.full_name === REPOSITORY) ||
+      typeof head.ref !== 'string' ||
+      head.ref.length === 0 ||
+      typeof base.ref !== 'string' ||
+      base.ref.length === 0
+    )
+      return false;
+    sha(head.sha);
+    sha(base.sha);
+    const changes = object(payload.changes);
+    const fields = Object.keys(changes);
+    return (
+      fields.length > 0 &&
+      fields.every((field) => {
+        if (field !== 'title' && field !== 'body') return false;
+        const change = object(changes[field]);
+        if (Object.keys(change).length !== 1 || !Object.hasOwn(change, 'from')) return false;
+        return field === 'title'
+          ? title(change.from)
+          : typeof change.from === 'string' || change.from === null;
+      })
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function planFeedback(
   env: Record<string, string | undefined>,
   event: unknown,
@@ -78,6 +138,7 @@ export async function planFeedback(
 ): Promise<Plan> {
   const fallback: Plan = {
     full: true,
+    metadata: false,
     reuse: false,
     source_run: '',
     image: runnerImage(env),
@@ -88,6 +149,24 @@ export async function planFeedback(
   try {
     sha(env.GITHUB_SHA);
     rootTestShards(env.CI_ROOT_TEST_SHARDS);
+  } catch {
+    return fallback;
+  }
+  if (
+    isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
+    (await proveMetadataProducer(env, event, read))
+  ) {
+    return {
+      ...fallback,
+      full: false,
+      metadata: true,
+      reason: 'Title/body edit with an authenticated same-head/base producer; preserve code checks',
+    };
+  }
+  // An edited event that failed strict metadata proof always requires full CI.
+  // The legacy selector remains available to callers using draft lifecycle feedback.
+  try {
+    if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited') return fallback;
   } catch {
     return fallback;
   }
@@ -178,7 +257,12 @@ export function qualifyFull(
     const needs = object(results);
     const plan = object(needs.plan);
     const outputs = object(plan.outputs);
-    if (plan.result !== 'success' || outputs.full !== full || outputs.reuse !== reuse) {
+    if (
+      plan.result !== 'success' ||
+      outputs.metadata !== 'false' ||
+      outputs.full !== full ||
+      outputs.reuse !== reuse
+    ) {
       throw new Error('Plan did not successfully bind gate mode');
     }
     if (
@@ -286,7 +370,7 @@ async function main(): Promise<void> {
   }
   const plan = await planFeedback(process.env, event, read);
   output(
-    `full=${plan.full}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
+    `full=${plan.full}\nmetadata=${plan.metadata}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
   );
   console.log(plan.reason);
 }
