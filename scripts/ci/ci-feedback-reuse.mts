@@ -2,6 +2,10 @@
 export const REPOSITORY = '777genius/agent-teams-ai';
 export const WORKFLOW = '.github/workflows/ci.yml';
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// GitHub reports this exact unevaluated name for the skipped feedback job.
+// It is an alias only after workflow/tree provenance is verified, never executed code.
+const SKIPPED_FEEDBACK_NAME =
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
 export type JsonObject = Record<string, unknown>;
 export type GitHubRead = (endpoint: string) => Promise<unknown>;
 export type ReuseResult = { reuse: boolean; sourceRun: string; reason: string };
@@ -275,7 +279,13 @@ export async function provePostmergeReuse(
     ];
     requireProof(jobs.length === expected.length, 'Unexpected or partial full job set');
     for (const name of expected) {
-      const matching = jobs.filter((job) => job.name === name);
+      const matching = jobs.filter(
+        (job) =>
+          job.name === name ||
+          (name === 'Fast feedback' &&
+            job.name === SKIPPED_FEEDBACK_NAME &&
+            job.conclusion === 'skipped')
+      );
       requireProof(matching.length === 1, `Missing or duplicate job: ${name}`);
       const job = matching[0];
       requireProof(

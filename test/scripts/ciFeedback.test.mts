@@ -351,6 +351,84 @@ test('ordinary squash with exact inputs can reuse after GitHub drops PR links, w
   assert.equal(plan.source_run, '100');
 });
 
+// Observed jobs API name in successful GitHub run 37620209834: skipped
+// conditional jobs can expose the exact unevaluated name expression.
+const skippedFeedbackExpression =
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
+
+function skippedExpressionFixture(): Map<string, unknown> {
+  const data = fixture();
+  job(data, 'Fast feedback').name = skippedFeedbackExpression;
+  return data;
+}
+
+test('actual GitHub skipped feedback expression preserves authenticated full reuse', async () => {
+  assert.deepEqual(await proof(skippedExpressionFixture()), {
+    reuse: true,
+    sourceRun: '100',
+    reason: 'Verified identical-input full CI',
+  });
+});
+
+test('skipped feedback alias cannot hide execution, malformed names or missing full jobs', async () => {
+  const changes: ((data: Map<string, unknown>) => void)[] = [
+    (data) => {
+      job(data, skippedFeedbackExpression).conclusion = 'success';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).conclusion = 'failure';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).status = 'in_progress';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name += ' ';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name = '${{ ' + skippedFeedbackExpression + ' }}';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name = 'Metadata fast feedback';
+    },
+    (data) => {
+      job(data, 'Full qualification').name = skippedFeedbackExpression;
+    },
+    (data) => {
+      const response = record(data, jobsEndpoint);
+      response.jobs = (response.jobs as JsonObject[]).filter((item) => item.name !== 'test (1/2)');
+      response.total_count = 9;
+    },
+    (data) => {
+      record(data, `${prefix}/contents/${WORKFLOW}?ref=${headSha}`).sha = baseSha;
+    },
+  ];
+  for (const change of changes) {
+    const data = skippedExpressionFixture();
+    change(data);
+    assert.equal((await proof(data)).reuse, false);
+  }
+});
+
+test('metadata result and skipped heavy jobs never qualify through the exact feedback alias', async () => {
+  for (const renamePlan of [false, true]) {
+    const data = skippedExpressionFixture();
+    for (const item of record(data, jobsEndpoint).jobs as JsonObject[]) {
+      if (item.name === skippedFeedbackExpression) continue;
+      if (item.name === 'plan') {
+        if (renamePlan) item.name = 'Metadata CI plan';
+        continue;
+      }
+      if (item.name === 'Full qualification') {
+        item.name = 'Metadata CI result';
+        continue;
+      }
+      item.conclusion = 'skipped';
+      item.steps = [];
+    }
+    assert.equal((await proof(data)).reuse, false);
+  }
+});
+
 const mutations: [string, (data: Map<string, unknown>) => void][] = [
   [
     'source image changed with same runner class',
