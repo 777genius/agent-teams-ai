@@ -793,7 +793,7 @@ describe('MCP team tools over the local REST control API', () => {
         });
         expect(edit.statusCode).toBe(409);
         expect(edit.json().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
-        expect(await readFile(targetPath)).toEqual(oversized);
+        expect((await readFile(targetPath)).equals(oversized)).toBe(true);
         expect(events).toHaveLength(0);
       } finally {
         await app.close();
