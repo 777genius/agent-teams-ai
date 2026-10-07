@@ -47,12 +47,16 @@ export function selectRecentManagedTeams(
   notices: Notices
 ): TeamSummary[] {
   return filteredTeams
-    .filter((team) =>
-      !team.deletedAt && canonicalTeams.includes(team) &&
-      notices[team.teamName]?.kind !== 'trashed' && notices[team.teamName]
+    .filter(
+      (team) =>
+        !team.deletedAt &&
+        canonicalTeams.includes(team) &&
+        notices[team.teamName]?.kind !== 'trashed' &&
+        notices[team.teamName]
     )
-    .sort((a, b) =>
-      Date.parse(notices[b.teamName].committedAt) - Date.parse(notices[a.teamName].committedAt) ||
-      a.teamName.localeCompare(b.teamName)
+    .sort(
+      (a, b) =>
+        Date.parse(notices[b.teamName].committedAt) - Date.parse(notices[a.teamName].committedAt) ||
+        a.teamName.localeCompare(b.teamName)
     );
 }

@@ -30,11 +30,11 @@ import {
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
 import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
 } from '@renderer/store/slices/teamSlice';
+import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
 import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
@@ -1306,11 +1306,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       );
     }
 
-    const recentTeams = selectRecentManagedTeams(
-      filteredTeams,
-      teams,
-      teamManagementNoticeByTeam
-    );
+    const recentTeams = selectRecentManagedTeams(filteredTeams, teams, teamManagementNoticeByTeam);
     const recentNames = new Set(recentTeams.map((team) => team.teamName));
     const activeFiltered = filteredTeams.filter(
       (t) => !t.deletedAt && !recentNames.has(t.teamName)
