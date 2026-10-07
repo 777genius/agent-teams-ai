@@ -1,46 +1,50 @@
 # External agent connection: implementation evidence
 
-2026-10-07. Core implementation is complete in the isolated `feat/external-agent-mcp-cdp` worktree. PR delivery and required GitHub CI are pending. This is a verification record, not a product audit store or a release announcement.
+2026-10-07. Core implementation and packaged acceptance pass in the isolated `feat/external-agent-mcp-cdp` worktree. Required current-head GitHub CI and PR delivery are pending. This record is not a release announcement.
 
 ## Tested source and artifact
 
-- Production source: `3b9f6112d7841267ac86a0eac32a164724395856`.
-- Final harness source: `b50bb502308bc2905020cae266adeabd3fc33589`. Later commits change only harnesses, typecheck registration and documentation; they do not change the tested production source.
-- Linux unpacked Electron 44.4.5, application 2.17.4; no remote-debugging or main-inspector launch flags. The saved application setting enables native renderer CDP with port 0.
+- Production and harness source: `5e3f16baf146661d705e84a685cdd8ae99cb94d2`. Delivery PR4 tree `afb68dc07884da4462929eadfd0909b963d7a5f4` is identical; subsequent documentation does not change the tested source.
+- Linux unpacked Electron 44.4.5, application 2.17.6. No remote-debugging or main-inspector launch flags; the saved application setting enables renderer CDP with port 0.
 - Executable SHA256: `ee9faf5bb9fe78a750cc5099863c85c4459e7f04c387fd1f111c83e4e8c57c97`.
-- `app.asar` SHA256: `57d4f185463284d782b6eeb5abfed784192f6b778aaae1c8e518ce129338dc58`.
+- `app.asar` SHA256: `95db6b844566ecb93c373ac8f02c7644cfbc13cb761a1e745729ccbfe0d4060d`.
 - Packaged `resources/mcp-server/index.js` SHA256: `9bfd6034a8373cd977fcb69ff482fb0d4c621817c05b0145c9475caa130a640a`.
-- Fuse values were read from the artifact without modifying them. The Linux harness uses `--no-sandbox --disable-gpu` under its isolated Xvfb display; this does not prove sandboxed macOS/Windows behavior or signing.
+- Fuse values were read without modification from the same executable hash. The Linux harness uses `--no-sandbox --disable-gpu` under isolated Xvfb; this does not prove sandboxed macOS/Windows behavior or signing.
 
 ## Acceptance evidence
 
 | Requirement | Result and nearest proof |
 | --- | --- |
-| Providerless templates remain saved drafts | Four static templates reuse the existing editor/writer. Metadata create/edit/reopen and IPC/HTTP checks preserve marker 1; explicit provider selection is required before launch admission. Legacy requests retain existing semantics. |
-| Native external MCP client can connect | Codex CLI 0.159.2 registers the actual HTTP endpoint in a fresh isolated home. Native app-server discovers tools, calls `app_get_connection_info`, creates a marker-1 draft and reads its saved request. No SDK substitute, login, API key, LLM turn or agent launch. |
-| Independent MCP/control ownership | Actual HTTP/stdio transport checks pass; immutable desktop binding rejects stale/foreign contexts, redirects and override/fallback. Startup and shutdown review found and fixed early-child composition and foreign cleanup defects. |
-| Raw renderer CDP | Application-owned port/WS and exact renderer marker agree. Native CDP input, JS, screenshot, console/network and reload are exercised against the packaged renderer. No main inspector is opened. |
-| Toggle and restart | Disable reports access still open until restart; the next process reports disabled with no endpoint. Re-enable reports pending before restart, then a fresh renderer endpoint after restart. |
-| Prompt popup and DRY roster | Free text and four read-only template references use shared roster primitives from create/launch rows. Dark/light popup and Settings screenshots, real clipboard equality, clipboard failure with selectable preview, and draft reopen pass. The prompt truthfully supports create-only. |
-| Root/context safety | Real TCP admission/root-switch fixture and transport stale-context checks pass. Bound requests retain admitted dependencies rather than rereading a changed global root. |
-| Two applications sharing storage | Two actual packaged main processes use the same test data root but separate profiles/endpoints. Concurrent create produces 201/409, preserves the winner, rejects foreign app context, and closes each app's own endpoints. |
-| Owned shutdown | Both CDP-ready runs close through the application's window-close API with `hardFallback=false` and `detachedMcpCleanup=false`. The CDP-disabled fixture has no renderer control channel and explicitly uses verified test-owned forced cleanup; it is not evidence of graceful disabled-mode shutdown. |
-| No runtime side effects | Sandbox-only drafts contain no launch/bootstrap/config runtime artifacts. No terminal, provisioning, task assignment or agent action runs on a real user project. |
+| Providerless saved drafts | Four static templates reuse the existing editor/writer. Create/edit/reopen and IPC/HTTP preserve marker 1. Launch admission requires explicit selection; legacy behavior remains. |
+| Native external MCP connection | Codex CLI 0.159.2 registers the actual HTTP endpoint in an isolated home. Native app-server discovers tools, calls `app_get_connection_info`, creates a marker-1 draft and reads it back. No SDK substitute, login, API key, LLM turn or agent launch. |
+| Independent MCP/control ownership | Immutable binding rejects stale/foreign contexts and fallback. Focused lifecycle tests cover failed local context recovery against the actual root, partial remote transition refusal, startup cancellation, child exit and shutdown fences. |
+| Raw renderer CDP | Real listener/WS, exact renderer target and context marker agree. Native input, JS, screenshot, console/network, renderer reload and actual clipboard are exercised in the package. No main inspector is opened. |
+| Toggle/restart | Disable truthfully reports still-open access until restart. Next process exposes no CDP endpoint. Re-enable reports pending until restart, then a fresh endpoint. |
+| Prompt popup/DRY roster | Free text and four read-only references use the shared create/launch roster primitives. Dark/light screenshots, clipboard equality, selectable preview on clipboard failure and reopen pass. Copied instructions truthfully support create-only. |
+| Copy/provider intent | Configured offline sandbox sources expose the real Copy action. Disabled multimodel normalizes a selected copied provider to Anthropic; unresolved Copy retains no provider. Both save marker-1 drafts without launch. Model save/remount/default and inherited-member serialization have focused regression coverage. |
+| Root/context safety | Actual TCP admission/root-switch fixture and transport stale-context checks pass. Admitted writes retain captured dependencies. Early IPC guards reject unresolved/unsupported selection before cwd creation, launch intent, engagement or provisioning. |
+| Shared storage | Two actual packaged main processes share one test root with separate profiles/endpoints. Concurrent create returns 201/409, preserves winner hashes, rejects foreign context, and closes only owned endpoints. |
+| Owned shutdown | Shared-root apps exit normally with code 0, `hardFallback=false`, `detachedMcpCleanup=false`; all three endpoints per app close. Main CDP-ready runs request app close without fallback. The CDP-disabled fixture explicitly uses verified test-owned forced cleanup, not graceful-shutdown proof. |
+| Crash cleanup | Deliberate SIGKILL yields an expected failed harness run. Its separately verified owned MCP child is cleaned; all endpoints close, while the other app exits normally. The crash is never reported as normal quit or a green full flow. |
+| No runtime side effects | Created/copied destinations have no config/launch/bootstrap runtime artifacts. Copy sources contain only deliberate offline config fixtures. No agent, terminal, task assignment or provisioning action runs on a real project. |
 
-Hosted evidence locations (preserved outside the repository):
+Preserved hosted evidence under `/srv/workers/ea-cdp-20261007-5adf8c/`:
 
-- `/tmp/external-agent-desktop-TEST-I2w7os/evidence.json`, screenshots and prompt text; log `/tmp/external-agent-packaged-e2e-gated-20261007.log`.
-- `/tmp/external-agent-shared-root-TEST-FdBjG4/evidence.json`; log `/tmp/external-agent-shared-root-e2e-20261007.log`.
-- Local copies: `/tmp/external-agent-mcp-cdp-20261007/desktop-final-evidence.json` and `shared-root-evidence.json`.
+- `external-agent-desktop-TEST-bMwdE8/evidence.json`, screenshots and prompt; log `final-main-e2e.log`.
+- `external-agent-shared-root-TEST-rOfYns/evidence.json`; log `final-shared-root-e2e.log`.
+- `external-agent-shared-root-TEST-6F5vBn/evidence.json`; log `final-failure-cleanup.log` (intentional failure).
+- Local manifest copies: `/tmp/external-agent-mcp-cdp-20261007/{desktop,shared-root,failure-cleanup}-current-final-evidence.json`.
 
 ## Static and focused checks
 
-Workspace typecheck passes; the two final handwritten TypeScript harness configurations also pass after registration in the project command. Full app lint has zero errors and 4557 existing warnings; MCP lint has zero errors and four warnings. Production source-size and provisioning architecture guards pass without raising frozen caps. Frozen dependency installation, controller/MCP builds, production desktop build and unpacked packaging pass.
+Project typecheck, desktop build and unpacked packaging pass. Typed lint of the final nine changed production paths has zero errors and 44 warnings. Source-size/provisioning guards pass without raising frozen caps (main 3702/3703, supervisor 1399/1410). Packaging's dependency collector falls back to manual traversal after EACCES and completes successfully.
 
-Relevant focused suites: providerless persistence/IPC/HTTP/prefill 478; controller 391; MCP unit 66; actual MCP HTTP/stdio 22; roster/settings/draft hydration 52; lifecycle/root TCP 30. These counts include existing tests. Two startup/ownership regressions were shown red on old code and fixed; no per-template/helper/snapshot coverage expansion was added.
+Final relevant suites: IPC/supervisor/actual HTTP lifecycle **290**; dialog/OpenCode model authority/draft persistence **124**; corrected host fixtures **19**. Counts include existing tests. Old-code RED was reproduced for IPC early admission, expected pre-ready stop, failed context recovery, draft model intent, inherited-member materialization and launch opt-out. After the final assertion-only adjustment, six affected UI cases pass; no production changes followed except the separately verified portable `ps axeww` argument. Native adapter probes on Linux and macOS verify its own test marker without emitting environment contents.
 
-## Explicit limits and remaining delivery
+Earlier broad providerless/controller/MCP suites and installation/build checks remain historical evidence; they are not substituted for current-head CI of changed code. Hosted logs for final checks are `backend-final-{red,green}.log`, `ui-intent-{red,green}.log`, `copy-preflight-{red-corrected,green-suite}.log`, `ci-fixtures-green.log`, `ui-intent-contract-final.log`, `final-source-types.log`, `final-production-lint.log`, `final-build.log`, and `final-package.log` in the same scratch directory.
 
-Verified support is Linux Electron 44.4.5 with native Codex CLI 0.159.2 plus raw CDP. Claude Code/Cursor registration instructions are not runtime proof. Other OS/client versions, extra BrowserWindows and in-process renderer crash/recreation were not exercised; reload was. Hot tool registration in an already running agent turn is not promised. Cloud agents need a local executor. Copying a prompt alone cannot grant a client MCP/CDP tools.
+## Explicit limits and delivery
 
-Edit, trash, session-only recent highlights and change summaries are a separately planned next scope in `team-template-prompt-builder-ux.md`. Required current-head GitHub CI and dependency-safe PR delivery remain outstanding. No release has been published.
+Verified packaged support is Linux Electron 44.4.5 with native Codex CLI 0.159.2 plus raw CDP. The macOS process-command probe is not a macOS packaged acceptance run. Claude Code/Cursor instructions are not runtime proof. Other OS/client versions, extra BrowserWindows and in-process renderer crash/recreation were not exercised; reload was. Hot registration in an already running agent turn is not promised. Cloud agents need a local executor; copying a prompt cannot grant unavailable client tools.
+
+Edit, reversible trash, session-only highlights and change summaries remain the separate next scope in `team-template-prompt-builder-ux.md`. Current-head required GitHub CI and dependency-safe PR delivery remain outstanding. No release is published.
