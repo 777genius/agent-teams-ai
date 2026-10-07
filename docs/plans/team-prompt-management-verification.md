@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `e9f0a800904ee43db71db8d4496b1bcdeb0818c6`.
+- Source: `2eecb5f59cc5aa137dab903113ce37c78047f53b`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-7S40u0/evidence.json`.
-- Evidence SHA256: `186c4e59691b54e4b667e36cd1806bd9f8759582eb63ffbad3911f7ca4b5b3d6`.
-- Integration of current main release tooling does not change application, MCP, controller or this desktop harness relative to the tested source.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-xxliGy/evidence.json`.
+- Evidence SHA256: `aca70ca52bb9105b6971083fd43a8887648bf20936e008b7aae86126341a14b8`.
+- Later commits change only a test assertion and documentation; application, MCP, controller and desktop harness match the tested source.
 
 ## Actual desktop and native MCP proof
 
@@ -35,9 +35,10 @@ Passed:
 - The first full CI exposed four outdated fixtures (prototype-only service instances, missing mock/AST ports, and metadata already above the existing reader limit). Only these fixtures were corrected; all 283 tests in those suites and full project typecheck then passed on the worker. Native desktop product/harness source above remained unchanged.
 - A later P2 review found unreadable roster metadata could be normalized to empty and overwritten. Existing-file presence plus the canonical metadata reader now rejects this before writes/events. All seven focused HTTP tests passed, including malformed/oversized byte-preservation proofs and genuinely missing metadata support.
 - A later P1 review found destination admission ended between draft rename and provisioning. An existing rename continuation now holds destination identity/lifecycle gates through provisioning; occupied-destination preflight and reentry remain intact. The new deterministic HTTP regression failed on prior production code (interleaved edit returned 200) and passed on the fix (409 TEAM_ACTIVE). All 217 tests in the nearest HTTP/data suites, project typecheck and focused lint passed. Independent review accepted the final five-file fix. No real agent/runtime launch was used for this concurrency proof.
+- Final review found config-only stopped rosters could lose saved policies on replacement. Such roster edits now reject before writes; GET exposes the original members and trash preserves them. New saved drafts without config remain writable. Fingerprint reads enforce existing 10 MiB config/256 KiB metadata limits before allocation and cap actual reads if files grow. Independent review accepted both fixes; project typecheck and focused lint passed. The nearest HTTP suite checks exact saved bytes, original policies, no events on rejection and oversized-file refusal. Its initial 10 MiB deep-comparison assertion exceeded the timeout; direct Buffer.equals preserves exact equality without that overhead.
 
 ## Limits
 
-This proves local MCP connectivity with one real native client, not automatic configuration of every external agent. Clients need local execution and MCP support; registration may require their own setup. CDP remains a separate endpoint. Editing/trash applies to draft or stopped teams outside provisioning; running teams require an explicit stop first. Result highlighting is session-only, not permanent pinning or an audit history.
+This proves local MCP connectivity with one real native client, not automatic configuration of every external agent. Clients need local execution and MCP support; registration may require their own setup. CDP remains a separate endpoint. Editing/trash applies to draft or stopped teams outside provisioning; running teams require an explicit stop first. Stopped teams lacking member metadata reject roster replacement to preserve existing config policies. Result highlighting is session-only, not permanent pinning or an audit history.
 
 Earlier harness attempts failed on a long Unix socket path, process ownership detection and a CSS-uppercase heading assertion. The final fresh run above passed the complete scenario; the earlier attempts are not claimed as passes. Final exact-head required GitHub qualification remains a separate merge gate.
