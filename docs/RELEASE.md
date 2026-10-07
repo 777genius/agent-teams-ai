@@ -2233,6 +2233,14 @@ For artifact-only qualification on that reviewed source:
 gh workflow run macos-signing-qualification.yml --ref release/macos-signing -f use_github_runner=true
 ```
 
+For artifact-only pre-merge qualification, the owner may instead fast-forward
+the signing branch to an independently reviewed candidate SHA and verify that
+remote SHA before dispatch. Full current-head CI must pass before merging.
+Use a merge commit to preserve the qualified candidate in ancestry, then compare
+its complete Git tree with the merged tree. Reuse artifact evidence only when
+the tree hashes match; receipts retain the actual candidate SHA. This path does
+not authorize release publication.
+
 This manual workflow verifies both architectures and uploads Actions artifacts;
 it does not publish a release or change updater channels.
 
@@ -2273,6 +2281,7 @@ git push origin v1.0.0
 # After review, fast-forward the owner-controlled signing branch to the tagged commit.
 RELEASE_SOURCE_SHA="$(git rev-parse 'v1.0.0^{commit}')"
 git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
 gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing \
   -f release_tag=v1.0.0 -f publish_release=false
 # Wait for CI, review the assets, and update the draft notes

@@ -27,15 +27,17 @@ jobs:
       - name: Reject untrusted signing dispatch
         env:
           REPOSITORY_OWNER: ${{ github.repository_owner }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = workflow_dispatch
           test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$TRIGGERING_ACTOR" = "$REPOSITORY_OWNER"
           test "$GITHUB_REF" = refs/heads/release/macos-signing
 
   release-mac:
     needs: signing-custody
-    if: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
     environment: macos-signing
     timeout-minutes: 90
     strategy:
