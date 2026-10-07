@@ -3,10 +3,12 @@
  *
  */
 
+import { withEditorTabSession } from '@features/editor-tab-sessions/renderer';
 import { api } from '@renderer/api';
 import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { createEditorSaveActions } from '@renderer/utils/editorSaveActions';
+import { createEditorTabActions, omitKey } from '@renderer/utils/editorTabActions';
 import { invalidateQuickOpenCache } from '@renderer/utils/quickOpenCache';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { createLogger } from '@shared/utils/logger';
@@ -28,17 +30,8 @@ import type {
   FileTreeEntry,
   GitFileStatus,
 } from '@shared/types/editor';
-import type { StateCreator } from 'zustand';
 
 const log = createLogger('Store:editor');
-
-/** Remove a key from a record. Returns the same reference if key doesn't exist. */
-function omitKey<V>(record: Record<string, V>, key: string): Record<string, V> {
-  if (!(key in record)) return record;
-  const result = { ...record };
-  delete result[key];
-  return result;
-}
 
 function editorPathsEqual(left: string, right: string): boolean {
   return normalizePathForComparison(left) === normalizePathForComparison(right);
@@ -289,7 +282,7 @@ export interface EditorSlice {
 // Slice Creator
 // =============================================================================
 
-export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (set, get) => ({
+export const createEditorSlice = withEditorTabSession<EditorSlice>((set, get, tabSession) => ({
   // Group 1 initial state
   editorProjectPath: null,
   editorFileTree: null,
@@ -422,6 +415,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   openEditor: async (projectPath: string) => {
     editorBridge.destroy();
     const openSeq = ++editorOpenSeq;
+    const savedTabs = tabSession.beginOpen(projectPath, openSeq);
     set({
       editorProjectPath: projectPath,
       editorFileTree: null,
@@ -456,6 +450,9 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       if (editorOpenSeq !== openSeq || get().editorProjectPath !== projectPath) {
         return;
       }
+
+      const restoredTabs = tabSession.restore(savedTabs);
+      if (restoredTabs) set(restoredTabs);
 
       // Load file tree first so UI becomes interactive quickly.
       // Git status and file watching can be expensive on large projects, so they are NOT awaited here.
@@ -504,6 +501,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       }
       const message = error instanceof Error ? error.message : String(error);
       log.error('Failed to open editor:', message);
+      const restoredTabs = tabSession.restore(savedTabs);
+      if (restoredTabs) set(restoredTabs);
       set({
         editorFileTreeLoading: false,
         editorFileTreeError: message,
@@ -514,6 +513,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   closeEditor: () => {
     // Cancel any in-flight openEditor async work
     editorOpenSeq++;
+    tabSession.beginClose();
     // Cancel any pending watcher sync (avoid calling into main after close)
     if (watchedFilesSyncTimer) {
       clearTimeout(watchedFilesSyncTimer);
@@ -562,6 +562,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       editorConflictFile: null,
       editorPendingGoToLine: null,
     });
+    tabSession.endClose();
   },
 
   loadFileTree: async (dirPath: string) => {
@@ -635,122 +636,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   // Group 2: Tab management
   // ═══════════════════════════════════════════════════════
 
-  openFile: (filePath: string) => {
-    const { editorOpenTabs } = get();
-
-    // Dedup: if file already open, just activate it
-    const existing = editorOpenTabs.find((t) => editorPathsEqual(t.filePath, filePath));
-    if (existing) {
-      set({ editorActiveTabId: existing.id });
-      return;
-    }
-
-    const fileName = getBasename(filePath) || 'file';
-    const language = getLanguageFromFileName(fileName);
-
-    const tab: EditorFileTab = {
-      id: filePath,
-      filePath,
-      fileName,
-      language,
-    };
-
-    const newTabs = computeDisambiguatedTabs([...editorOpenTabs, tab]);
-
-    set({
-      editorOpenTabs: newTabs,
-      editorActiveTabId: tab.id,
-    });
-
-    scheduleSyncWatchedFiles(get);
-  },
-
-  closeEditorTab: (tabId: string) => {
-    const { editorOpenTabs, editorActiveTabId, editorModifiedFiles, editorSaveError } = get();
-    const filtered = editorOpenTabs.filter((t) => t.id !== tabId);
-
-    // Clean up dirty/error state for closed tab
-    const restModified = omitKey(editorModifiedFiles, tabId);
-    const restErrors = omitKey(editorSaveError, tabId);
-
-    // Clear cached EditorState from bridge
-    editorBridge.deleteState(tabId);
-
-    // Clear draft from localStorage
-    try {
-      localStorage.removeItem(`editor-draft:${tabId}`);
-    } catch {
-      // localStorage may not be available
-    }
-
-    let newActiveId = editorActiveTabId;
-    if (editorActiveTabId === tabId) {
-      // Activate adjacent tab
-      const closedIndex = editorOpenTabs.findIndex((t) => t.id === tabId);
-      if (filtered.length > 0) {
-        newActiveId = filtered[Math.min(closedIndex, filtered.length - 1)].id;
-      } else {
-        newActiveId = null;
-      }
-    }
-
-    // Recompute disambiguation after removing tab
-    const disambiguated = computeDisambiguatedTabs(filtered);
-
-    set({
-      editorOpenTabs: disambiguated,
-      editorActiveTabId: newActiveId,
-      editorModifiedFiles: restModified,
-      editorSaveError: restErrors,
-      editorSaving: omitKey(get().editorSaving, tabId),
-    });
-
-    scheduleSyncWatchedFiles(get);
-  },
-
-  closeOtherEditorTabs: (keepTabId: string) => {
-    const { editorOpenTabs } = get();
-    const toClose = editorOpenTabs.filter((t) => t.id !== keepTabId);
-    for (const tab of toClose) get().closeEditorTab(tab.id);
-  },
-
-  closeEditorTabsToLeft: (tabId: string) => {
-    const { editorOpenTabs } = get();
-    const idx = editorOpenTabs.findIndex((t) => t.id === tabId);
-    if (idx <= 0) return;
-    const toClose = editorOpenTabs.slice(0, idx);
-    for (const tab of toClose) get().closeEditorTab(tab.id);
-  },
-
-  closeEditorTabsToRight: (tabId: string) => {
-    const { editorOpenTabs } = get();
-    const idx = editorOpenTabs.findIndex((t) => t.id === tabId);
-    if (idx < 0 || idx >= editorOpenTabs.length - 1) return;
-    const toClose = editorOpenTabs.slice(idx + 1);
-    for (const tab of toClose) get().closeEditorTab(tab.id);
-  },
-
-  closeAllEditorTabs: () => {
-    const { editorOpenTabs } = get();
-    for (const tab of [...editorOpenTabs]) get().closeEditorTab(tab.id);
-  },
-
-  setActiveEditorTab: (tabId: string) => {
-    set({ editorActiveTabId: tabId });
-  },
-
-  reorderEditorTabs: (activeId: string, overId: string) => {
-    if (activeId === overId) return;
-    const { editorOpenTabs } = get();
-    const oldIndex = editorOpenTabs.findIndex((t) => t.id === activeId);
-    const newIndex = editorOpenTabs.findIndex((t) => t.id === overId);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const updated = [...editorOpenTabs];
-    const [moved] = updated.splice(oldIndex, 1);
-    updated.splice(newIndex, 0, moved);
-    set({ editorOpenTabs: updated });
-  },
+  ...createEditorTabActions(set, get, () => scheduleSyncWatchedFiles(get)),
 
   // ═══════════════════════════════════════════════════════
   // Group 3: Content + Save
@@ -767,7 +653,9 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     set({ editorModifiedFiles: omitKey(editorModifiedFiles, filePath) });
   },
 
-  ...createEditorSaveActions(set, get, (filePath) => recentSaveTimestamps.set(filePath, Date.now())),
+  ...createEditorSaveActions(set, get, (filePath) =>
+    recentSaveTimestamps.set(filePath, Date.now())
+  ),
 
   discardChanges: (filePath: string) => {
     editorBridge.deleteState(filePath);
@@ -1199,7 +1087,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   resolveConflict: () => {
     set({ editorConflictFile: null });
   },
-});
+}));
 
 // =============================================================================
 // Helpers
