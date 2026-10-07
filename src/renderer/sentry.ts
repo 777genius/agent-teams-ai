@@ -9,6 +9,7 @@
 
 import * as SentryElectron from '@sentry/electron/renderer';
 import { browserTracingIntegration as reactBrowserTracing, init as reactInit } from '@sentry/react';
+import { sentryArtifactGuardIntegration } from '@shared/utils/sentryArtifactPolicy';
 import {
   filterSafeSentryIntegrations,
   isValidDsn,
@@ -17,6 +18,8 @@ import {
   SENTRY_RELEASE,
   TRACES_SAMPLE_RATE,
 } from '@shared/utils/sentryConfig';
+
+import { loadRendererSentryArtifactPolicy } from './sentryArtifactPolicy';
 
 import type { ElectronAPI } from '@shared/types/api';
 
@@ -149,6 +152,7 @@ export function initSentryRenderer(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!isValidDsn(dsn)) return;
 
+  const artifactPolicy = getElectronApi() ? loadRendererSentryArtifactPolicy() : null;
   const baseOptions = {
     dsn,
     release: SENTRY_RELEASE,
@@ -158,10 +162,11 @@ export function initSentryRenderer(): void {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
-  const beforeSend = (event: any): any => (telemetryAllowed ? redactSentryEvent(event) : null);
+  const beforeSend = (event: any): any =>
+    telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
   const beforeSendTransaction = (event: any): any =>
-    telemetryAllowed ? redactSentryEvent(event) : null;
+    telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
 
   if (getElectronApi()) {
     // Electron renderer - uses IPC transport to main process.
@@ -172,6 +177,7 @@ export function initSentryRenderer(): void {
       beforeSend,
       beforeSendTransaction,
       integrations: (integrations) => [
+        sentryArtifactGuardIntegration(artifactPolicy),
         ...filterSafeSentryIntegrations(integrations),
         SentryElectron.browserTracingIntegration(),
       ],

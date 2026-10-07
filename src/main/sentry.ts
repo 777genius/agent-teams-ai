@@ -18,6 +18,10 @@ import {
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getSharedTelemetryBuildProperties } from '@shared/utils/buildMetadata';
 import {
+  sentryArtifactGuardIntegration,
+  type SentryArtifactPolicy,
+} from '@shared/utils/sentryArtifactPolicy';
+import {
   filterSafeSentryIntegrations,
   isValidDsn,
   redactSentryEvent,
@@ -27,6 +31,8 @@ import {
 } from '@shared/utils/sentryConfig';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { loadMainSentryArtifactPolicy } from './sentryArtifactPolicy';
 
 import type { SentryTelemetryStatus } from '@shared/types/api';
 
@@ -82,6 +88,7 @@ export function readPersistedTelemetryEnabled(basePath = getClaudeBasePath()): b
 // so telemetry-disabled users do not start Sentry sessions on app startup.
 let telemetryAllowed = readPersistedTelemetryEnabled();
 let telemetryIdentitySyncToken = 0;
+let artifactPolicy: SentryArtifactPolicy | null = null;
 
 export function getSafeSentryTelemetryTags(
   identitySource: AgentTeamsIdentitySource
@@ -111,7 +118,7 @@ export function syncTelemetryFlag(enabled: boolean): void {
 }
 
 export function filterSentryEventForTelemetry(event: unknown): unknown {
-  return telemetryAllowed ? redactSentryEvent(event) : null;
+  return telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,9 +152,7 @@ interface SentryInitOptions {
   sendDefaultPii: false;
   beforeSend: (event: unknown) => unknown;
   beforeSendTransaction: (event: unknown) => unknown;
-  integrations: <TIntegration extends { name?: string }>(
-    integrations: TIntegration[]
-  ) => TIntegration[];
+  integrations: (integrations: { name?: string }[]) => { name?: string }[];
   ipcMode: number;
 }
 
@@ -223,6 +228,7 @@ function shutdownSentry(): void {
 
   initialized = false;
   Sentry = null;
+  artifactPolicy = null;
 }
 
 export function getMainSentryStatus(): SentryTelemetryStatus {
@@ -331,6 +337,7 @@ export function initializeMainSentry(): void {
       throw new Error('Sentry Electron classic IPC is unavailable');
     }
 
+    artifactPolicy = loadMainSentryArtifactPolicy();
     sentryApi.init({
       dsn,
       release: SENTRY_RELEASE,
@@ -340,7 +347,10 @@ export function initializeMainSentry(): void {
 
       beforeSend: filterSentryEventForTelemetry,
       beforeSendTransaction: filterSentryEventForTelemetry,
-      integrations: filterSafeSentryIntegrations,
+      integrations: (integrations) => [
+        sentryArtifactGuardIntegration(artifactPolicy),
+        ...filterSafeSentryIntegrations(integrations),
+      ],
       // The app provides an explicit classic preload bridge. Protocol mode
       // cannot be registered after Electron ready when telemetry is enabled later.
       ipcMode: classicIpcMode,
