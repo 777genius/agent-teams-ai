@@ -280,6 +280,7 @@ export async function windowsOtaObserver(root: string, evidence: string) {
     const input = path.join(root, `ota-native-${++sequence}.json`);
     await writeFile(input, JSON.stringify({ root, shell, references, operation, ...values }));
     const startedAt = Date.now();
+    let childPid: number | undefined;
     try {
       const pending = execute(
         shell.executable,
@@ -295,8 +296,9 @@ export async function windowsOtaObserver(root: string, evidence: string) {
           '-TrustedModulePath',
           shell.modules.join(path.delimiter),
         ],
-        { env, timeout: 20_000, maxBuffer: 4_194_304 }
+        { env, timeout: 20_000, windowsHide: true, maxBuffer: 4_194_304 }
       );
+      childPid = pending.child.pid;
       pending.child.stdin?.end();
       const result = await pending;
       await writeFile(
@@ -304,6 +306,7 @@ export async function windowsOtaObserver(root: string, evidence: string) {
         JSON.stringify(
           {
             operation,
+            childPid,
             input: JSON.parse(await readFile(input, 'utf8')) as unknown,
             elapsedMs: Date.now() - startedAt,
             ...result,
@@ -329,6 +332,7 @@ export async function windowsOtaObserver(root: string, evidence: string) {
         JSON.stringify(
           {
             operation,
+            childPid,
             error: String(error),
             stdout: failure?.stdout,
             stderr: failure?.stderr,

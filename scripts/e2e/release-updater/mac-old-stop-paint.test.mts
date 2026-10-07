@@ -105,7 +105,8 @@ async function fixture(context: TestContext) {
           },
         ]);
       } else if (label === 'capture-native-aqua') {
-        await writeFile(args[3]!, Buffer.alloc(1201));
+        assert(args[3]);
+        await writeFile(args[3], Buffer.alloc(1201));
       } else {
         assert.equal(label, 'read-painted-aqua-ocr');
         reads++;
