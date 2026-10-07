@@ -872,7 +872,8 @@ try {
       await access(path.join(claude, 'teams', second, 'team.meta.json'));
       await waitFor(async () => {
         const facts = await listFacts();
-        return !facts.cards.some((card) => card.name === second) && facts.text.includes('Trash (1)')
+        return !facts.cards.some((card) => card.name === second) &&
+          /\btrash\s*\(1\)/i.test(facts.text)
           ? facts
           : false;
       }, 'reversible trash section');
