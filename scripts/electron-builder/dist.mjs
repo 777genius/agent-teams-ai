@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
+import { verifyMacSigningPreflight } from './mac-signing-preflight.mts';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -96,10 +97,16 @@ async function runElectronBuilder(args) {
   });
 }
 
-async function main(argv) {
-  const invocations = buildElectronBuilderInvocations(argv, process.platform, process.arch);
+export async function main(argv, {
+  platform = process.platform,
+  arch = process.arch,
+  env = process.env,
+  guard = runRendererBundleGuard,
+  packageInvocation = runElectronBuilderInvocation,
+} = {}) {
+  const invocations = buildElectronBuilderInvocations(argv, platform, arch);
 
-  if (process.env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
+  if (env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
     console.log(
       JSON.stringify(
         invocations.map((invocation) => invocation.args),
@@ -110,10 +117,13 @@ async function main(argv) {
     return;
   }
 
-  await runRendererBundleGuard();
+  for (const invocation of invocations) {
+    verifyMacSigningPreflight(invocation.args, platform, env);
+  }
+  await guard();
 
   for (const invocation of invocations) {
-    await runElectronBuilderInvocation(invocation);
+    await packageInvocation(invocation);
   }
 }
 

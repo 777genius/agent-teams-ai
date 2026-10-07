@@ -1,3 +1,5 @@
+import type { EditorDocumentMode } from '@shared/editorPolicy';
+
 /**
  * Editor types shared between main and renderer processes.
  */
@@ -30,6 +32,8 @@ export interface ReadDirResult {
 }
 
 export interface ReadFileResult {
+  /** Full text, reduced-cost editable text, bounded read-only preview, or binary. */
+  mode?: EditorDocumentMode;
   content: string;
   size: number;
   /** Unix timestamp (stats.mtimeMs) — baseline for conflict detection */

@@ -31,7 +31,44 @@ env:
   PUBLISH_RELEASE: ${{ inputs.publish_release }}
 
 jobs:
+  signing-custody:
+    name: Validate signing source before release builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Reject untrusted new-build dispatch
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          REUSE_EXISTING_DRAFT: ${{ inputs.reuse_existing_draft_assets }}
+        run: |
+          set -euo pipefail
+          if [ "$REUSE_EXISTING_DRAFT" = true ]; then
+            exit 0
+          fi
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$TRIGGERING_ACTOR" = "$REPOSITORY_OWNER"
+          test "$GITHUB_REF" = refs/heads/release/macos-signing
+
+      - name: Checkout signing source
+        if: ${{ !inputs.reuse_existing_draft_assets }}
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Require selected release tag to match workflow commit
+        if: ${{ !inputs.reuse_existing_draft_assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse FETCH_HEAD^{commit})" = "$GITHUB_SHA"
+
   build:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
@@ -157,6 +194,7 @@ jobs:
           retention-days: 1
 
   prepare-runtime:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
@@ -332,6 +370,7 @@ jobs:
           exit 1
 
   prepare-terminal-platform-runtime:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
@@ -526,6 +565,8 @@ jobs:
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs
 
   release-mac:
+    if: ${{ github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
+    environment: macos-signing
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     timeout-minutes: 90
     strategy:
@@ -535,9 +576,11 @@ jobs:
           - arch: arm64
             runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
+            bundle: release/mac-arm64/Agent Teams AI.app
           - arch: x64
             runner: macos-15-intel
             dist_command: pnpm pack:mac:x64
+            bundle: release/mac/Agent Teams AI.app
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -648,21 +691,59 @@ jobs:
           test -f resources/terminal-platform/terminal-daemon
           test -f resources/terminal-platform/terminal-platform-node/index.mjs
 
+      - name: Verify Apple signing credentials (macOS)
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test "${APPLE_TEAM_ID:-}" = "86399583GS" || { echo "Unexpected APPLE_TEAM_ID" >&2; exit 1; }
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_BASE64 APPLE_API_KEY_ID APPLE_API_ISSUER; do
+            test -n "${!name:-}" || { echo "Missing $name" >&2; exit 1; }
+          done
+
+      - name: Prepare Apple notarization API key
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          python3 - <<'PYTHON'
+          import base64, os, pathlib
+          key = base64.b64decode(os.environ['APPLE_API_KEY_BASE64'], validate=True)
+          if not key:
+              raise SystemExit('Apple notarization API key is empty')
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'apple-notary-key.p8'
+          with path.open('wb') as stream:
+              os.fchmod(stream.fileno(), 0o600)
+              stream.write(key)
+          with open(os.environ['GITHUB_ENV'], 'a') as stream:
+              stream.write(f'APPLE_API_KEY={path}\n')
+          PYTHON
+
       - name: Package (macOS ${{ matrix.arch }})
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: ${{ matrix.dist_command }} --publish never
 
+      - name: Verify signed and notarized bundle (macOS ${{ matrix.arch }})
+        run: bash scripts/ci/verify-macos-signing.sh "${{ matrix.bundle }}" --notarized
+
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin ${{ matrix.arch }}
+        run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" darwin ${{ matrix.arch }}
 
       - name: Smoke packaged app (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" darwin
+
+      - name: Verify transported macOS apps
+        run: bash scripts/ci/verify-macos-archives.sh release
 
       - name: Upload assets to release
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
