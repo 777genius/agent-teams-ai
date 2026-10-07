@@ -39,8 +39,8 @@ import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { getModelTriggerToneClass } from './memberModelToneClasses';
+import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
 
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
@@ -179,46 +179,14 @@ export const LeadModelRow = ({
   );
 
   return (
-    <div
-      className={cn(
-        'relative grid grid-cols-1 gap-2 md:items-start',
-        isFlatRoster
-          ? cn(
-              'hover:bg-[var(--color-surface-raised)]/45 rounded-sm px-4 py-2 transition-colors',
-              FLAT_ROSTER_GRID_COLUMNS
-            )
-          : 'rounded-md p-2 shadow-sm md:grid-cols-[minmax(220px,1fr)_minmax(230px,1fr)_190px]'
-      )}
-      data-role="lead-row"
-      style={{
-        backgroundColor: isFlatRoster
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
-        boxShadow: isFlatRoster
-          ? undefined
-          : isLight
-            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.28)',
-      }}
+    <RosterParticipantFrame
+      accentColor={leadColorSet.border}
+      isLight={isLight}
+      layout={isFlatRoster ? 'flat' : 'lead'}
+      dataRole="lead-row"
     >
-      <div
-        className={cn(
-          'absolute inset-y-0 left-0 w-1',
-          isFlatRoster ? 'my-2 rounded-full' : 'rounded-l-md'
-        )}
-        style={{ backgroundColor: leadColorSet.border }}
-        aria-hidden="true"
-      />
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <img
-            src={agentAvatarUrl('team-lead', 32)}
-            alt=""
-            className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
-            loading="lazy"
-          />
+        <RosterParticipantIdentity avatarSrc={agentAvatarUrl('team-lead', 32)}>
           <div className="flex h-8 min-w-0 items-center gap-3">
             <span className="truncate text-sm font-semibold text-[var(--color-text)]">
               {t('members.leadModel.leadShort')}
@@ -229,7 +197,7 @@ export const LeadModelRow = ({
               </span>
             ) : null}
           </div>
-        </div>
+        </RosterParticipantIdentity>
       </div>
       <div className="min-w-0">
         <div className="flex h-8 items-center px-1 text-xs text-[var(--color-text-secondary)]">
@@ -362,6 +330,6 @@ export const LeadModelRow = ({
           </div>
         </div>
       ) : null}
-    </div>
+    </RosterParticipantFrame>
   );
 };
