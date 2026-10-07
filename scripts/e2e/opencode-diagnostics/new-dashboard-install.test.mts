@@ -11,7 +11,9 @@ const receipt = { schemaVersion: 1 as const, sourceCommit: 'b54020c17cc2624668fe
   originalArchivePath: new URL(import.meta.url).pathname, originalArchiveSha256: '92a6b30ec214240df1f2742060cfe993d858526b11c42f0ef51b0ac6b3a2ea91', artifact };
 const recovered = { runtime: { installed: true, source: 'app-managed', state: 'ready' }, gate: 'ready',
   cards: [{ id: 'provider-quick-card-opencode-zen', blocked: false }],
-  inventory: [{ launchModel: 'opencode/example-free', source: 'app-server', metadata: { opencode: { providerId: 'opencode', routeKind: 'builtin_free', accessKind: 'builtin_free' } } }],
+  inventory: [{ launchModel: 'opencode/example-free', source: 'app-server', metadata: { free: false,
+    opencode: { providerId: 'opencode', routeKind: 'connected_provider', accessKind: 'credentialed',
+      proofState: 'needs_probe', requiresExecutionProof: true } } }],
   modelBadges: [{ modelId: 'opencode/example-free', label: 'Example Free' }],
   catalog: { state: 'ready', models: ['opencode/example-free'] } };
 const session = { main: { pid: 1234, birth: '2026-10-07T00:00:00Z', executable: file.path },
@@ -38,6 +40,18 @@ await test('transport success, stale runtime state and blocked providers cannot 
     { ...recovered, gate: 'missing' }, { ...recovered, inventory: [] }, { ...recovered, modelBadges: [] },
     { ...recovered, cards: [{ id: 'provider-quick-card-opencode-zen', blocked: true }] },
   ]) assert.throws(() => assertRecoveredUi(broken));
+});
+
+await test('discovery accepts runtime105 catalog classifications but rejects fallback and mismatched model provenance', () => {
+  assertRecoveredUi(recovered);
+  const model = recovered.inventory[0];
+  for (const inventory of [
+    [{ ...model, source: 'models-dev' }],
+    [{ ...model, launchModel: 'opencode/other-model' }],
+    [{ ...model, launchModel: 'other/example-free' }],
+    [{ ...model, metadata: { ...model.metadata, opencode: { ...model.metadata.opencode, providerId: 'other' } } }],
+  ]) assert.throws(() => assertRecoveredUi({ ...recovered, inventory }));
+  assert.throws(() => assertRecoveredUi({ ...recovered, modelBadges: [{ modelId: 'opencode/other-model', label: 'Other' }] }));
 });
 
 await test('restart, target replacement, navigation and reload each fail the session boundary', () => {

@@ -131,9 +131,9 @@ export function assertRecoveredUi(ui: UiSnapshot): void {
   assert(ui.modelBadges.length > 0 && ui.modelBadges.every((badge) => badge.label && ui.catalog?.models.includes(badge.modelId)),
     'Actual visible dashboard model badges required');
   assert(ui.inventory.some((model) => model.source === 'app-server' &&
-    model.metadata?.opencode?.providerId === 'opencode' && model.metadata.opencode.routeKind === 'builtin_free' &&
-    model.metadata.opencode.accessKind === 'builtin_free' && ui.modelBadges.some((badge) => badge.modelId === model.launchModel)),
-    'Visible catalog must contain runtime OpenCode built-in-free routes, not static/fallback directory rows');
+    model.metadata?.opencode?.providerId === 'opencode' && model.launchModel.startsWith('opencode/') &&
+    ui.catalog?.models.includes(model.launchModel) && ui.modelBadges.some((badge) => badge.modelId === model.launchModel)),
+    'Visible catalog must match actual runtime OpenCode inventory, not static/fallback directory rows');
 }
 
 const installControl = `(() => {
@@ -162,7 +162,7 @@ async function waitForRecovery(
     if (readyAt !== null) {
       assert(Date.now() - readyAt < 120000, 'Natural recovery missed the two-minute boundary');
       if (current.gate === 'ready' && current.catalog?.state === 'ready' && current.catalog.models.length > 0) {
-        await reveal(); recovered = await snapshot(); assertRecoveredUi(recovered); break;
+        await reveal(); recovered = await snapshot(); break;
       }
     }
     await pause(250);
@@ -237,6 +237,10 @@ export async function verifyDashboardInstall(ports: Ports): Promise<void> {
     const { recovered, readyAt, recoveredAt } = await waitForRecovery(snapshot, shot, () => evaluate(`document.querySelector('[data-testid="runtime-manage-opencode"]')?.scrollIntoView({block:'center'})`), transitions);
     evidence.recoveryTiming = { readyAt, recoveredAt };
     evidence.recovered = recovered;
+    // Dashboard discovery is not authless execution proof. Preserve the actual
+    // DTO classification, including unknown/free/probe states, without minting it.
+    evidence.catalogClassification = { scope: 'dashboard-discovery', authlessExecutionVerified: false,
+      models: recovered.inventory };
     evidence.sessionRecovered = await identity();
     assertSameSession(session, evidence.sessionRecovered as SessionIdentity);
     await shot('dashboard-after-install');
@@ -265,6 +269,7 @@ export async function verifyDashboardInstall(ports: Ports): Promise<void> {
     const version = await ports.versionProbe(runtime.path);
     evidence.versionProbe = version;
     assert(version.passed && version.stdout.trim() === manifest.version, 'Actual OpenCode --version differs');
+    assertRecoveredUi(recovered);
     await click(`document.querySelector('[data-testid="runtime-manage-opencode"]')`);
     const catalogDeadline = Date.now() + 90000;
     let visible: { providerIds: string[]; modelIds: string[] } = { providerIds: [], modelIds: [] };
