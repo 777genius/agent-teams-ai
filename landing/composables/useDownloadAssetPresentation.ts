@@ -49,9 +49,9 @@ export function useDownloadAssetPresentation(
 
     if (asset.os === "macos") {
       const macArchLabel = archLabel === "Apple Silicon / Intel" ? "Apple Silicon & Intel" : archLabel;
-      // Compatibility belongs to the selected payload, not its release channel.
-      const version = platformInfo("macos", getDownloadArch(asset)).version;
-      const minimum = version === "2.17.1" ? "12" : version === "2.17.7" ? "13" : null;
+      const info = platformInfo("macos", getDownloadArch(asset));
+      const minimum = "macProductMinimum" in info && typeof info.macProductMinimum === "string"
+        ? info.macProductMinimum.replace(/\.0$/, "") : null;
       return `macOS${minimum ? ` ${minimum}+` : ""} · ${macArchLabel}`;
     }
 
