@@ -8,6 +8,7 @@ import {
   useMemberLogReadScope,
   useReadRefreshing,
 } from '@features/member-log-reads/renderer';
+import { readTeamTaskLogs } from '@features/team-read-recovery/renderer';
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -182,7 +183,7 @@ export const MemberLogsTab = ({
     read: async () => {
       const result =
         taskId != null
-          ? await api.teams.getLogsForTask(teamName, taskId, {
+          ? await readTeamTaskLogs(teamName, taskId, {
               owner: taskOwner,
               status: taskStatus,
               intervals: taskWorkIntervals,

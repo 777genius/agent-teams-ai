@@ -8,6 +8,10 @@ import {
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
+import {
+  classifyTeamReadWorkerFailure,
+  teamReadFailureResult,
+} from '@features/team-read-recovery/main';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -369,19 +373,9 @@ function getWorkerErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function getFatalTeamDataWorkerFailureMessage(error: unknown): string | null {
-  if (!isTeamDataWorkerFatalError(error)) {
-    return null;
-  }
-  const message = getWorkerErrorMessage(error);
-  return `TEAM_DATA_WORKER_FAILED: ${message}`;
-}
-
 function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): void {
-  const message = getFatalTeamDataWorkerFailureMessage(error);
-  if (message) {
-    throw new Error(message);
-  }
+  const failure = classifyTeamReadWorkerFailure(error, isTeamDataWorkerFatalError(error));
+  if (failure) throw failure;
 }
 
 async function getNewestMessagesPageWithLiveOverlay(input: {
@@ -1003,7 +997,7 @@ async function wrapTeamHandler<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[teams:${operation}] ${message}`);
-    return { success: false, error: message };
+    return teamReadFailureResult(error);
   }
 }
 
@@ -1174,7 +1168,7 @@ async function handleGetData(
       }
     }
     logger.error(`[teams:getData] ${message}`);
-    return { success: false, error: message };
+    return teamReadFailureResult(error);
   } finally {
     setCurrentMainOp(null);
   }
@@ -2844,7 +2838,8 @@ async function handleSendMessage(
   }
   const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
   if (!validatedTaskRefs.valid) return { success: false, error: validatedTaskRefs.error };
-  const validatedMessageId = payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
+  const validatedMessageId =
+    payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
   if (validatedMessageId && !validatedMessageId.valid)
     return { success: false, error: validatedMessageId.error ?? 'Invalid messageId' };
 
@@ -3075,11 +3070,11 @@ async function handleSendMessage(
       replyRecipient,
       ...(recipientProviderId ? { providerId: recipientProviderId } : {}),
     });
-    const inboxMessageId = validatedMessageId?.value ?? (
-      directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
+    const inboxMessageId =
+      validatedMessageId?.value ??
+      (directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
         ? crypto.randomUUID()
-        : undefined
-    );
+        : undefined);
     const memberDeliveryText = buildMessageDeliveryText(baseText, {
       actionMode,
       isLeadRecipient,
@@ -3922,9 +3917,12 @@ async function handleGetLogsForTask(
       const result = await worker.findLogsForTask(vTeam.value!, vTask.value!, opts);
       return { success: true, data: result };
     } catch (workerErr) {
-      const fatalError = getFatalTeamDataWorkerFailureMessage(workerErr);
+      const fatalError = classifyTeamReadWorkerFailure(
+        workerErr,
+        isTeamDataWorkerFatalError(workerErr)
+      );
       if (fatalError) {
-        return { success: false, error: fatalError };
+        return teamReadFailureResult(fatalError);
       }
       logger.warn(
         `[teams:getLogsForTask] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
@@ -4699,7 +4697,8 @@ async function handleReplaceMembers(
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
       if (payload.memberSettingsRelaunch !== undefined) {
         await persistNodeMemberSettingsRelaunch(tn, members, payload.memberSettingsRelaunch, {
-          isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name), hasProvisioningRun: (name) => getTeamProvisioningRunApi().hasProvisioningRun(name),
+          isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name),
+          hasProvisioningRun: (name) => getTeamProvisioningRunApi().hasProvisioningRun(name),
           invalidateWorkerCache: invalidateTeamRosterSnapshotCaches,
         });
         return;

@@ -6,7 +6,6 @@
  *
  * Shared between preload and renderer processes.
  */
-
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
@@ -78,7 +77,6 @@ import type {
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
@@ -98,11 +96,9 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
-  TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
-  TeamMemberActivityMeta,
   TeamMessageNotificationData,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
@@ -113,7 +109,6 @@ import type {
   TeamTaskStatus,
   TeamTaskWithKanban,
   TeamUpdateConfigRequest,
-  TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
@@ -147,6 +142,10 @@ import type { RecentProjectsElectronApi } from '@features/recent-projects/contra
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
+import type {
+  TeamReadLegacyApi,
+  TeamReadRecoveryApi,
+} from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
@@ -164,7 +163,6 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
-
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -445,9 +443,9 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi {
+export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+  readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
-  getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -482,11 +480,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     teamName: string,
     messageId: string
   ) => Promise<OpenCodeRuntimeDeliveryStatus | null>;
-  getMessagesPage: (
-    teamName: string,
-    options?: { cursor?: string | null; limit?: number }
-  ) => Promise<MessagesPage>;
-  getMemberActivityMeta: (teamName: string) => Promise<TeamMemberActivityMeta>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
@@ -522,18 +515,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
-  getLogsForTask: (
-    teamName: string,
-    taskId: string,
-    options?: {
-      owner?: string;
-      status?: string;
-      /** Persisted work intervals (preferred for reliable owner-log attribution). */
-      intervals?: { startedAt: string; completedAt?: string }[];
-      /** Back-compat: single since timestamp (deprecated). */
-      since?: string;
-    }
-  ) => Promise<MemberLogSummary[]>;
   getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;
   getTaskActivityDetail: (
     teamName: string,
