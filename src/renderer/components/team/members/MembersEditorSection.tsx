@@ -132,6 +132,7 @@ export interface MembersEditorSectionProps {
   /** Default provider to use for newly added member rows. */
   defaultProviderId?: TeamProviderId;
   /** When true, provider/model controls stay read-only for existing rows. */
+  runtimeSelectionUnresolved?: boolean;
   lockProviderModel?: boolean;
   /** When true, existing teammate names stay read-only while the team is live. */
   lockExistingMemberIdentity?: boolean;
@@ -195,6 +196,7 @@ export const MembersEditorSection = ({
   existingMembers,
   existingMemberColorMap,
   defaultProviderId = 'anthropic',
+  runtimeSelectionUnresolved = false,
   lockProviderModel = false,
   lockExistingMemberIdentity = false,
   identityLockReason,
@@ -637,6 +639,7 @@ export const MembersEditorSection = ({
             >
               {activeMembers.map((member, index) => (
                 <MemberDraftRow
+                  runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   key={member.id}
                   member={member}
                   index={index}
@@ -715,6 +718,7 @@ export const MembersEditorSection = ({
                   <div className="space-y-2">
                     {removedMembers.map((member, index) => (
                       <MemberDraftRow
+                        runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                         key={member.id}
                         member={member}
                         index={activeMembers.length + index}

@@ -6,6 +6,7 @@ import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDec
 import { describe, expect, it, vi } from 'vitest';
 
 import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import { TeamMetaStore } from '../../TeamMetaStore';
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningRequestAdmissionBoundary,
@@ -117,10 +118,10 @@ describe('TeamProvisioningRequestAdmission', () => {
         },
       });
       try {
-        const launch = createTeamProvisioningRequestAdmissionBoundary(host).launchTeam(
-          launchRequest,
-          vi.fn()
-        );
+        const launch = createTeamProvisioningRequestAdmissionBoundary(
+          host,
+          async () => null
+        ).launchTeam(launchRequest, vi.fn());
         const checked =
           barrier === 'team-lock' ? expect(launch).rejects.toThrow(/superseded/) : launch;
         await entering;
@@ -137,6 +138,34 @@ describe('TeamProvisioningRequestAdmission', () => {
     }
   );
 
+  it('rejects an unresolved saved draft before create or launch mutates provisioning', async () => {
+    const temp = await mkdtemp(join(tmpdir(), 'unresolved-admission-'));
+    setClaudeBasePathOverride(temp);
+    try {
+      const store = new TeamMetaStore();
+      await store.writeMeta('alpha', { cwd: '', runtimeSelectionVersion: 1, createdAt: 1 });
+      const host = createHost();
+      const boundary = createTeamProvisioningRequestAdmissionBoundary(host, (teamName) =>
+        store.getMeta(teamName)
+      );
+      for (const operation of [
+        () => boundary.createTeam({ teamName: 'alpha', cwd: '', members: [] }, vi.fn()),
+        () => boundary.launchTeam({ teamName: 'alpha', cwd: '' }, vi.fn()),
+      ])
+        await expect(operation()).rejects.toMatchObject({ code: 'RUNTIME_SELECTION_REQUIRED' });
+      expect(host.runTracking.getResolvableProvisioningRunId).not.toHaveBeenCalled();
+      expect(host.initializeToolApprovalSettingsForLaunch).not.toHaveBeenCalled();
+      expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
+      expect(host.provisioningRunByTeam.size).toBe(0);
+      expect(host.cleanedStoppedTeamOpenCodeRuntimeLanes.has('alpha')).toBe(true);
+      const launchStore = new TeamLaunchStateStore();
+      expect(await launchStore.read('alpha')).toBeNull();
+    } finally {
+      setClaudeBasePathOverride(null);
+      await rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('rejects missing or blank team names before admission', () => {
     expect(() => getTeamProvisioningRequestLockKey({})).toThrow('Team name is required');
     expect(() => getTeamProvisioningRequestLockKey({ teamName: '   ' })).toThrow(
@@ -151,7 +180,7 @@ describe('TeamProvisioningRequestAdmission', () => {
   it('does not enter the create lock or provisioning flow for an invalid request', async () => {
     const getResolvableProvisioningRunId = vi.fn(() => 'run-active');
     const host = createHost({ runTracking: { getResolvableProvisioningRunId } });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
     const onProgress = vi.fn<(progress: TeamProvisioningProgress) => void>();
 
     await expect(
@@ -165,7 +194,7 @@ describe('TeamProvisioningRequestAdmission', () => {
   it('serializes launch admission by team and delegates to launch orchestration', async () => {
     const getResolvableProvisioningRunId = vi.fn(() => 'run-active');
     const host = createHost({ runTracking: { getResolvableProvisioningRunId } });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
     const onProgress = vi.fn<(progress: TeamProvisioningProgress) => void>();
 
     await expect(
@@ -204,7 +233,7 @@ describe('TeamProvisioningRequestAdmission', () => {
           boundary.launchTeam(request, onProgress)
       ),
     });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
 
     const outcome = await Promise.race([
       boundary.launchTeam(launchRequest, vi.fn()).then(
@@ -235,7 +264,7 @@ describe('TeamProvisioningRequestAdmission', () => {
           boundary.launchTeam({ ...launchRequest, teamName: 'beta' }, onProgress)
       ),
     });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
 
     await expect(boundary.launchTeam(launchRequest, vi.fn())).resolves.toEqual({
       runId: 'run-beta',
@@ -282,7 +311,7 @@ describe('TeamProvisioningRequestAdmission', () => {
         }
       ),
     });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
     const throwingProgress = vi.fn(() => {
       throw new Error('progress observer failed');
     });
@@ -330,7 +359,7 @@ describe('TeamProvisioningRequestAdmission', () => {
         launchStatus: 'started' as const,
       })),
     });
-    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
 
     await expect(boundary.createTeam(createRequest, vi.fn())).rejects.toThrow(
       'Team launch cancelled by app shutdown'

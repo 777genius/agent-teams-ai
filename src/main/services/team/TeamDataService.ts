@@ -3,7 +3,7 @@ import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
-import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -19,7 +19,6 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import {
   createCliAutoSuffixNameGuard,
@@ -28,6 +27,7 @@ import {
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { resolveTeamRuntimeSelection } from '@shared/utils/teamRuntimeSelection';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
@@ -43,6 +43,7 @@ import {
   type LeadSessionParseCacheKey,
 } from './cache/LeadSessionParseCache';
 import { atomicWriteAsync } from './atomicWrite';
+import { createDraftTeamConfig } from './createDraftTeamConfig';
 import { renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
@@ -74,6 +75,7 @@ import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisorySer
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
 import { TeamMetaStore } from './TeamMetaStore';
+import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
@@ -321,15 +323,6 @@ async function mapLimitLocal<T, R>(
   return results;
 }
 
-function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
-  members: readonly T[]
-): T[] {
-  const colorMap = buildTeamMemberColorMap(members, { preferProvidedColors: false });
-  return members.map((member) => ({
-    ...member,
-    color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
-  }));
-}
 
 function readConfigForUiSnapshot(
   configReader: TeamConfigReader & {
@@ -1080,7 +1073,8 @@ export class TeamDataService {
 
     const membersMeta = await this.membersMetaStore.getMeta(teamName);
     const members = membersMeta?.members ?? [];
-    const resolvedProviderId = meta.providerId ?? 'anthropic';
+    const selection = resolveTeamRuntimeSelection(meta);
+    const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
       teamName,
       displayName: meta.displayName,
@@ -1089,6 +1083,7 @@ export class TeamDataService {
       cwd: meta.cwd,
       prompt: meta.prompt,
       savedSettingsFingerprint: fingerprintSavedLaunchSettings(meta),
+      runtimeSelectionVersion: meta.runtimeSelectionVersion,
       providerId: resolvedProviderId,
       providerBackendId: migrateProviderBackendId(
         resolvedProviderId,
@@ -3366,114 +3361,8 @@ export class TeamDataService {
     });
   }
 
-  async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    const teamDir = path.join(getTeamsBasePath(), request.teamName);
-    const tasksDir = path.join(getTasksBasePath(), request.teamName);
-    await Promise.all([
-      fs.promises.mkdir(getTeamsBasePath(), { recursive: true }),
-      fs.promises.mkdir(getTasksBasePath(), { recursive: true }),
-    ]);
-
-    const pathExists = async (targetPath: string): Promise<boolean> => {
-      try {
-        await fs.promises.lstat(targetPath);
-        return true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-        throw error;
-      }
-    };
-    if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
-      throw new Error(`Team already exists: ${request.teamName}`);
-    }
-
-    try {
-      await fs.promises.mkdir(teamDir);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
-
-    let tasksDirectoryCreated = false;
-    try {
-      await fs.promises.mkdir(tasksDir);
-      tasksDirectoryCreated = true;
-      await fs.promises.mkdir(path.join(teamDir, 'inboxes'));
-
-      const joinedAt = Date.now();
-      // Save team-level metadata to team.meta.json (NOT config.json).
-      // config.json is CLI territory — created by TeamCreate during provisioning.
-      // team.meta.json preserves user's configuration for the Launch flow.
-      await this.teamMetaStore.writeMeta(request.teamName, {
-        displayName: request.displayName,
-        description: request.description,
-        color: request.color,
-        cwd: request.cwd?.trim() || '',
-        prompt: request.prompt,
-        providerId: request.providerId,
-        providerBackendId: request.providerBackendId,
-        model: request.model,
-        effort: request.effort,
-        fastMode: request.fastMode,
-        syncModelsWithLead: request.syncModelsWithLead,
-        skipPermissions: request.skipPermissions,
-        worktree: request.worktree,
-        extraCliArgs: request.extraCliArgs,
-        limitContext: request.limitContext,
-        createdAt: joinedAt,
-      });
-
-      const membersToWrite = applyDistinctRosterColors(
-        request.members.map((member) => ({
-          name: (() => {
-            const name = member.name.trim();
-            if (!name) throw new Error('Member name cannot be empty');
-            const formatError = validateTeamMemberNameFormat(name);
-            if (formatError) {
-              throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-            }
-            if (name.toLowerCase() === 'user') {
-              throw new Error('Member name "user" is reserved');
-            }
-            if (name.toLowerCase() === 'team-lead')
-              throw new Error('Member name "team-lead" is reserved');
-            const suffixInfo = parseNumericSuffixName(name);
-            if (suffixInfo && suffixInfo.suffix >= 2) {
-              throw new Error(
-                `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-              );
-            }
-            return name;
-          })(),
-          role: member.role?.trim() || undefined,
-          workflow: member.workflow?.trim() || undefined,
-          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId: normalizeOptionalTeamProviderId(member.providerId),
-          providerBackendId: member.providerBackendId,
-          model: member.model?.trim() || undefined,
-          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-          fastMode: member.fastMode,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-          agentType: 'general-purpose' as const,
-          joinedAt,
-        }))
-      );
-      await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
-        providerBackendId: request.providerBackendId,
-      });
-      TeamConfigReader.invalidateListTeamsCache();
-    } catch (error) {
-      if (tasksDirectoryCreated) {
-        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => undefined);
-      }
-      await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => undefined);
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
+  createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+    return createDraftTeamConfig(request, { teamMetaStore: this.teamMetaStore, membersMetaStore: this.membersMetaStore });
   }
 
   readonly renameDraftTeam = renameDraftTeamDirectory;

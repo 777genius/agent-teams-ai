@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
+import { UnselectedTeamProvider } from '@features/team-templates/renderer';
 import {
   ANTHROPIC_LONG_CONTEXT_PRICING_URL,
   ANTHROPIC_SONNET_EXTRA_USAGE_WARNING,
@@ -46,6 +47,7 @@ import type { EffortLevel, TeamProviderId } from '@shared/types';
 export { ANTHROPIC_LONG_CONTEXT_PRICING_URL, ANTHROPIC_SONNET_EXTRA_USAGE_WARNING };
 
 interface LeadModelRowProps {
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
@@ -74,6 +76,7 @@ interface LeadModelRowProps {
 }
 
 export const LeadModelRow = ({
+  runtimeSelectionUnresolved = false,
   providerId,
   model,
   effort,
@@ -234,58 +237,64 @@ export const LeadModelRow = ({
         </div>
       </div>
       <div className="min-w-0 space-y-1">
-        <div
-          className={cn(
-            'flex flex-col gap-2 sm:flex-row sm:items-start',
-            isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
-          )}
-        >
+        {runtimeSelectionUnresolved ? (
+          <UnselectedTeamProvider onSelect={onProviderChange} />
+        ) : (
           <div
             className={cn(
-              'w-full min-w-0 space-y-1',
-              isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              'flex flex-col gap-2 sm:flex-row sm:items-start',
+              isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
             )}
           >
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                      getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
-                    )}
-                    aria-label={modelButtonAriaLabel}
-                    onClick={() => setModelExpanded((prev) => !prev)}
-                  >
-                    {modelExpanded ? (
-                      <ChevronDown className="size-3.5" />
-                    ) : (
-                      <ChevronRight className="size-3.5" />
-                    )}
-                    <TeamModelBrandIcon providerId={providerId} model={model} />
-                    <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
-                    {hasModelIssue ? (
-                      <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
-                    ) : null}
-                    {hasModelAdvisory ? (
-                      <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
-                    ) : null}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-80 break-words">{modelButtonLabel}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          {isFlatRoster ? (
-            <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
-              {syncModelControl}
+            <div
+              className={cn(
+                'w-full min-w-0 space-y-1',
+                isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              )}
+            >
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                        getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
+                      )}
+                      aria-label={modelButtonAriaLabel}
+                      onClick={() => setModelExpanded((prev) => !prev)}
+                    >
+                      {!runtimeSelectionUnresolved && modelExpanded ? (
+                        <ChevronDown className="size-3.5" />
+                      ) : (
+                        <ChevronRight className="size-3.5" />
+                      )}
+                      <TeamModelBrandIcon providerId={providerId} model={model} />
+                      <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
+                      {hasModelIssue ? (
+                        <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
+                      ) : null}
+                      {hasModelAdvisory ? (
+                        <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                      ) : null}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-80 break-words">
+                    {modelButtonLabel}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          ) : null}
-        </div>
+            {isFlatRoster ? (
+              <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
+                {syncModelControl}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
-      {hasWarnings ? (
+      {!runtimeSelectionUnresolved && hasWarnings ? (
         <div className="md:col-span-3">
           <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
             <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
@@ -298,7 +307,7 @@ export const LeadModelRow = ({
           </div>
         </div>
       ) : null}
-      {modelExpanded ? (
+      {!runtimeSelectionUnresolved && modelExpanded ? (
         <div className="space-y-2 md:col-span-3">
           <TeamModelSelector
             providerId={providerId}

@@ -1354,7 +1354,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   extraCliArgs?: string;
 }
 
-export interface TeamCreateConfigRequest {
+export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
   teamName: string;
   displayName?: string;
   description?: string;

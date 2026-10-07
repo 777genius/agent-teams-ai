@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Nama harus berisi paling tidak satu huruf atau digit",
-      "nameTooLong": "Nama terlalu panjang (max 128 chars)",
+      "nameTooLong": "Nama terlalu panjang (max 64 chars)",
       "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
       "memberNameRequired": "Nama anggota tidak dapat kosong",
       "memberNameInvalid": "Nama anggota harus dimulai dengan alfanumerik, hanya gunakan [a-zA-Z0-9.], maksimal 128 chars",

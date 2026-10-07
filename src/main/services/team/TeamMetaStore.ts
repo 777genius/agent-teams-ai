@@ -2,6 +2,7 @@ import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRea
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
+import { normalizeRuntimeSelectionVersion } from '@shared/utils/teamRuntimeSelection';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -17,6 +18,7 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  */
 export interface TeamMetaFile {
   version: 1;
+  runtimeSelectionVersion?: 1;
   displayName?: string;
   description?: string;
   color?: string;
@@ -144,12 +146,15 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
 }
 
 export class TeamMetaStore {
-  private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'team.meta.json');
+  private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
+    return path.join(teamsBasePath, teamName, 'team.meta.json');
   }
 
-  async getMeta(teamName: string): Promise<TeamMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName);
+  async getMeta(
+    teamName: string,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<TeamMetaFile | null> {
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
     try {
       const stat = await fs.promises.stat(metaPath);
       if (!stat.isFile() || stat.size > MAX_META_FILE_BYTES) {
@@ -191,6 +196,7 @@ export class TeamMetaStore {
 
     return {
       version: 1,
+      runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
       displayName:
         typeof file.displayName === 'string' ? file.displayName.trim() || undefined : undefined,
       description:
@@ -218,9 +224,21 @@ export class TeamMetaStore {
     };
   }
 
-  async writeMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void> {
-    const metaPath = this.getMetaPath(teamName);
-    await withMetaMutationLock(metaPath, () => this.writeMetaUnlocked(metaPath, data));
+  async writeMeta(
+    teamName: string,
+    data: Omit<TeamMetaFile, 'version'>,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<void> {
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
+    await withMetaMutationLock(metaPath, async () => {
+      const current = await this.getMeta(teamName, teamsBasePath);
+      await this.writeMetaUnlocked(metaPath, {
+        ...data,
+        runtimeSelectionVersion:
+          normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
+          current?.runtimeSelectionVersion,
+      });
+    });
   }
 
   async updateMeta(
@@ -242,6 +260,7 @@ export class TeamMetaStore {
   ): Promise<void> {
     const payload: TeamMetaFile = {
       version: 1,
+      runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,
       description: data.description?.trim() || undefined,
       color: data.color?.trim() || undefined,

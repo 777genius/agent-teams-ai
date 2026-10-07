@@ -1,3 +1,8 @@
+import {
+  getProviderScopedTeamModelLabel,
+  getTeamProviderLabel,
+} from '@renderer/components/team/dialogs/TeamModelSelector';
+
 import type { TeamMemberMcpMode, TeamProviderId } from '@shared/types';
 
 type ModelReasonByValue = Partial<Record<string, string | null | undefined>>;
@@ -36,4 +41,40 @@ export function formatMemberMcpButtonLabel(
   if (mode === 'appOnly') return 'Agent Teams MCP';
   if (mode === 'strictAllowlist') return `MCP ${serverCount || 'strict'}`;
   return mode === 'inheritScopes' ? labels.scopes : labels.inherit;
+}
+
+export function resolveMemberModelButtonLabels({
+  effectiveProviderId,
+  effectiveModel,
+  openCodeDefaultRoute,
+  inheritsLeadModel,
+  unresolved,
+  t,
+}: {
+  effectiveProviderId: TeamProviderId;
+  effectiveModel?: string;
+  openCodeDefaultRoute?: { label: string; modelLabel: string } | null;
+  inheritsLeadModel: boolean;
+  unresolved: boolean;
+  t: ReturnType<typeof import('@features/localization/renderer').useAppTranslation>['t'];
+}) {
+  const modelButtonLabelBase = effectiveModel?.trim()
+    ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
+    : openCodeDefaultRoute
+      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
+      : t('memberDraft.model.default');
+  const modelButtonLabel = unresolved
+    ? 'Provider not selected'
+    : inheritsLeadModel
+      ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
+      : modelButtonLabelBase;
+  const modelButtonText =
+    !unresolved && openCodeDefaultRoute
+      ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
+      : modelButtonLabel;
+  const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
+    provider: unresolved ? 'Not selected' : getTeamProviderLabel(effectiveProviderId),
+    model: modelButtonLabel,
+  });
+  return { modelButtonLabel, modelButtonText, modelButtonAriaLabel };
 }

@@ -104,6 +104,7 @@ import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
+  getLaunchDialogLabelKeys,
   getLocalTimezone,
   getProviderLabel,
   getStoredTeamFastMode,
@@ -208,7 +209,6 @@ const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
 
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
-// Component
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
   const { open, onClose } = props;
   const { isLight } = useTheme();
@@ -358,6 +358,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft),
     [sourceMembers, memberSettingsDraft]
   );
+  const [runtimeSelectionVersion, setRuntimeSelectionVersion] = useState<1 | undefined>();
+  const [runtimeSelectionUnresolved, setRuntimeSelectionUnresolved] = useState(false);
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -467,8 +469,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
-      collectDialogMemberProviderIds(multimodelEnabled, selectedProviderId, effectiveMemberDrafts),
-    [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
+      runtimeSelectionUnresolved
+        ? []
+        : collectDialogMemberProviderIds(
+            multimodelEnabled,
+            selectedProviderId,
+            effectiveMemberDrafts
+          ),
+    [runtimeSelectionUnresolved, effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const launchGuard = createLaunchGuard(
@@ -644,10 +652,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
+    setRuntimeSelectionUnresolved(false);
     const normalizedValue = isLaunchMode
       ? normalizeLeadProviderForMode(value, multimodelEnabled)
       : normalizeOneShotProviderForMode(value, multimodelEnabled);
-    const nextModel = getStoredTeamModel(normalizedValue);
+    const nextModel = runtimeSelectionVersion === 1 ? '' : getStoredTeamModel(normalizedValue);
     const nextEffort = getAvailableTeamEffortValue({
       providerId: normalizedValue,
       model: nextModel,
@@ -890,7 +899,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         savedRequest = effectiveTeamName
           ? await api.teams.getSavedRequest(effectiveTeamName)
           : null;
-      } catch {
+      } catch (error) {
+        if (String(error).includes('RUNTIME_SELECTION_UNSUPPORTED')) {
+          setRuntimeSelectionUnresolved(true);
+          setLocalError(String(error));
+          return;
+        }
         savedRequest = null;
       }
       // Edits made while the request was in flight win over it, but an unrelated control is
@@ -917,6 +931,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         storedLimitContext: localStorage.getItem('team:lastLimitContext') === 'true',
         getStoredModel: getStoredTeamModel,
       });
+      setRuntimeSelectionVersion(savedRequest?.runtimeSelectionVersion);
+      setRuntimeSelectionUnresolved(launchPrefill.runtimeSelectionUnresolved === true);
       setSavedLaunchProviderId(normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null);
       const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
       setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
@@ -2154,6 +2170,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const handleSubmit = (): void => {
     if (submissionFence.busy || isSubmitting || launchInFlight) return;
+    if (runtimeSelectionUnresolved) {
+      setLocalError('Choose a team provider before launching');
+      return;
+    }
     if (prepareState === 'loading' && !canSkipPreflight()) return;
     if (validationErrors.length > 0) {
       setLocalError(validationErrors[0]);
@@ -2206,6 +2226,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             inheritedProviderId: selectedProviderId,
           });
           const launchRequest: TeamLaunchRequest = {
+            runtimeSelectionVersion,
             teamName: effectiveTeamName,
             cwd: effectiveCwd,
             prompt: promptDraft.value.trim() || undefined,
@@ -2353,7 +2374,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const isDisabled = isLaunchMode
-    ? !launchPreflightSelectionReady ||
+    ? runtimeSelectionUnresolved ||
+      !launchPreflightSelectionReady ||
       isSubmitting ||
       launchInFlight ||
       (prepareState === 'loading' && !canSkipPreflight()) ||
@@ -2365,11 +2387,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
-  const dialogTitle = isLaunchMode
-    ? t(isRelaunch ? 'launch.title.relaunch' : 'launch.title.launch')
-    : isEditing
-      ? t('launch.title.editSchedule')
-      : t('launch.title.createSchedule');
+  const labelKeys = getLaunchDialogLabelKeys(isLaunchMode, isRelaunch, isEditing);
+  const dialogTitle = t(labelKeys.title);
 
   const dialogDescription = isLaunchMode ? (
     isRelaunch ? (
@@ -2393,21 +2412,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     t('launch.description.createSchedule')
   );
 
-  const submitLabel = isLaunchMode
-    ? isRelaunch
-      ? t('launch.actions.relaunchTeam')
-      : t('launch.actions.launchTeam')
-    : isEditing
-      ? t('launch.actions.saveChanges')
-      : t('launch.actions.createSchedule');
-
-  const submittingLabel = isLaunchMode
-    ? isRelaunch
-      ? t('launch.actions.relaunching')
-      : t('launch.actions.launching')
-    : isEditing
-      ? t('launch.actions.saving')
-      : t('launch.actions.creating');
+  const submitLabel = t(labelKeys.submit);
+  const submittingLabel = t(labelKeys.submitting);
 
   return (
     <Dialog
@@ -2683,6 +2689,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 ) : null}
 
                 <TeamRosterEditorSection
+                  runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
                   validateMemberName={validateMemberNameInline}
@@ -2698,8 +2705,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   inheritedModel={selectedModel}
                   inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
                   inheritModelSettingsByDefault
-                  lockProviderModel={syncModelsWithLead}
-                  forceInheritedModelSettings={syncModelsWithLead}
+                  lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
+                  forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
                   teammatesInheritLeadModel={relaunchInheritedSync !== false}
                   modelLockReason="This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
                   providerId={selectedProviderId}

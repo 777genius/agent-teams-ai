@@ -565,14 +565,14 @@ describe('TeamDataService draft metadata', () => {
       });
 
     await new TeamDataService().createTeamConfig({
-      teamName: 'TEST-empty-inbox',
+      teamName: 'test-empty-inbox',
       providerId: 'opencode',
       members: [{ name: 'researcher' }],
     });
 
     expect(publishDraft).toHaveBeenCalledTimes(1);
     await expect(
-      fs.access(path.join(claudeRoot, 'teams', 'TEST-empty-inbox', 'team.meta.json'))
+      fs.access(path.join(claudeRoot, 'teams', 'test-empty-inbox', 'team.meta.json'))
     ).resolves.toBeUndefined();
   });
 
@@ -580,8 +580,8 @@ describe('TeamDataService draft metadata', () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-inbox-rollback-'));
     tempPaths.push(claudeRoot);
     setClaudeBasePathOverride(claudeRoot);
-    const teamDir = path.join(claudeRoot, 'teams', 'TEST-inbox-rollback');
-    const tasksDir = path.join(claudeRoot, 'tasks', 'TEST-inbox-rollback');
+    const teamDir = path.join(claudeRoot, 'teams', 'test-inbox-rollback');
+    const tasksDir = path.join(claudeRoot, 'tasks', 'test-inbox-rollback');
     const inboxDir = path.join(teamDir, 'inboxes');
     const mkdir = nodeFs.promises.mkdir;
     vi.spyOn(nodeFs.promises, 'mkdir').mockImplementation(async (directoryPath, options) => {
@@ -591,7 +591,7 @@ describe('TeamDataService draft metadata', () => {
     const publishDraft = vi.spyOn(TeamMetaStore.prototype, 'writeMeta');
 
     await expect(
-      new TeamDataService().createTeamConfig({ teamName: 'TEST-inbox-rollback', members: [] })
+      new TeamDataService().createTeamConfig({ teamName: 'test-inbox-rollback', members: [] })
     ).rejects.toThrow('TEST inbox initialization failed');
 
     expect(publishDraft).not.toHaveBeenCalled();
@@ -744,6 +744,79 @@ describe('TeamDataService draft metadata', () => {
           fastMode: 'on',
         },
       ],
+    });
+  });
+
+  it('keeps an explicit unresolved draft through unrelated metadata edits and reopen', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-unresolved-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    await new TeamDataService().createTeamConfig({
+      teamName: 'unresolved-team',
+      runtimeSelectionVersion: 1,
+      prompt: 'Coordinate the investigation',
+      members: [{ name: 'investigator', role: 'Researcher' }],
+    });
+    const store = new TeamMetaStore();
+    await store.updateMeta('unresolved-team', (meta) => ({
+      ...meta!,
+      description: 'Edited description',
+    }));
+    const current = await store.getMeta('unresolved-team');
+    // Existing writers replacing presentation/settings must not remove opt-in authority.
+    const { runtimeSelectionVersion: _marker, ...oldWriterPayload } = current!;
+    await store.writeMeta('unresolved-team', oldWriterPayload);
+    const reopened = await new TeamDataService().getSavedRequest('unresolved-team');
+    expect(reopened).toMatchObject({
+      runtimeSelectionVersion: 1,
+      description: 'Edited description',
+      prompt: 'Coordinate the investigation',
+      members: [{ name: 'investigator', role: 'Researcher' }],
+    });
+    expect(reopened?.providerId).toBeUndefined();
+    expect(reopened?.model).toBeUndefined();
+    await expect(
+      fs.stat(path.join(claudeRoot, 'teams', 'unresolved-team', 'config.json'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('keeps every draft artifact on the captured root when the active root changes during persistence', async () => {
+    const firstRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'draft-captured-root-'));
+    const secondRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'draft-new-root-'));
+    tempPaths.push(firstRoot, secondRoot);
+    setClaudeBasePathOverride(firstRoot);
+    const writeMeta = TeamMetaStore.prototype.writeMeta;
+    vi.spyOn(TeamMetaStore.prototype, 'writeMeta').mockImplementation(function (
+      this: TeamMetaStore,
+      teamName,
+      metadata,
+      capturedBase
+    ) {
+      setClaudeBasePathOverride(secondRoot);
+      return writeMeta.call(this, teamName, metadata, capturedBase);
+    });
+    await new TeamDataService().createTeamConfig({
+      teamName: 'captured-team',
+      runtimeSelectionVersion: 1,
+      members: [{ name: 'investigator', workflow: 'Read and report evidence' }],
+    });
+    const writtenTeam = path.join(firstRoot, 'teams', 'captured-team');
+    const meta = JSON.parse(await fs.readFile(path.join(writtenTeam, 'team.meta.json'), 'utf8'));
+    const members = JSON.parse(
+      await fs.readFile(path.join(writtenTeam, 'members.meta.json'), 'utf8')
+    );
+    expect(meta.runtimeSelectionVersion).toBe(1);
+    expect(members.members).toMatchObject([
+      { name: 'investigator', workflow: 'Read and report evidence' },
+    ]);
+    await expect(
+      fs.access(path.join(firstRoot, 'tasks', 'captured-team'))
+    ).resolves.toBeUndefined();
+    await expect(fs.access(path.join(secondRoot, 'teams'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(secondRoot, 'tasks'))).rejects.toMatchObject({
+      code: 'ENOENT',
     });
   });
 
