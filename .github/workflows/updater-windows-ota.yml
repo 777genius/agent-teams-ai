@@ -34,6 +34,10 @@ on:
           required: false,
           description: Actual immutable executor SHA; defaults to tooling SHA,
         }
+      cloud_experience_preflight:
+        type: boolean
+        default: false
+        description: TEST ARM diagnostic only; close one exactly verified CloudExperienceHost window
       owned_uia_diagnostic:
         type: boolean
         default: false
@@ -70,7 +74,10 @@ jobs:
         env:
           TOOLING_SHA: ${{ inputs.tooling_sha }}
           EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
+          CLOUD_PREFLIGHT: ${{ inputs.cloud_experience_preflight }}
+          OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic }}
         run: |
+          if [[ "$CLOUD_PREFLIGHT" == true ]]; then [[ "$OWNED_UIA_DIAGNOSTIC" == true ]]; fi
           [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$EXECUTION_SHA" ]]
       - uses: actions/checkout@v6
         with:
@@ -241,6 +248,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic && '1' || '0' }}
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && inputs.owned_uia_diagnostic && matrix.arch == 'arm64' && '1' || '0' }}
     timeout-minutes: 25
     defaults:
       run:

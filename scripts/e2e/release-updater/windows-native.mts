@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { testCloudExperiencePreflight } from './windows-cloud-preflight.mts';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -687,6 +688,7 @@ export async function windowsNative(root: string, evidence: string) {
     return JSON.parse(result.stdout.trim()) as T;
   }
   await call('compile');
+  await testCloudExperiencePreflight(root, evidence, shell, compilerReferences, env);
   return {
     priorFixtureGuard: (files: string[], registry: boolean) =>
       call<{

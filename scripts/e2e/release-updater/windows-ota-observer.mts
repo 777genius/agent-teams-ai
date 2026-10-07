@@ -536,6 +536,52 @@ public static class TestOtaObserver {
     } catch(Exception error) { proof.Error=proof.Error??error.Message; }
     finally { if(pin.Handle!=null) pin.Handle.Dispose(); }
   }
+  [DllImport("user32.dll")] static extern bool IsWindow(IntPtr hwnd);
+  [DllImport("user32.dll",EntryPoint="SendMessageTimeoutW",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr SendCloseMessage(IntPtr hwnd,uint message,UIntPtr wParam,IntPtr lParam,uint flags,uint timeout,out UIntPtr result);
+  [DllImport("kernel32.dll")] static extern void SetLastError(uint error);
+  public sealed class CloudCloseReceipt {
+    public ForegroundObservation Before,AfterForeground; public HeldOwner Immediate,AfterHeld;
+    public int Requested,SendError,InputSent,Message; public bool SendReturned,WindowGone,ProcessExited,Qualifying; public long ElapsedMs; public string Error;
+  }
+  public static CloudCloseReceipt CloseTestCloudExperience(string image,string sid,int session,Action signature,Action<CloudCloseReceipt> progress) {
+    const string package="Microsoft.Windows.CloudExperienceHost_10.0.26100.1_neutral_neutral_cw5n1h2txyewy";
+    CloudCloseReceipt proof=new CloudCloseReceipt(); PinnedForeground pin=PinForeground(); proof.Before=pin.Proof; long started=Environment.TickCount64;
+    try {
+      if(pin.Proof.Error!=null) throw new Exception(pin.Proof.Error);
+      HeldOwner owner=pin.Proof.Before; IntPtr hwnd=new IntPtr(Convert.ToInt64(pin.Proof.Hwnd,16));
+      if(pin.Proof.PackageBeforeStatus!=0 || pin.Proof.PackageBefore!=package || !String.Equals(owner.Executable,image,StringComparison.OrdinalIgnoreCase) || owner.Sid!=sid || owner.Session!=session) throw new Exception("TEST CloudExperienceHost identity not exact");
+      signature();
+      proof.Immediate=ReadHeld(pin.Handle,owner.Pid,null);
+      if(proof.Immediate.BirthFileTime!=owner.BirthFileTime || proof.Immediate.Executable!=owner.Executable || proof.Immediate.Sid!=owner.Sid || proof.Immediate.Session!=owner.Session) throw new Exception("CloudExperienceHost held identity changed before close");
+      int status; if(ReadPackage(pin.Handle,out status)!=package || status!=0) throw new Exception("CloudExperienceHost package changed before close");
+      progress(proof); // Durable before-request evidence; timeout remains uncertain, never retry.
+      proof.Immediate=ReadHeld(pin.Handle,owner.Pid,null);
+      if(proof.Immediate.BirthFileTime!=owner.BirthFileTime || proof.Immediate.Executable!=owner.Executable || proof.Immediate.Sid!=owner.Sid || proof.Immediate.Session!=owner.Session) throw new Exception("CloudExperienceHost identity changed immediately before close");
+      RootOwner(hwnd,owner.Pid,pin.Proof.Thread);
+      if(GetForegroundWindow()!=hwnd) throw new Exception("CloudExperienceHost foreground changed before close");
+      UIntPtr ignored; SetLastError(0); proof.Requested=1; proof.Message=0x10;
+      proof.SendReturned=SendCloseMessage(hwnd,0x10,UIntPtr.Zero,IntPtr.Zero,0x23,1000,out ignored)!=IntPtr.Zero;
+      proof.SendError=Marshal.GetLastWin32Error();
+      long deadline=Environment.TickCount64+3000;
+      while(Environment.TickCount64<deadline) {
+        proof.ProcessExited=WaitForSingleObject(pin.Handle,0)==0;
+        proof.WindowGone=!IsWindow(hwnd);
+        if(proof.WindowGone || proof.ProcessExited) break;
+        RootOwner(hwnd,owner.Pid,pin.Proof.Thread); Thread.Sleep(50);
+      }
+      if(!proof.WindowGone) throw new Exception("CloudExperienceHost window did not close or handle reused");
+      if(!proof.ProcessExited) {
+        proof.AfterHeld=ReadHeld(pin.Handle,owner.Pid,null);
+        if(proof.AfterHeld.BirthFileTime!=owner.BirthFileTime || proof.AfterHeld.Executable!=owner.Executable || proof.AfterHeld.Sid!=owner.Sid || proof.AfterHeld.Session!=owner.Session) throw new Exception("CloudExperienceHost held identity changed after close");
+      }
+      signature();
+      PinnedForeground after=PinForeground(); FinishForeground(after); proof.AfterForeground=after.Proof;
+      if(after.Proof.Error!=null || after.Proof.PackageBefore==package || after.Proof.Hwnd==pin.Proof.Hwnd) throw new Exception("CloudExperienceHost closure not independently observed");
+      if(IsWindow(hwnd)) throw new Exception("CloudExperienceHost HWND recycled during closure proof");
+    } catch(Exception error) { proof.Error=error.Message; }
+    finally { if(pin.Handle!=null) pin.Handle.Dispose(); proof.ElapsedMs=Environment.TickCount64-started; }
+    return proof;
+  }
   public static Observation Focus(long hwnd,uint pid,uint thread,string executable,string sid,int session,long cimTicks) {
     return Observe(new IntPtr(hwnd),pid,false,new FocusRequest { Thread=thread,Executable=executable,Sid=sid,Session=session,CimTicks=cimTicks });
   }
