@@ -108,7 +108,7 @@ jobs:
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: pnpm ${{ matrix.pack }} --publish never
+        run: pnpm ${{ matrix.pack }} --publish never --config.mac.identity=null --config.mac.forceCodeSigning=false --config.mac.notarize=false
       - name: Verify bundle native architecture
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
       - name: Smoke packaged SQLite and PTY modules

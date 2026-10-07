@@ -535,9 +535,11 @@ jobs:
           - arch: arm64
             runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
+            bundle: release/mac-arm64/Agent Teams AI.app
           - arch: x64
             runner: macos-15-intel
             dist_command: pnpm pack:mac:x64
+            bundle: release/mac/Agent Teams AI.app
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -691,13 +693,13 @@ jobs:
         run: ${{ matrix.dist_command }} --publish never
 
       - name: Verify signed and notarized bundle (macOS ${{ matrix.arch }})
-        run: bash scripts/ci/verify-macos-signing.sh "release/mac-${{ matrix.arch }}/Agent Teams AI.app" --notarized
+        run: bash scripts/ci/verify-macos-signing.sh "${{ matrix.bundle }}" --notarized
 
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin ${{ matrix.arch }}
+        run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" darwin ${{ matrix.arch }}
 
       - name: Smoke packaged app (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" darwin
 
       - name: Upload assets to release
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
