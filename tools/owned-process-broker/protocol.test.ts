@@ -44,6 +44,9 @@ function wirePeer(
     holdWrite?: boolean;
     nativeFailed?: boolean;
     partialRelease?: boolean;
+    holdReleaseExit?: boolean;
+    releaseExit?: BrokerExit;
+    exitBeforeReleaseAck?: boolean;
   } = {}
 ) {
   const requests: Frame[] = [];
@@ -79,6 +82,8 @@ function wirePeer(
           }
         }
         if (frame.opcode === Op.release) {
+          if (options.exitBeforeReleaseAck)
+            exited(options.releaseExit ?? { code: 0, signal: null });
           if (options.partialRelease)
             control.push(
               encodeFrame({
@@ -90,7 +95,8 @@ function wirePeer(
             );
           else send(Op.released, frame.requestId);
           control.push(null);
-          exited({ code: 0, signal: null });
+          if (!options.holdReleaseExit && !options.exitBeforeReleaseAck)
+            exited(options.releaseExit ?? { code: 0, signal: null });
         }
       });
       if (options.holdWrite) completeWrite = done;
@@ -126,6 +132,20 @@ function wirePeer(
       const done = completeWrite;
       completeWrite = undefined;
       done?.();
+    },
+    eof: () => control.push(null),
+    resumed() {
+      const request = requests.findLast((frame) => frame.opcode === Op.resume);
+      if (!request) throw new Error('No Resume request');
+      send(Op.resumed, request.requestId);
+    },
+    resumeFailed() {
+      const request = requests.findLast((frame) => frame.opcode === Op.resume);
+      if (!request) throw new Error('No Resume request');
+      const payload = Buffer.alloc(5);
+      payload[0] = 1;
+      payload.writeUInt32LE(5, 1);
+      send(Op.failed, request.requestId, payload);
     },
     prepared() {
       const request = requests.find((frame) => frame.opcode === Op.launch);
@@ -642,6 +662,173 @@ describe('bounded owned process protocol', () => {
       brokerExit: { code: 0, signal: null },
     });
     owned.abandonControl(owner);
+  });
+  it.each(['lost-ack', 'native-failed', 'acknowledged'] as const)(
+    'Resume dispatch reports only observed creation facts (%s)',
+    async (result) => {
+      const peer = wirePeer();
+      const port = createWindowsOwnedLaunchPort(
+        'C:\\sandbox\\owned-process-broker.exe',
+        'job-membership',
+        peer.factory
+      );
+      const pending = port.allocate(owner);
+      const preparation = await port.prepare(pending, spec);
+      if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+      const resume = preparation.process.resume(owner, () => Promise.resolve());
+      const observed = resume.then(
+        () => undefined,
+        (error: unknown) => error
+      );
+      await Promise.resolve();
+      expect(peer.requests.at(-1)?.opcode).toBe(Op.resume);
+      if (result === 'lost-ack') peer.eof();
+      else if (result === 'native-failed') peer.resumeFailed();
+      else peer.resumed();
+      const error = await observed;
+      expect(error === undefined).toBe(result === 'acknowledged');
+      const outcome = await pending.stop({
+        expectedOwner: owner,
+        attemptId: 'resume-fact',
+        mode: 'graceful',
+        deadlineMs: performance.now() + 1000,
+      });
+      const expectedCreation = {
+        'lost-ack': 'uncertain',
+        'native-failed': 'contained-suspended',
+        acknowledged: 'running',
+      };
+      expect(outcome).toMatchObject({ kind: 'unknown', creation: expectedCreation[result] });
+      pending.abandonControl(owner);
+    }
+  );
+  it('preserves the caller generation spelling through resume and Stop authority checks', async () => {
+    const uppercase = { ...owner, processGeneration: generation.toUpperCase() };
+    const peer = wirePeer();
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe',
+      'job-membership',
+      peer.factory
+    );
+    const pending = port.allocate(uppercase);
+    expect(pending.owner).toEqual(uppercase);
+    const preparation = await port.prepare(pending, spec);
+    if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+    const resume = preparation.process.resume(uppercase, () => Promise.resolve());
+    await Promise.resolve();
+    peer.resumed();
+    await resume;
+    expect(
+      await pending.stop({
+        expectedOwner: uppercase,
+        attemptId: 'case-preserved',
+        mode: 'graceful',
+        deadlineMs: performance.now() + 1000,
+      })
+    ).toMatchObject({ kind: 'unknown', owner: uppercase, creation: 'running' });
+    pending.abandonControl(uppercase);
+  });
+  it.each([
+    { holdReleaseExit: true },
+    { releaseExit: { code: 74, signal: null } },
+    { releaseExit: { code: null, signal: 'SIGTERM' as const } },
+    { exitBeforeReleaseAck: true },
+  ])('requires both complete Release acknowledgement and original exit0 (%j)', async (options) => {
+    const peer = wirePeer(options);
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe',
+      'job-membership',
+      peer.factory
+    );
+    const pending = port.allocate(owner);
+    const preparation = await port.prepare(pending, spec);
+    if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+    const stopping = pending.stop({
+      expectedOwner: owner,
+      attemptId: 'release-completion',
+      mode: 'force',
+      deadlineMs: performance.now() + 1000,
+    });
+    peer.stopped();
+    const stopped = await stopping;
+    if (stopped.kind !== 'confirmed') throw new Error('Expected bridge receipt');
+    preparation.process.stdout.resume();
+    preparation.process.stderr.resume();
+    peer.stdout.end();
+    peer.stderr.end();
+    await preparation.process.drain(performance.now() + 1000);
+    let completed = false;
+    const release = pending.release(stopped.receipt, 'job-membership');
+    const observed = release.then(
+      () => {
+        completed = true;
+        return undefined;
+      },
+      (error: unknown) => error
+    );
+    await new Promise<void>((done) => setImmediate(done));
+    if (options.holdReleaseExit) {
+      expect(completed).toBe(false);
+      const duplicate = pending.release(stopped.receipt, 'job-membership');
+      peer.exit({ code: 0, signal: null });
+      await duplicate;
+      expect(peer.requests.filter((frame) => frame.opcode === Op.release)).toHaveLength(1);
+    }
+    const error = await observed;
+    expect(error === undefined).toBe(!options.releaseExit);
+    expect(completed).toBe(!options.releaseExit);
+    if (options.releaseExit)
+      expect(pending.diagnostics()).toMatchObject({
+        cause: { name: 'broker-exit', phase: 'release' },
+        brokerExit: options.releaseExit,
+      });
+    pending.abandonControl(owner);
+  });
+  it('a complete Release acknowledgement without original exit reaches a bounded failure', async () => {
+    const peer = wirePeer({ holdReleaseExit: true });
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe',
+      'job-membership',
+      peer.factory
+    );
+    const pending = port.allocate(owner);
+    const preparation = await port.prepare(pending, spec);
+    if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+    const stopping = pending.stop({
+      expectedOwner: owner,
+      attemptId: 'missing-exit',
+      mode: 'force',
+      deadlineMs: performance.now() + 1000,
+    });
+    peer.stopped();
+    const stopped = await stopping;
+    if (stopped.kind !== 'confirmed') throw new Error('Expected bridge receipt');
+    preparation.process.stdout.resume();
+    preparation.process.stderr.resume();
+    peer.stdout.end();
+    peer.stderr.end();
+    await preparation.process.drain(performance.now() + 1000);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const release = pending.release(stopped.receipt, 'job-membership');
+      const observed = release.then(
+        () => undefined,
+        (error: unknown) => error
+      );
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(5001);
+      expect(await observed).toBeInstanceOf(Error);
+      expect(pending.diagnostics()).toMatchObject({
+        cause: { name: 'release-unavailable', phase: 'release' },
+      });
+      peer.exit({ code: 0, signal: null });
+      await expect(pending.release(stopped.receipt, 'job-membership')).rejects.toThrow(
+        'completion deadline'
+      );
+    } finally {
+      pending.abandonControl(owner);
+      vi.useRealTimers();
+    }
   });
   it('runtime staged admission rejects tampered bytes, schema/protocol and machine mismatch', () => {
     const sandbox = mkdtempSync(join(tmpdir(), 'owned-admission-'));

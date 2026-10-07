@@ -23,6 +23,11 @@ std::map<uint64_t,wire::Frame> cachedReplies;
 std::array<uint8_t,16> generation{};
 std::atomic<bool> sealed{false}, launched{false}, admissionDone{false}, stopBusy{false};
 std::atomic<bool> releaseAccepted{false};
+#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
+bool releaseContentionEnabled=false;
+std::atomic<bool> releaseContentionRequested{false}, releaseContentionHeld{false};
+std::atomic<bool> releaseContentionObserved{false}, releaseContentionFinished{false};
+#endif
 #ifdef OWNED_PROCESS_TEST_ACCOUNTING_FAILURE
 std::atomic<bool> accountingFailurePending{true};
 #endif
@@ -121,6 +126,16 @@ void observeRoot() { // state lock required; no PID-based reopening
 void watcher() {
   for(;;) {
     if(state.try_lock()) {
+#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
+      if(releaseContentionRequested.exchange(false)) {
+        releaseContentionHeld=true; // this watcher actually owns the original state mutex
+        const auto deadline=GetTickCount64()+5000;
+        while(!releaseContentionObserved&&GetTickCount64()<deadline) Sleep(1);
+        if(!releaseContentionObserved) abandon();
+        Sleep(25); // bounded contention, only after the actual failed lock probe
+        releaseContentionFinished=true;
+      }
+#endif
       observeRoot();
       state.unlock();
     }
@@ -269,6 +284,10 @@ int main() {
   wchar_t flag[2]{};
   wire::terminalRaceEnabled=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_TERMINAL_RACE",flag,2)==1&&flag[0]==L'1';
 #endif
+#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
+  wchar_t contentionFlag[2]{};
+  releaseContentionEnabled=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_RELEASE_CONTENTION",contentionFlag,2)==1&&contentionFlag[0]==L'1';
+#endif
   std::thread(writer).detach(); std::thread(watcher).detach();
   uint64_t lastId=0; bool bound=false; size_t frames=0;
   std::map<uint64_t,wire::Frame> idempotentRequests;
@@ -314,11 +333,32 @@ int main() {
         CloseHandle(primaryThread); primaryThread=nullptr; creation=Running;
         reply(wire::Resumed,frame.id);
       } else if(frame.op==wire::Release) {
-        if(!frame.payload.empty()||!state.try_lock()) abandon();
+        if(!frame.payload.empty()) abandon();
+#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
+        if(releaseContentionEnabled) {
+          releaseContentionRequested=true;
+          const auto deadline=GetTickCount64()+5000;
+          while(!releaseContentionHeld&&GetTickCount64()<deadline) Sleep(1);
+          if(!releaseContentionHeld) abandon();
+          if(state.try_lock()) { state.unlock(); abandon(); }
+          releaseContentionObserved=true; // contention was observed, not inferred from a delay
+        }
+#endif
+        // Same bounded command-state budget as Resume; a watcher may briefly own this lock.
+        if(!state.try_lock_for(std::chrono::milliseconds(100))) abandon();
         std::unique_lock<std::timed_mutex> lock(state,std::adopt_lock);
         if(!confirmed||stopBusy) { failure(frame.id,creation,ERROR_INVALID_STATE); continue; }
         if(job&&!CloseHandle(job)) { failure(frame.id,creation,GetLastError()); continue; }
-        job=nullptr; releaseAccepted=true; reply(wire::Released,frame.id);
+        job=nullptr; releaseAccepted=true;
+        std::vector<uint8_t> releasedFacts;
+#ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
+        if(releaseContentionEnabled) {
+          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionHeld.load()));
+          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionObserved.load()));
+          wire::append(releasedFacts,static_cast<uint8_t>(releaseContentionFinished.load()));
+        }
+#endif
+        reply(wire::Released,frame.id,releasedFacts);
         break; // this command read completed; do not issue another read after accepted Release
       } else abandon();
     }

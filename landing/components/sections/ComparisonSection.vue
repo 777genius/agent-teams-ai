@@ -6,7 +6,36 @@ const { t, locale } = useI18n()
 const comparisonRobotRef = ref<HTMLElement | null>(null)
 const showComparisonRobotBubble = ref(false)
 let comparisonRobotObserver: IntersectionObserver | null = null
+const comparisonScrollRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+let comparisonResizeObserver: ResizeObserver | null = null
+const scrollLabels = computed(() => locale.value === 'ru'
+  ? { hint: 'Прокрутите таблицу, чтобы увидеть все инструменты.', left: 'Влево', right: 'Вправо' }
+  : { hint: 'Scroll the table to see every tool.', left: 'Left', right: 'Right' })
 
+function updateScrollState(): void {
+  const scroller = comparisonScrollRef.value
+  if (!scroller) return
+  canScrollLeft.value = scroller.scrollLeft > 1
+  canScrollRight.value = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
+}
+
+function scrollComparison(direction: -1 | 1, edge = false): void {
+  const scroller = comparisonScrollRef.value
+  if (!scroller) return
+  const featureWidth = scroller.querySelector('th')?.getBoundingClientRect().width ?? 0
+  const step = Math.max(40, scroller.clientWidth - featureWidth - 24)
+  const left = edge ? (direction === -1 ? 0 : scroller.scrollWidth) : scroller.scrollLeft + direction * step
+  scroller.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+}
+
+function onComparisonKeydown(event: KeyboardEvent): void {
+  if (event.altKey || event.ctrlKey || event.metaKey) return
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  scrollComparison(event.key === 'ArrowLeft' || event.key === 'Home' ? -1 : 1, event.key === 'Home' || event.key === 'End')
+}
 
 
 function note(text: string): string {
@@ -359,6 +388,11 @@ const sourceLinks = [
 ]
 
 onMounted(() => {
+  if (comparisonScrollRef.value) {
+    comparisonResizeObserver = new ResizeObserver(updateScrollState)
+    comparisonResizeObserver.observe(comparisonScrollRef.value)
+    updateScrollState()
+  }
   if (!comparisonRobotRef.value) return
 
   comparisonRobotObserver = new IntersectionObserver(
@@ -378,6 +412,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  comparisonResizeObserver?.disconnect()
+  comparisonResizeObserver = null
   comparisonRobotObserver?.disconnect()
   comparisonRobotObserver = null
 })
@@ -455,7 +491,33 @@ function getPowerLabel(power: number): string {
             draggable="false"
           >
         </span>
+        <div class="comparison-table__toolbar">
+          <p id="comparison-scroll-hint" class="comparison-table__scroll-hint">{{ scrollLabels.hint }}</p>
+          <div class="comparison-table__scroll-controls">
+            <button type="button" class="comparison-table__scroll-button" aria-controls="comparison-scroll" :disabled="!canScrollLeft" @click="scrollComparison(-1)">
+              <span aria-hidden="true">←</span> {{ scrollLabels.left }}
+            </button>
+            <button type="button" class="comparison-table__scroll-button" aria-controls="comparison-scroll" :disabled="!canScrollRight" @click="scrollComparison(1)">
+              {{ scrollLabels.right }} <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+        <div
+          id="comparison-scroll"
+          ref="comparisonScrollRef"
+          class="comparison-table__scroll"
+          role="region"
+          :aria-label="t('comparison.sectionTitle')"
+          aria-describedby="comparison-scroll-hint"
+          tabindex="0"
+          @scroll.passive="updateScrollState"
+          @keydown.self="onComparisonKeydown"
+        >
         <table class="comparison-table">
+          <colgroup>
+            <col class="comparison-table__feature-col">
+            <col v-for="comp in competitors" :key="comp.key" class="comparison-table__tool-col">
+          </colgroup>
           <thead>
             <tr>
               <th class="comparison-table__th comparison-table__th--feature">
@@ -525,6 +587,7 @@ function getPowerLabel(power: number): string {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <p class="comparison-section__rating-note">
@@ -546,7 +609,8 @@ function getPowerLabel(power: number): string {
 <style scoped>
 .comparison-section {
   position: relative;
-  --comparison-sticky-header-offset: 76px;
+  --comparison-feature-width: 200px;
+  --comparison-tool-width: 280px;
 }
 
 .comparison-section__header {
@@ -578,7 +642,6 @@ function getPowerLabel(power: number): string {
 
 /* Table wrapper */
 .comparison-table__wrap {
-  overflow-x: clip;
   border-radius: 16px;
   border: 1px solid rgba(0, 240, 255, 0.15);
   background: rgba(10, 10, 15, 0.6);
@@ -587,10 +650,68 @@ function getPowerLabel(power: number): string {
   z-index: 1;
 }
 
+.comparison-table__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  color: #a8b4cf;
+}
+
+.comparison-table__scroll-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.comparison-table__scroll-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.comparison-table__scroll-button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: #00d4e6;
+  background: transparent;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.comparison-table__scroll-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.comparison-table__scroll {
+  max-height: min(72vh, 820px);
+  overflow: auto;
+  scroll-padding-left: var(--comparison-feature-width);
+  border-radius: 0 0 16px 16px;
+  scrollbar-color: #0891b2 transparent;
+}
+
+.comparison-table__scroll:focus-visible,
+.comparison-table__scroll-button:focus-visible {
+  outline: 2px solid #0891b2;
+  outline-offset: -2px;
+}
+
+.comparison-table__feature-col {
+  width: var(--comparison-feature-width);
+}
+
+.comparison-table__tool-col {
+  width: var(--comparison-tool-width);
+}
+
 .comparison-table__robot {
   position: absolute;
   right: clamp(28px, 7vw, 96px);
-  bottom: calc(100% - 20px);
+  bottom: calc(100% - 4px);
   z-index: 4;
   width: clamp(82px, 7.2vw, 124px);
   height: auto;
@@ -722,7 +843,8 @@ function getPowerLabel(power: number): string {
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1100px;
+  min-width: calc(var(--comparison-feature-width) + 6 * var(--comparison-tool-width));
+  table-layout: fixed;
   font-size: 0.85rem;
 }
 
@@ -733,7 +855,7 @@ function getPowerLabel(power: number): string {
 
 .comparison-table__th {
   position: sticky;
-  top: var(--comparison-sticky-header-offset);
+  top: 0;
   z-index: 3;
   padding: 16px 12px;
   text-align: center;
@@ -751,7 +873,7 @@ function getPowerLabel(power: number): string {
 .comparison-table__th--feature {
   text-align: left;
   padding-left: 20px;
-  min-width: 180px;
+  white-space: normal;
 }
 
 .comparison-table__th--highlight {
@@ -798,6 +920,19 @@ function getPowerLabel(power: number): string {
   font-size: 0.85rem;
 }
 
+.comparison-table__th--feature,
+.comparison-table__td--feature {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: rgb(10, 10, 15);
+  box-shadow: 1px 0 rgba(0, 240, 255, 0.15);
+}
+
+.comparison-table__th--feature {
+  z-index: 5;
+}
+
 .comparison-table__td--highlight-col {
   background: rgba(0, 240, 255, 0.04);
 }
@@ -824,7 +959,7 @@ function getPowerLabel(power: number): string {
   font-size: 0.78rem;
   color: #6b7994;
   line-height: 1.3;
-  max-width: 140px;
+  max-width: calc(var(--comparison-tool-width) - 32px);
   text-align: center;
   white-space: normal;
 }
@@ -923,6 +1058,19 @@ function getPowerLabel(power: number): string {
   color: #475569;
 }
 
+.v-theme--light .comparison-table__toolbar {
+  color: #475569;
+}
+
+.v-theme--light .comparison-table__scroll-button {
+  color: #0e7490;
+}
+
+.v-theme--light .comparison-table__th--feature,
+.v-theme--light .comparison-table__td--feature {
+  background: #fff;
+}
+
 .v-theme--light .comparison-table__wrap {
   background: rgba(255, 255, 255, 0.8);
   border-color: rgba(0, 180, 200, 0.2);
@@ -943,7 +1091,7 @@ function getPowerLabel(power: number): string {
 .v-theme--light .comparison-table__th {
   color: #64748b;
   border-bottom-color: rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.95);
+  background: #fff;
 }
 
 .v-theme--light .comparison-table__th--highlight {
@@ -972,7 +1120,7 @@ function getPowerLabel(power: number): string {
 }
 
 .v-theme--light .comparison-table__cell-note {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .v-theme--light .comparison-table__cell-note--link {
@@ -1019,14 +1167,6 @@ function getPowerLabel(power: number): string {
 
 /* Responsive */
 @media (max-width: 960px) {
-  .comparison-section {
-    --comparison-sticky-header-offset: 60px;
-  }
-
-  .comparison-table__wrap {
-    overflow-x: auto;
-  }
-
   .comparison-section__title {
     font-size: 1.85rem;
   }
@@ -1040,13 +1180,16 @@ function getPowerLabel(power: number): string {
   }
 }
 
-@media (min-width: 1600px) {
-  .comparison-section {
-    --comparison-sticky-header-offset: 124px;
-  }
-}
-
 @media (max-width: 600px) {
+  .comparison-table__robot {
+    display: none;
+  }
+
+  .comparison-section {
+    --comparison-feature-width: 144px;
+    --comparison-tool-width: 220px;
+  }
+
   .comparison-section__title {
     font-size: 1.6rem;
   }
@@ -1075,7 +1218,6 @@ function getPowerLabel(power: number): string {
 
   .comparison-table__cell-note {
     font-size: 0.7rem;
-    max-width: 110px;
   }
 }
 </style>

@@ -66,6 +66,10 @@ then performs actual successful Job queries: first attempt remains unknown even 
 and only distinct fresh reconciliation can confirm. A release-delay fixture pauses the writer
 after a fully written ACK; the raw native gate reads Released, ends owner control and requires
 the original broker process to exit0, exercising reader/writer scheduling rather than a mock.
+Release waits up to the same100ms state-lock budget as Resume. This unstaged variant also
+uses a watcher-held original mutex and an actually failed lock probe before bounded unlock;
+the contention gate requires all three native facts, a genuine Released ACK and original exit0.
+The production broker does not compile the contention toggle or emit its fixture-only ACK facts.
 This same unstaged variant requires an actual post-Launch ReadFile ERROR_IO_PENDING before
 Prepared, proving concurrent read/reply scheduling. Native pending-write timeout/cancellation
 storage races remain an explicit OPEN runtime gate; synthetic bridge tests cannot prove them.
@@ -106,10 +110,15 @@ mark before Stop. Output remains unconsumed and bounded; Resume ACK alone is ins
 A target-only first-effect nonce precedes scenario work/descendant spawn:
 absent while suspended/cancelled/birth-failed/unpublished, exact nonce present after resume.
 They run only disposable fixture processes in the controller's new temp directory.
+Stream parser, protocol and helper diagnostic callbacks preserve their first exception as an
+awaited gate rejection. The owning finally still abandons private capabilities and waits only
+its direct helpers; diagnostic logging failures cannot skip that cleanup. Portable tests throw
+from actual output/decoder/event callbacks and require rejected waits plus owned cleanup.
 No taskkill/PID scan is proof. Fixture handle witnesses and Job accounting are separate
 assertions. A successful future protocol test is not a native-tree/packaging claim.
 
 Official API contracts used:
+
 - https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute
 - https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject
 - https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/get-osfhandle

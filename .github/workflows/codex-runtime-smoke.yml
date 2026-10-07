@@ -30,6 +30,11 @@ on:
       - 'src/main/utils/pathDecoder.ts'
       - 'tsconfig*.json'
 
+# Cancel obsolete PR checks without sharing custody with push or manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   install:
     name: Install Codex runtime (${{ matrix.os }})

@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks';
 
 import type { ChildProcess } from 'node:child_process';
 import type { PendingOwnedProcess } from '../../src/main/utils/ownedProcess/contract';
+import type { NativeGateEvents } from './nativeGateEvents';
 
 type GateScenario =
   | 'bootstrap'
@@ -16,6 +17,7 @@ type GateScenario =
   | 'accounting-failure'
   | 'release'
   | 'release-delay'
+  | 'release-contention'
   | 'terminal-race'
   | 'owner-eof'
   | 'broker-crash'
@@ -73,7 +75,8 @@ interface NativeGateDiagnostics {
 export function createNativeGateDiagnostics(
   testChildren: Set<ChildProcess>,
   helperExits: Map<ChildProcess, Promise<void>>,
-  pendingCapabilities: Set<PendingOwnedProcess>
+  pendingCapabilities: Set<PendingOwnedProcess>,
+  events: NativeGateEvents
 ): NativeGateDiagnostics {
   const helperFacts = new Map<ChildProcess, HelperFacts>();
   const gateStarted = performance.now();
@@ -124,18 +127,27 @@ export function createNativeGateDiagnostics(
         })
       );
     };
-    child.once('exit', (code, signal) => {
-      facts.exit = { code, signal };
-      observed('exit');
-    });
-    child.once('error', () => {
-      facts.errorObserved = true;
-      observed('helper-error');
-    });
-    child.once('close', () => {
-      facts.closed = true;
-      observed('close');
-    });
+    child.once(
+      'exit',
+      events.guard((code: number | null, signal: NodeJS.Signals | null) => {
+        facts.exit = { code, signal };
+        observed('exit');
+      })
+    );
+    child.once(
+      'error',
+      events.guard(() => {
+        facts.errorObserved = true;
+        observed('helper-error');
+      })
+    );
+    child.once(
+      'close',
+      events.guard(() => {
+        facts.closed = true;
+        observed('close');
+      })
+    );
   };
   const cleanupObservation = (stage: CleanupObservation): void => {
     console.log(JSON.stringify({ cleanupObservation: stage, ...snapshots() }));
@@ -173,11 +185,11 @@ export function createNativeGateDiagnostics(
       cleanupObservation('before-private-abandon');
     },
     observeHelperCleanup: async (wait) => {
-      phase('helper-exits');
+      events.guard(phase)('helper-exits');
       try {
         await wait();
       } finally {
-        cleanupObservation('after-helper-wait');
+        events.guard(cleanupObservation)('after-helper-wait');
       }
     },
     cleanupRequested: (child) => {

@@ -34,6 +34,7 @@ import {
   type TreeOutcome,
   type TreeReceipt,
 } from './contract';
+import { BrokerReleaseConfirmation } from './releaseConfirmation';
 
 const nativeExitCategories: readonly NativeExitCategory[] = [
   'owner-eof',
@@ -222,6 +223,8 @@ class WindowsCapability implements PreparedOwnedProcess {
   private sealed = false;
   private released = false;
   private releaseRequested = false;
+  private readonly releaseConfirmation = new BrokerReleaseConfirmation();
+  private releaseOperation?: Promise<void>;
   private resumeStarted = false;
   private drainSettled = false;
   private streamFailed = false;
@@ -241,10 +244,7 @@ class WindowsCapability implements PreparedOwnedProcess {
     for (const value of Object.values(owner)) {
       if (!value || value.length > 256 || value.includes('\0')) throw new Error('Invalid owner');
     }
-    this.owner = Object.freeze({
-      ...owner,
-      processGeneration: owner.processGeneration.toLowerCase(),
-    });
+    this.owner = Object.freeze({ ...owner });
     this.decoder = new FrameDecoder(this.owner.processGeneration);
   }
   get root(): Readonly<{ pid: number; birth: string }> {
@@ -300,6 +300,7 @@ class WindowsCapability implements PreparedOwnedProcess {
     if (this.transportFailure) return;
     this.recordCause(cause, observation);
     this.transportFailure = reason;
+    this.releaseConfirmation.fail(reason);
     this.sealed = true;
     if (this.started && !this.rootIdentity) this.creation = 'uncertain';
     for (const waiter of this.waiters.values()) waiter.reject(new Error(reason));
@@ -351,7 +352,7 @@ class WindowsCapability implements PreparedOwnedProcess {
     }
     if (frame.opcode === Op.released) {
       if (frame.payload.length) throw new Error('Invalid release acknowledgement');
-      this.released = true; // terminal before EOF/exit can run ahead of Promise continuation
+      this.releaseConfirmation.acknowledge();
     }
     if (frame.opcode === Op.failed) {
       if (frame.payload.length !== 5) throw new Error('Invalid preparation failure');
@@ -480,12 +481,15 @@ class WindowsCapability implements PreparedOwnedProcess {
         } catch {
           this.fail('Truncated broker protocol');
         }
-        this.fail('Broker control EOF', 'control-eof');
+        if (!this.releaseConfirmation.acknowledged) this.fail('Broker control EOF', 'control-eof');
       });
       pipe.on('error', () => this.fail('Broker control failure', 'control-read'));
       this.child.onFailure(() => this.fail('Broker startup failure', 'startup'));
       this.child.onExit((exit) => {
         this.brokerExit ??= Object.freeze({ code: exit.code, signal: exit.signal });
+        this.releaseConfirmation.observeExit(this.brokerExit);
+        if (this.releaseRequested && (exit.code !== 0 || exit.signal !== null))
+          this.fail('Broker exit without release success', 'broker-exit');
         // Process exit can precede reading its fully written acknowledgement. A pending release
         // remains bounded by request deadline/EOF; exit alone is never an acknowledgement.
         if (!this.released && !this.releaseRequested)
@@ -541,6 +545,7 @@ class WindowsCapability implements PreparedOwnedProcess {
       await installOwner();
       if (this.sealed || this.transportFailure)
         throw new Error('Resume sealed during owner installation');
+      this.creation = 'uncertain'; // dispatch may resume natively before its acknowledgement arrives
       const frame = await this.request(
         Op.resume,
         Op.resumed,
@@ -722,16 +727,18 @@ class WindowsCapability implements PreparedOwnedProcess {
     }
     if (this.released) return;
     if (this.started && !this.drainSettled) throw new Error('Target drain not settled');
+    if (this.releaseOperation) return this.releaseOperation;
+    this.releaseOperation = this.performRelease();
+    return this.releaseOperation;
+  }
+  private async performRelease(): Promise<void> {
     if (this.started) {
       this.releaseRequested = true;
+      const deadline = performance.now() + 5000;
       try {
-        const frame = await this.request(
-          Op.release,
-          Op.released,
-          Buffer.alloc(0),
-          performance.now() + 5000
-        );
+        const frame = await this.request(Op.release, Op.released, Buffer.alloc(0), deadline);
         if (frame.payload.length) throw new Error('Invalid release acknowledgement');
+        await this.releaseConfirmation.wait(deadline);
       } catch (error) {
         this.releaseRequested = false;
         this.fail('Broker release acknowledgement unavailable', 'release-unavailable');

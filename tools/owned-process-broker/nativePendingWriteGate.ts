@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';
 import type { HelperRole } from './nativeGateDiagnostics';
+import { createNativeGateEvents, type NativeGateEvents } from './nativeGateEvents';
 
 const SOURCE_BYTES = 1024 * 1024;
 type WriteMode = 'complete' | 'deadline';
@@ -295,7 +296,8 @@ export function validateNativeWriteFacts(facts: NativeFacts, mode: WriteMode): v
 export async function runNativePendingWriteGate(
   existingFixture: string,
   mode: WriteMode,
-  track: (child: ChildProcess, role?: HelperRole) => void
+  track: (child: ChildProcess, role?: HelperRole) => void,
+  events: NativeGateEvents = createNativeGateEvents()
 ): Promise<void> {
   const admitted = admitFixture(existingFixture); // external receipt/PE/digest before any spawn
   assert.ok(isAbsolute(admitted.executable));
@@ -307,31 +309,44 @@ export async function runNativePendingWriteGate(
   const chunks: Buffer[] = [];
   let length = 0;
   let stderr = 0;
-  await new Promise<void>((done, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error('Pending write original helper deadline')),
-      10000
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await events.wait(
+      new Promise<void>((done, reject) => {
+        timer = setTimeout(
+          () => reject(new Error('Pending write original helper deadline')),
+          10000
+        );
+        child.stdout.on(
+          'data',
+          events.guard((chunk: Buffer) => {
+            length += chunk.length;
+            if (length <= 4096) chunks.push(chunk);
+            else reject(new Error('Pending write fact overflow'));
+          })
+        );
+        child.stderr.on(
+          'data',
+          events.guard((chunk: Buffer) => {
+            stderr += chunk.length;
+            if (stderr > 4096) reject(new Error('Pending write error overflow'));
+          })
+        );
+        child.once('error', () => {
+          clearTimeout(timer);
+          reject(new Error('Pending write helper error'));
+        });
+        child.once('close', (code, signal) => {
+          clearTimeout(timer);
+          if (code !== 0 || signal !== null || stderr !== 0 || length > 4096)
+            reject(new Error('Pending write original supervisor failed'));
+          else done();
+        });
+      })
     );
-    child.stdout.on('data', (chunk: Buffer) => {
-      length += chunk.length;
-      if (length <= 4096) chunks.push(chunk);
-      else reject(new Error('Pending write fact overflow'));
-    });
-    child.stderr.on('data', (chunk: Buffer) => {
-      stderr += chunk.length;
-      if (stderr > 4096) reject(new Error('Pending write error overflow'));
-    });
-    child.once('error', () => {
-      clearTimeout(timer);
-      reject(new Error('Pending write helper error'));
-    });
-    child.once('close', (code, signal) => {
-      clearTimeout(timer);
-      if (code !== 0 || signal !== null || stderr !== 0 || length > 4096)
-        reject(new Error('Pending write original supervisor failed'));
-      else done();
-    });
-  });
+  } finally {
+    clearTimeout(timer);
+  }
   const facts = decodeFacts(Buffer.concat(chunks, length));
   validateNativeWriteFacts(facts, mode);
   console.log(JSON.stringify({ nativeWritePrimitive: mode, binarySha256: admitted.sha256, facts }));
