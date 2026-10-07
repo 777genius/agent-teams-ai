@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -159,14 +159,14 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
     }
   );
 
-  it.each([
+  it.concurrent.each([
     'success',
     'early-exit',
     'timeout',
     'failure-pattern',
     'renderer-crash',
     'failure-and-cleanup-error',
-  ])('cleans inherited pipes on the full harness %s path', (mode) => {
+  ])('cleans inherited pipes on the full harness %s path', async (mode) => {
     const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-harness-TEST-'));
     try {
       const fixtureSource = `#!${process.execPath}
@@ -206,17 +206,38 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
         );
         nodeArgs.unshift('--require', hookPath);
       }
-      const result = spawnSync(process.execPath, nodeArgs, {
-        cwd: sandbox,
-        encoding: 'utf8',
-        timeout: 8_000,
-        env: {
-          ...process.env,
-          TMPDIR: sandbox,
-          PACKAGED_SMOKE_TIMEOUT_MS: '2000',
-          PACKAGED_SMOKE_STABLE_MS: mode === 'renderer-crash' ? '400' : '0',
-          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
-        },
+      const result = await new Promise<{
+        error: undefined;
+        status: number;
+        stdout: string;
+        stderr: string;
+      }>((resolve, reject) => {
+        execFile(
+          process.execPath,
+          nodeArgs,
+          {
+            cwd: sandbox,
+            encoding: 'utf8',
+            timeout: 8_000,
+            env: {
+              ...process.env,
+              TMPDIR: sandbox,
+              PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+              PACKAGED_SMOKE_STABLE_MS: mode === 'renderer-crash' ? '400' : '0',
+              PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+            },
+          },
+          (error, stdout, stderr) => {
+            if (!error) {
+              resolve({ error: undefined, status: 0, stdout, stderr });
+            } else if (typeof error.code === 'number' && !error.killed && !error.signal) {
+              // execFile reports normal nonzero exits as errors; preserve their exact status.
+              resolve({ error: undefined, status: error.code, stdout, stderr });
+            } else {
+              reject(error);
+            }
+          }
+        );
       });
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(mode === 'success' ? 0 : 1);
@@ -242,7 +263,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
     } finally {
       fs.rmSync(sandbox, { recursive: true, force: true });
     }
-  });
+  }, 8_000);
 
   it('reports a failed executable spawn through cleanup without claiming success', () => {
     const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-spawn-TEST-'));

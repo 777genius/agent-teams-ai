@@ -5,13 +5,24 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const isolated = vi.hoisted(() => ({ env: {} as NodeJS.ProcessEnv }));
+import type { ProviderAwareCliEnvOptions } from '@main/services/runtime/providerAwareCliEnv';
+
+const isolated = vi.hoisted(() => ({
+  byProvider: new Map<string, { binaryPath: string; env: NodeJS.ProcessEnv }>(),
+}));
 
 // Only credential/environment ports are replaced; execution and parsing stay real.
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: () => ({ env: isolated.env, connectionIssues: {} }),
+  buildPassiveProviderStatusCliEnv: (
+    options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
+  ) => {
+    const fixture = options.providerId ? isolated.byProvider.get(options.providerId) : undefined;
+    if (!fixture || options.binaryPath !== fixture.binaryPath)
+      throw new Error('Missing TEST provider summary environment binding');
+    return { env: { ...fixture.env }, connectionIssues: {}, providerArgs: [] };
+  },
 }));
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: {
@@ -54,76 +65,78 @@ function quoteSh(value: string): string {
 }
 
 describe('Provider summary timeout subprocess integration', () => {
-  let sandbox: string | undefined;
-
-  afterEach(async () => {
-    if (sandbox) {
-      await rm(sandbox, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-      sandbox = undefined;
-    }
-  });
-
-  it.each(['opencode', 'anthropic'] as const)(
+  it.concurrent.each(['opencode', 'anthropic'] as const)(
     'parses an authoritative %s summary after eight seconds',
     async (providerId) => {
-      sandbox = await mkdtemp(path.join(os.tmpdir(), 'provider summary sandbox '));
-      const config = path.join(sandbox, 'fresh config');
-      await mkdir(config);
-      isolated.env = {
-        HOME: sandbox,
-        USERPROFILE: sandbox,
-        XDG_CONFIG_HOME: config,
-        CLAUDE_CONFIG_DIR: config,
-        APPDATA: config,
-        LOCALAPPDATA: config,
-        XDG_DATA_HOME: config,
-        XDG_CACHE_HOME: config,
-        TEMP: sandbox,
-        TMP: sandbox,
-        PATH: '',
-        ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}),
-      };
-      const program = path.join(sandbox, 'summary fixture.cjs');
-      const launcher = path.join(sandbox, process.platform === 'win32' ? 'summary.cmd' : 'summary');
-      await writeFile(program, summaryProgram);
-      // Deliberately not an npm/Bun shim: Windows must execute the actual .cmd
-      // fallback. Its environment marker proves the batch body was evaluated.
-      await writeFile(
-        launcher,
-        process.platform === 'win32'
-          ? `@echo off\r\nset "SUMMARY_CMD_SHIM=executed"\r\n"${process.execPath}" "${program}" %*\r\n`
-          : `#!/bin/sh\nexec ${quoteSh(process.execPath)} ${quoteSh(program)} "$@"\n`
+      const sandbox = await mkdtemp(
+        path.join(os.tmpdir(), `TEST ${providerId} provider summary sandbox `)
       );
-      await chmod(launcher, 0o755);
+      try {
+        const config = path.join(sandbox, 'fresh config');
+        await mkdir(config);
+        const env: NodeJS.ProcessEnv = {
+          HOME: sandbox,
+          USERPROFILE: sandbox,
+          XDG_CONFIG_HOME: config,
+          CLAUDE_CONFIG_DIR: config,
+          APPDATA: config,
+          LOCALAPPDATA: config,
+          XDG_DATA_HOME: config,
+          XDG_CACHE_HOME: config,
+          TEMP: sandbox,
+          TMP: sandbox,
+          PATH: '',
+          ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}),
+        };
+        const program = path.join(sandbox, 'summary fixture.cjs');
+        const launcher = path.join(
+          sandbox,
+          process.platform === 'win32' ? 'summary.cmd' : 'summary'
+        );
+        await writeFile(program, summaryProgram);
+        // Deliberately not an npm/Bun shim: Windows must execute the actual .cmd
+        // fallback. Its environment marker proves the batch body was evaluated.
+        await writeFile(
+          launcher,
+          process.platform === 'win32'
+            ? `@echo off\r\nset "SUMMARY_CMD_SHIM=executed"\r\n"${process.execPath}" "${program}" %*\r\n`
+            : `#!/bin/sh\nexec ${quoteSh(process.execPath)} ${quoteSh(program)} "$@"\n`
+        );
+        await chmod(launcher, 0o755);
+        isolated.byProvider.set(providerId, { binaryPath: launcher, env });
 
-      const status = await new ClaudeMultimodelBridgeService().getProviderStatus(
-        launcher,
-        providerId
-      );
+        const status = await new ClaudeMultimodelBridgeService().getProviderStatus(
+          launcher,
+          providerId
+        );
 
-      expect(status).toMatchObject({
-        providerId,
-        supported: true,
-        authenticated: false,
-        statusCheckOutcome: 'authoritative',
-        statusMessage: 'Sandbox delayed summary',
-        capabilities: { teamLaunch: false },
-      });
-      expect(status.statusCheckErrorCode).toBeUndefined();
-      expect(Number(status.detailMessage)).toBeGreaterThanOrEqual(8000);
-      const calls = (await readFile(path.join(sandbox, 'calls.jsonl'), 'utf8'))
-        .trim()
-        .split('\n')
-        .map((line) => JSON.parse(line));
-      expect(calls).toEqual([
-        expect.objectContaining({
-          args: ['runtime', 'status', '--json', '--provider', providerId, '--summary'],
-          home: sandbox,
-          config,
-          ...(process.platform === 'win32' ? { shim: 'executed' } : {}),
-        }),
-      ]);
-      expect(calls[0].pid).not.toBe(process.pid);
+        expect(status).toMatchObject({
+          providerId,
+          supported: true,
+          authenticated: false,
+          statusCheckOutcome: 'authoritative',
+          statusMessage: 'Sandbox delayed summary',
+          capabilities: { teamLaunch: false },
+        });
+        expect(status.statusCheckErrorCode).toBeUndefined();
+        expect(Number(status.detailMessage)).toBeGreaterThanOrEqual(8000);
+        const calls = (await readFile(path.join(sandbox, 'calls.jsonl'), 'utf8'))
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+        expect(calls).toEqual([
+          expect.objectContaining({
+            args: ['runtime', 'status', '--json', '--provider', providerId, '--summary'],
+            home: sandbox,
+            config,
+            ...(process.platform === 'win32' ? { shim: 'executed' } : {}),
+          }),
+        ]);
+        expect(calls[0].pid).not.toBe(process.pid);
+      } finally {
+        isolated.byProvider.delete(providerId);
+        await rm(sandbox, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      }
     },
     20_000
   );

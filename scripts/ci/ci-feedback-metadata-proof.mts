@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import { object, REPOSITORY, sha, WORKFLOW } from './ci-feedback-reuse.mts';
+import { object, REPOSITORY, rootTestShards, sha, WORKFLOW } from './ci-feedback-reuse.mts';
 import type { GitHubRead, JsonObject } from './ci-feedback-reuse.mts';
 
 const lifecycle = ['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'];
@@ -13,8 +13,14 @@ const heavySkips = [
   "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
 ];
 const feedbackSkip = "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
-const fullJobs = ['validate', 'Full qualification', 'test (1/2)', 'test (2/2)',
-  'lint (main)', 'lint (renderer)', 'lint (features)', 'Task change ledger Windows smoke'];
+function configuredHeavySkips(shards: 2 | 4): string[] {
+  return heavySkips.map((name) => name.replace('/2)', `/${shards})`));
+}
+function fullJobs(shards: 2 | 4): string[] {
+  return ['validate', 'Full qualification',
+    ...Array.from({ length: shards }, (_, index) => `test (${index + 1}/${shards})`),
+    'lint (main)', 'lint (renderer)', 'lint (features)', 'Task change ledger Windows smoke'];
+}
 
 function requireProof(value: unknown, reason: string): asserts value {
   if (!value) throw new Error(reason);
@@ -53,14 +59,14 @@ function runIdentity(run: JsonObject): string {
     run.run_attempt, run.status, run.conclusion, run.display_title, run.created_at,
     run.updated_at, repoIdentity(run.repository), repoIdentity(run.head_repository), run.pull_requests]);
 }
-function attestation(run: JsonObject, pr: JsonObject): string | undefined {
+function attestation(run: JsonObject, pr: JsonObject, mergeSha: string): string {
   const title = run.display_title;
   requireProof(typeof title === 'string', 'Missing authenticated run title');
-  if (!title.startsWith('CI proof:')) return undefined; // Completed legacy producers need job proof.
-  const tuple = /^CI proof: PR=([1-9]\d*) \| head=([a-f0-9]{40}) \| base=([a-f0-9]{40}) \| action=([a-z_]+) \| draft=(true|false)$/.exec(title);
+  requireProof(title.startsWith('CI proof:'), 'Missing immutable merge attestation');
+  const tuple = /^CI proof: PR=([1-9]\d*) \| head=([a-f0-9]{40}) \| base=([a-f0-9]{40}) \| merge=([a-f0-9]{40}) \| action=([a-z_]+) \| draft=(true|false)$/.exec(title);
   requireProof(tuple && Number(tuple[1]) === pr.number && tuple[2] === object(pr.head).sha &&
-    tuple[3] === object(pr.base).sha && tuple[5] === String(pr.draft), 'Run event attestation mismatch');
-  const action = tuple[4];
+    tuple[3] === object(pr.base).sha && tuple[4] === mergeSha && tuple[6] === String(pr.draft), 'Run event attestation mismatch');
+  const action = tuple[5];
   requireProof(action === 'edited' || lifecycle.includes(action), 'Unknown producer action');
   requireProof(!(action === 'ready_for_review' && pr.draft) &&
     !(action === 'converted_to_draft' && !pr.draft), 'Contradictory draft action');
@@ -95,15 +101,26 @@ function skipped(jobs: JsonObject[], names: string[]): void {
       'Skipped producer job executed or failed');
   }
 }
-function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, action?: string): boolean {
+function skippedDraftNodeCleanup(gate: JsonObject, step: JsonObject): boolean {
+  if (step.name !== 'Post Setup Node.js' || step.conclusion !== 'skipped') return false;
+  const steps = array(gate.steps);
+  const setup = steps.filter((item) => item.name === 'Setup Node.js');
+  const failure = steps.filter((item) => item.name === 'Require complete current-code qualification');
+  return steps.filter((item) => item.name === 'Post Setup Node.js').length === 1 &&
+    setup.length === 1 && setup[0].status === 'completed' && setup[0].conclusion === 'success' &&
+    failure.length === 1 && failure[0].status === 'completed' && failure[0].conclusion === 'failure' &&
+    positive(step.number) > positive(failure[0].number) && positive(failure[0].number) > positive(setup[0].number);
+}
+function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, shards: 2 | 4, action?: string): boolean {
+  const skippedHeavy = configuredHeavySkips(shards);
   requireProof(jobs.every((job) => job.run_id === run.id && job.run_attempt === run.run_attempt &&
     job.head_sha === run.head_sha && job.status === 'completed'), 'Job attempt mismatch');
   const plan = sourceProof(jobs, run, pr);
   const metadata = jobs.find((job) => job.name === 'Metadata CI result');
   if (metadata) {
     requireProof(action === 'edited' || action === undefined, 'Lifecycle producer claimed metadata');
-    exactJobs(jobs, ['Metadata CI plan', 'Metadata CI result', ...heavySkips, feedbackSkip]);
-    skipped(jobs, [...heavySkips, feedbackSkip]);
+    exactJobs(jobs, ['Metadata CI plan', 'Metadata CI result', ...skippedHeavy, feedbackSkip]);
+    skipped(jobs, [...skippedHeavy, feedbackSkip]);
     requireProof(run.conclusion === 'success' && metadata.conclusion === 'success' &&
       successfulStep(metadata, 'Preserve existing current-code checks after metadata edits') &&
       array(metadata.steps).filter((step) => step.name === 'Require complete current-code qualification' &&
@@ -126,8 +143,8 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, act
     return false; // Metadata continuity must still reach a canonical producer.
   }
   if (pr.draft && action && action !== 'edited') {
-    exactJobs(jobs, ['plan', 'Fast feedback', 'Full qualification', ...heavySkips]);
-    skipped(jobs, heavySkips);
+    exactJobs(jobs, ['plan', 'Fast feedback', 'Full qualification', ...skippedHeavy]);
+    skipped(jobs, skippedHeavy);
     const feedback = jobs.find((job) => job.name === 'Fast feedback')!;
     const gate = jobs.find((job) => job.name === 'Full qualification')!;
     requireProof(run.conclusion === 'failure' && plan.name === 'plan' &&
@@ -141,14 +158,15 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, act
       array(gate.steps).every((step) => step.status === 'completed' &&
         (step.conclusion === 'success' ||
           (step.name === 'Require complete current-code qualification' && step.conclusion === 'failure') ||
-          (step.name === 'Preserve existing current-code checks after metadata edits' && step.conclusion === 'skipped'))),
+          (step.name === 'Preserve existing current-code checks after metadata edits' && step.conclusion === 'skipped') ||
+          skippedDraftNodeCleanup(gate, step))),
       'Draft producer failed outside its deliberate qualification gate');
     return true;
   }
   requireProof(!pr.draft, 'Legacy or edited draft producer lacks draft lifecycle proof');
   const feedback = jobs.find((job) => job.name === 'Fast feedback' || job.name === feedbackSkip);
   requireProof(feedback, 'Missing skipped feedback');
-  exactJobs(jobs, [String(plan.name), String(feedback.name), ...fullJobs]);
+  exactJobs(jobs, [String(plan.name), String(feedback.name), ...fullJobs(shards)]);
   skipped(jobs, [String(feedback.name)]);
   requireProof(run.conclusion === 'success' && jobs.every((job) =>
     job === feedback || job.conclusion === 'success') &&
@@ -162,6 +180,8 @@ export async function proveMetadataProducer(
   env: Record<string, string | undefined>, event: unknown, read: GitHubRead
 ): Promise<boolean> {
   try {
+    const shards = rootTestShards(env.CI_ROOT_TEST_SHARDS);
+    const mergeSha = sha(env.GITHUB_SHA);
     const payload = object(event);
     const pr = object(payload.pull_request);
     const number = positive(pr.number);
@@ -197,6 +217,12 @@ export async function proveMetadataProducer(
         run.head_sha === head && repoIdentity(run.repository) === repoIdentity(repository) &&
         repoIdentity(run.head_repository) === repoIdentity(object(pr.head).repo), 'Run identity mismatch');
       const links = array(run.pull_requests);
+      if (links.length === 0) {
+        const fork = object(object(pr.head).repo);
+        requireProof(fork.id !== repository.id && fork.full_name !== REPOSITORY && attestation(run, pr, mergeSha),
+          'Empty linkage requires a true fork and immutable event attestation');
+        return;
+      }
       requireProof(links.length === 1 && links[0].number === number &&
         object(links[0].head).sha === head && object(links[0].base).sha === object(pr.base).sha &&
         sameLinkedRepository(object(links[0].head).repo, object(pr.head).repo) &&
@@ -204,8 +230,16 @@ export async function proveMetadataProducer(
     };
     const current = object(await read(`${prefix}/actions/runs/${runId}`));
     checkRun(current);
-    requireProof(current.id === runId && current.run_attempt === attempt && attestation(current, pr) === 'edited',
+    requireProof(current.id === runId && current.run_attempt === attempt && attestation(current, pr, mergeSha) === 'edited',
       'Current run is not the attested metadata event');
+    // PR base.sha can retain its old anchor after the branch advances. Bind the
+    // actual tested merge object instead; every producer must attest this SHA.
+    const merge = object(await read(`${prefix}/git/commits/${mergeSha}`));
+    const parents = array(merge.parents);
+    requireProof(merge.sha === mergeSha && parents.length === 2 && parents[1].sha === head,
+      'Current synthetic merge identity mismatch');
+    sha(parents[0].sha);
+    sha(object(merge.tree).sha);
     const listEndpoint = `${prefix}/actions/workflows/${workflowId}/runs?event=pull_request&head_sha=${head}&per_page=100`;
     const readList = async (): Promise<JsonObject[]> => {
       const listing = object(await read(listEndpoint));
@@ -222,13 +256,13 @@ export async function proveMetadataProducer(
       const run = object(await read(`${prefix}/actions/runs/${positive(candidate.id)}`));
       checkRun(run);
       requireProof(run.id === candidate.id && runIdentity(run) === runIdentity(candidate), 'Producer attempt changed');
-      const action = attestation(run, pr);
+      const action = attestation(run, pr, mergeSha);
       checked.push(run);
       if (run.status === 'completed') {
         const response = object(await read(`${prefix}/actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`));
         const jobs = array(response.jobs);
         requireProof(response.total_count === jobs.length && jobs.length < 100, 'Incomplete producer jobs');
-        canonical = proveCompleted(jobs, run, pr, action);
+        canonical = proveCompleted(jobs, run, pr, shards, action);
       } else {
         requireProof(['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(String(run.status)) &&
           run.conclusion === null && action, 'Pending producer lacks immutable attestation');
