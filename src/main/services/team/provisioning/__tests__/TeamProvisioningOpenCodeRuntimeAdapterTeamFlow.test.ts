@@ -4,9 +4,8 @@ import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { TeamInboxReader } from '../../TeamInboxReader';
 import { setClaudeBasePathOverride } from '../../../../utils/pathDecoder';
-
+import { TeamInboxReader } from '../../TeamInboxReader';
 import {
   createOpenCodeTeamThroughRuntimeAdapterFlow,
   launchOpenCodeTeamThroughRuntimeAdapterFlow,
