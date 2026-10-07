@@ -17,6 +17,7 @@ import {
   textProof,
 } from '../../ci/release/contract.ts';
 import { hashFile } from './inputs.mts';
+import { authenticateExecutor } from './execution-provenance.mts';
 import { validateWindowsProducerUpload } from './windows-plan-producer.mts';
 import {
   planWindowsInputs,
@@ -77,6 +78,7 @@ interface ProducerReceipt {
   artifactName: string;
   artifactSha256: string;
   toolingSha: string;
+  executionSha?: string;
   planDigest: string;
   inputDigest: string;
 }
@@ -94,6 +96,11 @@ async function downloadTrustedArtifact(
     /^[a-f\d]{64}$/u.test(artifactSha256) &&
       /^[a-f\d]{64}$/u.test(planDigest) &&
       /^[a-f\d]{40}$/u.test(toolingSha)
+  );
+  const executionIndex = args.indexOf('--execution-sha');
+  const execution = authenticateExecutor(
+    toolingSha,
+    executionIndex < 0 ? toolingSha : option('--execution-sha')
   );
   const workflow =
     kind === 'prepared'
@@ -200,6 +207,7 @@ async function downloadTrustedArtifact(
     artifactName,
     artifactSha256,
     toolingSha,
+    executionSha: execution.executionSha,
     planDigest,
     inputDigest: digest(canonical(plan.input)),
   };

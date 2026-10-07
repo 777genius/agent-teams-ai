@@ -12,8 +12,10 @@ import {
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
 import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
+import { assertNativeRootFocus, windowsUiaSource } from './windows-ota-observer.mts';
 
 import type { ExecFileException } from 'node:child_process';
+import type { NativeRootFocus } from './windows-ota-observer.mts';
 import type { PhysicalProfile, ProfileOwnership } from './windows-ota-profile.mts';
 
 const execute = promisify(execFile);
@@ -108,6 +110,7 @@ interface NativeWindow {
   foreground: boolean;
   screenshot: string;
   caption: CaptionProof | null;
+  uiaFocus: NativeRootFocus | null;
 }
 interface DesktopSession {
   station: string;
@@ -142,7 +145,7 @@ $progress = $InputFile + '.progress.jsonl'
 function Write-TestProgress([string]$phase, [hashtable]$details=$null) {
   $record = @{ operation=$data.operation; phase=$phase; at=[DateTime]::UtcNow.ToString('o') }
   if ($null -ne $details) { $record.details=$details }
-  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Compress) + [Environment]::NewLine)
+  [IO.File]::AppendAllText($progress, (ConvertTo-Json -InputObject $record -Depth 12 -Compress) + [Environment]::NewLine)
 }
 Write-TestProgress 'after-input-and-shell-validation'
 function Get-StartUtcTicks([object]$value) {
@@ -238,6 +241,10 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading;
+using System.Collections.Generic;
+using Microsoft.Win32.SafeHandles;
+${windowsUiaSource}
 public static class TestWindowsNative {
   [DllImport("shell32.dll")] static extern int SHGetKnownFolderPath(ref Guid id, uint flags, IntPtr token, out IntPtr value);
   public static string KnownFolder(string id) {
@@ -276,6 +283,8 @@ public static class TestWindowsNative {
   [DllImport("user32.dll",SetLastError=true)] static extern bool SetWindowPos(IntPtr hwnd,IntPtr after,int x,int y,int width,int height,uint flags);
   [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] inputs,int size);
   public static object CaptionTrace;
+  public static TestOtaObserver.Observation RootFocusTrace;
+  public sealed class OwnedFocusRequired:Exception { public OwnedFocusRequired(string reason):base(reason) {} }
   public static int InputSize() {
     int size=Marshal.SizeOf(typeof(Input));
     if(IntPtr.Size!=8 || size!=40) throw new Exception("Unexpected native INPUT ABI");
@@ -336,14 +345,14 @@ public static class TestWindowsNative {
     try {
       SameThread(hwnd,pid,thread,validate);
       if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) {
-        if(original || !occluded) throw new Exception("No accessible owned HTCAPTION point");
+        if(original || !occluded) throw new OwnedFocusRequired("No accessible owned HTCAPTION point");
         SameThread(hwnd,pid,thread,validate); promoted=true;
         if(!SetWindowPos(hwnd,new IntPtr(-1),0,0,0,0,0x213) || !Topmost(hwnd)) throw new Exception("Owned TOPMOST promotion failed");
         SameThread(hwnd,pid,thread,validate);
         if(!GetWindowRect(hwnd,out r)) throw new Exception("Owned rectangle unavailable after promotion");
       }
       SameThread(hwnd,pid,thread,validate);
-      if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) throw new Exception("Owned caption occluded or no HTCAPTION point");
+      if(!FindCaption(hwnd,pid,thread,r,searchStart+2000,ref searchCandidates,out point,out proof,out occluded)) throw new OwnedFocusRequired("Owned caption occluded or no HTCAPTION point");
       searchElapsedMs=Environment.TickCount64-searchStart;
       Input[] inputs=new Input[] {
         new Input { Mouse=new Mouse { X=(int)((long)point.X*65536/width)+1,Y=(int)((long)point.Y*65536/height)+1,Flags=0x8001 } },
@@ -392,8 +401,8 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress) {
-    CaptionTrace=null; validate();
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks) {
+    CaptionTrace=null; RootFocusTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
     ShowWindow(hwnd, 9);
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
@@ -408,7 +417,16 @@ public static class TestWindowsNative {
     FocusTrace=new object[] { hwnd.ToInt64().ToString("x"), expectedPid, thread, foreground.ToInt64().ToString("x"), foregroundPid, foregroundThread, GetCurrentThreadId(), accepted, synchronized, WindowMetrics(foreground), WindowMetrics(hwnd) };
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
     if ((accepted && !synchronized) || foreground != hwnd) {
-      CaptionClick(hwnd,expectedPid,thread,validate,progress);
+      try { CaptionClick(hwnd,expectedPid,thread,validate,progress); }
+      catch(OwnedFocusRequired) {
+        SameThread(hwnd,expectedPid,thread,validate);
+        RootFocusTrace=new TestOtaObserver.Observation { RootHwnd=hwnd.ToInt64().ToString("x"),RootPid=expectedPid,RootThread=thread };
+        try {
+          RootFocusTrace=TestOtaObserver.Focus(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks);
+          if(RootFocusTrace.Error!=null) throw new Exception(RootFocusTrace.Error);
+        } catch(Exception error) { if(RootFocusTrace.Error==null) { RootFocusTrace.Error=error.Message; RootFocusTrace.HResult=error.HResult; } throw; }
+        SameThread(hwnd,expectedPid,thread,validate);
+      }
       if(GetForegroundWindow()!=hwnd) throw new Exception("Owned foreground changed after caption fallback");
     }
     SameThread(hwnd,expectedPid,thread,validate);
@@ -432,7 +450,7 @@ Write-TestProgress 'after-native-compile'
 Write-TestProgress 'operation-entry'
 $result = $null
 switch ($data.operation) {
-  'compile' { $result=@{ inputSize=[TestWindowsNative]::InputSize(); pointerSize=[IntPtr]::Size } }
+  'compile' { $uia=[TestOtaObserver]::Compile(); $result=@{ uia=$uia; inputSize=[TestWindowsNative]::InputSize(); pointerSize=[IntPtr]::Size } }
   'profile' {
     foreach($registry in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
       if (Test-Path -LiteralPath $registry) {
@@ -449,6 +467,41 @@ switch ($data.operation) {
     $result=@{ station=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetProcessWindowStation()); desktop=[TestWindowsNative]::ObjectName([TestWindowsNative]::GetThreadDesktop([TestWindowsNative]::GetCurrentThreadId())); session=(Get-Process -Id $PID).SessionId; sid=$identity.User.Value; administrator=$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
   }
   'processes' { $result=@(Read-Owned $data.executable) }
+  'installer-lineage' {
+    function Read-LineageRow([int]$processId) {
+      $item=@(Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction Stop)
+      if ($item.Count -ne 1 -or -not $item[0].ExecutablePath) { throw 'Lineage identity unavailable' }
+      $sid=Invoke-CimMethod -InputObject $item[0] -MethodName GetOwnerSid -ErrorAction Stop
+      if ($sid.ReturnValue -ne 0) { throw 'Lineage SID unavailable' }
+      @{ pid=$processId; parent=[int]$item[0].ParentProcessId; executable=$item[0].ExecutablePath; start=$item[0].CreationDate.ToUniversalTime().ToString('o'); sid=$sid.Sid; session=[int]$item[0].SessionId }
+    }
+    function Test-LineageParent($expected) {
+      $fresh=Read-LineageRow $expected.pid
+      if ($fresh.executable -ne $expected.executable -or -not (Test-SameStart $fresh.start $expected.start) -or $fresh.sid -ne $expected.sid -or $fresh.session -ne $expected.session) { throw 'Lineage parent identity changed' }
+    }
+    $owner=$data.owner; Test-OwnedPath $owner.executable | Out-Null
+    if ($owner.sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $owner.session -ne (Get-Process -Id $PID).SessionId) { throw 'Installer owner/session mismatch' }
+    Test-LineageParent $owner
+    $rows=New-Object 'Collections.Generic.List[object]'; $queue=New-Object 'Collections.Generic.Queue[object]'
+    $queue.Enqueue(@{ identity=$owner; depth=0 }); $limited=$false
+    while ($queue.Count -gt 0 -and $rows.Count -lt 16) {
+      $parent=$queue.Dequeue(); Test-LineageParent $parent.identity
+      if ($parent.depth -ge 3) { $limited=$true; continue }
+      $children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($parent.identity.pid)" -ErrorAction Stop | Select-Object -First 17)
+      foreach ($item in $children) {
+        if ($rows.Count -ge 16) { $limited=$true; break }
+        $child=Read-LineageRow $item.ProcessId; Test-LineageParent $parent.identity
+        if ($child.parent -ne $parent.identity.pid -or $child.sid -ne $owner.sid -or $child.session -ne $owner.session -or (Get-StartUtcTicks $child.start) -lt (Get-StartUtcTicks $parent.identity.start)) { throw 'Lineage child relation changed' }
+        $allowed=$child.executable.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $child.executable -in @([IO.Path]::Combine($data.shell.systemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),[IO.Path]::Combine($data.shell.systemRoot,'SysWOW64','WindowsPowerShell','v1.0','powershell.exe'))
+        if (-not $allowed) { $rows.Add(@{ pid=$child.pid; parent=$child.parent; rejected='Image outside TEST/systemPS bounds'; stopEligible=$false }); continue }
+        $rows.Add(@{ identity=$child; depth=$parent.depth+1; stopEligible=$false })
+        $queue.Enqueue(@{ identity=$child; depth=$parent.depth+1 })
+      }
+      Test-LineageParent $parent.identity
+    }
+    Test-LineageParent $owner
+    $result=@{ root=$owner; descendants=@($rows.ToArray()); truncated=($limited -or $queue.Count -gt 0); source='CIM read-only ancestry observation'; ownershipAdopted=$false }
+  }
   'capture' {
     $validate=[Action] {
       $process=@(Read-Owned $data.executable | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) -and $_.sid -eq $data.sid -and $_.session -eq $data.session })
@@ -459,15 +512,16 @@ switch ($data.operation) {
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
     $attemptProgress=[Action] { Write-TestProgress 'caption-before-effects' @{ trace=[TestWindowsNative]::CaptionTrace } }
-    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress) }
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start)) }
     finally {
       Write-TestProgress 'caption-attempt' @{ trace=[TestWindowsNative]::CaptionTrace }
+      Write-TestProgress 'capture-uia-focus' @{ observation=[TestWindowsNative]::RootFocusTrace }
       $focus=[TestWindowsNative]::FocusTrace
       if ($null -ne $focus) { Write-TestProgress 'capture-focus' @{ desiredHwnd=$focus[0]; desiredPid=$focus[1]; desiredThread=$focus[2]; foregroundHwnd=$focus[3]; foregroundPid=$focus[4]; foregroundThread=$focus[5]; callerThread=$focus[6]; setForegroundAccepted=$focus[7]; synchronizationSucceeded=$focus[8]; foregroundGeometry=$focus[9]; ownedGeometry=$focus[10] } }
     }
     if ($null -eq $pixels) { Write-TestProgress 'capture-foreground-pending'; $result=$null; break }
     if ($pixels[0] -ne $data.pid) { throw 'HWND owner changed' }
-    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file; caption=[TestWindowsNative]::CaptionTrace }
+    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file; caption=[TestWindowsNative]::CaptionTrace; uiaFocus=[TestWindowsNative]::RootFocusTrace }
   }
   'signature' {
     $file=Test-OwnedPath $data.file
@@ -629,8 +683,16 @@ export async function windowsNative(root: string, evidence: string) {
     physicalProfile: () => call<PhysicalProfile>('profile'),
     session: () => call<DesktopSession>('session'),
     processes: (executable: string) => call<WindowsProcess[]>('processes', { executable }),
-    capture: (owner: WindowsProcess, screenshot: string) =>
-      call<NativeWindow | null>('capture', { ...owner, screenshot }),
+    installerLineage: (owner: Omit<WindowsProcess, 'command'>) =>
+      call<unknown>('installer-lineage', { owner }),
+    capture: async (owner: WindowsProcess, screenshot: string) => {
+      const window = await call<NativeWindow | null>('capture', { ...owner, screenshot });
+      if (window?.uiaFocus) {
+        assert(window.caption);
+        assertNativeRootFocus(owner, window.hwnd, window.caption, window.uiaFocus);
+      }
+      return window;
+    },
     signature: (file: string) =>
       call<{
         status: string;

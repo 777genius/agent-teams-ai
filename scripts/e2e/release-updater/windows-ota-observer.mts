@@ -10,7 +10,95 @@ import {
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
 
-import type { WindowsProcess } from './windows-native.mts';
+import type { ChildProcess } from 'node:child_process';
+import type { WindowsProcess, windowsNative } from './windows-native.mts';
+
+export function observeInstallerChild(
+  child: ChildProcess,
+  executable: string,
+  native: Pick<Awaited<ReturnType<typeof windowsNative>>, 'processes' | 'installerLineage'>,
+  save: (receipt: unknown) => Promise<void>
+) {
+  const receipt = {
+    scope: 'Read-only NSIS spawn and one25second lineage; no process adoption',
+    qualifying: false,
+    executable,
+    events: [] as object[],
+    identity: null as Omit<WindowsProcess, 'command'> | null,
+    lineage: null as unknown,
+    diagnosticError: null as string | null,
+    persistenceError: null as string | null,
+    closeObserved: false,
+  };
+  let timer: ReturnType<typeof setTimeout> | undefined,
+    ended = false;
+  let pending = Promise.resolve(),
+    writes = Promise.resolve();
+  const record = (event: string, details: object = {}) => {
+    receipt.events.push({ event, at: new Date().toISOString(), ...details });
+    writes = writes.then(() => save(receipt));
+    void writes.catch((error: unknown) => {
+      receipt.persistenceError = String(error);
+    });
+  };
+  child.once('spawn', () => {
+    const pid = child.pid;
+    record('spawn', { pid });
+    pending = native
+      .processes(executable)
+      .then((owners) => {
+        const owner = owners.find((item) => item.pid === pid);
+        if (owner) {
+          receipt.identity = {
+            pid: owner.pid,
+            parent: owner.parent,
+            executable: owner.executable,
+            start: owner.start,
+            sid: owner.sid,
+            session: owner.session,
+          };
+        }
+        record('identity', { available: receipt.identity !== null });
+      })
+      .catch((error: unknown) => {
+        receipt.diagnosticError = String(error);
+        record('identity-unavailable');
+      });
+    timer = setTimeout(() => {
+      pending = pending
+        .then(async () => {
+          if (ended || !receipt.identity) return;
+          receipt.lineage = await native.installerLineage(receipt.identity);
+          record('lineage-at25s');
+        })
+        .catch((error: unknown) => {
+          receipt.diagnosticError = String(error);
+          record('lineage-unavailable');
+        });
+    }, 25_000);
+  });
+  child.once('error', (error) => {
+    ended = true;
+    clearTimeout(timer);
+    record('error', { error: String(error) });
+  });
+  child.once('exit', (code, signal) => {
+    ended = true;
+    clearTimeout(timer);
+    record('exit', { code, signal });
+  });
+  child.once('close', (code, signal) => {
+    receipt.closeObserved = true;
+    record('close', { code, signal });
+  });
+  return async () => {
+    clearTimeout(timer);
+    await pending;
+    // Exit is decisive; pipe closure may follow later and must not extend the installer deadline.
+    record('observation-finalized', { closeObserved: receipt.closeObserved });
+    await writes;
+  };
+}
 
 export interface NativeNames {
   Names: string[];
@@ -48,22 +136,87 @@ export function assertNativeNames(ownerPid: number, hwnd: string, observation: N
   assert(observation.ProcessIds.length <= observation.Visited);
   assert(observation.ProcessIds.every((pid) => Number.isInteger(pid) && pid > 0));
 }
-const execute = promisify(execFile);
-const script = String.raw`
-param([string]$InputFile,[string]$TrustedModulePath)
-$ErrorActionPreference='Stop'
-[Environment]::SetEnvironmentVariable('PSModulePath',$TrustedModulePath,'Process')
-$data=ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($InputFile))
-if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.ToString() -ne $data.shell.version -or $PSHOME -ne $data.shell.psHome -or [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName -ne $data.shell.executable) { throw 'Selected installed PS7 identity changed' }
-$refs=[string[]]@($data.references.assemblies | Where-Object { [IO.Path]::GetDirectoryName($_.file) -eq [IO.Path]::Combine($PSHOME,'ref') } | ForEach-Object { $_.file })
-if ($refs.Count -lt 4) { throw 'Installed PSHOME references required' }
-Add-Type -TypeDefinition @'
-using System;
-using System.Text;
-using System.Threading;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
+export interface NativeRootFocus extends NativeNames {
+  Focus: {
+    Before: HeldFocusOwner;
+    After: HeldFocusOwner;
+    Focusable: boolean;
+    Requested: boolean;
+    Synchronized: boolean;
+    SetFocusHResult: number | null;
+    CimTicks: string;
+    ForegroundHwnd: string;
+    ComparisonResolution100nsTicks: number;
+  };
+}
+interface HeldFocusOwner {
+  Pid: number;
+  Executable: string;
+  Sid: string;
+  Session: number;
+  BirthFileTime: string;
+}
+function ownerCimTicks(start: string) {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,7}))?Z$/.exec(start);
+  assert(match, 'Owned creation must be explicit UTC');
+  const seconds = Date.parse(`${match[1]}Z`);
+  assert(Number.isFinite(seconds));
+  return (
+    BigInt(seconds) * 10_000n + BigInt((match[2] ?? '').padEnd(7, '0')) + 621_355_968_000_000_000n
+  );
+}
+export function assertNativeRootFocus(
+  owner: Omit<WindowsProcess, 'command'>,
+  hwnd: string,
+  caption: {
+    pid: number;
+    hwnd: string;
+    thread: number;
+    sent: number;
+    error: number;
+    restored: boolean;
+    restorationError: string | null;
+  },
+  observation: NativeRootFocus
+) {
+  assert.equal(caption.pid, owner.pid);
+  assert.equal(caption.hwnd, hwnd);
+  assert.equal(caption.sent, 0, 'No UIA retry after actual/partial input');
+  assert.equal(caption.error, 0);
+  assert.equal(caption.restored, true);
+  assert.equal(caption.restorationError, null);
+  assert.equal(observation.Error, null);
+  assert.equal(observation.HResult, 0);
+  assert.equal(observation.RootHwnd, hwnd);
+  assert.equal(observation.RootPid, owner.pid);
+  assert.equal(observation.RootThread, caption.thread);
+  assert(Number.isInteger(caption.thread) && caption.thread > 0);
+  assert.equal(observation.Visited, 0, 'SetFocus observes only the exact root');
+  assert.deepEqual(observation.Names, []);
+  assert.deepEqual(observation.ProcessIds, []);
+  const proof = observation.Focus;
+  assert.equal(typeof proof.Focusable, 'boolean');
+  assert.equal(proof.Requested, true);
+  assert.equal(proof.SetFocusHResult, 0);
+  assert.equal(proof.Synchronized, true);
+  assert.equal(proof.ForegroundHwnd, hwnd, 'S_OK is insufficient without owned foreground');
+  assert.equal(proof.ComparisonResolution100nsTicks, 10);
+  assert.deepEqual(proof.Before, proof.After, 'Held exact raw identity must remain unchanged');
+  assert.equal(proof.Before.Pid, owner.pid);
+  assert.equal(proof.Before.Executable.toLowerCase(), owner.executable.toLowerCase());
+  assert.equal(proof.Before.Sid, owner.sid);
+  assert.equal(proof.Before.Session, owner.session);
+  const cimTicks = ownerCimTicks(owner.start);
+  assert.equal(proof.CimTicks, cimTicks.toString());
+  assert(/^\d+$/.test(proof.Before.BirthFileTime));
+  // FILETIME starts1601, DateTime ticks start0001; compare only CIM's documented microsecond.
+  assert.equal(
+    BigInt(proof.Before.BirthFileTime) / 10n,
+    (cimTicks - 504_911_232_000_000_000n) / 10n
+  );
+}
+
+export const windowsUiaSource = String.raw`
 // Exact IUnknown prefixes from Microsoft's UIAutomationClient.h; unused slots are never called.
 [ComImport,Guid("30cbe57d-d9d0-452a-ab13-7ac5ac4825ee"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 public interface TestAutomation {
@@ -76,7 +229,7 @@ public interface TestAutomation {
 }
 [ComImport,Guid("d22108aa-8ac5-49a5-837b-37bbb3d7591e"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 public interface TestElement {
-  void SetFocus(); void GetRuntimeId(); void FindFirst(); void FindAll();
+  [PreserveSig] int SetFocus(); void GetRuntimeId(); void FindFirst(); void FindAll();
   void FindFirstBuildCache(); void FindAllBuildCache(); void BuildUpdatedCache();
   [PreserveSig] int GetCurrentPropertyValue(int id,[MarshalAs(UnmanagedType.Struct)] out object value);
 }
@@ -110,6 +263,7 @@ public static class TestOtaObserver {
     public string[] Names=new string[0]; public string Error;
     public int HResult,Visited,RootChildren,MaxDepth,Characters;
     public int[] ProcessIds=new int[0]; public string RootHwnd; public uint RootPid,RootThread;
+    public FocusObservation Focus;
   }
   static object Property(TestElement element,int id) {
     object value; Marshal.ThrowExceptionForHR(element.GetCurrentPropertyValue(id,out value)); return value;
@@ -151,8 +305,8 @@ public static class TestOtaObserver {
     try { Marshal.ReleaseComObject(value); }
     catch(Exception error) { if(result.Error==null) { result.Error=error.Message; result.HResult=error.HResult; } }
   }
-  static Observation Observe(IntPtr window,uint pid,bool compileOnly) {
-    Observation result=new Observation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid };
+  static Observation Observe(IntPtr window,uint pid,bool compileOnly,FocusRequest focus=null) {
+    Observation result=new Observation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid,Focus=focus==null?null:new FocusObservation() };
     Exception failure=null;
     Thread worker=new Thread(()=> {
       TestAutomation automation=null; TestWalker walker=null; TestElement root=null;
@@ -165,9 +319,11 @@ public static class TestOtaObserver {
         if(!compileOnly) {
           uint actual; result.RootThread=GetWindowThreadProcessId(window,out actual);
           RootOwner(window,pid,result.RootThread);
+          if(focus!=null && result.RootThread!=focus.Thread) throw new Exception("UIA focus root thread changed");
           Marshal.ThrowExceptionForHR(automation.ElementFromHandle(window,out root));
           if(root==null || ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root HWND/PID mismatch");
-          Walk(root,walker,window,names,pids,result,0);
+          if(focus==null) Walk(root,walker,window,names,pids,result,0);
+          else FocusRoot(root,window,pid,focus,result);
           if(ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root changed after traversal");
           RootOwner(window,pid,result.RootThread);
         }
@@ -183,9 +339,84 @@ public static class TestOtaObserver {
     if(compileOnly && result.Error!=null) throw new Exception(result.Error,failure);
     return result;
   }
+    [DllImport("kernel32.dll",SetLastError=true)] static extern SafeProcessHandle OpenProcess(uint access,bool inherit,uint pid);
+  [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(SafeProcessHandle process,out long created,out long exited,out long kernel,out long user);
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool QueryFullProcessImageName(SafeProcessHandle process,uint flags,StringBuilder image,ref int size);
+  [DllImport("kernel32.dll")] static extern uint GetProcessId(SafeProcessHandle process);
+  [DllImport("kernel32.dll")] static extern uint WaitForSingleObject(SafeProcessHandle process,uint milliseconds);
+  [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(SafeProcessHandle process,uint access,out SafeAccessTokenHandle token);
+  [DllImport("advapi32.dll",SetLastError=true)] static extern bool GetTokenInformation(SafeAccessTokenHandle token,int kind,out int session,int size,out int needed);
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr hwnd,uint message,UIntPtr wParam,IntPtr lParam,uint flags,uint timeout,out UIntPtr result);
+  public sealed class FocusRequest { public string Executable,Sid; public int Session; public long CimTicks; public uint Thread; }
+  public sealed class HeldOwner { public uint Pid; public string Executable,Sid,BirthFileTime; public int Session; }
+  public sealed class FocusObservation {
+    public HeldOwner Before,After; public bool Focusable,Requested,Synchronized;
+    public int? SetFocusHResult; public string CimTicks,ForegroundHwnd;
+    public int ComparisonResolution100nsTicks=10;
+  }
+  static HeldOwner ReadHeld(SafeProcessHandle handle,uint pid,FocusRequest expected) {
+    if(handle.IsInvalid || WaitForSingleObject(handle,0)!=0x102 || GetProcessId(handle)!=pid) throw new Exception("Held owned process unavailable");
+    long birth,exit,kernel,user; int size=32768; StringBuilder image=new StringBuilder(size);
+    if(!GetProcessTimes(handle,out birth,out exit,out kernel,out user) || !QueryFullProcessImageName(handle,0,image,ref size)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    SafeAccessTokenHandle token;
+    if(!OpenProcessToken(handle,8,out token)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    string sid; int session,needed;
+    using(token) using(System.Security.Principal.WindowsIdentity identity=new System.Security.Principal.WindowsIdentity(token.DangerousGetHandle())) {
+      if(identity.User==null || !GetTokenInformation(token,12,out session,4,out needed) || needed!=4) throw new Exception("Held process token identity unavailable");
+      sid=identity.User.Value;
+    }
+    // CIM_DATETIME carries six microsecond digits; held-handle raw100ns birth stays exact before/after.
+    if(String.IsNullOrEmpty(image.ToString()) || !String.Equals(image.ToString(),expected.Executable,StringComparison.OrdinalIgnoreCase) || sid!=expected.Sid || session!=expected.Session || DateTime.FromFileTimeUtc(birth).Ticks/10!=expected.CimTicks/10) throw new Exception("Held process identity differs from fresh CIM owner");
+    return new HeldOwner { Pid=pid,Executable=image.ToString(),Sid=sid,Session=session,BirthFileTime=birth.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+  }
+  static void FocusRoot(TestElement root,IntPtr window,uint pid,FocusRequest expected,Observation result) {
+    using(SafeProcessHandle handle=OpenProcess(0x100000|0x1000,false,pid)) {
+      FocusObservation proof=result.Focus; proof.CimTicks=expected.CimTicks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+      proof.Before=ReadHeld(handle,pid,expected); RootOwner(window,pid,expected.Thread);
+      if(ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Root-only UIA focus identity changed");
+      object focusable=Property(root,30009); proof.Focusable=focusable is bool && (bool)focusable;
+      // Native SetFocus has no advertised capability precondition; retain the observed value.
+      HeldOwner immediate=ReadHeld(handle,pid,expected);
+      if(immediate.BirthFileTime!=proof.Before.BirthFileTime) throw new Exception("Held creation changed before SetFocus");
+      RootOwner(window,pid,expected.Thread); proof.Requested=true; proof.SetFocusHResult=root.SetFocus();
+      Marshal.ThrowExceptionForHR(proof.SetFocusHResult.Value);
+      if(proof.SetFocusHResult!=0) throw new Exception("Owned root SetFocus did not return S_OK");
+      proof.After=ReadHeld(handle,pid,expected); RootOwner(window,pid,expected.Thread);
+      if(proof.After.BirthFileTime!=proof.Before.BirthFileTime || ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Owned identity changed after root SetFocus");
+      proof.ForegroundHwnd=GetForegroundWindow().ToInt64().ToString("x"); UIntPtr ignored;
+      if(GetForegroundWindow()!=window) throw new Exception("Root SetFocus did not activate owned foreground");
+      proof.Synchronized=SendMessageTimeout(window,0,UIntPtr.Zero,IntPtr.Zero,0x22,500,out ignored)!=IntPtr.Zero;
+      if(ReadHeld(handle,pid,expected).BirthFileTime!=proof.Before.BirthFileTime) throw new Exception("Held exact creation changed after owned WM_NULL");
+      RootOwner(window,pid,expected.Thread);
+      if(!proof.Synchronized || GetForegroundWindow()!=window) throw new Exception("Owned UIA focus foreground synchronization failed");
+    }
+  }
+  public static Observation Focus(long hwnd,uint pid,uint thread,string executable,string sid,int session,long cimTicks) {
+    return Observe(new IntPtr(hwnd),pid,false,new FocusRequest { Thread=thread,Executable=executable,Sid=sid,Session=session,CimTicks=cimTicks });
+  }
   public static Observation Compile() { return Observe(IntPtr.Zero,0,true); }
   public static Observation WindowNames(long handle,uint pid) { return Observe(new IntPtr(handle),pid,false); }
 }
+`;
+
+const execute = promisify(execFile);
+const script = String.raw`
+param([string]$InputFile,[string]$TrustedModulePath)
+$ErrorActionPreference='Stop'
+[Environment]::SetEnvironmentVariable('PSModulePath',$TrustedModulePath,'Process')
+$data=ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($InputFile))
+if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.ToString() -ne $data.shell.version -or $PSHOME -ne $data.shell.psHome -or [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName -ne $data.shell.executable) { throw 'Selected installed PS7 identity changed' }
+$refs=[string[]]@($data.references.assemblies | Where-Object { [IO.Path]::GetDirectoryName($_.file) -eq [IO.Path]::Combine($PSHOME,'ref') } | ForEach-Object { $_.file })
+if ($refs.Count -lt 4) { throw 'Installed PSHOME references required' }
+Add-Type -TypeDefinition @'
+using System;
+using System.Text;
+using System.Threading;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+${windowsUiaSource}
 '@ -ReferencedAssemblies $refs
 function Get-StartUtcTicks([object]$value) {
   # ConvertFrom-Json can produce DateTime; compare instants without string coercion.

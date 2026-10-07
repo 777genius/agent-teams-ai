@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { assertCaptionProof } from './windows-native.mts';
-import { assertNativeNames } from './windows-ota-observer.mts';
+import { assertNativeNames, assertNativeRootFocus } from './windows-ota-observer.mts';
 
 import type { CaptionProof } from './windows-native.mts';
-import type { NativeNames } from './windows-ota-observer.mts';
+import type { NativeNames, NativeRootFocus } from './windows-ota-observer.mts';
 
 // These are consumer receipt boundaries, not simulated native focus/UI qualification.
 const caption: CaptionProof = {
@@ -87,3 +87,126 @@ for (const [name, change] of Object.entries({
     assert.throws(() => assertNativeNames(41, 'abc', { ...tree, ...change }));
   });
 }
+
+const focusOwner = {
+  pid: 41,
+  parent: 3,
+  executable: 'C:\\TEST-updater-windows-proof\\AgentTeamsAI.exe',
+  start: '2026-10-07T12:23:14.7943200Z',
+  sid: 'S-1-5-21-TEST',
+  session: 2,
+};
+const cimTicks = '639269725947943200';
+const heldOwner = {
+  Pid: 41,
+  Executable: focusOwner.executable,
+  Sid: focusOwner.sid,
+  Session: 2,
+  BirthFileTime: '134358493947943207',
+};
+const focus: NativeRootFocus = {
+  ...tree,
+  Names: [],
+  ProcessIds: [],
+  Visited: 0,
+  RootChildren: 0,
+  MaxDepth: 0,
+  Characters: 0,
+  Focus: {
+    Before: heldOwner,
+    After: heldOwner,
+    Focusable: true,
+    Requested: true,
+    Synchronized: true,
+    SetFocusHResult: 0,
+    CimTicks: cimTicks,
+    ForegroundHwnd: 'abc',
+    ComparisonResolution100nsTicks: 10,
+  },
+};
+const unclicked = { ...caption, sent: 0 };
+void test('root capability false still requires actual focus, foreground and synchronization receipts', () => {
+  const observed = { ...focus, Focus: { ...focus.Focus, Focusable: false } };
+  assertNativeRootFocus(focusOwner, 'abc', unclicked, observed);
+  for (const change of [
+    { Requested: false },
+    { SetFocusHResult: null },
+    { SetFocusHResult: -1 },
+    { SetFocusHResult: 1 },
+    { ForegroundHwnd: 'def' },
+    { Synchronized: false },
+    { After: { ...heldOwner, BirthFileTime: '134358493947943208' } },
+  ])
+    assert.throws(() =>
+      assertNativeRootFocus(focusOwner, 'abc', unclicked, {
+        ...observed,
+        Focus: { ...observed.Focus, ...change },
+      })
+    );
+});
+void test('root-focus receipt requires exact held birth after documented CIM microsecond bootstrap', () => {
+  assertNativeRootFocus(focusOwner, 'abc', unclicked, focus);
+  for (const change of [
+    { BirthFileTime: '134358493947943210' },
+    { Pid: 99 },
+    { Sid: 'S-1-5-21-FOREIGN' },
+    { Session: 1 },
+    { Executable: 'C:\\Other.exe' },
+  ])
+    assert.throws(() =>
+      assertNativeRootFocus(focusOwner, 'abc', unclicked, {
+        ...focus,
+        Focus: {
+          ...focus.Focus,
+          Before: { ...heldOwner, ...change },
+          After: { ...heldOwner, ...change },
+        },
+      })
+    );
+  assert.throws(() =>
+    assertNativeRootFocus(focusOwner, 'abc', unclicked, {
+      ...focus,
+      Focus: { ...focus.Focus, After: { ...heldOwner, BirthFileTime: '134358493947943208' } },
+    })
+  );
+});
+for (const [name, change] of Object.entries({
+  'S_OK but foreign foreground': { ForegroundHwnd: 'def' },
+  'non-boolean capability observation': { Focusable: null as unknown as boolean },
+  'no actual request': { Requested: false },
+  'failed HRESULT': { SetFocusHResult: -1 },
+  'no returned HRESULT': { SetFocusHResult: null },
+  'no owned WM_NULL synchronization': { Synchronized: false },
+  'broad birth tolerance': { ComparisonResolution100nsTicks: 10000 },
+  'different original CIM birth': { CimTicks: '639269725947943210' },
+}))
+  void test(`root-focus receipt rejects ${name}`, () =>
+    assert.throws(() =>
+      assertNativeRootFocus(focusOwner, 'abc', unclicked, {
+        ...focus,
+        Focus: { ...focus.Focus, ...change },
+      })
+    ));
+void test('root-focus cannot accept partial input, unrestored state, foreign root, thread or traversal', () => {
+  for (const change of [
+    { sent: 1 },
+    { restored: false },
+    { restorationError: 'Owner changed' },
+    { error: 5 },
+    { thread: 99 },
+  ])
+    assert.throws(() =>
+      assertNativeRootFocus(focusOwner, 'abc', { ...unclicked, ...change }, focus)
+    );
+  for (const change of [
+    { RootPid: 99 },
+    { RootHwnd: 'def' },
+    { RootThread: 0 },
+    { Visited: 1 },
+    { Names: ['foreign'] },
+    { Error: 'UIA failed', HResult: -1 },
+  ])
+    assert.throws(() =>
+      assertNativeRootFocus(focusOwner, 'abc', unclicked, { ...focus, ...change })
+    );
+});
