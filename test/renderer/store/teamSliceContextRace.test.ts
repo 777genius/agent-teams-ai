@@ -794,4 +794,205 @@ describe('team slice context races', () => {
 
     expect(apiMock.teams.getMemberActivityMeta).toHaveBeenCalledTimes(1);
   });
+
+  it('returns the actual fresh successor to every queued head caller', async () => {
+    const store = createSliceStore();
+    const first = deferred<{
+      messages: [];
+      feedRevision: string;
+      nextCursor: null;
+      hasMore: false;
+    }>();
+    const next = deferred<{
+      messages: [];
+      feedRevision: string;
+      nextCursor: null;
+      hasMore: false;
+    }>();
+    apiMock.teams.getMessagesPage
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(next.promise);
+    const initial = store.getState().refreshTeamMessagesHead('shared-team');
+    const fresh = store.getState().refreshTeamMessagesHead('shared-team');
+    const duplicate = store.getState().refreshTeamMessagesHead('shared-team');
+    let settled = false;
+    void fresh.then(() => {
+      settled = true;
+    });
+    first.resolve({ messages: [], feedRevision: 'old', nextCursor: null, hasMore: false });
+    await initial;
+    await flushMicrotasks();
+    expect(settled).toBe(false);
+    expect(apiMock.teams.getMessagesPage).toHaveBeenCalledTimes(2);
+    next.resolve({ messages: [], feedRevision: 'new', nextCursor: null, hasMore: false });
+    expect(await fresh).toMatchObject({ feedRevision: 'new' });
+    expect(await duplicate).toMatchObject({ feedRevision: 'new' });
+    expect(apiMock.teams.getMessagesPage).toHaveBeenCalledTimes(2);
+  });
+
+  it('passes the successor head failure to fresh callers with its original cause', async () => {
+    const store = createSliceStore();
+    const first = deferred<{
+      messages: [];
+      feedRevision: string;
+      nextCursor: null;
+      hasMore: false;
+    }>();
+    const next = deferred<{
+      messages: [];
+      feedRevision: string;
+      nextCursor: null;
+      hasMore: false;
+    }>();
+    apiMock.teams.getMessagesPage
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(next.promise);
+    const initial = store.getState().refreshTeamMessagesHead('shared-team');
+    const fresh = store.getState().refreshTeamMessagesHead('shared-team');
+    const error = new Error('TEST-fresh-head-failure');
+    const observed = fresh.catch((failure: unknown) => failure);
+    first.resolve({ messages: [], feedRevision: 'retained', nextCursor: null, hasMore: false });
+    await initial;
+    next.reject(error);
+    expect(await observed).toMatchObject({ message: 'TEST-fresh-head-failure', causeError: error });
+    expect(store.getState().teamMessagesByName['shared-team']).toMatchObject({
+      feedRevision: 'retained',
+      loadingHead: false,
+    });
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      '[Renderer:unwrapIpc]',
+      '[team:getMessagesPage] TEST-fresh-head-failure'
+    );
+    vi.mocked(console.error).mockClear();
+  });
+
+  it.each(['context', 'team'] as const)(
+    'does not join a prior %s scope head or let its finally retire the replacement',
+    async (boundary) => {
+      const store = createSliceStore();
+      const old = deferred<{
+        messages: [];
+        feedRevision: string;
+        nextCursor: null;
+        hasMore: false;
+      }>();
+      const current = deferred<{
+        messages: [];
+        feedRevision: string;
+        nextCursor: null;
+        hasMore: false;
+      }>();
+      const successor = deferred<{
+        messages: [];
+        feedRevision: string;
+        nextCursor: null;
+        hasMore: false;
+      }>();
+      apiMock.teams.getMessagesPage
+        .mockReturnValueOnce(old.promise)
+        .mockReturnValueOnce(current.promise)
+        .mockReturnValueOnce(successor.promise);
+      const oldRead = store.getState().refreshTeamMessagesHead('shared-team');
+      const oldFresh = store.getState().refreshTeamMessagesHead('shared-team');
+      if (boundary === 'context') invalidateContextScopedRequestEpoch();
+      else invalidateTeamLocalStateEpoch('shared-team');
+      store.setState({ teamMessagesByName: {} });
+      const currentRead = store.getState().refreshTeamMessagesHead('shared-team');
+      expect(apiMock.teams.getMessagesPage).toHaveBeenCalledTimes(2);
+      expect(await oldFresh).toMatchObject({ feedRevision: null });
+      old.resolve({ messages: [], feedRevision: 'stale', nextCursor: null, hasMore: false });
+      await oldRead;
+      const currentFresh = store.getState().refreshTeamMessagesHead('shared-team');
+      expect(apiMock.teams.getMessagesPage).toHaveBeenCalledTimes(2);
+      current.resolve({ messages: [], feedRevision: 'current', nextCursor: null, hasMore: false });
+      await currentRead;
+      await flushMicrotasks();
+      expect(apiMock.teams.getMessagesPage).toHaveBeenCalledTimes(3);
+      successor.resolve({
+        messages: [],
+        feedRevision: 'successor',
+        nextCursor: null,
+        hasMore: false,
+      });
+      expect(await currentFresh).toMatchObject({ feedRevision: 'successor' });
+      expect(store.getState().teamMessagesByName['shared-team']?.feedRevision).toBe('successor');
+    }
+  );
+
+  it.each(['success', 'failure'] as const)(
+    'observes the actual activity successor %s',
+    async (outcome) => {
+      const store = createSliceStore();
+      apiMock.teams.getMessagesPage.mockResolvedValue({
+        messages: [],
+        feedRevision: 'feed',
+        nextCursor: null,
+        hasMore: false,
+      });
+      await store.getState().refreshTeamMessagesHead('shared-team');
+      const first = deferred<{
+        teamName: string;
+        computedAt: string;
+        feedRevision: string;
+        members: Record<string, never>;
+      }>();
+      const next = deferred<{
+        teamName: string;
+        computedAt: string;
+        feedRevision: string;
+        members: Record<string, never>;
+      }>();
+      apiMock.teams.getMemberActivityMeta
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(next.promise);
+      const initial = store.getState().refreshMemberActivityMeta('shared-team');
+      const fresh = store.getState().refreshMemberActivityMeta('shared-team');
+      let settled = false;
+      const observed = fresh.then(
+        () => {
+          settled = true;
+          return null;
+        },
+        (error: unknown) => {
+          settled = true;
+          return error;
+        }
+      );
+      first.resolve({
+        teamName: 'shared-team',
+        computedAt: 'old',
+        feedRevision: 'feed',
+        members: {},
+      });
+      await initial;
+      await flushMicrotasks();
+      expect(settled).toBe(false);
+      expect(apiMock.teams.getMemberActivityMeta).toHaveBeenCalledTimes(2);
+      if (outcome === 'success') {
+        next.resolve({
+          teamName: 'shared-team',
+          computedAt: 'new',
+          feedRevision: 'feed',
+          members: {},
+        });
+        expect(await observed).toBeNull();
+        // Same feed revision retains the existing facts by the established store contract.
+        expect(store.getState().memberActivityMetaByTeam['shared-team']?.computedAt).toBe('old');
+      } else {
+        const error = new Error('TEST-fresh-activity-failure');
+        next.reject(error);
+        expect(await observed).toMatchObject({
+          message: 'TEST-fresh-activity-failure',
+          causeError: error,
+        });
+        expect(console.error).toHaveBeenCalledTimes(1);
+        expect(console.error).toHaveBeenCalledWith(
+          '[Renderer:unwrapIpc]',
+          '[team:getMemberActivityMeta] TEST-fresh-activity-failure'
+        );
+        vi.mocked(console.error).mockClear();
+      }
+    }
+  );
 });

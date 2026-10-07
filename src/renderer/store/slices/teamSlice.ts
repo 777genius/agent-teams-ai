@@ -4,6 +4,7 @@ import {
   readTeamData,
   readTeamMemberActivity,
   readTeamMessagesPage,
+  ScopedReadRequests,
 } from '@features/team-read-recovery/renderer';
 import {
   buildProviderMix,
@@ -303,12 +304,16 @@ interface PostPaintHandle {
   ran: boolean;
 }
 const postPaintTeamEnrichmentTimers = new Map<string, PostPaintHandle>();
-const inFlightTeamMessagesHeadRequests = new Map<string, Promise<RefreshTeamMessagesHeadResult>>();
-const inFlightTeamMessagesOlderRequests = new Map<string, Promise<void>>();
-const queuedTeamMessagesHeadRefreshesAfterOlder = new Map<string, QueuedMessagesHeadRead>();
-const pendingFreshTeamMessagesHeadRefreshes = new Set<string>();
-const inFlightTeamMemberActivityMetaRequests = new Map<string, Promise<void>>();
-const pendingFreshTeamMemberActivityMetaRefreshes = new Set<string>();
+function unchangedTeamMessagesHead(): RefreshTeamMessagesHeadResult {
+  return { feedChanged: false, headChanged: false, feedRevision: null };
+}
+const inFlightTeamMessagesHeadRequests = new ScopedReadRequests(unchangedTeamMessagesHead);
+const inFlightTeamMessagesOlderRequests = new ScopedReadRequests<void>(() => undefined);
+const queuedTeamMessagesHeadRefreshesAfterOlder = new Map<
+  string,
+  QueuedMessagesHeadRead & { scope: TeamRequestScope }
+>();
+const inFlightTeamMemberActivityMetaRequests = new ScopedReadRequests<void>(() => undefined);
 const pendingTeamPendingReplyRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let latestTeamsFetchRequestId = 0,
   deletedTasksFetchId = 0;
@@ -481,9 +486,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   inFlightTeamMessagesHeadRequests.clear();
   inFlightTeamMessagesOlderRequests.clear();
   queuedTeamMessagesHeadRefreshesAfterOlder.clear();
-  pendingFreshTeamMessagesHeadRefreshes.clear();
   inFlightTeamMemberActivityMetaRequests.clear();
-  pendingFreshTeamMemberActivityMetaRefreshes.clear();
   for (const timer of pendingTeamPendingReplyRefreshTimers.values()) {
     clearTimeout(timer);
   }
@@ -528,9 +531,7 @@ function clearTeamScopedTransientState(teamName: string): void {
   inFlightTeamMessagesHeadRequests.delete(teamName);
   inFlightTeamMessagesOlderRequests.delete(teamName);
   queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-  pendingFreshTeamMessagesHeadRefreshes.delete(teamName);
   inFlightTeamMemberActivityMetaRequests.delete(teamName);
-  pendingFreshTeamMemberActivityMetaRefreshes.delete(teamName);
   clearLastResolvedTeamDataRefreshAt(teamName);
   clearMemberSpawnStatusesIpcBackoff(teamName);
   clearTeamRefreshBurstDiagnostics(teamName);
@@ -828,9 +829,9 @@ export function __getTeamScopedTransientStateForTests(teamName: string): {
     hasQueuedFullTeamDataRefreshAfterThin: queuedFullTeamDataRefreshesAfterThin.has(teamName),
     hasPostPaintTeamEnrichmentTimer: postPaintTeamEnrichmentTimers.has(teamName),
     hasQueuedHeadRefreshAfterOlder: queuedTeamMessagesHeadRefreshesAfterOlder.has(teamName),
-    hasPendingFreshMessagesHeadRefresh: pendingFreshTeamMessagesHeadRefreshes.has(teamName),
+    hasPendingFreshMessagesHeadRefresh: inFlightTeamMessagesHeadRequests.hasPending(teamName),
     hasPendingFreshMemberActivityMetaRefresh:
-      pendingFreshTeamMemberActivityMetaRefreshes.has(teamName),
+      inFlightTeamMemberActivityMetaRequests.hasPending(teamName),
     hasLastResolvedTeamDataRefresh: hasLastResolvedTeamDataRefreshAt(teamName),
     hasCurrentLocalStateEpoch: hasTeamLocalStateEpoch(teamName),
     hasMemberSpawnStatusesIpcBackoff: hasMemberSpawnStatusesIpcBackoff(teamName),
@@ -3301,37 +3302,51 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   refreshTeamMessagesHead: async (teamName: string) => {
-    const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName);
+    const requestScope = captureTeamRequestScope(get, teamName);
+    const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestScope);
     if (existingRequest) {
-      pendingFreshTeamMessagesHeadRefreshes.add(teamName);
-      return existingRequest;
+      return inFlightTeamMessagesHeadRequests.queueFresh(
+        teamName,
+        requestScope,
+        () => get().refreshTeamMessagesHead(teamName),
+        () => isTeamRequestScopeCurrent(get, teamName, requestScope)
+      );
     }
     const queuedAfterOlder = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
     if (queuedAfterOlder) {
-      return queuedAfterOlder.result;
+      if (isTeamRequestScopeCurrent(get, teamName, queuedAfterOlder.scope))
+        return queuedAfterOlder.result;
+      queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+      queuedAfterOlder.cancel();
     }
 
-    const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName);
+    const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestScope);
     if (existingOlderRequest) {
-      const queuedScope = captureTeamRequestScope(get, teamName);
-      const queuedRequest = queueMessagesHeadRead(
-        existingOlderRequest,
-        () => {
-          if (
-            !isTeamRequestScopeCurrent(get, teamName, queuedScope) ||
-            queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) !== queuedRequest
-          ) {
-            return Promise.resolve({ feedChanged: false, headChanged: false, feedRevision: null });
-          }
-          queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-          return get().refreshTeamMessagesHead(teamName);
-        },
-        () => {
-          if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
+      const queuedRequest = {
+        scope: requestScope,
+        ...queueMessagesHeadRead(
+          existingOlderRequest,
+          () => {
+            if (
+              !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
+              queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) !== queuedRequest
+            ) {
+              return Promise.resolve({
+                feedChanged: false,
+                headChanged: false,
+                feedRevision: null,
+              });
+            }
             queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+            return get().refreshTeamMessagesHead(teamName);
+          },
+          () => {
+            if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
+              queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+            }
           }
-        }
-      );
+        ),
+      };
       queuedTeamMessagesHeadRefreshesAfterOlder.set(teamName, queuedRequest);
       return queuedRequest.result;
     }
@@ -3340,7 +3355,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       current: null,
     };
     requestRef.current = (async (): Promise<RefreshTeamMessagesHeadResult> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
       set((state) => ({
         teamMessagesByName: {
           ...state.teamMessagesByName,
@@ -3356,11 +3370,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           readTeamMessagesPage(teamName, { limit: 50 })
         );
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
+          return unchangedTeamMessagesHead();
         }
 
         const previousEntry = getTeamMessagesCacheEntry(get(), teamName);
@@ -3412,11 +3422,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       } catch (error) {
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
+          return unchangedTeamMessagesHead();
         }
         set((state) => ({
           teamMessagesByName: {
@@ -3429,31 +3435,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }));
         throw error;
       } finally {
-        if (inFlightTeamMessagesHeadRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMessagesHeadRequests.delete(teamName);
-          if (
-            pendingFreshTeamMessagesHeadRefreshes.delete(teamName) &&
-            isTeamRequestScopeCurrent(get, teamName, requestScope)
-          ) {
-            void get().refreshTeamMessagesHead(teamName);
-          }
-        }
+        inFlightTeamMessagesHeadRequests.release(teamName, requestRef.current);
       }
     })();
 
     const request = requestRef.current;
-    inFlightTeamMessagesHeadRequests.set(teamName, request);
+    inFlightTeamMessagesHeadRequests.set(teamName, request, requestScope);
     return request;
   },
 
   loadOlderTeamMessages: async (teamName: string) => {
     const requestedScope = captureTeamRequestScope(get, teamName);
-    const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName);
+    const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestedScope);
     if (existingRequest) {
       return existingRequest;
     }
 
-    const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName);
+    const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestedScope);
     if (existingHeadRequest) {
       await existingHeadRequest;
       if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
@@ -3513,11 +3511,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
               },
             },
           }));
-          if (inFlightTeamMessagesOlderRequests.get(teamName) === requestRef.current) {
-            inFlightTeamMessagesOlderRequests.delete(teamName);
-          }
+          inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
           const queuedHead = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-          await (queuedHead ? queuedHead.start() : get().refreshTeamMessagesHead(teamName));
+          await (queuedHead && isTeamRequestScopeCurrent(get, teamName, queuedHead.scope)
+            ? queuedHead.start()
+            : get().refreshTeamMessagesHead(teamName));
           return;
         }
 
@@ -3552,14 +3550,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           },
         }));
       } finally {
-        if (inFlightTeamMessagesOlderRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMessagesOlderRequests.delete(teamName);
-        }
+        inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
       }
     })();
 
     const request = requestRef.current;
-    inFlightTeamMessagesOlderRequests.set(teamName, request);
+    inFlightTeamMessagesOlderRequests.set(teamName, request, requestedScope);
     return request;
   },
 
@@ -3569,15 +3565,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       return;
     }
 
-    const existingRequest = inFlightTeamMemberActivityMetaRequests.get(teamName);
+    const requestScope = captureTeamRequestScope(get, teamName);
+    const existingRequest = inFlightTeamMemberActivityMetaRequests.get(teamName, requestScope);
     if (existingRequest) {
-      pendingFreshTeamMemberActivityMetaRefreshes.add(teamName);
-      return existingRequest;
+      return inFlightTeamMemberActivityMetaRequests.queueFresh(
+        teamName,
+        requestScope,
+        () => get().refreshMemberActivityMeta(teamName),
+        () => isTeamRequestScopeCurrent(get, teamName, requestScope)
+      );
     }
 
     const requestRef: { current: Promise<void> | null } = { current: null };
     requestRef.current = (async (): Promise<void> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
       try {
         const meta = await unwrapIpc('team:getMemberActivityMeta', () =>
           readTeamMemberActivity(teamName)
@@ -3621,20 +3621,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
         throw error;
       } finally {
-        if (inFlightTeamMemberActivityMetaRequests.get(teamName) === requestRef.current) {
-          inFlightTeamMemberActivityMetaRequests.delete(teamName);
-          if (
-            pendingFreshTeamMemberActivityMetaRefreshes.delete(teamName) &&
-            isTeamRequestScopeCurrent(get, teamName, requestScope)
-          ) {
-            void get().refreshMemberActivityMeta(teamName);
-          }
-        }
+        inFlightTeamMemberActivityMetaRequests.release(teamName, requestRef.current);
       }
     })();
 
     const request = requestRef.current;
-    inFlightTeamMemberActivityMetaRequests.set(teamName, request);
+    inFlightTeamMemberActivityMetaRequests.set(teamName, request, requestScope);
     return request;
   },
 
