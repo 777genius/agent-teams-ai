@@ -2,11 +2,25 @@
  * Tests for fileIcons utility — extension-to-icon mapping with Devicon support.
  */
 
+import { getDeviconUrl, getFileIcon } from '@renderer/components/team/editor/fileIcons';
 import { describe, expect, it } from 'vitest';
 
-import { getDeviconUrl, getFileIcon } from '@renderer/components/team/editor/fileIcons';
-
 describe('getFileIcon', () => {
+  it('provides local distinct colorful document icons without CDN dependencies', () => {
+    const families = [['pdf'], ['doc', 'docx'], ['xls', 'xlsx', 'csv', 'tsv'], ['ppt', 'pptx']];
+    const colors = families.map(extensions => {
+      const first = getFileIcon('report.' + extensions[0]);
+      for (const extension of extensions) {
+        const info = getFileIcon('report.' + extension.toUpperCase());
+        expect(info.deviconSlug).toBeUndefined();
+        expect(info.icon).not.toBe(getFileIcon('unknown.zzzz').icon);
+        expect(info.color).toBe(first.color);
+      }
+      return first.color;
+    });
+    expect(new Set(colors).size).toBe(4);
+  });
+
   it('returns TypeScript icon for .ts files', () => {
     const info = getFileIcon('index.ts');
     expect(info.color).toBe('#3178c6');
