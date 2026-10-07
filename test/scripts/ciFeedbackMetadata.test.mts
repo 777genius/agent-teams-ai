@@ -44,6 +44,7 @@ function event(changes: unknown = { body: { from: null } }, draft = false): Json
 const prefix = `repos/${REPOSITORY}`;
 const listEndpoint = `${prefix}/actions/workflows/789/runs?event=pull_request&head_sha=${headSha}&per_page=100`;
 const jobsEndpoint = `${prefix}/actions/runs/100/attempts/1/jobs?per_page=100`;
+const baseRefEndpoint = `${prefix}/git/ref/heads/main`;
 function runTitle(input: JsonObject, action = 'synchronize', merge = env.GITHUB_SHA): string {
   const pr = input.pull_request as JsonObject;
   return `CI proof: PR=12 | head=${(pr.head as JsonObject).sha} | base=${(pr.base as JsonObject).sha} | merge=${merge} | action=${action} | draft=${pr.draft}`;
@@ -82,6 +83,9 @@ function fixture(input: JsonObject = event(), status = 'queued', shards: 2 | 4 =
   const workflow = { type: 'file', path: WORKFLOW, sha: blob };
   return new Map([
     [prefix, repository],
+    [`${prefix}/git/ref/heads/${encodeURIComponent(String((pr.base as JsonObject).ref))}`, {
+      ref: `refs/heads/${(pr.base as JsonObject).ref}`, object: { type: 'commit', sha: baseSha },
+    }],
     [`${prefix}/git/commits/${env.GITHUB_SHA}`, { sha: env.GITHUB_SHA,
       parents: [{ sha: baseSha }, { sha: headSha }], tree: { sha: 'e'.repeat(40) } }],
     [`${prefix}/actions/workflows/ci.yml`, { id: 789, path: WORKFLOW, state: 'active' }],
@@ -711,6 +715,7 @@ test('same attested actual merge preserves checks even when the PR API base rema
     const data = fixture(event(), status);
     const merge = data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject;
     merge.parents = [{ sha: 'd'.repeat(40) }, { sha: headSha }];
+    (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'd'.repeat(40) };
     assert.equal((await plan(event(), {}, data)).metadata, true, status);
   }
 });
@@ -759,4 +764,98 @@ test('missing merge attestations and unauthenticated merge objects fail closed',
     assert.equal((await plan(event(), {}, data)).full, true, `mutation ${index}`);
   }
   assert.equal((await plan(event(), { GITHUB_SHA: 'f'.repeat(40) })).full, true);
+});
+
+
+test('an advanced canonical target tip requires full CI even when PR anchor, head and attested merge are unchanged', async () => {
+  for (const status of ['queued', 'in_progress', 'completed']) {
+    const data = fixture(event(), status);
+    (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'd'.repeat(40) };
+    assert.equal((await plan(event(), {}, data)).full, true, status);
+  }
+});
+
+test('target ref identity, commit type and valid tip are required on the initial read', async () => {
+  const mutations: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { data.delete(baseRefEndpoint); },
+    (data) => { data.set(baseRefEndpoint, null); },
+    (data) => { (data.get(baseRefEndpoint) as JsonObject).ref = 'refs/heads/other'; },
+    (data) => { delete (data.get(baseRefEndpoint) as JsonObject).ref; },
+    (data) => { (data.get(baseRefEndpoint) as JsonObject).object = { type: 'tag', sha: baseSha }; },
+    (data) => { (data.get(baseRefEndpoint) as JsonObject).object = { sha: baseSha }; },
+    (data) => { (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit' }; },
+    (data) => { (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'invalid' }; },
+    (data) => { delete (data.get(baseRefEndpoint) as JsonObject).object; },
+  ];
+  for (const [index, mutate] of mutations.entries()) {
+    const data = fixture();
+    mutate(data);
+    assert.equal((await plan(event(), {}, data)).full, true, `mutation ${index}`);
+  }
+});
+
+test('final target ref advance, deletion or malformed identity invalidates unchanged producer proof', async () => {
+  const finalResponses: unknown[] = [
+    { ref: 'refs/heads/main', object: { type: 'commit', sha: 'd'.repeat(40) } },
+    null,
+    { ref: 'refs/heads/other', object: { type: 'commit', sha: baseSha } },
+    { object: { type: 'commit', sha: baseSha } },
+    { ref: 'refs/heads/main', object: { type: 'tag', sha: baseSha } },
+    { ref: 'refs/heads/main', object: { type: 'commit' } },
+    { ref: 'refs/heads/main', object: { type: 'commit', sha: 'invalid' } },
+    { ref: 'refs/heads/main' },
+  ];
+  for (const [index, final] of finalResponses.entries()) {
+    const data = fixture();
+    let targetReads = 0;
+    const decision = await planFeedback(env, event(), async (endpoint) => {
+      assert.ok(data.has(endpoint), `Unexpected read: ${endpoint}`);
+      if (endpoint === baseRefEndpoint && ++targetReads === 2) return structuredClone(final);
+      return structuredClone(data.get(endpoint));
+    });
+    assert.equal(targetReads, 2, 'target ref must be reread after producer proof');
+    assert.equal(decision.full, true, `final response ${index}`);
+  }
+  const data = fixture();
+  let targetReads = 0;
+  const unavailable = await planFeedback(env, event(), async (endpoint) => {
+    if (endpoint === baseRefEndpoint && ++targetReads === 2) throw new Error('Ref deleted');
+    return structuredClone(data.get(endpoint));
+  });
+  assert.equal(unavailable.full, true);
+});
+
+test('stale PR anchors preserve ready and deliberate draft producers only when actual merge base is the canonical tip', async () => {
+  for (const draft of [false, true]) {
+    for (const status of ['queued', 'completed']) {
+      const input = event(undefined, draft);
+      const data = draft && status === 'completed' ? draftFixture() : fixture(input, status);
+      const actualBase = 'd'.repeat(40);
+      (data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject).parents = [
+        { sha: actualBase }, { sha: headSha },
+      ];
+      (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: actualBase };
+      assert.equal((await plan(input, {}, data)).metadata, true, `${draft}/${status}`);
+      (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'f'.repeat(40) };
+      assert.equal((await plan(input, {}, data)).full, true, `${draft}/${status}/advanced`);
+    }
+  }
+});
+
+test('slash-containing target refs use an encoded API path and exact unencoded returned ref', async () => {
+  const input = event();
+  ((input.pull_request as JsonObject).base as JsonObject).ref = 'integration/ci-target';
+  const data = fixture(input);
+  const endpoint = `${prefix}/git/ref/heads/integration%2Fci-target`;
+  const endpoints: string[] = [];
+  const decision = await planFeedback(env, input, async (requested) => {
+    endpoints.push(requested);
+    assert.ok(data.has(requested), `Unexpected read: ${requested}`);
+    return structuredClone(data.get(requested));
+  });
+  assert.equal(decision.metadata, true);
+  assert.equal(endpoints.filter((requested) => requested === endpoint).length, 2);
+  assert.equal(endpoints.includes(`${prefix}/git/ref/heads/integration/ci-target`), false);
+  (data.get(endpoint) as JsonObject).ref = 'refs/heads/integration%2Fci-target';
+  assert.equal((await plan(input, {}, data)).full, true);
 });

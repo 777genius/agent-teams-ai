@@ -83,8 +83,14 @@ require full qualification. A metadata edit also requires an authenticated
 canonical producer for the exact current PR head and actual synthetic merge.
 The workflow run name attests the immutable merge SHA before queued jobs start;
 GitHub may keep an old PR base SHA after the actual merge base advances. The
-authenticated merge must have two parents, with the current PR head second. A
-different merge or a legacy producer without merge attestation requires full CI.
+authenticated merge must have two parents, with the current PR head second.
+This binds the tested inputs; a separate authenticated canonical base Git ref
+must still point to the merge's first parent. The final read rechecks the exact
+ref, commit type and tip, because GitHub can cache a synthetic merge after its
+target branch advances. A stale target, different merge or legacy producer
+without merge attestation requires full CI.
+FULL selects fresh qualification work; it does not guarantee that GitHub
+regenerates a cached synthetic merge.
 Fork runs with empty PR links additionally require exact authenticated fork
 identity and the complete event tuple. At most eight
 other source runs are examined; missing, conflicting or failed proof requires

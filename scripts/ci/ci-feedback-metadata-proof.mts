@@ -238,8 +238,16 @@ export async function proveMetadataProducer(
     const parents = array(merge.parents);
     requireProof(merge.sha === mergeSha && parents.length === 2 && parents[1].sha === head,
       'Current synthetic merge identity mismatch');
-    sha(parents[0].sha);
+    const testedBase = sha(parents[0].sha);
     sha(object(merge.tree).sha);
+    // A cached synthetic merge can also lag the target branch. Its immutable
+    // input identity only qualifies while its base is the current canonical tip.
+    const baseRef = object(pr.base).ref;
+    requireProof(typeof baseRef === 'string' && baseRef.length > 0, 'Missing target base ref');
+    const baseRefEndpoint = `${prefix}/git/ref/heads/${encodeURIComponent(baseRef)}`;
+    const target = object(await read(baseRefEndpoint));
+    requireProof(target.ref === `refs/heads/${baseRef}` && object(target.object).type === 'commit' &&
+      sha(object(target.object).sha) === testedBase, 'Synthetic merge base is not the current target tip');
     const listEndpoint = `${prefix}/actions/workflows/${workflowId}/runs?event=pull_request&head_sha=${head}&per_page=100`;
     const readList = async (): Promise<JsonObject[]> => {
       const listing = object(await read(listEndpoint));
@@ -281,6 +289,9 @@ export async function proveMetadataProducer(
       'Source listing changed during metadata proof');
     requireProof(prIdentity(object(await read(`${prefix}/pulls/${number}`))) === prIdentity(pr),
       'Current PR base/head changed during metadata proof');
+    const finalTarget = object(await read(baseRefEndpoint));
+    requireProof(finalTarget.ref === target.ref && object(finalTarget.object).type === 'commit' &&
+      sha(object(finalTarget.object).sha) === testedBase, 'Target base tip changed during metadata proof');
     return true;
   } catch {
     return false;
