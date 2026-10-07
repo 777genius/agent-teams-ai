@@ -16,24 +16,24 @@ Force Stop seals admission before waiting. `abandonControl` seals and closes onl
 private endpoint for unconfirmed last-handle containment; it retains unknown outcome
 records and cannot authorize resource/metadata release. Genuine receipts are private
 object capabilities, checked against immutable owner and component coverage. Unknown
-attempts remain immutable. Up to64 attempt records are retained; further attempts fail
+attempts remain immutable. Up to 64 attempt records are retained; further attempts fail
 explicitly instead of evicting unresolved ownership. One coalesced Stop uses the earliest
 app deadline; late native proof cannot rewrite an expired outcome. Graceful Windows Stop
 is unavailable. Targets using PTYs, IPC/fd inheritance, relative executables, shell flags,
 drive-current-directory environment entries or external service dispatch are unsupported.
 
-Control framing is32 bytes, protocol1, u64 request ID, exact128-bit generation;
-launch1MiB, other4KiB,8 queued native replies,4 pending app requests,1024 frames.
-Control writes time out after5s. Native admission and accounting do not depend on target
+Control framing is 32 bytes, protocol 1, u64 request ID, exact 128-bit generation;
+launch 1 MiB, other 4 KiB, 8 queued native replies, 4 pending app requests, 1024 frames.
+Control writes time out after 5 s. Native admission and accounting do not depend on target
 stdio consumption. Launch values remain on the private pipe, never diagnostics/argv.
-Birth tokens are fixed16-hex FILETIME values read through the original process handle.
+Birth tokens are fixed 16-hex FILETIME values read through the original process handle.
 
 Only private fd3 uses Node's `overlapped` stdio option. Native reads and writes use separate
 OVERLAPPED/manual-reset events and terminal original-handle result queries. Partial writes
-share one5s whole-frame budget. Pending failure latches before exact-operation CancelIoEx;
+share one 5 s whole-frame budget. Pending failure latches before exact-operation CancelIoEx;
 unproven terminal cancellation uses nonreturning self-termination without freeing storage.
-Accepted Release stops further command reads; complete in-budget ACK and original exit0
-are separate assertions. Fixed exit categories70-77 plus bit128 for unproven cancel drain
+Accepted Release stops further command reads; complete in-budget ACK and original exit 0
+are separate assertions. Fixed exit categories 70-77 plus bit 128 for unproven cancel drain
 and bounded bridge cause/phase facts expose no launch values. Later exit cannot replace failure.
 
 Host commands, from the repository root (source was not locally executed):
@@ -51,7 +51,7 @@ The controller creates a fresh sandbox and atomically contains Node plus all fix
 descendants in its independent outer no-breakaway Job. Every pending capability is retained
 for private-control abandonment in finally, and direct helpers are awaited. Only the controller
 removes the sandbox after its original Node handle exits and fresh outer accounting is zero.
-Any120s deadline/emergency termination makes the gate FAIL, even if containment succeeds.
+Any 120 s deadline/emergency termination makes the gate FAIL, even if containment succeeds.
 The Node scenario log alone is not PASS. Run only through this controller, never standalone.
 Neither the controller nor any fault/scheduling executable is staged as the product broker.
 
@@ -65,10 +65,10 @@ The separately compiled accounting fixture injects one QueryInformationJobObject
 then performs actual successful Job queries: first attempt remains unknown even after zero,
 and only distinct fresh reconciliation can confirm. A release-delay fixture pauses the writer
 after a fully written ACK; the raw native gate reads Released, ends owner control and requires
-the original broker process to exit0, exercising reader/writer scheduling rather than a mock.
-Release waits up to the same100ms state-lock budget as Resume. This unstaged variant also
+the original broker process to exit 0, exercising reader/writer scheduling rather than a mock.
+Release waits up to the same 100 ms state-lock budget as Resume. This unstaged variant also
 uses a watcher-held original mutex and an actually failed lock probe before bounded unlock;
-the contention gate requires all three native facts, a genuine Released ACK and original exit0.
+the contention gate requires all three native facts, a genuine Released ACK and original exit 0.
 The production broker does not compile the contention toggle or emit its fixture-only ACK facts.
 This same unstaged variant requires an actual post-Launch ReadFile ERROR_IO_PENDING before
 Prepared, proving concurrent read/reply scheduling. Native pending-write timeout/cancellation
@@ -76,25 +76,26 @@ storage races remain an explicit OPEN runtime gate; synthetic bridge tests canno
 The new unstaged pending-write fixture qualifies only the shared native transport primitive.
 Its native supervisor holds a private connected byte-pipe reader until a real WriteFile pending
 and GetOverlappedResult incomplete observation. Positive drain has its own OVERLAPPED/event/
-64KiB buffer under the original writer deadline. The deadline cohort leaves the peer unread,
-records exact CancelIoEx/result facts and requires original writer exit74 or202 according to
+64 KiB buffer under the original writer deadline. The deadline cohort leaves the peer unread,
+records exact CancelIoEx/result facts and requires original writer exit 74 or 202 according to
 terminal proof. Pending storage stays live to a proved terminal result or original process death.
-The original supervisor exits0 only after fresh inner Job0; the outer controller still owns
+The original supervisor exits 0 only after fresh inner Job 0; the outer controller still owns
 the Node/Electron run and all descendants. No product Stop/Release receipt is derived.
 Before spawn, nativePendingWriteGate reads checkout/native-evidence/binary-sha256.txt anchored
 to its own source module, with strict bounded full-path/digest and actual PE-architecture checks.
 The current workflow creates that inventory before either gate; running without it fails closed.
 Only the pending-write fixture compiles its passive observation definition, and staging remains
-exactly normal broker plus manifest. Both new cases run after all17 existing scenarios on both
-real architectures under Node and pinned Electron. No new WRITE gate has yet executed.
+exactly normal broker plus manifest. Both new cases run after all 17 existing scenarios on both
+real architectures under Node and pinned Electron. The native workflow must provide
+current-source WRITE evidence before merge.
 Claims remain branch-observed: unhit terminal/undrained/partial/late-completion races and direct
 broker-fd3 backpressure remain OPEN. Neither pauses nor an elapsed deadline prove API pending.
 Its compile-guarded numeric `OWNED_PROCESS_TEST_TERMINAL_RACE=1` fixture toggle forces a
 failure CAS after genuine full ACK and before success CAS; the raw gate separately requires
-original exit74. A bounded two-way atomic handshake requires the actual losing success CAS
-and its observation before exit74; missing handshake exits75, so it cannot pass by elapsed time.
+original exit 74. A bounded two-way atomic handshake requires the actual losing success CAS
+and its observation before exit 74; missing handshake exits 75, so it cannot pass by elapsed time.
 Normal broker ignores this toggle. ACK alone is never this negative gate's success.
-Default product-side admission reads a maximum4KiB strict manifest, hashes a maximum16MiB
+Default product-side admission reads a maximum 4 KiB strict manifest, hashes a maximum 16 MiB
 PE file and verifies schema/platform/architecture/protocol/file/digest before starting the
 broker. Mutable filesystem check-to-spawn races are not a malicious-OS security guarantee.
 The injected BrokerTransportFactory is trusted composition (private streams/control/events)
