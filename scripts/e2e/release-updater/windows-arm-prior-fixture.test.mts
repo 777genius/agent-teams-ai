@@ -4,12 +4,14 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { gunzipSync } from 'node:zlib';
 import {
   ARM211_FILES,
   assertFixturePath,
   assertPreservedFiles,
   assertRepairManifest,
   copyOriginalArmFile,
+  parseOriginalArchiveListing,
 } from './windows-arm-prior-fixture.mts';
 
 // These exercise actual TEST filesystem/PE boundaries, not a native installer or decoder mock.
@@ -20,11 +22,12 @@ const bytes = (data: Buffer) => ({
 });
 void test('archive boundary rejects changed entry set, foreign names, links and case collisions', () => {
   const valid = [
-    ...ARM211_FILES.map((name) => ({ name, method: 'ARM64 LZMA2', link: false })),
+    ...ARM211_FILES.map((name) => ({ name, method: 'ARM64 LZMA2', link: false, directory: false })),
     ...Array.from({ length: 1007 }, (_, index) => ({
       name: `resources/data-${index}`,
       method: 'LZMA2',
       link: false,
+      directory: false,
     })),
   ];
   assertRepairManifest(valid);
@@ -41,6 +44,29 @@ void test('archive boundary rejects changed entry set, foreign names, links and 
     Object.assign(invalid[0], changed);
     assert.throws(() => assertRepairManifest(invalid));
   }
+  const invalid = structuredClone(valid);
+  assert(invalid[0]);
+  invalid[0].name = `C:\\outside\n${'x'.repeat(600)}`;
+  invalid[0].method = 'y'.repeat(200);
+  invalid[0].link = true;
+  assert.throws(
+    () => assertRepairManifest(invalid),
+    (error: unknown) => {
+      assert(error instanceof Error);
+      assert(!error.message.includes('\n'), 'Diagnostic must escape control characters');
+      const details = JSON.parse(
+        error.message.split('Invalid original archive member: ')[1] ?? ''
+      ) as {
+        name: string;
+        method: string;
+        link: boolean;
+      };
+      assert.equal(details.name, invalid[0]?.name.slice(0, 512));
+      assert.equal(details.method.length, 128);
+      assert.equal(details.link, true);
+      return true;
+    }
+  );
 });
 void test('copy proves original bytes/ARM PE and never overwrites, even a destination created after validation', async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-arm211-files-')));
@@ -102,4 +128,77 @@ void test('preserved original ASAR/update configuration reject changed bytes', a
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+void test('authenticated actual ARM211 7z listing preserves900files126directories and exact19filtered paths', async () => {
+  const compressed = await readFile(new URL('./fixtures/arm211-7z-slt.txt.gz', import.meta.url));
+  const raw = gunzipSync(compressed);
+  assert.equal(raw.length, 213401);
+  assert.equal(
+    createHash('sha256').update(raw).digest('hex'),
+    'f102d4b995ef1488515175e2575e2a951a353d6a0f4cd79b97f610044350c652'
+  );
+  const entries = parseOriginalArchiveListing(raw.toString());
+  assert.equal(entries.filter((entry) => entry.directory).length, 126);
+  assert.equal(entries.filter((entry) => !entry.directory).length, 900);
+  assert.deepEqual(entries[2], {
+    name: 'resources\\app.asar.unpacked',
+    method: '',
+    link: false,
+    directory: true,
+  });
+  assertRepairManifest(entries);
+  const originalNames = entries.map((entry) => entry.name);
+  assertRepairManifest(
+    entries.map((entry) => ({ ...entry, name: entry.name.replaceAll('\\', '/') }))
+  );
+  // Change exactly the first separator to exercise mixed Windows/POSIX member names.
+  const mixedSeparators = entries.map((entry) => {
+    const firstSeparator = entry.name.indexOf('\\');
+    const name =
+      firstSeparator < 0
+        ? entry.name
+        : `${entry.name.slice(0, firstSeparator)}/${entry.name.slice(firstSeparator + 1)}`;
+    return { ...entry, name };
+  });
+  assert(
+    mixedSeparators.some((entry) => entry.name.includes('/') && entry.name.includes('\\')),
+    'The fixture must retain mixed separators'
+  );
+  assertRepairManifest(mixedSeparators);
+  for (const name of [
+    '../outside',
+    '..\\outside',
+    '/absolute',
+    '\\absolute',
+    '\\\\server\\share',
+    'C:\\outside',
+    'C:relative',
+    'resources/./x',
+    'resources\\..\\x',
+    'resources/\\x',
+    'resources\\\\x',
+    'resources/x\0z',
+  ]) {
+    const invalid = structuredClone(entries);
+    assert(invalid[2]);
+    invalid[2].name = name;
+    assert.throws(() => assertRepairManifest(invalid));
+  }
+  const collided = structuredClone(entries);
+  assert(collided[3] && collided[2]);
+  collided[3].name = collided[2].name.replaceAll('\\', '/');
+  assert.throws(() => assertRepairManifest(collided), /Archive name collision/);
+  for (const change of [{ link: true }, { directory: true }, { method: '' }]) {
+    const invalid = structuredClone(entries);
+    const payload = invalid.find((entry) => entry.name === 'AgentTeamsAI.exe');
+    assert(payload);
+    Object.assign(payload, change);
+    assert.throws(() => assertRepairManifest(invalid));
+  }
+  assert.deepEqual(
+    entries.map((entry) => entry.name),
+    originalNames,
+    'Raw member names remain unchanged'
+  );
 });

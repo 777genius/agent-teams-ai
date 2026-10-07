@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { test } from 'node:test';
 import { uniqueWindowsOwners } from './windows-native.mts';
+import { observerFailureReceipt } from './windows-observer-receipt.mts';
+import { observeInstallerChild } from './windows-ota-observer.mts';
 import type { WindowsProcess } from './windows-native.mts';
 
 const owner: WindowsProcess = {
@@ -48,4 +52,151 @@ for (const [field, value] of Object.entries({
 void test('empty owner list stays empty and invalid PIDs fail before preparing a signal', () => {
   assert.deepEqual(uniqueWindowsOwners([]), []);
   assert.throws(() => uniqueWindowsOwners([{ ...owner, pid: 0 }]), /Invalid TEST PID/u);
+});
+void test('real portable child events retain spawn PID and nonzero exit without adopting missing identity', async () => {
+  const records: unknown[] = [];
+  const child = spawn(process.execPath, ['-e', 'process.exit(7)'], { env: {}, stdio: 'ignore' });
+  const finish = observeInstallerChild(
+    child,
+    process.execPath,
+    {
+      processes: () => Promise.resolve([]),
+      installerLineage: () =>
+        Promise.reject(new Error('Exited child must not be inspected at25seconds')),
+    },
+    (receipt) => {
+      records.push(structuredClone(receipt));
+      return Promise.resolve();
+    }
+  );
+  await once(child, 'exit');
+  await finish();
+  const record = records.at(-1) as {
+    qualifying: boolean;
+    identity: unknown;
+    lineage: unknown;
+    closeObserved: boolean;
+    events: { event: string; pid?: number; code?: number; signal?: string | null }[];
+  };
+  assert.equal(record.qualifying, false);
+  assert.equal(record.identity, null);
+  assert.equal(record.lineage, null);
+  assert.equal(record.events.find((event) => event.event === 'spawn')?.pid, child.pid);
+  assert.equal(record.events.find((event) => event.event === 'exit')?.code, 7);
+  assert.equal(record.events.find((event) => event.event === 'exit')?.signal, null);
+  assert.equal(
+    record.closeObserved,
+    record.events.some((event) => event.event === 'close')
+  );
+  assert(record.events.some((event) => event.event === 'observation-finalized'));
+});
+void test('failed portable spawn records the error and never queries an undefined installer PID', async () => {
+  const records: unknown[] = [];
+  const child = spawn('/TEST-nonexistent-installer-observer', [], { env: {}, stdio: 'ignore' });
+  const closed = new Promise<void>((resolve) => child.once('close', () => resolve()));
+  const unavailable = (): Promise<never> =>
+    Promise.reject(new Error('No spawn means no native query'));
+  const finish = observeInstallerChild(
+    child,
+    '/TEST-nonexistent-installer-observer',
+    {
+      processes: unavailable,
+      installerLineage: unavailable,
+    },
+    (receipt) => {
+      records.push(structuredClone(receipt));
+      return Promise.resolve();
+    }
+  );
+  await closed;
+  await finish();
+  const record = records.at(-1) as {
+    identity: unknown;
+    diagnosticError: unknown;
+    events: { event: string; error?: string }[];
+  };
+  assert.equal(record.identity, null);
+  assert.equal(record.diagnosticError, null);
+  assert(!record.events.some((event) => event.event === 'spawn'));
+  assert.match(record.events.find((event) => event.event === 'error')?.error ?? '', /ENOENT/u);
+});
+
+void test('diagnostic save failure preserves installer exit and allows later receipt saves', async () => {
+  const child = spawn(process.execPath, ['-e', 'process.exit(7)'], { env: {}, stdio: 'ignore' });
+  const records: unknown[] = [];
+  let writes = 0;
+  const finish = observeInstallerChild(
+    child,
+    process.execPath,
+    {
+      processes: () => Promise.resolve([]),
+      installerLineage: () => Promise.reject(new Error('Exited child must not be inspected')),
+    },
+    (receipt) => {
+      if (++writes === 1) return Promise.reject(new Error('TEST receipt first write failed'));
+      records.push(structuredClone(receipt));
+      return Promise.resolve();
+    }
+  );
+  const code = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+  await finish();
+  assert.equal(code, 7);
+  const final = records.at(-1) as {
+    persistenceError: string;
+    events: { event: string; code?: number }[];
+  };
+  assert.match(final.persistenceError, /TEST receipt first write failed/u);
+  assert.equal(final.events.find((event) => event.event === 'exit')?.code, 7);
+  assert(final.events.some((event) => event.event === 'observation-finalized'));
+  assert(writes > 1);
+});
+
+void test('malformed observer JSON preserves every control character and parse failure in its receipt', () => {
+  for (let code = 0; code < 32; code++) {
+    const stdout = `{"Names":["before${String.fromCharCode(code)}after"]}\r\n`;
+    let parseError: unknown;
+    try {
+      JSON.parse(stdout.trim());
+    } catch (error) {
+      parseError = error;
+    }
+    assert(parseError instanceof SyntaxError);
+    const completed = { stdout, stderr: 'TEST diagnostic stderr\r\n' };
+    const receipt = observerFailureReceipt(parseError, 'json-parse', completed);
+    // The persisted JSON must round-trip raw evidence; never repair the malformed payload.
+    const persisted = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+    assert.equal(persisted.stdout, stdout);
+    assert.equal(persisted.stderr, completed.stderr);
+    assert.equal(persisted.phase, 'json-parse');
+    assert.equal(persisted.error, String(parseError));
+    assert.throws(() => JSON.parse(persisted.stdout!), SyntaxError);
+  }
+});
+
+void test('observer execution failure retains child output and termination metadata', () => {
+  const error = Object.assign(new Error('TEST observer timed out'), {
+    stdout: 'TEST partial stdout\r\n',
+    stderr: 'TEST partial stderr\r\n',
+    code: 'ETIMEDOUT',
+    signal: 'SIGTERM',
+    killed: true,
+  });
+  assert.deepEqual(observerFailureReceipt(error, 'execution'), {
+    phase: 'execution',
+    error: String(error),
+    stdout: error.stdout,
+    stderr: error.stderr,
+    code: error.code,
+    signal: error.signal,
+    killed: error.killed,
+  });
+});
+
+void test('observer receipt persistence failure retains successfully completed transport output', () => {
+  const error = new Error('TEST receipt persistence failed');
+  const completed = { stdout: '{"Names":["TEST"]}\r\n', stderr: '' };
+  const receipt = observerFailureReceipt(error, 'receipt', completed);
+  assert.equal(receipt.phase, 'receipt');
+  assert.equal(receipt.stdout, completed.stdout);
+  assert.equal(receipt.stderr, '');
 });
