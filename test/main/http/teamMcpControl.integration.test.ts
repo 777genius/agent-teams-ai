@@ -691,12 +691,18 @@ describe('MCP team tools over the local REST control API', () => {
       observer.mockRestore();
       snapshot = await get();
       let release!: () => void;
+      let entered!: () => void;
+      const launchEntered = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
       const launch = teamDataService.runConfigurationOperation(teamName, async () => {
+        entered();
         await new Promise<void>((resolve) => {
           release = resolve;
         });
         await originalWriter(teamName, { name: 'Launch won' });
       });
+      await launchEntered;
       const staleEdit = update(snapshot.configurationRevision, { description: 'Overwrite launch' });
       release();
       await launch;
