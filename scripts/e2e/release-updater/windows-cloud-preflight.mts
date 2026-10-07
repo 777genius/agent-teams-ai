@@ -154,7 +154,15 @@ export function assertCloudPreflight(receipt: CloudPreflightReceipt, expectedIma
   if (proof.ProcessExited) assert.equal(proof.AfterHeld, null);
   else assert.deepEqual(proof.AfterHeld, owner);
   assertForegroundIdentity(proof.AfterForeground);
-  assert.notEqual(proof.AfterForeground.PackageBefore, cloudExperiencePackage);
+  assert(
+    !proof.AfterForeground.PackageBefore?.toLowerCase().startsWith(
+      'microsoft.windows.cloudexperiencehost_'
+    )
+  );
+  assert.notEqual(
+    path.win32.basename(proof.AfterForeground.Before?.Executable ?? '').toLowerCase(),
+    'wwahost.exe'
+  );
   assert.notEqual(proof.AfterForeground.Hwnd, proof.Before.Hwnd);
   assert.equal(typeof proof.SendReturned, 'boolean');
   assert(Number.isInteger(proof.SendError));

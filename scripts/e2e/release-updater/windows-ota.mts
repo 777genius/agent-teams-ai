@@ -256,6 +256,7 @@ async function run() {
   let logError: Error | undefined;
   let targetVersion = '';
   let samplerStop = false;
+  let finalReleaseProof: (() => boolean) | undefined;
   let sampler: Promise<void> | undefined;
   const installerSamples: WindowsProcess[] = [];
   const spawnedChildren: { kind: 'app' | 'installer'; child: ChildProcess }[] = [];
@@ -551,6 +552,7 @@ async function run() {
       evidence.passed = false;
       process.exitCode = 1;
     }
+    evidence.finalReleaseProved = finalReleaseProof?.() ?? false;
     evidence.finishedAt = new Date().toISOString();
     await writeFile(path.join(output, 'summary.json'), JSON.stringify(evidence, null, 2));
     if (
@@ -1072,17 +1074,18 @@ async function run() {
     assert(!logError);
     evidence.passed = true;
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
-    evidence.finalReleaseProved = finalWindowsReleaseProved({
-      architecture: process.arch,
-      mode,
-      targetVersion,
-      legacyFixture: inputs.legacyFixture,
-      plan: inputs.plan,
-      stagedMetadata: inputs.stagedMetadata,
-      passed: evidence.passed === true,
-      freshInstallProved: evidence.freshInstallProved === true,
-      fullOtaProved: evidence.fullOtaProved === true,
-    });
+    finalReleaseProof = () =>
+      finalWindowsReleaseProved({
+        architecture: process.arch,
+        mode,
+        targetVersion,
+        legacyFixture: inputs.legacyFixture,
+        plan: inputs.plan,
+        stagedMetadata: inputs.stagedMetadata,
+        passed: evidence.passed === true,
+        freshInstallProved: evidence.freshInstallProved === true,
+        fullOtaProved: evidence.fullOtaProved === true,
+      });
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);
     process.exitCode = 1;

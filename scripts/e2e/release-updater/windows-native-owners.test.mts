@@ -121,6 +121,36 @@ void test('failed portable spawn records the error and never queries an undefine
   assert.match(record.events.find((event) => event.event === 'error')?.error ?? '', /ENOENT/u);
 });
 
+void test('diagnostic save failure preserves installer exit and allows later receipt saves', async () => {
+  const child = spawn(process.execPath, ['-e', 'process.exit(7)'], { env: {}, stdio: 'ignore' });
+  const records: unknown[] = [];
+  let writes = 0;
+  const finish = observeInstallerChild(
+    child,
+    process.execPath,
+    {
+      processes: () => Promise.resolve([]),
+      installerLineage: () => Promise.reject(new Error('Exited child must not be inspected')),
+    },
+    (receipt) => {
+      if (++writes === 1) return Promise.reject(new Error('TEST receipt first write failed'));
+      records.push(structuredClone(receipt));
+      return Promise.resolve();
+    }
+  );
+  const code = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+  await finish();
+  assert.equal(code, 7);
+  const final = records.at(-1) as {
+    persistenceError: string;
+    events: { event: string; code?: number }[];
+  };
+  assert.match(final.persistenceError, /TEST receipt first write failed/u);
+  assert.equal(final.events.find((event) => event.event === 'exit')?.code, 7);
+  assert(final.events.some((event) => event.event === 'observation-finalized'));
+  assert(writes > 1);
+});
+
 void test('malformed observer JSON preserves every control character and parse failure in its receipt', () => {
   for (let code = 0; code < 32; code++) {
     const stdout = `{"Names":["before${String.fromCharCode(code)}after"]}\r\n`;
