@@ -28,8 +28,11 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   // The launch prompt reaches the lead through the inbox rather than the
   // orchestrator leadPrompt, and the launch flow drives it from outside.
   'deliverOpenCodeLaunchPromptToLead',
+  // App composition reads HTTP runtime ownership and installs the synchronous launch fence.
+  'hasLiveOpenCodeMcpConsumers',
   'launchTeam',
   'restartLeadRuntime',
+  'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
@@ -71,6 +74,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getTeamAgentRuntimeSnapshot',
   'getTeamAgentRuntimeSnapshotReadOnly',
   'hasActiveTeamRuntimes',
+  'hasLiveOpenCodeMcpConsumers',
   'hasProvisioningRun',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
@@ -105,6 +109,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'sendMessageToTeam',
   'setControlApiBaseUrlResolver',
   'setCrossTeamSender',
+  'setLaunchAdmissionGuard',
   'setMainWindow',
   'setMemberRuntimeAdvisoryInvalidator',
   'setMemberWorkSyncAcceptedReportChecker',

@@ -157,7 +157,8 @@ export function initializeIpcHandlers(
   contextCallbacks: {
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
-    onClaudeRootPathUpdated: (claudeRootPath: string | null) => Promise<void> | void;
+    updateClaudeRoot: (applyConfig: () => void) => Promise<void>;
+    changeContext?: (operation: () => Promise<void> | void) => Promise<void>;
     onAgentLanguageUpdated: (newLangCode: string) => Promise<void> | void;
   },
   httpServerDeps?: {
@@ -199,8 +200,13 @@ export function initializeIpcHandlers(
   initializeSearchHandlers(registry);
   initializeSubagentHandlers(registry);
   initializeUpdaterHandlers(updater);
-  initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
-  initializeContextHandlers(registry, contextCallbacks.rewire);
+  initializeSshHandlers(
+    sshManager,
+    registry,
+    contextCallbacks.rewire,
+    contextCallbacks.changeContext
+  );
+  initializeContextHandlers(registry, contextCallbacks.rewire, contextCallbacks.changeContext);
   initializeTeamHandlers(
     teamDataService,
     teamHandlerApis,
@@ -233,7 +239,7 @@ export function initializeIpcHandlers(
     })
   );
   initializeConfigHandlers({
-    onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
+    updateClaudeRoot: contextCallbacks.updateClaudeRoot,
     onAgentLanguageUpdated: contextCallbacks.onAgentLanguageUpdated,
   });
   if (httpServerDeps) {

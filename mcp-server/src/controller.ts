@@ -26,7 +26,11 @@ export const taskTextSignals = controllerModule.taskTextSignals;
 export function getController(teamName: string, claudeDir?: string): WorkSyncCapableController {
   const forcedClaudeDir = process.env[FORCED_CLAUDE_DIR_ENV]?.trim();
   let resolvedClaudeDir = claudeDir;
-  if (forcedClaudeDir) {
+  if (
+    forcedClaudeDir &&
+    process.env.AGENT_TEAMS_BOUND_CONTROL_URL === undefined &&
+    process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON === undefined
+  ) {
     resolvedClaudeDir = forcedClaudeDir;
   }
 

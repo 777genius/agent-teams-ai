@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -857,7 +858,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           const savedRequest = await api.teams.getSavedRequest(teamName);
           if (savedRequest) {
             setCopyData({
-              teamName: uniqueName, runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
+              teamName: uniqueName,
+              runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
               description: savedRequest.description,
               color: savedRequest.color,
               cwd: savedRequest.cwd,
@@ -1162,9 +1164,15 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   const renderHeader = (): React.JSX.Element => (
     <div className="mb-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-[var(--color-text)]">{t('list.title')}</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <ExternalAgentPromptAction
+            api={api.externalAgentConnection}
+            local={canCreate}
+            isLight={isLight}
+            onSettings={() => useStore.getState().openSettingsTab('general')}
+          />
           <Button
             variant="outline"
             size="sm"

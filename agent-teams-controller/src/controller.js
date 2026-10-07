@@ -1,3 +1,4 @@
+const { boundControllerOptions } = require('./internal/desktopControlBinding.js');
 const { createControllerContext } = require('./internal/context.js');
 const tasks = require('./internal/tasks.js');
 const kanban = require('./internal/kanban.js');
@@ -19,7 +20,7 @@ function bindModule(context, moduleApi) {
 }
 
 function createController(options) {
-  const context = createControllerContext(options);
+  const context = createControllerContext(boundControllerOptions(options));
 
   // tasks/kanban/review stay exposed for low-level compatibility.
   // New task-board lifecycle writes should enter through taskBoard.

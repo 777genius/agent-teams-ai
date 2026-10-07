@@ -28,13 +28,22 @@ const logger = createLogger('HTTP:ssh');
 export function registerSshRoutes(
   app: FastifyInstance,
   connectionManager: SshConnectionManager,
-  modeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
+  modeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>,
+  changeContext: (operation: () => Promise<void>) => Promise<void> = async (operation) =>
+    operation()
 ): void {
   const configManager = ConfigManager.getInstance();
   let lifecycleTail = Promise.resolve();
 
   const runLifecycleOperation = <T>(operation: () => Promise<T>): Promise<T> => {
-    const result = lifecycleTail.then(operation, operation);
+    const fencedOperation = async (): Promise<T> => {
+      let value!: T;
+      await changeContext(async () => {
+        value = await operation();
+      });
+      return value;
+    };
+    const result = lifecycleTail.then(fencedOperation, fencedOperation);
     lifecycleTail = result.then(
       () => undefined,
       () => undefined

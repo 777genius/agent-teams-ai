@@ -58,7 +58,6 @@ import {
   Workflow as WorkflowIcon,
 } from 'lucide-react';
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import {
   formatMemberMcpButtonLabel,
   MEMBER_MCP_SCOPE_LABEL_KEYS,
@@ -68,6 +67,7 @@ import {
 import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
 import * as modelTone from './memberModelToneClasses';
 import { MemberModelTooltipContent } from './MemberModelTooltipContent';
+import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
 
 import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
@@ -447,49 +447,15 @@ export const MemberDraftRow = ({
     });
   }, [onWorkflowSuggestionsNeeded]);
   return (
-    <div
-      className={cn(
-        'relative grid grid-cols-1 gap-2 md:items-start',
-        isFlatRoster
-          ? cn(
-              'hover:bg-[var(--color-surface-raised)]/45 rounded-sm px-4 py-2 transition-colors',
-              FLAT_ROSTER_GRID_COLUMNS
-            )
-          : 'rounded-md p-2 shadow-sm md:grid-cols-[minmax(0,1fr)_156px_auto]',
-        isRemoved && 'opacity-55'
-      )}
-      data-role="member-row"
-      style={{
-        backgroundColor: isFlatRoster
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
-        boxShadow: isFlatRoster
-          ? undefined
-          : isLight
-            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.28)',
-      }}
+    <RosterParticipantFrame
+      accentColor={memberColorSet.border}
+      isLight={isLight}
+      layout={isFlatRoster ? 'flat' : 'member'}
+      dataRole="member-row"
+      removed={isRemoved}
     >
-      <div
-        className={cn(
-          'absolute inset-y-0 left-0 w-1',
-          isFlatRoster ? 'my-2 rounded-full' : 'rounded-l-md'
-        )}
-        style={{ backgroundColor: memberColorSet.border }}
-        aria-hidden="true"
-      />
       <div className="min-w-0 space-y-0.5">
-        <div className="flex items-center gap-2">
-          {avatarSrc ? (
-            <img
-              src={avatarSrc}
-              alt=""
-              className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
-              loading="lazy"
-            />
-          ) : null}
+        <RosterParticipantIdentity avatarSrc={avatarSrc}>
           <Input
             className="h-8 text-xs"
             value={member.name}
@@ -499,7 +465,7 @@ export const MemberDraftRow = ({
             onChange={(event) => onNameChange(member.id, event.target.value)}
             placeholder={t('memberDraft.placeholders.name')}
           />
-        </div>
+        </RosterParticipantIdentity>
         {nameError ? (
           <p className="text-[10px] text-[var(--field-error-text)]">{nameError}</p>
         ) : null}
@@ -984,6 +950,6 @@ export const MemberDraftRow = ({
           )}
         </div>
       )}
-    </div>
+    </RosterParticipantFrame>
   );
 };
