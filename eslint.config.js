@@ -795,6 +795,7 @@ export default defineConfig([
     },
   },
 
+  { name: 'owned-process-broker-tooling-project', files: ['tools/owned-process-broker/*.ts', 'scripts/build/buildOwnedProcessBroker.ts'], languageOptions: { parserOptions: { projectService: false, project: './tools/owned-process-broker/tsconfig.json' } } },
   // Custom rule overrides for all TypeScript files
   {
     name: 'custom-rules',

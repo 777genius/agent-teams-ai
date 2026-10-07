@@ -60,6 +60,8 @@ const storeState = {
       loadingHead: boolean;
       loadingOlder: boolean;
       headHydrated: boolean;
+      historyReloadRequired?: boolean;
+      messagesError?: string | null;
     }
   >,
 };
@@ -305,6 +307,7 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
     leadActivity,
     leadContextUpdatedAt,
     allCollapsed,
+    historyControl,
   }: {
     messages: InboxMessage[];
     loading?: boolean;
@@ -313,6 +316,7 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
     leadActivity?: string;
     leadContextUpdatedAt?: string;
     allCollapsed?: boolean;
+    historyControl?: (prepare?: () => void) => React.ReactNode;
   }) {
     activityTimelineRenderSpy({ allCollapsed, leadActivity, leadContextUpdatedAt, messages });
     return React.createElement(
@@ -338,7 +342,8 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
               )
             : null
         )
-      )
+      ),
+      historyControl?.()
     );
   },
 }));
@@ -583,6 +588,79 @@ describe('MessagesPanel idle summary invariants', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('keeps revision-invalidated direct history behind explicit reload demand', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    sidebarUiState.conversationScope = { kind: 'direct', participant: 'alice' };
+    const props = {
+      teamName: 'atlas-hq',
+      position: 'sidebar' as const,
+      onPositionChange: vi.fn(),
+      members: [],
+      tasks: [],
+      timeWindow: null,
+      pendingRepliesByMember: {},
+      onPendingReplyChange: vi.fn(),
+    };
+    const render = async () => {
+      await act(async () => {
+        // The store fake has no subscriptions, so change one callback to bypass React.memo.
+        // Keep the component mounted so the direct-thread effect retains its page counter.
+        root.render(React.createElement(MessagesPanel, { ...props, onPositionChange: vi.fn() }));
+        await Promise.resolve();
+      });
+    };
+    try {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'alice-older', from: 'alice', to: 'user' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-1',
+        nextCursor: 'older-cursor',
+        hasMore: true,
+        lastFetchedAt: 1,
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      await render();
+      expect(storeState.loadOlderTeamMessages).not.toHaveBeenCalled();
+      const notice = 'Message history changed. Load older messages again to refresh it.';
+      storeState.teamMessagesByName['atlas-hq'] = {
+        ...storeState.teamMessagesByName['atlas-hq'],
+        canonicalMessages: Array.from({ length: 50 }, (_, index) =>
+          makeMessage({ messageId: `bob-${index}`, from: 'bob', to: 'user' })
+        ),
+        feedRevision: 'rev-2',
+        nextCursor: 'fresh-head-cursor',
+        historyReloadRequired: true,
+        messagesError: notice,
+      };
+      await render();
+      expect(host.textContent).toContain(notice);
+      expect(storeState.loadOlderTeamMessages).not.toHaveBeenCalled();
+      const loadOlderButton = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Load older messages')
+      );
+      expect(loadOlderButton).toBeDefined();
+      await act(async () => loadOlderButton!.click());
+      expect(storeState.loadOlderTeamMessages).toHaveBeenCalledWith('atlas-hq');
+      storeState.loadOlderTeamMessages.mockClear();
+      // Initial scoped discovery still pages automatically when there is no invalidated history.
+      storeState.teamMessagesByName['atlas-hq'] = {
+        ...storeState.teamMessagesByName['atlas-hq'],
+        historyReloadRequired: false,
+        messagesError: null,
+      };
+      await render();
+      expect(storeState.loadOlderTeamMessages).toHaveBeenCalledWith('atlas-hq');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 
   it('does not keep timeline loading forever after an empty failed head attempt settles', async () => {
