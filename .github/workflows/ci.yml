@@ -9,74 +9,82 @@ on:
       # through PR #252's merge CI).
       - refactor/team-provisioning-round2-reapply
       - refactor/hosted-web-feature-boundaries
-    paths:
-      - 'src/**'
-      - 'landing/**'
-      - 'bin/**'
-      - 'scripts/**'
-      - 'agent-teams-controller/**'
-      - 'mcp-server/**'
-      - 'packages/**'
-      - 'patches/**'
-      - 'resources/runtime/**'
-      - 'resources/terminal-platform/**'
-      - '.runtime-download/**'
-      - 'runtime.lock.json'
-      - 'terminal-platform.lock.json'
-      - 'vendor/terminal-platform/**'
-      - 'test/**'
-      - '.github/workflows/**'
-      - '.gitattributes'
-      - '.github/dependabot.yml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - 'vite*.config.*'
-      - 'vitest*.config.*'
-      - 'tailwind.config.*'
-      - 'eslint.config.*'
-      - '*.js'
-      - '*.cjs'
-      - '*.mjs'
-      - '*.ts'
-      - '*.tsx'
   pull_request:
-    paths:
-      - 'src/**'
-      - 'landing/**'
-      - 'bin/**'
-      - 'scripts/**'
-      - 'agent-teams-controller/**'
-      - 'mcp-server/**'
-      - 'packages/**'
-      - 'patches/**'
-      - 'resources/runtime/**'
-      - 'resources/terminal-platform/**'
-      - '.runtime-download/**'
-      - 'runtime.lock.json'
-      - 'terminal-platform.lock.json'
-      - 'vendor/terminal-platform/**'
-      - 'test/**'
-      - '.github/workflows/**'
-      - '.gitattributes'
-      - '.github/dependabot.yml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - 'vite*.config.*'
-      - 'vitest*.config.*'
-      - 'tailwind.config.*'
-      - 'eslint.config.*'
-      - '*.js'
-      - '*.cjs'
-      - '*.mjs'
-      - '*.ts'
-      - '*.tsx'
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  plan:
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    outputs:
+      full: ${{ steps.plan.outputs.full }}
+      reuse: ${{ steps.plan.outputs.reuse }}
+      source_run: ${{ steps.plan.outputs.source_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: "CI source proof: PR=${{ github.event.pull_request.number || 0 }} | base=${{ github.event.pull_request.base.sha || 'none' }} | head=${{ github.event.pull_request.head.sha || github.sha }}"
+        run: echo 'Source event identity recorded in job metadata'
+      - name: Plan feedback and verify reusable evidence
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+        run: node scripts/ci/ci-feedback.mts plan
+
+  feedback:
+    name: Fast feedback
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    needs: plan
+    if: needs.plan.outputs.full == 'false'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Test feedback policy
+        run: node --test test/scripts/ciFeedback*.test.mts
+      - name: Install dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Guard runtime artifacts
+        run: node ./scripts/ci/forbid-runtime-artifacts.cjs
+      - name: Guard production source file size
+        run: node ./scripts/ci/check-source-file-size.mjs
+      - name: Guard Team Provisioning architecture
+        run: node ./scripts/ci/check-team-provisioning-architecture.mjs
+      - name: Typecheck workspace
+        run: pnpm typecheck:workspace
+      - name: Fast lint
+        run: pnpm lint:fast
+
   validate:
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    needs: plan
+    if: needs.plan.outputs.full == 'true'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
 
     steps:
@@ -132,7 +140,12 @@ jobs:
         run: pnpm validate:ci
 
   test:
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     name: test (${{ matrix.shard }}/2)
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     strategy:
       fail-fast: false
@@ -140,6 +153,8 @@ jobs:
         shard: [1, 2]
 
     steps:
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -181,8 +196,17 @@ jobs:
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
 
+      - name: Test feedback policy
+        if: matrix.shard == 1
+        run: node --test test/scripts/ciFeedback*.test.mts
+
   lint:
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     name: lint (${{ matrix.scope }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     strategy:
       fail-fast: false
@@ -196,6 +220,8 @@ jobs:
             paths: src/features
 
     steps:
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -235,11 +261,18 @@ jobs:
         run: pnpm lint:mcp
 
   task-change-ledger-windows:
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     name: Task change ledger Windows smoke
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: windows-latest
     timeout-minutes: 15
 
     steps:
+      - name: 'CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | windows-latest'
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -259,9 +292,6 @@ jobs:
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
-      - name: Test Windows CLI shell fallback
-        run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
-
       - name: Test crash-safe app lock publication
         run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
 
@@ -269,38 +299,58 @@ jobs:
         run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
 
       - name: Test task change ledger
-        run: pnpm test:task-change-ledger
-
-      - name: Test OpenCode nvm-windows runtime resolution
-        run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
-
-      - name: Test Windows cleanup probe diagnostics
-        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
-
-      - name: Test startup cleanup admission and IPC recovery
-        run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
-
-      - name: Test startup cleanup budget and recovery payloads
         run: >-
           pnpm exec vitest run --maxWorkers=1
+          test/main/services/team/TaskChangeLedgerReader.test.ts
+          test/main/utils/childProcess.windows.test.ts
+          test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+          test/main/utils/processStartTime.test.ts
+          test/main/utils/windowsProcessTable.test.ts
+          test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+          src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts
+          src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts
+          test/main/ipc/teams.test.ts
+          test/renderer/store/teamSlice.test.ts
           test/main/services/team/OpenCodeStartupCleanupBudget.test.ts
-          test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx
+          test/main/services/team/OpenCodeStartupCleanupRecovery.test.ts
           test/main/services/team/OpenCodeBridgeCommandClient.test.ts
           test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts
           test/main/utils/processKill.test.ts
+          test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.ts
+          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
+          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts
+          test/main/services/team/taskChangeLedgerFixtures.integration.test.ts
+          test/main/services/team/ReviewApplierService.test.ts
+          test/main/services/team/FileContentResolver.test.ts
+          test/main/services/team/ChangeExtractorService.test.ts
+          test/renderer/store/changeReviewSlice.test.ts
+          test/renderer/utils/reviewKey.test.ts
+          test/main/services/team/TeamLogSourceTracker.test.ts
+          test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts
 
       - name: Test startup cleanup deadline and late-response lifecycle
         run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
-      - name: Test delayed provider summaries through real subprocesses
-        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
-
-      - name: Test OpenCode catalog diagnostic boundaries
-        run: >-
-          pnpm exec vitest run --maxWorkers=1
-          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
-          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
-          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
-          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
-          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
-          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts
+  full-qualification:
+    name: Full qualification
+    needs: [plan, validate, test, lint, task-change-ledger-windows]
+    if: always()
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Require complete current-code qualification
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+          MODE_FULL: ${{ needs.plan.outputs.full }}
+          MODE_REUSE: ${{ needs.plan.outputs.reuse }}
+          SOURCE_RUN: ${{ needs.plan.outputs.source_run }}
+        run: node scripts/ci/ci-feedback.mts gate
