@@ -2,8 +2,11 @@ name: Electron packaged CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
     paths:
       - '.github/workflows/electron-packaged-ci.yml'
+      - 'scripts/ci/packaged-ci-*.mts'
+      - 'tsconfig.packaged-ci.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -16,15 +19,38 @@ on:
 permissions:
   contents: read
 
-# Cancel obsolete PR checks without sharing custody with push or manual runs.
+# Metadata edits use unique groups and noncanonical check names, even if setup fails.
+# A title/body edit must never cancel or replace checks for the same code.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}', github.run_id) || 'checks' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}
 
 jobs:
+  packaged-scope:
+    name: classify packaged smoke
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 10
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Verify packaged CI policy contracts
+        run: node --test scripts/ci/packaged-ci-policy.test.mts
+      - name: Classify exact local PR diff
+        id: scope
+        run: node scripts/ci/packaged-ci-cli.mts classify
+
   packaged-smoke:
-    if: github.event.pull_request.head.repo.full_name == github.repository
-    name: packaged smoke (${{ matrix.platform }})
+    needs: packaged-scope
+    if: needs.packaged-scope.outputs.run == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    name: ${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged smoke' || 'packaged smoke' }} (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
@@ -64,6 +90,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -86,6 +114,8 @@ jobs:
           done
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Typecheck packaged CI policy with pinned compiler
+        run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
         run: node -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"
       - name: Verify native rebuild
@@ -108,7 +138,9 @@ jobs:
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: pnpm ${{ matrix.pack }} --publish never --config.mac.identity=null --config.mac.forceCodeSigning=false --config.mac.notarize=false
+        # Only the two macOS commands omit DMG/ZIP in the intermediate draft lane.
+        # Native rebuild, staging and every bundle smoke below remain mandatory.
+        run: pnpm ${{ matrix.pack }} --publish never --config.mac.identity=null --config.mac.forceCodeSigning=false --config.mac.notarize=false ${{ matrix.os == 'darwin' && needs.packaged-scope.outputs.scope == 'app' && '--dir' || '' }}
       - name: Verify bundle native architecture
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
       - name: Smoke packaged SQLite and PTY modules
@@ -124,3 +156,27 @@ jobs:
       - name: Smoke packaged app under Xvfb
         if: matrix.os == 'linux'
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux
+
+  packaged-full-gate:
+    needs: [packaged-scope, packaged-smoke]
+    if: always()
+    name: ${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Require full verification on every platform
+        if: needs.packaged-scope.outputs.run != 'false'
+        env:
+          PACKAGED_SCOPE: ${{ needs.packaged-scope.outputs.scope }}
+          SCOPE_RESULT: ${{ needs.packaged-scope.result }}
+          PACKAGED_RESULT: ${{ needs.packaged-smoke.result }}
+        run: node scripts/ci/packaged-ci-cli.mts gate
+      - name: Preserve existing code checks after metadata edits
+        if: needs.packaged-scope.outputs.run == 'false'
+        run: echo 'Title/body edit only. Existing packaged code checks are unchanged.'
