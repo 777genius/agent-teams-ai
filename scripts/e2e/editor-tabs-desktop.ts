@@ -173,7 +173,7 @@ async function launch(): Promise<Cdp> {
  }
  throw Error('startup timeout');
 }
-async function stop():Promise<void>{client?.socket.close();client=null;if(app?.pid){try{process.kill(-app.pid,'SIGTERM');}catch{ /* owned app already exited */ }await new Promise<void>(resolve=>{if(app?.exitCode!==null)return resolve();app?.once('exit',()=>resolve());setTimeout(resolve,5000);});}app=null;}
+async function stop():Promise<void>{client?.socket.close();client=null;if(app?.pid&&app.exitCode===null){try{process.kill(-app.pid,'SIGTERM');}catch{ /* owned app already exited */ }await new Promise<void>(resolve=>{if(app?.exitCode!==null)return resolve();app?.once('exit',()=>resolve());setTimeout(resolve,5000);});}app=null;}
 async function state(c:Cdp):Promise<{paths:string[];active:string|null}>{return c.evaluate(`(async()=>{const s=${storeExpression}.getState();return {paths:s.editorOpenTabs.map(t=>t.filePath),active:s.editorActiveTabId};})()`);}
 async function action(c:Cdp,method:string,...args:unknown[]):Promise<unknown>{return c.evaluate(`(async()=>${storeExpression}.getState()[${jsLiteral(method)}](...${jsLiteral(args)}))()`);}
 async function shot(c:Cdp,name:string):Promise<void>{await c.evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');const data=await c.send('Page.captureScreenshot',{format:'png'});assert(data.data);await writeFile(path.join(artifacts,name+'.png'),Buffer.from(data.data,'base64'));}
@@ -213,6 +213,7 @@ try{
  assert.deepEqual(client.exceptions,[],'first process has no uncaught renderer exceptions');
  await client.send('Runtime.evaluate',{expression:'void window.electronAPI.windowControls.close()'});
  await new Promise<void>((resolve,reject)=>{if(client!.socket.readyState===WebSocket.CLOSED)return resolve();const timer=setTimeout(()=>reject(Error('graceful app quit timed out')),30000);client!.socket.addEventListener('close',()=>{clearTimeout(timer);resolve();},{once:true});});
+ await new Promise<void>((resolve,reject)=>{const quitting=app!;const check=()=>quitting.exitCode===0?resolve():reject(Error('app quit exit code '+quitting.exitCode));if(quitting.exitCode!==null)return check();const timer=setTimeout(()=>reject(Error('main/wrapper exit timed out before restart')),30000);quitting.once('exit',()=>{clearTimeout(timer);check();});});
  await stop();client=await launch();receipt.afterRestart=await client.evaluate(`({origin:location.origin,raw:localStorage.getItem('editor-project-tabs:v1')})`);await mountEditor(client,projectA);await expectSession(client,[...aPaths,missing],renamed,'full Electron process restart restores renamed/deleted/missing A tabs');
  await mountEditor(client,projectB);await expectSession(client,[bFiles[1],bFiles[0]],bFiles[0],'full Electron restart preserves independent B session');await shot(client,'project-b-restarted');
  assert.deepEqual(client.exceptions,[],'restarted process has no uncaught renderer exceptions');
