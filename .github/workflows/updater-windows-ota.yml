@@ -217,8 +217,8 @@ jobs:
           retention-days: 14
 
   fresh-windows:
-    needs: [verified-windows-inputs, legacy-windows-inputs, windows-predecessor]
-    if: ${{ !cancelled() && needs.windows-predecessor.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    needs: [verified-windows-inputs, legacy-windows-inputs]
+    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
