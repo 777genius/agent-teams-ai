@@ -166,7 +166,7 @@ const downloadActionSubtitle = computed(() => {
   }
 
   const asset = selectedDownloadAsset.value;
-  return asset.os === 'macos' ? `macOS · ${asset.archLabel}` : asset.actionSubtitle;
+  return asset.actionSubtitle;
 });
 const docsActionSubtitle = computed(() => (
   t("hero.guidesSetup")

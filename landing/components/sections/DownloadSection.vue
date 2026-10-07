@@ -327,7 +327,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           <div class="download-section__card-info">
             <h3 class="download-section__card-label">{{ asset.label }}</h3>
             <span class="download-section__card-arch">
-              {{ asset.archLabel }}<template v-if="isMounted && getDownloadVersion(asset)"> · v{{ getDownloadVersion(asset) }}</template>
+              {{ asset.os === 'macos' ? asset.actionSubtitle : asset.archLabel }}<template v-if="isMounted && getDownloadVersion(asset)"> · v{{ getDownloadVersion(asset) }}</template>
             </span>
             <DownloadArchitectureToggle
               v-if="(asset.os === 'macos' || asset.os === 'windows') && downloadStore.selectedId === asset.id"

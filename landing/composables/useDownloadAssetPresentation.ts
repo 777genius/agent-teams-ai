@@ -12,6 +12,7 @@ export type PresentedDownloadAsset = Omit<DownloadAsset, "archLabel" | "fileName
 
 export function useDownloadAssetPresentation() {
   const downloadStore = useDownloadStore();
+  const { platformInfo } = useReleaseDownloads();
 
   const getDownloadArch = (asset: Pick<DownloadAsset, "os" | "arch">): DownloadArch | "unknown" => (
     asset.os === "macos"
@@ -47,7 +48,10 @@ export function useDownloadAssetPresentation() {
 
     if (asset.os === "macos") {
       const macArchLabel = archLabel === "Apple Silicon / Intel" ? "Apple Silicon & Intel" : archLabel;
-      return `macOS 12+ · ${macArchLabel}`;
+      // Compatibility belongs to the selected payload, not its release channel.
+      const version = platformInfo("macos", getDownloadArch(asset)).version;
+      const minimum = version === "2.17.1" ? "12" : version === "2.17.7" ? "13" : null;
+      return `macOS${minimum ? ` ${minimum}+` : ""} · ${macArchLabel}`;
     }
 
     if (asset.os === "windows") return `Windows 10+ · ${archLabel}`;
