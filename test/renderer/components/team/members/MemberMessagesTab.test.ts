@@ -1,9 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MemberMessagesTab } from '@renderer/components/team/members/MemberMessagesTab';
 import { useStore } from '@renderer/store';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
@@ -42,6 +42,46 @@ vi.mock('@renderer/hooks/useTeamMessagesRead', () => ({
 }));
 
 describe('MemberMessagesTab', () => {
+  it('shows message-history errors for a loaded team and clears the notice after retry', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const notices = [
+      'Older messages are temporarily unavailable.',
+      'Message history changed. Load older messages again to refresh it.',
+    ];
+    try {
+      for (const error of notices) {
+        await act(async () => {
+          const entry = useStore.getState().teamMessagesByName['demo-team'];
+          useStore.setState({
+            teamMessagesByName: { 'demo-team': { ...entry, messagesError: error } },
+          });
+          root.render(
+            React.createElement(MemberMessagesTab, {
+              teamName: 'demo-team',
+              memberName: 'jack',
+              members: [],
+              tasks: [],
+            })
+          );
+        });
+        expect(host.querySelector('[role="status"]')?.textContent).toBe(error);
+        expect(useStore.getState().selectedTeamError).toBeNull();
+      }
+      await act(async () => {
+        const entry = useStore.getState().teamMessagesByName['demo-team'];
+        useStore.setState({
+          teamMessagesByName: { 'demo-team': { ...entry, messagesError: null } },
+        });
+      });
+      expect(host.querySelector('[role="status"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     getMessagesPage.mockResolvedValue({
