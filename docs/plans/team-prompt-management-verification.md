@@ -2,10 +2,11 @@
 
 ## Tested source
 
-- Source: `8484cb8bc916f5191b9c43546f9fc60ce376806d`.
+- Source: `2309168842184b98a979ab9076397dc40fa8f2f0`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-vGpqns/evidence.json`.
-- Evidence SHA256: `1b5c1c54a7ee46367e781863b62a57a1a130b7ac4bb5bde1a42906680120860e`.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-GwMzcK/evidence.json`.
+- Evidence SHA256: `ac41c0aa1bbb95eb60ddbfecba05b207512b81b03024b8e7f1a5daf96d99adb2`.
+- Later integration of `cbd4267cb5602eee6857f33fe42f7d7ba774bf37` changes release tooling and existing tests; application, MCP, controller and this desktop harness are identical to the tested source.
 
 ## Actual desktop and native MCP proof
 
@@ -21,17 +22,18 @@ Passed:
 - Read-only shared template roster, 14 identities across four references, no member editing controls.
 - Real clipboard copy contains the request, templates, MCP and independent CDP endpoints.
 - Dark 320px and light 1280px popup screenshots; manual visual inspection passed.
-- Normal application quit: `mainExitedNormally=true`, no fallback kills and no remaining owned processes.
+- Normal application quit: `mainExitedNormally=true`; three residual owned dev-wrapper/watch processes stopped through verified PID/start-time leases, with no remaining owned processes.
 
 ## Focused validation and review
 
-- Full project typecheck, full lint and MCP lint passed at product source `4532576bad88e56a18d0c8a44a458a787bdecc26`; subsequent source changes affect only the desktop harness. Its native TypeScript config passed at the tested source above.
+- Full project typecheck, full lint and MCP lint passed at product source `4532576bad88e56a18d0c8a44a458a787bdecc26`. Full project typecheck and focused lint passed again after the unreadable-roster fix at the tested source above.
 - 302 tests in seven focused backend/UI suites passed at that product source. Existing reader, deterministic launch and roster-lock suites also passed (27/18/6 tests).
 - MCP typechecks, all 67 MCP tests and controller/MCP builds passed; their source was unchanged by later fixes.
 - Production source-size and provisioning architecture guards passed without raising baselines.
-- Independent backend review accepted `8dcc611ad248cb08a84b95614cb7e7f55ddab2de`; later commits do not change backend semantics. Independent UI review accepted `34844cc41ade1f72d1446598d518d4d65d625722`; final harness review accepted the tested source above.
+- Independent backend review accepted `8dcc611ad248cb08a84b95614cb7e7f55ddab2de` and the final unreadable-roster fix separately. Independent UI review accepted `34844cc41ade1f72d1446598d518d4d65d625722`; final harness review accepted `8484cb8bc916f5191b9c43546f9fc60ce376806d`, with no subsequent harness changes.
 - Two independent plan reviews accepted the bounded implementation plan.
 - The first full CI exposed four outdated fixtures (prototype-only service instances, missing mock/AST ports, and metadata already above the existing reader limit). Only these fixtures were corrected; all 283 tests in those suites and full project typecheck then passed on the worker. Native desktop product/harness source above remained unchanged.
+- A later P2 review found unreadable roster metadata could be normalized to empty and overwritten. Existing-file presence plus the canonical metadata reader now rejects this before writes/events. All seven focused HTTP tests passed, including malformed/oversized byte-preservation proofs and genuinely missing metadata support.
 
 ## Limits
 
