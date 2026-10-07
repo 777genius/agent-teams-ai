@@ -91,8 +91,9 @@ export function checkMacArtifactAuthority(
   assert.equal(value.run.head_sha, expected.toolingSha);
   assert.equal(value.run.path.split('@')[0], expected.workflowPath);
   assert.equal(value.run.event, 'workflow_dispatch');
-  // The producer completes before the dependent native matrix. The overall run can remain active.
-  assert(['in_progress', 'completed'].includes(value.run.status));
+  // GitHub can report the aggregate run as queued while dependent matrix jobs execute.
+  // Authority still requires this attempt's completed successful producer and upload below.
+  assert(['queued', 'in_progress', 'completed'].includes(value.run.status));
   assert.equal(value.artifact.id, expected.artifactId);
   assert.equal(value.artifact.name, macInputArtifactName(expected.runId, expected.attempt));
   assert.equal(value.artifact.digest, `sha256:${expected.artifactSha256}`);

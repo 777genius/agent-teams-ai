@@ -380,7 +380,9 @@ async function verifySource(recorder: Recorder, plan: StagePlan, suffix: string)
     build: { appId: string; mac: { minimumSystemVersion: string }; dmg: { sign: boolean } };
   };
   requireThat(
-    sourcePackage.version === '2.17.1' &&
+    // The frozen source stores 2.1.2; release.yml sets 2.17.1 from the tag before building.
+    // bundleProbe independently requires the delivered, signed app version to be 2.17.1.
+    sourcePackage.version === '2.1.2' &&
       sourcePackage.build.appId === 'com.agent-teams.app' &&
       sourcePackage.build.mac.minimumSystemVersion === '12.0' &&
       sourcePackage.build.dmg.sign === false,

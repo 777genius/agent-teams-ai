@@ -62,7 +62,7 @@ export async function windowsInputs(
 ): Promise<WindowsInputSet> {
   assert(
     Boolean(mode.plan) !== Boolean(mode.legacy2172),
-    'Choose an immutable 2.17.4 plan or explicit legacy 2.17.2 infrastructure fixture'
+    'Choose an immutable 2.17.6 plan or explicit legacy 2.17.2 infrastructure fixture'
   );
   if (mode.plan)
     return planWindowsInputs(

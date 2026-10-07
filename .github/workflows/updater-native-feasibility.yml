@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
     inputs:
       target_mode:
-        description: '2.17.4 requires exact prepared stage; 2.17.2 is historical evidence only'
+        description: '2.17.6 requires exact prepared stage; 2.17.2 is historical evidence only'
         type: choice
-        options: [staged-2.17.4, historical-2.17.2]
-        default: staged-2.17.4
+        options: [staged-2.17.6, historical-2.17.2]
+        default: staged-2.17.6
       stage_artifact:
         description: 'Prepared stage artifact name'
         type: string
@@ -31,8 +31,26 @@ permissions:
   contents: read
 
 jobs:
+  linux-appimage-tooling-quality:
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm typecheck
+      - run: pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts
+      - run: pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
+
   verified-inputs:
-    if: github.repository == '777genius/agent-teams-ai' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
     # GitHub requires push-level access to read draft releases. Keep this token
     # in an input-only job; the native application runs in a separate read-only VM.
     permissions:
@@ -54,7 +72,7 @@ jobs:
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
       - name: Require explicit prepared artifact identity
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.6'
         env:
           TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
           TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
@@ -65,7 +83,7 @@ jobs:
           [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
           [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
       - name: Download immutable prepared stage
-        if: inputs.target_mode == 'staged-2.17.4'
+        if: inputs.target_mode == 'staged-2.17.6'
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.stage_artifact }}
@@ -84,7 +102,7 @@ jobs:
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern Agent.Teams.AI-2.17.1.AppImage --output "$inputs/old.AppImage"
           gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern agent-teams-ai_2.17.1_amd64.deb --output "$inputs/old.deb"
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.4; then
+          if test "$TEST_TARGET_MODE" = staged-2.17.6; then
             node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
             release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
             target_asset=$(jq -er '.assets[0].id' "$inputs/target-download-identities.json")
@@ -116,6 +134,7 @@ jobs:
           retention-days: 2
 
   linux-predecessor-availability:
+    if: github.event_name == 'workflow_dispatch'
     needs: verified-inputs
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
@@ -157,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
           flags=(--historical-preview)
-          if test "$TEST_TARGET_MODE" = staged-2.17.4; then flags=(--stage .artifacts/TEST-updater-inputs/stage --plan-sha256 "$TEST_PLAN_SHA"); fi
+          if test "$TEST_TARGET_MODE" = staged-2.17.6; then flags=(--stage .artifacts/TEST-updater-inputs/stage --plan-sha256 "$TEST_PLAN_SHA"); fi
           xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' --error-file=.artifacts/TEST-updater-evidence/xvfb.log \
             node scripts/e2e/release-updater/linux-feasibility.mts \
               --inputs .artifacts/TEST-updater-inputs \
@@ -173,6 +192,7 @@ jobs:
           retention-days: 14
 
   linux-native-ota:
+    if: github.event_name == 'workflow_dispatch'
     needs: verified-inputs
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
@@ -224,7 +244,7 @@ jobs:
                 set -euo pipefail
                 ip link set lo up
                 flags=(--historical-preview)
-                if test "$TEST_TARGET_MODE" = staged-2.17.4; then flags=(--stage "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs/stage" --plan-sha256 "$TEST_PLAN_SHA"); fi
+                if test "$TEST_TARGET_MODE" = staged-2.17.6; then flags=(--stage "$TEST_WORKSPACE/.artifacts/TEST-updater-inputs/stage" --plan-sha256 "$TEST_PLAN_SHA"); fi
                 if test "$TEST_CASE_MODE" = fresh; then flags+=(--fresh); fi
                 runuser -u "$TEST_RUNNER_USER" -- env DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY" \
                   "$TEST_NODE_BIN" "$TEST_WORKSPACE/scripts/e2e/release-updater/linux-ota.mts" \
