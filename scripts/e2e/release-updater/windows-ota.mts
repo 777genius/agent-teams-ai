@@ -17,6 +17,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { parse } from 'yaml';
 
+import { finalWindowsReleaseProved } from '../../ci/release/windowsReleaseScenario.ts';
+
 import { readAsar, readInspectorFuse } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import {
@@ -1071,10 +1073,17 @@ async function run() {
     assert(!logError);
     evidence.passed = true;
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
-    evidence.finalReleaseProved =
-      inputs.legacyFixture === false &&
-      targetVersion === '2.17.6' &&
-      Boolean(inputs.stagedMetadata);
+    evidence.finalReleaseProved = finalWindowsReleaseProved({
+      architecture: process.arch,
+      mode,
+      targetVersion,
+      legacyFixture: inputs.legacyFixture,
+      plan: inputs.plan,
+      stagedMetadata: inputs.stagedMetadata,
+      passed: evidence.passed === true,
+      freshInstallProved: evidence.freshInstallProved === true,
+      fullOtaProved: evidence.fullOtaProved === true,
+    });
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);
     process.exitCode = 1;
