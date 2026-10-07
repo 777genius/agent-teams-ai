@@ -14,7 +14,7 @@ export const DECODER_ARCHIVE_SHA =
 export function usesRepairedArm211(architecture: string, mode: string, targetVersion: string) {
   return (
     architecture === 'arm64' &&
-    isWindowsOtaMode(mode) &&
+    (mode === 'predecessor' || isWindowsOtaMode(mode)) &&
     isReviewedWindowsTargetVersion(targetVersion)
   );
 }
