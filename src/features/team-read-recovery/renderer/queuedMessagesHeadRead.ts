@@ -3,6 +3,7 @@ import type { RefreshTeamMessagesHeadResult } from '@renderer/store/team/teamMes
 export interface QueuedMessagesHeadRead {
   readonly result: Promise<RefreshTeamMessagesHeadResult>;
   start(): Promise<RefreshTeamMessagesHeadResult>;
+  cancel(): void;
 }
 
 /** Lets an older-page owner hand off to its queued head before awaiting that head. */
@@ -36,5 +37,11 @@ export function queueMessagesHeadRead(
   void older.then(() => {
     void start();
   }, reject);
-  return { result, start };
+  const cancel = (): void => {
+    if (!started) {
+      started = true;
+      resolve({ feedChanged: false, headChanged: false, feedRevision: null });
+    }
+  };
+  return { result, start, cancel };
 }

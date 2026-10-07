@@ -1,3 +1,4 @@
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
@@ -155,5 +156,42 @@ describe('actual store older/head handoff with synthetic transport', () => {
     expect(boundary.getMessagesPage).toHaveBeenCalledTimes(1);
     expect(store.getState().teamMessagesByName).toEqual({});
     expect(__getTeamScopedTransientStateForTests(team).hasQueuedHeadRefreshAfterOlder).toBe(false);
+  });
+
+  it('retires an old scoped queue before a replacement older page requires its own head', async () => {
+    const store = storeWithOlderCursor();
+    const oldPage = deferred<MessagesPage>();
+    const currentPage = deferred<MessagesPage>();
+    const currentHead = deferred<MessagesPage>();
+    boundary.getMessagesPage
+      .mockReturnValueOnce(oldPage.promise)
+      .mockResolvedValueOnce({ ...page('TEST-B'), nextCursor: 'TEST-B-cursor', hasMore: true })
+      .mockReturnValueOnce(currentPage.promise)
+      .mockReturnValueOnce(currentHead.promise);
+    const oldLoading = store.getState().loadOlderTeamMessages(team);
+    const oldHead = store.getState().refreshTeamMessagesHead(team);
+    let oldSettled = false;
+    void oldHead.then(() => {
+      oldSettled = true;
+    });
+    invalidateContextScopedRequestEpoch();
+    store.setState({ teamMessagesByName: {} });
+    await store.getState().refreshTeamMessagesHead(team);
+    await flushMicrotasks();
+    const currentLoading = store.getState().loadOlderTeamMessages(team);
+    expect(boundary.getMessagesPage).toHaveBeenCalledTimes(3);
+    currentPage.resolve(page('TEST-B-changed'));
+    await flushMicrotasks();
+    expect(boundary.getMessagesPage).toHaveBeenCalledTimes(4);
+    expect(oldSettled).toBe(true);
+    expect(boundary.getMessagesPage.mock.calls[3]).toEqual([team, { limit: 50 }]);
+    currentHead.resolve(page('TEST-B-fresh'));
+    await currentLoading;
+    expect(store.getState().teamMessagesByName[team].feedRevision).toBe('TEST-B-fresh');
+    oldPage.resolve(page('TEST-A-late'));
+    await oldLoading;
+    expect(await oldHead).toEqual({ feedChanged: false, headChanged: false, feedRevision: null });
+    expect(store.getState().teamMessagesByName[team].feedRevision).toBe('TEST-B-fresh');
+    expect(boundary.getMessagesPage).toHaveBeenCalledTimes(4);
   });
 });

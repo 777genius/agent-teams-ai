@@ -33,6 +33,11 @@ export class ScopedReadRequests<T> {
   constructor(private readonly retiredValue: () => T) {}
 
   get(team: string, scope: TeamReadScope): Promise<T> | undefined {
+    const pending = this.pending.get(team);
+    if (pending && !sameScope(pending.scope, scope)) {
+      this.pending.delete(team);
+      pending.settle({ kind: 'superseded' });
+    }
     const active = this.active.get(team);
     if (active && !sameScope(active.scope, scope)) {
       this.retire(team, 'superseded');

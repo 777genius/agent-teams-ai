@@ -304,9 +304,10 @@ interface PostPaintHandle {
   ran: boolean;
 }
 const postPaintTeamEnrichmentTimers = new Map<string, PostPaintHandle>();
-const inFlightTeamMessagesHeadRequests = new ScopedReadRequests<RefreshTeamMessagesHeadResult>(
-  () => ({ feedChanged: false, headChanged: false, feedRevision: null })
-);
+function unchangedTeamMessagesHead(): RefreshTeamMessagesHeadResult {
+  return { feedChanged: false, headChanged: false, feedRevision: null };
+}
+const inFlightTeamMessagesHeadRequests = new ScopedReadRequests(unchangedTeamMessagesHead);
 const inFlightTeamMessagesOlderRequests = new ScopedReadRequests<void>(() => undefined);
 const queuedTeamMessagesHeadRefreshesAfterOlder = new Map<
   string,
@@ -3312,8 +3313,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
     }
     const queuedAfterOlder = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-    if (queuedAfterOlder && isTeamRequestScopeCurrent(get, teamName, queuedAfterOlder.scope)) {
-      return queuedAfterOlder.result;
+    if (queuedAfterOlder) {
+      if (isTeamRequestScopeCurrent(get, teamName, queuedAfterOlder.scope))
+        return queuedAfterOlder.result;
+      queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
+      queuedAfterOlder.cancel();
     }
 
     const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestScope);
@@ -3366,11 +3370,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           readTeamMessagesPage(teamName, { limit: 50 })
         );
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
+          return unchangedTeamMessagesHead();
         }
 
         const previousEntry = getTeamMessagesCacheEntry(get(), teamName);
@@ -3422,11 +3422,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       } catch (error) {
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return {
-            feedChanged: false,
-            headChanged: false,
-            feedRevision: null,
-          };
+          return unchangedTeamMessagesHead();
         }
         set((state) => ({
           teamMessagesByName: {
@@ -3517,7 +3513,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }));
           inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
           const queuedHead = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-          await (queuedHead ? queuedHead.start() : get().refreshTeamMessagesHead(teamName));
+          await (queuedHead && isTeamRequestScopeCurrent(get, teamName, queuedHead.scope)
+            ? queuedHead.start()
+            : get().refreshTeamMessagesHead(teamName));
           return;
         }
 
