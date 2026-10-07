@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { realpathSync } from 'fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'url';
 
 import { FastMCP } from 'fastmcp';
@@ -42,11 +43,41 @@ export interface AgentTeamsMcpHttpHealthIdentity {
 }
 
 export function createServer(
-  input: { healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null } = {}
+  input: {
+    healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null;
+    startOptions?: AgentTeamsMcpStartOptions;
+  } = {}
 ) {
+  const httpOptions =
+    input.startOptions?.transportType === HTTP_TRANSPORT ? input.startOptions.httpStream : null;
+  const bound =
+    process.env.AGENT_TEAMS_BOUND_CONTROL_URL !== undefined ||
+    process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON !== undefined;
+  if (bound && httpOptions && !['127.0.0.1', '::1', 'localhost'].includes(httpOptions.host)) {
+    throw new Error('Desktop-bound MCP must listen on loopback');
+  }
+  const authorityHost = httpOptions?.host === '::1' ? '[::1]' : httpOptions?.host;
+  const authority = httpOptions ? `${authorityHost}:${httpOptions.port}` : null;
   const server = new FastMCP({
     name: 'agent-teams-mcp',
     version: '1.0.0',
+    ...(bound && authority
+      ? {
+          // Patched transport admission covers every method, before CORS and session lookup.
+          httpRequestGate: (request: IncomingMessage, response: ServerResponse) => {
+            if (
+              request.headers.host !== authority ||
+              (request.headers.origin !== undefined &&
+                request.headers.origin !== `http://${authority}`)
+            ) {
+              response.writeHead(403, { 'content-type': 'application/json' });
+              response.end(JSON.stringify({ error: 'Forbidden Host or Origin' }));
+              return false;
+            }
+            return true;
+          },
+        }
+      : {}),
     ...(input.healthIdentity
       ? {
           health: {
@@ -164,7 +195,10 @@ export function resolveStartOptions(
 
 async function main(): Promise<void> {
   const startOptions = resolveStartOptions();
-  const server = createServer({ healthIdentity: buildHttpHealthIdentity(startOptions) });
+  const server = createServer({
+    startOptions,
+    healthIdentity: buildHttpHealthIdentity(startOptions),
+  });
   await server.start(startOptions);
 }
 

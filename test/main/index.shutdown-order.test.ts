@@ -12,6 +12,12 @@ const electronMock = vi.hoisted(() => ({
     // eslint-disable-next-line sonarjs/publicly-writable-directories -- Isolated test-only Electron userData path.
     getPath: vi.fn(() => '/tmp/agent-teams-index-shutdown-test'),
     getVersion: vi.fn(() => '1.3.0'),
+    // Native CDP preparation reads explicit switches before app.ready.
+    commandLine: {
+      hasSwitch: vi.fn(() => false),
+      getSwitchValue: vi.fn(() => ''),
+      appendSwitch: vi.fn(),
+    },
     isPackaged: false,
     on: vi.fn(),
     // src/main/index.ts calls this at module scope on win32, so the mock has to

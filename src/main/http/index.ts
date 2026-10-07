@@ -46,6 +46,7 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { FastifyInstance } from 'fastify';
 
@@ -62,6 +63,7 @@ export interface HttpServices {
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
   workspaceTrust?: WorkspaceTrustStatusFeatureFacade;
+  externalAgentConnection?: DesktopExternalAgentConnection;
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
@@ -73,6 +75,7 @@ export function registerHttpRoutes(
   services: HttpServices,
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
+  services.externalAgentConnection?.registerHttp(app);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
@@ -81,10 +84,15 @@ export function registerHttpRoutes(
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);
-  registerConfigRoutes(app);
+  registerConfigRoutes(app, services.externalAgentConnection?.updateRoot);
   registerValidationRoutes(app);
   registerUtilityRoutes(app);
-  registerSshRoutes(app, services.sshConnectionManager, sshModeSwitchCallback);
+  registerSshRoutes(
+    app,
+    services.sshConnectionManager,
+    sshModeSwitchCallback,
+    services.externalAgentConnection?.changeContext
+  );
   registerUpdaterRoutes(app, services);
   if (services.recentProjectsFeature) {
     registerRecentProjectsHttp(app, services.recentProjectsFeature);

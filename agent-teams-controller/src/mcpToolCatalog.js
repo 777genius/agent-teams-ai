@@ -1,4 +1,9 @@
-const AGENT_TEAMS_TEAM_TOOL_NAMES = ['team_list', 'team_get', 'team_create'];
+const AGENT_TEAMS_TEAM_TOOL_NAMES = [
+  'app_get_connection_info',
+  'team_list',
+  'team_get',
+  'team_create',
+];
 
 const AGENT_TEAMS_TASK_TOOL_NAMES = [
   'member_briefing',

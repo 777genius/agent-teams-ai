@@ -210,6 +210,7 @@ export function bindMemberWorkSyncProvisioningRuntime(
 export async function startPreparedMemberWorkSyncFeature(input: {
   backup: TeamBackupService;
   prepared: MemberWorkSyncFeatureFacade;
+  startBackground?: boolean;
   stallObservation: { attach(feature: MemberWorkSyncFeatureFacade): void };
   onRestoreProgress?: (progress: { current: number; total: number }) => void;
   isShutdownStarted?: () => boolean;
@@ -229,7 +230,7 @@ export async function startPreparedMemberWorkSyncFeature(input: {
     await input.prepared.dispose();
     return null;
   }
-  input.prepared.startBackground();
+  if (input.startBackground !== false) input.prepared.startBackground();
   input.stallObservation.attach(input.prepared);
   input.onStarted?.(input.prepared);
   return input.prepared;

@@ -24,6 +24,9 @@ const logger = createLogger('IPC:context');
 // =============================================================================
 
 let registry: ServiceContextRegistry;
+let changeContext = async (operation: () => Promise<void> | void): Promise<void> => {
+  await operation();
+};
 let onContextRewire: (context: ServiceContext) => void;
 
 // =============================================================================
@@ -37,10 +40,16 @@ let onContextRewire: (context: ServiceContext) => void;
  */
 export function initializeContextHandlers(
   contextRegistry: ServiceContextRegistry,
-  onRewire: (context: ServiceContext) => void
+  onRewire: (context: ServiceContext) => void,
+  withContextChange?: typeof changeContext
 ): void {
   registry = contextRegistry;
   onContextRewire = onRewire;
+  changeContext =
+    withContextChange ??
+    (async (operation) => {
+      await operation();
+    });
 }
 
 // =============================================================================
@@ -72,11 +81,13 @@ export function registerContextHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle(CONTEXT_SWITCH, async (_event, contextId: string) => {
     try {
-      // Switch to the new context
-      const { current } = registry.switch(contextId);
+      await changeContext(() => {
+        // Switch to the new context
+        const { current } = registry.switch(contextId);
 
-      // Re-wire file watcher events only (no renderer notification — renderer initiated this switch)
-      onContextRewire(current);
+        // Re-wire file watcher events only (no renderer notification — renderer initiated this switch)
+        onContextRewire(current);
+      });
 
       return { success: true, data: { contextId } };
     } catch (err) {

@@ -36,6 +36,7 @@ export interface SafeConfig {
     autoExpandAIGroups: boolean;
     useNativeTitleBar: boolean;
     telemetryEnabled: boolean;
+    externalAgentCdpEnabled: boolean;
   };
   notifications: {
     enabled: boolean;
@@ -189,6 +190,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         autoExpandAIGroups: displayConfig?.general?.autoExpandAIGroups ?? false,
         useNativeTitleBar: displayConfig?.general?.useNativeTitleBar ?? false,
         telemetryEnabled: displayConfig?.general?.telemetryEnabled ?? true,
+        externalAgentCdpEnabled: displayConfig?.general?.externalAgentCdpEnabled ?? false,
       },
       notifications: {
         enabled: displayConfig?.notifications?.enabled ?? true,
