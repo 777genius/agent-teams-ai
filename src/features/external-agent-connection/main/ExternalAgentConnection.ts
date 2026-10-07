@@ -72,7 +72,10 @@ export class ExternalAgentConnection {
       this.deps.mcp.getCurrentHandle() === handle &&
       this.deps.getControlUrl() === controlUrl;
     const ready = controlReady && stable && transportMatches && handle !== null;
-    if (ready) this.wasReady = true;
+    if (ready) {
+      this.wasReady = true;
+      this.startError = null;
+    }
     const failure =
       this.startError ??
       (!this.starting && this.wasReady && !handle

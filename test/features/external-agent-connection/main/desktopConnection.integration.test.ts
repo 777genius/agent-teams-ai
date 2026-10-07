@@ -28,6 +28,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
     let handle: { url: string; generation: number } | null = null;
     let generation = 0;
     let liveConsumers = false;
+    let startupFailure = true;
     let liveRuntimeConsumers = false;
     let reconfigureFails = false;
     const spawnedEnvironments: Record<string, string>[] = [];
@@ -38,6 +39,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
         if (liveConsumers) throw new Error('Stop teams using MCP before switching.');
       },
       ensureStarted: async () => {
+        if (startupFailure) throw new Error('Sandbox MCP startup failed');
         if (!handle) {
           spawnedEnvironments.push(
             getDesktopMcpChildEnvironment({ AGENT_TEAMS_MCP_CLAUDE_DIR: '/foreign' })
@@ -135,7 +137,19 @@ describe('desktop connection bound HTTP lifecycle', () => {
           })
         ).status
       ).toBe(403);
-      const before = await connection.retryConnection();
+      const failed = await connection.retryConnection();
+      expect(failed.mcp.status).toBe('error');
+      expect(failed.errorCode).toBe('MCP_START_FAILED');
+      expect(failed.reason).toBe('Sandbox MCP startup failed');
+      // Another owned supervisor consumer can recover without a facade retry.
+      startupFailure = false;
+      await mcp.ensureStarted();
+      const before = await connection.getConnectionInfo();
+      expect(before.mcp.status).toBe('ready');
+      expect(before.capabilities.draftCreation).toBe(true);
+      expect(before.errorCode).toBeNull();
+      expect(before.reason).toBeNull();
+      expect(before.recovery).toBeNull();
       liveRuntimeConsumers = true;
       await expect(
         connection.updateRoot(() => {
