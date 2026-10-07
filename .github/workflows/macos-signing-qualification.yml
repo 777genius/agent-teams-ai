@@ -179,6 +179,7 @@ jobs:
 
       - name: Package (macOS ${{ matrix.arch }})
         env:
+          CSC_FOR_PULL_REQUEST: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
