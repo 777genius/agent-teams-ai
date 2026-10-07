@@ -82,7 +82,14 @@ export function resolveLaunchDialogPrefill({
   getStoredModel,
 }: LaunchDialogPrefillInput): LaunchDialogPrefillResult {
   if (savedRequest && resolveTeamRuntimeSelection(savedRequest).status === 'unresolved') {
-    return { runtimeSelectionUnresolved: true, providerId: storedProviderId, model: '', effort: '', fastMode: 'inherit', limitContext: false };
+    return {
+      runtimeSelectionUnresolved: true,
+      providerId: storedProviderId,
+      model: '',
+      effort: '',
+      fastMode: 'inherit',
+      limitContext: false,
+    };
   }
   const currentLead = members.find((member) => isLeadMember(member));
   const currentLeadProviderId = normalizeOptionalTeamProviderId(currentLead?.providerId);
@@ -136,7 +143,9 @@ export function resolveLaunchDialogPrefill({
     providerBackendId,
     model: matchingModel
       ? normalizeExplicitTeamModelForUi(providerId, matchingModel)
-      : getStoredModel(providerId),
+      : savedRequest?.runtimeSelectionVersion === 1
+        ? ''
+        : getStoredModel(providerId),
     effort,
     fastMode,
     limitContext,

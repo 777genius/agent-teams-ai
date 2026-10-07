@@ -1721,7 +1721,11 @@ async function validateProvisioningRequest(
   }
 
   const payload = request as Partial<TeamCreateRequest>;
-  if (payload.runtimeSelectionVersion !== undefined && payload.runtimeSelectionVersion !== 1) return { valid: false, error: 'RUNTIME_SELECTION_UNSUPPORTED: Unsupported runtimeSelectionVersion' };
+  if (payload.runtimeSelectionVersion !== undefined && payload.runtimeSelectionVersion !== 1)
+    return {
+      valid: false,
+      error: 'RUNTIME_SELECTION_UNSUPPORTED: Unsupported runtimeSelectionVersion',
+    };
   if (typeof payload.teamName !== 'string' || payload.teamName.trim().length === 0) {
     return { valid: false, error: 'teamName is required' };
   }
@@ -2022,6 +2026,11 @@ async function handleLaunchTeam(
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
 
   const payload = request as Partial<TeamLaunchRequest>;
+  try {
+    normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion);
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
   const validatedTeamName = validateTeamName(payload.teamName);
   if (!validatedTeamName.valid) {
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
@@ -2091,7 +2100,10 @@ async function handleLaunchTeam(
     }
 
     const savedProviderId = savedRequest.providerId ?? 'anthropic';
-    const resolvedProviderId = explicitProviderId ?? savedRequest.providerId ?? (savedRequest.runtimeSelectionVersion === 1 ? undefined : providerId);
+    const resolvedProviderId =
+      explicitProviderId ??
+      savedRequest.providerId ??
+      (savedRequest.runtimeSelectionVersion === 1 ? undefined : providerId);
     const providerChangedFromSaved =
       explicitProviderId != null && explicitProviderId !== savedProviderId;
     const effortValidation = parseOptionalTeamEffort(
@@ -2251,7 +2263,8 @@ async function handleLaunchTeam(
     try {
       const response = await getTeamProvisioningStartApi().launchTeam(
         {
-          runtimeSelectionVersion: persistedMeta?.runtimeSelectionVersion ?? normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion),
+          runtimeSelectionVersion:
+            persistedMeta?.runtimeSelectionVersion ?? payload.runtimeSelectionVersion,
           teamName: validatedTeamName.value!,
           cwd,
           prompt:
@@ -3639,7 +3652,10 @@ async function handleProcessAlive(
   );
 }
 
-async function handleCreateConfig(_event: IpcMainInvokeEvent, request: unknown): Promise<IpcResult<void>> {
+async function handleCreateConfig(
+  _event: IpcMainInvokeEvent,
+  request: unknown
+): Promise<IpcResult<void>> {
   return wrapTeamHandler('createConfig', async () => {
     const payload = parseCreateTeamRequest(request);
     const create = (): Promise<void> => getTeamDataService().createTeamConfig(payload);

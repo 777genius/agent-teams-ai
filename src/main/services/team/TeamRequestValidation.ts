@@ -403,6 +403,7 @@ export function parseDraftLaunchCreateRequest(
   body: unknown
 ): TeamCreateRequest {
   const payload = getObjectPayload(body);
+  normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion);
   const teamName = Object.hasOwn(payload, 'teamName')
     ? assertProvisioningTeamName(payload.teamName)
     : savedRequest.teamName;
@@ -411,13 +412,15 @@ export function parseDraftLaunchCreateRequest(
     throw new TeamRequestValidationError('cwd is required');
   }
 
-  const providerId = Object.hasOwn(payload, 'providerId')
-    ? parseProviderId(payload.providerId)
-    : resolveTeamRuntimeSelection(savedRequest).status === 'unresolved'
-      ? undefined
-      : (savedRequest.providerId ?? 'anthropic');
+  const savedSelection = resolveTeamRuntimeSelection(savedRequest);
+  const explicitProviderId =
+    payload.providerId == null ? undefined : parseProviderId(payload.providerId);
+  const providerId =
+    explicitProviderId ??
+    (savedSelection.status === 'selected' ? savedSelection.providerId : undefined);
   const providerChangedFromSaved =
-    Object.hasOwn(payload, 'providerId') && providerId !== (savedRequest.providerId ?? 'anthropic');
+    explicitProviderId != null &&
+    (savedSelection.status === 'unresolved' || explicitProviderId !== savedSelection.providerId);
   const providerBackendId = parseLaunchProviderBackendId(
     providerId,
     Object.hasOwn(payload, 'providerBackendId')

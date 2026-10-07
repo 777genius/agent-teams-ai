@@ -7329,6 +7329,52 @@ describe('ipc teams handlers', () => {
       );
     });
 
+    it.each([true, false])(
+      'rejects unsupported inbound marker before saved metadata masks it (draft=%s)',
+      async (draft) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-unsupported-marker-'));
+        setClaudeBasePathOverride(claudeRoot);
+        try {
+          const teamDir = path.join(claudeRoot, 'teams', 'marker-team');
+          fs.mkdirSync(teamDir, { recursive: true });
+          fs.writeFileSync(
+            path.join(teamDir, 'team.meta.json'),
+            JSON.stringify({
+              version: 1,
+              runtimeSelectionVersion: 1,
+              providerId: 'codex',
+              createdAt: Date.now(),
+            })
+          );
+          if (!draft)
+            fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+          service.getSavedRequest.mockResolvedValueOnce({
+            teamName: 'marker-team',
+            runtimeSelectionVersion: 1,
+            providerId: 'codex',
+            cwd: claudeRoot,
+            members: [],
+          });
+          const result = await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+            teamName: 'marker-team',
+            cwd: claudeRoot,
+            runtimeSelectionVersion: 2,
+          });
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining('RUNTIME_SELECTION_UNSUPPORTED'),
+          });
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has('marker-team')).not.toBe(true);
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+        } finally {
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
+
     it('launches draft team through saved request without dropping Electron draft metadata', async () => {
       const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-launch-'));
       setClaudeBasePathOverride(claudeRoot);

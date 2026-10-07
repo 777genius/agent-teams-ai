@@ -786,12 +786,15 @@ describe('TeamDataService draft metadata', () => {
     tempPaths.push(firstRoot, secondRoot);
     setClaudeBasePathOverride(firstRoot);
     const writeMeta = TeamMetaStore.prototype.writeMeta;
-    vi.spyOn(TeamMetaStore.prototype, 'writeMeta').mockImplementation(
-      function (teamName, metadata, capturedBase) {
-        setClaudeBasePathOverride(secondRoot);
-        return writeMeta.call(this, teamName, metadata, capturedBase);
-      }
-    );
+    vi.spyOn(TeamMetaStore.prototype, 'writeMeta').mockImplementation(function (
+      this: TeamMetaStore,
+      teamName,
+      metadata,
+      capturedBase
+    ) {
+      setClaudeBasePathOverride(secondRoot);
+      return writeMeta.call(this, teamName, metadata, capturedBase);
+    });
     await new TeamDataService().createTeamConfig({
       teamName: 'captured-team',
       runtimeSelectionVersion: 1,
