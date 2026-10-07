@@ -29,6 +29,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
     let generation = 0;
     let liveConsumers = false;
     let liveRuntimeConsumers = false;
+    let reconfigureFails = false;
     const spawnedEnvironments: Record<string, string>[] = [];
     const order: string[] = [];
     const mcp = {
@@ -65,6 +66,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
         controlReady = true;
       },
       reconfigureRoot: () => {
+        if (reconfigureFails) throw new Error('Root services unavailable');
         order.push(`reconfigure:${root}`);
       },
       cdp: {
@@ -218,9 +220,46 @@ describe('desktop connection bound HTTP lifecycle', () => {
       for (const url of ['/api/app/connection/retry', '/api/ssh/connect', '/api/ssh/disconnect']) {
         expect((await request(url, newHeaders)).status).toBe(409);
       }
-      await connection.changeContext(() => {
-        local = false;
+      // A failed local switch must resume native launches against the actual root.
+      await expect(
+        connection.changeContext(() => {
+          throw new Error('SSH connect failed');
+        })
+      ).rejects.toThrow('SSH connect failed');
+      expect(() => connection.assertLaunchAdmission()).not.toThrow();
+      expect((await connection.getConnectionInfo()).mcp.status).toBe('ready');
+      expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(root);
+      await expect(
+        connection.updateRoot(() => {
+          root = '/sandbox/connection-failed-update';
+          throw new Error('Config write failed');
+        })
+      ).rejects.toThrow('Config write failed');
+      expect(() => connection.assertLaunchAdmission()).not.toThrow();
+      expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(
+        '/sandbox/connection-failed-update'
+      );
+      await connection.updateRoot(() => {
+        root = '/sandbox/connection-new';
       });
+      reconfigureFails = true;
+      await expect(
+        connection.changeContext(() => {
+          throw new Error('SSH connect failed');
+        })
+      ).rejects.toThrow('SSH connect failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
+      expect(handle).toBeNull();
+      reconfigureFails = false;
+      expect((await connection.retryConnection()).mcp.status).toBe('ready');
+      // A partially completed remote switch cannot restore local authority.
+      await expect(
+        connection.changeContext(() => {
+          local = false;
+          throw new Error('Remote setup failed');
+        })
+      ).rejects.toThrow('Remote setup failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
       const remote = await connection.getConnectionInfo();
       expect(remote.mcp.url).toBeNull();
       expect(remote.cdp.httpOrigin).toBeNull();
