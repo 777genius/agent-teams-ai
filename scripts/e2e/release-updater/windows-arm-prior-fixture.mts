@@ -24,17 +24,71 @@ const execute = promisify(execFile);
 type Native = Awaited<ReturnType<typeof windowsNative>>;
 type Bytes = Awaited<ReturnType<typeof hashFile>>;
 type Guard = (file: string, exists?: boolean) => Promise<void>;
-export function assertRepairManifest(entries: { name: string; method: string; link: boolean }[]) {
+interface OriginalArchiveEntry {
+  name: string;
+  method: string;
+  link: boolean;
+  directory: boolean;
+}
+export function parseOriginalArchiveListing(listing: string): OriginalArchiveEntry[] {
+  const sections = listing.split('----------');
+  assert.equal(sections.length, 2);
+  const body = sections[1];
+  assert(body);
+  return body
+    .trim()
+    .split(/\r?\n\r?\n/u)
+    .map((entry) => {
+      const fields = Object.fromEntries<string>(
+        entry.split(/\r?\n/u).map((line): [string, string] => {
+          const separator = line.indexOf(' = ');
+          assert(separator > 0);
+          return [line.slice(0, separator), line.slice(separator + 3)];
+        })
+      );
+      assert(
+        fields.Attributes === 'A' || fields.Attributes === 'D',
+        'Original member attributes changed'
+      );
+      assert(
+        typeof fields.Path === 'string' && typeof fields.Method === 'string',
+        'Original member fields unavailable'
+      );
+      return {
+        directory: fields.Attributes === 'D',
+        name: fields.Path,
+        method: fields.Method,
+        link: Object.keys(fields).some((key) => /link/iu.test(key)),
+      };
+    });
+}
+export function assertRepairManifest(entries: OriginalArchiveEntry[]) {
   assert.equal(entries.length, 1026, 'Original archive file count changed');
-  const names = entries.map((entry) => entry.name.toLowerCase());
-  assert.equal(new Set(names).size, names.length, 'Archive name collision');
   for (const entry of entries) {
-    assert(!entry.link && entry.name.length < 512 && !/[\\:\0]/u.test(entry.name));
-    assert(entry.name.split('/').every((part) => part && part !== '.' && part !== '..'));
+    const valid =
+      !entry.link &&
+      entry.name.length < 512 &&
+      !/[:\0]/u.test(entry.name) &&
+      entry.name.split(/[\\/]/u).every((part) => part && part !== '.' && part !== '..') &&
+      typeof entry.directory === 'boolean' &&
+      (entry.directory ? entry.method === '' : entry.method.length > 0);
+    assert(
+      valid,
+      `Invalid original archive member: ${JSON.stringify({
+        name: entry.name.slice(0, 512),
+        method: entry.method.slice(0, 128),
+        link: entry.link,
+        directory: entry.directory,
+      })}`
+    );
   }
+  // Only separators change after every raw-path guard; never resolve or trim a member name.
+  const canonical = entries.map((entry) => ({ ...entry, name: entry.name.replace(/\\/gu, '/') }));
+  const names = canonical.map((entry) => entry.name.toLowerCase());
+  assert.equal(new Set(names).size, names.length, 'Archive name collision');
   assert.deepEqual(
-    entries
-      .filter((entry) => /\bARM64\b/u.test(entry.method))
+    canonical
+      .filter((entry) => !entry.directory && /\bARM64\b/u.test(entry.method))
       .map((entry) => entry.name)
       .sort((a, b) => a.localeCompare(b)),
     [...ARM211_FILES].sort((a, b) => a.localeCompare(b))
@@ -178,6 +232,7 @@ export async function prepareArmPriorFixture(options: {
   native: Native;
   ownDecoder: (file: string) => Promise<void>;
   recordDecoded: (ledger: unknown) => Promise<void>;
+  recordListing: (receipt: unknown) => Promise<void>;
 }): Promise<ArmPriorFixture | undefined> {
   if (!usesRepairedArm211(process.arch, options.mode, options.targetVersion)) return undefined;
   const { root, install, priorInstaller, native } = options;
@@ -276,27 +331,8 @@ export async function prepareArmPriorFixture(options: {
     return result.stdout;
   };
   const listing = await decode(['l', '-slt', archive]);
-  const sections = listing.split('----------');
-  assert.equal(sections.length, 2);
-  const body = sections[1];
-  assert(body);
-  const entries = body
-    .trim()
-    .split(/\r?\n\r?\n/u)
-    .map((entry) => {
-      const fields = Object.fromEntries<string>(
-        entry.split(/\r?\n/u).map((line): [string, string] => {
-          const separator = line.indexOf(' = ');
-          assert(separator > 0);
-          return [line.slice(0, separator), line.slice(separator + 3)];
-        })
-      );
-      return {
-        name: String(fields.Path),
-        method: String(fields.Method ?? ''),
-        link: Object.keys(fields).some((key) => /link/iu.test(key)),
-      };
-    });
+  await options.recordListing({ installer: source, archive: archiveProof, decoder, listing });
+  const entries = parseOriginalArchiveListing(listing);
   assertRepairManifest(entries);
   await decode(['x', '-y', `-o${staging}`, archive, ...ARM211_FILES, ...unchanged]);
   for (const name of unchanged) {

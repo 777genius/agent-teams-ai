@@ -16,6 +16,7 @@ import {
   platformNames,
   textProof,
 } from '../../ci/release/contract.ts';
+import { authenticateExecutor } from './execution-provenance.mts';
 import { hashFile } from './inputs.mts';
 import { checkNativePredecessor, nativeReleaseScenario } from './native-release-scenario.mts';
 import { downloadPreparedStageArtifact } from './prepared-stage-download.mts';
@@ -79,6 +80,7 @@ interface ProducerReceipt {
   artifactName: string;
   artifactSha256: string;
   toolingSha: string;
+  executionSha?: string;
   planDigest: string;
   inputDigest: string;
 }
@@ -97,17 +99,22 @@ async function downloadTrustedArtifact(
       /^[a-f\d]{64}$/u.test(planDigest) &&
       /^[a-f\d]{40}$/u.test(toolingSha)
   );
-  if (kind === 'prepared')
-    return (
-      await downloadPreparedStageArtifact(output, {
-        runId,
-        attempt,
-        artifactId,
-        artifactSha256,
-        toolingSha,
-        planDigest,
-      })
-    ).receipt;
+  const executionIndex = args.indexOf('--execution-sha');
+  const execution = authenticateExecutor(
+    toolingSha,
+    executionIndex < 0 ? toolingSha : option('--execution-sha')
+  );
+  if (kind === 'prepared') {
+    const prepared = await downloadPreparedStageArtifact(output, {
+      runId,
+      attempt,
+      artifactId,
+      artifactSha256,
+      toolingSha,
+      planDigest,
+    });
+    return { ...prepared.receipt, executionSha: execution.executionSha };
+  }
   const workflow = '.github/workflows/prepare-updater-native-inputs.yml';
   const artifactName = 'TEST-windows-native-inputs';
   const run = await api<{
@@ -194,6 +201,7 @@ async function downloadTrustedArtifact(
     artifactName,
     artifactSha256,
     toolingSha,
+    executionSha: execution.executionSha,
     planDigest,
     inputDigest: digest(canonical(plan.input)),
   };

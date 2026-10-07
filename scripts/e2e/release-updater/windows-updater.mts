@@ -26,6 +26,7 @@ import {
   ownPhysicalProfile,
   releasePhysicalProfile,
 } from './windows-ota-profile.mts';
+import { observeInstallerChild } from './windows-ota-observer.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
 import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
 
@@ -258,10 +259,21 @@ try {
   for (const stream of [setup.stdout, setup.stderr]) {
     stream?.on('data', (chunk: Buffer) => log.write(chunk));
   }
+  const finishInstallObservation = observeInstallerChild(
+    setup,
+    priorInstaller,
+    native,
+    async (receipt) => {
+      await writeFile(
+        path.join(output, 'nsis-spawn-lineage.json'),
+        JSON.stringify(receipt, null, 2)
+      );
+    }
+  );
   const setupCode = await new Promise<number | null>((resolve, reject) => {
     setup.once('error', reject);
     setup.once('exit', resolve);
-  });
+  }).finally(finishInstallObservation);
   evidence.priorInstall = { code: setupCode, arguments: ['/S', `/D=${install}`] };
   assert.equal(setupCode, 0, 'Official NSIS prior installation failed');
   assert.equal(
@@ -278,6 +290,12 @@ try {
     actualNsisExitCode: setupCode,
     env,
     native,
+    recordListing: async (receipt) => {
+      await writeFile(
+        path.join(output, 'prior-archive-listing.json'),
+        JSON.stringify(receipt, null, 2)
+      );
+    },
     recordDecoded: async (ledger) => {
       await writeFile(path.join(output, 'prior-decoded-pe.json'), JSON.stringify(ledger, null, 2));
     },
