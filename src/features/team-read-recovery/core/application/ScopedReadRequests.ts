@@ -30,18 +30,17 @@ export function sameScope(left: TeamReadScope, right: TeamReadScope): boolean {
 export class ScopedReadRequests<T> {
   private readonly active = new Map<string, ActiveRead<T>>();
   private readonly pending = new Map<string, PendingRead<T>>();
+  private readonly waiters = new Map<string, Set<PendingRead<T>>>();
 
   constructor(private readonly retiredValue: () => T) {}
 
   get(team: string, scope: TeamReadScope): Promise<T> | undefined {
-    const pending = this.pending.get(team);
-    if (pending && !sameScope(pending.scope, scope)) {
-      this.pending.delete(team);
-      pending.settle({ kind: 'superseded' });
+    for (const waiter of this.waiters.get(team) ?? []) {
+      if (!sameScope(waiter.scope, scope)) waiter.settle({ kind: 'superseded' });
     }
     const active = this.active.get(team);
     if (active && !sameScope(active.scope, scope)) {
-      this.retire(team, 'superseded');
+      this.active.delete(team);
       return undefined;
     }
     return active?.result;
@@ -83,20 +82,37 @@ export class ScopedReadRequests<T> {
       if (value.kind === 'failure') throw value.error;
       return this.retiredValue();
     });
-    const pending: PendingRead<T> = { scope, result, settle, predecessor };
+    const pending: PendingRead<T> = {
+      scope,
+      result,
+      predecessor,
+      settle: (value) => {
+        const waiters = this.waiters.get(team);
+        waiters?.delete(pending);
+        if (waiters?.size === 0) this.waiters.delete(team);
+        if (this.pending.get(team) === pending) this.pending.delete(team);
+        settle(value);
+      },
+    };
+    let waiters = this.waiters.get(team);
+    if (!waiters) {
+      waiters = new Set();
+      this.waiters.set(team, waiters);
+    }
+    waiters.add(pending);
     this.pending.set(team, pending);
     const start = (): void => {
       if (this.pending.get(team) !== pending) return;
       this.pending.delete(team);
       if (!isCurrent()) {
-        settle({ kind: 'superseded' });
+        pending.settle({ kind: 'superseded' });
         return;
       }
       let successor: Promise<T>;
       try {
         successor = this.get(team, scope) ?? read();
       } catch (error) {
-        settle({ kind: 'failure', error });
+        pending.settle({ kind: 'failure', error });
         return;
       }
       this.observe(pending, successor);
@@ -111,7 +127,12 @@ export class ScopedReadRequests<T> {
   }
 
   clear(): void {
-    for (const team of new Set([...this.active.keys(), ...this.pending.keys()])) this.delete(team);
+    for (const team of new Set([
+      ...this.active.keys(),
+      ...this.pending.keys(),
+      ...this.waiters.keys(),
+    ]))
+      this.delete(team);
   }
 
   private observe(pending: PendingRead<T>, successor: Promise<T>): void {
@@ -123,8 +144,7 @@ export class ScopedReadRequests<T> {
 
   private retire(team: string, kind: 'superseded' | 'disposed'): void {
     this.active.delete(team);
-    const pending = this.pending.get(team);
     this.pending.delete(team);
-    pending?.settle({ kind });
+    for (const waiter of this.waiters.get(team) ?? []) waiter.settle({ kind });
   }
 }
