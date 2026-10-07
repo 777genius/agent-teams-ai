@@ -37,7 +37,7 @@ const logger = createLogger('Service:TeamConfigReader');
 const TEAM_LIST_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
 const LARGE_CONFIG_BYTES = 512 * 1024;
 const CONFIG_HEAD_BYTES = 64 * 1024;
-const MAX_CONFIG_READ_BYTES = 10 * 1024 * 1024; // 10MB hard limit for full config reads
+export const MAX_CONFIG_READ_BYTES = 10 * 1024 * 1024; // 10MB hard limit for full config reads
 const PER_TEAM_READ_TIMEOUT_MS = 5_000;
 const GET_CONFIG_SLOW_READ_WARN_MS = 500;
 const CONFIG_SNAPSHOT_RECENT_STAT_FAILURE_FALLBACK_MS = 5_000;

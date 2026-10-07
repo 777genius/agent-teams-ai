@@ -647,7 +647,7 @@ describe('MCP team tools over the local REST control API', () => {
       expect(await readFile(membersPath)).toEqual(Buffer.from(unreadable));
       expect(await readFile(metaPath)).toEqual(savedMetadata);
       expect(events).toHaveLength(0);
-      // A genuinely missing roster is supported for saved legacy configurations.
+      // A genuinely missing roster is supported for a new saved draft without runtime config.
       await rm(membersPath);
       const missing = await services.teamPromptManagement!.get(teamName);
       expect(missing.savedRequest?.members).toEqual([]);
@@ -672,6 +672,138 @@ describe('MCP team tools over the local REST control API', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // Catches config-only roster policies/identities being silently replaced by narrow management fields.
+  it('refuses stopped roster replacement without member metadata while retaining get and trash', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-config-roster-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'config-only-roster';
+    const directory = path.join(root, 'teams', teamName);
+    const configPath = path.join(directory, 'config.json');
+    const membersPath = path.join(directory, 'members.meta.json');
+    const metaPath = path.join(directory, 'team.meta.json');
+    const members = [
+      {
+        name: 'builder',
+        providerId: 'codex',
+        model: 'saved-model',
+        isolation: 'worktree',
+        mcpPolicy: { mode: 'appOnly' },
+        agentId: 'existing-agent',
+        cwd: root,
+        joinedAt: 1,
+      },
+      { name: 'removed-builder', removedAt: 1, agentId: 'historical-agent' },
+    ];
+    try {
+      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await rm(membersPath);
+      await writeFile(
+        configPath,
+        JSON.stringify({ name: 'Stored roster', projectPath: root, members })
+      );
+      const configBytes = await readFile(configPath);
+      const metaBytes = await readFile(metaPath);
+      const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      expect(get.statusCode).toBe(200);
+      expect(get.json().members).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'builder',
+            providerId: 'codex',
+            model: 'saved-model',
+            agentId: 'existing-agent',
+            isolation: 'worktree',
+            mcpPolicy: { mode: 'appOnly' },
+          }),
+        ])
+      );
+      const expectedRevision = get.json().configurationRevision;
+      const target = { expectedContext: context.snapshot(), expectedRevision };
+      const update = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: { ...target, members: [{ name: 'builder', role: 'New role' }] },
+      });
+      expect(update.statusCode).toBe(409);
+      expect(update.json().code).toBe('TEAM_ROSTER_METADATA_MISSING');
+      expect(await readFile(configPath)).toEqual(configBytes);
+      expect(await readFile(metaPath)).toEqual(metaBytes);
+      await expect(readFile(membersPath)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(events).toHaveLength(0);
+      const trash = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/trash`,
+        payload: target,
+      });
+      expect(trash.statusCode).toBe(200);
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toMatchObject({
+        members,
+        deletedAt: expect.any(String),
+      });
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Catches fingerprint accepting oversized valid JSON before canonical storage limits can reject it.
+  it.each([
+    ['config.json', 10 * 1024 * 1024],
+    ['team.meta.json', 256 * 1024],
+  ] as const)(
+    'rejects oversized %s before configuration admission and preserves saved bytes',
+    async (filename, limit) => {
+      const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-bounded-read-'));
+      setClaudeBasePathOverride(root);
+      const app = Fastify();
+      const { services, teamDataService } = createServices(root);
+      const { context, events } = enableManagement(services, teamDataService, root);
+      registerTeamRoutes(app, services);
+      const teamName = 'oversized-configuration';
+      const directory = path.join(root, 'teams', teamName);
+      const targetPath = path.join(directory, filename);
+      try {
+        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        const initial = await services.teamPromptManagement!.get(teamName);
+        const original =
+          filename === 'config.json'
+            ? Buffer.from('{"name":"Oversized","members":[]}')
+            : await readFile(targetPath);
+        const oversized = Buffer.concat([original, Buffer.alloc(limit + 1, ' ')]);
+        await writeFile(targetPath, oversized);
+        const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+        expect(get.statusCode).toBe(409);
+        expect(get.json().error).toContain('TEAM_CONFIGURATION_UNREADABLE');
+        const edit = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: {
+            expectedContext: context.snapshot(),
+            expectedRevision: initial.configurationRevision,
+            metadata: { description: 'Must not write' },
+          },
+        });
+        expect(edit.statusCode).toBe(409);
+        expect(edit.json().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
+        expect(await readFile(targetPath)).toEqual(oversized);
+        expect(events).toHaveLength(0);
+      } finally {
+        await app.close();
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        TeamConfigReader.clearCacheForTests();
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
 
   // Catches admission checked before a queued launch, stale overwrites, and claiming a failed
   // mutation after its canonical writer committed but an observer/read response failed.

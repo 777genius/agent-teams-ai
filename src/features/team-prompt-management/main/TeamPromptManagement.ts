@@ -1,10 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, readFile } from 'node:fs/promises';
+import { lstat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { MAX_CONFIG_READ_BYTES, TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { TeamMetadataTooLargeError } from '@main/services/team/TeamMetadataSerialization';
+import {
+  MAX_TEAM_METADATA_BYTES,
+  TeamMetadataTooLargeError,
+} from '@main/services/team/TeamMetadataSerialization';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -48,6 +51,7 @@ interface ConfigurationSnapshot {
   config: Record<string, unknown> | null;
   meta: Awaited<ReturnType<TeamMetaStore['getMeta']>>;
   members: TeamMember[];
+  membersMetadataPresent: boolean;
   savedRequest: TeamCreateRequest | null;
   deletedAt?: string;
 }
@@ -85,26 +89,61 @@ export class TeamPromptManagement {
     if (!identity.isDirectory() || identity.isSymbolicLink())
       throw new TeamManagementError('TEAM_UNSUPPORTED', 'Team must be a local directory');
     const contents = await Promise.all(
-      ['config.json', 'team.meta.json', 'members.meta.json'].map(async (name) => {
-        try {
-          return await readFile(join(directory, name), 'utf8');
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-          throw error;
-        }
-      })
+      ['config.json', 'team.meta.json', 'members.meta.json'].map((name) =>
+        this.readFingerprintFile(directory, name)
+      )
     );
     const config = contents[0] ? (JSON.parse(contents[0]) as Record<string, unknown>) : null;
-    const revision = createHash('sha256')
-      .update(
-        JSON.stringify({
-          teamName,
-          directory: [identity.dev, identity.ino, identity.birthtimeMs],
-          contents,
-        })
-      )
-      .digest('hex');
+    const hash = createHash('sha256').update(
+      JSON.stringify({ teamName, directory: [identity.dev, identity.ino, identity.birthtimeMs] })
+    );
+    for (const content of contents) {
+      hash.update(content === null ? '-:' : `+${Buffer.byteLength(content, 'utf8')}:`);
+      if (content !== null) hash.update(content);
+    }
+    const revision = hash.digest('hex');
     return { revision, config, membersMetadataPresent: contents[2] !== null };
+  }
+
+  /** A single handle bounds both initial size and bytes read if the file grows after stat. */
+  private async readFingerprintFile(directory: string, name: string): Promise<string | null> {
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
+    const limit = name === 'config.json' ? MAX_CONFIG_READ_BYTES : MAX_TEAM_METADATA_BYTES;
+    const unreadable = () =>
+      new TeamManagementError(
+        name === 'members.meta.json'
+          ? 'TEAM_MEMBERS_METADATA_UNREADABLE'
+          : 'TEAM_CONFIGURATION_UNREADABLE',
+        `${name} must be a regular file within its supported ${limit}-byte limit`
+      );
+    try {
+      const filePath = join(directory, name);
+      const preflight = await lstat(filePath);
+      if (!preflight.isFile() || preflight.size > limit) throw unreadable();
+      handle = await open(filePath, 'r');
+      const before = await handle.stat();
+      if (!before.isFile() || before.size > limit) throw unreadable();
+      const bytes = Buffer.alloc(before.size + 1);
+      let length = 0;
+      while (length < bytes.length) {
+        const result = await handle.read(bytes, length, bytes.length - length, length);
+        if (!result.bytesRead) break;
+        length += result.bytesRead;
+      }
+      const after = await handle.stat();
+      if (length > limit || after.size > limit) throw unreadable();
+      if (length !== before.size || after.size !== before.size)
+        throw new TeamManagementError(
+          'TEAM_CONFIGURATION_CHANGED',
+          'Configuration changed during read'
+        );
+      return bytes.subarray(0, length).toString('utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    } finally {
+      await handle?.close();
+    }
   }
 
   private async read(teamName: string): Promise<ConfigurationSnapshot> {
@@ -132,6 +171,7 @@ export class TeamPromptManagement {
       config: after.config,
       meta,
       members: membersMeta?.members ?? [],
+      membersMetadataPresent: after.membersMetadataPresent,
       savedRequest,
       deletedAt:
         typeof after.config?.deletedAt === 'string' ? after.config.deletedAt : meta?.deletedAt,
@@ -348,6 +388,11 @@ export class TeamPromptManagement {
             );
           }
         } else if (target.members) {
+          if (snapshot.config && !snapshot.membersMetadataPresent)
+            throw new TeamManagementError(
+              'TEAM_ROSTER_METADATA_MISSING',
+              'This stopped team has no authoritative member metadata for safe roster replacement'
+            );
           const previous = activeTeammates(snapshot.members);
           if (!snapshot.meta)
             throw new TeamManagementError(
