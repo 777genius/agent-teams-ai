@@ -1,7 +1,22 @@
 name: macOS Signing Qualification
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/macos-signing-qualification.yml'
+      - '.github/workflows/release.yml'
+      - 'scripts/ci/verify-macos-signing.sh'
+      - 'scripts/ci/verify-macos-archives.sh'
   workflow_dispatch:
+    inputs:
+      use_github_runner:
+        description: Use GitHub hosted macOS when the configured runner is unavailable
+        type: boolean
+        default: false
+
+concurrency:
+  group: macos-signing-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -11,13 +26,14 @@ env:
 
 jobs:
   release-mac:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: arm64
-            runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
+            runner: ${{ (github.event_name == 'pull_request' || inputs.use_github_runner) && 'macos-15' || vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
           - arch: x64
@@ -183,6 +199,14 @@ jobs:
       - name: Verify transported macOS apps
         run: bash scripts/ci/verify-macos-archives.sh release
 
+      - name: Record exact packaged source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git rev-parse HEAD > release/source-sha.txt
+          (cd release && shasum -a 256 *.dmg *.zip > SHA256SUMS)
+
       - name: Upload qualified macOS installers
         uses: actions/upload-artifact@v7
         with:
@@ -191,5 +215,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/*.blockmap
+            release/source-sha.txt
+            release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
