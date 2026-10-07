@@ -80,9 +80,13 @@ Strict proof requires the complete PR/repository/base/head identity, valid commi
 SHAs, nonempty current/previous titles, and only `title`/`body` change records
 containing `from`. Base changes, unknown fields and malformed/missing identity
 require full qualification. A metadata edit also requires an authenticated
-canonical producer for the exact current PR head and base, so an advance of
-`main` requires full CI even when only the description was edited. The workflow
-run name records immutable event inputs before queued jobs start. At most eight
+canonical producer for the exact current PR head and actual synthetic merge.
+The workflow run name attests the immutable merge SHA before queued jobs start;
+GitHub may keep an old PR base SHA after the actual merge base advances. The
+authenticated merge must have two parents, with the current PR head second. A
+different merge or a legacy producer without merge attestation requires full CI.
+Fork runs with empty PR links additionally require exact authenticated fork
+identity and the complete event tuple. At most eight
 other source runs are examined; missing, conflicting or failed proof requires
 full CI. Metadata runs only carry continuity to a canonical producer. Final
 reads recheck run attempts, the listing and current PR inputs. The deliberate
@@ -99,6 +103,8 @@ The plan name is assigned before strict classification, so `Metadata CI plan`
 may also belong to a conservatively classified complete full run. Only the
 `Metadata CI result` aggregate selects metadata proof; the exact successful
 plan alias still requires every canonical full-run check and source binding.
+All four configured root test shards are required; partial or mixed topology
+cannot qualify for reuse.
 
 All `edited` events use a unique concurrency group without cancellation before
 planning. Proven metadata runs skip dependency installation, tests, lint and
