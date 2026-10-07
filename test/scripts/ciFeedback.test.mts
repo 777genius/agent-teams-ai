@@ -473,6 +473,63 @@ function metadataJobs(data: Map<string, unknown>, id = 101): JsonObject[] {
   return record(data, `${prefix}/actions/runs/${id}/attempts/1/jobs?per_page=100`).jobs as JsonObject[];
 }
 
+function interveningFullPlanAliasFixture(): Map<string, unknown> {
+  const data = metadataFixture(2);
+  const jobs = structuredClone(record(data, jobsEndpoint).jobs) as JsonObject[];
+  for (const item of jobs) {
+    item.run_id = 101;
+    item.run_attempt = 1;
+    if (item.name === 'plan') item.name = 'Metadata CI plan';
+  }
+  data.set(`${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`,
+    { total_count: jobs.length, jobs });
+  return data;
+}
+
+test('successful preclassification plan alias can qualify only as a complete canonical full run', async () => {
+  const direct = skippedExpressionFixture();
+  job(direct, 'plan').name = 'Metadata CI plan';
+  for (const [data, sourceRun] of [
+    [direct, '100'], [interveningFullPlanAliasFixture(), '101'],
+  ] as const) {
+    assert.deepEqual(await proof(data), {
+      reuse: true, sourceRun, reason: 'Verified identical-input full CI',
+    });
+    const read = async (endpoint: string) => structuredClone(data.get(endpoint));
+    assert.equal((await provePostmergeReuse({ ...context, sourceRun, windowsImage }, read)).reuse, true);
+  }
+});
+
+test('invalid closest full run with a metadata plan alias never falls back to an older pass', async () => {
+  const aliasPlan = (data: Map<string, unknown>): JsonObject =>
+    metadataJobs(data).find((item) => item.name === 'Metadata CI plan')!;
+  const changes: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { aliasPlan(data).conclusion = 'failure'; },
+    (data) => { aliasPlan(data).conclusion = 'skipped'; },
+    (data) => { aliasPlan(data).status = 'in_progress'; },
+    (data) => { aliasPlan(data).name += ' '; },
+    (data) => { aliasPlan(data).name = 'Metadata CI plan unknown'; },
+    (data) => { aliasPlan(data).run_attempt = 2; },
+    (data) => { (aliasPlan(data).steps as JsonObject[])[0].conclusion = 'skipped'; },
+    (data) => { (aliasPlan(data).steps as JsonObject[])[0].name = `CI source proof: PR=13 | base=${baseSha} | head=${headSha}`; },
+    (data) => { metadataJobs(data).find((item) => item.name === 'test (1/2)')!.conclusion = 'skipped'; },
+    (data) => { metadataJobs(data).find((item) => item.name === 'Full qualification')!.name = 'Metadata CI result'; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).conclusion = 'failure'; },
+    (data) => {
+      const response = record(data, `${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`);
+      response.jobs = metadataJobs(data).filter((item) => item.name !== 'lint (main)');
+      response.total_count = 9;
+    },
+    (data) => { metadataJobs(data).find((item) => item.name === 'validate')!.name = 'plan'; },
+    (data) => { record(data, `${prefix}/contents/${WORKFLOW}?ref=${headSha}`).sha = baseSha; },
+  ];
+  for (const [index, change] of changes.entries()) {
+    const data = interveningFullPlanAliasFixture();
+    change(data);
+    assert.equal((await proof(data)).reuse, false, `Full plan alias mutation ${index}`);
+  }
+});
+
 test('proven metadata edits preserve the closest full qualification, including Windows selection', async () => {
   for (const count of [1, 3, 7]) {
     const data = metadataFixture(count);

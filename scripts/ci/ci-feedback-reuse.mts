@@ -298,9 +298,9 @@ export async function provePostmergeReuse(
         response.total_count === candidateJobs.length && candidateJobs.length < 100,
         'Incomplete job list'
       );
-      if (candidateJobs.some((job) =>
-        job.name === 'Metadata CI plan' || job.name === 'Metadata CI result'
-      )) {
+      // The plan name is assigned before strict event classification. Only the
+      // result names a metadata decision, and its complete job proof must pass.
+      if (candidateJobs.some((job) => job.name === 'Metadata CI result')) {
         proveMetadataJobs(candidateJobs, candidateRun, context.now);
         const metadataBase = readSourceBase(
           candidateJobs, candidateRun, prNumber, headSha, repoId, 'Metadata CI plan'
@@ -319,7 +319,12 @@ export async function provePostmergeReuse(
       context.sourceRun === undefined || context.sourceRun === String(runId),
       'Windows source run differs from verified Linux source run'
     );
-    const testedBase = readSourceBase(jobs, run, prNumber, headSha, repoId, 'plan');
+    // A conservatively classified edited event can run every canonical full job
+    // under this exact successful preclassification plan name.
+    const fullPlanName = jobs.some((job) =>
+      job.name === 'Metadata CI plan' && job.conclusion === 'success'
+    ) ? 'Metadata CI plan' : 'plan';
+    const testedBase = readSourceBase(jobs, run, prNumber, headSha, repoId, fullPlanName);
     requireProof(
       metadata.every((item) => item.base === testedBase),
       'Metadata base differs from full source'
@@ -372,6 +377,7 @@ export async function provePostmergeReuse(
       const matching = jobs.filter(
         (job) =>
           job.name === name ||
+          (name === 'plan' && job.name === fullPlanName && job.conclusion === 'success') ||
           (name === 'Fast feedback' &&
             job.name === SKIPPED_FEEDBACK_NAME &&
             job.conclusion === 'skipped')
@@ -470,7 +476,7 @@ export async function provePostmergeReuse(
     for (const item of [{ run, jobs, base: testedBase }, ...metadata]) {
       const finalRun = object(await read(`${prefix}/actions/runs/${positive(item.run.id)}`));
       requireProof(sameRun(finalRun, item.run), 'Source attempt changed during proof');
-      const planName = item.run.id === runId ? 'plan' : 'Metadata CI plan';
+      const planName = item.run.id === runId ? fullPlanName : 'Metadata CI plan';
       requireProof(
         readSourceBase(item.jobs, finalRun, prNumber, headSha, repoId, planName) === item.base,
         'Source base changed during proof'

@@ -88,6 +88,10 @@ must satisfy every full-run requirement; failed, cancelled, pending, unknown or
 incomplete evidence requires fresh CI. Final reads recheck the selected full run,
 each crossed metadata attempt and the unchanged run listing. Metadata never
 extends the source evidence expiry or creates full qualification by itself.
+The plan name is assigned before strict classification, so `Metadata CI plan`
+may also belong to a conservatively classified complete full run. Only the
+`Metadata CI result` aggregate selects metadata proof; the exact successful
+plan alias still requires every canonical full-run check and source binding.
 
 All `edited` events use a unique concurrency group without cancellation before
 planning. Proven metadata runs skip dependency installation, tests, lint and
