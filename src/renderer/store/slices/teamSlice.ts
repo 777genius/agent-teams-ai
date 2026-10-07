@@ -1,9 +1,7 @@
 import {
   type QueuedMessagesHeadRead,
-  queueMessagesHeadRead,
   readTeamData,
   readTeamMemberActivity,
-  readTeamMessagesPage,
   ScopedReadRequests,
   TeamDataReadWork,
 } from '@features/team-read-recovery/renderer';
@@ -20,7 +18,6 @@ import {
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
-import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
 import {
   buildOpenCodeRuntimeDeliveryDiagnostics,
   isOpenCodeRuntimeDeliveryHardUxFailure,
@@ -113,21 +110,18 @@ import {
   shouldLogMemberSpawnUiEqualSuppressed,
 } from '../team/teamMemberSpawnUiEqualWarningThrottle';
 import {
-  areInboxMessageArraysEquivalent,
   buildOptimisticTeamMessage,
   clearTeamMessageSelectorCaches,
   clearTeamMessageSelectorCachesForTeam,
-  extractRetainedCanonicalOlderTail,
-  getCanonicalHeadSlice,
   getTeamMessagesCacheEntry,
   getTeamMessageSelectorCacheSnapshotForTeam,
-  pruneOptimisticMessages,
   upsertOptimisticTeamMessage,
 } from '../team/teamMessagesCache';
 import {
   loadPersistedMessagesPanelMode,
   savePersistedMessagesPanelMode,
 } from '../team/teamMessagesPanelModePersistence';
+import { createTeamMessagesProvenanceActions } from '../team/teamMessagesProvenance';
 import {
   clearAllPendingReplyRefreshWaits,
   clearPendingReplyRefreshWaits,
@@ -3238,263 +3232,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  refreshTeamMessagesHead: async (teamName: string) => {
-    const requestScope = captureTeamRequestScope(get, teamName);
-    const existingRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestScope);
-    if (existingRequest) {
-      return inFlightTeamMessagesHeadRequests.queueFresh(
-        teamName,
-        requestScope,
-        () => get().refreshTeamMessagesHead(teamName),
-        () => isTeamRequestScopeCurrent(get, teamName, requestScope)
-      );
-    }
-    const queuedAfterOlder = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-    if (queuedAfterOlder) {
-      if (isTeamRequestScopeCurrent(get, teamName, queuedAfterOlder.scope))
-        return queuedAfterOlder.result;
-      queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-      queuedAfterOlder.cancel();
-    }
-
-    const existingOlderRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestScope);
-    if (existingOlderRequest) {
-      const queuedRequest = {
-        scope: requestScope,
-        ...queueMessagesHeadRead(
-          existingOlderRequest,
-          () => {
-            if (
-              !isTeamRequestScopeCurrent(get, teamName, requestScope) ||
-              queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) !== queuedRequest
-            ) {
-              return Promise.resolve({
-                feedChanged: false,
-                headChanged: false,
-                feedRevision: null,
-              });
-            }
-            queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-            return get().refreshTeamMessagesHead(teamName);
-          },
-          () => {
-            if (queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName) === queuedRequest) {
-              queuedTeamMessagesHeadRefreshesAfterOlder.delete(teamName);
-            }
-          }
-        ),
-      };
-      queuedTeamMessagesHeadRefreshesAfterOlder.set(teamName, queuedRequest);
-      return queuedRequest.result;
-    }
-
-    const requestRef: { current: Promise<RefreshTeamMessagesHeadResult> | null } = {
-      current: null,
-    };
-    requestRef.current = (async (): Promise<RefreshTeamMessagesHeadResult> => {
-      set((state) => ({
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: {
-            ...getTeamMessagesCacheEntry(state, teamName),
-            loadingHead: true,
-          },
-        },
-      }));
-
-      try {
-        const page = await unwrapIpc('team:getMessagesPage', () =>
-          readTeamMessagesPage(teamName, { limit: 50 })
-        );
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return unchangedTeamMessagesHead();
-        }
-
-        const previousEntry = getTeamMessagesCacheEntry(get(), teamName);
-        const feedChanged =
-          !previousEntry.headHydrated || previousEntry.feedRevision !== page.feedRevision;
-        const previousHeadSlice = getCanonicalHeadSlice(
-          previousEntry.canonicalMessages,
-          page.messages.length
-        );
-        const headChanged = !areInboxMessageArraysEquivalent(previousHeadSlice, page.messages);
-
-        set((state) => {
-          const current = getTeamMessagesCacheEntry(state, teamName);
-          const retainedOlderTail = extractRetainedCanonicalOlderTail(
-            current.canonicalMessages,
-            page.messages
-          );
-          const preserveLoadedOlderTail =
-            Array.isArray(retainedOlderTail) && retainedOlderTail.length > 0;
-          const nextCanonical = headChanged
-            ? preserveLoadedOlderTail
-              ? mergeTeamMessages(retainedOlderTail, page.messages)
-              : page.messages
-            : current.canonicalMessages;
-          const nextOptimistic = pruneOptimisticMessages(current.optimisticMessages, nextCanonical);
-          const nextEntry: TeamMessagesCacheEntry = {
-            ...current,
-            canonicalMessages: nextCanonical,
-            optimisticMessages: nextOptimistic,
-            feedRevision: page.feedRevision,
-            nextCursor: preserveLoadedOlderTail ? current.nextCursor : page.nextCursor,
-            hasMore: preserveLoadedOlderTail ? current.hasMore : page.hasMore,
-            lastFetchedAt: Date.now(),
-            loadingHead: false,
-            headHydrated: true,
-          };
-          return {
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: nextEntry,
-            },
-          };
-        });
-
-        return {
-          feedChanged,
-          headChanged,
-          feedRevision: page.feedRevision,
-        };
-      } catch (error) {
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return unchangedTeamMessagesHead();
-        }
-        set((state) => ({
-          teamMessagesByName: {
-            ...state.teamMessagesByName,
-            [teamName]: {
-              ...getTeamMessagesCacheEntry(state, teamName),
-              loadingHead: false,
-            },
-          },
-        }));
-        throw error;
-      } finally {
-        inFlightTeamMessagesHeadRequests.release(teamName, requestRef.current);
-      }
-    })();
-
-    const request = requestRef.current;
-    inFlightTeamMessagesHeadRequests.set(teamName, request, requestScope);
-    return request;
-  },
-
-  loadOlderTeamMessages: async (teamName: string) => {
-    const requestedScope = captureTeamRequestScope(get, teamName);
-    const existingRequest = inFlightTeamMessagesOlderRequests.get(teamName, requestedScope);
-    if (existingRequest) {
-      return existingRequest;
-    }
-
-    const existingHeadRequest = inFlightTeamMessagesHeadRequests.get(teamName, requestedScope);
-    if (existingHeadRequest) {
-      await existingHeadRequest;
-      if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        return;
-      }
-    }
-
-    let entry = getTeamMessagesCacheEntry(get(), teamName);
-    if (!entry.headHydrated) {
-      await get().refreshTeamMessagesHead(teamName);
-      if (!isTeamRequestScopeCurrent(get, teamName, requestedScope)) {
-        return;
-      }
-      entry = getTeamMessagesCacheEntry(get(), teamName);
-    }
-
-    if (!entry.headHydrated || !entry.nextCursor || entry.loadingOlder || entry.loadingHead) {
-      return;
-    }
-
-    const requestRef: { current: Promise<void> | null } = { current: null };
-    requestRef.current = (async (): Promise<void> => {
-      const requestScope = captureTeamRequestScope(get, teamName);
-      set((state) => ({
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: {
-            ...getTeamMessagesCacheEntry(state, teamName),
-            loadingOlder: true,
-          },
-        },
-      }));
-
-      try {
-        const baseFeedRevision = entry.feedRevision;
-        const page = await unwrapIpc('team:getMessagesPage', () =>
-          readTeamMessagesPage(teamName, {
-            cursor: entry.nextCursor,
-            limit: 50,
-          })
-        );
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-
-        const current = getTeamMessagesCacheEntry(get(), teamName);
-        if (
-          current.feedRevision !== baseFeedRevision ||
-          (current.feedRevision && current.feedRevision !== page.feedRevision)
-        ) {
-          set((state) => ({
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: {
-                ...getTeamMessagesCacheEntry(state, teamName),
-                loadingOlder: false,
-              },
-            },
-          }));
-          inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
-          const queuedHead = queuedTeamMessagesHeadRefreshesAfterOlder.get(teamName);
-          await (queuedHead && isTeamRequestScopeCurrent(get, teamName, queuedHead.scope)
-            ? queuedHead.start()
-            : get().refreshTeamMessagesHead(teamName));
-          return;
-        }
-
-        set((state) => {
-          const liveEntry = getTeamMessagesCacheEntry(state, teamName);
-          const mergedCanonical = mergeTeamMessages(liveEntry.canonicalMessages, page.messages);
-          return {
-            teamMessagesByName: {
-              ...state.teamMessagesByName,
-              [teamName]: {
-                ...liveEntry,
-                canonicalMessages: mergedCanonical,
-                nextCursor: page.nextCursor,
-                hasMore: page.hasMore,
-                feedRevision: page.feedRevision,
-                loadingOlder: false,
-              },
-            },
-          };
-        });
-      } catch {
-        if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
-          return;
-        }
-        set((state) => ({
-          teamMessagesByName: {
-            ...state.teamMessagesByName,
-            [teamName]: {
-              ...getTeamMessagesCacheEntry(state, teamName),
-              loadingOlder: false,
-            },
-          },
-        }));
-      } finally {
-        inFlightTeamMessagesOlderRequests.release(teamName, requestRef.current);
-      }
-    })();
-
-    const request = requestRef.current;
-    inFlightTeamMessagesOlderRequests.set(teamName, request, requestedScope);
-    return request;
-  },
+  ...createTeamMessagesProvenanceActions({
+    set,
+    get,
+    captureTeamRequestScope,
+    isTeamRequestScopeCurrent,
+    inFlightTeamMessagesHeadRequests,
+    inFlightTeamMessagesOlderRequests,
+    queuedTeamMessagesHeadRefreshesAfterOlder,
+  }),
 
   refreshMemberActivityMeta: async (teamName: string) => {
     const entry = getTeamMessagesCacheEntry(get(), teamName);
