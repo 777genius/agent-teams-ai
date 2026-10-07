@@ -165,6 +165,17 @@ const rejected: Record<string, (copy: ClosedCloudPreflightReceipt) => void> = {
     c.close.AfterForeground.PackageBeforeStatus = 0;
     c.close.AfterForeground.PackageAfterStatus = 0;
   },
+  'replacement CloudExperienceHost package version': (c) => {
+    c.close.AfterForeground.PackageBefore = 'Microsoft.Windows.CloudExperienceHost_11.0_other';
+    c.close.AfterForeground.PackageAfter = c.close.AfterForeground.PackageBefore;
+    c.close.AfterForeground.PackageBeforeStatus = 0;
+    c.close.AfterForeground.PackageAfterStatus = 0;
+  },
+  'replacement WWAHost image with unrelated package': (c) => {
+    assert(c.close.AfterForeground.Before && c.close.AfterForeground.After);
+    c.close.AfterForeground.Before.Executable = image;
+    c.close.AfterForeground.After.Executable = image;
+  },
   'recycled original HWND': (c) => {
     c.close.AfterForeground.Hwnd = '10208';
     c.close.AfterForeground.AfterHwnd = '10208';

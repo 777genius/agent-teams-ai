@@ -46,10 +46,11 @@ export function observeInstallerChild(
     writes = Promise.resolve();
   const record = (event: string, details: object = {}) => {
     receipt.events.push({ event, at: new Date().toISOString(), ...details });
-    writes = writes.then(() => save(receipt));
-    void writes.catch((error: unknown) => {
-      receipt.persistenceError = String(error);
-    });
+    writes = writes
+      .then(() => save(receipt))
+      .catch((error: unknown) => {
+        receipt.persistenceError = String(error);
+      });
   };
   child.once('spawn', () => {
     const pid = child.pid;
@@ -579,13 +580,17 @@ public static class TestOtaObserver {
         RootOwner(hwnd,owner.Pid,pin.Proof.Thread); Thread.Sleep(50);
       }
       if(!proof.WindowGone) throw new Exception("CloudExperienceHost window did not close or handle reused");
+      proof.ProcessExited=WaitForSingleObject(pin.Handle,0)==0;
       if(!proof.ProcessExited) {
-        proof.AfterHeld=ReadHeld(pin.Handle,owner.Pid,null);
+        try { proof.AfterHeld=ReadHeld(pin.Handle,owner.Pid,null); }
+        catch { if(WaitForSingleObject(pin.Handle,0)!=0) throw; proof.ProcessExited=true; proof.AfterHeld=null; }
+      }
+      if(proof.AfterHeld!=null) {
         if(proof.AfterHeld.BirthFileTime!=owner.BirthFileTime || proof.AfterHeld.Executable!=owner.Executable || proof.AfterHeld.Sid!=owner.Sid || proof.AfterHeld.Session!=owner.Session) throw new Exception("CloudExperienceHost held identity changed after close");
       }
       signature();
       PinnedForeground after=PinForeground(); FinishForeground(after); proof.AfterForeground=after.Proof;
-      if(after.Proof.Error!=null || after.Proof.PackageBefore==package || after.Proof.Hwnd==pin.Proof.Hwnd) throw new Exception("CloudExperienceHost closure not independently observed");
+      if(after.Proof.Error!=null || (after.Proof.PackageBefore??"").StartsWith("Microsoft.Windows.CloudExperienceHost_",StringComparison.OrdinalIgnoreCase) || String.Equals(System.IO.Path.GetFileName(after.Proof.Before.Executable),"WWAHost.exe",StringComparison.OrdinalIgnoreCase) || after.Proof.Hwnd==pin.Proof.Hwnd) throw new Exception("CloudExperienceHost closure not independently observed");
       if(IsWindow(hwnd)) throw new Exception("CloudExperienceHost HWND recycled during closure proof");
       proof.Outcome="closed";
     } catch(Exception error) { proof.Error=error.Message; }

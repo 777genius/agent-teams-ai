@@ -1,8 +1,9 @@
 export const windowsInstallerLineageSource = String.raw`
   'installer-lineage' {
     $systemPS=@([IO.Path]::Combine($data.shell.systemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),[IO.Path]::Combine($data.shell.systemRoot,'SysWOW64','WindowsPowerShell','v1.0','powershell.exe'))
-    function Read-LineageRow([int]$processId) {
+    function Read-LineageRow([int]$processId,[bool]$allowMissing=$false) {
       $item=@(Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction Stop)
+      if ($allowMissing -and $item.Count -eq 0) { return $null }
       if ($item.Count -ne 1 -or -not $item[0].ExecutablePath) { throw 'Lineage identity unavailable' }
       $sid=Invoke-CimMethod -InputObject $item[0] -MethodName GetOwnerSid -ErrorAction Stop
       if ($sid.ReturnValue -ne 0) { throw 'Lineage SID unavailable' }
@@ -23,12 +24,20 @@ export const windowsInstallerLineageSource = String.raw`
       $children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($parent.identity.pid)" -ErrorAction Stop | Select-Object -First 17)
       foreach ($item in $children) {
         if ($rows.Count -ge 16) { $limited=$true; break }
-        $child=Read-LineageRow $item.ProcessId; Test-LineageParent $parent.identity
+        try { $child=Read-LineageRow $item.ProcessId $true }
+        catch { $rows.Add(@{ pid=[int]$item.ProcessId; parent=$parent.identity.pid; rejected='Child identity read failed'; stopEligible=$false }); Test-LineageParent $parent.identity; continue }
+        Test-LineageParent $parent.identity
+        if ($null -eq $child) { $rows.Add(@{ pid=[int]$item.ProcessId; parent=$parent.identity.pid; rejected='Child vanished before identity read'; stopEligible=$false }); continue }
         if ($child.parent -ne $parent.identity.pid -or $child.sid -ne $owner.sid -or $child.session -ne $owner.session -or (Get-StartUtcTicks $child.start) -lt (Get-StartUtcTicks $parent.identity.start)) { throw 'Lineage child relation changed' }
         $allowed=$child.executable.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $child.executable -in $systemPS
         if (-not $allowed) { $rows.Add(@{ pid=$child.pid; parent=$child.parent; rejected='Image outside TEST/systemPS bounds'; stopEligible=$false }); continue }
         if ($child.executable -notin $systemPS -or $child.command.Length -gt 4096 -or $child.command -notmatch '(?i)\bGet-Process\b' -or $child.command -match '(?i)token|secret|password|authorization|api.?key|encodedcommand') { $child.command=$null }
-        Test-LineageParent $child
+        try { Test-LineageParent $child }
+        catch {
+          if (@(Get-CimInstance Win32_Process -Filter "ProcessId = $($child.pid)" -ErrorAction Stop).Count -ne 0) { throw }
+          Test-LineageParent $parent.identity
+          $rows.Add(@{ pid=$child.pid; parent=$parent.identity.pid; rejected='Child vanished during identity recheck'; stopEligible=$false }); continue
+        }
         $rows.Add(@{ identity=$child; depth=$parent.depth+1; stopEligible=$false })
         $queue.Enqueue(@{ identity=$child; depth=$parent.depth+1 })
       }

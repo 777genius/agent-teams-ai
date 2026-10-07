@@ -421,6 +421,12 @@ public static class TestWindowsNative {
   public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks,bool diagnosticOnly,Func<TestOtaObserver.FocusRequest[]> inventory) {
     CaptionTrace=null; RootFocusTrace=null; OwnedMetadataTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
+    if(diagnosticOnly) {
+      SameThread(hwnd,expectedPid,thread,validate);
+      try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks,inventory); }
+      catch(Exception error) { OwnedMetadataTrace=new TestOtaObserver.Observation { Error=error.Message,HResult=error.HResult }; }
+      throw new OwnedFocusRequired("Metadata-only diagnostic cannot qualify native capture");
+    }
     ShowWindow(hwnd, 9);
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
     bool accepted=SetForegroundWindow(hwnd), synchronized=false;
@@ -437,11 +443,6 @@ public static class TestWindowsNative {
       try { CaptionClick(hwnd,expectedPid,thread,validate,progress); }
       catch(OwnedFocusRequired) {
         SameThread(hwnd,expectedPid,thread,validate);
-        if(diagnosticOnly) {
-          try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks,inventory); }
-          catch(Exception error) { OwnedMetadataTrace=new TestOtaObserver.Observation { Error=error.Message,HResult=error.HResult }; }
-          throw; // Metadata cannot qualify native capture or replace its original failure.
-        }
         RootFocusTrace=new TestOtaObserver.Observation { RootHwnd=hwnd.ToInt64().ToString("x"),RootPid=expectedPid,RootThread=thread };
         try {
           RootFocusTrace=TestOtaObserver.Focus(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks);
