@@ -3,6 +3,10 @@ name: OpenCode packaged Windows E2E
 on:
   workflow_dispatch:
     inputs:
+      qualified_dashboard_install:
+        description: 'Check dashboard Install against immutable qualified B540 Windows payload (no rebuild)'
+        type: boolean
+        default: false
       runtime_candidate_run:
         description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
@@ -27,6 +31,7 @@ permissions:
 
 jobs:
   packaged-windows:
+    if: inputs.qualified_dashboard_install != true
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -134,3 +139,79 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.txt
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.ndjson
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/desktop.log
+
+  qualified-dashboard-install:
+    if: github.event_name == 'workflow_dispatch' && inputs.qualified_dashboard_install == true
+    runs-on: windows-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable long paths
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install tooling dependencies without product build hooks
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck, canonical typed lint and boundary contracts
+        shell: pwsh
+        run: |
+          $modules = @('scripts/e2e/opencode-diagnostics/new-dashboard-install.mts', 'scripts/e2e/opencode-diagnostics/new-dashboard-install.test.mts', 'scripts/e2e/opencode-diagnostics/new-qualified-payload.mts')
+          node node_modules/@typescript/native/bin/tsc --ignoreConfig --noEmit --strict --noUnusedLocals --noUnusedParameters --target ES2023 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --lib ES2023,DOM,DOM.Iterable --types node --skipLibCheck @modules
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $parser = '{"projectService":{"allowDefaultProject":["scripts/e2e/opencode-diagnostics/new*.mts"],"defaultProject":"tsconfig.opencode-recovery-e2e.json"}}'
+          node node_modules/eslint/bin/eslint.js --parser-options $parser @modules
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test scripts/e2e/opencode-diagnostics/new-dashboard-install.test.mts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Authenticate and stage immutable qualified official payload
+        id: payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/e2e/opencode-diagnostics/new-qualified-payload.mts
+      - name: Real dashboard Install and natural provider recovery
+        id: ui
+        shell: pwsh
+        env:
+          TEST_OPENCODE_DASHBOARD_INSTALL: '1'
+          TEST_OPENCODE_QUALIFIED_PAYLOAD_RECEIPT: ${{ steps.payload.outputs.receipt }}
+          TEST_QUALIFIED_EXE: ${{ steps.payload.outputs.executable }}
+        run: |
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $before = @(Get-ChildItem -LiteralPath $env:RUNNER_TEMP -Directory | Where-Object Name -Like 'opencode-diagnostics-e2e-*' | ForEach-Object FullName)
+          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $env:TEST_QUALIFIED_EXE --runtime-setup app-install
+          $result = $LASTEXITCODE
+          $created = @(Get-ChildItem -LiteralPath $env:RUNNER_TEMP -Directory | Where-Object { $_.Name -like 'opencode-diagnostics-e2e-*' -and $_.FullName -notin $before })
+          if ($created.Count -eq 1) {
+            $root = $created[0].FullName
+            "root=$root" >> $env:GITHUB_OUTPUT
+            if (Test-Path -LiteralPath "$root/packaged-runs.json") {
+              $runs = Get-Content -LiteralPath "$root/packaged-runs.json" -Raw | ConvertFrom-Json
+              if ($runs.results.Count -eq 1 -and $runs.results[0].cleanup -eq $true) { 'upload_safe=true' >> $env:GITHUB_OUTPUT }
+            }
+          }
+          exit $result
+      - name: Preserve public payload qualification metadata
+        if: always() && steps.payload.outputs.receipt != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: opencode-dashboard-qualified-payload-${{ github.run_attempt }}
+          path: ${{ steps.payload.outputs.receipt }}
+          if-no-files-found: error
+      - name: Preserve TEST UI evidence after owned cleanup
+        if: always() && steps.ui.outputs.upload_safe == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: opencode-dashboard-install-${{ github.run_attempt }}
+          path: |
+            ${{ steps.ui.outputs.root }}/packaged-runs.json
+            ${{ steps.ui.outputs.root }}/cold/evidence.json
+            ${{ steps.ui.outputs.root }}/cold/*.png
+          if-no-files-found: error

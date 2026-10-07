@@ -6,7 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { open, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
+import { packagedArguments, packagedDrainSnapshot, fingerprint } from './packaged.mjs';
 import { processes, listeners, sameIdentity, windowsCleanupEvidence } from './platform.mjs';
 
 const args = process.argv.slice(2);
@@ -24,9 +24,22 @@ assert.equal(seed.status, 0, seed.stderr || String(seed.error));
 const root = seed.stdout.trim();
 console.log(`Packaged artifacts/profile: ${root}`);
 const manifestPath = path.join(root, 'manifest.json');
+const dashboardInstall = process.env.TEST_OPENCODE_DASHBOARD_INSTALL === '1';
+const runs = dashboardInstall ? ['cold'] : ['cold', 'warm-1', 'warm-2'];
+if (dashboardInstall) {
+  const { assertQualifiedPayload } = await import('./new-dashboard-install.mts');
+  const receiptPath = process.env.TEST_OPENCODE_QUALIFIED_PAYLOAD_RECEIPT;
+  assert(receiptPath, 'Qualified official payload receipt required before launch');
+  const data = JSON.parse(await readFile(manifestPath, 'utf8'));
+  assert.equal(data.runtimeSetup, 'app-install', 'Use --runtime-setup app-install for dashboard recovery');
+  const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+  assertQualifiedPayload(data.artifact, receipt);
+  assert.equal((await fingerprint(receipt.originalArchivePath)).sha256, receipt.originalArchiveSha256,
+    'Official full ZIP bytes differ; launch refused');
+}
 const results = [];
 let cleanupFailed = false;
-for (const run of ['cold', 'warm-1', 'warm-2']) {
+for (const run of runs) {
   const runDir = path.join(root, run);
   await mkdir(runDir);
   const data = JSON.parse(await readFile(manifestPath, 'utf8'));
@@ -74,7 +87,9 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
     );
     const evidence = JSON.parse(await readFile(path.join(runDir, 'evidence.json'), 'utf8'));
     assert.equal(evidence.passed, true);
-    assert(['provider-inventory', 'transport-only'].includes(evidence.qualification));
+    assert(dashboardInstall
+      ? evidence.qualification === 'dashboard-install-provider-inventory' && evidence.providerQualified === true
+      : ['provider-inventory', 'transport-only'].includes(evidence.qualification));
     result.qualification = evidence.qualification;
     result.providerQualified = evidence.providerQualified === true;
     result.passed = true;
@@ -138,9 +153,9 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       path.join(root, 'packaged-runs.json'),
       JSON.stringify(
         {
-          passed: results.length === 3 && results.every((r) => r.passed && r.cleanup),
+          passed: results.length === runs.length && results.every((r) => r.passed && r.cleanup),
           providerQualified:
-            results.length === 3 &&
+            results.length === runs.length &&
             results.every((r) => r.passed && r.cleanup && r.providerQualified),
           results,
         },
@@ -151,4 +166,4 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
   }
   if (cleanupFailed) break;
 }
-process.exitCode = results.length === 3 && results.every((r) => r.passed && r.cleanup) ? 0 : 1;
+process.exitCode = results.length === runs.length && results.every((r) => r.passed && r.cleanup) ? 0 : 1;

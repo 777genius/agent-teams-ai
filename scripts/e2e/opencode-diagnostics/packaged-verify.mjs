@@ -3,7 +3,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { clickControl, correlateReport } from './catalog.mjs';
-import { runtimeProvenance, packagedEnvironment, probeOrchestratorVersion } from './packaged.mjs';
+import { runtimeProvenance, packagedEnvironment, probeOrchestratorVersion, fingerprint } from './packaged.mjs';
+
+import { processes, listeners, ownedTree } from './platform.mjs';
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const refreshControl = `[...document.querySelectorAll('button')].find(b =>
@@ -463,6 +465,27 @@ export async function verifyPackaged({
   preloadScripts,
   scriptMetadata,
 }) {
+  if (process.env.TEST_OPENCODE_DASHBOARD_INSTALL === '1') {
+    const { verifyDashboardInstall } = await import('./new-dashboard-install.mts');
+    return verifyDashboardInstall({
+      root, data, evaluate, send, catalogExpression: catalogState, fingerprint,
+      provenance: (status) => runtimeProvenance(status, data, 'opencode'),
+      versionProbe: (binary) => probeOrchestratorVersion(binary, {
+        env: packagedEnvironment(data), cwd: data.project,
+      }),
+      mainIdentity: () => {
+        const socketPids = listeners();
+        const matches = ownedTree(processes(), data.launcher).filter(entry =>
+          entry.parent === data.launcher.pid &&
+          entry.executable?.toLowerCase() === data.artifact.app.path.toLowerCase());
+        assert.equal(matches.length, 1, 'Expected one owned packaged Electron main');
+        assert(socketPids.length === 1 && socketPids[0] === matches[0].pid,
+          'Packaged main must retain sole ownership of CDP');
+        const { pid, birth, executable } = matches[0];
+        return { pid, birth, executable };
+      },
+    });
+  }
   assert(['cold', 'warm-1', 'warm-2'].includes(data.run), 'Use the explicit packaged runner');
   const evidence = {
     passed: false,
