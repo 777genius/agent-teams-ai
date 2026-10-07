@@ -6465,6 +6465,19 @@ export default interface Resources {
       "warningUnknownTaskOwner": "Task {{description}} referenced unknown member {{owner}} and was imported without an owner.",
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
     },
+    "templates": {
+      "label": "Team template",
+      "modelAfterProvider": "Model selection is available after choosing a provider.",
+      "names": {
+        "bug": "Fix a bug",
+        "feature": "Build a feature",
+        "research": "Research a solution",
+        "review": "Review code"
+      },
+      "placeholder": "Start from a team template",
+      "providerLabel": "Choose team provider",
+      "providerPlaceholder": "Choose a provider"
+    },
     "terminalWorkspace": {
       "backgroundModeImage": "Image",
       "backgroundModeSolid": "Solid color",
