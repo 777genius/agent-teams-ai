@@ -2574,6 +2574,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       const feature = createMemberWorkSyncFeature({
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
+        // The explicit drain below owns event consumption.
+        startBackground: false,
         recoveryAllocation: { enabled: true },
         configReader: {
           getConfig: vi.fn(async () => ({
