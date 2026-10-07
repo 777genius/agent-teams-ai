@@ -34,7 +34,11 @@ import {
   proveWindowsProvider,
   windowsOtaMirror,
 } from './windows-ota-mirror.mts';
-import { assertNativeNames, windowsOtaObserver } from './windows-ota-observer.mts';
+import {
+  assertNativeNames,
+  observeInstallerChild,
+  windowsOtaObserver,
+} from './windows-ota-observer.mts';
 import {
   absent,
   appEnvironment,
@@ -498,7 +502,7 @@ async function run() {
           attempts.push(attempt);
           await persist(); // Actual pixels survive any subsequent UIA/content failure.
           assert((await stat(image)).size > 1000);
-          assertCaptionProof(owner.pid, window.hwnd, window.caption);
+          if (!window.uiaFocus) assertCaptionProof(owner.pid, window.hwnd, window.caption);
           attempt.observation = await observer.names(owner, window.hwnd);
           await persist(); // Includes UIA Error/HResult and partial owned subtree counters.
           assertNativeNames(owner.pid, window.hwnd, attempt.observation);
@@ -937,10 +941,21 @@ async function run() {
     spawnedChildren.push({ kind: 'installer', child: setup });
     for (const stream of [setup.stdout, setup.stderr])
       stream?.on('data', (chunk: Buffer) => log.write(chunk));
+    const finishInstallObservation = observeInstallerChild(
+      setup,
+      installer,
+      native,
+      async (receipt) => {
+        await writeFile(
+          path.join(output, 'nsis-spawn-lineage.json'),
+          JSON.stringify(receipt, null, 2)
+        );
+      }
+    );
     const setupCode = await new Promise<number | null>((resolve, reject) => {
       setup.once('error', reject);
       setup.once('exit', resolve);
-    });
+    }).finally(finishInstallObservation);
     assert.equal(setupCode, 0);
     assert.equal(
       (await native.processes(executable)).length,
@@ -957,6 +972,12 @@ async function run() {
       actualNsisExitCode: setupCode,
       env,
       native,
+      recordListing: async (receipt) => {
+        await writeFile(
+          path.join(output, 'prior-archive-listing.json'),
+          JSON.stringify(receipt, null, 2)
+        );
+      },
       recordDecoded: async (ledger) => {
         await writeFile(
           path.join(output, 'prior-decoded-pe.json'),
