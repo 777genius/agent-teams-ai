@@ -156,6 +156,112 @@ interface HeldFocusOwner {
   Session: number;
   BirthFileTime: string;
 }
+export interface OwnedUiaMetadata {
+  RootHwnd: string;
+  RootPid: number;
+  RootThread: number;
+  Before: HeldFocusOwner;
+  After: HeldFocusOwner;
+  CimTicks: string;
+  Requested: false;
+  InputSent: 0;
+  Complete: boolean;
+  StopReason: 'node-limit' | 'depth-limit' | 'time-limit' | 'foreign-boundary' | null;
+  Error: string | null;
+  ElapsedMs: number;
+  Nodes: {
+    Index: number;
+    ParentIndex: number;
+    Depth: number;
+    Pid: number;
+    Hwnd: string | null;
+    NativePid: number;
+    RootAncestor: string | null;
+    Enabled: boolean | null;
+    Focusable: boolean | null;
+    Boundary: boolean;
+  }[];
+}
+export function assertOwnedUiaMetadata(
+  owner: Omit<WindowsProcess, 'command'>,
+  hwnd: string,
+  thread: number,
+  receipt: OwnedUiaMetadata
+) {
+  assert.equal(receipt.Error, null);
+  assert.equal(receipt.RootPid, owner.pid);
+  assert.equal(receipt.RootHwnd, hwnd);
+  assert.equal(receipt.RootThread, thread);
+  assert(Number.isInteger(thread) && thread > 0);
+  assert.equal(receipt.Requested, false);
+  assert.equal(receipt.InputSent, 0);
+  assert.deepEqual(receipt.Before, receipt.After);
+  assert.equal(receipt.Before.Pid, owner.pid);
+  assert.equal(receipt.Before.Executable.toLowerCase(), owner.executable.toLowerCase());
+  assert.equal(receipt.Before.Sid, owner.sid);
+  assert.equal(receipt.Before.Session, owner.session);
+  const ticks = ownerCimTicks(owner.start);
+  assert.equal(receipt.CimTicks, ticks.toString());
+  assert(/^\d+$/.test(receipt.Before.BirthFileTime));
+  assert.equal(
+    BigInt(receipt.Before.BirthFileTime) / 10n,
+    (ticks - 504_911_232_000_000_000n) / 10n
+  );
+  assert(
+    ['node-limit', 'depth-limit', 'time-limit', 'foreign-boundary', null].includes(
+      receipt.StopReason
+    )
+  );
+  assert.equal(receipt.Complete, receipt.StopReason === null);
+  assert(
+    Number.isInteger(receipt.ElapsedMs) && receipt.ElapsedMs >= 0 && receipt.ElapsedMs < 15_000
+  );
+  assert(receipt.StopReason === 'time-limit' || receipt.ElapsedMs <= 3000);
+  assert(receipt.Nodes.length > 0 && receipt.Nodes.length <= 128);
+  if (receipt.StopReason === 'node-limit') assert.equal(receipt.Nodes.length, 128);
+  if (receipt.StopReason === 'depth-limit') assert(receipt.Nodes.some((node) => node.Depth === 16));
+  if (receipt.StopReason === 'time-limit') assert(receipt.ElapsedMs >= 3000);
+  receipt.Nodes.forEach((node, index) => assertMetadataNode(receipt, node, index));
+}
+function assertMetadataNode(
+  receipt: OwnedUiaMetadata,
+  node: OwnedUiaMetadata['Nodes'][number],
+  index: number
+) {
+  assert.equal(node.Index, index);
+  assert.equal(typeof node.Boundary, 'boolean');
+  assert(Number.isInteger(node.Pid) && node.Pid > 0);
+  assert(Number.isInteger(node.Depth) && node.Depth >= 0 && node.Depth <= 16);
+  if (index === 0) {
+    assert.equal(node.ParentIndex, -1);
+    assert.equal(node.Depth, 0);
+    assert.equal(node.Hwnd, receipt.RootHwnd);
+  } else {
+    assert(Number.isInteger(node.ParentIndex) && node.ParentIndex >= 0 && node.ParentIndex < index);
+    const parent = receipt.Nodes[node.ParentIndex];
+    assert(parent);
+    assert.equal(parent.Boundary, false);
+    assert.equal(parent.Pid, receipt.RootPid);
+    assert.equal(node.Depth, parent.Depth + 1);
+  }
+  if (node.Boundary) {
+    assert.notEqual(node.Pid, receipt.RootPid);
+    assert.equal(node.Hwnd, null);
+    assert.equal(node.RootAncestor, null);
+    assert.equal(node.NativePid, 0);
+    assert.equal(node.Enabled, null);
+    assert.equal(node.Focusable, null);
+    assert.equal(receipt.StopReason, 'foreign-boundary');
+    assert.equal(index, receipt.Nodes.length - 1);
+  } else {
+    assert.equal(node.Pid, receipt.RootPid);
+    assert.equal(typeof node.Enabled, 'boolean');
+    assert.equal(typeof node.Focusable, 'boolean');
+    assert(/^[a-f0-9]+$/.test(node.Hwnd ?? ''));
+    assert.equal(node.NativePid, node.Hwnd === '0' ? 0 : receipt.RootPid);
+    assert.equal(node.RootAncestor, node.Hwnd === '0' ? null : receipt.RootHwnd);
+  }
+}
 function ownerCimTicks(start: string) {
   const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,7}))?Z$/.exec(start);
   assert(match, 'Owned creation must be explicit UTC');
@@ -264,6 +370,7 @@ public static class TestOtaObserver {
     public int HResult,Visited,RootChildren,MaxDepth,Characters;
     public int[] ProcessIds=new int[0]; public string RootHwnd; public uint RootPid,RootThread;
     public FocusObservation Focus;
+    public MetadataObservation Metadata;
   }
   static object Property(TestElement element,int id) {
     object value; Marshal.ThrowExceptionForHR(element.GetCurrentPropertyValue(id,out value)); return value;
@@ -305,8 +412,8 @@ public static class TestOtaObserver {
     try { Marshal.ReleaseComObject(value); }
     catch(Exception error) { if(result.Error==null) { result.Error=error.Message; result.HResult=error.HResult; } }
   }
-  static Observation Observe(IntPtr window,uint pid,bool compileOnly,FocusRequest focus=null) {
-    Observation result=new Observation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid,Focus=focus==null?null:new FocusObservation() };
+  static Observation Observe(IntPtr window,uint pid,bool compileOnly,FocusRequest focus=null,bool metadata=false) {
+    Observation result=new Observation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid,Focus=focus==null || metadata?null:new FocusObservation() };
     Exception failure=null;
     Thread worker=new Thread(()=> {
       TestAutomation automation=null; TestWalker walker=null; TestElement root=null;
@@ -321,10 +428,11 @@ public static class TestOtaObserver {
           RootOwner(window,pid,result.RootThread);
           if(focus!=null && result.RootThread!=focus.Thread) throw new Exception("UIA focus root thread changed");
           Marshal.ThrowExceptionForHR(automation.ElementFromHandle(window,out root));
-          if(root==null || ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root HWND/PID mismatch");
+          if(root==null || Convert.ToInt32(Property(root,30002))!=pid || ElementHandle(root)!=window) throw new Exception("Native UIA root HWND/PID mismatch");
           if(focus==null) Walk(root,walker,window,names,pids,result,0);
+          else if(metadata) InspectRoot(root,walker,window,pid,focus,result);
           else FocusRoot(root,window,pid,focus,result);
-          if(ElementHandle(root)!=window || Convert.ToInt32(Property(root,30002))!=pid) throw new Exception("Native UIA root changed after traversal");
+          if(Convert.ToInt32(Property(root,30002))!=pid || ElementHandle(root)!=window) throw new Exception("Native UIA root changed after traversal");
           RootOwner(window,pid,result.RootThread);
         }
       } catch(Exception error) { failure=error; result.Error=error.Message; result.HResult=error.HResult; }
@@ -332,6 +440,7 @@ public static class TestOtaObserver {
         result.Names=names.ToArray(); result.ProcessIds=new List<int>(pids).ToArray();
         Release(root,result); Release(walker,result); Release(automation,result);
         if(initialized) CoUninitialize();
+        if(result.Metadata!=null && result.Error!=null) { result.Metadata.Error=result.Error; result.Metadata.Complete=false; }
       }
     });
     worker.IsBackground=true; worker.SetApartmentState(ApartmentState.MTA); worker.Start();
@@ -391,6 +500,75 @@ public static class TestOtaObserver {
       RootOwner(window,pid,expected.Thread);
       if(!proof.Synchronized || GetForegroundWindow()!=window) throw new Exception("Owned UIA focus foreground synchronization failed");
     }
+  }
+  public sealed class MetadataNode {
+    public int Index,ParentIndex,Depth,Pid; public uint NativePid;
+    public string Hwnd,RootAncestor; public bool? Enabled,Focusable; public bool Boundary;
+  }
+  public sealed class MetadataObservation {
+    public string RootHwnd,CimTicks,StopReason,Error; public uint RootPid,RootThread;
+    public HeldOwner Before,After; public bool Requested=false,Complete; public int InputSent=0;
+    public long ElapsedMs; public List<MetadataNode> Nodes=new List<MetadataNode>();
+  }
+  static bool MetadataBudget(MetadataObservation receipt,long started,int depth) {
+    if(Environment.TickCount64-started>=3000) receipt.StopReason="time-limit";
+    else if(receipt.Nodes.Count>=128) receipt.StopReason="node-limit";
+    else if(depth>16) receipt.StopReason="depth-limit";
+    return receipt.StopReason==null;
+  }
+  static bool MetadataWalk(TestElement element,TestWalker walker,IntPtr window,uint pid,uint thread,MetadataObservation receipt,long started,int parent,int depth) {
+    if(!MetadataBudget(receipt,started,depth)) return false;
+    RootOwner(window,pid,thread);
+    int elementPid=Convert.ToInt32(Property(element,30002));
+    MetadataNode row=new MetadataNode { Index=receipt.Nodes.Count,ParentIndex=parent,Depth=depth,Pid=elementPid };
+    receipt.Nodes.Add(row);
+    if(elementPid!=(int)pid) { row.Boundary=true; receipt.StopReason="foreign-boundary"; return false; }
+    IntPtr hwnd=ElementHandle(element); row.Hwnd=hwnd.ToInt64().ToString("x");
+    if(hwnd!=IntPtr.Zero) {
+      uint nativePid; uint nativeThread=GetWindowThreadProcessId(hwnd,out nativePid);
+      row.NativePid=nativePid; row.RootAncestor=GetAncestor(hwnd,2).ToInt64().ToString("x");
+      if(nativePid!=pid || nativeThread==0 || row.RootAncestor!=receipt.RootHwnd) throw new Exception("Metadata element outside exact owned HWND");
+    }
+    object enabled=Property(element,30010),focusable=Property(element,30009);
+    if(!(enabled is bool) || !(focusable is bool)) throw new Exception("Metadata capability is not Boolean");
+    row.Enabled=(bool)enabled; row.Focusable=(bool)focusable;
+    if(!MetadataBudget(receipt,started,depth)) return false;
+    TestElement child=null;
+    try {
+      Marshal.ThrowExceptionForHR(walker.FirstChild(element,out child));
+      while(child!=null) {
+        if(!MetadataWalk(child,walker,window,pid,thread,receipt,started,row.Index,depth+1)) return false;
+        TestElement next=null;
+        try { Marshal.ThrowExceptionForHR(walker.NextSibling(child,out next)); }
+        catch { if(next!=null) Marshal.ReleaseComObject(next); throw; }
+        Marshal.ReleaseComObject(child); child=next;
+      }
+    } finally { if(child!=null) Marshal.ReleaseComObject(child); }
+    return MetadataBudget(receipt,started,depth);
+  }
+  static void InspectRoot(TestElement root,TestWalker walker,IntPtr window,uint pid,FocusRequest expected,Observation result) {
+    MetadataObservation receipt=new MetadataObservation { RootHwnd=window.ToInt64().ToString("x"),RootPid=pid,RootThread=expected.Thread,CimTicks=expected.CimTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+    result.Metadata=receipt; long started=Environment.TickCount64;
+    using(SafeProcessHandle handle=OpenProcess(0x100000|0x1000,false,pid)) {
+      try {
+        receipt.Before=ReadHeld(handle,pid,expected); RootOwner(window,pid,expected.Thread);
+        if(Convert.ToInt32(Property(root,30002))!=pid || ElementHandle(root)!=window) throw new Exception("Metadata root HWND/PID mismatch");
+        MetadataWalk(root,walker,window,pid,expected.Thread,receipt,started,-1,0);
+        receipt.Complete=receipt.StopReason==null;
+      } catch(Exception error) { receipt.Error=error.Message; }
+      finally {
+        try {
+          receipt.After=ReadHeld(handle,pid,expected); RootOwner(window,pid,expected.Thread);
+          if(receipt.Before==null || receipt.Before.BirthFileTime!=receipt.After.BirthFileTime || Convert.ToInt32(Property(root,30002))!=pid || ElementHandle(root)!=window) throw new Exception("Metadata held identity or root changed");
+        } catch(Exception error) { receipt.Error=receipt.Error??error.Message; }
+        receipt.ElapsedMs=Environment.TickCount64-started;
+        if(receipt.ElapsedMs>=3000 && receipt.StopReason==null) receipt.StopReason="time-limit";
+        receipt.Complete=receipt.Error==null && receipt.StopReason==null;
+      }
+    }
+  }
+  public static Observation FocusMetadata(long hwnd,uint pid,uint thread,string executable,string sid,int session,long cimTicks) {
+    return Observe(new IntPtr(hwnd),pid,false,new FocusRequest { Thread=thread,Executable=executable,Sid=sid,Session=session,CimTicks=cimTicks },true);
   }
   public static Observation Focus(long hwnd,uint pid,uint thread,string executable,string sid,int session,long cimTicks) {
     return Observe(new IntPtr(hwnd),pid,false,new FocusRequest { Thread=thread,Executable=executable,Sid=sid,Session=session,CimTicks=cimTicks });

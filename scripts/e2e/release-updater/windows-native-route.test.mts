@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { assertCaptionProof } from './windows-native.mts';
-import { assertNativeNames, assertNativeRootFocus } from './windows-ota-observer.mts';
+import { assertCaptionProof, windowsCaptureRequest } from './windows-native.mts';
+import {
+  assertNativeNames,
+  assertNativeRootFocus,
+  assertOwnedUiaMetadata,
+} from './windows-ota-observer.mts';
 
 import type { CaptionProof } from './windows-native.mts';
-import type { NativeNames, NativeRootFocus } from './windows-ota-observer.mts';
+import type { NativeNames, NativeRootFocus, OwnedUiaMetadata } from './windows-ota-observer.mts';
 
 // These are consumer receipt boundaries, not simulated native focus/UI qualification.
 const caption: CaptionProof = {
@@ -209,4 +213,196 @@ void test('root-focus cannot accept partial input, unrestored state, foreign roo
     assert.throws(() =>
       assertNativeRootFocus(focusOwner, 'abc', unclicked, { ...focus, ...change })
     );
+});
+
+const metadata: OwnedUiaMetadata = {
+  RootHwnd: 'abc',
+  RootPid: 41,
+  RootThread: 52,
+  Before: { ...heldOwner },
+  After: { ...heldOwner },
+  CimTicks: cimTicks,
+  Requested: false,
+  InputSent: 0,
+  Complete: true,
+  StopReason: null,
+  Error: null,
+  ElapsedMs: 150,
+  Nodes: [
+    {
+      Index: 0,
+      ParentIndex: -1,
+      Depth: 0,
+      Pid: 41,
+      Hwnd: 'abc',
+      NativePid: 41,
+      RootAncestor: 'abc',
+      Enabled: true,
+      Focusable: false,
+      Boundary: false,
+    },
+    {
+      Index: 1,
+      ParentIndex: 0,
+      Depth: 1,
+      Pid: 41,
+      Hwnd: '0',
+      NativePid: 0,
+      RootAncestor: null,
+      Enabled: true,
+      Focusable: true,
+      Boundary: false,
+    },
+  ],
+};
+void test('metadata receipt permits root-anchored zero-HWND descendants without authorizing input', () => {
+  assertOwnedUiaMetadata(
+    focusOwner,
+    'abc',
+    52,
+    JSON.parse(JSON.stringify(metadata)) as OwnedUiaMetadata
+  );
+  assertOwnedUiaMetadata(focusOwner, 'abc', 52, {
+    ...metadata,
+    Complete: false,
+    StopReason: 'time-limit',
+    ElapsedMs: 3001,
+  });
+});
+function metadataNode(receipt: OwnedUiaMetadata, index = 1) {
+  const node = receipt.Nodes.at(index);
+  assert(node);
+  return node;
+}
+const invalidMetadata: [string, (receipt: OwnedUiaMetadata) => void][] = [
+  [
+    'non-Boolean boundary',
+    (r) => {
+      metadataNode(r).Boundary = null as unknown as boolean;
+    },
+  ],
+  [
+    'changed held birth',
+    (r) => {
+      r.After.BirthFileTime = '134358493947943208';
+    },
+  ],
+  [
+    'foreign root',
+    (r) => {
+      r.RootPid = 99;
+    },
+  ],
+  [
+    'foreign descendant',
+    (r) => {
+      metadataNode(r).Pid = 99;
+    },
+  ],
+  [
+    'unanchored descendant',
+    (r) => {
+      metadataNode(r).ParentIndex = -1;
+    },
+  ],
+  [
+    'cyclic parent',
+    (r) => {
+      metadataNode(r).ParentIndex = 1;
+    },
+  ],
+  [
+    'foreign HWND ancestor',
+    (r) => {
+      metadataNode(r).Hwnd = 'def';
+      metadataNode(r).NativePid = 41;
+      metadataNode(r).RootAncestor = 'def';
+    },
+  ],
+  [
+    'foreign native PID',
+    (r) => {
+      metadataNode(r, 0).NativePid = 99;
+    },
+  ],
+  [
+    'depth overflow',
+    (r) => {
+      metadataNode(r).Depth = 17;
+    },
+  ],
+  [
+    'deadline disguised as complete',
+    (r) => {
+      r.ElapsedMs = 3001;
+    },
+  ],
+  [
+    'truncation disguised as complete',
+    (r) => {
+      r.StopReason = 'time-limit';
+      r.ElapsedMs = 3001;
+    },
+  ],
+  [
+    'false node-limit claim',
+    (r) => {
+      r.StopReason = 'node-limit';
+      r.Complete = false;
+    },
+  ],
+  [
+    'partial observation',
+    (r) => {
+      r.Error = 'Provider failed';
+    },
+  ],
+  [
+    'actual focus request',
+    (r) => {
+      r.Requested = true as unknown as false;
+    },
+  ],
+  [
+    'actual input',
+    (r) => {
+      r.InputSent = 1 as unknown as 0;
+    },
+  ],
+];
+for (const [name, change] of invalidMetadata)
+  void test(`read-only metadata receipt rejects ${name}`, () => {
+    const receipt = structuredClone(metadata);
+    change(receipt);
+    assert.throws(() => assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt));
+  });
+void test('foreign boundary receipt records only PID and never admits traversal beyond it', () => {
+  const receipt = structuredClone(metadata);
+  receipt.Complete = false;
+  receipt.StopReason = 'foreign-boundary';
+  Object.assign(metadataNode(receipt), {
+    Pid: 99,
+    Boundary: true,
+    Hwnd: null,
+    RootAncestor: null,
+    NativePid: 0,
+    Enabled: null,
+    Focusable: null,
+  });
+  assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt);
+  metadataNode(receipt).Focusable = true;
+  assert.throws(() => assertOwnedUiaMetadata(focusOwner, 'abc', 52, receipt));
+});
+void test('capture request serialization requires exact diagnostic opt-in and preserves owned identity', () => {
+  const owner = { ...focusOwner, command: 'TEST-owned-capture' };
+  for (const flag of [undefined, '0', 'true', '1']) {
+    const encoded = JSON.parse(
+      JSON.stringify(windowsCaptureRequest(owner, 'TEST.png', flag))
+    ) as ReturnType<typeof windowsCaptureRequest>;
+    const { screenshot, diagnosticOnly, ...roundtripOwner } = encoded;
+    assert.deepEqual(roundtripOwner, owner);
+    assert.equal(screenshot, 'TEST.png');
+    assert.equal(typeof diagnosticOnly, 'boolean');
+    assert.equal(diagnosticOnly, flag === '1');
+  }
 });

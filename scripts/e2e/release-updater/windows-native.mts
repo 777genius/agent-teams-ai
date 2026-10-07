@@ -28,6 +28,13 @@ export interface WindowsProcess {
   session: number;
   sid: string;
 }
+export function windowsCaptureRequest(
+  owner: WindowsProcess,
+  screenshot: string,
+  diagnostic?: string
+) {
+  return { ...owner, screenshot, diagnosticOnly: diagnostic === '1' };
+}
 export function uniqueWindowsOwners(owners: WindowsProcess[]) {
   const unique = new Map<number, WindowsProcess>();
   for (const owner of owners) {
@@ -284,6 +291,7 @@ public static class TestWindowsNative {
   [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] inputs,int size);
   public static object CaptionTrace;
   public static TestOtaObserver.Observation RootFocusTrace;
+  public static TestOtaObserver.Observation OwnedMetadataTrace;
   public sealed class OwnedFocusRequired:Exception { public OwnedFocusRequired(string reason):base(reason) {} }
   public static int InputSize() {
     int size=Marshal.SizeOf(typeof(Input));
@@ -401,8 +409,8 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks) {
-    CaptionTrace=null; RootFocusTrace=null; validate();
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress, string executable, string sid, int session, long cimTicks,bool diagnosticOnly) {
+    CaptionTrace=null; RootFocusTrace=null; OwnedMetadataTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
     ShowWindow(hwnd, 9);
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
@@ -420,6 +428,11 @@ public static class TestWindowsNative {
       try { CaptionClick(hwnd,expectedPid,thread,validate,progress); }
       catch(OwnedFocusRequired) {
         SameThread(hwnd,expectedPid,thread,validate);
+        if(diagnosticOnly) {
+          try { OwnedMetadataTrace=TestOtaObserver.FocusMetadata(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks); }
+          catch(Exception error) { OwnedMetadataTrace=new TestOtaObserver.Observation { Error=error.Message,HResult=error.HResult }; }
+          throw; // Metadata cannot qualify native capture or replace its original failure.
+        }
         RootFocusTrace=new TestOtaObserver.Observation { RootHwnd=hwnd.ToInt64().ToString("x"),RootPid=expectedPid,RootThread=thread };
         try {
           RootFocusTrace=TestOtaObserver.Focus(hwnd.ToInt64(),expectedPid,thread,executable,sid,session,cimTicks);
@@ -503,6 +516,7 @@ switch ($data.operation) {
     $result=@{ root=$owner; descendants=@($rows.ToArray()); truncated=($limited -or $queue.Count -gt 0); source='CIM read-only ancestry observation'; ownershipAdopted=$false }
   }
   'capture' {
+    if ($data.diagnosticOnly -isnot [bool]) { throw 'Explicit Boolean diagnostic mode required' }
     $validate=[Action] {
       $process=@(Read-Owned $data.executable | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) -and $_.sid -eq $data.sid -and $_.session -eq $data.session })
       if ($process.Count -ne 1) { throw 'Owned process identity changed during native capture' }
@@ -512,10 +526,11 @@ switch ($data.operation) {
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
     $attemptProgress=[Action] { Write-TestProgress 'caption-before-effects' @{ trace=[TestWindowsNative]::CaptionTrace } }
-    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start)) }
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress,$data.executable,$data.sid,$data.session,(Get-StartUtcTicks $data.start),$data.diagnosticOnly) }
     finally {
       Write-TestProgress 'caption-attempt' @{ trace=[TestWindowsNative]::CaptionTrace }
       Write-TestProgress 'capture-uia-focus' @{ observation=[TestWindowsNative]::RootFocusTrace }
+      if ($null -ne [TestWindowsNative]::OwnedMetadataTrace) { Write-TestProgress 'capture-owned-uia-metadata' @{ observation=[TestWindowsNative]::OwnedMetadataTrace } }
       $focus=[TestWindowsNative]::FocusTrace
       if ($null -ne $focus) { Write-TestProgress 'capture-focus' @{ desiredHwnd=$focus[0]; desiredPid=$focus[1]; desiredThread=$focus[2]; foregroundHwnd=$focus[3]; foregroundPid=$focus[4]; foregroundThread=$focus[5]; callerThread=$focus[6]; setForegroundAccepted=$focus[7]; synchronizationSucceeded=$focus[8]; foregroundGeometry=$focus[9]; ownedGeometry=$focus[10] } }
     }
@@ -686,7 +701,10 @@ export async function windowsNative(root: string, evidence: string) {
     installerLineage: (owner: Omit<WindowsProcess, 'command'>) =>
       call<unknown>('installer-lineage', { owner }),
     capture: async (owner: WindowsProcess, screenshot: string) => {
-      const window = await call<NativeWindow | null>('capture', { ...owner, screenshot });
+      const window = await call<NativeWindow | null>(
+        'capture',
+        windowsCaptureRequest(owner, screenshot, process.env.TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC)
+      );
       if (window?.uiaFocus) {
         assert(window.caption);
         assertNativeRootFocus(owner, window.hwnd, window.caption, window.uiaFocus);

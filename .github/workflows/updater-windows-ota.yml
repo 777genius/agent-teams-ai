@@ -34,6 +34,10 @@ on:
           required: false,
           description: Actual immutable executor SHA; defaults to tooling SHA,
         }
+      owned_uia_diagnostic:
+        type: boolean
+        default: false
+        description: Read-only ARM window diagnostic; never qualifies release readiness
 
 permissions:
   contents: read
@@ -145,7 +149,7 @@ jobs:
 
   windows-predecessor:
     needs: [verified-windows-inputs, legacy-windows-inputs]
-    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -233,13 +237,10 @@ jobs:
     if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-2025
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
+      matrix: ${{ fromJSON(inputs.owned_uia_diagnostic && '{"include":[{"os":"windows-11-arm","arch":"arm64"}]}' || '{"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
+    env:
+      TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic && '1' || '0' }}
     timeout-minutes: 25
     defaults:
       run:
@@ -307,7 +308,7 @@ jobs:
 
   windows-ota:
     needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
-    if: ${{ !cancelled() && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
