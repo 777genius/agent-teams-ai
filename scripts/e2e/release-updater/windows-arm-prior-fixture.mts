@@ -90,7 +90,7 @@ export async function assertPreservedFiles(
     await guard(file);
   }
 }
-function decoderMember(compressed: Buffer) {
+export function decoderMember(compressed: Buffer) {
   const tar = gunzipSync(compressed, { maxOutputLength: 8_000_000 });
   let result: Buffer | undefined;
   let offset = 0,
@@ -107,7 +107,7 @@ function decoderMember(compressed: Buffer) {
     assert(Number.isSafeInteger(size) && size >= 0 && offset + 512 + size <= tar.length);
     assert(!name.startsWith('/') && !name.includes('..') && !/[\\:]/u.test(name));
     assert([0, 48, 53].includes(header[156] ?? -1), 'Decoder tar links/extension entries rejected');
-    if (name === 'bin/7za.exe') {
+    if (name === '7zip/bin/7za.exe') {
       assert(!result && header[156] !== 53);
       result = tar.subarray(offset + 512, offset + 512 + size);
     }

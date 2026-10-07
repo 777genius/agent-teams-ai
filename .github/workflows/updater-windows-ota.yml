@@ -49,7 +49,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
@@ -72,7 +72,7 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Verify native helper imports do not intercept controller cleanup
-        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts
+        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
       - name: Verify immutable native producer and extract exact plan-bound inputs
         env:
           GH_TOKEN: ${{ github.token }}

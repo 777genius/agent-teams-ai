@@ -410,13 +410,16 @@ interface MacProcess {
   start: string;
   command: string;
 }
+class MacProcessReadError extends Error {}
 export async function macProcesses(commands: MacCommands): Promise<MacProcess[]> {
-  const raw = await commands.checked(
+  const raw = await commands.run(
     'process-identities',
     '/bin/ps',
     ['-axww', '-o', 'pid=,uid=,pgid=,lstart=,comm='],
     1000
   );
+  if (raw.exitCode !== 0)
+    throw new MacProcessReadError(`process-identities failed; see ${raw.logFile}`);
   const processes = raw.stdout
     .trim()
     .split('\n')
@@ -561,7 +564,14 @@ export async function captureMacWindow(
     'visible native Mac application window',
     10_000
   );
-  await macOwner(commands, owner.pid, owner.command);
+  let current: MacProcess;
+  try {
+    current = await macOwner(commands, owner.pid, owner.command);
+  } catch (error) {
+    if (!(error instanceof MacProcessReadError)) throw error;
+    current = await macOwner(commands, owner.pid, owner.command);
+  }
+  assert.deepEqual(current, owner, 'Native capture owner identity changed');
   const screenshot = path.join(commands.output, 'native-window.png');
   await commands.checked('capture-aqua-window', '/usr/sbin/screencapture', [
     '-x',

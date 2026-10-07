@@ -22,6 +22,14 @@ const caption: CaptionProof = {
   promoted: true,
   restored: true,
   restorationError: null,
+  x: 100,
+  y: 24,
+  primaryWidth: 1920,
+  primaryHeight: 1080,
+  rect: [0, 0, 1024, 768],
+  rectVerified: true,
+  searchCandidates: 3,
+  searchElapsedMs: 150,
 };
 const tree: NativeNames = {
   Names: ['Providers & plans', 'Tasks'],
@@ -52,6 +60,12 @@ for (const [name, change] of Object.entries({
   'blocked input with unknown UIPI cause': { sent: 0, error: 5 },
   'unrestored topmost': { restored: false },
   'uncertain restoration': { restorationError: 'Owner changed' },
+  'point outside primary screen': { x: 1920 },
+  'point outside owned rectangle': { x: 1024 },
+  'point outside bounded top strip': { y: 64 },
+  'changed selected rectangle': { rectVerified: false },
+  'excessive candidate count': { searchCandidates: 31 },
+  'excessive total search duration': { searchElapsedMs: 2001 },
 })) {
   void test(`caption receipt rejects ${name}`, () => {
     assert.throws(() => assertCaptionProof(41, 'abc', { ...caption, ...change }));
