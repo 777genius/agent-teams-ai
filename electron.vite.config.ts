@@ -1,3 +1,4 @@
+import { fileViewerRenderers } from '@file-viewer/vite-plugin';
 import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
@@ -293,12 +294,16 @@ export default defineConfig({
         '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },
-    plugins: [react(), ...createSentryPlugins('renderer')],
+    plugins: [react(), fileViewerRenderers({ preset: 'office', inject: false, chunkStrategy: 'none',
+      copyAssets: { baseDir: 'file-viewer', publicDir: resolve(__dirname, 'node_modules/.cache/document-preview-public') } }),
+      ...createSentryPlugins('renderer')],
+    publicDir: resolve(__dirname, 'src/renderer/public'),
     build: {
       sourcemap: sourceMapSetting,
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html')
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          'document-preview': resolve(__dirname, 'src/renderer/document-preview.html')
         }
       }
     }

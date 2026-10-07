@@ -195,7 +195,7 @@ export class ProjectFileService {
     }
 
     const target = await resolveEditorFilePath(projectRoot, normalizedPath);
-    const result = await boundedTextRead(target);
+    const result = await boundedTextRead(target, normalizedPath);
     await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target);
 
     return result;
