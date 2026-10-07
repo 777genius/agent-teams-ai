@@ -1398,7 +1398,10 @@ export const CreateTeamDialog = ({
         initialData.providerId == null
           ? selectedProviderId
           : normalizeLeadProviderForMode(initialData.providerId, multimodelEnabled);
-      setRuntimeSelection(initialData.runtimeSelectionVersion, initialData.providerId);
+      setRuntimeSelection(
+        initialData.runtimeSelectionVersion,
+        initialData.providerId ? copiedProviderId : undefined
+      );
       if (initialData.runtimeSelectionVersion === 1 && !initialData.providerId)
         setLaunchTeam(false);
       setTeamName(initialData.teamName);
