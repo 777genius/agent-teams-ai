@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 import { canonical, digest, platformNames, textProof } from '../../ci/release/contract.ts';
 import {
   checkManualArtifact,
+  checkManualTransfer,
   checkManualBundle,
   checkManualContext,
   checkManualEntries,
@@ -14,6 +19,7 @@ import {
   manualWorkflow,
   oldManualDmg,
 } from './mac-manual-inputs.mts';
+import { downloadGithubFile } from './github-download.mts';
 import { nativePredecessor } from './native-release-scenario.mts';
 
 import type { Release, StagePlan } from '../../ci/release/contract.ts';
@@ -309,4 +315,23 @@ void test('release reread accepts download counters but rejects asset and snapsh
   assert.throws(() =>
     checkManualReleaseReread(before, { ...after, target_commitish: '0'.repeat(40) }, ['TEST.dmg'])
   );
+});
+
+void test('manual input transfer accepts real offline downloader success and rejects stream failure', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-mac-manual-transfer-'));
+  try {
+    const executable = fileURLToPath(
+      new URL('./fixtures/github-download/gh-fixture.mts', import.meta.url)
+    );
+    const endpoint = 'repos/TEST/transport/actions/artifacts/101/zip';
+    const destination = path.join(root, 'inputs.zip');
+    checkManualTransfer(await downloadGithubFile(executable, endpoint, destination));
+    const collision = path.join(root, 'existing.zip');
+    await writeFile(collision, 'owned existing bytes');
+    const failure = await downloadGithubFile(executable, endpoint, collision);
+    assert.match(failure.error, /EEXIST/);
+    assert.throws(() => checkManualTransfer(failure));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

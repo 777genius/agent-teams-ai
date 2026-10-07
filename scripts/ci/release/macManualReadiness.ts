@@ -93,14 +93,12 @@ export function checkMacManual(
   checkSignatures(phases, architecture);
   checkProfiles(value, phases, architecture, entries);
   const commands = list(value.commands, 'native commands').map((item) => object(item, 'command'));
+  const osCommands = commands.filter((item) => item.command === '/usr/bin/sw_vers -productVersion');
   requireThat(
-    commands.some(
-      (item) =>
-        item.command === '/usr/bin/sw_vers -productVersion' &&
-        item.exitCode === 0 &&
-        String(item.stdout).trim() === value.actualMacOs
-    ),
-    'Missing actual OS command'
+    osCommands.length === 1 &&
+      osCommands[0]?.exitCode === 0 &&
+      String(osCommands[0].stdout).trim() === value.actualMacOs,
+    'Exactly one actual OS command required'
   );
   for (const command of commands) {
     equal(command.exitCode, 0, 'native command result');
@@ -215,6 +213,34 @@ function checkProfiles(
   equal(proof(original.configProof), proof(replacement.profileBefore), 'seeded config');
   // The new application may persist normalized defaults after reading the original config.
   proof(migrated.configProof);
+  const projectPath = String(original.profile) + '/TEST-migration-project';
+  for (const item of [original, migrated]) {
+    equal(
+      item.migrationState,
+      {
+        theme: original.theme,
+        projectPaths: [projectPath],
+        team: { teamName: 'TEST-manual-migration-team', projectPath, memberCount: 0 },
+      },
+      'retained passive project and team through public API'
+    );
+  }
+  const passive = [proof(original.passiveTeamProof), proof(original.passiveProjectProof)];
+  equal(
+    [proof(migrated.passiveTeamProof), proof(migrated.passiveProjectProof)],
+    passive,
+    'retained passive bytes after launch'
+  );
+  equal(
+    list(replacement.passiveBefore, 'passive before replacement').map(proof),
+    passive,
+    'seeded passive bytes'
+  );
+  equal(
+    list(replacement.passivePreserved, 'passive after replacement').map(proof),
+    passive,
+    'preserved passive bytes before launch'
+  );
   const root = String(value.ownedRoot);
   requireThat(/^\/.+\/TEST-mac-manual-owned-[^/]+$/.test(root), 'Missing owned sandbox root');
   for (const [index, label] of ['fresh217', 'original211', 'manual217'].entries()) {

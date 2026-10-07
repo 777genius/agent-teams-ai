@@ -8,6 +8,7 @@ import { parseArgs } from 'node:util';
 import { canonical, fileProof } from '../../ci/release/contract.ts';
 import { readAsar } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { macMigrationState } from './mac-migration-state.mts';
 import { macInputCommand } from './mac-input-artifact.mts';
 import {
   MacCommands,
@@ -271,6 +272,27 @@ async function launch(
     path.join(home, 'Library', 'Application Support'),
   ])
     await mkdir(directory, { recursive: true });
+  const passiveProject = path.join(profile, 'TEST-migration-project');
+  const passiveTeam = 'TEST-manual-migration-team';
+  const passiveTeamFile = path.join(claude, 'teams', passiveTeam, 'config.json');
+  if (seed) {
+    await mkdir(passiveProject);
+    await writeFile(
+      path.join(passiveProject, 'TEST-project.txt'),
+      'owned passive migration project',
+      { flag: 'wx' }
+    );
+    await mkdir(path.dirname(passiveTeamFile), { recursive: true });
+    await writeFile(
+      passiveTeamFile,
+      canonical({
+        name: passiveTeam,
+        projectPath: passiveProject,
+        members: [],
+      }),
+      { flag: 'wx' }
+    );
+  }
   const mainPort = await macDebugPort();
   const rendererPort = await macDebugPort();
   const launchOutput = path.join(output, label);
@@ -449,16 +471,17 @@ async function launch(
   const seededTheme = before === 'light' ? 'dark' : 'light';
   const theme = seed ? seededTheme : (expectedTheme ?? before);
   if (seed) {
-    await preference(
-      `(async()=>{await window.electronAPI.config.update("general",{theme:${JSON.stringify(theme)}});return (await window.electronAPI.config.get()).general.theme;})()`
-    );
+    await macMigrationState(renderer!, passiveTeam, { theme, projectPath: passiveProject });
     await waitFor(
       async () => {
         try {
           const persisted = JSON.parse(
             await readFile(path.join(claude, 'agent-teams-config.json'), 'utf8')
-          ) as { general: { theme: string } };
-          return persisted.general.theme === theme;
+          ) as { general: { theme: string; customProjectPaths: string[] } };
+          return (
+            persisted.general.theme === theme &&
+            persisted.general.customProjectPaths.includes(passiveProject)
+          );
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
           throw error;
@@ -472,6 +495,20 @@ async function launch(
     '(async()=> (await window.electronAPI.config.get()).general.theme)()'
   );
   assert.equal(after, theme);
+  const retainedState =
+    seed || expectedTheme !== undefined
+      ? await macMigrationState(renderer!, passiveTeam)
+      : undefined;
+  if (retainedState) {
+    assert.equal(retainedState.theme, theme);
+    assert.deepEqual(retainedState.projectPaths, [passiveProject]);
+    assert.deepEqual(retainedState.team, {
+      teamName: passiveTeam,
+      projectPath: passiveProject,
+      memberCount: 0,
+    });
+  }
+
   if (theme !== 'system')
     await waitFor(
       () =>
@@ -494,6 +531,16 @@ async function launch(
     before,
     theme: after,
     preferenceAuthority: 'public config IPC and painted renderer theme',
+    ...(retainedState
+      ? {
+          migrationState: retainedState,
+          passiveTeamProof: await fileProof(passiveTeamFile, 'passive-team.json'),
+          passiveProjectProof: await fileProof(
+            path.join(passiveProject, 'TEST-project.txt'),
+            'passive-project.txt'
+          ),
+        }
+      : {}),
     painted,
     ...(seed || expectedTheme !== undefined
       ? {
@@ -547,6 +594,15 @@ try {
     path.join(profile, 'home', '.claude', 'agent-teams-config.json'),
     'seeded-config.json'
   );
+  const passiveFiles = [
+    path.join(profile, 'home', '.claude', 'teams', 'TEST-manual-migration-team', 'config.json'),
+    path.join(profile, 'TEST-migration-project', 'TEST-project.txt'),
+  ];
+  const passiveBefore = await Promise.all(
+    passiveFiles.map((file, index) =>
+      fileProof(file, index === 0 ? 'passive-team.json' : 'passive-project.txt')
+    )
+  );
   await noAppProcesses();
   await rm(app, { recursive: true });
   await macDmgInstall(
@@ -562,9 +618,17 @@ try {
     ),
     profileBefore
   );
+  const passivePreserved = await Promise.all(
+    passiveFiles.map((file, index) =>
+      fileProof(file, index === 0 ? 'passive-team.json' : 'passive-project.txt')
+    )
+  );
+  assert.deepEqual(passivePreserved, passiveBefore);
   phases.push({
     replacementSignature: await installed('replacement217', '2.17.7'),
     profileBefore,
+    passiveBefore,
+    passivePreserved,
     preservedBeforeLaunch: await fileProof(
       path.join(profile, 'home', '.claude', 'agent-teams-config.json'),
       'seeded-config.json'

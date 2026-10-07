@@ -278,6 +278,10 @@ export async function prepareManualInputs(
 async function api<T>(endpoint: string) {
   return JSON.parse(await macInputCommand(['api', endpoint])) as T;
 }
+export function checkManualTransfer(transfer: Awaited<ReturnType<typeof downloadGithubFile>>) {
+  assert.equal(transfer.exitCode, 0, transfer.stderr);
+  assert.equal(transfer.error, '');
+}
 export async function retrieveManualInputs(
   output: string,
   expected: Parameters<typeof checkManualArtifact>[1]
@@ -315,8 +319,7 @@ export async function retrieveManualInputs(
     `${prefix}/artifacts/${expected.artifactId}/zip`,
     archive
   );
-  assert.equal(transfer.exitCode, 0, transfer.stderr);
-  assert.equal(transfer.error, undefined);
+  checkManualTransfer(transfer);
   authority.archiveSha256 = (await fileProof(archive, 'inputs.zip')).sha256;
   checkManualArtifact(authority, expected);
   const entries = (await macInputCommand(['-Z1', archive], 'unzip')).trim().split(/\r?\n/);

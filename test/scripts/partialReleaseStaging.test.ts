@@ -1568,6 +1568,15 @@ async function publicationFixture() {
 
 describe('carried publication effects and reconciliation', () => {
   afterEach(() => vi.restoreAllMocks());
+  it('redrafts carry publication when an old-version canonical Mac latest URL is missing', async () => {
+    const f = await publicationFixture();
+    f.store.missingLatestFeed = platformNames('2.17.1').mac[0]!;
+    await expect(
+      publishCarriedRelease(f.store, f.port, f.plan, f.planDigest, f.receipt)
+    ).rejects.toThrow('returned to draft');
+    expect(f.store.visibilityWrites).toEqual([false, true]);
+    expect(f.store.releases.get('v2.17.2')!.draft).toBe(true);
+  });
   it('proves complete bytes and signatures without a visibility write in readiness mode', async () => {
     const f = await publicationFixture();
     const result = await verifyCarryReadiness(f.store, f.port, f.plan, f.planDigest, f.receipt);

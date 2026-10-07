@@ -240,7 +240,7 @@ async function publishPreparedRelease(
     for (const name of [
       ...platformNames(version(plan.input.target.tag)).windows,
       ...platformNames(versions.linux).linux,
-      ...(plan.input.mode === 'full' ? platformNames(versions.mac).mac : []),
+      ...platformNames(versions.mac).mac,
       ...aliases,
     ]) {
       await retryPublicRead(() =>

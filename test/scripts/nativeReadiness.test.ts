@@ -1,32 +1,31 @@
-import { validateNativeArchivePaths } from '../../scripts/ci/release/nativeReadinessGithub.js';
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Pinned release TS7 enables noUncheckedIndexedAccess; the renderer lint project does not. */
-import { promoteExistingDraft } from '../../scripts/ci/promote-existing-draft.mjs';
-import { writeFile } from 'node:fs/promises';
-import { publishFullRelease } from '../../scripts/ci/release/publication.js';
-import type { PublicationPort } from '../../scripts/ci/release/publication.js';
-import { manualCapturePaths } from '../../scripts/ci/release/macManualReadiness.js';
 // @vitest-environment node
 import assert from 'node:assert/strict';
+import { writeFile } from 'node:fs/promises';
 
 import { describe, expect, it } from 'vitest';
 
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Pinned release TS7 enables noUncheckedIndexedAccess; the renderer lint project does not. */
+import { promoteExistingDraft } from '../../scripts/ci/promote-existing-draft.mjs';
 import {
+  aliases,
   canonical,
   compareNames,
-  aliases,
-  renderFeed,
   digest,
   MANIFEST,
   manifestFor,
   platformNames,
+  renderFeed,
   textProof,
 } from '../../scripts/ci/release/contract.js';
+import { manualCapturePaths } from '../../scripts/ci/release/macManualReadiness.js';
 import {
   checkWindowsPriorFixture,
-  nativeScenarioRows,
   fullNativeScenarioRows,
+  nativeScenarioRows,
   verifyNativeReadiness,
 } from '../../scripts/ci/release/nativeReadiness.js';
+import { validateNativeArchivePaths } from '../../scripts/ci/release/nativeReadinessGithub.js';
+import { publishFullRelease } from '../../scripts/ci/release/publication.js';
 import {
   ARM211_FILES,
   ARM211_SHA,
@@ -34,6 +33,8 @@ import {
   usesRepairedArm211,
 } from '../../scripts/ci/release/windowsArmPriorFixture.js';
 import { finalWindowsReleaseProved } from '../../scripts/ci/release/windowsReleaseScenario.js';
+
+import type { PublicationPort } from '../../scripts/ci/release/publication.js';
 
 // Receipt policy only: these synthetic claims never qualify a native run.
 it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor cases', () => {
@@ -200,7 +201,7 @@ it.each(['2.17.6', '2.17.7'])(
   }
 );
 
-import type { StagePlan, Release } from '../../scripts/ci/release/contract.js';
+import type { Release, StagePlan } from '../../scripts/ci/release/contract.js';
 import type {
   NativeArtifact,
   NativeJob,
@@ -800,7 +801,15 @@ function manualValue(
       archiveSha256: 'a'.repeat(64),
     })),
   });
+  const projectPath = `${root}/migration-profile/TEST-migration-project`;
+  const passiveTeam = textProof(
+    'passive-team.json',
+    JSON.stringify({ name: 'TEST-manual-migration-team', projectPath, members: [] })
+  );
+  const passiveProject = textProof('passive-project.txt', 'owned passive migration project');
   const profileBefore = {
+    passiveBefore: [passiveTeam, passiveProject],
+    passivePreserved: [passiveTeam, passiveProject],
     replacementSignature: signature('2.17.7'),
     profileBefore: file,
     preservedBeforeLaunch: file,
@@ -820,7 +829,18 @@ function manualValue(
       profile,
       before: label === 'original211' ? 'system' : 'light',
       theme: 'light',
-      ...(label === 'fresh217' ? {} : { configProof: label === 'manual217' ? normalized : file }),
+      ...(label === 'fresh217'
+        ? {}
+        : {
+            configProof: label === 'manual217' ? normalized : file,
+            migrationState: {
+              theme: 'light',
+              projectPaths: [projectPath],
+              team: { teamName: 'TEST-manual-migration-team', projectPath, memberCount: 0 },
+            },
+            passiveTeamProof: passiveTeam,
+            passiveProjectProof: passiveProject,
+          }),
       roots: {
         home: `${profile}/home`,
         nodeHome: `${profile}/home`,
@@ -920,6 +940,47 @@ describe('full217 frozen-source native readiness', () => {
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
   });
   it.each([
+    [
+      'contradictory duplicate OS command',
+      (v: Record<string, unknown>) => {
+        (v.commands as Record<string, unknown>[]).push({
+          command: '/usr/bin/sw_vers -productVersion',
+          exitCode: 0,
+          stdout: '14.0\n',
+          stderr: '',
+          outputSha256: digest('stdout:\n14.0\n\nstderr:\n'),
+        });
+      },
+    ],
+    [
+      'lost passive team after replacement',
+      (v: Record<string, unknown>) => {
+        delete (
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+            .migrationState as Record<string, unknown>
+        ).team;
+      },
+    ],
+    [
+      'lost custom project after replacement',
+      (v: Record<string, unknown>) => {
+        (
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+            .migrationState as Record<string, unknown>
+        ).projectPaths = [];
+      },
+    ],
+    [
+      'changed passive bytes during replacement',
+      (v: Record<string, unknown>) => {
+        (v.phases as Record<string, unknown>[]).find(
+          (p) => p.replacementSignature
+        )!.passivePreserved = [
+          textProof('passive-team.json', 'changed'),
+          textProof('passive-project.txt', 'changed'),
+        ];
+      },
+    ],
     [
       'prelaunch config bytes altered',
       (v: Record<string, unknown>) => {
