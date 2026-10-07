@@ -5,6 +5,7 @@ import {
   assessLeadRuntimeRestart,
   restartLeadRuntime,
 } from './provisioning/TeamProvisioningLeadRuntimeRestart';
+import { hasLiveOpenCodeMcpConsumers } from './provisioning/TeamProvisioningMcpConsumerQuery';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from './provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { killTeamProcessAndWait } from './provisioning/TeamProvisioningRunProgress';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
@@ -87,31 +88,14 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 
   /** Tracked pending launches and live OpenCode lanes consume the app-owned HTTP bridge. */
   hasLiveOpenCodeMcpConsumers(): boolean {
-    // Metadata/provider selection may still be unresolved before a run is registered.
-    if (this.pendingLaunchAdmissions > 0) return true;
-    if ([...this.runtimeAdapterRunByTeam.values()].some((run) => run.providerId === 'opencode')) {
-      return true;
-    }
-    if ([...this.secondaryRuntimeRunByTeam.values()].some((lanes) => lanes.size > 0)) {
-      return true;
-    }
-    for (const run of this.runs.values()) {
-      if (run.processKilled || run.cancelRequested) continue;
-      const pending = this.provisioningRunByTeam.get(run.teamName) === run.runId;
-      if (!pending && this.runTracking.getAliveRunId(run.teamName) !== run.runId) continue;
-      if (run.request.providerId === 'opencode') return true;
-      if (pending && run.allEffectiveMembers.some((member) => member.providerId === 'opencode')) {
-        return true;
-      }
-      if (
-        run.mixedSecondaryLanes.some(
-          (lane) => !lane.blockedBeforeLaunch && lane.state !== 'finished'
-        )
-      ) {
-        return true;
-      }
-    }
-    return false;
+    return hasLiveOpenCodeMcpConsumers({
+      pendingLaunchAdmissions: this.pendingLaunchAdmissions,
+      runtimeAdapterRuns: this.runtimeAdapterRunByTeam.values(),
+      secondaryRuntimeLanes: this.secondaryRuntimeRunByTeam.values(),
+      runs: this.runs.values(),
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
+    });
   }
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
