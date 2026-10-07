@@ -113,3 +113,60 @@ it.each(['success', 'failure'] as const)(
     requests.clear();
   }
 );
+
+it.each([
+  ['displaced', 'delete'],
+  ['displaced', 'clear'],
+  ['started', 'delete'],
+  ['started', 'clear'],
+] as const)(
+  'settles %s fresh observers on %s before physical completion',
+  async (phase, retire) => {
+    const requests = new ScopedReadRequests(() => 'TEST-retired');
+    const scope = { contextId: 'TEST-context', contextEpoch: 1, teamStateEpoch: 0 };
+    const first = deferred<string>(),
+      replacement = deferred<string>();
+    requests.set('TEST-team', first.promise, scope);
+    const earlier = requests.queueFresh(
+      'TEST-team',
+      scope,
+      () => {
+        requests.set('TEST-team', replacement.promise, scope);
+        return replacement.promise;
+      },
+      () => true
+    );
+    first.resolve('TEST-first');
+    requests.release('TEST-team', first.promise);
+    let later: Promise<string> | undefined;
+    if (phase === 'displaced') {
+      requests.set('TEST-team', replacement.promise, scope);
+      later = requests.queueFresh(
+        'TEST-team',
+        scope,
+        () => Promise.resolve('TEST-unexpected'),
+        () => true
+      );
+    }
+    await Promise.resolve();
+    await Promise.resolve();
+    let settled = false;
+    void earlier.then(() => {
+      settled = true;
+    });
+    try {
+      if (retire === 'delete') requests.delete('TEST-team');
+      else requests.clear();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(settled).toBe(true);
+      expect(await earlier).toBe('TEST-retired');
+      if (later) expect(await later).toBe('TEST-retired');
+      expect(requests.get('TEST-team', scope)).toBeUndefined();
+    } finally {
+      replacement.resolve('TEST-late-physical-result');
+      await Promise.all([earlier, later]);
+      requests.clear();
+    }
+  }
+);
