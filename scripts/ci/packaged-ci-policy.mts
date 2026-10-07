@@ -70,9 +70,13 @@ export function isMetadataOnlyEdit(input: PullRequestInput): boolean {
   const keys = Object.keys(changes);
   return (
     keys.length > 0 &&
-    keys.every(
-      (key) => (key === 'title' || key === 'body') && typeof record(changes[key])?.from === 'string'
-    )
+    keys.every((key) => {
+      const previous = record(changes[key])?.from;
+      return (
+        (key === 'title' || key === 'body') &&
+        (typeof previous === 'string' || (key === 'body' && previous === null))
+      );
+    })
   );
 }
 

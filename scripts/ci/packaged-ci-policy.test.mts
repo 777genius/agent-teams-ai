@@ -92,6 +92,7 @@ test('title/body edits skip work; base or ambiguous edits must verify code', () 
   for (const changes of [
     { title: { from: 'old' } },
     { body: { from: '' } },
+    { body: { from: null } },
     {
       title: { from: 'old' },
       body: { from: 'old' },
@@ -107,6 +108,9 @@ test('title/body edits skip work; base or ambiguous edits must verify code', () 
     undefined,
     {},
     { title: {} },
+    { title: { from: null } },
+    { body: {} },
+    { body: { from: null }, base: null },
     { base: { ref: { from: 'main' } } },
     {
       title: { from: 'old' },
