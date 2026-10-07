@@ -27,7 +27,8 @@ export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   getTasksBasePath(): string;
   pathExists(filePath: string): Promise<boolean>;
   ensureCwdExists(cwd: string): Promise<void>;
-  mkdir(directoryPath: string): Promise<void>;
+  // A returned path proves directory creation; void provides no fresh-ownership evidence.
+  mkdir(directoryPath: string): Promise<string | void>;
   nowMs(): number;
   writeTeamMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void>;
   writeMembersMeta(
@@ -95,8 +96,10 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
       request,
       members: request.members,
     });
-  await ports.mkdir(path.join(ports.getTeamsBasePath(), launchRequest.teamName));
+  const teamDir = path.join(ports.getTeamsBasePath(), launchRequest.teamName);
+  const createdTeamDirectory = await ports.mkdir(teamDir);
   await ports.mkdir(path.join(ports.getTasksBasePath(), launchRequest.teamName));
+  if (createdTeamDirectory) await ports.mkdir(path.join(teamDir, 'inboxes'));
   await ports.writeTeamMeta(launchRequest.teamName, {
     displayName: launchRequest.displayName,
     description: launchRequest.description,
@@ -116,7 +119,9 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   });
   await ports.writeMembersMeta(
     launchRequest.teamName,
-    buildMembersMetaWritePayload(buildConfiguredMembersForPersistence(request.members, effectiveMembers)),
+    buildMembersMetaWritePayload(
+      buildConfiguredMembersForPersistence(request.members, effectiveMembers)
+    ),
     { providerBackendId: launchRequest.providerBackendId }
   );
   await ports.writeOpenCodeTeamConfig(launchRequest, effectiveMembers);

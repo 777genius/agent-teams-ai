@@ -3400,6 +3400,7 @@ export class TeamDataService {
     try {
       await fs.promises.mkdir(tasksDir);
       tasksDirectoryCreated = true;
+      await fs.promises.mkdir(path.join(teamDir, 'inboxes'));
 
       const joinedAt = Date.now();
       // Save team-level metadata to team.meta.json (NOT config.json).
