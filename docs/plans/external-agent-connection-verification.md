@@ -1,6 +1,6 @@
 # External agent connection: implementation evidence
 
-2026-10-07. Core implementation and packaged acceptance pass in the isolated `feat/external-agent-mcp-cdp` worktree. Required current-head GitHub CI and PR delivery are pending. This record is not a release announcement.
+2026-10-07. Core implementation and packaged acceptance pass in the isolated `feat/external-agent-mcp-cdp` worktree. Current-head CI and delivery status are tracked in the linked PRs below. This record is not a release announcement.
 
 ## Tested source and artifact
 
@@ -53,4 +53,4 @@ Earlier broad providerless/controller/MCP suites and installation/build checks r
 
 Verified packaged support is Linux Electron 44.4.5 with native Codex CLI 0.159.2 plus raw CDP. The macOS process-command probe is not a macOS packaged acceptance run. Claude Code/Cursor instructions are not runtime proof. Other OS/client versions, extra BrowserWindows and in-process renderer crash/recreation were not exercised; reload was. Hot registration in an already running agent turn is not promised. Cloud agents need a local executor; copying a prompt cannot grant unavailable client tools.
 
-Edit, reversible trash, session-only highlights and change summaries remain the separate next scope in `team-template-prompt-builder-ux.md`. Current-head required GitHub CI and dependency-safe PR delivery remain outstanding. No release is published.
+Edit, reversible trash, session-only highlights and change summaries remain the separate next scope in `team-template-prompt-builder-ux.md`. Delivery uses dependency-safe PRs [#847](https://github.com/777genius/agent-teams-ai/pull/847), [#848](https://github.com/777genius/agent-teams-ai/pull/848), [#849](https://github.com/777genius/agent-teams-ai/pull/849) and [#850](https://github.com/777genius/agent-teams-ai/pull/850); their current-head required checks and merge state are the delivery authority. No release is published.

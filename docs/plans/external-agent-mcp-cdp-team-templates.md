@@ -1,6 +1,6 @@
 # Готовые команды и внешний AI через MCP + CDP
 
-План реализации, 2026-10-07. Core реализован в изолированном worktree; Linux packaged/native-client proof завершён. [Результаты и границы проверки](external-agent-connection-verification.md). Required CI и доставка PR ещё впереди.
+План реализации, 2026-10-07. Core реализован в изолированном worktree; Linux packaged/native-client proof завершён. [Результаты и границы проверки](external-agent-connection-verification.md). Доставка и обязательный CI отслеживаются в PR [#847](https://github.com/777genius/agent-teams-ai/pull/847), [#848](https://github.com/777genius/agent-teams-ai/pull/848), [#849](https://github.com/777genius/agent-teams-ai/pull/849), [#850](https://github.com/777genius/agent-teams-ai/pull/850).
 
 Последнее принятое UX уточнение: свободный запрос и read-only справочник шаблонов в popup вместо обязательной формы состава. Общие roster primitives переиспользуются. Edit/trash и session-only highlights описаны отдельно в [следующем плане](team-template-prompt-builder-ux.md), они не входят в реализованный create-only core.
 
