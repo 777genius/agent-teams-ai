@@ -75,7 +75,12 @@ function fullNeeds(reuse = false): JsonObject {
   return {
     plan: {
       result: 'success',
-      outputs: { full: 'true', reuse: String(reuse), source_run: reuse ? '100' : '' },
+      outputs: {
+        full: 'true',
+        metadata: 'false',
+        reuse: String(reuse),
+        source_run: reuse ? '100' : '',
+      },
     },
     validate: { result: 'success' },
     test: { result: reuse ? 'skipped' : 'success' },
@@ -343,6 +348,284 @@ test('ordinary squash with exact inputs can reuse after GitHub drops PR links, w
   assert.equal(plan.full, true);
   assert.equal(plan.reuse, true);
   assert.equal(plan.source_run, '100');
+});
+
+// Observed jobs API name in successful GitHub run 37620209834: skipped
+// conditional jobs can expose the exact unevaluated name expression.
+const skippedFeedbackExpression =
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
+
+function skippedExpressionFixture(shards: 2 | 4 = 2): Map<string, unknown> {
+  const data = fixture(shards);
+  job(data, 'Fast feedback').name = skippedFeedbackExpression;
+  return data;
+}
+
+test('actual GitHub skipped feedback expression preserves authenticated full reuse', async () => {
+  assert.deepEqual(await proof(skippedExpressionFixture()), {
+    reuse: true,
+    sourceRun: '100',
+    reason: 'Verified identical-input full CI',
+  });
+});
+
+test('skipped feedback alias cannot hide execution, malformed names or missing full jobs', async () => {
+  const changes: ((data: Map<string, unknown>) => void)[] = [
+    (data) => {
+      job(data, skippedFeedbackExpression).conclusion = 'success';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).conclusion = 'failure';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).status = 'in_progress';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name += ' ';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name = '${{ ' + skippedFeedbackExpression + ' }}';
+    },
+    (data) => {
+      job(data, skippedFeedbackExpression).name = 'Metadata fast feedback';
+    },
+    (data) => {
+      job(data, 'Full qualification').name = skippedFeedbackExpression;
+    },
+    (data) => {
+      const response = record(data, jobsEndpoint);
+      response.jobs = (response.jobs as JsonObject[]).filter((item) => item.name !== 'test (1/2)');
+      response.total_count = 9;
+    },
+    (data) => {
+      record(data, `${prefix}/contents/${WORKFLOW}?ref=${headSha}`).sha = baseSha;
+    },
+  ];
+  for (const change of changes) {
+    const data = skippedExpressionFixture();
+    change(data);
+    assert.equal((await proof(data)).reuse, false);
+  }
+});
+
+test('metadata result and skipped heavy jobs never qualify through the exact feedback alias', async () => {
+  for (const renamePlan of [false, true]) {
+    const data = skippedExpressionFixture();
+    for (const item of record(data, jobsEndpoint).jobs as JsonObject[]) {
+      if (item.name === skippedFeedbackExpression) continue;
+      if (item.name === 'plan') {
+        if (renamePlan) item.name = 'Metadata CI plan';
+        continue;
+      }
+      if (item.name === 'Full qualification') {
+        item.name = 'Metadata CI result';
+        continue;
+      }
+      item.conclusion = 'skipped';
+      item.steps = [];
+    }
+    assert.equal((await proof(data)).reuse, false);
+  }
+});
+
+// Exact skipped job names recorded through gh for metadata run 37621422796.
+const metadataSkippedNames = [
+  "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+  "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/2)",
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+  skippedFeedbackExpression,
+];
+function metadataFixture(count = 1, shards: 2 | 4 = 2): Map<string, unknown> {
+  const data = skippedExpressionFixture(shards);
+  const runs = record(data, listEndpoint).workflow_runs as JsonObject[];
+  for (let index = 1; index <= count; index++) {
+    const run = structuredClone(record(data, runEndpoint));
+    run.id = 100 + index;
+    run.run_attempt = 1;
+    runs.push(run);
+    data.set(`${prefix}/actions/runs/${run.id}`, run);
+    const step = (name: string, conclusion = 'success'): JsonObject => ({
+      name, status: 'completed', conclusion,
+    });
+    const skippedNames = metadataSkippedNames.map((name) => name.replace('/2)', `/${shards})`));
+    const jobs = ['Metadata CI plan', 'Metadata CI result', ...skippedNames].map(
+      (name, offset) => ({
+        id: index * 10 + offset, run_id: run.id, run_attempt: 1, head_sha: headSha,
+        name, status: 'completed', conclusion: offset < 2 ? 'success' : 'skipped',
+        completed_at: recent,
+        steps: offset === 0
+          ? [step(`CI source proof: PR=12 | base=${baseSha} | head=${headSha}`),
+              step('Plan feedback and verify reusable evidence')]
+          : offset === 1
+            ? [step('Preserve existing current-code checks after metadata edits'),
+                step('Require complete current-code qualification', 'skipped')]
+            : [],
+      })
+    );
+    data.set(`${prefix}/actions/runs/${run.id}/attempts/1/jobs?per_page=100`,
+      { total_count: jobs.length, jobs });
+  }
+  record(data, listEndpoint).total_count = runs.length;
+  return data;
+}
+function metadataJobs(data: Map<string, unknown>, id = 101): JsonObject[] {
+  return record(data, `${prefix}/actions/runs/${id}/attempts/1/jobs?per_page=100`).jobs as JsonObject[];
+}
+
+function interveningFullPlanAliasFixture(): Map<string, unknown> {
+  const data = metadataFixture(2);
+  const jobs = structuredClone(record(data, jobsEndpoint).jobs) as JsonObject[];
+  for (const item of jobs) {
+    item.run_id = 101;
+    item.run_attempt = 1;
+    if (item.name === 'plan') item.name = 'Metadata CI plan';
+  }
+  data.set(`${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`,
+    { total_count: jobs.length, jobs });
+  return data;
+}
+
+test('successful preclassification plan alias can qualify only as a complete canonical full run', async () => {
+  const direct = skippedExpressionFixture();
+  job(direct, 'plan').name = 'Metadata CI plan';
+  for (const [data, sourceRun] of [
+    [direct, '100'], [interveningFullPlanAliasFixture(), '101'],
+  ] as const) {
+    assert.deepEqual(await proof(data), {
+      reuse: true, sourceRun, reason: 'Verified identical-input full CI',
+    });
+    const read = async (endpoint: string) => structuredClone(data.get(endpoint));
+    assert.equal((await provePostmergeReuse({ ...context, sourceRun, windowsImage }, read)).reuse, true);
+  }
+});
+
+test('invalid closest full run with a metadata plan alias never falls back to an older pass', async () => {
+  const aliasPlan = (data: Map<string, unknown>): JsonObject =>
+    metadataJobs(data).find((item) => item.name === 'Metadata CI plan')!;
+  const changes: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { aliasPlan(data).conclusion = 'failure'; },
+    (data) => { aliasPlan(data).conclusion = 'skipped'; },
+    (data) => { aliasPlan(data).status = 'in_progress'; },
+    (data) => { aliasPlan(data).name += ' '; },
+    (data) => { aliasPlan(data).name = 'Metadata CI plan unknown'; },
+    (data) => { aliasPlan(data).run_attempt = 2; },
+    (data) => { (aliasPlan(data).steps as JsonObject[])[0].conclusion = 'skipped'; },
+    (data) => { (aliasPlan(data).steps as JsonObject[])[0].name = `CI source proof: PR=13 | base=${baseSha} | head=${headSha}`; },
+    (data) => { metadataJobs(data).find((item) => item.name === 'test (1/2)')!.conclusion = 'skipped'; },
+    (data) => { metadataJobs(data).find((item) => item.name === 'Full qualification')!.name = 'Metadata CI result'; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).conclusion = 'failure'; },
+    (data) => {
+      const response = record(data, `${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`);
+      response.jobs = metadataJobs(data).filter((item) => item.name !== 'lint (main)');
+      response.total_count = 9;
+    },
+    (data) => { metadataJobs(data).find((item) => item.name === 'validate')!.name = 'plan'; },
+    (data) => { record(data, `${prefix}/contents/${WORKFLOW}?ref=${headSha}`).sha = baseSha; },
+  ];
+  for (const [index, change] of changes.entries()) {
+    const data = interveningFullPlanAliasFixture();
+    change(data);
+    assert.equal((await proof(data)).reuse, false, `Full plan alias mutation ${index}`);
+  }
+});
+
+test('proven metadata edits preserve the closest full qualification, including Windows selection', async () => {
+  for (const count of [1, 3, 7]) {
+    const data = metadataFixture(count);
+    assert.equal((await proof(data)).reuse, true);
+    const read = async (endpoint: string) => structuredClone(data.get(endpoint));
+    assert.equal((await provePostmergeReuse({ ...context, sourceRun: '100', windowsImage }, read)).reuse, true);
+    assert.equal((await provePostmergeReuse({ ...context, sourceRun: String(100 + count), windowsImage }, read)).reuse, false);
+  }
+  assert.equal((await proof(metadataFixture(8))).reuse, false);
+  const closestFull = metadataFixture(2);
+  const closerJobs = structuredClone(record(closestFull, jobsEndpoint).jobs) as JsonObject[];
+  for (const item of closerJobs) { item.run_id = 101; item.run_attempt = 1; }
+  closestFull.set(`${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`,
+    { total_count: closerJobs.length, jobs: closerJobs });
+  assert.equal((await proof(closestFull)).sourceRun, '101');
+  const droppedLinks = metadataFixture();
+  record(droppedLinks, `${prefix}/actions/runs/101`).pull_requests = [];
+  assert.equal((await proof(droppedLinks)).reuse, true);
+});
+
+test('only fully proven harmless metadata may precede full reuse', async () => {
+  const changes: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { record(data, `${prefix}/actions/runs/101`).conclusion = 'failure'; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).conclusion = 'cancelled'; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).status = 'in_progress'; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).workflow_id = 999; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).head_sha = treeSha; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).repository = { ...repository, id: 999 }; },
+    (data) => { record(data, `${prefix}/actions/runs/101`).created_at = new Date(now - MAX_AGE_MS - 1).toISOString(); },
+    (data) => { (metadataJobs(data)[0].steps as JsonObject[])[0].name = `CI source proof: PR=12 | base=${treeSha} | head=${headSha}`; },
+    (data) => { (metadataJobs(data)[0].steps as JsonObject[])[0].name = `CI source proof: PR=13 | base=${baseSha} | head=${headSha}`; },
+    (data) => { (metadataJobs(data)[0].steps as JsonObject[])[1].conclusion = 'skipped'; },
+    (data) => { metadataJobs(data)[0].run_attempt = 2; },
+    (data) => { metadataJobs(data)[1].name = 'Full qualification'; },
+    (data) => { (metadataJobs(data)[1].steps as JsonObject[])[0].conclusion = 'skipped'; },
+    (data) => { (metadataJobs(data)[1].steps as JsonObject[])[1].conclusion = 'success'; },
+    (data) => { metadataJobs(data)[2].steps = [{ name: 'Unexpected execution', status: 'completed', conclusion: 'success' }]; },
+    (data) => { metadataJobs(data)[2].conclusion = 'success'; },
+    (data) => { metadataJobs(data)[2].name += ' '; },
+    (data) => { (metadataJobs(data)[1].steps as JsonObject[]).push({ name: 'Unknown step', status: 'completed', conclusion: 'success' }); },
+    (data) => { metadataJobs(data)[2].name = metadataJobs(data)[3].name; },
+    (data) => { metadataJobs(data).pop(); },
+    (data) => { record(data, `${prefix}/contents/${WORKFLOW}?ref=${headSha}`).sha = baseSha; },
+    (data) => { record(data, runEndpoint).conclusion = 'failure'; },
+    (data) => {
+      (metadataJobs(data)[0].steps as JsonObject[])[0].name = `CI source proof: PR=12 | base=${treeSha} | head=${headSha}`;
+      ((record(data, `${prefix}/actions/runs/101`).pull_requests as JsonObject[])[0].base as JsonObject).sha = treeSha;
+    },
+    (data) => { job(data).conclusion = 'skipped'; },
+  ];
+  for (const [index, change] of changes.entries()) {
+    const data = metadataFixture();
+    change(data);
+    assert.equal((await proof(data)).reuse, false, `Metadata mutation ${index}`);
+  }
+  for (const failure of ['failure', 'missing-test']) {
+    const intervening = metadataFixture(2);
+    const fullJobs = structuredClone(record(intervening, jobsEndpoint).jobs) as JsonObject[];
+    for (const item of fullJobs) { item.run_id = 101; item.run_attempt = 1; }
+    if (failure === 'failure') record(intervening, `${prefix}/actions/runs/101`).conclusion = 'failure';
+    else fullJobs.splice(fullJobs.findIndex((item) => item.name === 'test (1/2)'), 1);
+    intervening.set(`${prefix}/actions/runs/101/attempts/1/jobs?per_page=100`,
+      { total_count: fullJobs.length, jobs: fullJobs });
+    assert.equal((await proof(intervening)).reuse, false);
+  }
+});
+
+test('reruns, changed metadata identity and listing races invalidate the entire reuse proof', async () => {
+  const races: [string, (value: JsonObject) => void][] = [
+    [`${prefix}/actions/runs/101`, (value) => { value.run_attempt = 2; }],
+    [`${prefix}/actions/runs/101`, (value) => { value.conclusion = 'failure'; }],
+    [`${prefix}/actions/runs/102`, (value) => { value.head_sha = treeSha; }],
+    [`${prefix}/actions/runs/101`, (value) => {
+      ((value.pull_requests as JsonObject[])[0].base as JsonObject).sha = treeSha;
+    }],
+    [runEndpoint, (value) => { value.run_attempt = 3; }],
+    [listEndpoint, (value) => {
+      (value.workflow_runs as JsonObject[])[2].run_attempt = 2;
+    }],
+    [listEndpoint, (value) => {
+      (value.workflow_runs as JsonObject[]).push({ id: 104 }); value.total_count = 4;
+    }],
+    [listEndpoint, (value) => {
+      (value.workflow_runs as JsonObject[]).pop(); value.total_count = 2;
+    }],
+  ];
+  for (const [target, mutate] of races) {
+    const data = metadataFixture(2);
+    let reads = 0;
+    const result = await provePostmergeReuse(context, async (endpoint) => {
+      const value = structuredClone(data.get(endpoint));
+      if (endpoint === target && ++reads > 1) mutate(value as JsonObject);
+      return value;
+    });
+    assert.equal(result.reuse, false);
+  }
 });
 
 test('all four successful root shards qualify reuse through Linux and Windows planning', async () => {
@@ -1000,7 +1283,7 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
     assert.equal(child.status, 0, child.stderr);
     assert.equal(
       readFileSync(outputFile, 'utf8'),
-      `full=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
+      `full=false\nmetadata=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
     );
     const gate = spawnSync(process.execPath, [cli, 'gate'], {
       encoding: 'utf8',
@@ -1016,4 +1299,13 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('four-shard postmerge reuse crosses only exact same-topology harmless metadata', async () => {
+  const data = metadataFixture(1, 4);
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, true);
+  assert.equal((await proof(data, { ...context, rootTestShards: '2' })).reuse, false);
+  const skippedTest = metadataJobs(data).find((item) => String(item.name).includes('matrix.shard'))!;
+  skippedTest.name = String(skippedTest.name).replace('/4)', '/2)');
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, false);
 });
