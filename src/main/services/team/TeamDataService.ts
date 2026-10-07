@@ -1244,6 +1244,17 @@ export class TeamDataService {
     operation
   ) => operation();
 
+  private configurationIdentityFence: (
+    teamName: string,
+    operation: () => Promise<void>
+  ) => Promise<void> = (_name, operation) => operation();
+
+  setConfigurationIdentityFence(
+    fence: (teamName: string, operation: () => Promise<void>) => Promise<void>
+  ): void {
+    this.configurationIdentityFence = fence;
+  }
+
   setConfigurationGate(
     gate: (teamName: string, operation: () => Promise<void>) => Promise<void>
   ): void {
@@ -1252,9 +1263,12 @@ export class TeamDataService {
 
   async runConfigurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
     let result!: T;
-    await this.configurationGate(teamName, async () => {
-      result = await operation();
-    });
+    const lockName = teamName.trim().toLowerCase();
+    await this.configurationIdentityFence(lockName, () =>
+      this.configurationGate(lockName, async () => {
+        result = await operation();
+      })
+    );
     return result;
   }
 
@@ -1297,17 +1311,19 @@ export class TeamDataService {
     isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
     options: PermanentTeamDataDeletionOptions = {}
   ): Promise<boolean> {
-    return permanentlyDeleteTeamData({
-      teamName,
-      isTeamDataCurrent,
-      isTaskDataCurrent,
-      options,
-      onTeamDataDeleted: () => {
-        TeamConfigReader.invalidateTeam(teamName);
-        this.invalidateNotificationContext(teamName);
-      },
-      onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
-    });
+    return this.runConfigurationOperation(teamName, () =>
+      permanentlyDeleteTeamData({
+        teamName,
+        isTeamDataCurrent,
+        isTaskDataCurrent,
+        options,
+        onTeamDataDeleted: () => {
+          TeamConfigReader.invalidateTeam(teamName);
+          this.invalidateNotificationContext(teamName);
+        },
+        onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
+      })
+    );
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
@@ -2103,6 +2119,8 @@ export class TeamDataService {
     const nextMembers = applyDistinctRosterColors(plan.nextMembers);
 
     await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
+
+    this.membersMetaStore.serializeMembers(nextMembers);
 
     const persistConfig = async (): Promise<void> => {
       if (!plan.nextConfig) return;

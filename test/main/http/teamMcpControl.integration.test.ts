@@ -3,13 +3,14 @@
 import { BoundControlContext } from '@features/external-agent-connection/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { vi } from 'vitest';
 import { registerTeamRoutes } from '@main/http/teams';
 import { TeamDataService } from '@main/services/team/TeamDataService';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { setClaudeBasePathOverride, setAppDataBasePath } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -349,6 +350,8 @@ function createServices(claudeRoot: string): {
 }
 
 function enableManagement(services: HttpServices, teamDataService: TeamDataService, root: string) {
+  setAppDataBasePath(path.join(root, 'app-state'));
+  const backup = new TeamBackupService(teamDataService);
   const lifecycle = new TeamProvisioningService();
   teamDataService.setConfigurationGate((name, operation) =>
     lifecycle.runLiveRosterMutation(name, operation)
@@ -377,7 +380,7 @@ function enableManagement(services: HttpServices, teamDataService: TeamDataServi
       events.push(event);
     },
   });
-  return { context, events, lifecycle };
+  return { context, events, lifecycle, backup };
 }
 
 describe('MCP team tools over the local REST control API', () => {
@@ -488,15 +491,40 @@ describe('MCP team tools over the local REST control API', () => {
       await getTool('team_update').execute({
         ...base,
         expectedRevision: snapshot.configurationRevision,
-        members: [{ name: 'new-builder', role: 'Developer' }],
+        members: [
+          { name: 'zeta', role: 'Developer' },
+          { name: 'alpha', role: 'Reviewer' },
+        ],
       });
       const renamed = await new TeamMembersMetaStore().getMembers(teamName);
       expect(renamed.find((member) => member.name === 'builder')).toMatchObject({
         removedAt: expect.any(Number),
         agentId: 'old-builder-id',
       });
-      expect(renamed.find((member) => member.name === 'new-builder')?.agentId).toBeUndefined();
+      expect(renamed.find((member) => member.name === 'zeta')?.agentId).toBeUndefined();
+      // Canonical storage order must not turn an unsorted successful edit into uncertainty,
+      // or make an equivalent reordered roster write again and publish another Edited fact.
+      expect(renamed.filter((member) => !member.removedAt).map((member) => member.name)).toEqual([
+        'alpha',
+        'zeta',
+      ]);
       snapshot = await get();
+      const beforeReorderEvents = events.length;
+      const reordered = parseJsonToolResult(
+        await getTool('team_update').execute({
+          ...base,
+          expectedRevision: snapshot.configurationRevision,
+          members: [
+            { name: 'alpha', role: 'Reviewer' },
+            { name: 'zeta', role: 'Developer' },
+          ],
+        })
+      ) as { changed: boolean; configurationRevision: string };
+      expect(reordered).toMatchObject({
+        changed: false,
+        configurationRevision: snapshot.configurationRevision,
+      });
+      expect(events).toHaveLength(beforeReorderEvents);
       const invalid = await app.inject({
         method: 'POST',
         url: `/api/teams/${teamName}/update`,
@@ -556,7 +584,7 @@ describe('MCP team tools over the local REST control API', () => {
       expect(
         JSON.parse(await readFile(path.join(root, 'teams', teamName, 'members.meta.json'), 'utf8'))
           .members
-      ).toHaveLength(2);
+      ).toHaveLength(3);
       await expect(
         readFile(path.join(root, 'teams', teamName, 'config.json'), 'utf8')
       ).rejects.toMatchObject({ code: 'ENOENT' });
@@ -570,6 +598,7 @@ describe('MCP team tools over the local REST control API', () => {
     } finally {
       restoreFetch();
       await app.close();
+      setAppDataBasePath(null);
       setClaudeBasePathOverride(null);
       TeamConfigReader.clearCacheForTests();
       await rm(root, { recursive: true, force: true });
@@ -583,7 +612,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(root);
     const app = Fastify();
     const { services, teamDataService } = createServices(root);
-    const { context, events, lifecycle } = enableManagement(services, teamDataService, root);
+    const { context, events } = enableManagement(services, teamDataService, root);
     registerTeamRoutes(app, services);
     const teamName = 'stopped-team';
     const expectedContext = context.snapshot();
@@ -591,6 +620,7 @@ describe('MCP team tools over the local REST control API', () => {
     const get = async () =>
       (await app.inject({ method: 'GET', url: `/api/teams/${teamName}` })).json() as {
         configurationRevision: string;
+        savedRequest: TeamCreateRequest | null;
       };
     const update = (expectedRevision: string, metadata: Record<string, string>) =>
       app.inject({
@@ -617,6 +647,19 @@ describe('MCP team tools over the local REST control API', () => {
         })
       );
       let snapshot = await get();
+      // Lost mutation responses must be recoverable from authoritative stopped-team readback.
+      const leadEdit = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: {
+          expectedContext,
+          expectedRevision: snapshot.configurationRevision,
+          leadInstructions: 'Edited stopped lead instructions',
+        },
+      });
+      expect(leadEdit.statusCode).toBe(200);
+      snapshot = await get();
+      expect(snapshot.savedRequest?.prompt).toBe('Edited stopped lead instructions');
       const originalWriter = teamDataService.updateConfig.bind(teamDataService);
       const writer = vi
         .spyOn(teamDataService, 'updateConfig')
@@ -634,7 +677,7 @@ describe('MCP team tools over the local REST control API', () => {
       });
       expect(await new TeamMetaStore().getMeta(teamName)).toMatchObject({
         description: 'Saved after fault',
-        prompt: 'Preserve saved lead instructions',
+        prompt: 'Edited stopped lead instructions',
         runtimeSelectionVersion: 1,
       });
       writer.mockRestore();
@@ -648,7 +691,7 @@ describe('MCP team tools over the local REST control API', () => {
       observer.mockRestore();
       snapshot = await get();
       let release!: () => void;
-      const launch = lifecycle.runLiveRosterMutation(teamName, async () => {
+      const launch = teamDataService.runConfigurationOperation(teamName, async () => {
         await new Promise<void>((resolve) => {
           release = resolve;
         });
@@ -710,6 +753,89 @@ describe('MCP team tools over the local REST control API', () => {
     } finally {
       vi.restoreAllMocks();
       await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Catches update recreating a detached directory or editing a replacement with an old revision.
+  // Uses the same backup constructor wiring as desktop main, with real storage and HTTP admission.
+  it('orders management against permanent deletion and a same-name replacement', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-identity-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, backup, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'identity-team';
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered!: () => void;
+    const held = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    try {
+      await teamDataService.createTeamConfig({
+        teamName,
+        cwd: root,
+        members: [],
+        prompt: 'Original',
+      });
+      const original = await services.teamPromptManagement!.get(teamName);
+      const deletion = backup.withTeamIdentityFence(teamName, async () => {
+        entered();
+        await barrier;
+        expect(await teamDataService.permanentlyDeleteTeam(teamName)).toBe(true);
+        await teamDataService.createTeamConfig({
+          teamName,
+          cwd: root,
+          members: [],
+          prompt: 'Replacement',
+        });
+      });
+      await held;
+      let admitted!: () => void;
+      const admission = new Promise<void>((resolve) => {
+        admitted = resolve;
+      });
+      const originalAdmit = context.admit.bind(context);
+      const observeAdmission = vi.spyOn(context, 'admit').mockImplementation((expected) => {
+        const releaseContext = originalAdmit(expected);
+        admitted();
+        return releaseContext;
+      });
+      const pending = app
+        .inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: {
+            expectedContext: context.snapshot(),
+            expectedRevision: original.configurationRevision,
+            metadata: { description: 'Old request' },
+          },
+        })
+        .then((response) => response);
+      await admission;
+      release();
+      await deletion;
+      const result = await pending;
+      observeAdmission.mockRestore();
+      expect(result.statusCode).toBe(409);
+      expect(result.json().code).toBe('TEAM_REVISION_MISMATCH');
+      const replacement = await services.teamPromptManagement!.get(teamName);
+      expect(replacement.configurationRevision).not.toBe(original.configurationRevision);
+      expect(replacement.savedRequest).toMatchObject({ prompt: 'Replacement' });
+      expect(replacement.savedRequest?.description).toBeUndefined();
+      expect(events).toHaveLength(0);
+    } finally {
+      release?.();
+      vi.restoreAllMocks();
+      await app.close();
+      setAppDataBasePath(null);
       setClaudeBasePathOverride(null);
       TeamConfigReader.clearCacheForTests();
       await rm(root, { recursive: true, force: true });

@@ -21,17 +21,20 @@ export async function updateTeamConfiguration(
   const config = await stores.configReader.getConfig(teamName);
   if (!config) throw new Error(`Team not found: ${teamName}`);
   if (config.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');
-  const updated = await stores.configReader.updateConfig(teamName, updates);
   const meta = await stores.teamMetaStore.getMeta(teamName);
+  const applyMetadata = (current: NonNullable<typeof meta>) => ({
+    ...current,
+    ...(updates.name !== undefined ? { displayName: updates.name } : {}),
+    ...(updates.description !== undefined ? { description: updates.description } : {}),
+    ...(updates.color !== undefined ? { color: updates.color } : {}),
+  });
+  // Validate the complete saved launch settings before the first config write.
+  if (meta) stores.teamMetaStore.serializeMeta(applyMetadata(meta));
+  const updated = await stores.configReader.updateConfig(teamName, updates);
   if (meta)
     await stores.teamMetaStore.updateMeta(teamName, (current) => {
       if (!current) throw new Error('Saved team configuration disappeared');
-      return {
-        ...current,
-        ...(updates.name !== undefined ? { displayName: updates.name } : {}),
-        ...(updates.description !== undefined ? { description: updates.description } : {}),
-        ...(updates.color !== undefined ? { color: updates.color } : {}),
-      };
+      return applyMetadata(current);
     });
   stores.invalidate(teamName);
   return updated;

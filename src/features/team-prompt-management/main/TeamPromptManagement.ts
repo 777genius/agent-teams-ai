@@ -1,6 +1,7 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { TeamMetadataTooLargeError } from '@main/services/team/TeamMetadataSerialization';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createHash, randomUUID } from 'node:crypto';
@@ -53,11 +54,13 @@ function activeTeammates(members: TeamMember[]): TeamMember[] {
   return members.filter((member) => !member.removedAt && !isLeadMember(member));
 }
 function rosterShape(members: { name: string; role?: string; workflow?: string }[]) {
-  return members.map((member) => ({
-    name: member.name,
-    role: member.role?.trim() || undefined,
-    workflow: member.workflow?.trim() || undefined,
-  }));
+  return members
+    .map((member) => ({
+      name: member.name,
+      role: member.role?.trim() || undefined,
+      workflow: member.workflow?.trim() || undefined,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 /** One admitted configuration conversation, using the existing launch/roster operation gate. */
 export class TeamPromptManagement {
@@ -127,9 +130,7 @@ export class TeamPromptManagement {
     };
   }
 
-  async get(
-    teamName: string
-  ): Promise<
+  async get(teamName: string): Promise<
     (
       | TeamViewSnapshot
       | {
@@ -138,7 +139,7 @@ export class TeamPromptManagement {
           savedRequest: TeamCreateRequest | null;
           deletedAt?: string;
         }
-    ) & { configurationRevision: string }
+    ) & { configurationRevision: string; savedRequest: TeamCreateRequest | null }
   > {
     return this.ports.run(teamName, async () => {
       const snapshot = await this.read(teamName);
@@ -159,6 +160,7 @@ export class TeamPromptManagement {
       return {
         ...data,
         isAlive: runtime.isAlive,
+        savedRequest: snapshot.savedRequest,
         configurationRevision: snapshot.configurationRevision,
       };
     });
@@ -249,6 +251,8 @@ export class TeamPromptManagement {
         throw new Error('Committed configuration does not match the requested edit');
       return readback;
     } catch (error) {
+      if (error instanceof TeamMetadataTooLargeError)
+        throw new TeamManagementError(error.code, error.message, error.statusCode);
       let readback: ConfigurationSnapshot | null = null;
       try {
         readback = await this.read(teamName);

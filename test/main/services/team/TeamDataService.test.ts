@@ -1,4 +1,3 @@
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { createHash } from 'crypto';
 import * as nodeFs from 'fs';
 import * as fs from 'fs/promises';
@@ -770,6 +769,96 @@ describe('TeamDataService draft metadata', () => {
           fastMode: 'on',
         },
       ],
+    });
+  });
+
+  it('rejects oversized UTF-8 launch instructions without losing readable saved metadata', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-metadata-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      prompt: 'Keep the saved instructions',
+      members: [{ name: 'builder' }],
+    });
+    const metaPath = path.join(claudeRoot, 'teams', 'byte-team', 'team.meta.json');
+    const previous = await fs.readFile(metaPath, 'utf8');
+    const store = new TeamMetaStore();
+    const oversizedPrompt = 'ж'.repeat(150_000);
+    await expect(
+      store.updateMeta('byte-team', (meta) => ({ ...meta!, prompt: oversizedPrompt }))
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    const meta = await store.getMeta('byte-team');
+    await expect(
+      store.writeMeta('byte-team', { ...meta!, prompt: oversizedPrompt })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(metaPath, 'utf8')).toBe(previous);
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      prompt: 'Keep the saved instructions',
+      members: [{ name: 'builder' }],
+    });
+  });
+
+  it('rejects combined saved metadata before changing the CLI config', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-combined-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    const prompt = 'p'.repeat(100_000);
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      displayName: 'Previous name',
+      description: 'Previous description',
+      prompt,
+      members: [{ name: 'builder' }],
+    });
+    const teamDir = path.join(claudeRoot, 'teams', 'byte-team');
+    const configPath = path.join(teamDir, 'config.json');
+    const previousConfig = JSON.stringify({
+      name: 'Previous name',
+      description: 'Previous description',
+      members: [{ name: 'builder' }],
+    });
+    await fs.writeFile(configPath, previousConfig);
+    const metaPath = path.join(teamDir, 'team.meta.json');
+    const previousMeta = await fs.readFile(metaPath, 'utf8');
+    await expect(
+      service.updateConfig('byte-team', { name: 'New name', description: 'd'.repeat(200_000) })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(configPath, 'utf8')).toBe(previousConfig);
+    expect(await fs.readFile(metaPath, 'utf8')).toBe(previousMeta);
+    await expect(new TeamConfigReader().getConfig('byte-team')).resolves.toMatchObject({
+      name: 'Previous name',
+      description: 'Previous description',
+    });
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      displayName: 'Previous name',
+      description: 'Previous description',
+      prompt,
+    });
+  });
+
+  it('includes preserved member tombstones in the UTF-8 roster limit', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-roster-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    const workflow = 'ж'.repeat(100_000);
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      members: [{ name: 'previous', workflow }],
+    });
+    const membersPath = path.join(claudeRoot, 'teams', 'byte-team', 'members.meta.json');
+    const previousMembers = await fs.readFile(membersPath, 'utf8');
+    await expect(
+      service.replaceMembers('byte-team', {
+        members: [{ name: 'replacement', workflow: 'w'.repeat(100_000) }],
+      })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(membersPath, 'utf8')).toBe(previousMembers);
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      members: [{ name: 'previous', workflow }],
     });
   });
 

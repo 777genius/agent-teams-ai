@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
 import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
 
@@ -39,7 +40,6 @@ export interface TeamMetaFile {
   createdAt: number;
 }
 
-const MAX_META_FILE_BYTES = 256 * 1024;
 const metaMutationLocks = new Map<string, Promise<void>>();
 
 async function withMetaMutationLock<T>(pathKey: string, operation: () => Promise<T>): Promise<T> {
@@ -158,7 +158,7 @@ export class TeamMetaStore {
     const metaPath = this.getMetaPath(teamName, teamsBasePath);
     try {
       const stat = await fs.promises.stat(metaPath);
-      if (!stat.isFile() || stat.size > MAX_META_FILE_BYTES) {
+      if (!stat.isFile() || stat.size > MAX_TEAM_METADATA_BYTES) {
         return null;
       }
     } catch {
@@ -260,7 +260,11 @@ export class TeamMetaStore {
     metaPath: string,
     data: Omit<TeamMetaFile, 'version'>
   ): Promise<void> {
-    const payload: TeamMetaFile = {
+    await atomicWriteAsync(metaPath, this.serializeMeta(data));
+  }
+
+  serializeMeta(data: Omit<TeamMetaFile, 'version'>): string {
+    return serializeTeamMetadata({
       version: 1,
       deletedAt: data.deletedAt,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
@@ -284,8 +288,7 @@ export class TeamMetaStore {
       limitContext: data.limitContext,
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
-    };
-    await atomicWriteAsync(metaPath, JSON.stringify(payload, null, 2));
+    } satisfies TeamMetaFile);
   }
 
   async deleteMeta(teamName: string): Promise<void> {

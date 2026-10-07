@@ -1,4 +1,3 @@
-import type { TeamMetaFile } from '../TeamMetaStore';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type ChildProcess, type SpawnOptions } from 'child_process';
 

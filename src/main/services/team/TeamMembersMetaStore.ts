@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
 import type { TeamMember } from '@shared/types';
 
@@ -17,8 +18,6 @@ export interface TeamMembersMetaFile {
   providerBackendId?: string;
   members: TeamMember[];
 }
-
-const MAX_META_FILE_BYTES = 256 * 1024;
 
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -81,7 +80,7 @@ export class TeamMembersMetaStore {
       if (!stat.isFile()) {
         return null;
       }
-      if (stat.isFile() && stat.size > MAX_META_FILE_BYTES) {
+      if (stat.isFile() && stat.size > MAX_TEAM_METADATA_BYTES) {
         return null;
       }
     } catch {
@@ -154,6 +153,13 @@ export class TeamMembersMetaStore {
     members: TeamMember[],
     options?: { providerBackendId?: string; teamsBasePath?: string }
   ): Promise<void> {
+    await atomicWriteAsync(
+      path.join(options?.teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json'),
+      this.serializeMembers(members, options)
+    );
+  }
+
+  serializeMembers(members: TeamMember[], options?: { providerBackendId?: string }): string {
     const deduped = new Map<string, TeamMember>();
     for (const member of members) {
       const normalized = normalizeMember(member);
@@ -174,15 +180,10 @@ export class TeamMembersMetaStore {
       }
     }
 
-    const payload: TeamMembersMetaFile = {
+    return serializeTeamMetadata({
       version: 1,
       providerBackendId: normalizeOptionalBackendId(options?.providerBackendId),
       members: Array.from(deduped.values()).sort((a, b) => a.name.localeCompare(b.name)),
-    };
-
-    await atomicWriteAsync(
-      path.join(options?.teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json'),
-      JSON.stringify(payload, null, 2)
-    );
+    } satisfies TeamMembersMetaFile);
   }
 }

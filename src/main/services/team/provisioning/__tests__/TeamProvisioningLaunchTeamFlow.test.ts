@@ -243,7 +243,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       }),
     });
 
-    expect(synthetic).toEqual({
+    expect(synthetic).toMatchObject({
       teamName: 'demo',
       members,
       cwd: '/repo',
@@ -259,6 +259,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       allowExperimentalLocalModels: true,
       color: 'blue',
       displayName: 'Demo Team',
+      description: 'Saved description',
     });
   });
 

@@ -311,7 +311,7 @@ function assertProviderless(readback: Record<string, unknown>, names: string[]) 
   assert.equal(saved.providerId, undefined);
   assert.equal(saved.model, undefined);
   assert(Array.isArray(saved.members));
-  assert.deepEqual(saved.members.map((value) => object(value).name), names);
+  assert.deepEqual(saved.members.map((value) => String(object(value).name)).sort(), [...names].sort());
   for (const member of saved.members) assert.equal(object(member).providerId, undefined);
   return saved;
 }
@@ -369,7 +369,11 @@ try {
         members: [{ name: 'developer', role: 'implementer', workflow: 'Narrow sandbox work.' }, { name: 'auditor', role: 'reviewer', workflow: 'Independent sandbox review.' }] });
       const edited = await call('team_get', { teamName: first });
       const editedSaved = assertProviderless(edited, ['developer', 'auditor']);
-      assert.deepEqual((editedSaved.members as unknown[]).map((value) => object(value).role), ['implementer', 'reviewer']);
+      const editedByName = new Map((editedSaved.members as unknown[]).map((value) => { const member = object(value); return [member.name, member] as const; }));
+      assert.equal(editedByName.get('developer')?.role, 'implementer');
+      assert.equal(editedByName.get('developer')?.workflow, 'Narrow sandbox work.');
+      assert.equal(editedByName.get('auditor')?.role, 'reviewer');
+      assert.equal(editedByName.get('auditor')?.workflow, 'Independent sandbox review.');
       await assert.rejects(call('team_update', { teamName: second, expectedContext: info.context, expectedRevision: 'deliberately-stale-test-revision', metadata: { description: 'Must never save' } }), /TEAM_REVISION_MISMATCH/);
       const unchanged = assertProviderless(await call('team_get', { teamName: second }), ['developer']);
       assert.notEqual(unchanged.description, 'Must never save');

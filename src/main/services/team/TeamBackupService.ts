@@ -41,6 +41,7 @@ import { loadTeamBackupStartupRegistry, readTeamBackupRegistry } from './TeamBac
 import { TeamBackupWorkSyncRestoreCoordinator } from './TeamBackupWorkSyncRestoreCoordinator';
 import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
+import type { TeamDataService } from './TeamDataService';
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
 import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
@@ -52,10 +53,6 @@ export type {
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 
 const logger = createLogger('TeamBackupService');
-
-// Types
-
-// Constants
 
 const PERIODIC_INTERVAL_MS = 3 * 60 * 1000;
 const TASK_DEBOUNCE_MS = 500;
@@ -82,8 +79,6 @@ const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members', '.member-work-sy
 const APP_DATA_SUBDIRS = ['attachments'];
 const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
 
-// Helpers
-
 function isEnoent(err: unknown): boolean {
   return (err as NodeJS.ErrnoException).code === 'ENOENT';
 }
@@ -91,10 +86,6 @@ function isEnoent(err: unknown): boolean {
 function nowIso(): string {
   return new Date().toISOString();
 }
-
-// ---------------------------------------------------------------------------
-// TeamBackupService
-// ---------------------------------------------------------------------------
 
 export class TeamBackupService {
   private registry: BackupRegistry = { version: 1, teams: {} };
@@ -138,6 +129,12 @@ export class TeamBackupService {
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
+
+  constructor(configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>) {
+    configuration?.setConfigurationIdentityFence((name, operation) =>
+      this.withTeamIdentityFence(name, operation)
+    );
+  }
 
   configureWorkSyncRestore(
     operationGate: TeamWorkSyncRestoreAttemptPorts['operationGate'],

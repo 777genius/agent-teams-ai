@@ -628,6 +628,53 @@ describe('TeamBackupService', () => {
     }
   });
 
+  // Catches an async child retaining a released identity permit and overtaking a new owner.
+  // Different backup instances must also recognize legitimate nested ownership of the same key.
+  it('reenters an active identity fence but expires ownership for escaped async work', async () => {
+    const first = new TeamBackupService();
+    const second = new TeamBackupService();
+    const teamName = 'sandbox-expired-identity';
+    let startEscaped!: () => void;
+    const escapedBarrier = new Promise<void>((resolve) => {
+      startEscaped = resolve;
+    });
+    let escaped!: Promise<void>;
+    let nested = false;
+    let escapedEntered = false;
+    await first.withTeamIdentityFence(teamName, async () => {
+      await second.withTeamIdentityFence(teamName, async () => {
+        nested = true;
+      });
+      escaped = (async () => {
+        await escapedBarrier;
+        await first.withTeamIdentityFence(teamName, async () => {
+          escapedEntered = true;
+        });
+      })();
+    });
+    expect(nested).toBe(true);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let acquired!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    const newOwner = second.withTeamIdentityFence(teamName, async () => {
+      acquired();
+      await held;
+    });
+    await entered;
+    startEscaped();
+    // Drain the child continuation while the real owner remains held.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(escapedEntered).toBe(false);
+    release();
+    await Promise.all([newOwner, escaped]);
+    expect(escapedEntered).toBe(true);
+  });
+
   it('does not adopt while the real owner is waiting for registry initialization', async () => {
     const service = new TeamBackupService();
     const readFile = nativeFs.promises.readFile.bind(nativeFs.promises);

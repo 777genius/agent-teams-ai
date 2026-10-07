@@ -2163,7 +2163,7 @@ async function initializeServices(): Promise<void> {
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
-  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService));
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();

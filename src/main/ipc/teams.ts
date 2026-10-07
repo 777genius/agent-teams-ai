@@ -632,6 +632,16 @@ export function initializeTeamHandlers(
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
   teamBackupService = backupService ?? null;
+  if (typeof service.setConfigurationIdentityFence === 'function' && backupService) {
+    service.setConfigurationIdentityFence((name, operation) =>
+      backupService.withTeamIdentityFence(name, operation)
+    );
+  }
+  if (typeof service.setConfigurationGate === 'function') {
+    service.setConfigurationGate((name, operation) =>
+      getTeamMemberLifecycleApi().runLiveRosterMutation(name, operation)
+    );
+  }
   teammateToolTracker = toolTracker ?? null;
   teamLogSourceTracker = logSourceTracker ?? null;
   branchStatusService = branchTracker ?? null;
@@ -1376,6 +1386,17 @@ async function handleSetTaskLogStreamTracking(
     }
     await getTeamLogSourceTracker().disableTracking(validated.value!, 'task_log_stream');
   });
+}
+
+/** Manual roster and launch callers acquire identity before the lifecycle operation gate. */
+function runTeamConfigurationMutation(
+  teamName: string,
+  operation: () => Promise<void>
+): Promise<void> {
+  const data = getTeamDataService();
+  return typeof data.runConfigurationOperation === 'function'
+    ? data.runConfigurationOperation(teamName, operation)
+    : getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation);
 }
 
 async function handleDeleteTeam(
@@ -4425,7 +4446,7 @@ async function handleAddMember(
 
   return wrapTeamHandler('addMember', async () => {
     const tn = vTeam.value!;
-    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+    return runTeamConfigurationMutation(tn, async () => {
       const memberName = vName.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
@@ -4574,7 +4595,7 @@ async function handleReplaceMembers(
 
   return wrapTeamHandler('replaceMembers', async () => {
     const tn = vTeam.value!;
-    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+    return runTeamConfigurationMutation(tn, async () => {
       const teamDataService = getTeamDataService();
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
@@ -4744,7 +4765,7 @@ async function handleRemoveMember(
 
   return wrapTeamHandler('removeMember', async () => {
     const tn = vTeam.value!;
-    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+    return runTeamConfigurationMutation(tn, async () => {
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
@@ -4807,7 +4828,7 @@ async function handleRestoreMember(
 
   return wrapTeamHandler('restoreMember', async () => {
     const tn = vTeam.value!;
-    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+    return runTeamConfigurationMutation(tn, async () => {
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
@@ -4923,7 +4944,7 @@ async function handleUpdateMemberRole(
 
   return wrapTeamHandler('updateMemberRole', async () => {
     const tn = vTeam.value!;
-    return getTeamMemberLifecycleApi().runLiveRosterMutation(tn, async () => {
+    return runTeamConfigurationMutation(tn, async () => {
       const name = vMember.value!;
       const { oldRole, changed } = await getTeamDataService().updateMemberRole(
         tn,
