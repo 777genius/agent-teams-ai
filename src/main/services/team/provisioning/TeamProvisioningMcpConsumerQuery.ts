@@ -40,9 +40,7 @@ export function hasLiveOpenCodeMcpConsumers(input: {
       return true;
     }
     if (
-      run.mixedSecondaryLanes.some(
-        (lane) => !lane.blockedBeforeLaunch && lane.state !== 'finished'
-      )
+      run.mixedSecondaryLanes.some((lane) => !lane.blockedBeforeLaunch && lane.state !== 'finished')
     ) {
       return true;
     }
