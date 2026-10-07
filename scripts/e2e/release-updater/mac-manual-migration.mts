@@ -452,10 +452,21 @@ async function launch(
     await preference(
       `(async()=>{await window.electronAPI.config.update("general",{theme:${JSON.stringify(theme)}});return (await window.electronAPI.config.get()).general.theme;})()`
     );
-    const persisted = JSON.parse(
-      await readFile(path.join(claude, 'agent-teams-config.json'), 'utf8')
-    ) as { general: { theme: string } };
-    assert.equal(persisted.general.theme, theme);
+    await waitFor(
+      async () => {
+        try {
+          const persisted = JSON.parse(
+            await readFile(path.join(claude, 'agent-teams-config.json'), 'utf8')
+          ) as { general: { theme: string } };
+          return persisted.general.theme === theme;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+          throw error;
+        }
+      },
+      'owned seeded preference persisted before byte proof',
+      10_000
+    );
   }
   const after = await preference(
     '(async()=> (await window.electronAPI.config.get()).general.theme)()'
@@ -484,10 +495,14 @@ async function launch(
     theme: after,
     preferenceAuthority: 'public config IPC and painted renderer theme',
     painted,
-    configProof: await fileProof(
-      path.join(claude, 'agent-teams-config.json'),
-      'seeded-config.json'
-    ),
+    ...(seed || expectedTheme !== undefined
+      ? {
+          configProof: await fileProof(
+            path.join(claude, 'agent-teams-config.json'),
+            'seeded-config.json'
+          ),
+        }
+      : {}),
   };
   phases.push(result);
   await persist();

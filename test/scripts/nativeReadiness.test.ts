@@ -658,6 +658,58 @@ describe('native readiness publication boundary', () => {
     const f = fixture();
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
   });
+  it('rejects a native family assembled from two individually successful current runs', async () => {
+    const f = fixture();
+    const reference = f.receipt.artifacts.find((item) =>
+      item.entries.some((entry) => entry.scenario === 'windows-x64-fresh')
+    );
+    assert(reference);
+    const run = f.runs.get(reference.runId);
+    const jobs = f.jobs.get(reference.runId);
+    assert(run && jobs);
+    const runId = 299;
+    f.runs.set(runId, { ...structuredClone(run), id: runId });
+    f.jobs.set(
+      runId,
+      jobs.map((job) => ({ ...structuredClone(job), id: job.id + 10_000, run_id: runId }))
+    );
+    const row = nativeScenarioRows(runId, reference.runAttempt).find(
+      (item) => item.scenario === 'windows-x64-fresh'
+    );
+    assert(row);
+    reference.runId = runId;
+    reference.jobId += 10_000;
+    reference.artifactName = row.artifact;
+    const artifact = await f.port.artifact(f.receipt.repository, reference.artifactId);
+    artifact.name = row.artifact;
+    artifact.workflow_run.id = runId;
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'Mixed native family runs'
+    );
+  });
+  it('keeps schema2 closed for any other plan despite caller-selected executor claims', async () => {
+    const f = fixture();
+    Object.assign(f.receipt, { schemaVersion: 2, executions: { windows: 'e'.repeat(40) } });
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'original closed release216 plan'
+    );
+  });
+  it('does not authorize a different actual executor through schema1 caller role claims', async () => {
+    const f = fixture();
+    Object.assign(f.receipt, { executions: { windows: 'e'.repeat(40) } });
+    f.runs.get(200)!.head_sha = 'e'.repeat(40);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'native tooling SHA'
+    );
+  });
+  for (const conclusion of ['failure', 'skipped'])
+    it(`rejects a whole ${conclusion} native run with successful selected jobs`, async () => {
+      const f = fixture();
+      f.runs.get(200)!.conclusion = conclusion;
+      await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+        'native run'
+      );
+    });
   it('rejects altered target AppImage bytes in the authentic three-entry producer ledger', async () => {
     const f = fixture();
     const value = f.values.get('linux-appimage-ota')!;
@@ -728,7 +780,11 @@ function manualValue(
   entries: Record<string, Buffer>
 ) {
   const root = '/TEST/TEST-mac-manual-owned-case';
-  const file = textProof('seeded-config.json', 'nondefault retained config');
+  const file = textProof('seeded-config.json', JSON.stringify({ general: { theme: 'light' } }));
+  const normalized = textProof(
+    'seeded-config.json',
+    JSON.stringify({ general: { theme: 'light', externalAgentCdpEnabled: false } })
+  );
   const signature = (version: string) => ({
     version,
     architecture,
@@ -762,7 +818,7 @@ function manualValue(
       profile,
       before: label === 'original211' ? 'system' : 'light',
       theme: 'light',
-      configProof: file,
+      ...(label === 'fresh217' ? {} : { configProof: label === 'manual217' ? normalized : file }),
       roots: {
         home: `${profile}/home`,
         nodeHome: `${profile}/home`,
@@ -862,7 +918,29 @@ describe('full217 frozen-source native readiness', () => {
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
   });
   it.each([
+    [
+      'prelaunch config bytes altered',
+      (v: Record<string, unknown>) => {
+        (v.phases as Record<string, unknown>[]).find(
+          (p) => p.replacementSignature
+        )!.preservedBeforeLaunch = textProof('seeded-config.json', 'altered during replacement');
+      },
+    ],
+    [
+      'invalid migrated config byte proof',
+      (v: Record<string, unknown>) => {
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!.configProof =
+          { sha256: 'invalid', size: 20 };
+      },
+    ],
     ['missing phase', (v: Record<string, unknown>) => (v.phases as unknown[]).pop()],
+    [
+      'missing migration config bytes',
+      (v: Record<string, unknown>) => {
+        delete (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+          .configProof;
+      },
+    ],
     [
       'wrong Team',
       (v: Record<string, unknown>) => {

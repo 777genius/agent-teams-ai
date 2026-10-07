@@ -31,7 +31,7 @@ Before publishing:
 
 ## v2.17.7 (Prepared draft)
 
-Source base: `main` at `f6a79b67730423ca67946fb0a1556156af64a865`.
+Source base: `main` at `ea434a28618d6ed89e6f2f003a8e0e491ed1adfa`.
 All five platforms use freshly built `2.17.7` apps. Publish `2.17.6` before preparing this release's GitHub draft.
 Existing runtime locks remain unchanged. Verify the final reviewed source and native installer evidence before publication.
 
