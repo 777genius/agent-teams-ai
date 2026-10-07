@@ -29,7 +29,11 @@ import { Cdp, waitFor } from './release-updater/cdp.mts';
 import { serializedFunction } from './release-updater/serialized-function.mts';
 
 import type { ElectronAPI } from '../../src/shared/types/api.ts';
-import type { TeamCreateConfigRequest, TeamCreateRequest } from '../../src/shared/types/team.ts';
+import type {
+  TeamConfig,
+  TeamCreateConfigRequest,
+  TeamCreateRequest,
+} from '../../src/shared/types/team.ts';
 
 interface Target {
   id: string;
@@ -596,9 +600,10 @@ async function screenshot(label: string): Promise<void> {
 async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
   const active = getClient();
   const selectedName = 'external-e2e-copy-codex-source';
-  await evaluate(
+  const unresolvedName = 'external-e2e-copy-unresolved-source';
+  const sources = await evaluate(
     active,
-    async (name: string, cwd: string) => {
+    async (name: string, unresolved: string, original: string, cwd: string) => {
       const api = (window as unknown as { electronAPI: HarnessApi }).electronAPI;
       await api.teams.createConfig({
         teamName: name,
@@ -609,10 +614,46 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         members: [],
         syncModelsWithLead: true,
       });
+      const providerless = await api.teams.getSavedRequest(original);
+      if (!providerless)
+        throw new Error('Providerless copy fixture requires original saved request');
+      await api.teams.createConfig({
+        ...providerless,
+        teamName: unresolved,
+        displayName: 'External E2E unresolved copy source',
+        cwd,
+      });
       await api.config.update('general', { multimodelEnabled: false });
+      return [await api.teams.getSavedRequest(name), await api.teams.getSavedRequest(unresolved)];
     },
-    [selectedName, project]
+    [selectedName, unresolvedName, providerlessName, project]
   );
+  // Copy is supported for configured teams, not pending drafts. These sandbox files
+  // mirror the canonical offline config shape without starting any team runtime.
+  for (const source of sources) {
+    assert(source);
+    await assertNoLaunch(source.teamName);
+    const config: TeamConfig = {
+      name: source.displayName ?? source.teamName,
+      description: source.description,
+      projectPath: project,
+      members: [
+        {
+          name: 'team-lead',
+          role: 'team-lead',
+          agentType: 'team-lead',
+          providerId: source.providerId,
+        },
+        ...source.members.map((member) => ({ ...member, agentType: 'teammate' })),
+      ],
+    };
+    await writeFile(
+      path.join(claude, 'teams', source.teamName, 'config.json'),
+      JSON.stringify(config)
+    );
+  }
+  evidence.copySourceFixture =
+    'Offline configured sandbox teams with canonical saved requests; no pending draft Copy or runtime launch';
   const reload = async (): Promise<void> => {
     const count = active.events.filter((event) => event.method === 'Page.loadEventFired').length;
     await active.send('Page.reload');
@@ -646,13 +687,35 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
         provider: 'anthropic',
       },
       {
-        source: providerlessName,
-        displayName: 'External E2E feature',
+        source: unresolvedName,
+        displayName: 'External E2E unresolved copy source',
         destination: 'external-e2e-copy-unresolved',
         provider: undefined,
       },
     ] as const) {
-      await assertNoLaunch(testCase.source);
+      await assertNoLaunch(testCase.source, true);
+      await waitFor(async () => {
+        const source = await evaluate(
+          active,
+          async (name: string) =>
+            (
+              await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list()
+            ).find((team) => team.teamName === name),
+          [testCase.source]
+        );
+        return source && !source.pendingCreate ? source : false;
+      }, 'configured copy source is readable, not pending draft');
+      const sourceRequest = await evaluate(
+        active,
+        async (name: string) =>
+          (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.getSavedRequest(
+            name
+          ),
+        [testCase.source]
+      );
+      assert(sourceRequest);
+      assert.equal(sourceRequest.runtimeSelectionVersion, 1);
+      assert.equal(sourceRequest.providerId, testCase.provider ? 'codex' : undefined);
       await openMenu('Teams');
       await button('Copy team', false, null, testCase.displayName);
       await waitFor(
@@ -1013,9 +1076,9 @@ async function settingsSnapshot(
   evidence[label] = { text: endpointsText, theme: text.theme };
   await screenshot(label);
 }
-async function assertNoLaunch(teamName: string): Promise<void> {
+async function assertNoLaunch(teamName: string, configuredFixture = false): Promise<void> {
   for (const filename of [
-    'config.json',
+    ...(configuredFixture ? [] : ['config.json']),
     'launch-state.json',
     'bootstrap-state.json',
     'bootstrap-journal.jsonl',
