@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: '26.10.0'
           architecture: arm64
-          package-manager-cache: false
+          cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check canonical typed tooling and source-byte boundary
         run: |
