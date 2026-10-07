@@ -89,6 +89,7 @@ function makeSafeConfig(): SafeConfig {
       autoExpandAIGroups: false,
       useNativeTitleBar: false,
       telemetryEnabled: false,
+      externalAgentCdpEnabled: false,
     },
     notifications: {
       enabled: false,

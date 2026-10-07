@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ExternalAgentConnectionSettings } from '@features/external-agent-connection/renderer';
 import { normalizeAppLocalePreference } from '@features/localization';
 import { AppLanguageSelect, useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
@@ -726,6 +727,16 @@ export const GeneralSection = ({
             {t('general.server.standaloneModeDescription')}
           </p>
         </>
+      )}
+
+      {isElectron && (
+        <ExternalAgentConnectionSettings
+          api={api.externalAgentConnection}
+          local={connectionMode === 'local'}
+          cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
+          saving={saving}
+          onCdpEnabledChange={(enabled) => onGeneralToggle('externalAgentCdpEnabled', enabled)}
+        />
       )}
 
       {/* Privacy / Telemetry - only visible when telemetry is baked into the build */}

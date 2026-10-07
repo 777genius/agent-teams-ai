@@ -3150,5 +3150,31 @@
         "weight_many": "weight {{count}}"
       }
     }
+  },
+  "externalPrompt": {
+    "title": "Manage teams with a prompt",
+    "description": "Write a request for your external agent. Templates below are read-only references.",
+    "taskLabel": "What should the agent do?",
+    "taskPlaceholder": "Create development and review teams for the dashboard, using feature and review as the starting points.",
+    "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
+    "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
+    "templatesTitle": "Available team templates (reference)",
+    "coordinator": "Coordinator",
+    "responsibilities": "Responsibilities",
+    "connectionStatus": "MCP: {{mcp}}; UI access: {{cdp}}",
+    "connectionSettings": "Connection settings",
+    "connectionRequired": "Wait for the MCP app connection or retry it before copying.",
+    "contextChanged": "The app or data root changed. Refresh the connection before copying.",
+    "loading": "Reading the local app connection...",
+    "localOnly": "External prompts require the local desktop app context.",
+    "retry": "Retry connection",
+    "preview": "View final prompt",
+    "previewLabel": "Final prompt (read only)",
+    "copy": "Copy prompt for agent",
+    "copying": "Copying...",
+    "copied": "Copied",
+    "copiedDescription": "Prompt copied. This does not mean the external agent has connected or completed your request.",
+    "copyFailed": "Clipboard write failed. Select and copy the final prompt manually.",
+    "responsibilitiesFor": "Responsibilities for {{name}}"
   }
 }

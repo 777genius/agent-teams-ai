@@ -291,6 +291,27 @@
         "label": "Show dock icon"
       },
       "title": "Startup"
+    },
+    "externalAgentConnection": {
+      "title": "External agent connection",
+      "description": "Local agents can create saved drafts through the app's MCP server. Connection readiness does not mean an external client is connected. Cloud agents need a local executor.",
+      "localOnly": "External connections are available in the local desktop app context only.",
+      "status": "MCP: {{mcp}}; control: {{control}}; renderer CDP: {{cdp}}",
+      "retry": "Retry connection",
+      "retrying": "Retrying...",
+      "cdpLabel": "Allow full renderer access (CDP)",
+      "cdpDescription": "Grants local processes full renderer access, including the preload API. The browser endpoint can see other app targets. Enabling and disabling require an app restart.",
+      "restartRequired": "Restart the app to apply the saved setting.",
+      "stillOpen": "Renderer access is still open until restart.",
+      "statuses": {
+        "loading": "loading",
+        "starting": "starting",
+        "ready": "ready",
+        "error": "error",
+        "stopped": "stopped",
+        "disabled": "disabled",
+        "restart-required": "restart required"
+      }
     }
   },
   "notifications": {

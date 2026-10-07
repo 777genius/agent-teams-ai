@@ -1290,6 +1290,7 @@ export default interface Resources {
           "invalidDraft": "Check the limits and thresholds in your edited scopes.",
           "invalidLimit": "Enter a finite positive number.",
           "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
+          "legacyCombinedExplanation": "This migrated budget combines anonymous runs and the team named unassigned. It can be edited or deleted. Once deleted, it cannot be created again.",
           "newThreshold": "New threshold",
           "noThresholds": "No threshold notifications configured.",
           "notifications": "Budget notifications",
@@ -1377,7 +1378,7 @@ export default interface Resources {
         "tokens": "tokens",
         "tokensCost": "{{tokens}} tokens / {{cost}}",
         "total": "Total",
-        "unassigned": "Unassigned",
+        "unassigned": "Anonymous runs",
         "unknownAgent": "Unknown agent"
       },
       "metrics": {
@@ -2562,6 +2563,27 @@ export default interface Resources {
           "label": "Enable server mode"
         },
         "title": "Browser Access"
+      },
+      "externalAgentConnection": {
+        "cdpDescription": "Grants local processes full renderer access, including the preload API. The browser endpoint can see other app targets. Enabling and disabling require an app restart.",
+        "cdpLabel": "Allow full renderer access (CDP)",
+        "description": "Local agents can create saved drafts through the app's MCP server. Connection readiness does not mean an external client is connected. Cloud agents need a local executor.",
+        "localOnly": "External connections are available in the local desktop app context only.",
+        "restartRequired": "Restart the app to apply the saved setting.",
+        "retry": "Retry connection",
+        "retrying": "Retrying...",
+        "status": "MCP: {{mcp}}; control: {{control}}; renderer CDP: {{cdp}}",
+        "statuses": {
+          "disabled": "disabled",
+          "error": "error",
+          "loading": "loading",
+          "ready": "ready",
+          "restart-required": "restart required",
+          "starting": "starting",
+          "stopped": "stopped"
+        },
+        "stillOpen": "Renderer access is still open until restart.",
+        "title": "External agent connection"
       },
       "localClaudeRoot": {
         "actions": {
@@ -4205,6 +4227,32 @@ export default interface Resources {
     "effortLevel": {
       "label": "Effort level (optional)",
       "maxDescription": "Max gives the model the most reasoning time for difficult tasks."
+    },
+    "externalPrompt": {
+      "connectionRequired": "Wait for the MCP app connection or retry it before copying.",
+      "connectionSettings": "Connection settings",
+      "connectionStatus": "MCP: {{mcp}}; UI access: {{cdp}}",
+      "contextChanged": "The app or data root changed. Refresh the connection before copying.",
+      "coordinator": "Coordinator",
+      "copied": "Copied",
+      "copiedDescription": "Prompt copied. This does not mean the external agent has connected or completed your request.",
+      "copy": "Copy prompt for agent",
+      "copyFailed": "Clipboard write failed. Select and copy the final prompt manually.",
+      "copying": "Copying...",
+      "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
+      "description": "Write a request for your external agent. Templates below are read-only references.",
+      "loading": "Reading the local app connection...",
+      "localOnly": "External prompts require the local desktop app context.",
+      "preview": "View final prompt",
+      "previewLabel": "Final prompt (read only)",
+      "responsibilities": "Responsibilities",
+      "responsibilitiesFor": "Responsibilities for {{name}}",
+      "retry": "Retry connection",
+      "taskLabel": "What should the agent do?",
+      "taskPlaceholder": "Create development and review teams for the dashboard, using feature and review as the starting points.",
+      "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
+      "templatesTitle": "Available team templates (reference)",
+      "title": "Manage teams with a prompt"
     },
     "kanban": {
       "board": {

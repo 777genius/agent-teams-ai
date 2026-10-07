@@ -1,0 +1,228 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { buildExternalAgentPrompt } from '@features/external-agent-connection';
+import { useAppTranslation } from '@features/localization/renderer';
+import { TEAM_TEMPLATES } from '@features/team-templates';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
+import { Label } from '@renderer/components/ui/label';
+import { Textarea } from '@renderer/components/ui/textarea';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { Check, Copy } from 'lucide-react';
+
+import { TeamTemplateReferences } from './TeamTemplateReferences';
+
+import type { ConnectionInfoV1, ExternalAgentConnectionApi } from '../contracts';
+
+interface Props {
+  api: ExternalAgentConnectionApi;
+  connection: ConnectionInfoV1;
+  isLight: boolean;
+  onSettings(): void;
+}
+
+function createPrompt(task: string, connection: ConnectionInfoV1): string {
+  return buildExternalAgentPrompt({
+    task,
+    templates: TEAM_TEMPLATES,
+    connection,
+    includeCdp: connection.cdp.status === 'ready' && connection.capabilities.rendererControl,
+  });
+}
+
+function snapshotSignature(connection: ConnectionInfoV1): string {
+  return JSON.stringify([
+    connection.context,
+    connection.mcp,
+    connection.control,
+    connection.cdp,
+    connection.capabilities,
+  ]);
+}
+
+/** Mounted per live app/root. Its persistent task key deliberately excludes appInstanceId. */
+export function ExternalAgentPromptDialog({
+  api,
+  connection,
+  isLight,
+  onSettings,
+}: Readonly<Props>): React.JSX.Element {
+  const { t } = useAppTranslation('team');
+  const { t: settingsT } = useAppTranslation('settings');
+  const request = useDraftPersistence({
+    key: `externalAgentPrompt:${connection.profileFingerprint}:${connection.context.dataRootFingerprint}`,
+  });
+  const [expanded, setExpanded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [generated, setGenerated] = useState<{
+    task: string;
+    signature: string;
+    prompt: string;
+  } | null>(null);
+  const [receipt, setReceipt] = useState<{ task: string; signature: string } | null>(null);
+  const [copySnapshot, setCopySnapshot] = useState<ConnectionInfoV1 | null>(null);
+  const currentConnection =
+    copySnapshot && copySnapshot.observedAt >= connection.observedAt ? copySnapshot : connection;
+  const currentTask = useRef(request.value);
+  const mounted = useRef(true);
+  useEffect(() => {
+    currentTask.current = request.value;
+  }, [request.value]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const signature = snapshotSignature(currentConnection);
+  const ready =
+    currentConnection.mcp.status === 'ready' &&
+    Boolean(currentConnection.mcp.url) &&
+    currentConnection.control.status === 'ready' &&
+    currentConnection.capabilities.draftCreation;
+  const taskPresent = Boolean(request.value.trim());
+  const copied = receipt?.task === request.value && receipt.signature === signature;
+  const preview = useMemo(() => {
+    if (!ready || !taskPresent) return '';
+    if (generated?.task === request.value && generated.signature === signature)
+      return generated.prompt;
+    try {
+      return createPrompt(request.value, currentConnection);
+    } catch {
+      return '';
+    }
+  }, [currentConnection, generated, ready, request.value, signature, taskPresent]);
+
+  const copy = async (): Promise<void> => {
+    if (busy || !ready || !taskPresent) return;
+    const task = request.value;
+    setBusy(true);
+    setError(null);
+    setReceipt(null);
+    let writingClipboard = false;
+    try {
+      const live = await api.getConnectionInfo();
+      if (!mounted.current || currentTask.current !== task) return;
+      if (
+        live.context.appInstanceId !== connection.context.appInstanceId ||
+        live.context.dataRootFingerprint !== connection.context.dataRootFingerprint ||
+        live.profileFingerprint !== connection.profileFingerprint
+      ) {
+        throw new Error(t('externalPrompt.contextChanged'));
+      }
+      const prompt = createPrompt(task, live);
+      const freshSignature = snapshotSignature(live);
+      setCopySnapshot(live);
+      setGenerated({ task, signature: freshSignature, prompt });
+      writingClipboard = true;
+      await navigator.clipboard.writeText(prompt);
+      if (mounted.current && currentTask.current === task)
+        setReceipt({ task, signature: freshSignature });
+    } catch (cause) {
+      if (!mounted.current || currentTask.current !== task) return;
+      setError(
+        writingClipboard
+          ? t('externalPrompt.copyFailed')
+          : cause instanceof Error
+            ? cause.message
+            : t('externalPrompt.connectionRequired')
+      );
+      setExpanded(true);
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-w-0 space-y-4" data-testid="external-agent-prompt-content">
+      <div className="space-y-2">
+        <Label htmlFor="external-agent-task">{t('externalPrompt.taskLabel')}</Label>
+        <Textarea
+          id="external-agent-task"
+          autoFocus
+          value={request.value}
+          onChange={(event) => {
+            currentTask.current = event.target.value;
+            request.setValue(event.target.value);
+            setError(null);
+            setReceipt(null);
+          }}
+          placeholder={t('externalPrompt.taskPlaceholder')}
+          className="min-h-24 text-sm"
+          aria-describedby="external-agent-task-help"
+        />
+        <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
+          {taskPresent ? t('externalPrompt.createOnly') : t('externalPrompt.taskRequired')}
+        </p>
+      </div>
+      <TeamTemplateReferences isLight={isLight} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
+          {t('externalPrompt.connectionStatus', {
+            mcp: settingsT(
+              `general.externalAgentConnection.statuses.${currentConnection.mcp.status}`
+            ),
+            cdp: settingsT(
+              `general.externalAgentConnection.statuses.${currentConnection.cdp.status}`
+            ),
+          })}
+        </p>
+        <Button type="button" variant="link" size="sm" onClick={onSettings}>
+          {t('externalPrompt.connectionSettings')}
+        </Button>
+      </div>
+      {!ready && (
+        <p className="text-xs text-[var(--warning-text)]" role="status">
+          {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
+        </p>
+      )}
+      <Collapsible open={expanded} onOpenChange={setExpanded} className="min-w-0 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="outline" size="sm" disabled={!preview}>
+              {t('externalPrompt.preview')}
+            </Button>
+          </CollapsibleTrigger>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void copy()}
+            disabled={busy || !ready || !taskPresent}
+            data-testid="external-agent-prompt-copy"
+            className="h-auto min-h-8 max-w-full whitespace-normal"
+          >
+            {copied ? (
+              <Check className="size-3.5 shrink-0" />
+            ) : (
+              <Copy className="size-3.5 shrink-0" />
+            )}
+            {t(
+              busy
+                ? 'externalPrompt.copying'
+                : copied
+                  ? 'externalPrompt.copied'
+                  : 'externalPrompt.copy'
+            )}
+          </Button>
+        </div>
+        <CollapsibleContent>
+          <Textarea
+            readOnly
+            value={preview}
+            aria-label={t('externalPrompt.previewLabel')}
+            className="min-h-64 select-text resize-y font-mono text-xs"
+            data-testid="external-agent-prompt-preview"
+          />
+        </CollapsibleContent>
+      </Collapsible>
+      <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
+        {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
+      </p>
+    </div>
+  );
+}
