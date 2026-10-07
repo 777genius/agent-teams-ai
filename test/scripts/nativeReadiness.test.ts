@@ -20,10 +20,12 @@ import {
   ARM211_FILES,
   ARM211_SHA,
   DECODER_ARCHIVE_SHA,
+  usesRepairedArm211,
 } from '../../scripts/ci/release/windowsArmPriorFixture.js';
+import { finalWindowsReleaseProved } from '../../scripts/ci/release/windowsReleaseScenario.js';
 
 // Receipt policy only: these synthetic claims never qualify a native run.
-it('requires honest byte-bound repaired ARM211 receipts only for216 predecessor cases', () => {
+it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor cases', () => {
   const bytes = {
     size: 100,
     sha256: 'a'.repeat(64),
@@ -66,13 +68,17 @@ it('requires honest byte-bound repaired ARM211 receipts only for216 predecessor 
     initialInstall: { code: 0, arguments: ['/S', `/D=${install}`] },
     installedBefore: { packageVersion: '2.17.1' },
   };
-  expect(() => checkWindowsPriorFixture(value, 'arm64', 'cold', '2.17.6')).not.toThrow();
+  for (const targetVersion of ['2.17.6', '2.17.7'])
+    expect(() => checkWindowsPriorFixture(value, 'arm64', 'cold', targetVersion)).not.toThrow();
   const mutations = [
     (v: typeof value) => {
       v.predecessorFixture.originalPriorFreshInstallProved = true;
     },
     (v: typeof value) => {
       v.predecessorFixture.source.sha256 = '0'.repeat(64);
+    },
+    (v: typeof value) => {
+      v.predecessorFixture.sourceApplicationSha = '0'.repeat(40);
     },
     (v: typeof value) => {
       v.predecessorFixture.decoder.archive.sha256 = '0'.repeat(64);
@@ -105,9 +111,11 @@ it('requires honest byte-bound repaired ARM211 receipts only for216 predecessor 
   for (const mutate of mutations) {
     const invalid = structuredClone(value);
     mutate(invalid);
-    expect(() => checkWindowsPriorFixture(invalid, 'arm64', 'cold', '2.17.6')).toThrow();
+    for (const targetVersion of ['2.17.6', '2.17.7'])
+      expect(() => checkWindowsPriorFixture(invalid, 'arm64', 'cold', targetVersion)).toThrow();
   }
-  expect(() => checkWindowsPriorFixture({}, 'arm64', 'cold', '2.17.6')).toThrow();
+  for (const targetVersion of ['2.17.6', '2.17.7'])
+    expect(() => checkWindowsPriorFixture({}, 'arm64', 'cold', targetVersion)).toThrow();
   for (const [arch, mode, version] of [
     ['x64', 'cold', '2.17.6'],
     ['arm64', 'fresh', '2.17.6'],
@@ -117,6 +125,67 @@ it('requires honest byte-bound repaired ARM211 receipts only for216 predecessor 
     expect(() => checkWindowsPriorFixture({}, arch, mode, version)).not.toThrow();
   }
 });
+
+it('selects repaired original ARM211 only for explicit reviewed Windows OTA scenarios', () => {
+  for (const version of ['2.17.6', '2.17.7']) {
+    for (const mode of ['full', 'cold', 'warm']) {
+      expect(usesRepairedArm211('arm64', mode, version)).toBe(true);
+      expect(usesRepairedArm211('x64', mode, version)).toBe(false);
+    }
+    expect(usesRepairedArm211('arm64', 'fresh', version)).toBe(false);
+    expect(usesRepairedArm211('arm64', 'unsupported', version)).toBe(false);
+  }
+  for (const version of ['2.17.5', '2.17.8', '2.18.0', '2.17.7-beta.1']) {
+    expect(usesRepairedArm211('arm64', 'cold', version)).toBe(false);
+  }
+});
+
+it.each(['2.17.6', '2.17.7'])(
+  'marks only successful plan-bound Windows %s native proofs as final',
+  (targetVersion) => {
+    // Synthetic predicate inputs prove policy only; they never qualify a native execution.
+    const valid = {
+      architecture: 'arm64',
+      mode: 'cold',
+      targetVersion,
+      legacyFixture: false,
+      plan: { input: { target: { tag: `v${targetVersion}`, id: 1234 } } },
+      stagedMetadata: { releaseId: 1234 },
+      passed: true,
+      freshInstallProved: false,
+      fullOtaProved: true,
+    };
+    for (const architecture of ['x64', 'arm64']) {
+      for (const mode of ['full', 'cold', 'warm']) {
+        expect(finalWindowsReleaseProved({ ...valid, architecture, mode })).toBe(true);
+      }
+      expect(
+        finalWindowsReleaseProved({
+          ...valid,
+          architecture,
+          mode: 'fresh',
+          freshInstallProved: true,
+          fullOtaProved: false,
+        })
+      ).toBe(true);
+    }
+    for (const change of [
+      { passed: false },
+      { fullOtaProved: false },
+      { legacyFixture: true },
+      { plan: undefined },
+      { stagedMetadata: undefined },
+      { stagedMetadata: { releaseId: 9999 } },
+      { plan: { input: { target: { tag: 'v2.17.5', id: 1234 } } } },
+      { targetVersion: '2.17.8' },
+      { architecture: 'ia32' },
+      { mode: 'unsupported' },
+      { mode: 'fresh', freshInstallProved: false },
+    ]) {
+      expect(finalWindowsReleaseProved({ ...valid, ...change })).toBe(false);
+    }
+  }
+);
 
 import type { StagePlan } from '../../scripts/ci/release/contract.js';
 import type {
