@@ -28,14 +28,17 @@ interface Dependencies {
   mcp: {
     getCurrentHandle(): { url: string; generation: number } | null;
     ensureStarted(): Promise<unknown>;
+    assertNoLiveConsumers?(): Promise<void>;
     stop(options?: { preventRestart?: boolean }): Promise<void>;
     appContext: { bind(env: Record<string, string | undefined>, httpEnabled: boolean): () => void };
   };
   httpEnabled: boolean;
+  assertNoLiveRuntimeConsumers?(): void;
 }
 
 export interface DesktopExternalAgentConnection extends ExternalAgentConnectionApi {
   registerHttp(app: FastifyInstance): void;
+  assertLaunchAdmission(): void;
   updateRoot(applyConfig: () => void): Promise<void>;
   changeContext(operation: () => Promise<void> | void): Promise<void>;
   closeAdmission(): Promise<void>;
@@ -50,6 +53,8 @@ export function createDesktopExternalAgentConnection(
   const profileFingerprint = createHash('sha256').update(deps.userDataPath).digest('hex');
   let tail = Promise.resolve();
   let stopping = false;
+  let boundControlUrl: string | null = null;
+  let shutdownStop: Promise<void> | null = null;
   let shutdownDrain: Promise<void> | null = null;
   let revokeAuthority: (() => void) | null = null;
   const serialize = <T>(operation: () => Promise<T>): Promise<T> => {
@@ -78,25 +83,42 @@ export function createDesktopExternalAgentConnection(
     }
     // This factory is invoked only for a new owned child, never for discovery reads.
     context.transportReplaced();
+    boundControlUrl = controlUrl;
     return Object.freeze({
       [BOUND_CONTROL_URL_ENV]: controlUrl,
       [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
       AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
+      CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
+      AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
+        deps.userDataPath,
+        deps.getRoot()
+      ),
     });
   });
   const connection = new ExternalAgentConnection({
     ...deps,
     context,
     getProfileFingerprint: () => profileFingerprint,
+    getBoundControlUrl: () => boundControlUrl,
     startControl: async () => {
       if (stopping || !deps.httpEnabled) throw new Error('Desktop MCP HTTP connection is disabled');
       await deps.startControl();
+      if (deps.mcp.getCurrentHandle() && boundControlUrl !== deps.getControlUrl()) {
+        await deps.mcp.assertNoLiveConsumers?.();
+        deps.assertNoLiveRuntimeConsumers?.();
+        await context.closeAdmission();
+        await deps.mcp.stop();
+        if (stopping) throw new Error('App connection is shutting down');
+        context.rebind(deps.getRoot());
+      }
     },
   });
   const retryConnection = () =>
     serialize(async () => {
       if (!stopping && deps.isLocalContext() && !context.isOpen) {
         await deps.reconfigureRoot();
+        if (stopping) throw new Error('App connection is shutting down');
         bindAuthority();
         context.rebind(deps.getRoot());
       }
@@ -105,14 +127,19 @@ export function createDesktopExternalAgentConnection(
   const change = (operation: () => Promise<void> | void, rootChanged: boolean) =>
     serialize(async () => {
       if (stopping) throw new Error('App connection is shutting down');
+      await deps.mcp.assertNoLiveConsumers?.();
+      deps.assertNoLiveRuntimeConsumers?.();
       await context.closeAdmission();
+      if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.stop();
+      if (stopping) throw new Error('App connection is shutting down');
       revokeAuthority?.();
       revokeAuthority = null;
       await operation();
       if (rootChanged) await deps.reconfigureRoot();
+      if (stopping) throw new Error('App connection is shutting down');
       bindAuthority();
-      if (!stopping && deps.isLocalContext()) {
+      if (deps.isLocalContext()) {
         context.rebind(deps.getRoot());
         await connection.retryConnection();
       }
@@ -124,6 +151,11 @@ export function createDesktopExternalAgentConnection(
     return shutdownDrain;
   };
   return {
+    assertLaunchAdmission() {
+      if (stopping || !context.isOpen) {
+        throw new Error('App connection is changing context. Retry the team launch.');
+      }
+    },
     closeAdmission,
     getConnectionInfo: () => connection.getConnectionInfo(),
     retryConnection,
@@ -135,14 +167,12 @@ export function createDesktopExternalAgentConnection(
       app.post('/api/app/connection/retry', () => retryConnection());
     },
     shutdown() {
-      const drained = closeAdmission();
-      return serialize(async () => {
-        await drained;
-        revokeAuthority?.();
-        revokeAuthority = null;
-        await deps.mcp.stop({ preventRestart: true });
-        revokeEnvironment();
-      });
+      void closeAdmission();
+      revokeAuthority?.();
+      revokeAuthority = null;
+      // Teardown cannot wait behind a hung admitted request or lifecycle operation.
+      shutdownStop ??= deps.mcp.stop({ preventRestart: true }).finally(revokeEnvironment);
+      return shutdownStop;
     },
   };
 }

@@ -816,7 +816,10 @@ describe('AgentTeamsMcpHttpServer', () => {
     { bound: false, identity: 'missing', shouldKill: true },
     { bound: true, identity: 'missing', shouldKill: false },
     { bound: true, identity: 'foreign', shouldKill: false },
-    { bound: true, identity: 'owned', shouldKill: true },
+    { bound: true, identity: 'prior-owned', shouldKill: true },
+    { bound: true, identity: 'owner-live', shouldKill: false },
+    { bound: true, identity: 'owner-reappears', shouldKill: false },
+    { bound: true, identity: 'pid-reused', shouldKill: false },
   ] as const)(
     'cleans up an orphan with bound=$bound, identity=$identity only when ownership is proven',
     async ({ bound, identity, shouldKill }) => {
@@ -833,9 +836,12 @@ describe('AgentTeamsMcpHttpServer', () => {
         { pid: 9005, ppid: 9001, command },
         { pid: 43123, ppid: process.pid, command: 'current child' },
       ];
-      const details = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp`;
+
       const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
-      let ownerInstanceId: string | undefined;
+      const profile = 'a'.repeat(64);
+      let reads = 0;
+      const priorOwner = 'earlier-process-owner';
+      const details = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp CLAUDE_TEAM_APP_PROFILE_SCOPE=${identity === 'foreign' ? 'b'.repeat(64) : profile} AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID=${priorOwner} AGENT_TEAMS_MCP_HTTP_OWNER_PID=8999`;
       const revokeBinding = bound
         ? configureDesktopMcpEnvironment(() => ({
             AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41029',
@@ -845,17 +851,20 @@ describe('AgentTeamsMcpHttpServer', () => {
         statePath,
         resolveLaunchSpec: async () => launchSpec,
         allocatePort: async () => 41030,
-        spawnProcess: vi.fn((_command, _args, env) => {
-          ownerInstanceId = env.AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID;
-          return child as unknown as ChildProcess;
-        }),
+        spawnProcess: vi.fn(() => child as unknown as ChildProcess),
         waitForPort: vi.fn(async () => undefined),
         listProcessRows: async () => rows,
-        readProcessDetails: async (pid) => (pid === 9001 || pid === 9005 ? details : null),
-        readProcessStartTimeMs: async () => 0,
+        readProcessDetails: async (pid) => {
+          if (pid === 9001) reads++;
+          return pid === 9001 || pid === 9005 ? details : null;
+        },
+        readProcessStartTimeMs: async () => (identity === 'pid-reused' && reads > 1 ? 1 : 0),
         killProcess,
         forceKillProcess: vi.fn(),
-        isProcessAlive: (pid) => alivePids.has(pid),
+        isProcessAlive: (pid) =>
+          alivePids.has(pid) ||
+          (pid === 8999 &&
+            (identity === 'owner-live' || (identity === 'owner-reappears' && reads > 2))),
         sleepMs: async () => undefined,
         probeHealth: vi.fn(async () => ({
           healthy: true,
@@ -866,11 +875,19 @@ describe('AgentTeamsMcpHttpServer', () => {
               : buildIdentity({
                   port: orphanPort,
                   launchSpec,
-                  ownerInstanceId: identity === 'owned' ? ownerInstanceId : 'foreign-app',
+                  ownerInstanceId: priorOwner,
                 }),
         })),
       });
 
+      const revokeAuthority = server.appContext.bind(
+        {
+          AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
+          CLAUDE_TEAM_APP_INSTANCE_ID: 'current-app',
+          CLAUDE_TEAM_APP_PROFILE_SCOPE: profile,
+        },
+        true
+      );
       try {
         const handle = await server.ensureStarted();
         await flushAsyncCleanup();
@@ -886,6 +903,7 @@ describe('AgentTeamsMcpHttpServer', () => {
           expect(alivePids).toEqual(new Set([9001, 9005]));
         }
       } finally {
+        revokeAuthority();
         revokeBinding();
         child.emit('exit', 0, null);
         await server.stop({ preventRestart: true });
@@ -899,7 +917,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const { root, statePath } = await createTempStatePath();
     const child = new FakeChildProcess(43123);
     const orphanPort = 41033;
-    const url = `http://127.0.0.1:${orphanPort}/mcp`;
+    let url = `http://127.0.0.1:${orphanPort}/mcp`;
     const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
     const rows = [
       { pid: 9002, ppid: 1, command },
@@ -932,6 +950,10 @@ describe('AgentTeamsMcpHttpServer', () => {
       await flushAsyncCleanup();
 
       expect(killProcess).not.toHaveBeenCalled();
+      url = handle.url;
+      await expect(server.assertNoLiveConsumers()).rejects.toThrow('Stop teams');
+      url = 'http://127.0.0.1:49999/mcp';
+      await expect(server.assertNoLiveConsumers()).resolves.toBeUndefined();
       expect(handle.diagnostics).toContain(
         `opencode_app_mcp_legacy_orphan_kept_live_consumers:${orphanPort}`
       );

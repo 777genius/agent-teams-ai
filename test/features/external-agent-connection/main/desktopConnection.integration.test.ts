@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
-import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import { request as httpRequest } from 'node:http';
 
+import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
+import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -27,10 +27,15 @@ describe('desktop connection bound HTTP lifecycle', () => {
       fetch(`${controlUrl}${url}`, { method: 'POST', headers, signal });
     let handle: { url: string; generation: number } | null = null;
     let generation = 0;
+    let liveConsumers = false;
+    let liveRuntimeConsumers = false;
     const spawnedEnvironments: Record<string, string>[] = [];
     const order: string[] = [];
     const mcp = {
       getCurrentHandle: () => handle,
+      assertNoLiveConsumers: async () => {
+        if (liveConsumers) throw new Error('Stop teams using MCP before switching.');
+      },
       ensureStarted: async () => {
         if (!handle) {
           spawnedEnvironments.push(
@@ -77,21 +82,34 @@ describe('desktop connection bound HTTP lifecycle', () => {
       } as unknown as NativeRendererCdp,
       mcp,
       httpEnabled: true,
+      assertNoLiveRuntimeConsumers: () => {
+        if (liveRuntimeConsumers) throw new Error('Stop teams using MCP before switching.');
+      },
     });
-    const app = Fastify();
+    let app = Fastify();
     connection.registerHttp(app);
     const admitted = deferred();
     const finishWrite = deferred();
     const writtenRoots: string[] = [];
-    app.post('/api/draft', async () => {
-      admitted.resolve();
-      await finishWrite.promise;
-      writtenRoots.push(root);
-      return { saved: true };
-    });
-    for (const url of ['/api/app/connection/retry', '/api/ssh/connect', '/api/ssh/disconnect']) {
-      if (url.startsWith('/api/ssh/')) app.post(url, () => ({ ignored: true }));
-    }
+    const shutdownAdmitted = deferred(),
+      finishShutdownWrite = deferred();
+    const installDraftRoutes = (server: ReturnType<typeof Fastify>) => {
+      server.post('/api/draft', async () => {
+        admitted.resolve();
+        await finishWrite.promise;
+        writtenRoots.push(root);
+        return { saved: true };
+      });
+      for (const url of ['/api/ssh/connect', '/api/ssh/disconnect']) {
+        server.post(url, () => ({ ignored: true }));
+      }
+      server.post('/api/hung', async () => {
+        shutdownAdmitted.resolve();
+        await finishShutdownWrite.promise;
+        return {};
+      });
+    };
+    installDraftRoutes(app);
     controlUrl = await app.listen({ host: '127.0.0.1', port: 0 });
     try {
       expect((await fetch(`${controlUrl}/api/app/connection`)).status).toBe(200);
@@ -116,7 +134,52 @@ describe('desktop connection bound HTTP lifecycle', () => {
         ).status
       ).toBe(403);
       const before = await connection.retryConnection();
-      const headers = { 'x-agent-teams-app-context': JSON.stringify(before.context) };
+      liveRuntimeConsumers = true;
+      await expect(
+        connection.updateRoot(() => {
+          root = '/sandbox/wrong';
+        })
+      ).rejects.toThrow('Stop teams');
+      await expect(
+        connection.changeContext(() => {
+          local = false;
+        })
+      ).rejects.toThrow('Stop teams');
+      expect((await connection.getConnectionInfo()).context).toEqual(before.context);
+      expect(local).toBe(true);
+      expect(root).toBe('/sandbox/connection-old');
+      expect(order).toEqual(['start:/sandbox/connection-old']);
+      liveRuntimeConsumers = false;
+      const oldApp = app;
+      app = Fastify();
+      connection.registerHttp(app);
+      installDraftRoutes(app);
+      controlUrl = await app.listen({ host: '127.0.0.1', port: 0 });
+      await oldApp.close();
+      const drift = await connection.getConnectionInfo();
+      expect(drift.mcp.status).toBe('error');
+      expect(drift.mcp.url).toBeNull();
+      liveConsumers = true;
+      const busy = await connection.retryConnection();
+      expect(busy.mcp.status).toBe('error');
+      expect(busy.reason).toContain('Stop teams');
+      expect(busy.context).toEqual(before.context);
+      expect(order).toEqual(['start:/sandbox/connection-old']);
+      liveConsumers = false;
+      const replacement = await connection.retryConnection();
+      expect(replacement.mcp.status).toBe('ready');
+      expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_BOUND_CONTROL_URL).toBe(controlUrl);
+      expect(replacement.context.connectionGeneration).toBeGreaterThan(
+        before.context.connectionGeneration
+      );
+      handle = null; // The supervisor's observable state after unexpected child exit.
+      const crash = await connection.getConnectionInfo();
+      expect(crash.mcp.status).toBe('error');
+      expect(crash.recovery).toContain('Retry');
+      const resumed = await connection.retryConnection();
+      expect(resumed.mcp.status).toBe('ready');
+      const rootOrderOffset = order.length;
+      const headers = { 'x-agent-teams-app-context': JSON.stringify(resumed.context) };
       const socket = new AbortController();
       const write = request('/api/draft', headers, socket.signal);
       await admitted.promise;
@@ -131,17 +194,17 @@ describe('desktop connection bound HTTP lifecycle', () => {
       });
       expect((await request('/api/draft', headers)).status).toBe(409);
       expect(root).toBe('/sandbox/connection-old');
-      expect(order).toEqual(['start:/sandbox/connection-old']);
+      expect(order).toHaveLength(rootOrderOffset);
       finishWrite.resolve();
       await update;
       expect(writtenRoots).toEqual(['/sandbox/connection-old']);
-      expect(order.slice(1)).toEqual([
+      expect(order.slice(rootOrderOffset)).toEqual([
         'stop:/sandbox/connection-old',
         'update',
         'reconfigure:/sandbox/connection-new',
         'start:/sandbox/connection-new',
       ]);
-      expect(spawnedEnvironments.map((env) => env.AGENT_TEAMS_MCP_CLAUDE_DIR)).toEqual([
+      expect(spawnedEnvironments.slice(-2).map((env) => env.AGENT_TEAMS_MCP_CLAUDE_DIR)).toEqual([
         '/sandbox/connection-old',
         '/sandbox/connection-new',
       ]);
@@ -163,8 +226,31 @@ describe('desktop connection bound HTTP lifecycle', () => {
       expect(remote.cdp.httpOrigin).toBeNull();
       expect(remote.capabilities.rendererControl).toBe(false);
       expect(() => getDesktopMcpChildEnvironment()).toThrow('unavailable');
+      await connection.changeContext(() => {
+        local = true;
+      });
+      const finalInfo = await connection.getConnectionInfo();
+      const hung = request('/api/hung', {
+        'x-agent-teams-app-context': JSON.stringify(finalInfo.context),
+      });
+      await shutdownAdmitted.promise;
+      const parked = connection.updateRoot(() => {
+        root = '/sandbox/must-not-write';
+      });
+      const rejected = expect(parked).rejects.toThrow('shutting down');
+      await vi.waitFor(async () =>
+        expect((await connection.getConnectionInfo()).control.status).toBe('starting')
+      );
+      await connection.shutdown();
+      expect(handle).toBeNull();
+      expect(root).toBe('/sandbox/connection-new');
+      finishShutdownWrite.resolve();
+      await hung;
+      await rejected;
+      expect(root).toBe('/sandbox/connection-new');
     } finally {
       finishWrite.resolve();
+      finishShutdownWrite.resolve();
       await connection.shutdown();
       await app.close();
     }

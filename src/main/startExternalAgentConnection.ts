@@ -24,6 +24,7 @@ export function composeExternalAgentConnection(options: {
   getControlUrl(): string | null;
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void>;
+  hasLiveRuntimeConsumers?(): boolean;
 }) {
   const connection = createDesktopExternalAgentConnection({
     ...options,
@@ -33,6 +34,11 @@ export function composeExternalAgentConnection(options: {
     getAppVersion: () => app.getVersion(),
     mcp: agentTeamsMcpHttpServer,
     httpEnabled: isOpenCodeMcpHttpBridgeEnabled(),
+    assertNoLiveRuntimeConsumers: () => {
+      if (isOpenCodeMcpHttpBridgeEnabled() && options.hasLiveRuntimeConsumers?.()) {
+        throw new Error('Stop teams using MCP before changing the app root or context.');
+      }
+    },
   });
   return {
     ...connection,
@@ -49,18 +55,17 @@ export function composeExternalAgentConnection(options: {
 export async function refreshDesktopBridgeEnvironment(env: NodeJS.ProcessEnv): Promise<void> {
   const root = getClaudeBasePath();
   const authority = agentTeamsMcpHttpServer.appContext.read(root);
+  if (env.AGENT_TEAMS_MCP_CLAUDE_DIR !== root) {
+    // Never retain an old-root spool when initialization of the new one fails.
+    delete env.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT;
+    const turnEnvironment = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+      teamsBasePath: getTeamsBasePath(),
+      provider: 'opencode',
+    });
+    if (getClaudeBasePath() !== root) throw new Error('App root changed during bridge preparation');
+    Object.assign(env, turnEnvironment);
+  }
   if (authority) {
-    if (env.AGENT_TEAMS_MCP_CLAUDE_DIR !== root) {
-      // Never retain an old-root spool when initialization of the new one fails.
-      delete env.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT;
-      const turnEnvironment = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
-        teamsBasePath: getTeamsBasePath(),
-        provider: 'opencode',
-      });
-      if (getClaudeBasePath() !== root)
-        throw new Error('App root changed during bridge preparation');
-      Object.assign(env, turnEnvironment);
-    }
     mergeOpenCodeLocalMcpChildEnvironment(env, {
       CLAUDE_TEAM_APP_INSTANCE_ID: authority.CLAUDE_TEAM_APP_INSTANCE_ID!,
       CLAUDE_TEAM_APP_PROFILE_SCOPE: authority.CLAUDE_TEAM_APP_PROFILE_SCOPE!,
