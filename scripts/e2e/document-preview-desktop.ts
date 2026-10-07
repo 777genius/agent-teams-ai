@@ -12,11 +12,21 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, writeFile, copyFile, truncate } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, copyFile, truncate, readdir } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+/** JSON literals embedded in evaluated JavaScript also escape HTML/script separators. */
+function jsLiteral(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) throw new Error('Cannot serialize undefined as JavaScript literal');
+  return serialized.replace(
+    /[<>&\u2028\u2029]/g,
+    (character) => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0')
+  );
+}
 
 interface CdpResult {
   result?: { value?: unknown };
@@ -52,7 +62,13 @@ class Cdp {
     socket.addEventListener('message', (event) => {
       const message = JSON.parse(String(event.data)) as CdpMessage;
       if (!message.id) {
-        const params = message.params as Record<string, any> | undefined;
+        const params = message.params as
+          | {
+              context?: { id: number; origin: string };
+              request?: { url?: string };
+              sessionId?: string;
+            }
+          | undefined;
         if (message.method === 'Runtime.executionContextCreated' && params?.context) {
           this.contexts.push({ ...params.context, sessionId: message.sessionId });
         }
@@ -275,28 +291,38 @@ async function launch(): Promise<Cdp> {
 const viewExpression = `(await window.__editorSourceImport('utils/editorBridge.ts')).editorBridge.getView()`;
 const storeExpression = `(await window.__editorSourceImport('store/index.ts')).useStore`;
 async function mountProductionPreview(client: Cdp): Promise<void> {
-  // Production asset smoke uses the real preload reader and packaged iframe entry.
-  // The full project editor routing is exercised separately by the dev UI cases.
+  // Import the real built component and its shared React runtime. Resolving hashed
+  // build imports avoids production hooks and tests the parent component's origin
+  // handling rather than reimplementing its message protocol in the fixture.
+  const assets = path.join(repo, 'out/renderer/assets');
+  const files = await readdir(assets);
+  const component = files.find((file) => /^DocumentPreview-.*\.js$/.test(file));
+  const clientChunk = files.find((file) => /^client-.*\.js$/.test(file));
+  assert(component && clientChunk, 'built component and ReactDOM client entries');
+  const source = await readFile(path.join(assets, component), 'utf8');
+  const react = source.match(/import\s+\{\s*(\w+)\s+as\s+reactExports\s*\}\s+from\s+"([^"]+)"/);
+  const shared = source.match(/import\s+\{[^\n]*\bas\s+useTheme\s*\}\s+from\s+"([^"]+)"/);
+  assert(react && shared, 'built component shared runtime imports');
+  const sharedSource = await readFile(path.resolve(assets, shared[1]), 'utf8');
+  const storeAlias = sharedSource.match(/useStore as (\w+)/)?.[1];
+  assert(storeAlias, 'built application store export');
   await client.evaluate(`(async () => {
-    await window.electronAPI.editor.open(${JSON.stringify(project)});
+    const {DocumentPreview}=await import(${jsLiteral(pathToFileURL(path.join(assets, component)).href)});
+    const React=(await import(${jsLiteral(pathToFileURL(path.resolve(assets, react[2])).href)}))[${jsLiteral(react[1])}];
+    const client=await import(${jsLiteral(pathToFileURL(path.join(assets, clientChunk)).href)});
+    const ReactDOM=Object.values(client).find(value=>typeof value?.createRoot==='function');
+    const store=(await import(${jsLiteral(pathToFileURL(path.resolve(assets, shared[1])).href)}))[${jsLiteral(storeAlias)}];
+    window.__productionSetTheme=theme=>{const state=store.getState();store.setState({appConfig:{...state.appConfig,general:{...state.appConfig?.general,theme}}});};
+    await window.electronAPI.editor.open(${jsLiteral(project)});
     document.querySelector('#root').style.display='none';
     const container=document.createElement('div');container.id='editor-large-e2e';
     container.style.cssText='position:fixed;inset:0;background:#18181b;color:white';document.body.append(container);
+    const root=ReactDOM.createRoot(container);
     window.__productionPreviewOpen=async(file,theme='dark')=>{
-      container.replaceChildren();
-      if(file.endsWith('small.txt')) {const result=await window.electronAPI.editor.readFile(file);const pre=document.createElement('pre');pre.textContent=result.content;container.append(pre);return;}
-      let preview;
-      try{preview=await window.electronAPI.editor.readDocumentPreview(file);}
-      catch(error){container.dataset.documentPreview=String(error).includes('20 MB')?'limit':'error';container.textContent=String(error);return;}
-      container.dataset.documentPreview='loading';const frame=document.createElement('iframe');
-      frame.src='document-preview://viewer/document-preview.html?parentOrigin=null';frame.setAttribute('sandbox','allow-scripts allow-same-origin');frame.style.cssText='width:100%;height:100%;border:0';
-      const requestId=crypto.randomUUID();
-      const receive=event=>{if(event.source!==frame.contentWindow||event.origin!=='document-preview://viewer'||event.data?.protocol!=='document-preview-v1')return;
-        if(event.data.kind==='initialized'){const buffer=new Uint8Array(preview.bytes).buffer;frame.contentWindow.postMessage({protocol:'document-preview-v1',kind:'load',requestId,buffer,fileName:preview.fileName,theme},'document-preview://viewer',[buffer]);return;}
-        if(event.data.requestId!==requestId)return;
-        if(event.data.kind==='ready'||event.data.kind==='error')container.dataset.documentPreview=event.data.kind;};
-      window.addEventListener('message',receive);
-      container.append(frame);
+      window.__productionSetTheme(theme);
+      const metadata=await window.electronAPI.editor.readFile(file);
+      root.render(file.endsWith('small.txt')?React.createElement('pre',{},metadata.content):
+        React.createElement(DocumentPreview,{key:file,filePath:file,size:metadata.size,fallback:React.createElement('div',{},'Document unavailable')}));
     };
   })()`);
 }
@@ -338,31 +364,32 @@ async function mountEditor(client: Cdp): Promise<void> {
     if (!createRoot) throw new Error('ReactDOM createRoot export missing');
     const { ProjectEditorOverlay } = await window.__editorSourceImport('components/team/editor/ProjectEditorOverlay.tsx');
     const { TooltipProvider } = await window.__editorSourceImport('components/ui/tooltip.tsx');
-    const { LocalizationProvider } = await import(${JSON.stringify('/@fs' + repo + '/src/features/localization/renderer/ui/LocalizationProvider.tsx')});
+    const { LocalizationProvider } = await import(${jsLiteral('/@fs' + repo + '/src/features/localization/renderer/ui/LocalizationProvider.tsx')});
     const container = document.createElement('div'); container.id = 'editor-large-e2e'; document.body.append(container);
     const root = createRoot(container); window.__editorE2eRoot = root;
     root.render(React.createElement(LocalizationProvider, { appConfig: null },
       React.createElement(TooltipProvider, {}, React.createElement(ProjectEditorOverlay, {
-        projectPath: ${JSON.stringify(project)}, onClose: () => root.unmount()
+        projectPath: ${jsLiteral(project)}, onClose: () => root.unmount()
       }))));
   })()`);
   await client.wait(
-    `(async () => { const s = ${storeExpression}.getState(); return s.editorProjectPath === ${JSON.stringify(project)} && !s.editorFileTreeLoading && !!s.editorFileTree; })()`,
+    `(async () => { const s = ${storeExpression}.getState(); return s.editorProjectPath === ${jsLiteral(project)} && !s.editorFileTreeLoading && !!s.editorFileTree; })()`,
     'sandbox editor initialization'
   );
 }
 async function open(client: Cdp, file: string, editable = false): Promise<number> {
   const start = Date.now();
   if (production) {
-    await client.evaluate(`window.__productionPreviewOpen(${JSON.stringify(file)})`);
+    await client.evaluate(`window.__productionPreviewOpen(${jsLiteral(file)})`);
+    if (editable) await client.wait('document.querySelector("#editor-large-e2e pre")', 'text tab');
     return Date.now() - start;
   }
   await client.evaluate(
-    `(async () => { ${storeExpression}.getState().openFile(${JSON.stringify(file)}); })()`
+    `(async () => { ${storeExpression}.getState().openFile(${jsLiteral(file)}); })()`
   );
   if (editable)
     await client.wait(
-      `(async () => { const view = ${viewExpression}; const store = ${storeExpression}.getState(); return store.editorActiveTabId === ${JSON.stringify(file)} && !!view && document.querySelector('#editor-large-e2e [data-editor-file]')?.getAttribute('data-editor-file') === ${JSON.stringify(file)} && document.querySelector('#editor-large-e2e .cm-content'); })()`,
+      `(async () => { const view = ${viewExpression}; const store = ${storeExpression}.getState(); return store.editorActiveTabId === ${jsLiteral(file)} && !!view && document.querySelector('#editor-large-e2e [data-editor-file]')?.getAttribute('data-editor-file') === ${jsLiteral(file)} && document.querySelector('#editor-large-e2e .cm-content'); })()`,
       `CodeMirror ${path.basename(file)}`
     );
   if (!editable)
@@ -385,7 +412,9 @@ async function previewContext(client: Cdp) {
     for (const context of candidates) {
       try {
         if (await client.evaluate('!!document.querySelector("#root")', context)) return context;
-      } catch {}
+      } catch {
+        /* A tab switch can detach an older iframe context. */
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
@@ -398,12 +427,22 @@ try {
     await copyFile(path.join(fixtures, name), path.join(project, name));
   }
   await writeFile(path.join(project, 'small.txt'), 'Text editor remains available');
+  const quotedFile = path.join(project, 'quoted "<>&\u2028\u2029-small.txt');
+  await writeFile(quotedFile, 'Quoted path stays literal');
   await writeFile(path.join(project, 'corrupt.pdf'), '%PDF-1.7\nbroken document');
   await writeFile(path.join(project, 'corrupt.docx'), Buffer.from([0x50, 0x4b, 3, 4, 0, 1]));
   await writeFile(path.join(project, 'oversized.pdf'), '%PDF-1.7');
   await truncate(path.join(project, 'oversized.pdf'), 21 * 1024 * 1024);
   cdp = await launch();
   await mountEditor(cdp);
+  await open(cdp, quotedFile, true);
+  assert(
+    await cdp.evaluate(
+      `document.querySelector('#editor-large-e2e')?.textContent.includes('Quoted path stays literal')`
+    ),
+    'serialized path preserves quotes and script separators'
+  );
+  receipt.quotedPath = true;
   if (!production)
     await cdp.evaluate(`(async()=>{
     const store=${storeExpression}; const state=store.getState();
@@ -450,7 +489,13 @@ try {
       try{parentAccessible=!!parent.electronAPI;}catch{}
       return {...info,api:!!window.electronAPI,parentAccessible};
     })()`;
-    let info: { text: string; paintedCanvases: number; cellInk: number; parentAccessible: boolean; api: boolean };
+    let info: {
+      text: string;
+      paintedCanvases: number;
+      cellInk: number;
+      parentAccessible: boolean;
+      api: boolean;
+    };
     const until = Date.now() + 60_000;
     while (true) {
       info = await cdp.evaluate(contentExpression, context);
@@ -487,11 +532,55 @@ try {
       !cdp.previewRequests.some((url) => /^https?:/.test(url)),
       'documents must use local preview assets'
     );
+    if (extension === 'pdf' && production) {
+      const parentLocation: { protocol: string; origin: string; declaredOrigin: string } =
+        await cdp.evaluate<{
+          protocol: string;
+          origin: string;
+          declaredOrigin: string;
+        }>(
+          `({protocol:location.protocol,origin:location.origin,declaredOrigin:new URL(document.querySelector('#editor-large-e2e iframe').src).searchParams.get('parentOrigin')})`
+        );
+      assert.equal(parentLocation.protocol, 'file:');
+      assert.equal(parentLocation.declaredOrigin, 'null');
+      await cdp.evaluate(
+        `window.__parentEventOrigin=undefined;window.addEventListener('message',event=>{if(event.source===parent&&event.data?.protocol==='document-preview-v1')window.__parentEventOrigin=event.origin;})`,
+        context
+      );
+      const eventOrigins: string[] = [];
+      for (const theme of ['light', 'dark']) {
+        await cdp.evaluate('window.__parentEventOrigin=undefined', context);
+        await cdp.evaluate(`window.__productionSetTheme(${jsLiteral(theme)})`);
+        const deadline = Date.now() + 10_000;
+        let eventOrigin: string | undefined;
+        while (
+          !(eventOrigin = await cdp.evaluate<string | undefined>(
+            'window.__parentEventOrigin',
+            context
+          ))
+        ) {
+          assert(Date.now() < deadline, 'actual component theme load reaches isolated frame');
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        assert(['null', 'file://'].includes(eventOrigin), 'Chromium file message origin');
+        eventOrigins.push(eventOrigin);
+        await cdp.wait(
+          'document.querySelector("[data-document-preview=ready]")',
+          'actual component theme parsed'
+        );
+        assert.equal(
+          await cdp.evaluate('document.body.classList.contains("dark")', context),
+          theme === 'dark'
+        );
+      }
+      receipt.productionParentOrigin = { ...parentLocation, eventOrigins, actualComponent: true };
+      receipt.themeReload = true;
+    }
     if (extension === 'pdf' && !production) {
       for (const theme of ['light', 'dark']) {
         const count = await cdp.evaluate<number>('window.__previewAcknowledgements.length');
         await cdp.evaluate(
-          `(async()=>{const store=${storeExpression};const state=store.getState();store.setState({appConfig:{...state.appConfig,general:{...state.appConfig.general,theme:${JSON.stringify(theme)}}}});})()`
+          `(async()=>{const store=${storeExpression};const state=store.getState();store.setState({appConfig:{...state.appConfig,general:{...state.appConfig.general,theme:${jsLiteral(theme)}}}});})()`
         );
         await cdp.wait(
           `window.__previewAcknowledgements.length>${count}&&document.querySelector('[data-document-preview=ready]')`,
@@ -530,7 +619,7 @@ try {
   );
   await open(cdp, path.join(project, 'corrupt.pdf'));
   await cdp.wait(
-    'document.querySelector(\"[data-document-preview=error]\")',
+    'document.querySelector("[data-document-preview=error]")',
     'PDF parser error fallback',
     90_000
   );
@@ -563,7 +652,9 @@ try {
   if (cdp) {
     try {
       await screenshot(cdp, 'failure');
-    } catch {}
+    } catch {
+      /* Preserve the original failure if the renderer already exited. */
+    }
   }
   console.error(receipt);
   process.exitCode = 1;
@@ -575,7 +666,9 @@ try {
   if (owned?.pid && owned.exitCode === null) {
     try {
       process.kill(process.platform === 'win32' ? owned.pid : -owned.pid, 'SIGTERM');
-    } catch {}
+    } catch {
+      /* The owned process may exit between the check and cleanup. */
+    }
   }
   console.log('Artifacts: ' + artifacts);
 }

@@ -5,7 +5,7 @@ import { useTheme } from '@renderer/hooks/useTheme';
 
 import { DOCUMENT_PREVIEW_MAX_BYTES } from '../../core/domain/documentPolicy';
 import { useDocumentPreview } from '../hooks/useDocumentPreview';
-import { isPreviewOrigin, PREVIEW_PROTOCOL } from '../utils/protocol';
+import { getPreviewParentOrigin, isPreviewOrigin, PREVIEW_PROTOCOL } from '../utils/protocol';
 
 interface Props {
   readonly filePath: string;
@@ -106,7 +106,7 @@ function LoadedDocumentPreview({ filePath, fallback }: Props): React.ReactElemen
       <iframe
         ref={iframe}
         title={t('editor.documentPreview.title')}
-        src={`document-preview://viewer/document-preview.html?parentOrigin=${encodeURIComponent(window.location.origin)}`}
+        src={`document-preview://viewer/document-preview.html?parentOrigin=${encodeURIComponent(getPreviewParentOrigin(window.location))}`}
         sandbox="allow-scripts allow-same-origin"
         className="min-h-0 w-full flex-1 border-0"
       />

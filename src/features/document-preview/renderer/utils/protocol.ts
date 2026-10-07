@@ -1,6 +1,16 @@
 import { DOCUMENT_PREVIEW_MAX_BYTES, getDocumentFormat } from '../../core/domain/documentPolicy';
 
 export const PREVIEW_PROTOCOL = 'document-preview-v1';
+
+// Chromium exposes file locations as file:// in some contexts, while message
+// events from that same opaque origin may report null. File targets require '*'.
+export function normalizePreviewParentOrigin(origin: string): string {
+  return origin === 'file://' || origin === 'null' ? 'null' : origin;
+}
+
+export function getPreviewParentOrigin(location: Pick<Location, 'protocol' | 'origin'>): string {
+  return location.protocol === 'file:' ? 'null' : normalizePreviewParentOrigin(location.origin);
+}
 export interface PreviewLoadMessage {
   protocol: typeof PREVIEW_PROTOCOL;
   requestId: string;

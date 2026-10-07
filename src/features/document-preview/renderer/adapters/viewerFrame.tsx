@@ -4,9 +4,15 @@ import { createRoot } from 'react-dom/client';
 import officePreset from '@file-viewer/preset-office';
 import FileViewer, { type FileViewerHandle, type ViewerOptions } from '@file-viewer/react';
 
-import { isPreviewLoadMessage, PREVIEW_PROTOCOL } from '../utils/protocol';
+import {
+  isPreviewLoadMessage,
+  normalizePreviewParentOrigin,
+  PREVIEW_PROTOCOL,
+} from '../utils/protocol';
 
-const parentOrigin = new URL(window.location.href).searchParams.get('parentOrigin');
+const parentOrigin = normalizePreviewParentOrigin(
+  new URL(window.location.href).searchParams.get('parentOrigin') ?? ''
+);
 const root = createRoot(document.getElementById('root')!);
 let requestId: string | null = null;
 let activeReadiness: AbortController | null = null;
@@ -14,7 +20,7 @@ let activeReadiness: AbortController | null = null;
 window.addEventListener('message', (event: MessageEvent) => {
   if (
     event.source !== window.parent ||
-    event.origin !== parentOrigin ||
+    normalizePreviewParentOrigin(event.origin) !== parentOrigin ||
     !isPreviewLoadMessage(event.data)
   )
     return;
@@ -134,5 +140,5 @@ window.addEventListener('pagehide', () => {
 // its listener. DOM load alone does not describe application receiver readiness.
 window.parent.postMessage(
   { protocol: PREVIEW_PROTOCOL, kind: 'initialized' },
-  parentOrigin === 'null' ? '*' : parentOrigin!
+  parentOrigin === 'null' ? '*' : parentOrigin
 );
