@@ -4973,6 +4973,85 @@ describe('LaunchTeamDialog', () => {
     await act(async () => root.unmount());
   });
 
+  it('permits saving a draft after opting out of a pending launch preflight and ignores its late failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    let finishPreflight!: (
+      result: Awaited<ReturnType<typeof runProviderPrepareDiagnostics>>
+    ) => void;
+    const pendingPreflight = new Promise<Awaited<ReturnType<typeof runProviderPrepareDiagnostics>>>(
+      (resolve) => {
+        finishPreflight = resolve;
+      }
+    );
+    vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(pendingPreflight);
+    const onCreate = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+    const settle = async () => {
+      for (let attempt = 0; attempt < 4; attempt++)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100);
+          await flush();
+        });
+    };
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+    try {
+      await act(async () => {
+        render();
+        await flush();
+      });
+      await settle();
+      expect(runProviderPrepareDiagnostics).toHaveBeenCalled();
+      expect(submit().disabled).toBe(true);
+      createTeamDraftMock.state.launchTeam = false;
+      await act(async () => {
+        render();
+        await flush();
+      });
+      expect(submit().disabled).toBe(false);
+      await act(async () => {
+        finishPreflight({
+          status: 'failed',
+          warnings: [],
+          details: ['Late cancelled failure'],
+          modelResultsById: {},
+        });
+        await flush();
+      });
+      await settle();
+      expect(submit().disabled).toBe(false);
+      expect(host.textContent).not.toContain('Late cancelled failure');
+      await act(async () => {
+        submit().click();
+        await flush();
+      });
+      expect(api.teams.createConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd: '/tmp/project' })
+      );
+      expect(onCreate).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();

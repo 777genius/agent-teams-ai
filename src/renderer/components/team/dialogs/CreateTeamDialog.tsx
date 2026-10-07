@@ -1072,7 +1072,7 @@ export const CreateTeamDialog = ({
       pendingPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
       prepareWarningsByProviderIdRef.current.clear();
-      if (!launchPreflightSelectionReady && prepareState !== 'idle') {
+      if ((!launchTeam || !launchPreflightSelectionReady) && prepareState !== 'idle') {
         setPrepareState('idle');
         setPrepareMessage(null);
         setPrepareWarnings([]);
