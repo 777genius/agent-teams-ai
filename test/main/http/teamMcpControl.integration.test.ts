@@ -391,8 +391,17 @@ describe('MCP team tools over the local REST control API', () => {
             },
           ],
         })
-      ) as { teamName: string };
-      expect(created).toEqual({ teamName: 'mcp-e2e-team' });
+      ) as {
+        teamName: string;
+        draft: true;
+        runtimeSelection: 'selected' | 'unresolved';
+        runtimeSelectionVersion?: 1;
+      };
+      expect(created).toEqual({
+        teamName: 'mcp-e2e-team',
+        draft: true,
+        runtimeSelection: 'selected',
+      });
 
       const restDraft = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team');
       expect(restDraft.status).toBe(200);

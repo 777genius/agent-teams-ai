@@ -97,3 +97,33 @@ export function buildWorktreePathByMemberName(
   }
   return paths;
 }
+
+export function getLaunchDialogLabelKeys(
+  isLaunchMode: boolean,
+  isRelaunch: boolean,
+  isEditing: boolean
+) {
+  return {
+    title: isLaunchMode
+      ? isRelaunch
+        ? 'launch.title.relaunch'
+        : 'launch.title.launch'
+      : isEditing
+        ? 'launch.title.editSchedule'
+        : 'launch.title.createSchedule',
+    submit: isLaunchMode
+      ? isRelaunch
+        ? 'launch.actions.relaunchTeam'
+        : 'launch.actions.launchTeam'
+      : isEditing
+        ? 'launch.actions.saveChanges'
+        : 'launch.actions.createSchedule',
+    submitting: isLaunchMode
+      ? isRelaunch
+        ? 'launch.actions.relaunching'
+        : 'launch.actions.launching'
+      : isEditing
+        ? 'launch.actions.saving'
+        : 'launch.actions.creating',
+  } as const;
+}

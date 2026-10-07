@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
-      "nameTooLong": "Name is too long (max 128 chars)",
+      "nameTooLong": "Name is too long (max 64 chars)",
       "selectWorkingDirectory": "Select working directory (cwd)",
       "memberNameRequired": "Member name cannot be empty",
       "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",
@@ -3157,5 +3157,18 @@
         "weight_many": "weight {{count}}"
       }
     }
+  },
+  "templates": {
+    "label": "Team template",
+    "placeholder": "Start from a team template",
+    "names": {
+      "feature": "Build a feature",
+      "bug": "Fix a bug",
+      "review": "Review code",
+      "research": "Research a solution"
+    },
+    "providerLabel": "Choose team provider",
+    "providerPlaceholder": "Choose a provider",
+    "modelAfterProvider": "Model selection is available after choosing a provider."
   }
 }

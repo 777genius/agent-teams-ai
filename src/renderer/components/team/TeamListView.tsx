@@ -854,10 +854,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         try {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
-          const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
+          const savedRequest = await api.teams.getSavedRequest(teamName);
           if (savedRequest) {
             setCopyData({
-              teamName: uniqueName,
+              teamName: uniqueName, runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
               description: savedRequest.description,
               color: savedRequest.color,
               cwd: savedRequest.cwd,

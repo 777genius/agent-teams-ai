@@ -80,6 +80,8 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       'Create a draft team configuration through the local Agent Teams control API. This does not launch the team.',
     parameters: z.object({
       ...teamContextSchema,
+      runtimeSelectionVersion: z.literal(1).optional(),
+      syncModelsWithLead: z.boolean().optional(),
       displayName: z.string().min(1).optional(),
       description: z.string().optional(),
       color: z.string().min(1).optional(),
@@ -101,6 +103,8 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       claudeDir,
       controlUrl,
       waitTimeoutMs,
+      runtimeSelectionVersion,
+      syncModelsWithLead,
       displayName,
       description,
       color,
@@ -120,6 +124,8 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       return jsonTextContent(
         await getController(teamName, claudeDir).runtime.createTeam({
           ...controlFlags({ controlUrl, waitTimeoutMs }),
+          ...(runtimeSelectionVersion !== undefined ? { runtimeSelectionVersion } : {}),
+          ...(syncModelsWithLead !== undefined ? { syncModelsWithLead } : {}),
           ...(displayName ? { displayName } : {}),
           ...(description ? { description } : {}),
           ...(color ? { color } : {}),

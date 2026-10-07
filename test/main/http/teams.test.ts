@@ -250,7 +250,9 @@ describe('HTTP team runtime routes', () => {
         },
       });
       expect(createResponse.statusCode).toBe(201);
-      expect(createResponse.json()).toEqual({ teamName: 'new-team' });
+      expect(createResponse.json()).toEqual({
+        teamName: 'new-team', draft: true, runtimeSelection: 'selected',
+      });
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'new-team',
         displayName: 'New Team',
@@ -378,7 +380,7 @@ describe('HTTP team runtime routes', () => {
           teamName: 'demo-team',
           cwd: '/Users/test/project',
           prompt: 'Resume work',
-          providerId: 'anthropic',
+          providerId: undefined,
           skipPermissions: false,
           clearContext: true,
           limitContext: true,
@@ -491,7 +493,7 @@ describe('HTTP team runtime routes', () => {
         {
           teamName: 'demo-team',
           cwd: '/Users/test/project',
-          providerId: 'anthropic',
+          providerId: undefined,
         },
         expect.any(Function)
       );
@@ -611,6 +613,45 @@ describe('HTTP team runtime routes', () => {
       await app.close();
     }
   });
+
+  it.each([
+    { providerId: null, marker: undefined, code: 'RUNTIME_SELECTION_REQUIRED' },
+    { providerId: undefined, marker: undefined, code: 'RUNTIME_SELECTION_REQUIRED' },
+    { providerId: 'codex', marker: 2, code: 'RUNTIME_SELECTION_UNSUPPORTED' },
+    { providerId: 'codex', marker: null, code: 'RUNTIME_SELECTION_UNSUPPORTED' },
+  ])(
+    'rejects unsafe draft launch overrides before mutations ($code, $providerId, $marker)',
+    async ({ providerId, marker, code }) => {
+      const { app, createTeam, launchTeam, getSavedRequest, renameDraftTeam, resumeTeam } =
+        await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'unresolved-draft',
+      runtimeSelectionVersion: 1,
+      cwd: '/sandbox/test-project',
+      members: [],
+      });
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/unresolved-draft/launch',
+          payload: {
+            teamName: 'final-team',
+            cwd: '/sandbox/test-project',
+            providerId,
+            runtimeSelectionVersion: marker,
+          },
+        });
+        expect(response.statusCode).toBe(422);
+        expect(response.json()).toMatchObject({ code, error: expect.stringContaining(code) });
+        expect(createTeam).not.toHaveBeenCalled();
+        expect(launchTeam).not.toHaveBeenCalled();
+        expect(renameDraftTeam).not.toHaveBeenCalled();
+        expect(resumeTeam).not.toHaveBeenCalled();
+      } finally {
+        await app.close();
+      }
+    }
+  );
 
   it('routes draft team launch through createTeam with saved metadata', async () => {
     const { app, createTeam, getSavedRequest, launchTeam, resumeTeam } = await createApp();

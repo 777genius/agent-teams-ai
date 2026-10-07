@@ -804,6 +804,8 @@ describe('ipc teams handlers', () => {
     service.getTeamData.mockReset();
     service.getAllTasks.mockReset();
     service.restoreMember.mockReset();
+    service.getSavedRequest.mockReset();
+    service.getSavedRequest.mockResolvedValue(null);
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
     service.getTeamData.mockResolvedValue({
       teamName: 'my-team',
@@ -2439,7 +2441,8 @@ describe('ipc teams handlers', () => {
   it('does not route slash commands through raw stdin when attachments are present', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
-    vi.stubEnv('HOME', os.tmpdir());
+    const attachmentsHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-attachments-home-'));
+    vi.stubEnv('HOME', attachmentsHome);
     try {
       const result = (await sendHandler!({} as never, 'my-team', {
         member: 'team-lead',
@@ -2468,6 +2471,7 @@ describe('ipc teams handlers', () => {
       );
     } finally {
       vi.unstubAllEnvs();
+      fs.rmSync(attachmentsHome, { recursive: true, force: true });
     }
   });
 
@@ -7236,13 +7240,16 @@ describe('ipc teams handlers', () => {
           members: [
             expect.objectContaining({
               name: 'builder',
-              providerId: undefined,
               providerBackendId: 'codex-native',
               effort: 'xhigh',
             }),
           ],
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).members[0]
+          .providerId
+      ).toBeUndefined();
     });
 
     it('handleCreateConfig rejects stale inherited teammate backends for the selected team provider', async () => {
@@ -7277,10 +7284,11 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-stale-top-level-runtime',
-          providerId: undefined,
-          providerBackendId: undefined,
         })
       );
+      const saved = mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest;
+      expect(saved.providerId).toBeUndefined();
+      expect(saved.providerBackendId).toBeUndefined();
     });
 
     it('handleCreateConfig validates teammate effort against default Anthropic provider metadata', async () => {
@@ -7323,11 +7331,116 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-default-anthropic-effort',
-          providerId: undefined,
           effort: 'max',
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).providerId
+      ).toBeUndefined();
     });
+
+    // Launch intent, watch engagement and cwd creation must follow runtime admission.
+    it.each(['create', 'draft', 'persisted', 'unsupported-persisted'] as const)(
+      'rejects unresolved or unsupported selection without launch effects (%s)',
+      async (entry) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-selection-admission-'));
+        setClaudeBasePathOverride(claudeRoot);
+        const noteIntent = vi.spyOn(launchIoGovernor, 'noteLaunchIntent');
+        try {
+          const teamName = 'selection-team';
+          const teamDir = path.join(claudeRoot, 'teams', teamName);
+          const cwd = entry === 'create' ? path.join(claudeRoot, 'must-not-create') : claudeRoot;
+          const meta = JSON.stringify({
+            version: 1,
+            cwd,
+            runtimeSelectionVersion: entry === 'unsupported-persisted' ? 2 : 1,
+            createdAt: Date.now(),
+          });
+          if (entry !== 'create') {
+            fs.mkdirSync(teamDir, { recursive: true });
+            fs.writeFileSync(path.join(teamDir, 'team.meta.json'), meta);
+            if (entry !== 'draft')
+              fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+            service.getSavedRequest.mockResolvedValueOnce({
+              teamName,
+              cwd,
+              runtimeSelectionVersion: 1,
+              members: [{ name: 'builder' }],
+            });
+          }
+          const result = await handlers.get(entry === 'create' ? TEAM_CREATE : TEAM_LAUNCH)!(
+            { sender: { send: vi.fn() } } as never,
+            { teamName, cwd, runtimeSelectionVersion: 1, members: [{ name: 'builder' }] }
+          );
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining(
+              entry === 'unsupported-persisted'
+                ? 'RUNTIME_SELECTION_UNSUPPORTED'
+                : 'RUNTIME_SELECTION_REQUIRED'
+            ),
+          });
+          expect(noteIntent).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has(teamName)).not.toBe(true);
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(teamBackupService.withTeamIdentityFence).not.toHaveBeenCalled();
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+          if (entry === 'create') expect(fs.existsSync(cwd)).toBe(false);
+          else expect(fs.readFileSync(path.join(teamDir, 'team.meta.json'), 'utf8')).toBe(meta);
+        } finally {
+          noteIntent.mockRestore();
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
+
+    it.each([true, false])(
+      'rejects unsupported inbound marker before saved metadata masks it (draft=%s)',
+      async (draft) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-unsupported-marker-'));
+        setClaudeBasePathOverride(claudeRoot);
+        try {
+          const teamDir = path.join(claudeRoot, 'teams', 'marker-team');
+          fs.mkdirSync(teamDir, { recursive: true });
+          fs.writeFileSync(
+            path.join(teamDir, 'team.meta.json'),
+            JSON.stringify({
+              version: 1,
+              runtimeSelectionVersion: 1,
+              providerId: 'codex',
+              createdAt: Date.now(),
+            })
+          );
+          if (!draft)
+            fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+          service.getSavedRequest.mockResolvedValueOnce({
+            teamName: 'marker-team',
+            runtimeSelectionVersion: 1,
+            providerId: 'codex',
+            cwd: claudeRoot,
+            members: [],
+          });
+          const result = await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+            teamName: 'marker-team',
+            cwd: claudeRoot,
+            runtimeSelectionVersion: 2,
+          });
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining('RUNTIME_SELECTION_UNSUPPORTED'),
+          });
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has('marker-team')).not.toBe(true);
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+        } finally {
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
 
     it('launches draft team through saved request without dropping Electron draft metadata', async () => {
       const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-launch-'));

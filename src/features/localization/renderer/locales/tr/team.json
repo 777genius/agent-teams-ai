@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Ad en az bir harf veya rakam içermelidir",
-      "nameTooLong": "Ad çok uzun (en fazla 128 karakter)",
+      "nameTooLong": "Ad çok uzun (en fazla 64 karakter)",
       "selectWorkingDirectory": "Çalışma dizinini seçin (cwd)",
       "memberNameRequired": "Üye adı boş olamaz",
       "memberNameInvalid": "Üye adı alfasayısal ile başlamalı, yalnızca [a-zA-Z0-9._-] kullanmalı, en fazla 128 karakter olmalıdır",

@@ -1,4 +1,10 @@
+import {
+  normalizeRuntimeSelectionVersion,
+  requireTeamRuntimeSelection,
+} from '@shared/utils/teamRuntimeSelection';
+
 import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+import { TeamMetaStore } from '../TeamMetaStore';
 
 import {
   createTeamInnerWithService,
@@ -10,17 +16,21 @@ import {
   teamProvisioningRequestAdmissionContext,
 } from './TeamProvisioningRequestAdmissionContext';
 
+import type { TeamMetaFile } from '../TeamMetaStore';
 import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamProviderId,
   TeamProvisioningProgress,
 } from '@shared/types';
 import type { AsyncLocalStorage } from 'node:async_hooks';
 
 interface TeamProvisioningRequestWithTeamName {
   teamName?: unknown;
+  providerId?: unknown;
+  runtimeSelectionVersion?: unknown;
 }
 
 export interface TeamProvisioningRequestAdmissionServiceHost extends TeamProvisioningCreateLaunchOrchestrationServiceHost {
@@ -51,7 +61,8 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
   service: TeamProvisioningRequestAdmissionServiceHost,
   admissionContext: AsyncLocalStorage<TeamProvisioningRequestAdmissionContext>,
   request: TeamProvisioningRequestWithTeamName,
-  run: () => Promise<TResult>
+  run: (runtime: { providerId: TeamProviderId; runtimeSelectionVersion?: 1 }) => Promise<TResult>,
+  readTeamMeta: (teamName: string) => Promise<TeamMetaFile | null>
 ): Promise<TResult> {
   const lockKey = getTeamProvisioningRequestLockKey(request);
   const parentContext = admissionContext.getStore();
@@ -68,6 +79,15 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
   const publicationIsAuthorized = captureTeamLaunchPublicationAuthority(lockKey);
   return service.withTeamLock(lockKey, async () => {
     if (!publicationIsAuthorized()) throw new Error('Launch admission superseded by Stop');
+    normalizeRuntimeSelectionVersion(request.runtimeSelectionVersion);
+    const meta = await readTeamMeta(lockKey);
+    const runtimeSelectionVersion = normalizeRuntimeSelectionVersion(
+      meta?.runtimeSelectionVersion ?? request.runtimeSelectionVersion
+    );
+    const providerId = requireTeamRuntimeSelection({
+      runtimeSelectionVersion,
+      providerId: request.providerId ?? meta?.providerId,
+    });
     const context: TeamProvisioningRequestAdmissionContext = {
       active: true,
       lockKey,
@@ -75,7 +95,9 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
       parent: parentContext,
     };
     try {
-      return await admissionContext.run(context, run);
+      return await admissionContext.run(context, () =>
+        run({ providerId, ...(runtimeSelectionVersion === 1 ? { runtimeSelectionVersion } : {}) })
+      );
     } finally {
       context.active = false;
     }
@@ -83,17 +105,27 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
 }
 
 export function createTeamProvisioningRequestAdmissionBoundary(
-  service: TeamProvisioningRequestAdmissionServiceHost
+  service: TeamProvisioningRequestAdmissionServiceHost,
+  readTeamMeta: (teamName: string) => Promise<TeamMetaFile | null> = (teamName) =>
+    new TeamMetaStore().getMeta(teamName)
 ): TeamProvisioningRequestAdmissionBoundary {
   const admissionContext = teamProvisioningRequestAdmissionContext;
   return {
     createTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
-        createTeamInnerWithService(service, request, onProgress)
+      runAdmittedTeamProvisioningRequest(
+        service,
+        admissionContext,
+        request,
+        (runtime) => createTeamInnerWithService(service, { ...request, ...runtime }, onProgress),
+        readTeamMeta
       ),
     launchTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
-        launchTeamInnerWithService(service, request, onProgress)
+      runAdmittedTeamProvisioningRequest(
+        service,
+        admissionContext,
+        request,
+        (runtime) => launchTeamInnerWithService(service, { ...request, ...runtime }, onProgress),
+        readTeamMeta
       ),
   };
 }

@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "名前には、少なくとも1文字または数字を含む必要があります。",
-      "nameTooLong": "お名前が長すぎる(最大128文字)",
+      "nameTooLong": "お名前が長すぎる(最大64文字)",
       "selectWorkingDirectory": "作業ディレクトリ(cwd)を選択します。",
       "memberNameRequired": "会員名を空にすることはできません",
       "memberNameInvalid": "会員名は英数字で始まり、[a-zA-Z0-9. -]、最大128文字を使用する必要があります。",

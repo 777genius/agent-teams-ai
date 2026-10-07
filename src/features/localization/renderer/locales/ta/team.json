@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "பெயரில் குறைந்தது ஒரு எழுத்து அல்லது இலக்கம் இருக்க வேண்டும்",
-      "nameTooLong": "பெயர் மிக நீளமானது (அதிகபட்சம் 128 எழுத்துகள்)",
+      "nameTooLong": "பெயர் மிக நீளமானது (அதிகபட்சம் 64 எழுத்துகள்)",
       "selectWorkingDirectory": "working directory ஐத் தேர்ந்தெடு (cwd)",
       "memberNameRequired": "உறுப்பினர் பெயர் காலியாக இருக்க முடியாது",
       "memberNameInvalid": "உறுப்பினர் பெயர் alphanumeric உடன் தொடங்க வேண்டும், [a-zA-Z0-9._-] மட்டுமே பயன்படுத்தவும், அதிகபட்சம் 128 எழுத்துகள்",
