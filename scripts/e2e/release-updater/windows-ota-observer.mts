@@ -4,6 +4,9 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import { observerFailureReceipt } from './windows-observer-receipt.mts';
+import type { ObserverFailurePhase } from './windows-observer-receipt.mts';
+
 import { ownerCimTicks } from './windows-owned-uia-metadata.mts';
 
 import {
@@ -23,7 +26,8 @@ export function observeInstallerChild(
   child: ChildProcess,
   executable: string,
   native: Pick<Awaited<ReturnType<typeof windowsNative>>, 'processes' | 'installerLineage'>,
-  save: (receipt: unknown) => Promise<void>
+  save: (receipt: unknown) => Promise<void>,
+  spawnEnv?: NodeJS.ProcessEnv
 ) {
   const receipt = {
     scope: 'Read-only NSIS spawn and one25second lineage; no process adoption',
@@ -74,7 +78,7 @@ export function observeInstallerChild(
       pending = pending
         .then(async () => {
           if (ended || !receipt.identity) return;
-          receipt.lineage = await native.installerLineage(receipt.identity);
+          receipt.lineage = await native.installerLineage(receipt.identity, spawnEnv);
           record('lineage-at25s');
         })
         .catch((error: unknown) => {
@@ -708,6 +712,8 @@ export async function windowsOtaObserver(root: string, evidence: string) {
     await writeFile(input, JSON.stringify({ root, shell, references, operation, ...values }));
     const startedAt = Date.now();
     let childPid: number | undefined;
+    let completed: { stdout: string; stderr: string } | undefined;
+    let phase: ObserverFailurePhase = 'execution';
     try {
       const pending = execute(
         shell.executable,
@@ -728,6 +734,8 @@ export async function windowsOtaObserver(root: string, evidence: string) {
       childPid = pending.child.pid;
       pending.child.stdin?.end();
       const result = await pending;
+      completed = result;
+      phase = 'receipt';
       await writeFile(
         path.join(directory, path.basename(input)),
         JSON.stringify(
@@ -742,30 +750,16 @@ export async function windowsOtaObserver(root: string, evidence: string) {
           2
         )
       );
+      phase = 'json-parse';
       return JSON.parse(result.stdout.trim()) as T;
     } catch (error) {
-      const failure =
-        error instanceof Error
-          ? (error as Error & {
-              stdout?: string;
-              stderr?: string;
-              code?: number | string;
-              signal?: string;
-              killed?: boolean;
-            })
-          : undefined;
       await writeFile(
         path.join(directory, path.basename(input)),
         JSON.stringify(
           {
             operation,
             childPid,
-            error: String(error),
-            stdout: failure?.stdout,
-            stderr: failure?.stderr,
-            code: failure?.code,
-            signal: failure?.signal,
-            killed: failure?.killed,
+            ...observerFailureReceipt(error, phase, completed),
             elapsedMs: Date.now() - startedAt,
           },
           null,

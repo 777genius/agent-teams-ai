@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { uniqueWindowsOwners } from './windows-native.mts';
+import { observerFailureReceipt } from './windows-observer-receipt.mts';
 import { observeInstallerChild } from './windows-ota-observer.mts';
 import type { WindowsProcess } from './windows-native.mts';
 
@@ -118,4 +119,54 @@ void test('failed portable spawn records the error and never queries an undefine
   assert.equal(record.diagnosticError, null);
   assert(!record.events.some((event) => event.event === 'spawn'));
   assert.match(record.events.find((event) => event.event === 'error')?.error ?? '', /ENOENT/u);
+});
+
+void test('malformed observer JSON preserves every control character and parse failure in its receipt', () => {
+  for (let code = 0; code < 32; code++) {
+    const stdout = `{"Names":["before${String.fromCharCode(code)}after"]}\r\n`;
+    let parseError: unknown;
+    try {
+      JSON.parse(stdout.trim());
+    } catch (error) {
+      parseError = error;
+    }
+    assert(parseError instanceof SyntaxError);
+    const completed = { stdout, stderr: 'TEST diagnostic stderr\r\n' };
+    const receipt = observerFailureReceipt(parseError, 'json-parse', completed);
+    // The persisted JSON must round-trip raw evidence; never repair the malformed payload.
+    const persisted = JSON.parse(JSON.stringify(receipt)) as typeof receipt;
+    assert.equal(persisted.stdout, stdout);
+    assert.equal(persisted.stderr, completed.stderr);
+    assert.equal(persisted.phase, 'json-parse');
+    assert.equal(persisted.error, String(parseError));
+    assert.throws(() => JSON.parse(persisted.stdout!), SyntaxError);
+  }
+});
+
+void test('observer execution failure retains child output and termination metadata', () => {
+  const error = Object.assign(new Error('TEST observer timed out'), {
+    stdout: 'TEST partial stdout\r\n',
+    stderr: 'TEST partial stderr\r\n',
+    code: 'ETIMEDOUT',
+    signal: 'SIGTERM',
+    killed: true,
+  });
+  assert.deepEqual(observerFailureReceipt(error, 'execution'), {
+    phase: 'execution',
+    error: String(error),
+    stdout: error.stdout,
+    stderr: error.stderr,
+    code: error.code,
+    signal: error.signal,
+    killed: error.killed,
+  });
+});
+
+void test('observer receipt persistence failure retains successfully completed transport output', () => {
+  const error = new Error('TEST receipt persistence failed');
+  const completed = { stdout: '{"Names":["TEST"]}\r\n', stderr: '' };
+  const receipt = observerFailureReceipt(error, 'receipt', completed);
+  assert.equal(receipt.phase, 'receipt');
+  assert.equal(receipt.stdout, completed.stdout);
+  assert.equal(receipt.stderr, '');
 });
