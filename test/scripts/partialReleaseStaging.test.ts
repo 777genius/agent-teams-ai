@@ -836,7 +836,14 @@ async function anonymousHttp(
   test: (
     requests: { path: string; method: string | undefined; authorization?: string }[]
   ) => Promise<void>,
-  routes: ReadonlyMap<string, { release?: Release; stall?: 'headers' | 'body' }> = new Map()
+  routes: ReadonlyMap<
+    string,
+    {
+      release?: Release;
+      stall?: 'headers' | 'body';
+      onHeaders?: (signal: AbortSignal | null | undefined) => void;
+    }
+  > = new Map()
 ): Promise<void> {
   const requests: { path: string; method: string | undefined; authorization?: string }[] = [];
   const server = createServer((request, response) => {
@@ -875,7 +882,12 @@ async function anonymousHttp(
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.hostname !== 'github.com' && url.hostname !== 'api.github.com')
       throw new Error('Unexpected external request in TEST transport');
-    return realFetch(`http://127.0.0.1:${address.port}${url.pathname}${url.search}`, init);
+    return realFetch(`http://127.0.0.1:${address.port}${url.pathname}${url.search}`, init).then(
+      (response) => {
+        routes.get(url.pathname)?.onHeaders?.(init?.signal);
+        return response;
+      }
+    );
   });
   try {
     await test(requests);
@@ -990,35 +1002,52 @@ describe.skipIf(process.platform === 'win32')(
   }
 );
 
-// An unbounded fetch (including a stalled JSON body) fails this observable deadline.
-// Real Node HTTP is used; only the destination is redirected to TEST localhost.
-it('bounds anonymous header and JSON-body stalls and reports HTTP 408 within 40 seconds', async () => {
+// Assert the production 30s budget, but substitute short native timeout signals.
+// Real HTTP, fetch, body reads and abort propagation remain under test.
+it('bounds anonymous header and JSON-body stalls with the production 30s budget', async () => {
   const target = await manifestlessFull('13.0', '22.0.0').release(repository, 'v2.17.2');
   const releasePath = `/repos/${repository}/releases/tags/v2.17.2`;
   const latestPath = `/repos/${repository}/releases/latest`;
+  const signals: AbortSignal[] = [];
+  let bodyHeadersBeforeAbort = false;
+  let stalledHeadersReceived = false;
   await anonymousHttp(
     target,
     '',
     200,
     async (requests) => {
       const started = performance.now();
-      const port = new GitHubReleasePort();
-      const results = Promise.allSettled([
-        port.publicRelease(repository, target.tag_name),
-        port.publicLatest(repository, target.tag_name),
-      ]);
+      const nativeTimeout = AbortSignal.timeout.bind(AbortSignal);
+      const deadline = vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
+        const signal = nativeTimeout(1_000);
+        signals.push(signal);
+        return signal;
+      });
       let watchdog: ReturnType<typeof setTimeout> | undefined;
       try {
+        const port = new GitHubReleasePort();
+        const results = Promise.allSettled([
+          port.publicRelease(repository, target.tag_name),
+          port.publicLatest(repository, target.tag_name),
+        ]);
         const settled = await Promise.race([
           results,
           new Promise<never>((_resolve, reject) => {
             watchdog = setTimeout(
-              () => reject(new Error('Anonymous requests exceeded 38 seconds')),
-              38_000
+              () => reject(new Error('Anonymous requests exceeded the TEST watchdog')),
+              5_000
             );
           }),
         ]);
-        expect(performance.now() - started).toBeLessThan(40_000);
+        expect(performance.now() - started).toBeLessThan(6_000);
+        expect(deadline.mock.calls).toEqual([[30_000], [30_000]]);
+        expect(signals).toHaveLength(2);
+        for (const signal of signals) {
+          expect(signal.aborted).toBe(true);
+          expect(signal.reason).toMatchObject({ name: 'TimeoutError' });
+        }
+        expect(bodyHeadersBeforeAbort).toBe(true);
+        expect(stalledHeadersReceived).toBe(false);
         expect(settled).toEqual([
           { status: 'rejected', reason: expect.objectContaining({ httpStatus: 408 }) },
           { status: 'rejected', reason: expect.objectContaining({ httpStatus: 408 }) },
@@ -1029,14 +1058,31 @@ it('bounds anonymous header and JSON-body stalls and reports HTTP 408 within 40 
         );
       } finally {
         clearTimeout(watchdog);
+        deadline.mockRestore();
       }
     },
     new Map([
-      [releasePath, { stall: 'headers' }],
-      [latestPath, { stall: 'body' }],
+      [
+        releasePath,
+        {
+          stall: 'headers',
+          onHeaders: () => {
+            stalledHeadersReceived = true;
+          },
+        },
+      ],
+      [
+        latestPath,
+        {
+          stall: 'body',
+          onHeaders: (signal: AbortSignal | null | undefined) => {
+            bodyHeadersBeforeAbort = !!signal && !signal.aborted && signals.includes(signal);
+          },
+        },
+      ],
     ])
   );
-}, 45_000);
+}, 10_000);
 
 async function publishedFullManifest(): Promise<TestReleaseStorage> {
   const store = manifestlessFull('13.0', '22.0.0');
