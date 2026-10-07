@@ -1,6 +1,8 @@
 # Готовые команды и внешний AI через MCP + CDP
 
-План реализации, 2026-10-07. Изменён только этот документ; runtime и проверки не запускались.
+План реализации, 2026-10-07. Core реализован в изолированном worktree; Linux packaged/native-client proof завершён. [Результаты и границы проверки](external-agent-connection-verification.md). Required CI и доставка PR ещё впереди.
+
+Последнее принятое UX уточнение: свободный запрос и read-only справочник шаблонов в popup вместо обязательной формы состава. Общие roster primitives переиспользуются. Edit/trash и session-only highlights описаны отдельно в [следующем плане](team-template-prompt-builder-ux.md), они не входят в реализованный create-only core.
 
 ## Цель и границы
 
@@ -146,10 +148,10 @@ JSON обратно не передавай. При context mismatch остан�
 | Клиент/сборка | Evidence сейчас | Нужно доказать |
 | --- | --- | --- |
 | Claude Code | Official HTTP registration docs, без запуска | Version, registration/reload, native tools create/read + собственный raw CDP. |
-| Codex local | Official HTTP docs + `mcp add --help --url`, connection не проверен | Тот же flow; client/network sandbox не обходится. |
+| Codex local | Native Codex CLI 0.159.2 app-server: registration, discovery, create/get на Linux package доказаны | Другие версии/OS не проверены; LLM turn не запускался. |
 | Cursor | Official Streamable HTTP docs | До actual proof - «инструкция, не проверено». |
 | Existing SDK fallback | Протокол изучен | За первой поставкой; без отдельного proof не заявлять поддержку. |
-| Packaged OS | Existing harness precedent | Artifact SHA/version/fuses, toggle/relaunch/bind/discovery/target для заявленных OS. |
+| Packaged OS | Linux Electron 44.4.5: native CDP toggle/restart, exact target, reload, dark/light, Copy и artifact SHA доказаны | macOS/Windows, extra BrowserWindow и crash/recreation не проверены. |
 
 Acceptance: один конкретный local client/version проходит native MCP providerless draft и raw CDP на disposable packaged app одной заявленной OS; остальные version/OS не наследуют verified label. Широкая client/OS matrix и одинаковые E2E во всех клиентах не блокируют этот slice. Evidence: head/artifact SHA, isolated paths, context/endpoints, tool results, draft readback/UI screenshot, отсутствие launch side effects. Не логировать credentials.
 
@@ -166,11 +168,11 @@ Dependency-safe PR, цель около 2 000 changed LOC каждый с tests:
 
 Оценка production по ответственности: templates/editor 250-450, providerless semantics 600-1 000, MCP/binding/discovery 500-900, CDP 400-700, prompt/UI 180-300 LOC. Tests считать по самостоятельным рискам, не дублировать один сценарий на каждом слое. Checkpoints задают bounded scope, а не требуют заполнить LOC budget.
 
-Не разрезать один selection/context invariant ради размера; превышение budget объяснить фактической coherent boundary. Реализация ещё не разрешена этим документом. Не увеличивать frozen oversized files; orchestration выносить через feature entrypoints.
+Не разрезать один selection/context invariant ради размера; превышение budget объяснить фактической coherent boundary. Реализация core разрешена последующими указаниями пользователя и выполнена; этот документ не расширяет scope на edit/trash. Не увеличивать frozen oversized files; orchestration выносить через feature entrypoints.
 
 Откат CDP: off + restart. Внешний и internal MCP используют общий unauthenticated listener: скрытие copy UI не отзывает endpoint; отключение listener прекращает и internal HTTP bridge, который затем использует существующий stdio fallback где поддержан. Не обещать external-only revoke. Данные drafts сохраняются. Reader/launch guard marker должны оставаться совместимыми при rollback UI; downgrade к старому reader небезопасен из-за implicit Anthropic и не заявляется безопасным без отдельной миграции/блокировки запуска.
 
-Оставшиеся spikes: packaged ephemeral-port discovery и exact client reload flow; доказать минимальную недоказанную фазу до маркировки поддержки. Не внедрять платформу ради этих неопределённостей.
+Ephemeral-port discovery и native Codex registration/new app-server session доказаны на указанной Linux сборке; hot registration существующего turn не заявляется. Не внедрять платформу ради этих неопределённостей.
 
 Два независимых review плана завершены: round 1 - context fence, canonical template payload, shared-root semantics; round 2 - controller whitelist/request builder и сквозной transport test. Все 3+1 findings отражены выше. Это проверка плана, не доказательство реализации/runtime.
 
