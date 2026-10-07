@@ -572,10 +572,9 @@ describe('TeamInboxReader', () => {
       ])} trailing`
     );
 
-    const window = await reader.getMessagesWindow('my-team', { limit: 10 });
-
-    expect(window.messages).toEqual([]);
-    expect(window.sourceMessageCount).toBe(0);
+    await expect(reader.getMessagesWindow('my-team', { limit: 10 })).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE:invalid_json'
+    );
   });
 
   it('getMessagesWindow rejects invalid comma placement like JSON.parse', async () => {
@@ -594,9 +593,9 @@ describe('TeamInboxReader', () => {
       `[${validMessage},,${validMessage}]`,
     ]) {
       hoisted.files.set('/mock/teams/my-team/inboxes/alice.json', raw);
-      const window = await reader.getMessagesWindow('my-team', { limit: 10 });
-      expect(window.messages).toEqual([]);
-      expect(window.sourceMessageCount).toBe(0);
+      await expect(reader.getMessagesWindow('my-team', { limit: 10 })).rejects.toThrow(
+        'TEAM_HISTORY_UNAVAILABLE:invalid_json'
+      );
     }
   });
 

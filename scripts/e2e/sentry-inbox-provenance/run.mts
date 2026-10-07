@@ -12,7 +12,7 @@ import { captureNativeWindow, processIdentity, stopOwnedGroup } from '../release
 import { Fixtures } from './fixtures.mts';
 import { renderer } from './renderer.mts';
 
-import type { RendererInput, Snapshot } from './renderer.mts';
+import type { PageCall, RefreshObservation, RendererInput, Snapshot } from './renderer.mts';
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const args = process.argv.slice(2);
@@ -29,7 +29,8 @@ await mkdir(output); // Fail closed on existing evidence directories.
 const root = await mkdtemp(path.join(tmpdir(), 'sentry-inbox-fixture-'));
 const rootIdentity = await stat(root);
 const fixture = new Fixtures(root);
-const input: RendererInput = { team: fixture.team, project: fixture.project };
+const input: RendererInput = { team: fixture.team, project: fixture.project,
+  inboxDetail: path.relative(path.join(fixture.claude, 'teams', fixture.team), fixture.inbox).split(path.sep).join('/') };
 const evidence: Record<string, unknown> = {
   started: new Date().toISOString(), repo, output, node: process.versions.node,
   isolation: { root, team: fixture.team, claudeRoot: fixture.claude, project: fixture.project, userData: fixture.userData },
@@ -38,7 +39,8 @@ const evidence: Record<string, unknown> = {
     'Equal-revision live-overlay boundary movement remains a source contract check: its actual producer requires a runtime sampler; this harness does not launch agents or invent IPC payloads.',
     'Optimistic send acknowledgement remains a source contract check; no send path or provider runtime is started.',
     'Old-incarnation R2 explicit-demand rehydration remains unit/source-contract coverage; this desktop run does not manipulate incarnation epochs or claim an actual R2 E2E result.',
-    'This is PR3a provenance verification, not the PR3b memory budget or evicted-range retrieval gate.',
+    'This run verifies PR3a provenance and PR3b producer inbox failure/recovery; it does not establish memory budgets or evicted-range retrieval.',
+    'Real optimistic acknowledgement remains OPEN. Failure retention checks preserve the existing empty optimistic list and do not claim real pending-send coverage.',
   ],
   cases: [],
 };
@@ -50,6 +52,7 @@ let rendererExceptionCount = 0;
 let documentEpoch = 0;
 let scenarioDocumentEpoch: number | null = null;
 let mainFrameId: string | undefined;
+const expectedErrorCalls = new Set<number>();
 const rendererExceptions: Cdp['events'] = [];
 let signal: NodeJS.Signals | null = null;
 const interrupted = (received: NodeJS.Signals) => { signal = received; };
@@ -225,6 +228,108 @@ async function manualOlder(expectedPages: number) {
   assert.equal(value.pages[expectedPages - 1]?.inputCursor, before.nextCursor);
   return value;
 }
+function assertRetainedHistory(before: Snapshot, after: Snapshot) {
+  for (const field of ['head', 'canonical', 'pages', 'optimistic', 'revision', 'nextCursor',
+    'hasMore', 'provenanceScope', 'headHydrated'] as const) {
+    assert.deepEqual(after[field], before[field], `Source failure must preserve trusted ${field}`);
+  }
+  assert.equal(after.loadingHead, false); assert.equal(after.loadingOlder, false);
+  assertHead(after);
+}
+async function unavailableHistory() {
+  return waitFor(async () => {
+    const value = await snapshot();
+    return !value.loadingHead && !value.loadingOlder && value.gate?.pending === 0 &&
+      value.error === 'TEAM_HISTORY_UNAVAILABLE:invalid_json' &&
+      value.notices.some(text => text === 'Could not load message history. Previously loaded messages are still available.') ? value : null;
+  }, 'actual IPC source failure commits history-unavailable notice');
+}
+function recordOwnedFailureCalls(start: number, calls: PageCall[] | undefined, phase: PageCall['sourceFailurePhase']) {
+  assert(calls, 'Real IPC observer must remain installed during source failure');
+  let failed = 0;
+  for (let index = start; index < calls.length; index++) {
+    const observed: PageCall | undefined = calls[index];
+    if (!observed?.error) continue;
+    assert.equal(observed.fulfilled, false);
+    assert.equal(observed.sourceFailurePhase, phase, 'Expected rejection must originate inside its owned corruption phase');
+    assert.equal(observed.page, undefined, 'Failed IPC must never publish a successful partial page');
+    assert.match(observed.error, /^Error: TEAM_HISTORY_UNAVAILABLE:invalid_json$/);
+    assert(!observed.error.includes(root), 'Failure transport must not expose filesystem paths');
+    expectedErrorCalls.add(index); failed++;
+  }
+  assert(failed > 0, 'Owned corruption must produce an observed actual IPC rejection');
+}
+async function inboxInvalidated(before: Snapshot, phase: string): Promise<Snapshot> {
+  assert(before.gate, 'Owned watcher observer must be installed');
+  const previousCount = before.gate.inboxChangeCount;
+  const notified: Snapshot = await waitFor(async () => {
+    const value: Snapshot = await snapshot();
+    return value.gate && value.gate.inboxChangeCount > previousCount ? value : null;
+  }, `actual owned inbox invalidation event: ${phase}`);
+  assert.equal(notified.gate?.droppedInboxChanges, 0, 'Bounded observer must retain all owned invalidation events');
+  const events = notified.gate?.inboxChanges.slice(previousCount);
+  assert(events?.length && events.every(event => event.detail === input.inboxDetail));
+  const fences = (evidence.sourceInvalidationFences ??= []) as unknown[];
+  assert(fences.length < 4, 'Only the four owned source mutations require invalidation fences');
+  fences.push({ phase, beforeCount: previousCount, afterCount: notified.gate?.inboxChangeCount, events });
+  // Main invalidation and worker invalidation dispatch precede TEAM_CHANGE.
+  // Observe real IPC completion before issuing the single explicit demand.
+  return idle();
+}
+async function verifySourceFailureRecovery() {
+  await revealLocalHistory(); await visibleButton('Load older messages');
+  const trusted = await idle();
+  assert.equal(trusted.pages.length, 1); assert.equal(trusted.hasMore, true); assert(trusted.nextCursor);
+  await call('sourcePhase', { sourceFailurePhase: 'head-malformed' });
+  const firstCall = trusted.gate?.calls.length ?? 0;
+  const receipt = await fixture.corruptInbox('malformed-suffix');
+  await inboxInvalidated(trusted, 'malformed-head');
+  const observed = await call<RefreshObservation>('observeRefresh');
+  assert.equal(observed.rejected, true, 'Explicit head refresh must reject the real invalid source');
+  assert.match(observed.error ?? '', /TEAM_HISTORY_UNAVAILABLE:invalid_json$/);
+  let failed = await unavailableHistory();
+  assertRetainedHistory(trusted, failed);
+  await checkpoint('malformed-head-retains-trusted-history', failed);
+  await fixture.persist();
+  const headRestored = await inboxInvalidated(failed, 'restore-head');
+  recordOwnedFailureCalls(firstCall, headRestored.gate?.calls, 'head-malformed');
+  await call('sourcePhase', { sourceFailurePhase: null });
+  await call('refresh');
+  let recovered = await waitFor(async () => {
+    const value = await snapshot();
+    return !value.loadingHead && value.gate?.pending === 0 && value.error === null &&
+      !value.notices.some(text => text === 'Could not load message history. Previously loaded messages are still available.') ? value : null;
+  }, 'explicit restored head retry clears actual UI error');
+  assertRetainedHistory(trusted, recovered);
+  recordOwnedFailureCalls(firstCall, recovered.gate?.calls, 'head-malformed');
+  await checkpoint('restored-head-explicit-retry', recovered);
+  const pagingTrusted = recovered;
+  const nextCall = pagingTrusted.gate?.calls.length ?? 0;
+  await call('sourcePhase', { sourceFailurePhase: 'older-nonarray' });
+  const nonArray = await fixture.corruptInbox('non-array');
+  await inboxInvalidated(pagingTrusted, 'nonarray-older');
+  await click('Load older messages');
+  failed = await unavailableHistory();
+  assertRetainedHistory(pagingTrusted, failed);
+  const olderFailures = failed.gate?.calls.slice(nextCall).filter(call => call.cursor);
+  assert.equal(olderFailures?.length, 1, 'One explicit older click must produce exactly one real cursor request');
+  assert.equal(olderFailures?.[0]?.cursor, pagingTrusted.nextCursor);
+  assert.match(olderFailures?.[0]?.error ?? '', /TEAM_HISTORY_UNAVAILABLE:invalid_json$/);
+  await checkpoint('nonarray-older-retains-trusted-history', failed);
+  await fixture.persist();
+  const olderRestored = await inboxInvalidated(failed, 'restore-older');
+  recordOwnedFailureCalls(nextCall, olderRestored.gate?.calls, 'older-nonarray');
+  await call('sourcePhase', { sourceFailurePhase: null });
+  recovered = await manualOlder(2);
+  recordOwnedFailureCalls(nextCall, recovered.gate?.calls, 'older-nonarray');
+  assert.equal(recovered.error, null); assert.equal(recovered.historyReloadRequired, false);
+  assert.deepEqual(recovered.pages[0], pagingTrusted.pages[0]);
+  assert.deepEqual(recovered.pages[1]?.inputCursor, pagingTrusted.nextCursor);
+  assert.deepEqual(recovered.canonical.map(message => message.id), fixture.expectedFeedIds(), 'Explicit retry must recover complete actual fixture history exactly once');
+  assert.equal(recovered.hasMore, false); assert.equal(recovered.nextCursor, null);
+  await checkpoint('restored-older-explicit-retry', recovered);
+  evidence.sourceFailureFixtures = [receipt, nonArray];
+}
 
 try {
   await fixture.prepare();
@@ -305,6 +410,7 @@ try {
   assert.equal(value.canonical.length, 100);
   assert(value.pages[0]?.messages.some(message => message.from === 'alice'));
   await checkpoint('explicit-ui-page', value);
+  await verifySourceFailureRecovery();
   await click('Back to chats'); await click('alice');
   value = await visibleText('SENTRY_ALICE_0069');
   assert(value.visibleText.includes('SENTRY_ALICE_0069'), 'Actual direct thread must render an explicitly loaded Alice message');
@@ -328,7 +434,17 @@ try {
   assert(value.visibleText.includes('SENTRY_ALICE_0069'));
   await checkpoint('alice-explicit-reload', value);
   const previousRevision = value.revision;
+  const fingerprintInbox = async () => {
+    const [fileStat, bytes] = await Promise.all([stat(fixture.inbox), readFile(fixture.inbox)]);
+    return { ino: fileStat.ino, size: fileStat.size, mtimeMs: fileStat.mtimeMs,
+      sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const inboxBeforeRewrite = await fingerprintInbox();
   fixture.rewriteAlice(); await fixture.persist();
+  const inboxAfterRewrite = await fingerprintInbox();
+  evidence.aliceRewrite = { inbox: fixture.inbox, before: inboxBeforeRewrite, after: inboxAfterRewrite };
+  assert.notEqual(inboxAfterRewrite.sha256, inboxBeforeRewrite.sha256, 'Persisted Alice rewrite must change the actual inbox bytes');
+  assert.equal(inboxAfterRewrite.size, inboxBeforeRewrite.size + 10, 'Fixture Alice rewrite must grow the actual inbox by ten bytes');
   await waitFor(async () => { await call('refresh'); const next = await idle(); return next.revision !== previousRevision ? next : null; }, 'actual older-source rewrite changes revision');
   value = await idle();
   assert.equal(value.pages.length, 0); assert.equal(value.historyReloadRequired, true);
@@ -369,8 +485,14 @@ try {
   await checkpoint('actual-member-history', value);
   evidence.actualPageCalls = value.gate?.calls;
   evidence.droppedPageCalls = value.gate?.droppedCalls;
+  evidence.inboxChangeCapture = { count: value.gate?.inboxChangeCount, events: value.gate?.inboxChanges,
+    dropped: value.gate?.droppedInboxChanges, limit: 120 };
+  assert.equal(value.gate?.droppedInboxChanges, 0, 'Owned inbox event bound must not truncate this small scenario');
   assert.equal(value.gate?.droppedCalls, 0, 'Evidence call bound must not truncate this small scenario');
-  assert(value.gate?.calls.every(call => call.fulfilled && !call.error), 'Every observed page must be an actual successful IPC result');
+  assert(value.gate?.calls.every((call, index) => expectedErrorCalls.has(index)
+    ? !call.fulfilled && call.error === 'Error: TEAM_HISTORY_UNAVAILABLE:invalid_json' && !call.page
+    : call.fulfilled && !call.error), 'Only recorded owned-corruption IPC rejections may fail; all other actual pages must succeed');
+  evidence.expectedSourceErrorCalls = [...expectedErrorCalls];
   assert.equal(rendererExceptionCount, 0, 'Actual renderer must not raise unhandled exceptions');
   check();
   evidence.status = 'passed';
@@ -383,7 +505,7 @@ try {
   }
 } finally {
   if (cdp) {
-    await cdp.evaluate("(() => { const g = window.__sentryInboxGate; if (g) { g.release(); Reflect.get = g.originalGet; delete window.__sentryInboxGate; } })()").catch(error => { evidence.restoreFailure = String(error); process.exitCode = 1; });
+    await cdp.evaluate("(() => { const g = window.__sentryInboxGate; if (g) { g.release(); g.unsubscribeInbox(); Reflect.get = g.originalGet; delete window.__sentryInboxGate; } })()").catch(error => { evidence.restoreFailure = String(error); process.exitCode = 1; });
     evidence.events = cdp.events; cdp.close();
   }
   const cleanup: unknown[] = [];
@@ -406,13 +528,34 @@ try {
   evidence.rendererExceptionCount = rendererExceptionCount;
   evidence.rendererExceptions = rendererExceptions;
   evidence.documentEpoch = documentEpoch;
+  const workerArtifact = path.join(repo, 'dist-electron/main/team-data-worker.cjs');
+  let workerArtifactReadFailure: string | null = null;
+  const workerData = await readFile(workerArtifact).catch(error => {
+    workerArtifactReadFailure = (error as NodeJS.ErrnoException).code ?? String(error);
+    return null;
+  });
+  const workerRejectLogs = launchLog.toString().split('\n').filter(line =>
+    line.includes('[teams:getMessagesPage] worker failed, falling back: TEAM_HISTORY_UNAVAILABLE:invalid_json')).slice(-20);
+  evidence.workerRoute = {
+    artifact: workerArtifact, artifactSha256: workerData ? createHash('sha256').update(workerData).digest('hex') : null,
+    artifactReadFailure: workerArtifactReadFailure,
+    actualRejectFallbackLogs: workerRejectLogs,
+    coverage: workerRejectLogs.length ? 'observed-worker-rejection-and-main-fallback'
+      : workerArtifactReadFailure === 'ENOENT' ? 'main-only-worker-unavailable' : 'worker-route-unverified',
+  };
+  if (!workerRejectLogs.length) (evidence.limitations as string[]).push('Actual worker rejection was not observed; worker coverage is not claimed by this desktop result.');
   const files = ['scripts/e2e/sentry-inbox-provenance/run.mts', 'scripts/e2e/sentry-inbox-provenance/renderer.mts',
     'scripts/e2e/sentry-inbox-provenance/fixtures.mts', 'tsconfig.sentry-inbox-e2e.json',
     'package.json', 'scripts/e2e/release-updater/cdp.mts', 'scripts/e2e/release-updater/native-window.mts',
     'src/renderer/store/team/teamMessagesProvenance.ts', 'src/renderer/store/team/teamMessagesCache.ts',
     'src/renderer/components/team/messages/useMessagesPanelChats.ts', 'src/renderer/components/team/messages/MessagesPanel.tsx',
     'src/renderer/components/team/members/MemberMessagesTab.tsx',
-    'src/main/services/team/TeamMessageFeedService.ts', 'src/main/ipc/teams.ts'];
+    'src/main/services/team/TeamMessageFeedService.ts', 'src/main/services/team/TeamInboxReader.ts',
+    'src/renderer/components/team/messages/MessageHistoryNotice.tsx',
+    'src/features/team-message-history/core/domain/messageSemantics.ts',
+    'src/features/team-message-history/core/domain/pageProgress.ts',
+    'src/features/team-message-history/main/application/inboxWindowRead.ts',
+    'src/features/team-message-history/main/infrastructure/messageRevision.ts', 'src/main/ipc/teams.ts'];
   evidence.sourceHashes = Object.fromEntries(await Promise.all(files.map(async file => [file, createHash('sha256').update(await readFile(path.join(repo, file))).digest('hex')])));
   evidence.finished = new Date().toISOString();
   if (signal) { evidence.interrupted = signal; process.exitCode = 1; }
