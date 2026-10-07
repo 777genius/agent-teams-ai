@@ -28,6 +28,20 @@ on:
       native_artifact_sha256: { type: string, required: false }
       plan_digest: { type: string, required: false }
       tooling_sha: { type: string, required: false }
+      execution_sha:
+        {
+          type: string,
+          required: false,
+          description: Actual immutable executor SHA; defaults to tooling SHA,
+        }
+      cloud_experience_preflight:
+        type: boolean
+        default: false
+        description: TEST ARM VM fixture; close one exact CloudExperienceHost window or record verified no-action
+      owned_uia_diagnostic:
+        type: boolean
+        default: false
+        description: Read-only ARM window diagnostic; never qualifies release readiness
 
 permissions:
   contents: read
@@ -49,18 +63,19 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 20
     steps:
       - name: Require the exact reviewed tooling SHA
         env:
           TOOLING_SHA: ${{ inputs.tooling_sha }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
         run: |
-          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$EXECUTION_SHA" ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -82,8 +97,9 @@ jobs:
           NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
           PLAN_DIGEST: ${{ inputs.plan_digest }}
           TOOLING_SHA: ${{ inputs.tooling_sha }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
         run: |
-          node scripts/e2e/release-updater/windows-plan-download.mts --kind native --output .artifacts/TEST-windows-inputs --run-id "$NATIVE_RUN_ID" --run-attempt "$NATIVE_ATTEMPT" --artifact-id "$NATIVE_ARTIFACT_ID" --artifact-sha256 "$NATIVE_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA"
+          node scripts/e2e/release-updater/windows-plan-download.mts --kind native --output .artifacts/TEST-windows-inputs --run-id "$NATIVE_RUN_ID" --run-attempt "$NATIVE_ATTEMPT" --artifact-id "$NATIVE_ARTIFACT_ID" --artifact-sha256 "$NATIVE_ARTIFACT_SHA256" --plan-digest "$PLAN_DIGEST" --tooling-sha "$TOOLING_SHA" --execution-sha "$EXECUTION_SHA"
       - uses: actions/upload-artifact@v7
         with:
           name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
@@ -137,7 +153,7 @@ jobs:
 
   windows-predecessor:
     needs: [verified-windows-inputs, legacy-windows-inputs]
-    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -147,6 +163,8 @@ jobs:
           - os: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.os }}
+    env:
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     timeout-minutes: 25
     permissions:
       contents: read
@@ -225,13 +243,11 @@ jobs:
     if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-2025
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
+      matrix: ${{ fromJSON(inputs.owned_uia_diagnostic && '{"include":[{"os":"windows-11-arm","arch":"arm64"}]}' || '{"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
+    env:
+      TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic && '1' || '0' }}
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     timeout-minutes: 25
     defaults:
       run:
@@ -299,7 +315,7 @@ jobs:
 
   windows-ota:
     needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
-    if: ${{ !cancelled() && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
