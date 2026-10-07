@@ -180,6 +180,9 @@ jobs:
       - name: Smoke packaged app (macOS ${{ matrix.arch }})
         run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" darwin
 
+      - name: Verify transported macOS apps
+        run: bash scripts/ci/verify-macos-archives.sh release
+
       - name: Upload qualified macOS installers
         uses: actions/upload-artifact@v7
         with:

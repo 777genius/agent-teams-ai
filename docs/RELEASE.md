@@ -2194,15 +2194,29 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 macOS builds are signed and notarized via GitHub Actions secrets:
 
-| Secret                        | Description                                  |
-| ----------------------------- | -------------------------------------------- |
-| `CSC_LINK`                    | Base64-encoded .p12 certificate              |
-| `CSC_KEY_PASSWORD`            | Certificate password                         |
-| `APPLE_ID`                    | Apple Developer account email                |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from appleid.apple.com |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                      |
+| Secret | Description |
+| --- | --- |
+| `CSC_LINK` | Base64-encoded Developer ID Application .p12 certificate |
+| `CSC_KEY_PASSWORD` | Certificate password |
+| `APPLE_TEAM_ID` | Must equal `86399583GS` |
+| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key |
+| `APPLE_API_KEY_ID` | API key ID |
+| `APPLE_API_ISSUER` | Team API issuer UUID |
 
-Without these secrets, macOS builds will be unsigned (users need to bypass Gatekeeper manually).
+macOS packaging fails when required credentials are missing or the publisher
+is wrong. It does not produce an unsigned release fallback. Apple ID/password
+credentials are not used. CI writes the API key to a mode-600 temporary file;
+the packaged app and transported ZIP/DMG app must pass signature and notarization
+checks before upload.
+
+For artifact-only qualification on a reviewed source ref:
+
+```bash
+gh workflow run macos-signing-qualification.yml --ref REVIEWED_REF
+```
+
+This manual workflow verifies both architectures and uploads Actions artifacts;
+it does not publish a release or change updater channels.
 
 ## Auto-Update
 
