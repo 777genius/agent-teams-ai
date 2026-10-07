@@ -126,9 +126,9 @@ it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor c
   }
 });
 
-it('selects repaired original ARM211 only for explicit reviewed Windows OTA scenarios', () => {
+it('selects repaired original ARM211 for reviewed predecessor probes and OTA scenarios', () => {
   for (const version of ['2.17.6', '2.17.7']) {
-    for (const mode of ['full', 'cold', 'warm']) {
+    for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
       expect(usesRepairedArm211('arm64', mode, version)).toBe(true);
       expect(usesRepairedArm211('x64', mode, version)).toBe(false);
     }
@@ -136,7 +136,9 @@ it('selects repaired original ARM211 only for explicit reviewed Windows OTA scen
     expect(usesRepairedArm211('arm64', 'unsupported', version)).toBe(false);
   }
   for (const version of ['2.17.5', '2.17.8', '2.18.0', '2.17.7-beta.1']) {
-    expect(usesRepairedArm211('arm64', 'cold', version)).toBe(false);
+    for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
+      expect(usesRepairedArm211('arm64', mode, version)).toBe(false);
+    }
   }
 });
 
