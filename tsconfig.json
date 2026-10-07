@@ -32,6 +32,7 @@
     "scripts/ci/*existing-draft.ts",
     "scripts/ci/verify-updater-release.ts",
     "scripts/ci/publish-carried-release.ts",
+    "scripts/ci/publish-full-release.ts",
     "scripts/e2e/release-updater/**/*.mts"
   ],
   "exclude": ["node_modules", "dist", "dist-electron"]

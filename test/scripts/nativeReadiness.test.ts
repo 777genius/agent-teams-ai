@@ -1,3 +1,10 @@
+import { validateNativeArchivePaths } from '../../scripts/ci/release/nativeReadinessGithub.js';
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Pinned release TS7 enables noUncheckedIndexedAccess; the renderer lint project does not. */
+import { promoteExistingDraft } from '../../scripts/ci/promote-existing-draft.mjs';
+import { writeFile } from 'node:fs/promises';
+import { publishFullRelease } from '../../scripts/ci/release/publication.js';
+import type { PublicationPort } from '../../scripts/ci/release/publication.js';
+import { manualCapturePaths } from '../../scripts/ci/release/macManualReadiness.js';
 // @vitest-environment node
 import assert from 'node:assert/strict';
 
@@ -5,6 +12,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canonical,
+  compareNames,
+  aliases,
+  renderFeed,
   digest,
   MANIFEST,
   manifestFor,
@@ -14,6 +24,7 @@ import {
 import {
   checkWindowsPriorFixture,
   nativeScenarioRows,
+  fullNativeScenarioRows,
   verifyNativeReadiness,
 } from '../../scripts/ci/release/nativeReadiness.js';
 import {
@@ -187,7 +198,7 @@ it.each(['2.17.6', '2.17.7'])(
   }
 );
 
-import type { StagePlan } from '../../scripts/ci/release/contract.js';
+import type { StagePlan, Release } from '../../scripts/ci/release/contract.js';
 import type {
   NativeArtifact,
   NativeJob,
@@ -197,14 +208,18 @@ import type {
 } from '../../scripts/ci/release/nativeReadiness.js';
 
 // This contract test becomes red if publication accepts a forged, stale, skipped or partial native proof.
-function fixture() {
-  const toolingSha = 'a'.repeat(40);
+// The closed synthetic matrix is intentionally kept together for scenario mutation tests.
+// eslint-disable-next-line sonarjs/cognitive-complexity
+function fixture(full = false) {
+  const targetVersion = full ? '2.17.7' : '2.17.4';
+  const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
+  const toolingSha = full ? 'b'.repeat(40) : 'a'.repeat(40);
   const applicationSha = 'b'.repeat(40);
   const p = 'c'.repeat(64);
   const proof = (name: string) => textProof(name, name);
   const snapshot = {
     id: 123,
-    tag: 'v2.17.4',
+    tag: `v${targetVersion}`,
     applicationSha,
     createdAt: '2026-10-06T00:00:00Z',
     name: 'Release',
@@ -214,23 +229,64 @@ function fixture() {
     schemaVersion: 1,
     input: {
       repository: '777genius/agent-teams-ai',
-      mode: 'carry-mac',
+      mode: full ? 'full' : 'carry-mac',
       toolingSha,
       target: snapshot,
       latest: { id: 120, tag: 'v2.17.1' },
       originals: [],
-      macSource: { release: { ...snapshot, id: 120, tag: 'v2.17.1' }, productMinimum: '12.0' },
+      ...(full
+        ? { macSource: null }
+        : {
+            macSource: {
+              release: { ...snapshot, id: 120, tag: 'v2.17.1' },
+              productMinimum: '12.0',
+            },
+          }),
       build: { runId: 1, attempt: 1, jobIds: [2] },
-      macProductMinimum: '12.0',
+      macProductMinimum: full ? '13.0' : '12.0',
     },
     feeds: { 'latest-mac.yml': 'carried feed' },
     aliases: {},
     outputs: [
-      ...platformNames('2.17.4').windows.flatMap((name) => [name, `${name}.blockmap`]),
-      ...platformNames('2.17.4').linux,
-      ...platformNames('2.17.1').mac,
+      ...platformNames(targetVersion).windows.flatMap((name) => [name, `${name}.blockmap`]),
+      ...platformNames(targetVersion).linux,
+      ...platformNames(full ? targetVersion : '2.17.1').mac,
     ].map(proof),
   };
+  if (full) {
+    plan.input.macSource = null;
+    plan.input.originals = plan.outputs.map((item, index) => ({
+      ...item,
+      assetId: 500 + index,
+      releaseId: plan.input.target.id,
+      tag: plan.input.target.tag,
+    }));
+    plan.aliases = aliases(targetVersion, targetVersion);
+    const names = platformNames(targetVersion);
+    plan.feeds = Object.fromEntries(
+      [
+        ['latest.yml', names.windows],
+        ['latest-linux.yml', names.linux],
+        ['latest-mac.yml', names.mac],
+      ].map(([name, files]) => [
+        name,
+        renderFeed(
+          targetVersion,
+          (files as string[]).map((name) => plan.outputs.find((item) => item.name === name)!),
+          plan.input.target.createdAt,
+          name === 'latest-mac.yml' ? '22.0.0' : undefined
+        ),
+      ])
+    );
+    plan.outputs = [
+      ...plan.outputs,
+      ...Object.entries(plan.aliases).map(([name, source]) => ({
+        ...plan.outputs.find((item) => item.name === source)!,
+        name,
+      })),
+      ...Object.entries(plan.feeds).map(([name, raw]) => textProof(name, raw)),
+    ].sort((a, b) => compareNames(a.name, b.name));
+  }
   const d = digest(canonical(plan.input));
   const manifest = textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`);
   const start = '2026-10-06T01:00:00Z',
@@ -244,7 +300,7 @@ function fixture() {
   const archives = new Map<number, { sha256: string; entries: Record<string, Buffer> }>();
   const values = new Map<string, Record<string, unknown>>();
   const receipt: NativeReadinessReceipt = {
-    schemaVersion: 1,
+    schemaVersion: full ? 2 : 1,
     repository: plan.input.repository,
     toolingSha,
     planSha256: p,
@@ -260,11 +316,11 @@ function fixture() {
     productMinimum: '12.0',
     teamIdentifier: '6C84CW694S',
   });
-  const rows = nativeScenarioRows(200, 2);
+  const rows = scenarioRows(200, 2);
   const paths = [...new Set(rows.map((row) => row.workflow))];
   for (const [index, workflow] of paths.entries()) {
     const runId = 200 + index;
-    const subset = nativeScenarioRows(runId, 2).filter((row) => row.workflow === workflow);
+    const subset = scenarioRows(runId, 2).filter((row) => row.workflow === workflow);
     runs.set(runId, {
       id: runId,
       run_attempt: 2,
@@ -276,22 +332,24 @@ function fixture() {
       repository: { full_name: plan.input.repository },
     });
     const sourceJobs: Record<string, unknown> = {};
-    const name =
-      index === 0
-        ? 'verified-windows-inputs'
-        : index === 1
-          ? 'verified-inputs'
-          : index === 2
-            ? 'inputs'
-            : 'prepare-mac-inputs';
+    const producerNames = [
+      'verified-windows-inputs',
+      'verified-inputs',
+      'inputs',
+      full ? 'prepare-mac-manual-inputs' : 'prepare-mac-inputs',
+    ];
+    const preparations = [
+      'Verify immutable native producer and extract exact plan-bound inputs',
+      'Read exact official predecessor and draft bytes',
+      'Download and verify immutable official packages',
+      full
+        ? 'Authenticate prepared plan and uploaded original 211 and target 217 bytes'
+        : 'Authenticate and hash real release inputs without native application execution',
+    ];
+    const name = producerNames[index] ?? 'prepare-mac-inputs';
     const preparation =
-      index === 0
-        ? 'Verify immutable native producer and extract exact plan-bound inputs'
-        : index === 1
-          ? 'Read exact official predecessor and draft bytes'
-          : index === 2
-            ? 'Download and verify immutable official packages'
-            : 'Authenticate and hash real release inputs without native application execution';
+      preparations[index] ??
+      'Authenticate and hash real release inputs without native application execution';
     const stepNames = [preparation];
     if (index === 1 || index === 2)
       stepNames.push(
@@ -300,7 +358,12 @@ function fixture() {
           ? 'Download immutable prepared stage'
           : 'Download immutable prepared stage for the current target'
       );
-    if (index >= 3) stepNames.push('Upload authenticated immutable Mac inputs');
+    if (index >= 3)
+      stepNames.push(
+        full
+          ? 'Upload authenticated manual migration inputs'
+          : 'Upload authenticated immutable Mac inputs'
+      );
     jobs.set(runId, [
       {
         id: 3000 + index,
@@ -376,7 +439,7 @@ function fixture() {
       receipt.artifacts.push(reference);
       for (const current of grouped) {
         const value: Record<string, unknown> = { passed: true, finishedAt: finish };
-        if (current.kind === 'windows')
+        if (current.kind === 'windows') {
           Object.assign(value, {
             mode: current.mode,
             arch: current.architecture,
@@ -386,23 +449,23 @@ function fixture() {
             targetBinding: {
               plan: { input: plan.input, sha256: p },
               legacyFixture: false,
-              targetVersion: '2.17.4',
+              targetVersion: targetVersion,
               stagedMetadata: { releaseId: 123 },
             },
             inputs: plan.outputs,
             cleanup: { passed: true },
             initialInstall: {},
-            installedBefore: { packageVersion: '2.17.4', architecture: current.architecture },
+            installedBefore: { packageVersion: targetVersion, architecture: current.architecture },
             initialLaunch: {},
             signatures: {},
             desktopSession: {},
             freshInstallProved: true,
             nativeWindow: {},
-            events: { events: events('2.17.4') },
+            events: { events: events(targetVersion) },
             fullOtaProved: true,
             automaticSuccessorProved: true,
             automaticSuccessor: {
-              installed: { packageVersion: '2.17.4', architecture: current.architecture },
+              installed: { packageVersion: targetVersion, architecture: current.architecture },
             },
             automaticWindow: {},
             downloadedInstaller: {
@@ -410,7 +473,7 @@ function fixture() {
                 sha256: plan.outputs.find(
                   (item) =>
                     item.name ===
-                    platformNames('2.17.4').windows[current.architecture === 'x64' ? 0 : 1]
+                    platformNames(targetVersion).windows[current.architecture === 'x64' ? 0 : 1]
                 )!.sha256,
               },
             },
@@ -418,24 +481,26 @@ function fixture() {
             installerProcesses: [{ command: 'setup --updated /S --force-run' }],
             profileAfterAutomatic: { general: { theme: 'light' } },
             postUpdate: {
-              events: { events: events('2.17.4') },
+              events: { events: events(targetVersion) },
               profile: { general: { theme: 'light' } },
             },
           });
-        else if (current.kind === 'package' || current.kind === 'appimage') {
-          const packageKind = current.scenario.split('-')[1]!;
+          if (full && current.architecture === 'arm64' && current.mode !== 'fresh')
+            Object.assign(value, fullArmPriorFixture());
+        } else if (current.kind === 'package' || current.kind === 'appimage') {
+          const packageKind = current.scenario.split('-')[1];
+          const appimageScope =
+            current.mode === 'fresh'
+              ? 'Linux AppImage native fresh installation'
+              : 'Linux AppImage native OTA from 2.17.1';
           Object.assign(value, {
             scope:
-              current.kind === 'appimage'
-                ? current.mode === 'fresh'
-                  ? 'Linux AppImage native fresh installation'
-                  : 'Linux AppImage native OTA from 2.17.1'
-                : `Linux ${packageKind} ${current.mode}`,
+              current.kind === 'appimage' ? appimageScope : `Linux ${packageKind} ${current.mode}`,
             mode: current.mode,
             stageBoundScenarioProved: true,
             sandboxEnabled: true,
             historicalPreview: false,
-            targetVersion: '2.17.4',
+            targetVersion: targetVersion,
             binding: {
               manifestBound: true,
               inputDigest: d,
@@ -455,7 +520,9 @@ function fixture() {
                       size: 193985224,
                       sha256: 'd2daf11bc93fde813d1df2fef25bfc5d6beebd419f7d47b8082d8da9e0ccf6ec',
                     },
-                    plan.outputs.find((item) => item.name === 'Agent.Teams.AI-2.17.4.AppImage')!,
+                    plan.outputs.find(
+                      (item) => item.name === `Agent.Teams.AI-${targetVersion}.AppImage`
+                    )!,
                   ]
                 : plan.outputs,
             isolation: {},
@@ -487,6 +554,11 @@ function fixture() {
             automaticDesktop: {},
             finalReleaseAcceptance: false,
           });
+        } else if (current.kind === 'mac-manual') {
+          Object.assign(
+            value,
+            manualValue(plan, p, d, current.architecture, runId, archive.entries)
+          );
         } else {
           const os = {
             command: '/usr/bin/sw_vers -productVersion',
@@ -495,6 +567,8 @@ function fixture() {
             stderr: '',
             outputSha256: digest('stdout:\n15.6\n\nstderr:\n'),
           };
+          const macScenario =
+            current.mode === 'older' ? 'mac-2.17.0-to-carried-2.17.1' : 'mac-fresh-2.17.1';
           Object.assign(value, {
             finalPromotionFeed: true,
             planBindingVerified: true,
@@ -506,8 +580,16 @@ function fixture() {
               planSha256: p,
               inputDigest: d,
               toolingSha,
-              targetBefore: { id: 123, target_commitish: applicationSha, tag_name: 'v2.17.4' },
-              targetAfter: { id: 123, target_commitish: applicationSha, tag_name: 'v2.17.4' },
+              targetBefore: {
+                id: 123,
+                target_commitish: applicationSha,
+                tag_name: `v${targetVersion}`,
+              },
+              targetAfter: {
+                id: 123,
+                target_commitish: applicationSha,
+                tag_name: `v${targetVersion}`,
+              },
               binding: {
                 inputDigest: d,
                 manifest,
@@ -517,12 +599,7 @@ function fixture() {
                 .filter((item) => item.name.includes('2.17.1'))
                 .map((item) => ({ proof: item })),
             },
-            scenario:
-              current.kind === 'mac-current'
-                ? 'mac-current-no-update'
-                : current.mode === 'older'
-                  ? 'mac-2.17.0-to-carried-2.17.1'
-                  : 'mac-fresh-2.17.1',
+            scenario: current.kind === 'mac-current' ? 'mac-current-no-update' : macScenario,
             architecture: current.architecture,
             signatureBefore: signature(
               current.architecture,
@@ -557,11 +634,11 @@ function fixture() {
     sources.set(workflow, JSON.stringify({ jobs: sourceJobs }));
   }
   const port: NativeReadinessPort = {
-    run: async (_, key) => runs.get(key)!,
-    jobs: async (_, key) => jobs.get(key)!,
-    artifact: async (_, key) => artifacts.get(key)!,
-    workflow: async (_, __, key) => sources.get(key)!,
-    archive: async (_, key) => archives.get(key)!,
+    run: (_, key) => Promise.resolve(runs.get(key)!),
+    jobs: (_, key) => Promise.resolve(jobs.get(key)!),
+    artifact: (_, key) => Promise.resolve(artifacts.get(key)!),
+    workflow: (_, __, key) => Promise.resolve(sources.get(key)!),
+    archive: (_, key) => Promise.resolve(archives.get(key)!),
   };
   function reseal(scenario: string) {
     const ref = receipt.artifacts.find((item) =>
@@ -640,3 +717,441 @@ describe('native readiness publication boundary', () => {
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
   });
 });
+
+// Synthetic receipt claims exercise policy and never represent a qualifying native run.
+function manualValue(
+  plan: StagePlan,
+  p: string,
+  d: string,
+  architecture: 'arm64' | 'x64',
+  runId: number,
+  entries: Record<string, Buffer>
+) {
+  const root = '/TEST/TEST-mac-manual-owned-case';
+  const file = textProof('seeded-config.json', 'nondefault retained config');
+  const signature = (version: string) => ({
+    version,
+    architecture,
+    teamIdentifier: version === '2.17.1' ? '6C84CW694S' : '86399583GS',
+    productMinimum: version === '2.17.1' ? '12.0' : '13.0',
+    asar: file,
+    locks: ['0.0.105', '0.3.3'].map((version) => ({
+      version,
+      lock: file,
+      signedInstalledBinary: file,
+      archiveSha256: 'a'.repeat(64),
+    })),
+  });
+  const profileBefore = {
+    replacementSignature: signature('2.17.7'),
+    profileBefore: file,
+    preservedBeforeLaunch: file,
+  };
+  const phases: Record<string, unknown>[] = [
+    { freshSignature: signature('2.17.7') },
+    { oldSignature: signature('2.17.1') },
+    profileBefore,
+  ];
+  for (const [index, label] of ['fresh217', 'original211', 'manual217'].entries()) {
+    const profile = `${root}/${label === 'fresh217' ? 'fresh-profile' : 'migration-profile'}`;
+    const executable = `${root}/Agent Teams AI.app/Contents/MacOS/Agent Teams AI`;
+    const bytes = Buffer.alloc(1200, index + 1);
+    entries[manualCapturePaths[index]!] = bytes;
+    phases.push({
+      label,
+      profile,
+      before: label === 'original211' ? 'system' : 'light',
+      theme: 'light',
+      configProof: file,
+      roots: {
+        home: `${profile}/home`,
+        nodeHome: `${profile}/home`,
+        userData: `${profile}/user-data`,
+        executable,
+        arch: architecture,
+        version: label === 'original211' ? '2.17.1' : '2.17.7',
+        packaged: true,
+      },
+      foregroundBefore: { pid: 42, executable },
+      foregroundAfter: { pid: 42, executable },
+      painted: {
+        owner: { pid: 42, command: executable },
+        kCGWindowOwnerPID: 42,
+        pixels: { width: 900, height: 600, distinctColors: 100 },
+        sha256: digest(bytes),
+      },
+    });
+  }
+  return {
+    schemaVersion: 1,
+    repository: plan.input.repository,
+    toolingSha: plan.input.toolingSha,
+    sourceSha: plan.input.target.applicationSha,
+    version: '2.17.7',
+    architecture,
+    actualMacOs: '15.6',
+    minimumOs13ExecutionProven: false,
+    cleanupPassed: true,
+    ownedRoot: root,
+    producer: {
+      run: {
+        id: runId,
+        run_attempt: 2,
+        head_sha: plan.input.toolingSha,
+        path: '.github/workflows/updater-mac-manual-migration.yml',
+        event: 'workflow_dispatch',
+      },
+    },
+    inputs: {
+      schemaVersion: 1,
+      toolingSha: plan.input.toolingSha,
+      sourceSha: plan.input.target.applicationSha,
+      planDigest: p,
+      inputDigest: d,
+      runId,
+      attempt: 2,
+      prepared: { toolingSha: plan.input.toolingSha, planDigest: p, inputDigest: d },
+      downloads: [
+        ...plan.input.originals
+          .filter((item) => /\.(dmg|zip)$/.test(item.name))
+          .map((item) => ({
+            architecture: item.name.includes('-arm64') ? 'arm64' : 'x64',
+            releaseId: plan.input.target.id,
+            assetId: item.assetId,
+            proof: item,
+          })),
+        {
+          architecture: 'arm64',
+          releaseId: 398386033,
+          assetId: 595801616,
+          proof: {
+            name: 'Agent.Teams.AI-2.17.1-arm64.dmg',
+            size: 249856838,
+            sha256: 'ef028b523ace7635abdbd050687b816de78bd887eea4d87a79919b8ea401756e',
+          },
+        },
+        {
+          architecture: 'x64',
+          releaseId: 398386033,
+          assetId: 595811076,
+          proof: {
+            name: 'Agent.Teams.AI-2.17.1-x64.dmg',
+            size: 259656716,
+            sha256: '7a6f2700813940bdc379bd01db568999099c19bda40383ac3e01241ee305de6d',
+          },
+        },
+      ],
+    },
+    phases,
+    commands: [
+      {
+        command: '/usr/bin/sw_vers -productVersion',
+        exitCode: 0,
+        stdout: '15.6\n',
+        stderr: '',
+        outputSha256: digest('stdout:\n15.6\n\nstderr:\n'),
+      },
+    ],
+  };
+}
+
+describe('full217 frozen-source native readiness', () => {
+  it('accepts exactly 18 scenarios, 14 artifacts and four complete workflow cohorts', async () => {
+    const f = fixture(true);
+    expect(f.receipt.artifacts).toHaveLength(14);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+  });
+  it.each([
+    ['missing phase', (v: Record<string, unknown>) => (v.phases as unknown[]).pop()],
+    [
+      'wrong Team',
+      (v: Record<string, unknown>) => {
+        (
+          (v.phases as Record<string, unknown>[])[0]!.freshSignature as Record<string, unknown>
+        ).teamIdentifier = '6C84CW694S';
+      },
+    ],
+    [
+      'wrong floor',
+      (v: Record<string, unknown>) => {
+        (
+          (v.phases as Record<string, unknown>[])[0]!.freshSignature as Record<string, unknown>
+        ).productMinimum = '12.0';
+      },
+    ],
+    [
+      'profile reset',
+      (v: Record<string, unknown>) => {
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!.theme =
+          'system';
+      },
+    ],
+    [
+      'cleanup false',
+      (v: Record<string, unknown>) => {
+        v.cleanupPassed = false;
+      },
+    ],
+    [
+      'invalid timestamp',
+      (v: Record<string, unknown>) => {
+        v.finishedAt = 'invalid';
+      },
+    ],
+    [
+      'claimed macOS13 execution',
+      (v: Record<string, unknown>) => {
+        v.minimumOs13ExecutionProven = true;
+      },
+    ],
+    [
+      'wrong prior bytes',
+      (v: Record<string, unknown>) => {
+        (
+          ((v.inputs as Record<string, unknown>).downloads as Record<string, unknown>[])[4]!
+            .proof as Record<string, unknown>
+        ).sha256 = 'f'.repeat(64);
+      },
+    ],
+  ] as const)('rejects resealed %s', async (_, mutate) => {
+    const f = fixture(true);
+    mutate(f.values.get('mac-arm64-manual')!);
+    f.reseal('mac-arm64-manual');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+  it.each([
+    'missing architecture',
+    'failed cohort',
+    'mixed attempt',
+    'unknown executor',
+    'partial artifact',
+    'extra artifact',
+    'changed pixels',
+  ])('rejects %s', async (failure) => {
+    const f = fixture(true);
+    if (failure === 'missing architecture') f.receipt.artifacts.pop();
+    if (failure === 'failed cohort') f.runs.get(203)!.conclusion = 'failure';
+    if (failure === 'mixed attempt') f.receipt.artifacts[13]!.runAttempt = 3;
+    if (failure === 'unknown executor') f.runs.get(203)!.head_sha = 'f'.repeat(40);
+    if (failure === 'partial artifact')
+      f.receipt.artifacts.find((a) => a.entries.length === 2)!.entries.pop();
+    if (failure === 'extra artifact')
+      f.receipt.artifacts.push(structuredClone(f.receipt.artifacts[0]!));
+    if (failure === 'changed pixels')
+      f.archives.get(f.receipt.artifacts[12]!.artifactId)!.entries[manualCapturePaths[0]!] =
+        Buffer.alloc(1200, 7);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+});
+
+// Every file download reads the original stored bytes; publication only changes visibility.
+function fullPublicationFixture() {
+  const f = fixture(true);
+  const target = {
+    id: f.plan.input.target.id,
+    tag_name: f.plan.input.target.tag,
+    target_commitish: f.plan.input.target.applicationSha,
+    created_at: f.plan.input.target.createdAt,
+    name: f.plan.input.target.name,
+    body: f.plan.input.target.body,
+    draft: true,
+    prerelease: false,
+    assets: [] as Release['assets'],
+  };
+  const bytes = new Map<number, Buffer>();
+  let id = 800;
+  for (const output of f.plan.outputs) {
+    const original = f.plan.input.originals.find((item) => item.name === output.name);
+    const key = original?.assetId ?? id++;
+    target.assets.push({
+      id: key,
+      name: output.name,
+      size: output.size,
+      digest: `sha256:${output.sha256}`,
+    });
+    bytes.set(
+      key,
+      Buffer.from(f.plan.feeds[output.name] ?? f.plan.aliases[output.name] ?? output.name)
+    );
+  }
+  function add(name: string, raw: string) {
+    const value = Buffer.from(raw);
+    const key = id++;
+    target.assets.push({ id: key, name, size: value.length, digest: `sha256:${digest(value)}` });
+    bytes.set(key, value);
+  }
+  add(MANIFEST, `${canonical(manifestFor(f.plan))}\n`);
+  add(
+    'build-provenance-1-1.json',
+    canonical({
+      schemaVersion: 1,
+      applicationSha: f.plan.input.target.applicationSha,
+      tag: f.plan.input.target.tag,
+      runId: 1,
+      attempt: 1,
+      jobs: [{ id: 2, conclusion: 'success', run_id: 1 }],
+    })
+  );
+  const writes: boolean[] = [];
+  const port: PublicationPort = {
+    release: () => Promise.resolve(structuredClone(target)),
+    releaseById: () => Promise.resolve(structuredClone(target)),
+    tagSha: () => Promise.resolve(f.plan.input.target.applicationSha),
+    latest: () =>
+      Promise.resolve(
+        target.draft
+          ? {
+              ...target,
+              id: f.plan.input.latest.id,
+              tag_name: f.plan.input.latest.tag,
+              draft: false,
+            }
+          : structuredClone(target)
+      ),
+    minimum: () => Promise.resolve('13.0'),
+    download: async (_, asset, destination) => {
+      await writeFile(destination, bytes.get(asset.id)!);
+    },
+    upload: () => {
+      throw new Error('Prepared publication must never upload');
+    },
+    verifyBuild: (_, sha, build, mode) => {
+      assert.equal(sha, f.plan.input.target.applicationSha);
+      assert.deepEqual(build, f.plan.input.build);
+      assert.equal(mode, 'full');
+      return Promise.resolve();
+    },
+    verifyNative: () => {
+      throw new Error('Full publication has no carried sidecar');
+    },
+    setVisibility: (_, snapshot, draft) => {
+      assert.deepEqual(snapshot, f.plan.input.target);
+      writes.push(draft);
+      target.draft = draft;
+      return Promise.resolve();
+    },
+    publicAsset: (_, tag, name) => {
+      assert.equal(target.draft, false);
+      assert.equal(tag, target.tag_name);
+      assert(target.assets.some((a) => a.name === name));
+      return Promise.resolve();
+    },
+    publicRelease: () => {
+      assert.equal(target.draft, false);
+      return Promise.resolve();
+    },
+    publicLatest: () => {
+      assert.equal(target.draft, false);
+      return Promise.resolve();
+    },
+    publicLatestAsset: (_, name) => {
+      assert.equal(target.draft, false);
+      assert(target.assets.some((a) => a.name === name));
+      return Promise.resolve();
+    },
+  };
+  return { ...f, publicationPort: port, bytes, target, writes };
+}
+it('prepared full publication preserves qualified feed/alias/manifest bytes exactly', async () => {
+  const f = fullPublicationFixture();
+  const before = [...f.bytes].map(([id, bytes]) => [id, digest(bytes)]);
+  await expect(
+    publishFullRelease(f.publicationPort, f.port, f.plan, f.p, f.receipt)
+  ).resolves.toMatchObject({ phase: 'published' });
+  expect(f.writes).toEqual([false]);
+  expect([...f.bytes].map(([id, bytes]) => [id, digest(bytes)])).toEqual(before);
+});
+it.each(['native failure', 'changed feed', 'extra asset'])(
+  'prepared full rejection writes zero for %s',
+  async (failure) => {
+    const f = fullPublicationFixture();
+    if (failure === 'native failure') f.runs.get(203)!.conclusion = 'failure';
+    if (failure === 'changed feed')
+      f.bytes.set(
+        f.target.assets.find((a) => a.name === 'latest-mac.yml')!.id,
+        Buffer.from('changed after native qualification')
+      );
+    if (failure === 'extra asset')
+      f.target.assets.push({
+        id: 999,
+        name: 'unexpected.bin',
+        size: 1,
+        digest: `sha256:${'f'.repeat(64)}`,
+      });
+    await expect(
+      publishFullRelease(f.publicationPort, f.port, f.plan, f.p, f.receipt)
+    ).rejects.toThrow();
+    expect(f.writes).toEqual([]);
+    expect(f.target.draft).toBe(true);
+  }
+);
+
+it('rejects legacy full217 promotion before any command or regenerated feed', async () => {
+  await expect(
+    promoteExistingDraft({
+      environment: {
+        RELEASE_REPOSITORY: '777genius/agent-teams-ai',
+        RELEASE_TAG: 'v2.17.7',
+        PUBLISH_RELEASE: 'true',
+        PATH: '',
+      },
+      now: () => {
+        throw new Error('Prepared feed bytes must not be regenerated');
+      },
+    })
+  ).rejects.toThrow('Full217 requires publish-full-release.ts');
+});
+
+it('reads only the closed manual outcome/capture archive set', () => {
+  const paths = ['TEST-mac-manual-evidence/native-manual-receipt.json', ...manualCapturePaths];
+  expect(() => validateNativeArchivePaths(paths)).not.toThrow();
+  for (const invalid of [
+    paths.slice(0, 3),
+    [...paths, 'unknown.png'],
+    ['../summary.json'],
+    ['unknown.png'],
+    [paths[0]!, paths[0]!],
+  ])
+    expect(() => validateNativeArchivePaths(invalid)).toThrow();
+});
+
+function fullArmPriorFixture() {
+  const bytes = textProof('fixture', 'synthetic prior fixture');
+  const prior = { ...bytes, size: 196906862, sha256: ARM211_SHA };
+  const install = String.raw`C:\TEST-updater-windows-fixture\install`;
+  const uninstall = `"${install}\\Uninstall AgentTeamsAI.exe" /currentuser`;
+  return {
+    predecessorFixture: {
+      fixtureKind: 'repaired-original-arm64-211',
+      originalPriorFreshInstallProved: false,
+      actualNsisExitCode: 0,
+      source: prior,
+      sourceApplicationSha: '395572f9ff2a261cb28224754883a39d2c3c8827',
+      archive: bytes,
+      decoder: {
+        archive: { ...bytes, size: 491981, sha256: DECODER_ARCHIVE_SHA },
+        executable: bytes,
+      },
+      preserved: {
+        'resources/app.asar': bytes,
+        'resources/app-update.yml': bytes,
+        'cache/installer.exe': prior,
+        'Uninstall AgentTeamsAI.exe': bytes,
+      },
+      registry: {
+        installLocation: install,
+        uninstallString: uninstall,
+        quietUninstallString: `${uninstall} /S`,
+        version: '2.17.1',
+      },
+      files: ARM211_FILES.map((name) => ({
+        name: String(name),
+        source: bytes,
+        installed: bytes,
+        architecture: 'arm64',
+      })),
+    },
+    initialInstall: { code: 0, arguments: ['/S', `/D=${install}`] },
+    installedBefore: { packageVersion: '2.17.1', architecture: 'arm64' },
+  };
+}

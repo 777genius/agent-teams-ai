@@ -245,6 +245,7 @@ async function installed(label: string, version: '2.17.1' | '2.17.7') {
   }
   return {
     version,
+    architecture,
     teamIdentifier: '86399583GS',
     productMinimum: '13.0',
     locks,
@@ -483,6 +484,10 @@ async function launch(
     theme: after,
     preferenceAuthority: 'public config IPC and painted renderer theme',
     painted,
+    configProof: await fileProof(
+      path.join(claude, 'agent-teams-config.json'),
+      'seeded-config.json'
+    ),
   };
   phases.push(result);
   await persist();
@@ -571,6 +576,7 @@ try {
     await rm(app, { recursive: true, force: true });
     if (!failure) await rm(root, { recursive: true });
   }
+  evidence.finishedAt = new Date().toISOString();
   await persist();
 }
 assert(cleanupPassed, 'Owned Mac native cleanup not proven; retained fixture');
