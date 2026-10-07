@@ -58,6 +58,7 @@ export function ExternalAgentPromptDialog({
   });
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [previewBlocked, setPreviewBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generated, setGenerated] = useState<{
     task: string;
@@ -88,7 +89,7 @@ export function ExternalAgentPromptDialog({
   const taskPresent = Boolean(request.value.trim());
   const copied = receipt?.task === request.value && receipt.signature === signature;
   const preview = useMemo(() => {
-    if (!ready || !taskPresent) return '';
+    if (previewBlocked || !ready || !taskPresent) return '';
     if (generated?.task === request.value && generated.signature === signature)
       return generated.prompt;
     try {
@@ -96,7 +97,7 @@ export function ExternalAgentPromptDialog({
     } catch {
       return '';
     }
-  }, [currentConnection, generated, ready, request.value, signature, taskPresent]);
+  }, [currentConnection, generated, previewBlocked, ready, request.value, signature, taskPresent]);
 
   const copy = async (): Promise<void> => {
     if (busy || !ready || !taskPresent) return;
@@ -117,6 +118,7 @@ export function ExternalAgentPromptDialog({
       }
       const prompt = createPrompt(task, live);
       const freshSignature = snapshotSignature(live);
+      setPreviewBlocked(false);
       setCopySnapshot(live);
       setGenerated({ task, signature: freshSignature, prompt });
       writingClipboard = true;
@@ -132,7 +134,11 @@ export function ExternalAgentPromptDialog({
             ? cause.message
             : t('externalPrompt.connectionRequired')
       );
-      setExpanded(true);
+      if (!writingClipboard) {
+        setPreviewBlocked(true);
+        setGenerated(null);
+      }
+      setExpanded(writingClipboard);
     } finally {
       if (mounted.current) setBusy(false);
     }
