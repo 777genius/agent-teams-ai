@@ -69,9 +69,11 @@ export class TeamPromptManagement {
   private readonly membersStore = new TeamMembersMetaStore();
   constructor(private readonly ports: TeamPromptManagementPorts) {}
 
-  private async fingerprint(
-    teamName: string
-  ): Promise<{ revision: string; config: Record<string, unknown> | null }> {
+  private async fingerprint(teamName: string): Promise<{
+    revision: string;
+    config: Record<string, unknown> | null;
+    membersMetadataPresent: boolean;
+  }> {
     const directory = join(getTeamsBasePath(), teamName);
     let identity;
     try {
@@ -102,16 +104,21 @@ export class TeamPromptManagement {
         })
       )
       .digest('hex');
-    return { revision, config };
+    return { revision, config, membersMetadataPresent: contents[2] !== null };
   }
 
   private async read(teamName: string): Promise<ConfigurationSnapshot> {
     const before = await this.fingerprint(teamName);
-    const [meta, members, savedRequest] = await Promise.all([
+    const [meta, membersMeta, savedRequest] = await Promise.all([
       this.metaStore.getMeta(teamName),
-      this.membersStore.getMembers(teamName),
+      this.membersStore.getMeta(teamName),
       this.ports.getSavedRequest(teamName),
     ]);
+    if (before.membersMetadataPresent && !membersMeta)
+      throw new TeamManagementError(
+        'TEAM_MEMBERS_METADATA_UNREADABLE',
+        'Saved member metadata is unreadable. Repair it before changing configuration'
+      );
     if (!before.config && !meta)
       throw new TeamManagementError('TEAM_UNSUPPORTED', 'No supported saved team configuration');
     const after = await this.fingerprint(teamName);
@@ -124,7 +131,7 @@ export class TeamPromptManagement {
       configurationRevision: after.revision,
       config: after.config,
       meta,
-      members,
+      members: membersMeta?.members ?? [],
       savedRequest,
       deletedAt:
         typeof after.config?.deletedAt === 'string' ? after.config.deletedAt : meta?.deletedAt,

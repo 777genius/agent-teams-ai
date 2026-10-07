@@ -605,6 +605,74 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
+  // Catches unreadable persisted roster being treated as empty, allowing edits to erase tombstones.
+  it.each([
+    ['malformed', '{"members":[{"name":"removed-builder","removedAt":1}'],
+    [
+      'oversized',
+      JSON.stringify({
+        members: [{ name: 'removed-builder', removedAt: 1, workflow: 'x'.repeat(256 * 1024) }],
+      }),
+    ],
+  ])('rejects %s member metadata without rewriting saved files', async (_label, unreadable) => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-unreadable-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'unreadable-roster';
+    const directory = path.join(root, 'teams', teamName);
+    const membersPath = path.join(directory, 'members.meta.json');
+    const metaPath = path.join(directory, 'team.meta.json');
+    try {
+      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      const initial = await services.teamPromptManagement!.get(teamName);
+      const savedMetadata = await readFile(metaPath);
+      await writeFile(membersPath, unreadable);
+      const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      expect(get.statusCode).toBe(409);
+      expect(get.json().error).toContain('TEAM_MEMBERS_METADATA_UNREADABLE');
+      const update = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: {
+          expectedContext: context.snapshot(),
+          expectedRevision: initial.configurationRevision,
+          members: [{ name: 'replacement' }],
+        },
+      });
+      expect(update.statusCode).toBe(409);
+      expect(update.json().code).toBe('TEAM_MEMBERS_METADATA_UNREADABLE');
+      expect(await readFile(membersPath)).toEqual(Buffer.from(unreadable));
+      expect(await readFile(metaPath)).toEqual(savedMetadata);
+      expect(events).toHaveLength(0);
+      // A genuinely missing roster is supported for saved legacy configurations.
+      await rm(membersPath);
+      const missing = await services.teamPromptManagement!.get(teamName);
+      expect(missing.savedRequest?.members).toEqual([]);
+      const replaceMissing = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/update`,
+        payload: {
+          expectedContext: context.snapshot(),
+          expectedRevision: missing.configurationRevision,
+          members: [{ name: 'replacement' }],
+        },
+      });
+      expect(replaceMissing.statusCode).toBe(200);
+      expect(await new TeamMembersMetaStore().getMembers(teamName)).toMatchObject([
+        { name: 'replacement' },
+      ]);
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // Catches admission checked before a queued launch, stale overwrites, and claiming a failed
   // mutation after its canonical writer committed but an observer/read response failed.
   it('fences stopped edits against launch and returns confirmed commits despite post-write faults', async () => {
