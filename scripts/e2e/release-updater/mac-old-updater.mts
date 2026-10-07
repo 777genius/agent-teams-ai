@@ -488,12 +488,12 @@ try {
   const initial = await launch('initial', initialVersion);
   evidence.initialLaunch = initial;
   if (scenario === 'fresh') {
-    evidence.noUpdate = await noUpdate('2.17.1', 'fresh-no-update', initial.mirrorRequestStart);
     evidence.nativeWindow = await waitFor(
       () => paintedMacDesktop(commands, native!.aqua, initial.owner, 'fresh-aqua', false),
       'fresh painted Aqua desktop',
       30_000
     );
+    evidence.noUpdate = await noUpdate('2.17.1', 'fresh-no-update', initial.mirrorRequestStart);
   } else {
     const available = await waitFor(
       async () => {
