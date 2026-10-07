@@ -44,9 +44,9 @@ function event(changes: unknown = { body: { from: null } }, draft = false): Json
 const prefix = `repos/${REPOSITORY}`;
 const listEndpoint = `${prefix}/actions/workflows/789/runs?event=pull_request&head_sha=${headSha}&per_page=100`;
 const jobsEndpoint = `${prefix}/actions/runs/100/attempts/1/jobs?per_page=100`;
-function runTitle(input: JsonObject, action = 'synchronize'): string {
+function runTitle(input: JsonObject, action = 'synchronize', merge = env.GITHUB_SHA): string {
   const pr = input.pull_request as JsonObject;
-  return `CI proof: PR=12 | head=${(pr.head as JsonObject).sha} | base=${(pr.base as JsonObject).sha} | action=${action} | draft=${pr.draft}`;
+  return `CI proof: PR=12 | head=${(pr.head as JsonObject).sha} | base=${(pr.base as JsonObject).sha} | merge=${merge} | action=${action} | draft=${pr.draft}`;
 }
 function compactLink(side: unknown): JsonObject {
   const value = side as JsonObject;
@@ -55,7 +55,7 @@ function compactLink(side: unknown): JsonObject {
   return { ...value, repo: { id: repo?.id, name: fullName.split('/')[1],
     url: `https://api.github.com/repos/${fullName}` } };
 }
-function fixture(input: JsonObject = event(), status = 'queued'): Map<string, unknown> {
+function fixture(input: JsonObject = event(), status = 'queued', shards: 2 | 4 = 2): Map<string, unknown> {
   const pr = input.pull_request as JsonObject;
   const run = (id: number, action: string): JsonObject => ({
     id, workflow_id: 789, path: WORKFLOW, event: 'pull_request', head_sha: headSha,
@@ -68,8 +68,8 @@ function fixture(input: JsonObject = event(), status = 'queued'): Map<string, un
   const current = run(200, 'edited');
   const producer = run(100, pr.draft ? 'converted_to_draft' : 'synchronize');
   const step = (name: string): JsonObject => ({ name, status: 'completed', conclusion: 'success' });
-  const names = ['plan', 'Fast feedback', 'validate', 'Full qualification', 'test (1/2)',
-    'test (2/2)', 'lint (main)', 'lint (renderer)', 'lint (features)', 'Task change ledger Windows smoke'];
+  const names = ['plan', 'Fast feedback', 'validate', 'Full qualification',
+    ...Array.from({ length: shards }, (_, index) => `test (${index + 1}/${shards})`), 'lint (main)', 'lint (renderer)', 'lint (features)', 'Task change ledger Windows smoke'];
   const jobs = status === 'completed' ? names.map((name, index) => ({
     id: index + 1, run_id: 100, run_attempt: 1, head_sha: headSha, name,
     status: 'completed', conclusion: name === 'Fast feedback' ? 'skipped' : 'success',
@@ -82,6 +82,8 @@ function fixture(input: JsonObject = event(), status = 'queued'): Map<string, un
   const workflow = { type: 'file', path: WORKFLOW, sha: blob };
   return new Map([
     [prefix, repository],
+    [`${prefix}/git/commits/${env.GITHUB_SHA}`, { sha: env.GITHUB_SHA,
+      parents: [{ sha: baseSha }, { sha: headSha }], tree: { sha: 'e'.repeat(40) } }],
     [`${prefix}/actions/workflows/ci.yml`, { id: 789, path: WORKFLOW, state: 'active' }],
     [`${prefix}/pulls/12`, pr],
     [`${prefix}/actions/runs/200`, current],
@@ -307,8 +309,8 @@ const heavySkips = [
   "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
   "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
 ];
-function draftFixture(): Map<string, unknown> {
-  const data = fixture(event(undefined, true), 'completed');
+function draftFixture(shards: 2 | 4 = 2): Map<string, unknown> {
+  const data = fixture(event(undefined, true), 'completed', shards);
   source(data).conclusion = 'failure';
   const plan = job(data, 'plan');
   const feedback = { ...plan, id: 2, name: 'Fast feedback',
@@ -317,19 +319,20 @@ function draftFixture(): Map<string, unknown> {
       'Typecheck workspace', 'Fast lint'].map((name) => completedStep(name)), conclusion: 'success' };
   const gate = { ...plan, id: 3, name: 'Full qualification', conclusion: 'failure',
     steps: [completedStep('Require complete current-code qualification', 'failure')] };
-  const skipped = heavySkips.map((name, index) => ({ ...plan, id: 4 + index, name,
+  const skipped = heavySkips.map((name) => name.replace('/2)', `/${shards})`))
+    .map((name, index) => ({ ...plan, id: 4 + index, name,
     conclusion: 'skipped', steps: [] }));
   data.set(jobsEndpoint, { total_count: 7, jobs: [plan, feedback, gate, ...skipped] });
   return data;
 }
 
-test('same-base queued empty-job and running producers avoid duplicate heavy work; green and legacy full producers preserve it', async () => {
+test('same-base queued empty-job and running producers avoid duplicate heavy work; green preserves it and legacy requires full', async () => {
   for (const status of ['queued', 'in_progress', 'completed']) {
     const data = fixture(event(), status);
     assert.equal((await plan(event(), {}, data)).metadata, true, status);
     if (status === 'completed') {
       source(data).display_title = 'A legacy workflow title';
-      assert.equal((await plan(event(), {}, data)).metadata, true, 'legacy immutable plan proof');
+      assert.equal((await plan(event(), {}, data)).full, true, 'legacy plan proof cannot bind actual synthetic merge');
     } else {
       source(data).display_title = 'A legacy workflow title';
       assert.equal((await plan(event(), {}, data)).full, true, 'legacy pending lacks proof');
@@ -583,4 +586,177 @@ test('newer producers with changed base, draft or malformed attestation still fa
     addNewerProducer(data, 'queued', null).display_title = title;
     assert.equal((await plan(event(), {}, data)).full, true, title);
   }
+});
+
+// Gate steps captured from TEST #845 run 37634869840. Identity fields are supplied
+// by draftFixture; these are the observed completed GitHub step facts.
+const capturedDraftGateSteps: JsonObject[] = [
+  { number: 1, name: 'Set up job', status: 'completed', conclusion: 'success' },
+  { number: 2, name: 'Set up runner', status: 'completed', conclusion: 'success' },
+  { number: 3, name: 'Checkout', status: 'completed', conclusion: 'success' },
+  { number: 4, name: 'Setup Node.js', status: 'completed', conclusion: 'success' },
+  { number: 5, name: 'Preserve existing current-code checks after metadata edits', status: 'completed', conclusion: 'skipped' },
+  { number: 6, name: 'Require complete current-code qualification', status: 'completed', conclusion: 'failure' },
+  { number: 10, name: 'Post Setup Node.js', status: 'completed', conclusion: 'skipped' },
+  { number: 11, name: 'Post Checkout', status: 'completed', conclusion: 'success' },
+  { number: 12, name: 'Complete runner', status: 'completed', conclusion: 'success' },
+  { number: 13, name: 'Complete job', status: 'completed', conclusion: 'success' },
+];
+
+test('observed successful draft feedback preserves checks when only Node post-cleanup is skipped after the deliberate failed gate', async () => {
+  const data = draftFixture();
+  job(data, 'Full qualification').steps = structuredClone(capturedDraftGateSteps);
+  assert.equal((await plan(event(undefined, true), {}, data)).metadata, true);
+});
+
+test('draft cleanup exceptions never hide failed setup, missing source proof or unknown skipped work', async () => {
+  const mutations: ((data: Map<string, unknown>, steps: JsonObject[]) => void)[] = [
+    (_, steps) => { steps.find((step) => step.name === 'Setup Node.js')!.conclusion = 'failure'; },
+    (_, steps) => { steps.find((step) => step.name === 'Setup Node.js')!.conclusion = 'skipped'; },
+    (_, steps) => { steps.splice(steps.findIndex((step) => step.name === 'Setup Node.js'), 1); },
+    (_, steps) => { steps.find((step) => step.name === 'Post Setup Node.js')!.conclusion = 'failure'; },
+    (_, steps) => { steps.find((step) => step.name === 'Post Setup Node.js')!.name = 'Unknown post cleanup'; },
+    (_, steps) => { steps.find((step) => step.name === 'Post Checkout')!.conclusion = 'skipped'; },
+    (_, steps) => { steps.find((step) => step.name === 'Post Setup Node.js')!.number = 5; },
+    (_, steps) => { delete steps.find((step) => step.name === 'Post Setup Node.js')!.number; },
+    (_, steps) => { steps.push({ ...steps.find((step) => step.name === 'Post Setup Node.js')! }); },
+    (data) => { (job(data, 'plan').steps as JsonObject[]).shift(); },
+  ];
+  for (const [index, mutate] of mutations.entries()) {
+    const data = draftFixture();
+    const steps = structuredClone(capturedDraftGateSteps);
+    job(data, 'Full qualification').steps = steps;
+    mutate(data, steps);
+    assert.equal((await plan(event(undefined, true), {}, data)).full, true, `mutation ${index}`);
+  }
+});
+
+test('four-shard metadata preservation authenticates the exact configured full and draft producer topology', async () => {
+  const four = fixture(event(), 'completed', 4);
+  assert.equal((await plan(event(), { CI_ROOT_TEST_SHARDS: '4' }, four)).metadata, true);
+  assert.equal((await plan(event(), { CI_ROOT_TEST_SHARDS: '2' }, four)).full, true);
+  assert.equal((await plan(event(), { CI_ROOT_TEST_SHARDS: '4' }, fixture(event(), 'completed'))).full, true);
+  for (const name of ['test (1/4)', 'test (2/4)', 'test (3/4)', 'test (4/4)']) {
+    const missing = fixture(event(), 'completed', 4);
+    const response = missing.get(jobsEndpoint) as JsonObject;
+    response.jobs = jobs(missing).filter((item) => item.name !== name);
+    response.total_count = (response.jobs as JsonObject[]).length;
+    assert.equal((await plan(event(), { CI_ROOT_TEST_SHARDS: '4' }, missing)).full, true, name);
+  }
+  const draft = draftFixture(4);
+  job(draft, 'Full qualification').steps = structuredClone(capturedDraftGateSteps);
+  assert.equal((await plan(event(undefined, true), { CI_ROOT_TEST_SHARDS: '4' }, draft)).metadata, true);
+  assert.equal((await plan(event(undefined, true), { CI_ROOT_TEST_SHARDS: '2' }, draft)).full, true);
+});
+
+function forkFixture(status = 'queued'): { input: JsonObject; data: Map<string, unknown> } {
+  const input = event();
+  ((input.pull_request as JsonObject).head as JsonObject).repo = {
+    id: 1213526556, full_name: 'sardorb3k/claude_agent_teams_ui',
+  };
+  const data = fixture(input, status);
+  for (const id of [100, 200]) (data.get(`${prefix}/actions/runs/${id}`) as JsonObject).pull_requests = [];
+  return { input, data };
+}
+
+test('authenticated true-fork runs preserve queued, running and completed producers with observed empty PR linkage', async () => {
+  for (const status of ['queued', 'in_progress', 'completed']) {
+    const { input, data } = forkFixture(status);
+    assert.equal((await plan(input, {}, data)).metadata, true, status);
+  }
+});
+
+test('empty fork linkage never excuses missing attestation, foreign identity or contradictory nonempty links', async () => {
+  const mutations: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { source(data).display_title = 'Legacy unattested title'; },
+    (data) => { source(data).display_title = runTitle(event()).replace(baseSha, 'd'.repeat(40)); },
+    (data) => { source(data).display_title = runTitle(event()).replace('draft=false', 'draft=true'); },
+    (data) => { source(data).repository = { id: 999, full_name: REPOSITORY }; },
+    (data) => { source(data).head_repository = { id: 1213526556, full_name: 'attacker/other' }; },
+    (data) => { delete source(data).pull_requests; },
+    (data) => { source(data).pull_requests = {}; },
+    (data) => { source(data).pull_requests = [{ number: 13, head: {}, base: {} }]; },
+  ];
+  for (const [index, mutate] of mutations.entries()) {
+    const { input, data } = forkFixture('completed');
+    mutate(data);
+    assert.equal((await plan(input, {}, data)).full, true, `mutation ${index}`);
+  }
+  const sameRepository = fixture();
+  for (const id of [100, 200]) (sameRepository.get(`${prefix}/actions/runs/${id}`) as JsonObject).pull_requests = [];
+  assert.equal((await plan(event(), {}, sameRepository)).full, true);
+});
+
+test('fork empty-link decisions still reject final run, listing and current PR races', async () => {
+  for (const target of [`${prefix}/actions/runs/100`, `${prefix}/actions/runs/200`, listEndpoint, `${prefix}/pulls/12`]) {
+    const { input, data } = forkFixture();
+    const reads = new Map<string, number>();
+    const decision = await planFeedback(env, input, async (endpoint) => {
+      const count = (reads.get(endpoint) ?? 0) + 1;
+      reads.set(endpoint, count);
+      const response = structuredClone(data.get(endpoint)) as JsonObject;
+      if (endpoint === target && count === 2) {
+        if (target === listEndpoint) response.total_count = 3;
+        else if (target.endsWith('/pulls/12')) (response.head as JsonObject).sha = 'd'.repeat(40);
+        else response.run_attempt = 2;
+      }
+      return response;
+    });
+    assert.equal(decision.full, true, target);
+  }
+});
+
+test('same attested actual merge preserves checks even when the PR API base remains an older anchor', async () => {
+  for (const status of ['queued', 'in_progress', 'completed']) {
+    const data = fixture(event(), status);
+    const merge = data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject;
+    merge.parents = [{ sha: 'd'.repeat(40) }, { sha: headSha }];
+    assert.equal((await plan(event(), {}, data)).metadata, true, status);
+  }
+});
+
+test('same PR, head and stale base anchor with a different synthetic merge always requires full CI, including equal trees', async () => {
+  const previousMerge = 'f'.repeat(40);
+  for (const status of ['queued', 'in_progress', 'completed']) {
+    const data = fixture(event(), status);
+    const current = data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject;
+    current.parents = [{ sha: 'd'.repeat(40) }, { sha: headSha }];
+    data.set(`${prefix}/git/commits/${previousMerge}`, { sha: previousMerge,
+      parents: [{ sha: baseSha }, { sha: headSha }], tree: structuredClone(current.tree) });
+    source(data).display_title = runTitle(event(), 'synchronize', previousMerge);
+    assert.equal((await plan(event(), {}, data)).full, true, status);
+  }
+});
+
+test('legacy anchor-only attestations cannot preserve inputs after an implicit base advance', async () => {
+  const data = fixture();
+  const current = data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject;
+  current.parents = [{ sha: 'd'.repeat(40) }, { sha: headSha }];
+  for (const id of [100, 200]) {
+    const run = data.get(`${prefix}/actions/runs/${id}`) as JsonObject;
+    run.display_title = String(run.display_title).replace(` | merge=${env.GITHUB_SHA}`, '');
+  }
+  assert.equal((await plan(event(), {}, data)).full, true);
+});
+
+test('missing merge attestations and unauthenticated merge objects fail closed', async () => {
+  const endpoint = `${prefix}/git/commits/${env.GITHUB_SHA}`;
+  const mutations: ((data: Map<string, unknown>) => void)[] = [
+    (data) => { source(data).display_title = String(source(data).display_title).replace(`merge=${env.GITHUB_SHA}`, 'merge=invalid'); },
+    (data) => { source(data).display_title = String(source(data).display_title).replace(` | merge=${env.GITHUB_SHA}`, ''); },
+    (data) => { (data.get(endpoint) as JsonObject).sha = 'f'.repeat(40); },
+    (data) => { (data.get(endpoint) as JsonObject).parents = [{ sha: baseSha }]; },
+    (data) => { (data.get(endpoint) as JsonObject).parents = [{ sha: baseSha }, { sha: headSha }, { sha: 'd'.repeat(40) }]; },
+    (data) => { (data.get(endpoint) as JsonObject).parents = [{ sha: baseSha }, { sha: 'f'.repeat(40) }]; },
+    (data) => { (data.get(endpoint) as JsonObject).parents = [{ sha: 'invalid' }, { sha: headSha }]; },
+    (data) => { (data.get(endpoint) as JsonObject).tree = { sha: 'invalid' }; },
+    (data) => { delete (data.get(endpoint) as JsonObject).tree; },
+    (data) => { data.delete(endpoint); },
+  ];
+  for (const [index, mutate] of mutations.entries()) {
+    const data = fixture();
+    mutate(data);
+    assert.equal((await plan(event(), {}, data)).full, true, `mutation ${index}`);
+  }
+  assert.equal((await plan(event(), { GITHUB_SHA: 'f'.repeat(40) })).full, true);
 });

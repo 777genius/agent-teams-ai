@@ -89,7 +89,7 @@ function fullNeeds(reuse = false): JsonObject {
   };
 }
 
-function fixture(): Map<string, unknown> {
+function fixture(shards: 2 | 4 = 2): Map<string, unknown> {
   const sourceRun = {
     id: 100,
     workflow_id: 456,
@@ -116,8 +116,7 @@ function fixture(): Map<string, unknown> {
     'Fast feedback',
     'validate',
     'Full qualification',
-    'test (1/2)',
-    'test (2/2)',
+    ...Array.from({ length: shards }, (_, index) => `test (${index + 1}/${shards})`),
     'lint (main)',
     'lint (renderer)',
     'lint (features)',
@@ -134,13 +133,13 @@ function fixture(): Map<string, unknown> {
     const commands = name.startsWith('test')
       ? [
           step('Rebuild test SQLite native module for Node'),
-          step('Test workspace packages', name === 'test (2/2)' ? 'skipped' : 'success'),
+          step('Test workspace packages', name === `test (1/${shards})` ? 'success' : 'skipped'),
           step(
             'Test CI scripts and OpenCode proof runner safety',
-            name === 'test (2/2)' ? 'skipped' : 'success'
+            name === `test (1/${shards})` ? 'success' : 'skipped'
           ),
           step('Test root shard'),
-          step('Test feedback policy', name === 'test (2/2)' ? 'skipped' : 'success'),
+          step('Test feedback policy', name === `test (1/${shards})` ? 'success' : 'skipped'),
         ]
       : name.startsWith('lint')
         ? [
@@ -250,8 +249,8 @@ function imageStep(data: Map<string, unknown>, name = 'test (1/2)'): JsonObject 
   )!;
 }
 
-async function proof(data = fixture()) {
-  return provePostmergeReuse(context, async (endpoint) => {
+async function proof(data = fixture(), inputs: ReuseContext = context) {
+  return provePostmergeReuse(inputs, async (endpoint) => {
     assert.ok(data.has(endpoint), `Unexpected read: ${endpoint}`);
     return structuredClone(data.get(endpoint));
   });
@@ -356,8 +355,8 @@ test('ordinary squash with exact inputs can reuse after GitHub drops PR links, w
 const skippedFeedbackExpression =
   "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
 
-function skippedExpressionFixture(): Map<string, unknown> {
-  const data = fixture();
+function skippedExpressionFixture(shards: 2 | 4 = 2): Map<string, unknown> {
+  const data = fixture(shards);
   job(data, 'Fast feedback').name = skippedFeedbackExpression;
   return data;
 }
@@ -437,8 +436,8 @@ const metadataSkippedNames = [
   "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
   skippedFeedbackExpression,
 ];
-function metadataFixture(count = 1): Map<string, unknown> {
-  const data = skippedExpressionFixture();
+function metadataFixture(count = 1, shards: 2 | 4 = 2): Map<string, unknown> {
+  const data = skippedExpressionFixture(shards);
   const runs = record(data, listEndpoint).workflow_runs as JsonObject[];
   for (let index = 1; index <= count; index++) {
     const run = structuredClone(record(data, runEndpoint));
@@ -449,7 +448,8 @@ function metadataFixture(count = 1): Map<string, unknown> {
     const step = (name: string, conclusion = 'success'): JsonObject => ({
       name, status: 'completed', conclusion,
     });
-    const jobs = ['Metadata CI plan', 'Metadata CI result', ...metadataSkippedNames].map(
+    const skippedNames = metadataSkippedNames.map((name) => name.replace('/2)', `/${shards})`));
+    const jobs = ['Metadata CI plan', 'Metadata CI result', ...skippedNames].map(
       (name, offset) => ({
         id: index * 10 + offset, run_id: run.id, run_attempt: 1, head_sha: headSha,
         name, status: 'completed', conclusion: offset < 2 ? 'success' : 'skipped',
@@ -626,6 +626,116 @@ test('reruns, changed metadata identity and listing races invalidate the entire 
     });
     assert.equal(result.reuse, false);
   }
+});
+
+test('all four successful root shards qualify reuse through Linux and Windows planning', async () => {
+  const data = fixture(4);
+  const read = async (endpoint: string): Promise<unknown> => {
+    assert.ok(data.has(endpoint), `Unexpected read: ${endpoint}`);
+    return structuredClone(data.get(endpoint));
+  };
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, true);
+  const plan = await planFeedback(
+    { ...env, CI_ROOT_TEST_SHARDS: '4' },
+    { ref: 'refs/heads/main', deleted: false, after: currentSha, repository },
+    read,
+    now
+  );
+  assert.equal(plan.full, true);
+  assert.equal(plan.reuse, true);
+  assert.equal(plan.source_run, '100');
+  assert.equal(
+    (
+      await windowsFeedback(
+        {
+          ...env,
+          CI_ROOT_TEST_SHARDS: '4',
+          RUNNER_OS: 'Windows',
+          RUNNER_ARCH: 'X64',
+          MODE_REUSE: 'true',
+          SOURCE_RUN: plan.source_run,
+          ImageOS: 'win25',
+          ImageVersion: '20260927.1.0',
+          CI_LINUX_IMAGE: plan.image,
+          CI_LINUX_ARCH: plan.linux_arch,
+        },
+        read,
+        now
+      )
+    ).reuse,
+    true
+  );
+  // toJSON(needs) exposes the matrix aggregate, not individual matrix cells.
+  assert.equal(qualifyFull(fullNeeds(), 'true', 'false', '4').ok, true);
+  assert.equal(qualifyFull(fullNeeds(true), 'true', 'true', '4').ok, true);
+  for (const result of ['failure', 'cancelled', 'skipped', undefined]) {
+    const needs = fullNeeds();
+    (needs.test as JsonObject).result = result;
+    assert.equal(qualifyFull(needs, 'true', 'false', '4').ok, false);
+  }
+  const missing = fullNeeds();
+  delete missing.test;
+  assert.equal(qualifyFull(missing, 'true', 'false', '4').ok, false);
+});
+
+test('four-shard reuse denies every missing or unsuccessful shard and skipped root command', async () => {
+  const inputs = { ...context, rootTestShards: '4' };
+  for (const name of ['test (1/4)', 'test (2/4)', 'test (3/4)', 'test (4/4)']) {
+    const missing = fixture(4);
+    const listing = record(missing, jobsEndpoint);
+    listing.jobs = (listing.jobs as JsonObject[]).filter((item) => item.name !== name);
+    listing.total_count = (listing.jobs as JsonObject[]).length;
+    assert.equal((await proof(missing, inputs)).reuse, false, `Missing ${name}`);
+    for (const conclusion of ['failure', 'cancelled', 'skipped']) {
+      const data = fixture(4);
+      job(data, name).conclusion = conclusion;
+      assert.equal((await proof(data, inputs)).reuse, false, `${name}: ${conclusion}`);
+    }
+    const skipped = fixture(4);
+    const rootStep = (job(skipped, name).steps as JsonObject[]).find(
+      (step) => step.name === 'Test root shard'
+    )!;
+    rootStep.conclusion = 'skipped';
+    assert.equal((await proof(skipped, inputs)).reuse, false, `${name}: skipped root command`);
+    const changedImage = fixture(4);
+    imageStep(changedImage, name).name = 'CI image proof: ubuntu24.04@20261001.1.0';
+    assert.equal((await proof(changedImage, inputs)).reuse, false, `${name}: changed image`);
+  }
+});
+
+test('reuse requires the configured shard topology, including the two-shard default', async () => {
+  assert.equal((await proof(fixture(), { ...context, rootTestShards: '2' })).reuse, true);
+  assert.equal((await proof(fixture(), { ...context, rootTestShards: '4' })).reuse, false);
+  assert.equal((await proof(fixture(4))).reuse, false);
+  const duplicate = fixture(4);
+  job(duplicate, 'test (4/4)').name = 'test (3/4)';
+  assert.equal((await proof(duplicate, { ...context, rootTestShards: '4' })).reuse, false);
+});
+
+test('invalid shard configuration fails closed before API reads and cannot qualify the gate', async () => {
+  for (const count of ['', '3', '04', '4\n', 4, null, ['4']]) {
+    let reads = 0;
+    const result = await provePostmergeReuse({ ...context, rootTestShards: count }, async () => {
+      reads++;
+      return undefined;
+    });
+    assert.equal(result.reuse, false);
+    assert.equal(reads, 0);
+    assert.equal(qualifyFull(fullNeeds(), 'true', 'false', count).ok, false);
+  }
+  let reads = 0;
+  const plan = await planFeedback(
+    { ...env, GITHUB_EVENT_NAME: 'pull_request', CI_ROOT_TEST_SHARDS: '3' },
+    prEvent('opened', true),
+    async () => {
+      reads++;
+      return undefined;
+    },
+    now
+  );
+  assert.equal(plan.full, true);
+  assert.equal(plan.reuse, false);
+  assert.equal(reads, 0);
 });
 
 const mutations: [string, (data: Map<string, unknown>) => void][] = [
@@ -1189,4 +1299,13 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('four-shard postmerge reuse crosses only exact same-topology harmless metadata', async () => {
+  const data = metadataFixture(1, 4);
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, true);
+  assert.equal((await proof(data, { ...context, rootTestShards: '2' })).reuse, false);
+  const skippedTest = metadataJobs(data).find((item) => String(item.name).includes('matrix.shard'))!;
+  skippedTest.name = String(skippedTest.name).replace('/4)', '/2)');
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, false);
 });

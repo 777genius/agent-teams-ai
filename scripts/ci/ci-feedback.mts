@@ -6,6 +6,7 @@ import {
   object,
   provePostmergeReuse,
   REPOSITORY,
+  rootTestShards,
   runnerImage,
   sha,
   WORKFLOW,
@@ -147,6 +148,7 @@ export async function planFeedback(
   if (env.GITHUB_REPOSITORY !== REPOSITORY) return fallback;
   try {
     sha(env.GITHUB_SHA);
+    rootTestShards(env.CI_ROOT_TEST_SHARDS);
   } catch {
     return fallback;
   }
@@ -197,6 +199,7 @@ export async function planFeedback(
       linuxRunner: env.CI_LINUX_RUNNER ?? '',
       linuxArch: env.RUNNER_ARCH ?? '',
       linuxImage: fallback.image,
+      rootTestShards: env.CI_ROOT_TEST_SHARDS,
       now,
     },
     read
@@ -231,6 +234,7 @@ export async function windowsFeedback(
       linuxRunner: env.CI_LINUX_RUNNER ?? '',
       linuxArch: env.CI_LINUX_ARCH ?? '',
       linuxImage: env.CI_LINUX_IMAGE ?? '',
+      rootTestShards: env.CI_ROOT_TEST_SHARDS,
       windowsImage: fallback.image,
       sourceRun: env.SOURCE_RUN,
       now,
@@ -243,9 +247,11 @@ export async function windowsFeedback(
 export function qualifyFull(
   results: unknown,
   full: unknown,
-  reuse: unknown
+  reuse: unknown,
+  shardCount?: unknown
 ): { ok: boolean; reason: string } {
   try {
+    rootTestShards(shardCount);
     if (full !== 'true') throw new Error('Draft feedback does not qualify for merge');
     if (reuse !== 'true' && reuse !== 'false') throw new Error('Invalid reuse mode');
     const needs = object(results);
@@ -266,6 +272,7 @@ export function qualifyFull(
       throw new Error('Reuse lacks authenticated source run');
     }
     for (const name of ['validate', 'test', 'lint', 'task-change-ledger-windows']) {
+      // GitHub's matrix job result aggregates every configured test shard.
       const result = object(needs[name]).result;
       if (
         result !== 'success' &&
@@ -344,7 +351,12 @@ async function main(): Promise<void> {
     } catch {
       results = null;
     }
-    const gate = qualifyFull(results, process.env.MODE_FULL, process.env.MODE_REUSE);
+    const gate = qualifyFull(
+      results,
+      process.env.MODE_FULL,
+      process.env.MODE_REUSE,
+      process.env.CI_ROOT_TEST_SHARDS
+    );
     console.log(gate.reason);
     if (!gate.ok) process.exitCode = 1;
     return;
