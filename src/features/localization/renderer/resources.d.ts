@@ -4058,6 +4058,9 @@ export default interface Resources {
         "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
         "unsavedTitle": "Unsaved Changes"
       },
+      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
+      "showInFolder": "Show in folder",
+      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
       "draftRecovered": "Recovered unsaved changes from a previous session.",
       "empty": {
         "selectFile": "Select a file from the tree to edit"

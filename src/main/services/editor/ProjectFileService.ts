@@ -16,11 +16,13 @@ import {
   validateFileName,
   validateFilePath,
 } from '@main/utils/pathValidation';
+import { EDITOR_FULL_MAX_BYTES } from '@shared/editorPolicy';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 import * as fs from 'fs/promises';
-import { isBinaryFile } from 'isbinaryfile';
 import * as path from 'path';
+
+import { assertEditorFilePathUnchanged, boundedTextRead, resolveEditorFilePath } from './boundedTextRead';
 
 import type {
   BinaryPreviewResult,
@@ -38,25 +40,7 @@ import type {
 // Constants
 // =============================================================================
 
-const MAX_FILE_SIZE_FULL = 2 * 1024 * 1024; // 2 MB
-const MAX_FILE_SIZE_PREVIEW = 5 * 1024 * 1024; // 5 MB
-const MAX_WRITE_SIZE = 2 * 1024 * 1024; // 2 MB
 const MAX_DIR_ENTRIES = 500;
-const PREVIEW_LINE_COUNT = 100;
-
-/**
- * Extract the first N lines from text using indexOf — O(1) allocations vs split().
- * For a 5MB file with 100k lines, avoids creating 100k string objects.
- */
-function sliceFirstNLines(text: string, n: number): string {
-  let pos = 0;
-  for (let i = 0; i < n; i++) {
-    const next = text.indexOf('\n', pos);
-    if (next === -1) return text;
-    pos = next + 1;
-  }
-  return text.slice(0, pos > 0 ? pos - 1 : 0);
-}
 
 const PREVIEW_MIME_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -189,16 +173,7 @@ export class ProjectFileService {
     return { entries, truncated: pendingEntries.length >= maxEntries };
   }
 
-  /**
-   * Read file content with security checks and binary detection.
-   *
-   * Security:
-   * - validateFilePath for traversal + sensitive check (SEC-1)
-   * - Device path blocking (SEC-4)
-   * - lstat + isFile check (SEC-4)
-   * - Size limits (SEC-4)
-   * - Post-read TOCTOU realpath verify (SEC-3)
-   */
+  /** Read bounded file content with containment, type and TOCTOU checks. */
   async readFile(projectRoot: string, filePath: string): Promise<ReadFileResult> {
     // 1. Path validation (traversal, sensitive, symlink)
     const validation = validateFilePath(filePath, projectRoot);
@@ -213,67 +188,20 @@ export class ProjectFileService {
       throw new Error('Cannot read device files');
     }
 
-    // 3. File type check
+    // A safe final symlink is allowed; the descriptor opens its validated canonical target.
     const stats = await fs.lstat(normalizedPath);
-    if (!stats.isFile()) {
+    if (!stats.isFile() && !stats.isSymbolicLink()) {
       throw new Error('Not a regular file');
     }
 
-    // 4. Size check — reject files beyond preview limit
-    if (stats.size > MAX_FILE_SIZE_PREVIEW) {
-      throw new Error(
-        `File too large (${(stats.size / 1024 / 1024).toFixed(1)}MB). Open in external editor.`
-      );
-    }
+    const target = await resolveEditorFilePath(projectRoot, normalizedPath);
+    const result = await boundedTextRead(target);
+    await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target);
 
-    // 5. Binary check
-    const binary = await isBinaryFile(normalizedPath);
-    if (binary) {
-      return {
-        content: '',
-        size: stats.size,
-        mtimeMs: stats.mtimeMs,
-        truncated: false,
-        encoding: 'binary',
-        isBinary: true,
-      };
-    }
-
-    // 6. Read content
-    const raw = await fs.readFile(normalizedPath, 'utf8');
-
-    // 7. Post-read TOCTOU verify
-    const realPath = await fs.realpath(normalizedPath);
-    const postValidation = validateFilePath(realPath, projectRoot);
-    if (!postValidation.valid) {
-      throw new Error('Path changed during read (TOCTOU)');
-    }
-
-    // 8. Tiered response
-    const isPreview = stats.size > MAX_FILE_SIZE_FULL;
-    const content = isPreview ? sliceFirstNLines(raw, PREVIEW_LINE_COUNT) : raw;
-
-    return {
-      content,
-      size: stats.size,
-      mtimeMs: stats.mtimeMs,
-      truncated: isPreview,
-      encoding: 'utf-8',
-      isBinary: false,
-    };
+    return result;
   }
 
-  /**
-   * Write file content with atomic write and full security checks.
-   *
-   * Security:
-   * - validateFilePath for traversal + sensitive check (SEC-1)
-   * - Project-only containment — block writes outside projectRoot (SEC-14)
-   * - Block .git/ internal paths (SEC-12)
-   * - Device path blocking (SEC-4)
-   * - Content size limit (2MB)
-   * - Atomic write via tmp + rename (SEC-9)
-   */
+  /** Atomically save a project target with containment, size and publish guards. */
   async writeFile(
     projectRoot: string,
     filePath: string,
@@ -304,17 +232,39 @@ export class ProjectFileService {
 
     // 5. Content size check
     const byteLength = Buffer.byteLength(content, 'utf8');
-    if (byteLength > MAX_WRITE_SIZE) {
+    if (byteLength > EDITOR_FULL_MAX_BYTES) {
       throw new Error(
-        `Content too large (${(byteLength / 1024 / 1024).toFixed(1)}MB). Maximum is 2MB.`
+        `Content too large (${(byteLength / 1024 / 1024).toFixed(1)}MB). Maximum is 32MiB.`
       );
     }
 
-    // 6. Atomic write
-    await atomicWriteAsync(normalizedPath, content);
+    const target = await resolveEditorFilePath(projectRoot, normalizedPath, true);
+    // Enforce the preview guard on the target, including force-save callers.
+    let existing: Awaited<ReturnType<typeof fs.lstat>> | undefined;
+    try {
+      existing = await fs.lstat(target);
+      if (!existing.isFile()) throw new Error('Not a regular file');
+      if (existing.size > EDITOR_FULL_MAX_BYTES) throw new Error('Read-only large file preview');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+
+    // Publish to the target instead of replacing the symlink. Recheck on every rename retry.
+    await atomicWriteAsync(target, content, { beforeCommit: async () => {
+      await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target, true);
+      let current: typeof existing;
+      try { current = await fs.lstat(target); } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      if (existing ? !current?.isFile() || existing.dev !== current.dev ||
+          existing.ino !== current.ino || existing.size !== current.size ||
+          existing.mtimeMs !== current.mtimeMs : current !== undefined) {
+        throw new Error('File changed during write. Please retry.');
+      }
+    } });
 
     // 7. Get post-write stats
-    const stats = await fs.stat(normalizedPath);
+    const stats = await fs.stat(target);
     log.info('File saved:', normalizedPath, `(${stats.size} bytes)`);
 
     return {
@@ -746,4 +696,4 @@ export class ProjectFileService {
   }
 }
 
-export { MAX_DIR_ENTRIES, MAX_FILE_SIZE_FULL, MAX_FILE_SIZE_PREVIEW, MAX_WRITE_SIZE };
+export { MAX_DIR_ENTRIES };

@@ -22,10 +22,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useEditorKeyboardShortcuts } from '@renderer/hooks/useEditorKeyboardShortcuts';
 import { useStore } from '@renderer/store';
 import { buildFileAction, buildSelectionAction } from '@renderer/utils/buildSelectionAction';
+import { editorBridge } from '@renderer/utils/editorBridge';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
 import { getBasename, getDirname } from '@shared/utils/platformPath';
 import {
   AlertTriangle,
+  FolderOpen,
   HelpCircle,
   Loader2,
   PanelLeftClose,
@@ -51,12 +53,12 @@ import { GoToLineDialog } from './GoToLineDialog';
 import { MarkdownSplitView } from './MarkdownSplitView';
 import { QuickOpenDialog } from './QuickOpenDialog';
 import { SearchInFilesPanel } from './SearchInFilesPanel';
+import { useEditorFileContent } from './useEditorFileContent';
 
 import type { MdPreviewMode } from './EditorToolbar';
 import type {
   EditorSelectionAction,
   EditorSelectionInfo,
-  ReadFileResult,
 } from '@shared/types/editor';
 
 // =============================================================================
@@ -103,12 +105,10 @@ export const ProjectEditorOverlay = ({
   const clearExternalChange = useStore((s) => s.clearExternalChange);
   const forceOverwrite = useStore((s) => s.forceOverwrite);
   const resolveConflict = useStore((s) => s.resolveConflict);
-  const setFileMtime = useStore((s) => s.setFileMtime);
   const fetchGitStatus = useStore((s) => s.fetchGitStatus);
 
-  const [fileContent, setFileContent] = useState<ReadFileResult | null>(null);
-  const [fileLoading, setFileLoading] = useState(false);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const { fileContent, fileLoading, fileError, loadFileContent, setFileContent } =
+    useEditorFileContent(activeTabId, projectPath);
   const [cursorLine, setCursorLine] = useState(1);
   const [cursorCol, setCursorCol] = useState(1);
 
@@ -127,7 +127,7 @@ export const ProjectEditorOverlay = ({
 
   // Markdown preview state
   const [mdPreviewMode, setMdPreviewMode] = useState<MdPreviewMode>('off');
-  const [liveContent, setLiveContent] = useState('');
+  const [liveContent, setLiveContent] = useState<{ filePath: string; content: string } | null>(null);
   const [splitRatio, setSplitRatio] = useState(() => {
     try {
       const stored = localStorage.getItem('editor:mdSplitRatio');
@@ -152,12 +152,11 @@ export const ProjectEditorOverlay = ({
 
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // IPC deduplication: reuse in-flight readFile promise for same path
-  const pendingReads = useRef(new Map<string, Promise<ReadFileResult>>());
-
   // Active tab metadata
   const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null;
-  const isMarkdown = activeTab?.language === 'Markdown';
+  const reducedMode = fileContent?.mode === 'large' || fileContent?.truncated === true;
+  const previewMode = reducedMode ? 'off' : mdPreviewMode;
+  const isMarkdown = activeTab?.language === 'Markdown' && !reducedMode;
 
   // Auto-enable split preview for markdown tabs, reset for non-markdown
   useEffect(() => {
@@ -179,8 +178,8 @@ export const ProjectEditorOverlay = ({
   }, []);
 
   const handleLiveContent = useCallback((content: string) => {
-    setLiveContent(content);
-  }, []);
+    if (activeTabId) setLiveContent({ filePath: activeTabId, content });
+  }, [activeTabId]);
 
   const toggleMdSplit = useCallback(() => {
     setMdPreviewMode((m) => (m === 'split' ? 'off' : 'split'));
@@ -190,51 +189,9 @@ export const ProjectEditorOverlay = ({
     setMdPreviewMode((m) => (m === 'preview' ? 'off' : 'preview'));
   }, []);
 
-  // Initialize live content when entering preview mode or switching files
-  useEffect(() => {
-    if (mdPreviewMode !== 'off' && fileContent?.content) {
-      setLiveContent(fileContent.content);
-    }
-  }, [mdPreviewMode, fileContent?.content]);
-
-  // Content for preview: use live content when available, fallback to file content
-  const previewContent = liveContent || fileContent?.content || '';
-
-  const loadFileContent = useCallback(
-    async (filePath: string) => {
-      setFileLoading(true);
-      setFileError(null);
-      setFileContent(null);
-
-      try {
-        const t0 = performance.now();
-        let promise = pendingReads.current.get(filePath);
-        const wasCached = !!promise;
-        if (!promise) {
-          promise = window.electronAPI.editor.readFile(filePath);
-          pendingReads.current.set(filePath, promise);
-          void promise.finally(() => pendingReads.current.delete(filePath));
-        }
-        const result = await promise;
-        const ipcMs = performance.now() - t0;
-        console.debug(
-          `[perf] loadFileContent: IPC=${ipcMs.toFixed(1)}ms, size=${result.size}, truncated=${result.truncated}, cached=${wasCached}, file=${getBasename(filePath)}`
-        );
-        setFileContent(result);
-
-        // Track baseline mtime for conflict detection
-        if (result.mtimeMs) {
-          setFileMtime(filePath, result.mtimeMs);
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setFileError(message);
-      } finally {
-        setFileLoading(false);
-      }
-    },
-    [setFileMtime]
-  );
+  // The mounted editor publishes its cached document; an empty draft is valid preview content.
+  const previewContent = liveContent && liveContent.filePath === activeTabId
+    ? liveContent.content : fileContent?.content ?? '';
 
   // Active tab save error
   const activeSaveError = activeTabId ? (saveErrors[activeTabId] ?? null) : null;
@@ -311,20 +268,7 @@ export const ProjectEditorOverlay = ({
     overlayRef.current?.focus();
   }, []);
 
-  // Load file content when active tab changes
-  useEffect(() => {
-    // Clear selection menu from previous tab
-    setSelectionInfo(null);
-
-    if (!activeTabId) {
-      setFileContent(null);
-      setFileLoading(false);
-      setFileError(null);
-      return;
-    }
-
-    void loadFileContent(activeTabId);
-  }, [activeTabId, loadFileContent]);
+  useEffect(() => { setSelectionInfo(null); }, [activeTabId]);
 
   // Clear draft recovery banner when switching tabs
   useEffect(() => {
@@ -362,7 +306,11 @@ export const ProjectEditorOverlay = ({
   }, [onClose, hasUnsavedChanges]);
 
   const handleSaveAndClose = useCallback(async () => {
+    const revision = editorBridge.revision('__overlay');
     await saveAllFiles();
+    const state = useStore.getState();
+    if (revision !== editorBridge.revision('__overlay') || state.hasUnsavedChanges() ||
+        Object.keys(state.editorSaving).length || Object.keys(state.editorSaveError).length || state.editorConflictFile) return;
     setShowConfirmClose(false);
     onClose();
   }, [saveAllFiles, onClose]);
@@ -401,7 +349,11 @@ export const ProjectEditorOverlay = ({
 
   const handleSaveAndCloseTab = useCallback(async () => {
     if (!confirmCloseTabId) return;
+    const revision = editorBridge.revision(confirmCloseTabId);
     await saveFile(confirmCloseTabId);
+    const state = useStore.getState();
+    if (revision !== editorBridge.revision(confirmCloseTabId) || state.editorModifiedFiles[confirmCloseTabId] ||
+        state.editorSaving[confirmCloseTabId] || state.editorSaveError[confirmCloseTabId] || state.editorConflictFile === confirmCloseTabId) return;
     closeEditorTab(confirmCloseTabId);
     setConfirmCloseTabId(null);
   }, [confirmCloseTabId, saveFile, closeEditorTab]);
@@ -429,7 +381,7 @@ export const ProjectEditorOverlay = ({
     setFileContent(null);
     setEditorResetKey((k) => k + 1);
     void loadFileContent(activeTabId);
-  }, [draftRecoveredFile, activeTabId, discardChanges, loadFileContent]);
+  }, [draftRecoveredFile, activeTabId, discardChanges, loadFileContent, setFileContent]);
 
   const handleDismissDraftBanner = useCallback(() => {
     setDraftRecoveredFile(null);
@@ -455,7 +407,7 @@ export const ProjectEditorOverlay = ({
     setFileContent(null);
     setEditorResetKey((k) => k + 1);
     void loadFileContent(activeTabId);
-  }, [activeTabId, clearExternalChange, discardChanges, loadFileContent]);
+  }, [activeTabId, clearExternalChange, discardChanges, loadFileContent, setFileContent]);
 
   const handleKeepMine = useCallback(() => {
     if (!activeTabId) return;
@@ -675,10 +627,27 @@ export const ProjectEditorOverlay = ({
           {/* Toolbar */}
           <EditorToolbar
             isMarkdown={isMarkdown}
-            mdPreviewMode={mdPreviewMode}
+            mdPreviewMode={previewMode}
             onToggleSplit={toggleMdSplit}
             onToggleFullPreview={toggleMdPreview}
           />
+
+          {reducedMode && (
+            <div data-editor-mode={fileContent?.truncated ? 'preview' : 'large'} className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1.5 text-xs text-text-muted">
+              <span>{t(fileContent?.truncated ? 'editor.largeFilePreview' : 'editor.largeFileMode')}</span>
+              {fileContent?.truncated && activeTabId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  onClick={() => void window.electronAPI.showInFolder(activeTabId).catch(console.error)}
+                >
+                  <FolderOpen className="size-3.5" />
+                  {t('editor.showInFolder')}
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Draft recovery banner */}
           {draftRecoveredFile && activeTabId === draftRecoveredFile && (
@@ -788,8 +757,8 @@ export const ProjectEditorOverlay = ({
                 <div
                   className="h-full overflow-hidden"
                   style={{
-                    display: mdPreviewMode === 'preview' ? 'none' : 'block',
-                    width: mdPreviewMode === 'split' ? `${splitRatio * 100}%` : '100%',
+                    display: previewMode === 'preview' ? 'none' : 'block',
+                    width: previewMode === 'split' ? `${splitRatio * 100}%` : '100%',
                   }}
                 >
                   <EditorErrorBoundary filePath={activeTabId} onRetry={handleRetry}>
@@ -799,19 +768,21 @@ export const ProjectEditorOverlay = ({
                       content={fileContent.content}
                       fileName={getBasename(activeTabId) || 'file'}
                       mtimeMs={fileContent.mtimeMs}
+                      mode={fileContent.mode}
+                      readOnly={fileContent.truncated}
                       onCursorChange={handleCursorChange}
                       onDraftRecovered={handleDraftRecovered}
                       onSelectionChange={setSelectionInfo}
-                      onDocChange={mdPreviewMode !== 'off' ? handleLiveContent : undefined}
+                      onDocChange={previewMode !== 'off' ? handleLiveContent : undefined}
                     />
                   </EditorErrorBoundary>
                 </div>
 
                 {/* Resize handle + Preview pane */}
-                {mdPreviewMode !== 'off' && (
+                {previewMode !== 'off' && (
                   <MarkdownSplitView
                     content={previewContent}
-                    mode={mdPreviewMode}
+                    mode={previewMode}
                     splitRatio={splitRatio}
                     onSplitRatioChange={handleSplitRatioChange}
                     viewKey={activeTabId}
