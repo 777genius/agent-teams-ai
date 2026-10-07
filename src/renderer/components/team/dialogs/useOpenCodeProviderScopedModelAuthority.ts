@@ -203,6 +203,8 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
   /** What main applies to unset teammates; defaults to syncModelsWithLead. */
   inheritsLeadModel?: boolean;
   selectedProviderId: TeamProviderId;
+  /** False while a draft has no explicit lead runtime selection. */
+  leadProviderResolved?: boolean;
   selectedModel: string | null | undefined;
   runtimeProviderStatusById: ReadonlyMap<
     TeamProviderId,
@@ -222,6 +224,7 @@ export function useOpenCodeProviderScopedDialogModelState({
   syncModelsWithLead,
   inheritsLeadModel,
   selectedProviderId,
+  leadProviderResolved = true,
   selectedModel,
   runtimeProviderStatusById,
   deferredProviderIds,
@@ -240,23 +243,26 @@ export function useOpenCodeProviderScopedDialogModelState({
   const openCodeDefaultSelection = useMemo(() => {
     const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
     return materializeOpenCodeDefaultSelections({
-      selectedProviderId,
+      selectedProviderId: leadProviderResolved ? selectedProviderId : undefined,
       selectedModel,
       syncModelsWithLead: inheritsLeadModel ?? syncModelsWithLead,
       projectDefault: openCodeProjectDefault,
-      members: clearInheritedMemberModelsUnavailableForProvider({
-        members: [...scopedMembers],
-        selectedProviderId,
-        runtimeProviderStatusById,
-        deferredProviderIds,
-        openCodeLocalProviderIds,
-        openCodeLocalProviderLookupAuthoritative,
-        openCodeProviderScopedStatusBySourceId,
-      }).members,
+      members: !leadProviderResolved
+        ? [...scopedMembers]
+        : clearInheritedMemberModelsUnavailableForProvider({
+            members: [...scopedMembers],
+            selectedProviderId,
+            runtimeProviderStatusById,
+            deferredProviderIds,
+            openCodeLocalProviderIds,
+            openCodeLocalProviderLookupAuthoritative,
+            openCodeProviderScopedStatusBySourceId,
+          }).members,
     });
   }, [
     deferredProviderIds,
     inheritsLeadModel,
+    leadProviderResolved,
     members,
     openCodeLocalProviderIds,
     openCodeLocalProviderLookupAuthoritative,

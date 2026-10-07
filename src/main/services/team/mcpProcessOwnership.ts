@@ -6,6 +6,23 @@ import type {
 } from './AgentTeamsMcpHttpServer';
 import type { RuntimeProcessTableRow } from '@features/tmux-installer/main';
 
+export function parseNativeProcessRows(output: string): RuntimeProcessTableRow[] {
+  const rows: RuntimeProcessTableRow[] = [];
+  for (const line of output.split('\n')) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
+    if (!match) {
+      continue;
+    }
+    const pid = Number.parseInt(match[1], 10);
+    const ppid = Number.parseInt(match[2], 10);
+    const command = match[3]?.trim() ?? '';
+    if (pid > 0 && ppid >= 0 && command.length > 0) {
+      rows.push({ pid, ppid, command });
+    }
+  }
+  return rows;
+}
+
 export function processDetailsIncludeMarker(details: string, marker: string): boolean {
   return new RegExp(`(^|\\s)${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`).test(
     details

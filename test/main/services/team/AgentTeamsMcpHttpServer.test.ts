@@ -918,6 +918,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const child = new FakeChildProcess(43123);
     const orphanPort = 41033;
     let url = `http://127.0.0.1:${orphanPort}/mcp`;
+    let snapshotUnknown = false;
     const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
     const rows = [
       { pid: 9002, ppid: 1, command },
@@ -935,7 +936,10 @@ describe('AgentTeamsMcpHttpServer', () => {
       allocatePort: async () => 41032,
       spawnProcess: vi.fn(() => child as unknown as ChildProcess),
       waitForPort: vi.fn(async () => undefined),
-      listProcessRows: async () => rows,
+      listProcessRows: async () => {
+        if (snapshotUnknown) throw new Error('Process snapshot unavailable');
+        return rows;
+      },
       readProcessDetails: async (pid) =>
         pid === 9002 ? orphanDetails : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
       readProcessStartTimeMs: async () => 0,
@@ -954,6 +958,8 @@ describe('AgentTeamsMcpHttpServer', () => {
       await expect(server.assertNoLiveConsumers()).rejects.toThrow('Stop teams');
       url = 'http://127.0.0.1:49999/mcp';
       await expect(server.assertNoLiveConsumers()).resolves.toBeUndefined();
+      snapshotUnknown = true;
+      await expect(server.assertNoLiveConsumers()).rejects.toThrow('Process snapshot unavailable');
       expect(handle.diagnostics).toContain(
         `opencode_app_mcp_legacy_orphan_kept_live_consumers:${orphanPort}`
       );
@@ -999,33 +1005,43 @@ describe('AgentTeamsMcpHttpServer', () => {
     }
   });
 
-  it('fails startup promptly when the child exits before readiness', async () => {
-    const child = new FakeChildProcess();
-    const server = new AgentTeamsMcpHttpServer({
-      statePath: null,
-      resolveLaunchSpec: async () => ({
-        command: 'node',
-        args: ['mcp-server/dist/index.js'],
-      }),
-      allocatePort: async () => 41003,
-      spawnProcess: vi.fn(() => child as unknown as ChildProcess),
-      waitForPort: vi.fn(() => {
-        child.emit('exit', 1, null);
+  it.each([false, true])(
+    'fails startup promptly when the child exits before readiness (expected stop=%s)',
+    async (expectedStop) => {
+      const child = new FakeChildProcess();
+      const waitForPort = vi.fn(() => {
+        if (!expectedStop) child.emit('exit', 1, null);
         return new Promise<void>(() => {
-          // Keep readiness pending so startup resolves only through the child exit.
+          // Readiness never completes; even an expected stop must settle startup.
         });
-      }),
-    });
-
-    await expect(server.ensureStarted()).rejects.toThrow(
-      'Agent Teams MCP HTTP server exited before startup completed with code 1'
-    );
-    expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(child, 'SIGKILL');
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'Agent Teams MCP HTTP server exited before startup completed with code 1'
-    );
-    vi.mocked(console.warn).mockClear();
-  });
+      });
+      const server = new AgentTeamsMcpHttpServer({
+        statePath: null,
+        resolveLaunchSpec: async () => ({ command: 'node', args: ['mcp-server/dist/index.js'] }),
+        allocatePort: async () => 41003,
+        spawnProcess: vi.fn(() => child as unknown as ChildProcess),
+        waitForPort,
+      });
+      const starting = server.ensureStarted();
+      const rejected = expect(starting).rejects.toThrow(
+        'Agent Teams MCP HTTP server exited before startup completed'
+      );
+      if (expectedStop) {
+        await vi.waitFor(() => expect(waitForPort).toHaveBeenCalled());
+        hoisted.killProcessTreeMock.mockImplementationOnce(() => child.emit('exit', 0, null));
+        await server.stop({ preventRestart: true });
+      }
+      await rejected;
+      expect(server.getCurrentHandle()).toBeNull();
+      expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(child, 'SIGKILL');
+      if (expectedStop) expect(console.warn).not.toHaveBeenCalled();
+      else
+        expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+          'Agent Teams MCP HTTP server exited before startup completed with code 1'
+        );
+      vi.mocked(console.warn).mockClear();
+    }
+  );
 
   it('does not return a handle if the child exits during readiness polling', async () => {
     const child = new FakeChildProcess();
