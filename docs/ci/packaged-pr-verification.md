@@ -91,9 +91,9 @@ extends the source evidence expiry or creates full qualification by itself.
 
 All `edited` events use a unique concurrency group without cancellation before
 planning. Proven metadata runs skip dependency installation, tests, lint and
-Windows execution, and use noncanonical check names. Potential metadata plan
-failures also use noncanonical names and fail closed. Their informational result
-never creates a successful `Full qualification`; a successful canonical full
-run for the current PR head remains mandatory. Unknown/base edits still run
-full CI. Verify title/body edits while a full run is pending and after it succeeds,
+Windows execution, and use noncanonical check names. Only successful planning
+that proves metadata may name the aggregate `Metadata CI result`. Failed or
+unclassified planning retains a failing canonical `Full qualification`, including
+base edits. A successful canonical full run for the current PR head remains
+mandatory. Unknown/base edits still run full CI. Verify title/body edits while a full run is pending and after it succeeds,
 plus base/unknown edits, on a disposable test PR using `gh`.

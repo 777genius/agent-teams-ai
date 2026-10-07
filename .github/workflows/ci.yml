@@ -377,7 +377,7 @@ jobs:
         run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
   full-qualification:
-    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata CI result' || 'Full qualification' }}
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && 'Metadata CI result' || 'Full qualification' }}
     needs: [plan, validate, test, lint, task-change-ledger-windows]
     if: always()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
