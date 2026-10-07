@@ -23,6 +23,7 @@ const mockEditorAPI = {
   createDir: vi.fn(),
   deleteFile: vi.fn(),
   moveFile: vi.fn(),
+  renameFile: vi.fn(),
 };
 
 vi.mock('@renderer/api', () => ({
@@ -37,6 +38,7 @@ vi.mock('@renderer/api', () => ({
       createDir: (...args: unknown[]) => mockEditorAPI.createDir(...args),
       deleteFile: (...args: unknown[]) => mockEditorAPI.deleteFile(...args),
       moveFile: (...args: unknown[]) => mockEditorAPI.moveFile(...args),
+      renameFile: (...args: unknown[]) => mockEditorAPI.renameFile(...args),
     },
     // Provide stubs for other API domains if needed
     getProjects: vi.fn(),
@@ -129,7 +131,93 @@ describe('editorSlice', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    localStorage.removeItem('editor-project-tabs:v1');
     store = createTestStore();
+  });
+
+  describe('project tab sessions', () => {
+    beforeEach(() => {
+      mockEditorAPI.open.mockResolvedValue(undefined);
+      mockEditorAPI.close.mockResolvedValue(undefined);
+      mockEditorAPI.readDir.mockResolvedValue(makeDirResult([]));
+    });
+
+    it('keeps project order/active tabs across switching, close/reopen and fresh stores', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/first.txt');
+      store.getState().openFile('/a/second.txt');
+      store.getState().reorderEditorTabs('/a/second.txt', '/a/first.txt');
+      store.getState().setActiveEditorTab('/a/first.txt');
+      await store.getState().openEditor('/b');
+      store.getState().openFile('/b/only.txt');
+      await store.getState().openEditor('/a');
+      expect(store.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/second.txt', '/a/first.txt']);
+      expect(store.getState().editorActiveTabId).toBe('/a/first.txt');
+      store.getState().closeEditor();
+      const restarted = createTestStore();
+      await restarted.getState().openEditor('/a/');
+      expect(restarted.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/second.txt', '/a/first.txt']);
+      restarted.getState().closeEditorTab('/a/first.txt');
+      restarted.getState().closeEditor();
+      await restarted.getState().openEditor('/a');
+      expect(restarted.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/second.txt']);
+      restarted.getState().closeAllEditorTabs();
+      restarted.getState().closeEditor();
+      await restarted.getState().openEditor('/a');
+      expect(restarted.getState().editorOpenTabs).toEqual([]);
+    });
+
+    it('preserves stored tabs when StrictMode closes during initialization or the current open fails', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/file.txt');
+      store.getState().closeEditor();
+      let resolve!: () => void;
+      mockEditorAPI.open.mockReturnValueOnce(new Promise<void>(finish => { resolve = finish; }));
+      const opening = store.getState().openEditor('/a');
+      store.getState().closeEditor();
+      resolve(); await opening;
+      mockEditorAPI.open.mockRejectedValueOnce(new Error('unavailable'));
+      await store.getState().openEditor('/a');
+      store.getState().closeEditor();
+      await store.getState().openEditor('/a');
+      expect(store.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/file.txt']);
+    });
+
+    it('does not restore stale project A into B and preserves user actions during tree loading', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/a.txt');
+      store.getState().closeEditor();
+      let resolve!: () => void;
+      mockEditorAPI.open.mockReturnValueOnce(new Promise<void>(finish => { resolve = finish; }));
+      const pending = store.getState().openEditor('/a');
+      await store.getState().openEditor('/b');
+      store.getState().openFile('/b/b.txt');
+      resolve(); await pending;
+      expect(store.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/b/b.txt']);
+      let tree!: (value: ReadDirResult) => void;
+      mockEditorAPI.readDir.mockReturnValueOnce(new Promise<ReadDirResult>(finish => { tree = finish; }));
+      const loading = store.getState().openEditor('/a');
+      await Promise.resolve(); await Promise.resolve();
+      expect(store.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/a.txt']);
+      store.getState().openFile('/a/new.txt');
+      tree(makeDirResult([])); await loading;
+      expect(store.getState().editorActiveTabId).toBe('/a/new.txt');
+    });
+
+    it('persists directory rename and deletion without recovering removed tabs', async () => {
+      await store.getState().openEditor('/a');
+      store.getState().openFile('/a/old/file.txt');
+      mockEditorAPI.renameFile.mockResolvedValue({ newPath: '/a/new', isDirectory: true });
+      expect(await store.getState().renameFileInTree('/a/old', 'new')).toBe(true);
+      store.getState().closeEditor();
+      await store.getState().openEditor('/a');
+      expect(store.getState().editorOpenTabs.map(tab => tab.filePath)).toEqual(['/a/new/file.txt']);
+      mockEditorAPI.deleteFile.mockResolvedValue(undefined);
+      await store.getState().deleteFileFromTree('/a/new');
+      store.getState().closeEditor();
+      await store.getState().openEditor('/a');
+      expect(store.getState().editorOpenTabs).toEqual([]);
+    });
   });
 
   describe('initial state', () => {

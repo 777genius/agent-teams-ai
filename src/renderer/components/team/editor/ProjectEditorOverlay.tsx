@@ -55,10 +55,7 @@ import { SearchInFilesPanel } from './SearchInFilesPanel';
 import { useEditorFileContent } from './useEditorFileContent';
 
 import type { MdPreviewMode } from './EditorToolbar';
-import type {
-  EditorSelectionAction,
-  EditorSelectionInfo,
-} from '@shared/types/editor';
+import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
 // =============================================================================
 // Types
@@ -126,7 +123,9 @@ export const ProjectEditorOverlay = ({
 
   // Markdown preview state
   const [mdPreviewMode, setMdPreviewMode] = useState<MdPreviewMode>('off');
-  const [liveContent, setLiveContent] = useState<{ filePath: string; content: string } | null>(null);
+  const [liveContent, setLiveContent] = useState<{ filePath: string; content: string } | null>(
+    null
+  );
   const [splitRatio, setSplitRatio] = useState(() => {
     try {
       const stored = localStorage.getItem('editor:mdSplitRatio');
@@ -176,9 +175,12 @@ export const ProjectEditorOverlay = ({
     }
   }, []);
 
-  const handleLiveContent = useCallback((content: string) => {
-    if (activeTabId) setLiveContent({ filePath: activeTabId, content });
-  }, [activeTabId]);
+  const handleLiveContent = useCallback(
+    (content: string) => {
+      if (activeTabId) setLiveContent({ filePath: activeTabId, content });
+    },
+    [activeTabId]
+  );
 
   const toggleMdSplit = useCallback(() => {
     setMdPreviewMode((m) => (m === 'split' ? 'off' : 'split'));
@@ -189,8 +191,10 @@ export const ProjectEditorOverlay = ({
   }, []);
 
   // The mounted editor publishes its cached document; an empty draft is valid preview content.
-  const previewContent = liveContent && liveContent.filePath === activeTabId
-    ? liveContent.content : fileContent?.content ?? '';
+  const previewContent =
+    liveContent && liveContent.filePath === activeTabId
+      ? liveContent.content
+      : (fileContent?.content ?? '');
 
   // Active tab save error
   const activeSaveError = activeTabId ? (saveErrors[activeTabId] ?? null) : null;
@@ -267,7 +271,9 @@ export const ProjectEditorOverlay = ({
     overlayRef.current?.focus();
   }, []);
 
-  useEffect(() => { setSelectionInfo(null); }, [activeTabId]);
+  useEffect(() => {
+    setSelectionInfo(null);
+  }, [activeTabId]);
 
   // Clear draft recovery banner when switching tabs
   useEffect(() => {
@@ -308,16 +314,24 @@ export const ProjectEditorOverlay = ({
     const revision = editorBridge.revision('__overlay');
     await saveAllFiles();
     const state = useStore.getState();
-    if (revision !== editorBridge.revision('__overlay') || state.hasUnsavedChanges() ||
-        Object.keys(state.editorSaving).length || Object.keys(state.editorSaveError).length || state.editorConflictFile) return;
+    if (
+      revision !== editorBridge.revision('__overlay') ||
+      state.hasUnsavedChanges() ||
+      Object.keys(state.editorSaving).length ||
+      Object.keys(state.editorSaveError).length ||
+      state.editorConflictFile
+    )
+      return;
     setShowConfirmClose(false);
     onClose();
   }, [saveAllFiles, onClose]);
 
   const handleDiscardAndClose = useCallback(() => {
+    for (const filePath of Object.keys(useStore.getState().editorModifiedFiles))
+      discardChanges(filePath);
     setShowConfirmClose(false);
     onClose();
-  }, [onClose]);
+  }, [onClose, discardChanges]);
 
   const handleCancelClose = useCallback(() => {
     setShowConfirmClose(false);
@@ -351,8 +365,14 @@ export const ProjectEditorOverlay = ({
     const revision = editorBridge.revision(confirmCloseTabId);
     await saveFile(confirmCloseTabId);
     const state = useStore.getState();
-    if (revision !== editorBridge.revision(confirmCloseTabId) || state.editorModifiedFiles[confirmCloseTabId] ||
-        state.editorSaving[confirmCloseTabId] || state.editorSaveError[confirmCloseTabId] || state.editorConflictFile === confirmCloseTabId) return;
+    if (
+      revision !== editorBridge.revision(confirmCloseTabId) ||
+      state.editorModifiedFiles[confirmCloseTabId] ||
+      state.editorSaving[confirmCloseTabId] ||
+      state.editorSaveError[confirmCloseTabId] ||
+      state.editorConflictFile === confirmCloseTabId
+    )
+      return;
     closeEditorTab(confirmCloseTabId);
     setConfirmCloseTabId(null);
   }, [confirmCloseTabId, saveFile, closeEditorTab]);
@@ -631,14 +651,21 @@ export const ProjectEditorOverlay = ({
           />
 
           {reducedMode && (
-            <div data-editor-mode={fileContent?.truncated ? 'preview' : 'large'} className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1.5 text-xs text-text-muted">
-              <span>{t(fileContent?.truncated ? 'editor.largeFilePreview' : 'editor.largeFileMode')}</span>
+            <div
+              data-editor-mode={fileContent?.truncated ? 'preview' : 'large'}
+              className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1.5 text-xs text-text-muted"
+            >
+              <span>
+                {t(fileContent?.truncated ? 'editor.largeFilePreview' : 'editor.largeFileMode')}
+              </span>
               {fileContent?.truncated && activeTabId && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="shrink-0 gap-1.5"
-                  onClick={() => void window.electronAPI.showInFolder(activeTabId).catch(console.error)}
+                  onClick={() =>
+                    void window.electronAPI.showInFolder(activeTabId).catch(console.error)
+                  }
                 >
                   <FolderOpen className="size-3.5" />
                   {t('editor.showInFolder')}
