@@ -140,7 +140,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         # Only the two macOS commands omit DMG/ZIP in the intermediate draft lane.
         # Native rebuild, staging and every bundle smoke below remain mandatory.
-        run: pnpm ${{ matrix.pack }} --publish never ${{ matrix.os == 'darwin' && needs.packaged-scope.outputs.scope == 'app' && '--dir' || '' }}
+        run: pnpm ${{ matrix.pack }} --publish never --config.mac.identity=null --config.mac.forceCodeSigning=false --config.mac.notarize=false ${{ matrix.os == 'darwin' && needs.packaged-scope.outputs.scope == 'app' && '--dir' || '' }}
       - name: Verify bundle native architecture
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
       - name: Smoke packaged SQLite and PTY modules

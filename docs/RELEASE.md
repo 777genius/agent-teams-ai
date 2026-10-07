@@ -1869,16 +1869,70 @@ CLI authentication is not required. A local runtime override remains available t
 ```bash
 git tag v<VERSION>
 git push origin v<VERSION>
+git fetch origin main
+RELEASE_SOURCE_SHA="$(git rev-parse 'v<VERSION>^{commit}')"
+git merge-base --is-ancestor "$RELEASE_SOURCE_SHA" origin/main
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
 
 gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
-  --ref v<VERSION> \
+  --ref release/macos-signing \
   -f release_tag=v<VERSION> \
   -f publish_release=false
 ```
 
 Pushing the tag does not start the release workflow. `release.yml` is
 `workflow_dispatch`-only, so the explicit `gh workflow run` command is required.
+Fresh builds require the owner to dispatch from `release/macos-signing`, whose
+SHA must match the reviewed tagged commit. Reusing already validated draft
+assets runs from the release tag with `reuse_existing_draft_assets=true`, without
+moving the signing branch. A historical tag cannot be reached by fast-forward
+when the signing branch has already advanced.
+
+For a necessary historical rebuild, only the owner may temporarily move the
+same trusted branch. First wait for every signing run to finish and prevent new
+dispatches during recovery. Confirm the old tag was independently reviewed and
+is on `main`. The tag itself must also contain the current signing contract:
+`macos-signing` environment, owner checks for both actor and triggering actor,
+exact trusted-ref custody gate, API-only notarization pinned to team `86399583GS`,
+fail-closed packaging, and signature/notarization checks for transported artifacts.
+Review the files at that exact tag; ancestry or an earlier review is insufficient.
+
+Tags predating this contract cannot be rebuilt merely by rewinding the branch.
+Use already-qualified existing assets or a separately reviewed recovery contract;
+never restore old secrets or allow unsigned output. Use existing owner permissions
+only, without weakening branch rules. If they do not permit the operation, use
+accepted assets or prepare a new reviewed patch release. For an eligible tag,
+save the exact observed branch head:
+
+```bash
+set -euo pipefail
+git fetch origin main
+RECOVERY_SOURCE_SHA="$(git rev-parse 'v<VERSION>^{commit}')"
+git merge-base --is-ancestor "$RECOVERY_SOURCE_SHA" origin/main
+SAVED_SIGNING_SHA="$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')"
+git fetch origin refs/heads/release/macos-signing
+test "$(git rev-parse FETCH_HEAD^{commit})" = "$SAVED_SIGNING_SHA"
+git cat-file -e "$SAVED_SIGNING_SHA^{commit}"
+git push --force-with-lease="refs/heads/release/macos-signing:$SAVED_SIGNING_SHA" origin "$RECOVERY_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RECOVERY_SOURCE_SHA"
+gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing -f release_tag=v<VERSION> -f publish_release=false
+```
+
+Set `RECOVERY_RUN_ID` to that dispatched run, verify its `headSha` equals
+`RECOVERY_SOURCE_SHA`, and wait for its full completion before restoring the
+saved branch head. Restore even after a failed build; failure does not qualify
+its artifacts. The exact lease refuses to overwrite a concurrent branch change:
+
+```bash
+test "$(gh run view "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai --json headSha --jq '.headSha')" = "$RECOVERY_SOURCE_SHA"
+gh run watch "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai
+test "$(gh run view "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai --json status --jq '.status')" = completed
+git push --force-with-lease="refs/heads/release/macos-signing:$RECOVERY_SOURCE_SHA" origin "$SAVED_SIGNING_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$SAVED_SIGNING_SHA"
+```
+
 The draft workflow:
 
 - Builds the app (ubuntu)
@@ -1988,7 +2042,8 @@ gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
   --ref v<VERSION> \
   -f release_tag=v<VERSION> \
-  -f publish_release=true
+  -f publish_release=true \
+  -f reuse_existing_draft_assets=true
 
 gh run list \
   --repo 777genius/agent-teams-ai \
@@ -2192,17 +2247,51 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 ## macOS Code Signing
 
-macOS builds are signed and notarized via GitHub Actions secrets:
+macOS builds are signed and notarized via the `macos-signing` environment secrets:
 
-| Secret                        | Description                                  |
-| ----------------------------- | -------------------------------------------- |
-| `CSC_LINK`                    | Base64-encoded .p12 certificate              |
-| `CSC_KEY_PASSWORD`            | Certificate password                         |
-| `APPLE_ID`                    | Apple Developer account email                |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from appleid.apple.com |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                      |
+| Secret | Description |
+| --- | --- |
+| `CSC_LINK` | Base64-encoded Developer ID Application .p12 certificate |
+| `CSC_KEY_PASSWORD` | Certificate password |
+| `APPLE_TEAM_ID` | Must equal `86399583GS` |
+| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key |
+| `APPLE_API_KEY_ID` | API key ID |
+| `APPLE_API_ISSUER` | Team API issuer UUID |
 
-Without these secrets, macOS builds will be unsigned (users need to bypass Gatekeeper manually).
+macOS packaging fails when required credentials are missing or the publisher
+is wrong. It does not produce an unsigned release fallback. Apple ID/password
+credentials are not used. CI writes the API key to a mode-600 temporary file;
+the packaged app and transported ZIP/DMG app must pass signature and notarization
+checks before upload.
+
+Signing secrets are available only on `release/macos-signing`, whose updates
+are restricted to the repository administrator. There are no required environment
+reviewers and no per-build approval. Repository-level copies of these signing
+secrets must be absent. Pull request builds remain unsigned.
+
+Before signing, the owner fast-forwards `release/macos-signing` to the reviewed
+and CI-qualified source SHA, then confirms the remote branch SHA matches it.
+The same protected ref is required for the Release workflow's macOS jobs.
+
+For artifact-only qualification on that reviewed source:
+
+```bash
+gh workflow run macos-signing-qualification.yml --ref release/macos-signing -f use_github_runner=true
+```
+
+For artifact-only pre-merge qualification, the owner may instead fast-forward
+the signing branch to an independently reviewed candidate SHA and verify that
+remote SHA before dispatch. Full current-head CI must pass before merging.
+Use a merge commit to preserve the qualified candidate in ancestry, then compare
+its complete Git tree with the merged tree. Reuse artifact evidence when the
+tree hashes match. The accepted exception is an unbundled-documentation-only
+diff: exhaustively inspect the complete `git diff` and prove every build input
+and workflow is identical; fresh current-head CI must still pass. In either
+case, original receipts retain the actual candidate SHA. This path does not
+authorize release publication.
+
+This manual workflow verifies both architectures and uploads Actions artifacts;
+it does not publish a release or change updater channels.
 
 ## Auto-Update
 
@@ -2238,7 +2327,11 @@ version, or has broken latest URLs is automatically returned to draft.
 # Create a draft release
 git tag v1.0.0
 git push origin v1.0.0
-gh workflow run release.yml --repo 777genius/agent-teams-ai --ref v1.0.0 \
+# After review, fast-forward the owner-controlled signing branch to the tagged commit.
+RELEASE_SOURCE_SHA="$(git rev-parse 'v1.0.0^{commit}')"
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
+gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing \
   -f release_tag=v1.0.0 -f publish_release=false
 # Wait for CI, review the assets, and update the draft notes
 

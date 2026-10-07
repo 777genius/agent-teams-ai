@@ -10,7 +10,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "scripts/ci/release/**/*.ts",
@@ -21,6 +22,7 @@
     "scripts/ci/publish-carried-release.ts",
     "test/scripts/partialReleaseStaging.test.ts",
     "test/scripts/nativeReadiness.test.ts",
-    "test/scripts/recoverDraftPayloads.test.ts"
+    "test/scripts/recoverDraftPayloads.test.ts",
+    "scripts/electron-builder/**/*.mts"
   ]
 }
