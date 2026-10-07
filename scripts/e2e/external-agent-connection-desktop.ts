@@ -244,8 +244,10 @@ async function captureOwnedMcp(): Promise<OwnedMcpProcess | null> {
     'claudeDirHash',
     'launchSpecHash',
     'ownerInstanceId',
-  ])
+  ]) {
+    assert.notEqual(state[key], undefined, `MCP cleanup requires state identity ${key}`);
     assert.equal(health[key], state[key], `MCP cleanup requires matching health ${key}`);
+  }
   assert.equal(state.schemaVersion, 1);
   assert.equal(state.service, 'agent-teams-mcp-http');
   assert.equal(state.transport, 'httpStream');
@@ -1335,13 +1337,8 @@ try {
   const beforeCrash = await evaluate(active, rendererSnapshot, [EXTERNAL_AGENT_RENDERER_MARKER]);
   assert(beforeCrash && beforeCrash.info.cdp.status === 'ready');
   const mainPidBeforeCrash = assertAlive().pid;
-  const healthBeforeCrash = await json<Record<string, unknown>>(
-    new URL('/health', beforeCrash.info.mcp.url!).href
-  );
-  assert(Number.isInteger(healthBeforeCrash.pid) && Number(healthBeforeCrash.pid) > 0);
-  assert(
-    typeof healthBeforeCrash.ownerInstanceId === 'string' && healthBeforeCrash.ownerInstanceId
-  );
+  const mcpBeforeCrash = await captureOwnedMcp();
+  assert(mcpBeforeCrash, 'Renderer crash proof requires an owned ready MCP child');
   // Crashing the selected renderer can disconnect CDP or leave Page.crash unanswered.
   // Its existing 30s command bound is accepted only alongside independent recovery evidence.
   const crashCommandResult = await active.send('Page.crash').then(
@@ -1386,15 +1383,13 @@ try {
   assert(recovered.info.cdp.targetGeneration > beforeCrash.info.cdp.targetGeneration);
   assert.equal(recovered.info.mcp.status, 'ready');
   assert.equal(recovered.info.mcp.url, beforeCrash.info.mcp.url);
-  const healthAfterCrash = await json<Record<string, unknown>>(
-    new URL('/health', recovered.info.mcp.url!).href
+  const mcpAfterCrash = await captureOwnedMcp();
+  assert(mcpAfterCrash, 'Recovered renderer requires an owned ready MCP child');
+  assert.deepEqual(
+    mcpAfterCrash,
+    mcpBeforeCrash,
+    'MCP process identity changed after renderer crash'
   );
-  for (const key of ['pid', 'ownerInstanceId', 'launchSpecHash', 'claudeDirHash'])
-    assert.equal(
-      healthAfterCrash[key],
-      healthBeforeCrash[key],
-      `MCP identity changed after renderer crash: ${key}`
-    );
   const crashDraft = await evaluate(
     active,
     async (name: string) =>
@@ -1410,8 +1405,8 @@ try {
     before: beforeCrash.info.cdp,
     after: recovered.info.cdp,
     context: recovered.info.context,
-    mcpHealthBefore: healthBeforeCrash,
-    mcpHealthAfter: healthAfterCrash,
+    mcpProcessBefore: mcpBeforeCrash,
+    mcpProcessAfter: mcpAfterCrash,
     draftReadback: crashDraft,
     noLaunch: true,
     scope:
