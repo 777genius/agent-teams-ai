@@ -8,50 +8,70 @@ export function useConnectionInfo(api: ExternalAgentConnectionApi, enabled: bool
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const generation = useRef(0);
+  const retryCurrent = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     const current = ++generation.current;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let requestId = 0;
+    let retryActive = false;
     setInfo(null);
     setError(null);
+    setRetrying(false);
     if (!enabled) return;
+    const isCurrent = (id: number): boolean => generation.current === current && requestId === id;
+    const scheduleRead = (): void => {
+      timer = setTimeout(() => void read(), 5000);
+    };
     const read = async (): Promise<void> => {
+      const id = ++requestId;
       try {
         const next = await api.getConnectionInfo();
-        if (generation.current !== current) return;
+        if (!isCurrent(id)) return;
         setInfo(next);
         setError(null);
       } catch (cause) {
-        if (generation.current !== current) return;
+        if (!isCurrent(id)) return;
         setInfo(null);
         setError(cause instanceof Error ? cause.message : 'Cannot read app connection.');
       }
-      if (generation.current === current) timer = setTimeout(() => void read(), 5000);
+      if (isCurrent(id)) scheduleRead();
+    };
+    retryCurrent.current = async (): Promise<void> => {
+      if (retryActive || generation.current !== current) return;
+      retryActive = true;
+      clearTimeout(timer);
+      const id = ++requestId;
+      setRetrying(true);
+      setError(null);
+      try {
+        const next = await api.retryConnection();
+        if (!isCurrent(id)) return;
+        setInfo(next);
+        setError(null);
+      } catch (cause) {
+        if (!isCurrent(id)) return;
+        setInfo(null);
+        setError(cause instanceof Error ? cause.message : 'Cannot retry app connection.');
+      } finally {
+        if (isCurrent(id)) {
+          retryActive = false;
+          setRetrying(false);
+          scheduleRead();
+        }
+      }
     };
     void read();
     return () => {
       generation.current++;
+      retryCurrent.current = null;
       clearTimeout(timer);
     };
   }, [api, enabled]);
 
   const retry = useCallback(async (): Promise<void> => {
-    if (!enabled || retrying) return;
-    const current = generation.current;
-    setRetrying(true);
-    setError(null);
-    try {
-      const next = await api.retryConnection();
-      if (generation.current === current) setInfo(next);
-    } catch (cause) {
-      if (generation.current === current) {
-        setInfo(null);
-        setError(cause instanceof Error ? cause.message : 'Cannot retry app connection.');
-      }
-    } finally {
-      setRetrying(false);
-    }
-  }, [api, enabled, retrying]);
+    await retryCurrent.current?.();
+  }, []);
 
   return { info, error, retrying, retry };
 }

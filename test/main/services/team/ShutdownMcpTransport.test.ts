@@ -349,49 +349,53 @@ describe('shutdown MCP transport authority', () => {
     }
   });
 
-  it('refreshes only a new main command copy to current root authority and turn-settled spool', async () => {
-    const old = hostEnv();
-    old.AGENT_TEAMS_MCP_CLAUDE_DIR = '/sandbox/old';
-    const command = { ...old, AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/old/spool' };
-    const current = {
-      ...hostEnv(),
-      AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/new',
-      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64),
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: undefined,
-    };
-    const root = vi.spyOn(pathDecoder, 'getClaudeBasePath').mockReturnValue('/sandbox/new');
-    const teams = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue('/sandbox/new/teams');
-    const spool = vi
-      .spyOn(memberWorkSync, 'buildMemberWorkSyncRuntimeTurnSettledEnvironment')
-      .mockResolvedValue({ AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/new/spool' });
-    const revoke = server.appContext.bind(current, true);
-    try {
-      // The generic validator still rejects the stale child; only this trusted copy is refreshed.
-      expect(() => applyAgentTeamsMcpAppContext({ ...command })).toThrow(
-        'Foreign Host MCP child context'
-      );
-      await refreshDesktopBridgeEnvironment(command);
-      expect(command.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/new');
-      expect(command.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT).toBe('/sandbox/new/spool');
-      expect(JSON.parse(command.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toMatchObject({
-        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64),
+  it.each([true, false])(
+    'refreshes a new main command spool with current authority=%s',
+    async (bound) => {
+      const old = hostEnv();
+      old.AGENT_TEAMS_MCP_CLAUDE_DIR = '/sandbox/old';
+      const command = { ...old, AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/old/spool' };
+      const current = {
+        ...hostEnv(),
         AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/new',
-      });
-      expect(old.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/old');
-      expect(
-        JSON.parse(old.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).CLAUDE_TEAM_APP_PROFILE_SCOPE
-      ).toBe(profile);
-      expect(spool).toHaveBeenCalledWith({
-        teamsBasePath: '/sandbox/new/teams',
-        provider: 'opencode',
-      });
-    } finally {
-      revoke();
-      spool.mockRestore();
-      teams.mockRestore();
-      root.mockRestore();
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64),
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: undefined,
+      };
+      const root = vi.spyOn(pathDecoder, 'getClaudeBasePath').mockReturnValue('/sandbox/new');
+      const teams = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue('/sandbox/new/teams');
+      const spool = vi
+        .spyOn(memberWorkSync, 'buildMemberWorkSyncRuntimeTurnSettledEnvironment')
+        .mockResolvedValue({ AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/new/spool' });
+      const revoke = bound ? server.appContext.bind(current, true) : () => undefined;
+      try {
+        // The generic validator still rejects the stale child; only this trusted copy is refreshed.
+        if (bound)
+          expect(() => applyAgentTeamsMcpAppContext({ ...command })).toThrow(
+            'Foreign Host MCP child context'
+          );
+        await refreshDesktopBridgeEnvironment(command);
+        expect(command.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/new');
+        expect(command.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT).toBe('/sandbox/new/spool');
+        expect(JSON.parse(command.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toMatchObject({
+          ...(bound ? { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64) } : {}),
+          AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/new',
+        });
+        expect(old.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/old');
+        expect(
+          JSON.parse(old.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).CLAUDE_TEAM_APP_PROFILE_SCOPE
+        ).toBe(profile);
+        expect(spool).toHaveBeenCalledWith({
+          teamsBasePath: '/sandbox/new/teams',
+          provider: 'opencode',
+        });
+      } finally {
+        revoke();
+        spool.mockRestore();
+        teams.mockRestore();
+        root.mockRestore();
+      }
     }
-  });
+  );
 
   it('does not publish a stopped in-flight child when readiness completes late', async () => {
     const child = Object.assign(new EventEmitter(), { stderr: new EventEmitter(), pid: undefined });

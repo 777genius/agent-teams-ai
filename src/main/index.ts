@@ -2056,6 +2056,7 @@ async function initializeServices(): Promise<void> {
   // Bind desktop authority before exposing any runtime bridge consumer.
   externalAgentConnection = composeExternalAgentConnection({
     appInstanceId: openCodeManagedHostInstanceId,
+    hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
     cdp: nativeRendererCdp,
     getMainContents: () => mainWindow?.webContents ?? null,
     isLocalContext: () =>
@@ -2069,6 +2070,7 @@ async function initializeServices(): Promise<void> {
       if (httpServer?.isRunning()) await syncTeamControlApiState();
     },
   });
+  teamProvisioningService.setLaunchAdmissionGuard(externalAgentConnection.assertLaunchAdmission);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,

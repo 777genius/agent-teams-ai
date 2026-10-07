@@ -20,6 +20,12 @@ import { createLogger } from '@shared/utils/logger';
 
 import { createOpenCodeMcpAppContext } from './opencode/bridge/OpenCodeMcpBridgeEnv';
 import { type FileLockOptions, withFileLock } from './fileLock';
+import {
+  assertNoLiveMcpConsumers,
+  canCleanupPriorDesktopMcpChild,
+  hasLiveMcpConsumers,
+  processDetailsIncludeMarker,
+} from './mcpProcessOwnership';
 import { stopOwnedMcpChild, waitForOwnedMcpPortRelease } from './stopOwnedMcpChild';
 import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpConfigBuilder';
 
@@ -575,12 +581,6 @@ function isMcpHttpServerCommand(command: string): boolean {
   );
 }
 
-function processDetailsIncludeMarker(details: string, marker: string): boolean {
-  return new RegExp(`(^|\\s)${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`).test(
-    details
-  );
-}
-
 function hasManagedMcpDetails(details: string, port: number): boolean {
   return (
     processDetailsIncludeMarker(details, 'AGENT_TEAMS_MCP_TRANSPORT=httpStream') &&
@@ -730,6 +730,14 @@ export class AgentTeamsMcpHttpServer {
           MCP_HTTP_PORT_RELEASE_TIMEOUT_MS,
           MCP_HTTP_READY_POLL_MS
         )
+    );
+  }
+
+  assertNoLiveConsumers(): Promise<void> {
+    return assertNoLiveMcpConsumers(
+      this.handle,
+      this.deps.listProcessRows ?? listNativeProcessRows,
+      this.deps.readProcessDetails ?? readNativeProcessCommandWithEnv
     );
   }
 
@@ -1274,17 +1282,35 @@ export class AgentTeamsMcpHttpServer {
         continue;
       }
 
-      const probe = await probeHealth(MCP_HTTP_HOST, port);
-      const hasMatchingIdentity =
-        probe.identity !== null && identityMatchesExpected(probe.identity, expectedIdentity, port);
-      if ((expectedIdentity.requireOwner || probe.identity) && !hasMatchingIdentity) {
-        continue;
-      }
+      const canCleanup = () =>
+        expectedIdentity.requireOwner
+          ? canCleanupPriorDesktopMcpChild({
+              pid: row.pid,
+              startedAtMs,
+              profile: this.appContext.read(getClaudeBasePath())?.CLAUDE_TEAM_APP_PROFILE_SCOPE,
+              listRows,
+              readDetails,
+              readStartTimeMs,
+              isProcessAlive,
+              probe: () => probeHealth(MCP_HTTP_HOST, port),
+              matchesIdentity: (identity) =>
+                identityMatchesExpected(
+                  identity,
+                  { ...expectedIdentity, requireOwner: false },
+                  port
+                ),
+              hasManagedDetails: (value) => hasManagedMcpDetails(value, port),
+            })
+          : probeHealth(MCP_HTTP_HOST, port).then(
+              (probe) =>
+                !probe.identity || identityMatchesExpected(probe.identity, expectedIdentity, port)
+            );
+      if (!(await canCleanup())) continue;
 
       const ownedPids = await this.collectOwnedMcpProcessTreePids(rows, row.pid, port, readDetails);
       const ownedPidSet = new Set(ownedPids);
 
-      if (await this.hasLiveMcpConsumers(rows, ownedPidSet, port, readDetails)) {
+      if (await hasLiveMcpConsumers(rows, ownedPidSet, port, readDetails)) {
         this.recordCleanupDiagnostic(
           currentHandle,
           `opencode_app_mcp_legacy_orphan_kept_live_consumers:${port}`
@@ -1293,6 +1319,7 @@ export class AgentTeamsMcpHttpServer {
       }
 
       try {
+        if (!(await canCleanup())) continue;
         let cleanupFailed = false;
         for (const pid of [...ownedPids].reverse()) {
           if (!isProcessAlive(pid)) {
@@ -1305,6 +1332,7 @@ export class AgentTeamsMcpHttpServer {
           }
         }
         await sleepMs(MCP_HTTP_ORPHAN_TERMINATE_GRACE_MS);
+        if ([...ownedPids].some(isProcessAlive) && !(await canCleanup())) continue;
         for (const pid of [...ownedPids].reverse()) {
           if (!isProcessAlive(pid)) {
             continue;
@@ -1363,32 +1391,6 @@ export class AgentTeamsMcpHttpServer {
       }
     }
     return ownedPids;
-  }
-
-  private async hasLiveMcpConsumers(
-    rows: readonly RuntimeProcessTableRow[],
-    candidatePids: ReadonlySet<number>,
-    port: number,
-    readDetails: (pid: number) => Promise<string | null>
-  ): Promise<boolean> {
-    const url = `http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`;
-    const urlHash = sha256Hex(url);
-    for (const row of rows) {
-      if (candidatePids.has(row.pid)) {
-        continue;
-      }
-      const details = (await readDetails(row.pid)) ?? row.command;
-      if (
-        processDetailsIncludeMarker(details, `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`) ||
-        processDetailsIncludeMarker(
-          details,
-          `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH=${urlHash}`
-        )
-      ) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private recordCleanupDiagnostic(
