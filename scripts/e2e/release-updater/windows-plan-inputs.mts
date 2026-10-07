@@ -5,7 +5,6 @@ import path from 'node:path';
 import {
   assetByName,
   canonical,
-  checkInput,
   checkMetadata,
   checkRelease,
   digest,
@@ -14,9 +13,9 @@ import {
   sameProof,
   textProof,
   validateFeed,
-  version,
 } from '../../ci/release/contract.ts';
 import { hashFile } from './inputs.mts';
+import { checkNativePredecessor, nativeReleaseScenario } from './native-release-scenario.mts';
 
 import type { Release, StageInput, StagePlan } from '../../ci/release/contract.ts';
 
@@ -83,23 +82,7 @@ export interface WindowsInputSet {
 
 export async function readWindowsStagePlan(planFile: string): Promise<StagePlan> {
   const plan = JSON.parse(await readFile(planFile, 'utf8')) as StagePlan;
-  assert.equal(plan.schemaVersion, 1);
-  checkInput(plan.input);
-  assert.equal(plan.input.repository, '777genius/agent-teams-ai');
-  assert.equal(plan.input.mode, 'carry-mac');
-  assert.equal(
-    plan.input.target.tag,
-    'v2.17.6',
-    'Only the owner-selected new target is final-release evidence'
-  );
-  assert.equal(plan.input.latest.tag, 'v2.17.1');
-  assert.equal(plan.input.latest.id, 398386033);
-  assert.equal(plan.input.macSource?.release.id, 398386033);
-  assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
-  assert.equal(
-    plan.input.macSource?.release.applicationSha,
-    '395572f9ff2a261cb28224754883a39d2c3c8827'
-  );
+  nativeReleaseScenario(plan);
   return plan;
 }
 
@@ -115,8 +98,7 @@ export async function planWindowsInputs(
   const target = JSON.parse(
     await readFile(path.join(directory, 'draft-api.json'), 'utf8')
   ) as Release;
-  assert(plan.input.macSource);
-  checkRelease(source, plan.input.macSource.release, false);
+  checkNativePredecessor(plan, source);
   checkRelease(target, plan.input.target, true);
   assert.equal(source.id, 398386033);
   const verified: WindowsProofPin[] = [];
@@ -128,7 +110,7 @@ export async function planWindowsInputs(
     checkMetadata(assetByName(source, pin.name), { name: pin.name, ...actual });
     verified.push({ ...pin, sha512: actual.sha512 });
   }
-  const targetVersion = version(plan.input.target.tag);
+  const { targetVersion } = nativeReleaseScenario(plan);
   for (const [index, name] of platformNames(targetVersion).windows.entries()) {
     for (const assetName of [name, `${name}.blockmap`]) {
       const original = plan.input.originals.find((entry) => entry.name === assetName);

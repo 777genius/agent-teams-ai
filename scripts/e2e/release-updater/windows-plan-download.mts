@@ -17,6 +17,8 @@ import {
   textProof,
 } from '../../ci/release/contract.ts';
 import { hashFile } from './inputs.mts';
+import { checkNativePredecessor, nativeReleaseScenario } from './native-release-scenario.mts';
+import { downloadPreparedStageArtifact } from './prepared-stage-download.mts';
 import { validateWindowsProducerUpload } from './windows-plan-producer.mts';
 import {
   planWindowsInputs,
@@ -95,12 +97,19 @@ async function downloadTrustedArtifact(
       /^[a-f\d]{64}$/u.test(planDigest) &&
       /^[a-f\d]{40}$/u.test(toolingSha)
   );
-  const workflow =
-    kind === 'prepared'
-      ? '.github/workflows/stage-existing-partial-draft.yml'
-      : '.github/workflows/prepare-updater-native-inputs.yml';
-  const artifactName =
-    kind === 'prepared' ? 'existing-draft-stage-plan' : 'TEST-windows-native-inputs';
+  if (kind === 'prepared')
+    return (
+      await downloadPreparedStageArtifact(output, {
+        runId,
+        attempt,
+        artifactId,
+        artifactSha256,
+        toolingSha,
+        planDigest,
+      })
+    ).receipt;
+  const workflow = '.github/workflows/prepare-updater-native-inputs.yml';
+  const artifactName = 'TEST-windows-native-inputs';
   const run = await api<{
     id: number;
     run_attempt: number;
@@ -123,11 +132,8 @@ async function downloadTrustedArtifact(
     `actions/runs/${runId}/attempts/${attempt}/jobs?per_page=100`,
     path.join(output, 'producer-jobs.json')
   );
-  const jobName = kind === 'prepared' ? 'assemble-draft' : 'prepare-windows-inputs';
-  const stepName =
-    kind === 'prepared'
-      ? 'Persist immutable metadata plan'
-      : 'Upload immutable Windows native inputs';
+  const jobName = 'prepare-windows-inputs';
+  const stepName = 'Upload immutable Windows native inputs';
   const successful = jobs.jobs.filter(
     (job) => job.name === jobName && job.status === 'completed' && job.conclusion === 'success'
   );
@@ -152,43 +158,31 @@ async function downloadTrustedArtifact(
   const zip = path.join(output, 'producer.zip');
   await command('gh', ['api', `repos/${repository}/actions/artifacts/${artifactId}/zip`], zip);
   assert.equal((await hashFile(zip)).sha256, artifactSha256);
-  const planName = kind === 'prepared' ? 'stage-plan.json' : 'plan.json';
-  await command('unzip', ['-p', zip, planName], path.join(output, 'plan.json'));
+  await command('unzip', ['-p', zip, 'plan.json'], path.join(output, 'plan.json'));
   const plan = JSON.parse(await readFile(path.join(output, 'plan.json'), 'utf8')) as StagePlan;
   assert.equal(plan.schemaVersion, 1);
   checkInput(plan.input);
   assert.equal((await hashFile(path.join(output, 'plan.json'))).sha256, planDigest);
   assert.equal(plan.input.toolingSha, toolingSha);
-  if (kind === 'prepared') {
-    await command(
-      'unzip',
-      ['-p', zip, 'stage-plan.sha256'],
-      path.join(output, 'stage-plan.sha256')
-    );
-    assert.equal(
-      (await readFile(path.join(output, 'stage-plan.sha256'), 'utf8')).trim(),
-      planDigest
-    );
-  } else {
-    const names = [
-      ...windowsPredecessorPins.map((pin) => pin.name),
-      ...platformNames('2.17.6').windows.flatMap((name) => [name, `${name}.blockmap`]),
-      'source-api.json',
-      'draft-api.json',
-      'latest.yml',
-      'release-platform-manifest.json',
-      'prepared-receipt.json',
-    ];
-    for (const name of names) await command('unzip', ['-p', zip, name], path.join(output, name));
-    const prepared = JSON.parse(
-      await readFile(path.join(output, 'prepared-receipt.json'), 'utf8')
-    ) as ProducerReceipt;
-    assert.equal(prepared.repository, repository);
-    assert.equal(prepared.workflow, '.github/workflows/stage-existing-partial-draft.yml');
-    assert.equal(prepared.toolingSha, toolingSha);
-    assert.equal(prepared.planDigest, planDigest);
-    assert.equal(prepared.inputDigest, digest(canonical(plan.input)));
-  }
+  const { targetVersion } = nativeReleaseScenario(plan);
+  const names = [
+    ...windowsPredecessorPins.map((pin) => pin.name),
+    ...platformNames(targetVersion).windows.flatMap((name) => [name, `${name}.blockmap`]),
+    'source-api.json',
+    'draft-api.json',
+    'latest.yml',
+    'release-platform-manifest.json',
+    'prepared-receipt.json',
+  ];
+  for (const name of names) await command('unzip', ['-p', zip, name], path.join(output, name));
+  const prepared = JSON.parse(
+    await readFile(path.join(output, 'prepared-receipt.json'), 'utf8')
+  ) as ProducerReceipt;
+  assert.equal(prepared.repository, repository);
+  assert.equal(prepared.workflow, '.github/workflows/stage-existing-partial-draft.yml');
+  assert.equal(prepared.toolingSha, toolingSha);
+  assert.equal(prepared.planDigest, planDigest);
+  assert.equal(prepared.inputDigest, digest(canonical(plan.input)));
   await unlink(zip);
   return {
     repository,
@@ -231,19 +225,17 @@ async function prepare() {
   const receipt = await downloadTrustedArtifact(output, kind);
   const planFile = path.join(output, 'plan.json');
   const plan = await readWindowsStagePlan(planFile);
-  assert.equal(plan.input.target.tag, 'v2.17.6');
-  assert.equal(plan.input.macSource?.release.tag, 'v2.17.1');
+  const { targetVersion, predecessor } = nativeReleaseScenario(plan);
   if (kind === 'prepared') {
-    assert(plan.input.macSource);
     const source = await api<Release>(
-      `releases/${plan.input.macSource.release.id}`,
+      `releases/${predecessor.id}`,
       path.join(output, 'source-api.json')
     );
     const target = await api<Release>(
       `releases/${plan.input.target.id}`,
       path.join(output, 'draft-api.json')
     );
-    checkRelease(source, plan.input.macSource.release, false);
+    checkNativePredecessor(plan, source);
     checkRelease(target, plan.input.target, true);
     const feed = plan.feeds['latest.yml'];
     assert(typeof feed === 'string');
@@ -260,7 +252,7 @@ async function prepare() {
       await downloadAsset(target, expected.name, output);
     }
     const sourceNames: string[] = windowsPredecessorPins.map((pin) => pin.name);
-    const targetNames = platformNames('2.17.6').windows.flatMap((name) => [
+    const targetNames = platformNames(targetVersion).windows.flatMap((name) => [
       name,
       `${name}.blockmap`,
     ]);

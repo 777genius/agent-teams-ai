@@ -47,8 +47,9 @@ function manifest() {
     input: {
       repository,
       mode: 'carry-mac',
+      macProductMinimum: '12.0',
       target: { tag: 'v2.17.2' },
-      macSource: { release: { tag: 'v2.17.1', createdAt: macDate } },
+      macSource: { productMinimum: '12.0', release: { tag: 'v2.17.1', createdAt: macDate } },
     },
     versions: { windows: '2.17.2', linux: '2.17.2', mac: '2.17.1' },
   };
@@ -70,6 +71,7 @@ describe('release download versions', () => {
         url: `https://github.com/${repository}/releases/download/v2.17.2/Agent.Teams.AI-2.17.1-${arch}.dmg`,
         version: '2.17.1',
         pubDate: null,
+        macProductMinimum: '12.0',
       });
       expect(resolveReleaseDownload(data, 'windows', arch)).toEqual({
         url: `https://github.com/${repository}/releases/download/v2.17.2/Agent.Teams.AI.Setup.2.17.2${arch === 'arm64' ? '-arm64' : ''}.exe`,
@@ -82,7 +84,7 @@ describe('release download versions', () => {
       pubDate: publishedAt,
     });
     expect(data.variants.linux.deb.version).toBe('2.17.2');
-    expect(platformReleaseInfo(data, 'macos')).toEqual({ version: '2.17.1', pubDate: null });
+    expect(platformReleaseInfo(data, 'macos')).toEqual({ version: '2.17.1', pubDate: null, macProductMinimum: '12.0' });
     expect(resolveReleaseDownload(data, 'macos', 'unknown')).toBeNull();
     expect(resolveReleaseDownload(data, 'windows', 'unknown')).toBeNull();
   });
@@ -94,6 +96,7 @@ describe('release download versions', () => {
       input: {
         ...value.input,
         macSource: {
+          ...value.input.macSource,
           release: { ...value.input.macSource.release, publishedAt: macDate },
         },
       },
@@ -106,6 +109,7 @@ describe('release download versions', () => {
       input: {
         ...value.input,
         macSource: {
+          ...value.input.macSource,
           release: { ...value.input.macSource.release, publishedAt: 'unavailable' },
         },
       },
@@ -217,6 +221,67 @@ describe('release download versions', () => {
         'x64'
       )?.version
     ).toBe('2.17.1');
+  });
+});
+
+describe('Mac product minimum provenance', () => {
+  const names = canonicalNames.map((name) => name.replace(/2\.17\.[12]/g, '2.17.8'));
+  const future = () => release(names, 'v2.17.8');
+  const full = (minimum: unknown) => ({
+    ...manifest(),
+    input: { ...manifest().input, mode: 'full', target: { tag: 'v2.17.8' }, macProductMinimum: minimum },
+    versions: { windows: '2.17.8', linux: '2.17.8', mac: '2.17.8' },
+  });
+
+  it.each(['12.0', '13.0'])('binds declared %s to both actual future Mac payloads', (minimum) => {
+    const data = parseReleaseDownloads(future(), repository, full(minimum));
+    expect(data.manifestValid).toBe(true);
+    for (const arch of ['arm64', 'x64'] as const) {
+      expect(resolveReleaseDownload(data, 'macos', arch)).toMatchObject({
+        version: '2.17.8', macProductMinimum: minimum,
+      });
+    }
+    expect(platformReleaseInfo(data, 'macos').macProductMinimum).toBe(minimum);
+  });
+
+  it.each([
+    full('14.0'), full(undefined),
+    { ...full('13.0'), input: { ...full('13.0').input, repository: 'someone/else' } },
+    { ...full('13.0'), input: { ...full('13.0').input, target: { tag: 'v2.17.7' } } },
+    { ...full('13.0'), versions: { ...full('13.0').versions, mac: '2.17.7' } },
+  ])('omits unsupported or unbound declarations: %j', (value) => {
+    const data = parseReleaseDownloads(future(), repository, value);
+    expect(data.manifestValid).toBe(false);
+    expect(resolveReleaseDownload(data, 'macos', 'arm64')?.macProductMinimum).toBeNull();
+  });
+
+  it('rejects a carried minimum that differs from its source metadata', () => {
+    const value = manifest();
+    value.input.macSource.productMinimum = '13.0';
+    const data = parseReleaseDownloads(release(), repository, value);
+    expect(data.manifestValid).toBe(false);
+    expect(resolveReleaseDownload(data, 'macos', 'x64')?.macProductMinimum).toBeNull();
+  });
+
+  it('rejects a carried floor outside the supported carried-release contract', () => {
+    const value = manifest();
+    value.input.macProductMinimum = value.input.macSource.productMinimum = '13.0';
+    const data = parseReleaseDownloads(release(), repository, value);
+    expect(data.manifestValid).toBe(false);
+    expect(resolveReleaseDownload(data, 'macos', 'arm64')?.macProductMinimum).toBeNull();
+  });
+
+  it('preserves only the bound historical 2.17.1 floor when no manifest exists', () => {
+    const mixed = release(names.map((name) => name.replace('2.17.8-arm64', '2.17.1-arm64')), 'v2.17.8');
+    const data = parseReleaseDownloads(mixed, repository);
+    expect(resolveReleaseDownload(data, 'macos', 'arm64')?.macProductMinimum).toBe('12.0');
+    expect(resolveReleaseDownload(data, 'macos', 'x64')?.macProductMinimum).toBeNull();
+    expect(platformReleaseInfo(data, 'macos').macProductMinimum).toBeNull();
+  });
+
+  it('does not assign the historical publisher floor to another repository', () => {
+    const data = parseReleaseDownloads(release(), 'someone/else');
+    expect(resolveReleaseDownload(data, 'macos', 'arm64')?.macProductMinimum).toBeNull();
   });
 });
 

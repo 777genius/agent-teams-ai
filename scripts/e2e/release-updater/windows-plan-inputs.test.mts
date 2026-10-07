@@ -21,7 +21,8 @@ import type { WindowsProofPin } from './windows-plan-inputs.mts';
 // Byte-backed bundle contract only: no GitHub, installer, app, or native proof.
 // These tests reject substitutions of release identity, asset identity, bytes,
 // or the prepared Windows feed, independently of the eventual native E2E.
-async function fixture() {
+async function fixture(targetVersion = '2.17.6') {
+  const full = targetVersion === '2.17.7';
   const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-windows-plan-contract-'));
   const source: Release = {
     id: 398386033,
@@ -36,7 +37,7 @@ async function fixture() {
   };
   const target: Release = {
     id: 499999999,
-    tag_name: 'v2.17.6',
+    tag_name: `v${targetVersion}`,
     target_commitish: '1'.repeat(40),
     created_at: '2026-10-05T15:27:10Z',
     draft: true,
@@ -53,7 +54,7 @@ async function fixture() {
     name: release.name,
     body: release.body,
   });
-  const t = platformNames('2.17.6');
+  const t = platformNames(targetVersion);
   const mac = [
     ...platformNames('2.17.1').mac,
     ...Object.keys(macAliases('2.17.1')),
@@ -83,23 +84,32 @@ async function fixture() {
   }
   for (const name of [...t.windows, ...t.linux, ...t.windows.map((n) => `${n}.blockmap`)])
     originals.push(await add(target, name));
-  for (const name of mac) originals.push(await add(source, name));
+  for (const name of full ? t.mac : mac) originals.push(await add(full ? target : source, name));
   const plan: StagePlan = {
     schemaVersion: 1,
     input: {
       repository: '777genius/agent-teams-ai',
-      mode: 'carry-mac',
+      ...(full
+        ? {
+            mode: 'full' as const,
+            latest: { id: 488888888, tag: 'v2.17.6' },
+            macSource: null,
+            macProductMinimum: '13.0',
+          }
+        : {
+            mode: 'carry-mac' as const,
+            latest: { id: source.id, tag: source.tag_name },
+            macSource: { release: snapshot(source), productMinimum: '12.0' },
+            macProductMinimum: '12.0',
+          }),
       toolingSha: '2'.repeat(40),
       target: snapshot(target),
-      latest: { id: source.id, tag: source.tag_name },
       originals,
-      macSource: { release: snapshot(source), productMinimum: '12.0' },
       build: { runId: 10, attempt: 1, jobIds: [11, 12, 13] },
-      macProductMinimum: '12.0',
     },
     feeds: {
       'latest.yml': renderFeed(
-        '2.17.6',
+        targetVersion,
         originals.filter((entry) => t.windows.includes(entry.name)),
         target.created_at
       ),
@@ -158,43 +168,65 @@ void test('bundle accepts matching actual byte proofs and preserves the prepared
   }
 });
 
-for (const variant of [
-  'target-sha',
-  'asset-id',
-  'asset-bytes',
-  'feed-version',
-  'source-id',
-  'skip-updater',
-  'missing-staged-feed',
-  'staged-manifest-bytes',
-] as const) {
-  void test(`bundle rejects ${variant} substitution`, async () => {
-    const input = await fixture();
-    try {
-      const installer = input.target.assets[0];
-      assert(installer);
-      if (variant === 'target-sha') input.target.target_commitish = '3'.repeat(40);
-      if (variant === 'asset-id') installer.id++;
-      if (variant === 'asset-bytes')
-        await writeFile(path.join(input.root, installer.name), 'changed actual bytes');
-      if (variant === 'feed-version') {
-        const feed = input.plan.feeds['latest.yml'];
-        assert(typeof feed === 'string');
-        input.plan.feeds['latest.yml'] = feed.replace('version: 2.17.6', 'version: 2.17.1');
+for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
+  for (const variant of [
+    'target-sha',
+    'asset-id',
+    'asset-bytes',
+    'feed-version',
+    'source-id',
+    'skip-updater',
+    'missing-staged-feed',
+    'staged-manifest-bytes',
+  ] as const) {
+    void test(`bundle ${targetVersion} rejects ${variant} substitution`, async () => {
+      const input = await fixture(targetVersion);
+      try {
+        const installer = input.target.assets[0];
+        assert(installer);
+        if (variant === 'target-sha') input.target.target_commitish = '3'.repeat(40);
+        if (variant === 'asset-id') installer.id++;
+        if (variant === 'asset-bytes')
+          await writeFile(path.join(input.root, installer.name), 'changed actual bytes');
+        if (variant === 'feed-version') {
+          const feed = input.plan.feeds['latest.yml'];
+          assert(typeof feed === 'string');
+          input.plan.feeds['latest.yml'] = feed.replace(
+            `version: ${targetVersion}`,
+            'version: 2.17.1'
+          );
+        }
+        if (variant === 'source-id') input.source.id++;
+        if (variant === 'skip-updater') {
+          input.target.body = '[skip-updater]';
+          input.plan.input.target.body = input.target.body;
+        }
+        if (variant === 'missing-staged-feed')
+          input.target.assets = input.target.assets.filter((asset) => asset.name !== 'latest.yml');
+        if (variant === 'staged-manifest-bytes')
+          await writeFile(path.join(input.root, 'release-platform-manifest.json'), '{}');
+        await input.persist();
+        await assert.rejects(input.verify());
+      } finally {
+        await rm(input.root, { recursive: true, force: true });
       }
-      if (variant === 'source-id') input.source.id++;
-      if (variant === 'skip-updater') {
-        input.target.body = '[skip-updater]';
-        input.plan.input.target.body = input.target.body;
-      }
-      if (variant === 'missing-staged-feed')
-        input.target.assets = input.target.assets.filter((asset) => asset.name !== 'latest.yml');
-      if (variant === 'staged-manifest-bytes')
-        await writeFile(path.join(input.root, 'release-platform-manifest.json'), '{}');
-      await input.persist();
-      await assert.rejects(input.verify());
-    } finally {
-      await rm(input.root, { recursive: true, force: true });
-    }
-  });
+    });
+  }
 }
+
+void test('full 217 bytes use independent 211 predecessor while captured latest is 216', async () => {
+  const input = await fixture('2.17.7');
+  try {
+    const result = await input.verify();
+    assert.equal(result.targetVersion, '2.17.7');
+    assert.equal(result.source.tag_name, 'v2.17.1');
+    assert.equal(result.plan?.input.latest.tag, 'v2.17.6');
+    assert.equal(result.plan?.input.macSource, null);
+    assert.deepEqual(
+      result.verified.map((pin) => pin.tag),
+      [...Array<string>(4).fill('v2.17.1'), ...Array<string>(4).fill('v2.17.7')]
+    );
+  } finally {
+    await rm(input.root, { recursive: true, force: true });
+  }
+});

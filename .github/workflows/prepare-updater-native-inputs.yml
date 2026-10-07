@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/e2e/release-updater/windows-plan*.mts'
+      - 'scripts/e2e/release-updater/native-release-scenario.mts'
+      - 'scripts/e2e/release-updater/prepared-stage-download*.mts'
       - 'scripts/e2e/release-updater/inputs.mts'
       - 'scripts/ci/release/contract.ts'
       - '.github/workflows/prepare-updater-native-inputs.yml'
@@ -39,8 +41,8 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
-      - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
-      - run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+      - run: pnpm lint:ci:files -- scripts/e2e/release-updater/native-release-scenario.mts scripts/e2e/release-updater/prepared-stage-download.mts scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts
+      - run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts
       - name: Diagnose actual read-only token visibility of the existing draft
         env:
           GH_TOKEN: ${{ github.token }}
@@ -116,9 +118,9 @@ jobs:
       - name: Require canonical typecheck and typed immutable-input tooling lint
         run: |
           pnpm typecheck
-          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/native-release-scenario.mts scripts/e2e/release-updater/prepared-stage-download.mts scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts
       - name: Check byte-backed immutable plan and actual staged metadata substitutions
-        run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts
+        run: node --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts
       - name: Verify the prepared producer and fetch exact real release bytes
         env:
           GH_TOKEN: ${{ github.token }}
