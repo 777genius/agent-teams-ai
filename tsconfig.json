@@ -27,7 +27,6 @@
     "test/**/*",
     "scripts/team-changes-real-data-smoke.ts",
     "scripts/smoke/codex-runtime-install.ts",
-    "scripts/ci/packaged-ci-*.mts",
     "scripts/ci/release/**/*.ts",
     "scripts/ci/*existing-draft.ts",
     "scripts/ci/verify-updater-release.ts",
