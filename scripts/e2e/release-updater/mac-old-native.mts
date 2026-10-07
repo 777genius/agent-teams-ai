@@ -417,7 +417,7 @@ export async function oldMacStopApps(commands: MacCommands) {
   );
   return { before, stopped: true };
 }
-export async function restoreOldMacNetwork(commands: MacCommands) {
+export async function retireOldMacShipIt(commands: MacCommands) {
   const value = await receipt(commands);
   assert(
     value.attempts.every((attempt) => attempt.pid !== undefined && attempt.owner),
@@ -426,6 +426,16 @@ export async function restoreOldMacNetwork(commands: MacCommands) {
   const job = await validatedJob(commands, value, false);
   if (job.present)
     await commands.checked('remove-owned-shipit-job', value.native.job, ['--remove-job']);
+  assert.equal(
+    (await jobStatus(commands, value.native.job)).present,
+    false,
+    'Owned ShipIt job must be absent before stopping TEST apps'
+  );
+  return job;
+}
+export async function restoreOldMacNetwork(commands: MacCommands) {
+  const value = await receipt(commands);
+  const job = await retireOldMacShipIt(commands);
   await oldMacStopApps(commands);
   // No unknown group members are signalled. They block restoration even if the original main exited.
   let since: number | undefined;

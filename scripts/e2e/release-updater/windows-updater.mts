@@ -248,7 +248,7 @@ try {
     env,
     windowsVerbatimArguments: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-    signal: AbortSignal.timeout(180_000),
+    signal: AbortSignal.timeout(process.arch === 'arm64' ? 480_000 : 180_000),
   });
   setup.on('error', (error) => {
     evidence.installError = String(error);

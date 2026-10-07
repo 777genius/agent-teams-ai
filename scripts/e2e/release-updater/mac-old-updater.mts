@@ -41,6 +41,7 @@ import {
   paintedMacDesktop,
   prepareOldMacNative,
   restoreOldMacNetwork,
+  retireOldMacShipIt,
 } from './mac-old-native.mts';
 import {
   MacOldUi,
@@ -714,6 +715,8 @@ try {
       !(evidence.automaticArguments as string).includes('--inspect'),
       'Automatic native proof must precede diagnostic launch'
     );
+    // Retire only this TEST install's validated job before transitioning to diagnostics.
+    evidence.transitionShipIt = await retireOldMacShipIt(commands);
     await oldMacStopApps(commands);
     const diagnostic = await launch('post-update-diagnostic', '2.17.1');
     assert.equal(diagnostic.roots.userData, initial.roots.userData);
