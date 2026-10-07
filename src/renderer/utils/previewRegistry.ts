@@ -4,7 +4,9 @@
  * Extensible: add a new PreviewType + extension set + component to support new formats.
  */
 
-export type PreviewType = 'image' | 'unknown';
+import { getDocumentFormat,isDocumentPreviewable } from '@features/document-preview';
+
+export type PreviewType = 'image' | 'document' | 'unknown';
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico']);
 
@@ -30,13 +32,14 @@ function getExtension(fileName: string): string {
 export function getPreviewType(fileName: string): PreviewType {
   const ext = getExtension(fileName);
   if (IMAGE_EXTENSIONS.has(ext)) return 'image';
+  if (getDocumentFormat(fileName)) return 'document';
   return 'unknown';
 }
 
 export function isPreviewable(fileName: string, size: number): boolean {
   const type = getPreviewType(fileName);
   if (type === 'image') return size <= IMAGE_MAX_SIZE;
-  return false;
+  return isDocumentPreviewable(fileName, size);
 }
 
 export function getMimeType(fileName: string): string | null {

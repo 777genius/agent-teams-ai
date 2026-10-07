@@ -39,6 +39,9 @@ export const EditorBinaryPlaceholder = ({
       <Button variant="outline" size="sm" className="mt-2" onClick={handleOpenExternal}>
         {t('editor.imagePreview.openSystemViewer')}
       </Button>
+      <Button variant="outline" size="sm" onClick={() => void window.electronAPI.showInFolder(filePath).catch(console.error)}>
+        {t('editor.showInFolder')}
+      </Button>
     </div>
   );
 };
