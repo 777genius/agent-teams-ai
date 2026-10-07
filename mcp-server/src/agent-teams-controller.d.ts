@@ -184,6 +184,7 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerRuntimeApi {
+    getConnectionInfo(): Promise<unknown>;
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;

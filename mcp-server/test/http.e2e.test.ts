@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
@@ -50,7 +50,8 @@ function parseJsonToolResult(response: Record<string, unknown>): Record<string, 
 async function postMcp(
   port: number,
   payload: Record<string, unknown>,
-  sessionId?: string
+  sessionId?: string,
+  headers: Record<string, string> = {}
 ): Promise<McpHttpResponse> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(payload);
@@ -65,6 +66,7 @@ async function postMcp(
           'content-type': 'application/json',
           'content-length': Buffer.byteLength(body),
           ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
+          ...headers,
         },
         timeout: 5_000,
       },
@@ -169,6 +171,197 @@ afterEach(async () => {
 });
 
 describe('agent-teams-mcp HTTP e2e', () => {
+  // Fails if bound HTTP tools lose marker/context, retarget via fallback, follow redirects,
+  // accept stale expectations, queue work-sync after rejection, or expose browser-origin access.
+  it('binds external discovery and draft requests to one app context across the real HTTP transport', async () => {
+    const claudeDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-bound-mcp-e2e-'));
+    tempDirectories.push(claudeDir);
+    const context = {
+      appInstanceId: 'sandbox-app',
+      dataRootFingerprint: 'sandbox-root',
+      connectionGeneration: 4,
+    };
+    const teamName = 'bound-draft';
+    const teamDir = path.join(claudeDir, 'teams', teamName);
+    await mkdir(teamDir, { recursive: true });
+    const configFile = path.join(teamDir, 'config.json');
+    const requests: Array<{ url: string; context: unknown; body: Record<string, unknown> }> = [];
+    let redirect = false;
+    const fallbackRequests: string[] = [];
+    const fallback = http.createServer((req, res) => {
+      fallbackRequests.push(req.url ?? '');
+      res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+    });
+    await new Promise<void>((resolve) => fallback.listen(0, '127.0.0.1', resolve));
+    const fallbackUrl = `http://127.0.0.1:${(fallback.address() as net.AddressInfo).port}`;
+    const control = http.createServer(async (req, res) => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      const rawBody = Buffer.concat(chunks).toString('utf8');
+      const body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
+      requests.push({
+        url: req.url ?? '',
+        context: JSON.parse(String(req.headers['x-agent-teams-app-context'] ?? 'null')),
+        body,
+      });
+      if (redirect) {
+        res.writeHead(307, { location: `${fallbackUrl}/redirected` }).end();
+        return;
+      }
+      res.setHeader('content-type', 'application/json');
+      if (req.url === '/api/app/connection') {
+        res.end(JSON.stringify({ schemaVersion: 1, context }));
+      } else if (req.url === '/api/teams' && req.method === 'POST') {
+        const saved = { ...body, name: teamName, members: body.members ?? [], isDraft: true };
+        await writeFile(configFile, JSON.stringify(saved));
+        res.end(JSON.stringify(saved));
+      } else if (req.url === `/api/teams/${teamName}`) {
+        res.end(await readFile(configFile, 'utf8'));
+      } else {
+        res.end(JSON.stringify({ accepted: true, memberName: 'alice' }));
+      }
+    });
+    await new Promise<void>((resolve) => control.listen(0, '127.0.0.1', resolve));
+    const controlUrl = `http://127.0.0.1:${(control.address() as net.AddressInfo).port}`;
+    await writeFile(
+      path.join(claudeDir, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: fallbackUrl })
+    );
+    const port = await allocateLoopbackPort();
+    const child = spawn(
+      process.execPath,
+      [serverEntry, '--transport', 'httpStream', '--host', '127.0.0.1', '--port', String(port)],
+      {
+        env: {
+          ...process.env,
+          AGENT_TEAMS_BOUND_CONTROL_URL: controlUrl,
+          AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+          AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+          CLAUDE_TEAM_CONTROL_URL: fallbackUrl,
+        },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
+    );
+    children.push(child);
+    try {
+      await waitForHealthBody(port);
+      const initializePayload = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'bound-sandbox-test', version: '1.0.0' },
+        },
+      };
+      const invalidHeaders: Array<Record<string, string>> = [
+        { origin: 'https://foreign.example' },
+        { host: 'foreign.example' },
+      ];
+      for (const headers of invalidHeaders) {
+        const denied = await postMcp(port, initializePayload, undefined, headers);
+        expect(denied.statusCode).toBe(403);
+        expect(denied.headers['access-control-allow-origin']).toBeUndefined();
+        for (const method of ['GET', 'DELETE', 'OPTIONS']) {
+          const result = await new Promise<McpHttpResponse>((resolve, reject) => {
+            const req = http.request(
+              { host: '127.0.0.1', port, path: '/mcp', method, headers },
+              (res) => {
+                res.resume();
+                res.on('end', () =>
+                  resolve({ statusCode: res.statusCode ?? null, headers: res.headers, body: '' })
+                );
+              }
+            );
+            req.once('error', reject);
+            req.end();
+          });
+          expect(result.statusCode).toBe(403);
+          expect(result.headers['access-control-allow-origin']).toBeUndefined();
+        }
+      }
+      const initialized = await postMcp(port, initializePayload);
+      expect(initialized.statusCode).toBe(200);
+      expect(initialized.headers['access-control-allow-origin']).toBeUndefined();
+      const sessionId = String(initialized.headers['mcp-session-id']);
+      await postMcp(port, { jsonrpc: '2.0', method: 'notifications/initialized' }, sessionId);
+      let nextId = 2;
+      const call = async (name: string, args: Record<string, unknown> = {}) => {
+        const id = nextId++;
+        const response = await postMcp(
+          port,
+          { jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } },
+          sessionId
+        );
+        return parseJsonToolResult(parseMcpResponse(response.body, id));
+      };
+      expect((await call('app_get_connection_info')).context).toEqual(context);
+      await expect(call('app_get_connection_info', { controlUrl: fallbackUrl })).rejects.toThrow();
+      const args = {
+        teamName,
+        runtimeSelectionVersion: 1,
+        expectedContext: context,
+        members: [{ name: 'alice', role: 'developer', workflow: 'Implement scoped changes' }],
+        prompt: 'Coordinate review',
+      };
+      const created = await call('team_create', args);
+      expect(created.runtimeSelectionVersion).toBe(1);
+      expect(created.expectedContext).toEqual(context);
+      expect(created).not.toHaveProperty('providerId');
+      expect(await call('team_get', { teamName })).toEqual(created);
+      expect(JSON.parse(await readFile(configFile, 'utf8'))).toEqual(created);
+      const rejected = [
+        { ...args, expectedContext: { ...context, connectionGeneration: 3 } },
+        { ...args, expectedContext: undefined },
+        { ...args, runtimeSelectionVersion: 2 },
+        { ...args, controlUrl: fallbackUrl },
+        { ...args, controlUrl: '' },
+        { ...args, claudeDir: path.join(claudeDir, 'other-root') },
+      ];
+      const before = requests.length;
+      for (const input of rejected) await expect(call('team_create', input)).rejects.toThrow();
+      expect(requests).toHaveLength(before);
+      await call('member_work_sync_status', { teamName, memberName: 'alice' });
+      await call('member_work_sync_report', {
+        teamName,
+        memberName: 'alice',
+        state: 'caught_up',
+        agendaFingerprint: 'test-agenda',
+        reportToken: 'test-token',
+      });
+      await call('runtime_heartbeat', {
+        teamName,
+        runId: 'sandbox-run',
+        memberName: 'alice',
+        runtimeSessionId: 'sandbox-session',
+      });
+      expect(
+        requests.every((request) => JSON.stringify(request.context) === JSON.stringify(context))
+      ).toBe(true);
+      redirect = true;
+      await expect(call('team_list')).rejects.toThrow();
+      await expect(
+        call('member_work_sync_report', {
+          teamName,
+          memberName: 'alice',
+          state: 'caught_up',
+          agendaFingerprint: 'test-agenda',
+          reportToken: 'test-token',
+        })
+      ).rejects.toThrow();
+      expect(fallbackRequests).toEqual([]);
+      await expect(
+        readFile(path.join(teamDir, '.member-work-sync', 'pending-reports.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await Promise.all([
+        new Promise<void>((resolve) => control.close(() => resolve())),
+        new Promise<void>((resolve) => fallback.close(() => resolve())),
+      ]);
+    }
+  });
+
   it('returns app-managed JSON identity from /health when identity env is present', async () => {
     const port = await allocateLoopbackPort();
     const child = spawn(

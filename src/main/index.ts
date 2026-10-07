@@ -27,6 +27,10 @@ import {
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
 import {
+  composeExternalAgentConnection,
+  refreshDesktopBridgeEnvironment,
+} from './startExternalAgentConnection';
+import {
   assertStartupActive,
   createStartupStage,
   StartupCancelledError,
@@ -36,6 +40,11 @@ import type {
   AppCloseReadinessResult,
   AppCloseReason,
 } from '@features/app-close-coordination/contracts';
+import {
+  prepareNativeRendererCdp,
+  registerExternalAgentConnectionIpc,
+  removeExternalAgentConnectionIpc,
+} from '@features/external-agent-connection/main';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
@@ -129,10 +138,7 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
-import {
-  applyAgentTeamsMcpAppContext,
-  ensureAgentTeamsMcpLocalLaunchEnv,
-} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import {
   hasExplicitOpenCodeBinaryOverride,
@@ -169,7 +175,6 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
-  shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
@@ -396,6 +401,10 @@ let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
+const nativeRendererCdp = prepareNativeRendererCdp(
+  configManager.getConfig().general.externalAgentCdpEnabled === true
+);
+let externalAgentConnection: ReturnType<typeof composeExternalAgentConnection> | null = null;
 
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
@@ -541,7 +550,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
   assertStartupActive(isShutdownStarted);
-  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
   if (explicitLocalMcpLaunchEnv) {
@@ -630,46 +638,17 @@ async function createOpenCodeRuntimeAdapterRegistry(
       }`
     );
   }
-  if (useHttpMcpBridge) {
-    try {
-      reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
-      const mcpHttpServer = await startupStage(
-        () => agentTeamsMcpHttpServer.ensureStarted(),
-        () => agentTeamsMcpHttpServer.stop({ preventRestart: true })
-      );
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
-        mcpHttpServer.url,
-        openCodeManagedHostInstanceId,
-        profileScope
-      );
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
-    } catch (error) {
-      assertStartupActive(isShutdownStarted);
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
-  if (
-    shouldEnsureOpenCodeLocalMcpLaunchEnv({
-      httpBridgeEnabled: useHttpMcpBridge,
-      mcpUrl: bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
-    })
-  ) {
-    await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
-  }
+  await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
     await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
     if (!useHttpMcpBridge) {
-      applyAgentTeamsMcpAppContext(nextEnv);
+      await refreshDesktopBridgeEnvironment(nextEnv);
       return nextEnv;
     }
+    if (!getTeamControlApiBaseUrl()) throw new Error('Desktop MCP control server is not ready');
     try {
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
@@ -692,7 +671,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
         }`
       );
     }
-    applyAgentTeamsMcpAppContext(nextEnv);
+    await refreshDesktopBridgeEnvironment(nextEnv);
     return nextEnv;
   };
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -1073,7 +1052,6 @@ let appStartupHandlersRegistered = false;
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
 let teamChangeCleanup: (() => void) | null = null;
-let revokeMcpAppContext: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -1868,8 +1846,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
   try {
     const currentLocal = contextRegistry.get('local');
     if (!currentLocal) {
-      logger.error('Cannot reconfigure local context: local context not found');
-      return;
+      throw new Error('Cannot reconfigure local context: local context not found');
     }
 
     const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
@@ -1906,6 +1883,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
     }
   } catch (error) {
     logger.error('Failed to reconfigure local context for Claude root change:', error);
+    throw error;
   }
 }
 
@@ -2075,6 +2053,22 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   projectFolderFeature.registerProjectFolderFeature(ipcMain);
+  // Bind desktop authority before exposing any runtime bridge consumer.
+  externalAgentConnection = composeExternalAgentConnection({
+    appInstanceId: openCodeManagedHostInstanceId,
+    cdp: nativeRendererCdp,
+    getMainContents: () => mainWindow?.webContents ?? null,
+    isLocalContext: () =>
+      contextRegistry.getActiveContextId() === 'local' &&
+      !['connecting', 'connected'].includes(sshConnectionManager.getStatus().state),
+    getControlUrl: getTeamControlApiBaseUrl,
+    startControl: () => startHttpServer(handleModeSwitch),
+    reconfigureRoot: async () => {
+      reconfigureLocalContextForClaudeRoot();
+      await schedulerService?.reloadForClaudeRootChange();
+      if (httpServer?.isRunning()) await syncTeamControlApiState();
+    },
+  });
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -2153,21 +2147,10 @@ async function initializeServices(): Promise<void> {
   );
   assertStartupActive(isShutdownStarted);
   teamProvisioningService.setRuntimeAdapterRegistry(runtimeAdapterRegistry);
-  teamRuntimeRecoveryFeature.start();
-  // Armed before the delay, not inside the task, so a launch requested during
-  // the scheduling delay serialises behind the sweep as well.
-  if (windowsStartupCleanup) {
-    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
-  } else {
-    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
-    scheduleStartupTask(() => {
-      void cleanupOpenCodeHostsForLifecycle('startup')
-        .catch((error: unknown) =>
-          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-        )
-        .finally(settleStartupRuntimeSweep);
-    }, STARTUP_RECOVERY_DELAY_MS);
-  }
+  // Fence launches before the control listener opens; run cleanup after bounded startup.
+  const settleStartupRuntimeSweep = windowsStartupCleanup
+    ? undefined
+    : beginOpenCodeStartupRuntimeSweep();
   stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted()
     ? null
     : startPeriodicOpenCodeHostStartupLockPurge({
@@ -2852,6 +2835,7 @@ async function initializeServices(): Promise<void> {
   await startPreparedMemberWorkSyncFeature({
     backup: initializedBackupOwner,
     prepared: preparedMemberWorkSyncFeature,
+    startBackground: false,
     stallObservation: memberWorkSyncStallObservation,
     isShutdownStarted,
     onStarted: (feature) => {
@@ -2907,6 +2891,8 @@ async function initializeServices(): Promise<void> {
     },
   });
 
+  registerExternalAgentConnectionIpc(ipcMain, externalAgentConnection);
+
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
@@ -2927,13 +2913,8 @@ async function initializeServices(): Promise<void> {
     {
       rewire: rewireContextEvents,
       full: onContextSwitched,
-      onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
-        reconfigureLocalContextForClaudeRoot();
-        void schedulerService?.reloadForClaudeRootChange();
-        if (httpServer?.isRunning()) {
-          void syncTeamControlApiState().catch(() => undefined);
-        }
-      },
+      updateClaudeRoot: (applyConfig) => externalAgentConnection!.updateRoot(applyConfig),
+      changeContext: (operation) => externalAgentConnection!.changeContext(operation),
       onAgentLanguageUpdated: (newLangCode: string) => {
         void teamProvisioningService.notifyLanguageChange(newLangCode);
       },
@@ -2993,12 +2974,20 @@ async function initializeServices(): Promise<void> {
     httpServer.broadcast('notification:clicked', data);
   });
 
-  // Start HTTP server if enabled in config
-  const appConfig = configManager.getConfig();
-  if (appConfig.httpServer?.enabled) {
-    void startHttpServer(handleModeSwitch).catch(() => undefined);
+  await externalAgentConnection.start();
+  memberWorkSyncFeature?.startBackground();
+  teamRuntimeRecoveryFeature.start();
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
   }
-
   logger.info('Services initialized successfully');
   publishStartupStatus({
     phase: 'readying',
@@ -3037,6 +3026,7 @@ async function startHttpServer(
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
+        externalAgentConnection: externalAgentConnection ?? undefined,
         updaterService,
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
@@ -3071,6 +3061,10 @@ async function shutdownServices(): Promise<void> {
   rendererRecoveryController?.dispose();
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    removeExternalAgentConnectionIpc(ipcMain);
+    await runShutdownStep('external connection admission drain', () =>
+      externalAgentConnection?.closeAdmission()
+    );
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();
@@ -3098,11 +3092,12 @@ async function shutdownServices(): Promise<void> {
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
-      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
-      revokeMcpAppContext = null;
-      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
-    });
+    await runShutdownStep(
+      'Agent Teams MCP HTTP server cleanup',
+      () =>
+        externalAgentConnection?.shutdown() ??
+        agentTeamsMcpHttpServer.stop({ preventRestart: true })
+    );
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );
@@ -3517,6 +3512,7 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', () => {
+    nativeRendererCdp.invalidateRenderer();
     recovery.dispose();
     if (rendererRecoveryController === recovery) rendererRecoveryController = null;
     clearRendererAvailability(mainWindow);
@@ -3551,6 +3547,7 @@ function createWindow(): void {
 
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    nativeRendererCdp.invalidateRenderer();
     logger.error('Renderer process gone:', details.reason, details.exitCode);
     if (isShutdownStarted()) {
       return;

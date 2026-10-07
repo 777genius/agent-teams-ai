@@ -7,6 +7,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
+import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,9 +58,7 @@ function buildLaunchSpecHash(launchSpec: TestLaunchSpec): string {
         Object.entries(launchSpec.env).sort(([left], [right]) => left.localeCompare(right))
       )
     : {};
-  return sha256Hex(
-    JSON.stringify({ command: launchSpec.command, args: launchSpec.args, env })
-  );
+  return sha256Hex(JSON.stringify({ command: launchSpec.command, args: launchSpec.args, env }));
 }
 
 async function createTempStatePath(): Promise<{ root: string; statePath: string }> {
@@ -205,15 +204,18 @@ describe('AgentTeamsMcpHttpServer', () => {
       waitForPort: async () => undefined,
     });
     const revokeReopened = reopened.appContext.bind(
-      { ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'after-quit' }, true
+      { ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'after-quit' },
+      true
     );
-    expect(reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL)
-      .toBeUndefined();
+    expect(
+      reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL
+    ).toBeUndefined();
     await reopened.ensureStarted();
     revokeOld();
     revokeNew();
-    expect(reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL)
-      .toContain('41004/mcp#agent-teams-app-instance=after-quit');
+    expect(
+      reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL
+    ).toContain('41004/mcp#agent-teams-app-instance=after-quit');
     expect(read()).toBeNull();
     revokeReopened();
     reopenedChild.emit('exit', 1, null);
@@ -414,10 +416,14 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     const startPromise = server.ensureStarted();
     await new Promise<void>((resolve) => setImmediate(resolve));
-    await server.stop({ preventRestart: true });
+    const stopping = server.stop({ preventRestart: true });
+    const rejectedStart = expect(startPromise).rejects.toThrow(
+      'startup is disabled during shutdown'
+    );
     resolveLaunchSpec({ command: 'node', args: ['mcp-server/dist/index.js'] });
+    await stopping;
+    await rejectedStart;
 
-    await expect(startPromise).rejects.toThrow('startup is disabled during shutdown');
     expect(spawnProcess).not.toHaveBeenCalled();
   });
 
@@ -505,45 +511,66 @@ describe('AgentTeamsMcpHttpServer', () => {
     }
   });
 
-  it('adopts a healthy MCP HTTP server from persistent state without spawning', async () => {
-    const { root, statePath } = await createTempStatePath();
-    const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
-    const port = 41021;
-    const identity = buildIdentity({ port, launchSpec });
-    await writeFile(
-      statePath,
-      `${JSON.stringify(buildState({ port, pid: 51234, launchSpec }), null, 2)}\n`
-    );
-    const spawnProcess = vi.fn();
-    const probeHealth = vi.fn(async () => ({
-      healthy: true,
-      statusCode: 200,
-      identity,
-    }));
-    const server = new AgentTeamsMcpHttpServer({
-      statePath,
-      disableOrphanCleanup: true,
-      resolveLaunchSpec: async () => launchSpec,
-      spawnProcess: spawnProcess as AgentTeamsMcpHttpServerDeps['spawnProcess'],
-      probeHealth,
-    });
-
-    try {
-      const handle = await server.ensureStarted();
-
-      expect(handle).toMatchObject({
-        url: `http://127.0.0.1:${port}/mcp`,
-        port,
-        pid: 51234,
-        diagnostics: [`opencode_app_mcp_adopted_state_server:${port}`],
+  it.each([false, true])(
+    'handles healthy persisted state with desktop binding=%s',
+    async (desktopBound) => {
+      const { root, statePath } = await createTempStatePath();
+      const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
+      const port = 41021;
+      const identity = buildIdentity({ port, launchSpec });
+      const previousPreferredPort = process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
+      process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(port);
+      await writeFile(
+        statePath,
+        `${JSON.stringify(buildState({ port, pid: 51234, launchSpec }), null, 2)}\n`
+      );
+      const factory = vi.fn(() => ({ AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41023' }));
+      const revokeBinding = desktopBound
+        ? configureDesktopMcpEnvironment(factory)
+        : () => undefined;
+      const child = new FakeChildProcess();
+      const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
+      const probeHealth = vi.fn(async () => ({ healthy: true, statusCode: 200, identity }));
+      const server = new AgentTeamsMcpHttpServer({
+        statePath,
+        disableOrphanCleanup: true,
+        resolveLaunchSpec: async () => launchSpec,
+        spawnProcess,
+        probeHealth,
+        waitForPort: async () => undefined,
+        // The previous listener occupies the preferred port and belongs to another app.
+        canListenOnPort: async (_host, candidate) => candidate !== port,
       });
-      expect(spawnProcess).not.toHaveBeenCalled();
-      expect(probeHealth).toHaveBeenCalledWith('127.0.0.1', port);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-      vi.mocked(console.warn).mockClear();
+      try {
+        const handle = await server.ensureStarted();
+        if (desktopBound) {
+          expect(handle.port).toBe(41022);
+          expect(handle.diagnostics).toContain('opencode_app_mcp_state_ignored:identity_mismatch');
+          expect(spawnProcess).toHaveBeenCalledTimes(1);
+          expect(factory).toHaveBeenCalledTimes(1);
+          expect(probeHealth).toHaveBeenCalledWith('127.0.0.1', port);
+        } else {
+          expect(handle).toMatchObject({
+            url: `http://127.0.0.1:${port}/mcp`,
+            port,
+            pid: 51234,
+            diagnostics: [`opencode_app_mcp_adopted_state_server:${port}`],
+          });
+          expect(spawnProcess).not.toHaveBeenCalled();
+          expect(factory).not.toHaveBeenCalled();
+        }
+      } finally {
+        if (previousPreferredPort === undefined)
+          delete process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
+        else process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = previousPreferredPort;
+        revokeBinding();
+        child.emit('exit', 0, null);
+        await server.stop({ preventRestart: true });
+        await rm(root, { recursive: true, force: true });
+        vi.mocked(console.warn).mockClear();
+      }
     }
-  });
+  );
 
   it('ignores corrupt persistent state and starts a fresh server', async () => {
     const { root, statePath } = await createTempStatePath();
@@ -785,54 +812,88 @@ describe('AgentTeamsMcpHttpServer', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('cleans up a proven legacy orphan MCP HTTP process without live consumers', async () => {
-    const { root, statePath } = await createTempStatePath();
-    const child = new FakeChildProcess(43123);
-    const orphanPort = 41031;
-    const alivePids = new Set([9001, 9005]);
-    const killProcess = vi.fn((pid: number) => {
-      alivePids.delete(pid);
-    });
-    const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
-    const rows = [
-      { pid: 9001, ppid: 1, command },
-      { pid: 9005, ppid: 9001, command },
-      { pid: 43123, ppid: process.pid, command: 'current child' },
-    ];
-    const details = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp`;
-    const server = new AgentTeamsMcpHttpServer({
-      statePath,
-      resolveLaunchSpec: async () => ({
-        command: 'node',
-        args: ['mcp-server/dist/index.js'],
-      }),
-      allocatePort: async () => 41030,
-      spawnProcess: vi.fn(() => child as unknown as ChildProcess),
-      waitForPort: vi.fn(async () => undefined),
-      listProcessRows: async () => rows,
-      readProcessDetails: async (pid) => (pid === 9001 || pid === 9005 ? details : null),
-      readProcessStartTimeMs: async () => 0,
-      killProcess,
-      forceKillProcess: vi.fn(),
-      isProcessAlive: (pid) => alivePids.has(pid),
-      sleepMs: async () => undefined,
-      probeHealth: vi.fn(async () => ({ healthy: true, statusCode: 200, identity: null })),
-    });
+  it.each([
+    { bound: false, identity: 'missing', shouldKill: true },
+    { bound: true, identity: 'missing', shouldKill: false },
+    { bound: true, identity: 'foreign', shouldKill: false },
+    { bound: true, identity: 'owned', shouldKill: true },
+  ] as const)(
+    'cleans up an orphan with bound=$bound, identity=$identity only when ownership is proven',
+    async ({ bound, identity, shouldKill }) => {
+      const { root, statePath } = await createTempStatePath();
+      const child = new FakeChildProcess(43123);
+      const orphanPort = 41031;
+      const alivePids = new Set([9001, 9005]);
+      const killProcess = vi.fn((pid: number) => {
+        alivePids.delete(pid);
+      });
+      const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
+      const rows = [
+        { pid: 9001, ppid: 1, command },
+        { pid: 9005, ppid: 9001, command },
+        { pid: 43123, ppid: process.pid, command: 'current child' },
+      ];
+      const details = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp`;
+      const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
+      let ownerInstanceId: string | undefined;
+      const revokeBinding = bound
+        ? configureDesktopMcpEnvironment(() => ({
+            AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41029',
+          }))
+        : () => undefined;
+      const server = new AgentTeamsMcpHttpServer({
+        statePath,
+        resolveLaunchSpec: async () => launchSpec,
+        allocatePort: async () => 41030,
+        spawnProcess: vi.fn((_command, _args, env) => {
+          ownerInstanceId = env.AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID;
+          return child as unknown as ChildProcess;
+        }),
+        waitForPort: vi.fn(async () => undefined),
+        listProcessRows: async () => rows,
+        readProcessDetails: async (pid) => (pid === 9001 || pid === 9005 ? details : null),
+        readProcessStartTimeMs: async () => 0,
+        killProcess,
+        forceKillProcess: vi.fn(),
+        isProcessAlive: (pid) => alivePids.has(pid),
+        sleepMs: async () => undefined,
+        probeHealth: vi.fn(async () => ({
+          healthy: true,
+          statusCode: 200,
+          identity:
+            identity === 'missing'
+              ? null
+              : buildIdentity({
+                  port: orphanPort,
+                  launchSpec,
+                  ownerInstanceId: identity === 'owned' ? ownerInstanceId : 'foreign-app',
+                }),
+        })),
+      });
 
-    try {
-      const handle = await server.ensureStarted();
-      await flushAsyncCleanup();
+      try {
+        const handle = await server.ensureStarted();
+        await flushAsyncCleanup();
 
-      expect(killProcess).toHaveBeenNthCalledWith(1, 9005);
-      expect(killProcess).toHaveBeenNthCalledWith(2, 9001);
-      expect(handle.diagnostics).toContain(
-        `opencode_app_mcp_legacy_orphan_cleaned:${orphanPort}`
-      );
-    } finally {
-      await rm(root, { recursive: true, force: true });
-      vi.mocked(console.warn).mockClear();
+        if (shouldKill) {
+          expect(killProcess).toHaveBeenNthCalledWith(1, 9005);
+          expect(killProcess).toHaveBeenNthCalledWith(2, 9001);
+          expect(handle.diagnostics).toContain(
+            `opencode_app_mcp_legacy_orphan_cleaned:${orphanPort}`
+          );
+        } else {
+          expect(killProcess).not.toHaveBeenCalled();
+          expect(alivePids).toEqual(new Set([9001, 9005]));
+        }
+      } finally {
+        revokeBinding();
+        child.emit('exit', 0, null);
+        await server.stop({ preventRestart: true });
+        await rm(root, { recursive: true, force: true });
+        vi.mocked(console.warn).mockClear();
+      }
     }
-  });
+  );
 
   it('keeps a proven legacy orphan MCP HTTP process when live consumers still reference it', async () => {
     const { root, statePath } = await createTempStatePath();
@@ -858,9 +919,7 @@ describe('AgentTeamsMcpHttpServer', () => {
       waitForPort: vi.fn(async () => undefined),
       listProcessRows: async () => rows,
       readProcessDetails: async (pid) =>
-        pid === 9002
-          ? orphanDetails
-          : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
+        pid === 9002 ? orphanDetails : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
       readProcessStartTimeMs: async () => 0,
       killProcess,
       isProcessAlive: () => false,

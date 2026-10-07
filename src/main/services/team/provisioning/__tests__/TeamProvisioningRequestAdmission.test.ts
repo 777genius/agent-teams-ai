@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { describe, expect, it, vi } from 'vitest';
 
-import { TeamMetaStore } from '../../TeamMetaStore';
 import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import { TeamMetaStore } from '../../TeamMetaStore';
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
 import {
   createTeamProvisioningRequestAdmissionBoundary,

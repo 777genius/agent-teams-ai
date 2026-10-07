@@ -5,6 +5,10 @@ import http from 'node:http';
 import net from 'node:net';
 import * as path from 'node:path';
 
+import {
+  getDesktopMcpChildEnvironment,
+  isDesktopMcpEnvironmentBound,
+} from '@features/external-agent-connection/main';
 import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
@@ -16,6 +20,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { createOpenCodeMcpAppContext } from './opencode/bridge/OpenCodeMcpBridgeEnv';
 import { type FileLockOptions, withFileLock } from './fileLock';
+import { stopOwnedMcpChild, waitForOwnedMcpPortRelease } from './stopOwnedMcpChild';
 import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpConfigBuilder';
 
 const logger = createLogger('Service:AgentTeamsMcpHttpServer');
@@ -116,6 +121,7 @@ interface AgentTeamsMcpExpectedHttpIdentity {
   claudeDirHash: string;
   launchSpecHash: string;
   ownerInstanceId: string;
+  requireOwner?: boolean;
 }
 
 interface AgentTeamsMcpHttpState {
@@ -314,21 +320,6 @@ async function waitForLoopbackPort(host: string, port: number, timeoutMs: number
   );
 }
 
-async function waitForLoopbackPortAvailable(
-  host: string,
-  port: number,
-  timeoutMs: number
-): Promise<boolean> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if (await canListenOnLoopbackPort(host, port)) {
-      return true;
-    }
-    await sleep(MCP_HTTP_READY_POLL_MS);
-  }
-  return await canListenOnLoopbackPort(host, port);
-}
-
 function defaultSpawnProcess(
   command: string,
   args: string[],
@@ -427,6 +418,7 @@ function buildExpectedIdentity(
     claudeDirHash: sha256Hex(getClaudeBasePath()),
     launchSpecHash: buildLaunchSpecHash(launchSpec),
     ownerInstanceId,
+    requireOwner: isDesktopMcpEnvironmentBound(),
   };
 }
 
@@ -442,6 +434,7 @@ function identityMatchesExpected(
     identity.endpoint === expected.endpoint &&
     identity.claudeDirHash === expected.claudeDirHash &&
     identity.launchSpecHash === expected.launchSpecHash &&
+    (!expected.requireOwner || identity.ownerInstanceId === expected.ownerInstanceId) &&
     (port === undefined || identity.port === port)
   );
 }
@@ -533,14 +526,9 @@ function stateMatchesExpected(
   expected: AgentTeamsMcpExpectedHttpIdentity
 ): boolean {
   return (
-    state.service === expected.service &&
-    state.transport === expected.transport &&
-    state.host === expected.host &&
-    state.endpoint === expected.endpoint &&
     state.url === `http://${MCP_HTTP_HOST}:${state.port}${MCP_HTTP_ENDPOINT}` &&
     state.urlHash === sha256Hex(state.url) &&
-    state.claudeDirHash === expected.claudeDirHash &&
-    state.launchSpecHash === expected.launchSpecHash
+    identityMatchesExpected(state, expected, state.port)
   );
 }
 
@@ -694,6 +682,7 @@ export class AgentTeamsMcpHttpServer {
   private readonly ownerInstanceId = randomUUID();
   private readonly startedAtMs = Date.now();
   private preventFutureStarts = false;
+  private stopping = 0;
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
   async ensureStarted(): Promise<AgentTeamsMcpHttpServerHandle> {
     this.throwIfStartsPrevented();
@@ -712,39 +701,47 @@ export class AgentTeamsMcpHttpServer {
     if (input.preventRestart) {
       this.preventFutureStarts = true;
     }
+    this.stopping++;
+    try {
+      await this.stopCurrentChild();
+      // Join a pending resolver/spawn, then tear down anything it managed to create.
+      await this.startPromise?.catch(() => undefined);
+      await this.stopCurrentChild();
+    } finally {
+      this.stopping--;
+    }
+  }
+
+  private async stopCurrentChild(): Promise<void> {
     const child = this.child;
     const handle = this.handle;
-    const releasePort = child ? (handle?.port ?? null) : null;
     this.child = null;
     this.handle = null;
-    if (child) {
-      this.expectedStopChildren.add(child);
-      killProcessTree(child, 'SIGKILL');
-      if (handle) {
-        await this.clearStateForOwnedHandle(handle);
-      }
-    }
-    if (releasePort) {
-      await waitForLoopbackPortAvailable(
-        MCP_HTTP_HOST,
-        releasePort,
-        MCP_HTTP_PORT_RELEASE_TIMEOUT_MS
-      );
-    }
+    await stopOwnedMcpChild(
+      child,
+      handle?.port ?? null,
+      this.expectedStopChildren,
+      async () => {
+        if (handle) await this.clearStateForOwnedHandle(handle);
+      },
+      (port) =>
+        waitForOwnedMcpPortRelease(
+          () => canListenOnLoopbackPort(MCP_HTTP_HOST, port),
+          MCP_HTTP_PORT_RELEASE_TIMEOUT_MS,
+          MCP_HTTP_READY_POLL_MS
+        )
+    );
   }
 
   getCurrentHandle(): AgentTeamsMcpHttpServerHandle | null {
     return this.handle;
   }
   private resolveStatePath(): string | null {
-    if (this.deps.statePath === null) {
-      return null;
-    }
-    return this.deps.statePath ?? buildStatePath();
+    return this.deps.statePath === null ? null : (this.deps.statePath ?? buildStatePath());
   }
 
   private throwIfStartsPrevented(): void {
-    if (this.preventFutureStarts) {
+    if (this.preventFutureStarts || this.stopping > 0) {
       throw new Error('Agent Teams MCP HTTP server startup is disabled during shutdown');
     }
   }
@@ -767,7 +764,7 @@ export class AgentTeamsMcpHttpServer {
         );
         const restartPort = handle.port;
         const previousUrlHash = handle.urlHash;
-        await this.stop();
+        await this.stopCurrentChild();
         return this.startOnce({
           preferredPort: restartPort,
           previousUrlHash,
@@ -1101,7 +1098,7 @@ export class AgentTeamsMcpHttpServer {
     };
     const childEnv = applyAgentTeamsIdentityEnv({
       ...process.env,
-      ...launchSpec.env,
+      ...getDesktopMcpChildEnvironment(launchSpec.env),
       AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
       AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
       AGENT_TEAMS_MCP_HTTP_HOST: MCP_HTTP_HOST,
@@ -1221,13 +1218,14 @@ export class AgentTeamsMcpHttpServer {
       return;
     }
 
-    void this.tryCleanupOwnedOrphans(expectedIdentity, currentHandle).catch(() => {
+    const cleanupIdentity = { ...expectedIdentity, requireOwner: isDesktopMcpEnvironmentBound() };
+    void this.tryCleanupOwnedOrphans(cleanupIdentity, currentHandle).catch(() => {
       logger.warn('Agent Teams MCP HTTP diagnostic: opencode_app_mcp_orphan_cleanup_failed');
     });
   }
 
   private async tryCleanupOwnedOrphans(
-    expectedIdentity: AgentTeamsMcpHttpIdentity,
+    expectedIdentity: AgentTeamsMcpExpectedHttpIdentity,
     currentHandle: AgentTeamsMcpHttpServerHandle
   ): Promise<void> {
     const listRows = this.deps.listProcessRows ?? listNativeProcessRows;
@@ -1238,7 +1236,6 @@ export class AgentTeamsMcpHttpServer {
       this.deps.readProcessStartTimeMs ??
       (process.platform === 'win32' ? async () => null : readNativeProcessStartTimeMs);
     const killProcess = this.deps.killProcess ?? killProcessByPid;
-    // Tree-aware taskkill on Windows; SIGKILL (not a repeated SIGTERM) on POSIX.
     const forceKillProcess = this.deps.forceKillProcess ?? forceKillProcessByPidNoWait;
     const isProcessAlive = this.deps.isProcessAlive ?? isNativeProcessAlive;
     const sleepMs = this.deps.sleepMs ?? sleep;
@@ -1280,7 +1277,7 @@ export class AgentTeamsMcpHttpServer {
       const probe = await probeHealth(MCP_HTTP_HOST, port);
       const hasMatchingIdentity =
         probe.identity !== null && identityMatchesExpected(probe.identity, expectedIdentity, port);
-      if (probe.identity && !hasMatchingIdentity) {
+      if ((expectedIdentity.requireOwner || probe.identity) && !hasMatchingIdentity) {
         continue;
       }
 
