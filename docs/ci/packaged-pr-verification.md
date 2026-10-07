@@ -71,3 +71,52 @@ review, a base edit and a title/body edit while a full run is active. Confirm th
 last edit neither cancels the full run nor replaces its canonical checks.
 Native canary results remain tied to their recorded product SHA. Policy updates
 require focused classification proof and final CI on the current PR head.
+
+## Teams CI metadata edits
+
+The main `CI` workflow also preserves current-code checks after a proven PR
+title/body-only edit, for ready and draft PRs. A previous null body is valid.
+Strict proof requires the complete PR/repository/base/head identity, valid commit
+SHAs, nonempty current/previous titles, and only `title`/`body` change records
+containing `from`. Base changes, unknown fields and malformed/missing identity
+require full qualification. A metadata edit also requires an authenticated
+canonical producer for the exact current PR head and actual synthetic merge.
+The workflow run name attests the immutable merge SHA before queued jobs start;
+GitHub may keep an old PR base SHA after the actual merge base advances. The
+authenticated merge must have two parents, with the current PR head second.
+This binds the tested inputs; a separate authenticated canonical base Git ref
+must still point to the merge's first parent. The final read rechecks the exact
+ref, commit type and tip, because GitHub can cache a synthetic merge after its
+target branch advances. A stale target, different merge or legacy producer
+without merge attestation requires full CI.
+FULL selects fresh qualification work; it does not guarantee that GitHub
+regenerates a cached synthetic merge.
+Fork runs with empty PR links additionally require exact authenticated fork
+identity and the complete event tuple. At most eight
+other source runs are examined; missing, conflicting or failed proof requires
+full CI. Metadata runs only carry continuity to a canonical producer. Final
+reads recheck run attempts, the listing and current PR inputs. The deliberate
+draft feedback and failed qualification-gate contract remains unchanged.
+
+Authenticated postmerge reuse checks at most eight newest source runs. It may
+cross only complete successful metadata runs whose exact skipped job set and
+immutable source proof match the selected full run. The closest nonmetadata run
+must satisfy every full-run requirement; failed, cancelled, pending, unknown or
+incomplete evidence requires fresh CI. Final reads recheck the selected full run,
+each crossed metadata attempt and the unchanged run listing. Metadata never
+extends the source evidence expiry or creates full qualification by itself.
+The plan name is assigned before strict classification, so `Metadata CI plan`
+may also belong to a conservatively classified complete full run. Only the
+`Metadata CI result` aggregate selects metadata proof; the exact successful
+plan alias still requires every canonical full-run check and source binding.
+All four configured root test shards are required; partial or mixed topology
+cannot qualify for reuse.
+
+All `edited` events use a unique concurrency group without cancellation before
+planning. Proven metadata runs skip dependency installation, tests, lint and
+Windows execution, and use noncanonical check names. Only successful planning
+that proves metadata may name the aggregate `Metadata CI result`. Failed or
+unclassified planning retains a failing canonical `Full qualification`, including
+base edits. A successful canonical full run for the current PR head remains
+mandatory. Unknown/base edits still run full CI. Verify title/body edits while a full run is pending and after it succeeds,
+plus base/unknown edits, on a disposable test PR using `gh`.

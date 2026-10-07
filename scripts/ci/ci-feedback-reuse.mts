@@ -2,6 +2,10 @@
 export const REPOSITORY = '777genius/agent-teams-ai';
 export const WORKFLOW = '.github/workflows/ci.yml';
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// GitHub reports this exact unevaluated name for the skipped feedback job.
+// It is an alias only after workflow/tree provenance is verified, never executed code.
+const SKIPPED_FEEDBACK_NAME =
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
 export type JsonObject = Record<string, unknown>;
 export type GitHubRead = (endpoint: string) => Promise<unknown>;
 export type ReuseResult = { reuse: boolean; sourceRun: string; reason: string };
@@ -87,6 +91,116 @@ const OTHER_ELIGIBLE = [
   ],
 ] as const;
 
+// Exact jobs API names from run 37621422796; never evaluated or matched broadly.
+const METADATA_SKIPPED_NAMES = [
+  "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+  "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/2)",
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+  "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+  SKIPPED_FEEDBACK_NAME,
+] as const;
+
+function proveMetadataJobs(jobs: JsonObject[], run: JsonObject, now: number, shards: 2 | 4): void {
+  const skippedNames = METADATA_SKIPPED_NAMES.map((name) => name.replace('/2)', `/${shards})`));
+  const expected = ['Metadata CI plan', 'Metadata CI result', ...skippedNames];
+  requireProof(jobs.length === expected.length, 'Unexpected metadata job set');
+  for (const name of expected) {
+    const matching = jobs.filter((job) => job.name === name);
+    requireProof(matching.length === 1, 'Missing or duplicate metadata job');
+    const job = matching[0];
+    const skipped = skippedNames.some((value) => value === name);
+    requireProof(
+      job.run_id === run.id &&
+        job.run_attempt === run.run_attempt &&
+        job.head_sha === run.head_sha &&
+        job.status === 'completed' &&
+        job.conclusion === (skipped ? 'skipped' : 'success') &&
+        fresh(job.completed_at, now),
+      'Unqualified metadata job'
+    );
+    const steps = array(job.steps).map(object);
+    if (skipped) {
+      requireProof(steps.length === 0, 'Metadata heavy job executed steps');
+      continue;
+    }
+    const planning = name === 'Metadata CI plan';
+    const required = planning
+      ? ['Plan feedback and verify reusable evidence']
+      : [
+          'Preserve existing current-code checks after metadata edits',
+          'Require complete current-code qualification',
+        ];
+    for (const stepName of required) {
+      requireProof(
+        steps.filter((step) => step.name === stepName).length === 1,
+        'Missing metadata decision step'
+      );
+    }
+    const allowed = [
+      'Set up job', 'Set up runner', 'Checkout', 'Setup Node.js', 'Post Setup Node.js',
+      'Post Checkout', 'Complete runner', 'Complete job', ...required,
+    ];
+    const names = steps.map((step) => step.name);
+    requireProof(
+      new Set(names).size === names.length &&
+        steps.every((step) =>
+          step.status === 'completed' && typeof step.name === 'string' &&
+          (allowed.includes(step.name) || (planning && step.name.startsWith('CI source proof:'))) &&
+          step.conclusion ===
+            (step.name === 'Require complete current-code qualification' ? 'skipped' : 'success')
+        ),
+      'Unknown, incomplete or unsafe metadata step'
+    );
+  }
+}
+
+function readSourceBase(
+  jobs: JsonObject[],
+  run: JsonObject,
+  prNumber: number,
+  headSha: string,
+  repoId: number,
+  planName: string
+): string {
+  // GitHub can drop run.pull_requests after merge. Preserve the trusted event's
+  // immutable base/head in a workflow-defined step name, read through the jobs API.
+  const planJobs = jobs.filter((job) => job.name === planName);
+  requireProof(planJobs.length === 1, 'Missing source plan job');
+  const sourceProofs = array(planJobs[0].steps)
+    .map(object)
+    .filter((step) => typeof step.name === 'string' && step.name.startsWith('CI source proof:'));
+  requireProof(
+    sourceProofs.length === 1 &&
+      sourceProofs[0].status === 'completed' &&
+      sourceProofs[0].conclusion === 'success',
+    'Missing immutable source event proof'
+  );
+  const sourceProof =
+    /^CI source proof: PR=([1-9]\d*) \| base=([a-f0-9]{40}) \| head=([a-f0-9]{40})$/.exec(
+      String(sourceProofs[0].name)
+    );
+  requireProof(
+    sourceProof && Number(sourceProof[1]) === prNumber && sourceProof[3] === headSha,
+    'Immutable source event proof mismatch'
+  );
+  const testedBase = sha(sourceProof[2]);
+  const links = array(run.pull_requests).map(object);
+  requireProof(links.length <= 1, 'Ambiguous source PR linkage');
+  if (links.length === 1) {
+    const sourceHead = object(links[0].head);
+    const sourceBase = object(links[0].base);
+    requireProof(
+      links[0].number === prNumber &&
+        sourceHead.sha === headSha &&
+        sourceBase.sha === testedBase &&
+        object(sourceHead.repo).id === repoId &&
+        object(sourceBase.repo).id === repoId,
+      'Source PR linkage disagrees with immutable event'
+    );
+  }
+  return testedBase;
+}
+
 export type ReuseContext = {
   repository: string;
   currentSha: string;
@@ -145,6 +259,7 @@ export async function provePostmergeReuse(
     const merged = associated.map(object).filter((pr) => pr.merge_commit_sha === currentSha);
     requireProof(merged.length === 1, 'No unique merged source PR');
     const pr = object(await read(`${prefix}/pulls/${positive(merged[0].number)}`));
+    const prNumber = positive(pr.number);
     const head = object(pr.head);
     const base = object(pr.base);
     requireProof(
@@ -169,85 +284,70 @@ export async function provePostmergeReuse(
         runs.length > 0,
       'Missing or incomplete source run list'
     );
-    // Never fall back to an older passing run when the newest run failed or was cancelled.
+    // Only proven harmless metadata can be crossed. The closest other run must
+    // qualify in full; failure/unknown evidence never falls back to an older pass.
     runs.sort((a, b) => positive(b.id) - positive(a.id));
-    const runId = positive(runs[0].id);
+    requireProof(
+      new Set(runs.map((item) => positive(item.id))).size === runs.length,
+      'Duplicate source runs'
+    );
+    const sameRun = (candidate: JsonObject, expected: JsonObject): boolean =>
+      candidate.id === expected.id && candidate.workflow_id === workflowId &&
+      candidate.path === WORKFLOW && candidate.event === 'pull_request' &&
+      candidate.head_sha === headSha && candidate.run_attempt === expected.run_attempt &&
+      candidate.status === 'completed' && candidate.conclusion === 'success' &&
+      candidate.created_at === expected.created_at && candidate.updated_at === expected.updated_at &&
+      fresh(candidate.created_at, context.now) && fresh(candidate.updated_at, context.now) &&
+      sameRepository(candidate.repository, repoId) && sameRepository(candidate.head_repository, repoId);
+    const metadata: { run: JsonObject; jobs: JsonObject[]; base: string }[] = [];
+    let selected: { run: JsonObject; jobs: JsonObject[] } | undefined;
+    for (const candidate of runs.slice(0, 8)) {
+      const id = positive(candidate.id);
+      const candidateRun = object(await read(`${prefix}/actions/runs/${id}`));
+      const attempt = positive(candidateRun.run_attempt);
+      requireProof(
+        sameRun(candidateRun, candidateRun) && sameRun(candidate, candidateRun),
+        'Latest candidate is not a fresh authenticated successful run'
+      );
+      const response = object(
+        await read(`${prefix}/actions/runs/${id}/attempts/${attempt}/jobs?per_page=100`)
+      );
+      const candidateJobs = array(response.jobs).map(object);
+      requireProof(
+        response.total_count === candidateJobs.length && candidateJobs.length < 100,
+        'Incomplete job list'
+      );
+      // The plan name is assigned before strict event classification. Only the
+      // result names a metadata decision, and its complete job proof must pass.
+      if (candidateJobs.some((job) => job.name === 'Metadata CI result')) {
+        proveMetadataJobs(candidateJobs, candidateRun, context.now, shardCount);
+        const metadataBase = readSourceBase(
+          candidateJobs, candidateRun, prNumber, headSha, repoId, 'Metadata CI plan'
+        );
+        metadata.push({ run: candidateRun, jobs: candidateJobs, base: metadataBase });
+        continue;
+      }
+      selected = { run: candidateRun, jobs: candidateJobs };
+      break;
+    }
+    requireProof(selected, 'No full source within eight newest runs');
+    const { run, jobs } = selected;
+    const runId = positive(run.id);
+    const attempt = positive(run.run_attempt);
     requireProof(
       context.sourceRun === undefined || context.sourceRun === String(runId),
       'Windows source run differs from verified Linux source run'
     );
-    const run = object(await read(`${prefix}/actions/runs/${runId}`));
-    const attempt = positive(run.run_attempt);
-    const sameRun = (candidate: JsonObject): boolean =>
-      candidate.id === runId &&
-      candidate.workflow_id === workflowId &&
-      candidate.path === WORKFLOW &&
-      candidate.event === 'pull_request' &&
-      candidate.head_sha === headSha &&
-      candidate.run_attempt === attempt &&
-      candidate.status === 'completed' &&
-      candidate.conclusion === 'success' &&
-      sameRepository(candidate.repository, repoId) &&
-      sameRepository(candidate.head_repository, repoId);
+    // A conservatively classified edited event can run every canonical full job
+    // under this exact successful preclassification plan name.
+    const fullPlanName = jobs.some((job) =>
+      job.name === 'Metadata CI plan' && job.conclusion === 'success'
+    ) ? 'Metadata CI plan' : 'plan';
+    const testedBase = readSourceBase(jobs, run, prNumber, headSha, repoId, fullPlanName);
     requireProof(
-      run.id === runId &&
-        run.workflow_id === workflowId &&
-        run.path === WORKFLOW &&
-        run.event === 'pull_request' &&
-        run.head_sha === headSha &&
-        sameRepository(run.repository, repoId) &&
-        sameRepository(run.head_repository, repoId),
-      'Run identity mismatch'
+      metadata.every((item) => item.base === testedBase),
+      'Metadata base differs from full source'
     );
-    requireProof(
-      run.status === 'completed' && run.conclusion === 'success',
-      'Latest source run did not pass'
-    );
-    requireProof(
-      fresh(run.created_at, context.now) && fresh(run.updated_at, context.now),
-      'Expired source run'
-    );
-    const response = object(
-      await read(`${prefix}/actions/runs/${runId}/attempts/${attempt}/jobs?per_page=100`)
-    );
-    const jobs = array(response.jobs).map(object);
-    requireProof(response.total_count === jobs.length && jobs.length < 100, 'Incomplete job list');
-    // GitHub can drop run.pull_requests after merge. Preserve the trusted event's
-    // immutable base/head in a workflow-defined step name, read through the jobs API.
-    const planJobs = jobs.filter((job) => job.name === 'plan');
-    requireProof(planJobs.length === 1, 'Missing source plan job');
-    const sourceProofs = array(planJobs[0].steps)
-      .map(object)
-      .filter((step) => typeof step.name === 'string' && step.name.startsWith('CI source proof:'));
-    requireProof(
-      sourceProofs.length === 1 &&
-        sourceProofs[0].status === 'completed' &&
-        sourceProofs[0].conclusion === 'success',
-      'Missing immutable source event proof'
-    );
-    const sourceProof =
-      /^CI source proof: PR=([1-9]\d*) \| base=([a-f0-9]{40}) \| head=([a-f0-9]{40})$/.exec(
-        String(sourceProofs[0].name)
-      );
-    requireProof(
-      sourceProof && Number(sourceProof[1]) === pr.number && sourceProof[3] === headSha,
-      'Immutable source event proof mismatch'
-    );
-    const testedBase = sha(sourceProof[2]);
-    const links = array(run.pull_requests).map(object);
-    requireProof(links.length <= 1, 'Ambiguous source PR linkage');
-    if (links.length === 1) {
-      const sourceHead = object(links[0].head);
-      const sourceBase = object(links[0].base);
-      requireProof(
-        links[0].number === pr.number &&
-          sourceHead.sha === headSha &&
-          sourceBase.sha === testedBase &&
-          object(sourceHead.repo).id === repoId &&
-          object(sourceBase.repo).id === repoId,
-        'Source PR linkage disagrees with immutable event'
-      );
-    }
     const comparison = object(await read(`${prefix}/compare/${testedBase}...${headSha}`));
     // The authenticated compare endpoint binds the requested head SHA; its response
     // has no head_commit field. Separate Git commit reads below bind both trees.
@@ -293,7 +393,14 @@ export async function provePostmergeReuse(
     ];
     requireProof(jobs.length === expected.length, 'Unexpected or partial full job set');
     for (const name of expected) {
-      const matching = jobs.filter((job) => job.name === name);
+      const matching = jobs.filter(
+        (job) =>
+          job.name === name ||
+          (name === 'plan' && job.name === fullPlanName && job.conclusion === 'success') ||
+          (name === 'Fast feedback' &&
+            job.name === SKIPPED_FEEDBACK_NAME &&
+            job.conclusion === 'skipped')
+      );
       requireProof(matching.length === 1, `Missing or duplicate job: ${name}`);
       const job = matching[0];
       requireProof(
@@ -384,22 +491,37 @@ export async function provePostmergeReuse(
         `Incomplete or skipped command evidence: ${name}`
       );
     }
-    // Detect a rerun begun while metadata was being collected.
-    const finalRun = object(await read(`${prefix}/actions/runs/${runId}`));
-    requireProof(sameRun(finalRun), 'Source attempt changed during proof');
-    const finalListing = object(
-      await read(
-        `${prefix}/actions/workflows/${workflowId}/runs?event=pull_request&head_sha=${headSha}&per_page=100`
-      )
-    );
+    // Re-read every selected/crossed attempt, then bind the unchanged listing.
+    for (const item of [{ run, jobs, base: testedBase }, ...metadata]) {
+      const finalRun = object(await read(`${prefix}/actions/runs/${positive(item.run.id)}`));
+      requireProof(sameRun(finalRun, item.run), 'Source attempt changed during proof');
+      const planName = item.run.id === runId ? fullPlanName : 'Metadata CI plan';
+      requireProof(
+        readSourceBase(item.jobs, finalRun, prNumber, headSha, repoId, planName) === item.base,
+        'Source base changed during proof'
+      );
+    }
+    const finalListing = object(await read(
+      `${prefix}/actions/workflows/${workflowId}/runs?event=pull_request&head_sha=${headSha}&per_page=100`
+    ));
     const finalRuns = array(finalListing.workflow_runs).map(object);
     finalRuns.sort((a, b) => positive(b.id) - positive(a.id));
+    const listingIdentity = (item: JsonObject): string => JSON.stringify([
+      item.id, item.run_attempt, item.workflow_id, item.path, item.event, item.head_sha,
+      item.status, item.conclusion, item.created_at, item.updated_at,
+      object(item.repository).id, object(item.repository).full_name,
+      object(item.head_repository).id, object(item.head_repository).full_name,
+      item.pull_requests,
+    ]);
     requireProof(
-      finalListing.total_count === finalRuns.length &&
-        finalRuns.length > 0 &&
-        sameRun(finalRuns[0]),
+      finalListing.total_count === finalRuns.length && finalRuns.length === runs.length &&
+        finalRuns.every((item, index) => listingIdentity(item) === listingIdentity(runs[index])),
       'Latest source run changed during proof'
     );
+    for (const item of [{ run }, ...metadata]) {
+      const listed = finalRuns.find((candidate) => candidate.id === item.run.id);
+      requireProof(listed && sameRun(listed, item.run), 'Selected listing attempt changed during proof');
+    }
     return { reuse: true, sourceRun: String(runId), reason: 'Verified identical-input full CI' };
   } catch (error) {
     return {
