@@ -42,7 +42,14 @@ import {
   prepareOldMacNative,
   restoreOldMacNetwork,
 } from './mac-old-native.mts';
-import { MacOldUi, macAbout, macDebugPort, macDebugTargets } from './mac-old-ui.mts';
+import {
+  MacOldUi,
+  macAbout,
+  macAboutHasVersion,
+  macAboutParagraphs,
+  macDebugPort,
+  macDebugTargets,
+} from './mac-old-ui.mts';
 import { transportHook } from './transport.mts';
 import { macCallFunction, macSerializedFunction } from './mac-serialization.mts';
 
@@ -305,22 +312,23 @@ async function noUpdate(version: string, label: string, requestStart: number) {
   const aboutRenderer = renderer;
   assert(aboutRenderer);
   await waitFor(
-    () =>
-      aboutRenderer.evaluate<boolean>(
-        `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.1\\b/.test(block.textContent));})()`
-      ),
+    () => aboutRenderer.evaluate<boolean>(macAboutHasVersion('2.17.1')),
     'painted About version 2.17.1',
     10_000
   );
-  await view().click('^Check for Updates$', 'about');
+  evidence.aboutVersionParagraphs = await aboutRenderer.evaluate(macAboutParagraphs);
+  evidence.noUpdateCheckControl = await view().click('^(?:Check for Updates|Up to date)$', 'about');
   const checked = await waitFor(
     async () => {
       const state = await observation();
       assert(
         !state.events.some((event) => ['available', 'downloaded', 'progress'].includes(event.type))
       );
-      return state.events.filter((event) => event.type === 'not-available').length >
-        startup.events.filter((event) => event.type === 'not-available').length && state.provider
+      return state.events.filter((event) => event.type === 'checking').length >
+        startup.events.filter((event) => event.type === 'checking').length &&
+        state.events.filter((event) => event.type === 'not-available').length >
+          startup.events.filter((event) => event.type === 'not-available').length &&
+        state.provider
         ? state
         : null;
     },
@@ -520,15 +528,16 @@ try {
     const aboutRenderer = renderer;
     assert(aboutRenderer);
     await waitFor(
-      () =>
-        aboutRenderer.evaluate<boolean>(
-          `(() => {const block=${macAbout};return Boolean(block&&/Version\\s+2\\.17\\.0\\b/.test(block.textContent));})()`
-        ),
+      () => aboutRenderer.evaluate<boolean>(macAboutHasVersion('2.17.0')),
       'painted About version 2.17.0',
       10_000
     );
     const checks = available.events.filter((event) => event.type === 'available').length;
-    await view().click('^(?:Check for Updates|v?2\\.17\\.1 available)$', 'about');
+    evidence.aboutVersionParagraphs = await aboutRenderer.evaluate(macAboutParagraphs);
+    evidence.predecessorCheckControl = await view().click(
+      '^(?:Check for Updates|v?2\\.17\\.1 available)$',
+      'about'
+    );
     await waitFor(
       async () =>
         (await observation()).events.filter((event) => event.type === 'available').length > checks
@@ -729,6 +738,9 @@ try {
   assert.equal(streamErrors.length, 0);
   evidence.passed = true;
 } catch (error) {
+  evidence.failureAboutVersionParagraphs = await renderer
+    ?.evaluate(macAboutParagraphs)
+    .catch(() => null);
   evidence.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
   process.exitCode = 1;
   evidence.lastTransport = await transport().catch(() => undefined);

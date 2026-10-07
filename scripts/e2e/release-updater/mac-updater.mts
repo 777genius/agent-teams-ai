@@ -29,6 +29,7 @@ import {
   stopMacOwned,
 } from './mac-loopback.mts';
 import { readMacInputs } from './mac-inputs.mts';
+import { macAbout, macAboutHasVersion, macAboutParagraphs } from './mac-old-ui.mts';
 import { freshMacHome } from './mac-old-native.mts';
 import { macReleaseMirror } from './mac-mirror.mts';
 import { transportHook } from './transport.mts';
@@ -242,10 +243,7 @@ async function clickButton(label: string, lookup: string) {
   return point;
 }
 // The pinned 2.17.1 About block distinguishes the app updater from runtime/provider controls.
-const aboutBlock = `(() => {
-  const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');
-  return name?.parentElement?.parentElement??null;
-})()`;
+const aboutBlock = macAbout;
 async function clickCheck() {
   const controls = [];
   controls.push(
@@ -266,10 +264,11 @@ async function clickCheck() {
       "[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Advanced')"
     )
   );
+  evidence.aboutVersionParagraphs = await renderer?.evaluate(macAboutParagraphs);
   controls.push(
     await clickButton(
       'application About Check for Updates',
-      `(() => {const block=${aboutBlock};if(!block||!/Version\\s+2\\.17\\.1\\b/.test(block.textContent))return null;return [...block.querySelectorAll('button')].find(b=>b.textContent.trim()==='Check for Updates')??null;})()`
+      `(() => {const block=${aboutBlock};if(!${macAboutHasVersion('2.17.1')})return null;return [...block.querySelectorAll('button')].find(b=>['Check for Updates','Up to date'].includes(b.textContent.trim()))??null;})()`
     )
   );
   return controls;
@@ -705,6 +704,9 @@ try {
   assert(!logError, 'Desktop log stream failed');
   evidence.passed = true;
 } catch (error) {
+  evidence.failureAboutVersionParagraphs = await renderer
+    ?.evaluate(macAboutParagraphs)
+    .catch(() => null);
   evidence.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
   process.exitCode = 1;
   evidence.transport = await transport().catch(() => undefined);

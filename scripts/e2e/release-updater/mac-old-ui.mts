@@ -8,6 +8,9 @@ import { macCallFunction } from './mac-serialization.mts';
 import type { Cdp } from './cdp.mts';
 
 export const macAbout = `(() => {const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');return name?.parentElement?.parentElement??null;})()`;
+export const macAboutHasVersion = (version: '2.17.0' | '2.17.1'): string =>
+  `(() => {const block=${macAbout};return Boolean(block&&[...block.querySelectorAll('p')].some(p=>p.textContent.trim()===${JSON.stringify('Version ' + version)}));})()`;
+export const macAboutParagraphs = `(() => {const block=${macAbout};return block?[...block.querySelectorAll('p')].map(p=>p.textContent.trim()):null;})()`;
 export class MacOldUi {
   readonly renderer: Cdp;
   readonly output: string;
@@ -30,7 +33,7 @@ export class MacOldUi {
   async point(pattern: string, root: 'document' | 'about' | 'dialog' = 'document') {
     const result = await macCallFunction<{ x: number; y: number; text: string } | null>(
       this.renderer,
-      `(pattern,root)=>{let scope=document;if(root==='dialog')scope=document.querySelector('[role=dialog]');if(root==='about'){const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');scope=name?.parentElement?.parentElement??null;}if(!scope)return null;const regex=new RegExp(pattern,'i');for(const b of scope.querySelectorAll('button')){if(b.disabled||!regex.test(b.textContent.trim()))continue;const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(r.width&&r.height&&b.contains(document.elementFromPoint(x,y)))return {x,y,text:b.textContent.trim()};}return null;}`,
+      `(pattern,root)=>{let scope=document;if(root==='dialog')scope=document.querySelector('[role=dialog]');if(root==='about'){const name=[...document.querySelectorAll('p')].find(p=>p.textContent.trim()==='Agent Teams AI');scope=name?.parentElement?.parentElement??null;}if(!scope)return null;const regex=new RegExp(pattern,'i');for(const b of scope.querySelectorAll('button')){if(b.disabled||!regex.test(b.textContent.trim()))continue;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(r.width&&r.height&&b.contains(document.elementFromPoint(x,y)))return {x,y,text:b.textContent.trim()};}return null;}`,
       [pattern, root]
     );
     assert(result !== undefined, 'UI hit testing must return a point or null');
