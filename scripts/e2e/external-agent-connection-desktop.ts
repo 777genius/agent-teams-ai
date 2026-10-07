@@ -1226,7 +1226,7 @@ async function optionalPortFile(): Promise<string | null> {
 try {
   await launch('enabled-dark');
   const first = await attach();
-  const active = getClient();
+  let active = getClient();
   const firstControl = await readControl();
   assert.deepEqual(firstControl.info.context, first.info.context);
   evidence.enabled = first;
@@ -1331,6 +1331,92 @@ try {
     'raw CDP network event on renderer reload'
   );
   evidence.rendererReload = 'verified; new BrowserWindow recreation not exercised';
+
+  const beforeCrash = await evaluate(active, rendererSnapshot, [EXTERNAL_AGENT_RENDERER_MARKER]);
+  assert(beforeCrash && beforeCrash.info.cdp.status === 'ready');
+  const mainPidBeforeCrash = assertAlive().pid;
+  const healthBeforeCrash = await json<Record<string, unknown>>(
+    new URL('/health', beforeCrash.info.mcp.url!).href
+  );
+  assert(Number.isInteger(healthBeforeCrash.pid) && Number(healthBeforeCrash.pid) > 0);
+  assert(
+    typeof healthBeforeCrash.ownerInstanceId === 'string' && healthBeforeCrash.ownerInstanceId
+  );
+  // Crashing the selected renderer can disconnect CDP or leave Page.crash unanswered.
+  // Its existing 30s command bound is accepted only alongside independent recovery evidence.
+  const crashCommandResult = await active.send('Page.crash').then(
+    () => 'acknowledged',
+    (error: unknown) => {
+      if (
+        error instanceof Error &&
+        ['Native CDP closed', 'Target crashed', 'CDP timeout: Page.crash'].includes(error.message)
+      )
+        return error.message;
+      throw error;
+    }
+  );
+  await waitFor(
+    async () => {
+      assert.equal(assertAlive().pid, mainPidBeforeCrash);
+      const info = await json<ConnectionInfoV1>(`${firstControl.state.baseUrl}/api/app/connection`);
+      assert.deepEqual(info.context, beforeCrash.info.context);
+      assert.equal(info.mcp.status, 'ready');
+      assert.equal(info.control.status, 'ready');
+      return info.cdp.status === 'ready' &&
+        info.cdp.targetGeneration > beforeCrash.info.cdp.targetGeneration
+        ? info
+        : false;
+    },
+    'renderer crash automatically recovered in the same app',
+    60_000
+  );
+  active.close();
+  client = null;
+  const recovered = await attach();
+  active = getClient();
+  assert.equal(assertAlive().pid, mainPidBeforeCrash);
+  assert.deepEqual(recovered.info.context, beforeCrash.info.context);
+  assert.equal(recovered.info.profileFingerprint, beforeCrash.info.profileFingerprint);
+  assert.equal(recovered.info.cdp.browserWsUrl, beforeCrash.info.cdp.browserWsUrl);
+  checkRenderer(
+    recovered,
+    beforeCrash.info.cdp.rendererTargetId!,
+    beforeCrash.info.cdp.rendererWsUrl!
+  );
+  assert(recovered.info.cdp.targetGeneration > beforeCrash.info.cdp.targetGeneration);
+  assert.equal(recovered.info.mcp.status, 'ready');
+  assert.equal(recovered.info.mcp.url, beforeCrash.info.mcp.url);
+  const healthAfterCrash = await json<Record<string, unknown>>(
+    new URL('/health', recovered.info.mcp.url!).href
+  );
+  for (const key of ['pid', 'ownerInstanceId', 'launchSpecHash', 'claudeDirHash'])
+    assert.equal(
+      healthAfterCrash[key],
+      healthBeforeCrash[key],
+      `MCP identity changed after renderer crash: ${key}`
+    );
+  const crashDraft = await evaluate(
+    active,
+    async (name: string) =>
+      (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.getSavedRequest(name),
+    [teamName]
+  );
+  assert.deepEqual(crashDraft, saved);
+  await assertNoLaunch(teamName);
+  evidence.rendererCrashRecovery = {
+    trigger: 'raw CDP Page.crash',
+    commandResult: crashCommandResult,
+    mainPid: mainPidBeforeCrash,
+    before: beforeCrash.info.cdp,
+    after: recovered.info.cdp,
+    context: recovered.info.context,
+    mcpHealthBefore: healthBeforeCrash,
+    mcpHealthAfter: healthAfterCrash,
+    draftReadback: crashDraft,
+    noLaunch: true,
+    scope:
+      'renderer crash and automatic recovery in the same main target; new BrowserWindow recreation not exercised',
+  };
   await openMenu('Settings');
   await button('#external-agent-cdp', true);
   const disabledLive = await waitFor(async () => {
