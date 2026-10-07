@@ -71,3 +71,22 @@ review, a base edit and a title/body edit while a full run is active. Confirm th
 last edit neither cancels the full run nor replaces its canonical checks.
 Native canary results remain tied to their recorded product SHA. Policy updates
 require focused classification proof and final CI on the current PR head.
+
+## Teams CI metadata edits
+
+The main `CI` workflow also preserves current-code checks after a proven PR
+title/body-only edit, for ready and draft PRs. A previous null body is valid.
+Strict proof requires the complete PR/repository/base/head identity, valid commit
+SHAs, nonempty current/previous titles, and only `title`/`body` change records
+containing `from`. Base changes, unknown fields and malformed/missing identity
+require full qualification. The draft lifecycle contract and authenticated
+postmerge reuse rules remain unchanged.
+
+All `edited` events use a unique concurrency group without cancellation before
+planning. Proven metadata runs skip dependency installation, tests, lint and
+Windows execution, and use noncanonical check names. Potential metadata plan
+failures also use noncanonical names and fail closed. Their informational result
+never creates a successful `Full qualification`; a successful canonical full
+run for the current PR head remains mandatory. Unknown/base edits still run
+full CI. Verify title/body edits while a full run is pending and after it succeeds,
+plus base/unknown edits, on a disposable test PR using `gh`.

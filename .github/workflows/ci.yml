@@ -19,15 +19,19 @@ permissions:
   actions: read
   pull-requests: read
 
+# Every edited event is isolated before the stricter Node classifier runs.
+# Even malformed edits or failed planning must not cancel current-code CI.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event.pull_request.number || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' }}
 
 jobs:
   plan:
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'Metadata CI plan' || 'plan' }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     outputs:
       full: ${{ steps.plan.outputs.full }}
+      metadata: ${{ steps.plan.outputs.metadata }}
       reuse: ${{ steps.plan.outputs.reuse }}
       source_run: ${{ steps.plan.outputs.source_run }}
       image: ${{ steps.plan.outputs.image }}
@@ -49,12 +53,12 @@ jobs:
         run: node scripts/ci/ci-feedback.mts plan
 
   feedback:
-    name: Fast feedback
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback' }}
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     needs: plan
-    if: needs.plan.outputs.full == 'false'
+    if: needs.plan.outputs.full == 'false' && needs.plan.outputs.metadata == 'false'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     steps:
       - name: Checkout
@@ -82,6 +86,7 @@ jobs:
         run: pnpm lint:fast
 
   validate:
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate' }}
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
@@ -145,7 +150,7 @@ jobs:
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-    name: test (${{ matrix.shard }}/2)
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata test' || 'test' }} (${{ matrix.shard }}/2)
     needs: plan
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
@@ -212,7 +217,7 @@ jobs:
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-    name: lint (${{ matrix.scope }})
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata lint' || 'lint' }} (${{ matrix.scope }})
     needs: plan
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
@@ -278,7 +283,7 @@ jobs:
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-    name: Task change ledger Windows smoke
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke' }}
     needs: plan
     if: needs.plan.outputs.full == 'true'
     runs-on: windows-latest
@@ -372,7 +377,7 @@ jobs:
         run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
   full-qualification:
-    name: Full qualification
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata CI result' || 'Full qualification' }}
     needs: [plan, validate, test, lint, task-change-ledger-windows]
     if: always()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
@@ -383,7 +388,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      - name: Preserve existing current-code checks after metadata edits
+        if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
+        run: echo 'Title/body edit only; existing current-code qualification remains required'
       - name: Require complete current-code qualification
+        if: needs.plan.result != 'success' || needs.plan.outputs.metadata != 'true' || needs.plan.outputs.full != 'false' || needs.plan.outputs.reuse != 'false'
         env:
           JOB_RESULTS: ${{ toJSON(needs) }}
           MODE_FULL: ${{ needs.plan.outputs.full }}

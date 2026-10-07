@@ -75,7 +75,12 @@ function fullNeeds(reuse = false): JsonObject {
   return {
     plan: {
       result: 'success',
-      outputs: { full: 'true', reuse: String(reuse), source_run: reuse ? '100' : '' },
+      outputs: {
+        full: 'true',
+        metadata: 'false',
+        reuse: String(reuse),
+        source_run: reuse ? '100' : '',
+      },
     },
     validate: { result: 'success' },
     test: { result: reuse ? 'skipped' : 'success' },
@@ -891,7 +896,7 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
     assert.equal(child.status, 0, child.stderr);
     assert.equal(
       readFileSync(outputFile, 'utf8'),
-      `full=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
+      `full=false\nmetadata=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
     );
     const gate = spawnSync(process.execPath, [cli, 'gate'], {
       encoding: 'utf8',
