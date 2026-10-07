@@ -1869,16 +1869,25 @@ CLI authentication is not required. A local runtime override remains available t
 ```bash
 git tag v<VERSION>
 git push origin v<VERSION>
+git fetch origin main
+RELEASE_SOURCE_SHA="$(git rev-parse 'v<VERSION>^{commit}')"
+git merge-base --is-ancestor "$RELEASE_SOURCE_SHA" origin/main
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
 
 gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
-  --ref v<VERSION> \
+  --ref release/macos-signing \
   -f release_tag=v<VERSION> \
   -f publish_release=false
 ```
 
 Pushing the tag does not start the release workflow. `release.yml` is
 `workflow_dispatch`-only, so the explicit `gh workflow run` command is required.
+Fresh builds require the owner to dispatch from `release/macos-signing`, whose
+SHA must match the reviewed tagged commit. Rebuild recovery uses the same
+protected ref; fast-forward it to the intended tag before dispatch. Reusing
+already validated draft assets can still run from the release tag.
 The draft workflow:
 
 - Builds the app (ubuntu)
@@ -1986,7 +1995,7 @@ publication flag enabled:
 ```bash
 gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
-  --ref v<VERSION> \
+  --ref release/macos-signing \
   -f release_tag=v<VERSION> \
   -f publish_release=true
 
@@ -2261,7 +2270,10 @@ version, or has broken latest URLs is automatically returned to draft.
 # Create a draft release
 git tag v1.0.0
 git push origin v1.0.0
-gh workflow run release.yml --repo 777genius/agent-teams-ai --ref v1.0.0 \
+# After review, fast-forward the owner-controlled signing branch to the tagged commit.
+RELEASE_SOURCE_SHA="$(git rev-parse 'v1.0.0^{commit}')"
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing \
   -f release_tag=v1.0.0 -f publish_release=false
 # Wait for CI, review the assets, and update the draft notes
 
