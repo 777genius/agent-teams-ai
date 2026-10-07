@@ -935,13 +935,13 @@ describe('team slice context races', () => {
         teamName: string;
         computedAt: string;
         feedRevision: string;
-        members: {};
+        members: Record<string, never>;
       }>();
       const next = deferred<{
         teamName: string;
         computedAt: string;
         feedRevision: string;
-        members: {};
+        members: Record<string, never>;
       }>();
       apiMock.teams.getMemberActivityMeta
         .mockReturnValueOnce(first.promise)

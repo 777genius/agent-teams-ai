@@ -14,6 +14,7 @@ interface ActiveRead<T> {
   readonly result: Promise<T>;
 }
 interface PendingRead<T> extends ActiveRead<T> {
+  readonly predecessor: Promise<T>;
   settle(outcome: ReadOutcome<T>): void;
 }
 
@@ -67,7 +68,12 @@ export class ScopedReadRequests<T> {
     const predecessor = this.get(team, scope);
     if (!predecessor) return read();
     const existing = this.pending.get(team);
-    if (existing && sameScope(existing.scope, scope)) return existing.result;
+    if (existing && sameScope(existing.scope, scope)) {
+      if (existing.predecessor === predecessor) return existing.result;
+      // A replacement already satisfies the earlier demand, but cannot satisfy a new one.
+      this.pending.delete(team);
+      this.observe(existing, predecessor);
+    }
     let settle!: (outcome: ReadOutcome<T>) => void;
     const outcome = new Promise<ReadOutcome<T>>((resolve) => {
       settle = resolve;
@@ -77,7 +83,7 @@ export class ScopedReadRequests<T> {
       if (value.kind === 'failure') throw value.error;
       return this.retiredValue();
     });
-    const pending: PendingRead<T> = { scope, result, settle };
+    const pending: PendingRead<T> = { scope, result, settle, predecessor };
     this.pending.set(team, pending);
     const start = (): void => {
       if (this.pending.get(team) !== pending) return;
@@ -93,10 +99,7 @@ export class ScopedReadRequests<T> {
         settle({ kind: 'failure', error });
         return;
       }
-      void successor.then(
-        (value) => settle({ kind: 'success', value }),
-        (error: unknown) => settle({ kind: 'failure', error })
-      );
+      this.observe(pending, successor);
     };
     // Both predecessor outcomes release the barrier. Its failure is not the fresh result.
     void predecessor.then(start, start);
@@ -109,6 +112,13 @@ export class ScopedReadRequests<T> {
 
   clear(): void {
     for (const team of new Set([...this.active.keys(), ...this.pending.keys()])) this.delete(team);
+  }
+
+  private observe(pending: PendingRead<T>, successor: Promise<T>): void {
+    void successor.then(
+      (value) => pending.settle({ kind: 'success', value }),
+      (error: unknown) => pending.settle({ kind: 'failure', error })
+    );
   }
 
   private retire(team: string, kind: 'superseded' | 'disposed'): void {
