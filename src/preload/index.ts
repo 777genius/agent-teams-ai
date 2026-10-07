@@ -2,6 +2,7 @@ import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
+import { createDocumentPreviewBridge } from '@features/document-preview/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
@@ -1887,7 +1888,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // ===== Editor API =====
-  editor: {
+  editor: { ...createDocumentPreviewBridge(),
     open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
     close: () => invokeIpcWithResult<void>(EDITOR_CLOSE),
     readDir: (dirPath: string, maxEntries?: number) =>

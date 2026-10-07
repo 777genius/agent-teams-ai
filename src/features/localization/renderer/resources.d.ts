@@ -4080,6 +4080,13 @@ export default interface Resources {
         "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
         "unsavedTitle": "Unsaved Changes"
       },
+      "documentPreview": {
+        "limit": "Preview is available for documents up to {{size}} MiB.",
+        "loading": "Loading document preview...",
+        "readOnly": "Read-only document preview",
+        "title": "Document preview",
+        "unavailable": "Preview unavailable. The document may be encrypted, damaged, or unsupported."
+      },
       "draftRecovered": "Recovered unsaved changes from a previous session.",
       "empty": {
         "selectFile": "Select a file from the tree to edit"
