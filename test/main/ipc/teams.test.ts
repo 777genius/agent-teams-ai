@@ -7339,6 +7339,63 @@ describe('ipc teams handlers', () => {
       ).toBeUndefined();
     });
 
+    // Launch intent, watch engagement and cwd creation must follow runtime admission.
+    it.each(['create', 'draft', 'persisted', 'unsupported-persisted'] as const)(
+      'rejects unresolved or unsupported selection without launch effects (%s)',
+      async (entry) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-selection-admission-'));
+        setClaudeBasePathOverride(claudeRoot);
+        const noteIntent = vi.spyOn(launchIoGovernor, 'noteLaunchIntent');
+        try {
+          const teamName = 'selection-team';
+          const teamDir = path.join(claudeRoot, 'teams', teamName);
+          const cwd = entry === 'create' ? path.join(claudeRoot, 'must-not-create') : claudeRoot;
+          const meta = JSON.stringify({
+            version: 1,
+            cwd,
+            runtimeSelectionVersion: entry === 'unsupported-persisted' ? 2 : 1,
+            createdAt: Date.now(),
+          });
+          if (entry !== 'create') {
+            fs.mkdirSync(teamDir, { recursive: true });
+            fs.writeFileSync(path.join(teamDir, 'team.meta.json'), meta);
+            if (entry !== 'draft')
+              fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+            service.getSavedRequest.mockResolvedValueOnce({
+              teamName,
+              cwd,
+              runtimeSelectionVersion: 1,
+              members: [{ name: 'builder' }],
+            });
+          }
+          const result = await handlers.get(entry === 'create' ? TEAM_CREATE : TEAM_LAUNCH)!(
+            { sender: { send: vi.fn() } } as never,
+            { teamName, cwd, runtimeSelectionVersion: 1, members: [{ name: 'builder' }] }
+          );
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining(
+              entry === 'unsupported-persisted'
+                ? 'RUNTIME_SELECTION_UNSUPPORTED'
+                : 'RUNTIME_SELECTION_REQUIRED'
+            ),
+          });
+          expect(noteIntent).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has(teamName)).not.toBe(true);
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(teamBackupService.withTeamIdentityFence).not.toHaveBeenCalled();
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+          if (entry === 'create') expect(fs.existsSync(cwd)).toBe(false);
+          else expect(fs.readFileSync(path.join(teamDir, 'team.meta.json'), 'utf8')).toBe(meta);
+        } finally {
+          noteIntent.mockRestore();
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
+
     it.each([true, false])(
       'rejects unsupported inbound marker before saved metadata masks it (draft=%s)',
       async (draft) => {

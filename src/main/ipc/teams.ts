@@ -137,6 +137,7 @@ import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy'
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   normalizeRuntimeSelectionVersion,
+  requireTeamRuntimeSelection,
   TeamRuntimeSelectionError,
 } from '@shared/utils/teamRuntimeSelection';
 import crypto from 'crypto';
@@ -1719,6 +1720,18 @@ async function rollbackLiveRosterMutation(options: {
   }
 }
 
+function runtimeSelectionFailure(
+  runtimeSelectionVersion: unknown,
+  providerId: unknown
+): string | null {
+  try {
+    requireTeamRuntimeSelection({ runtimeSelectionVersion, providerId });
+    return null;
+  } catch (error) {
+    return getErrorMessage(error);
+  }
+}
+
 async function validateProvisioningRequest(
   request: unknown
 ): Promise<{ valid: true; value: TeamCreateRequest } | { valid: false; error: string }> {
@@ -1754,6 +1767,11 @@ async function validateProvisioningRequest(
   if (!providerValidation.valid) {
     return { valid: false, error: providerValidation.error };
   }
+  const selectionError = runtimeSelectionFailure(
+    payload.runtimeSelectionVersion,
+    providerValidation.value
+  );
+  if (selectionError) return { valid: false, error: selectionError };
   const providerId = providerValidation.value ?? 'anthropic';
 
   const seenNames = new Set<string>();
@@ -2095,7 +2113,11 @@ async function handleLaunchTeam(
   try {
     await fs.promises.access(configPath, fs.constants.F_OK);
   } catch {
-    const meta = await teamMetaStore.getMeta(tn);
+    const meta = await teamMetaStore.getMeta(tn).catch((error: unknown) => {
+      if (error instanceof TeamRuntimeSelectionError) return error;
+      throw error;
+    });
+    if (meta instanceof TeamRuntimeSelectionError) return { success: false, error: meta.message };
     if (meta) isDraft = true;
   }
 
@@ -2105,11 +2127,15 @@ async function handleLaunchTeam(
       return { success: false, error: `Missing saved request for draft team: ${tn}` };
     }
 
+    const runtimeSelectionVersion =
+      savedRequest.runtimeSelectionVersion ?? payload.runtimeSelectionVersion;
     const savedProviderId = savedRequest.providerId ?? 'anthropic';
     const resolvedProviderId =
       explicitProviderId ??
       savedRequest.providerId ??
-      (savedRequest.runtimeSelectionVersion === 1 ? undefined : providerId);
+      (runtimeSelectionVersion === 1 ? undefined : providerId);
+    const selectionError = runtimeSelectionFailure(runtimeSelectionVersion, resolvedProviderId);
+    if (selectionError) return { success: false, error: selectionError };
     const providerChangedFromSaved =
       explicitProviderId != null && explicitProviderId !== savedProviderId;
     const effortValidation = parseOptionalTeamEffort(
@@ -2146,7 +2172,7 @@ async function handleLaunchTeam(
 
     const createRequest: TeamCreateRequest = {
       teamName: tn,
-      runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
+      runtimeSelectionVersion,
       displayName: savedRequest.displayName,
       description: savedRequest.description,
       color: savedRequest.color,
@@ -2202,14 +2228,22 @@ async function handleLaunchTeam(
     });
   }
 
-  const persistedMeta = await teamMetaStore.getMeta(tn).catch(() => null);
+  const persistedMeta = await teamMetaStore
+    .getMeta(tn)
+    .catch((error: unknown) => (error instanceof TeamRuntimeSelectionError ? error : null));
+  if (persistedMeta instanceof TeamRuntimeSelectionError)
+    return { success: false, error: persistedMeta.message };
+  const runtimeSelectionVersion =
+    persistedMeta?.runtimeSelectionVersion ?? payload.runtimeSelectionVersion;
   const persistedLaunchProviderId =
     persistedMeta?.launchIdentity?.providerId ?? persistedMeta?.providerId ?? 'anthropic';
   const launchProviderId =
     explicitProviderId ??
     persistedMeta?.launchIdentity?.providerId ??
     persistedMeta?.providerId ??
-    (persistedMeta?.runtimeSelectionVersion === 1 ? undefined : providerId);
+    (runtimeSelectionVersion === 1 ? undefined : providerId);
+  const selectionError = runtimeSelectionFailure(runtimeSelectionVersion, launchProviderId);
+  if (selectionError) return { success: false, error: selectionError };
   const providerChangedFromPersisted =
     explicitProviderId != null && explicitProviderId !== persistedLaunchProviderId;
   const rawLaunchProviderBackendId = Object.hasOwn(payload, 'providerBackendId')
@@ -2269,8 +2303,7 @@ async function handleLaunchTeam(
     try {
       const response = await getTeamProvisioningStartApi().launchTeam(
         {
-          runtimeSelectionVersion:
-            persistedMeta?.runtimeSelectionVersion ?? payload.runtimeSelectionVersion,
+          runtimeSelectionVersion,
           teamName: validatedTeamName.value!,
           cwd,
           prompt:
