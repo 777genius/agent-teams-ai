@@ -23,7 +23,7 @@ const downloadStore = useDownloadStore();
 const { resolve, platformInfo, data: releaseData } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
-const { selectedDownloadAsset } = useDownloadAssetPresentation();
+const { selectedDownloadAsset } = useDownloadAssetPresentation(platformInfo);
 
 useCyberHeroParallax(heroRef);
 
@@ -166,7 +166,7 @@ const downloadActionSubtitle = computed(() => {
   }
 
   const asset = selectedDownloadAsset.value;
-  return asset.os === 'macos' ? `macOS · ${asset.archLabel}` : asset.actionSubtitle;
+  return asset.actionSubtitle;
 });
 const docsActionSubtitle = computed(() => (
   t("hero.guidesSetup")
