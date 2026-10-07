@@ -366,20 +366,24 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         const teamName = validatedTeamName.value!;
         const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
           const draftSavedRequest = await getDraftSavedRequest(services, teamName);
-          let response: TeamCreateResponse | TeamLaunchResponse;
+          let response!: TeamCreateResponse | TeamLaunchResponse;
           if (draftSavedRequest) {
             const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
             requireTeamRuntimeSelection(createRequest);
-            if (createRequest.teamName !== teamName) {
-              // The draft directory was created under an earlier name; the final
-              // create must use the final team name for the directory.
-              await getTeamDataApi(services).renameDraftTeam(teamName, createRequest.teamName);
-            }
-            response = await getTeamProvisioningStartApi(services).createTeam(
-              createRequest,
-              () => undefined
-            );
-            services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+            const provision = async () => {
+              response = await getTeamProvisioningStartApi(services).createTeam(
+                createRequest,
+                () => undefined
+              );
+              services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+            };
+            if (createRequest.teamName !== teamName)
+              await getTeamDataApi(services).renameDraftTeam(
+                teamName,
+                createRequest.teamName,
+                provision
+              );
+            else await provision();
           } else {
             response = await getTeamProvisioningStartApi(services).launchTeam(
               parseLaunchRequest(teamName, request.body),

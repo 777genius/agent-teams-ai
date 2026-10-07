@@ -126,7 +126,11 @@ export interface TeamHttpDataApi {
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
-  renameDraftTeam(oldTeamName: string, newTeamName: string): Promise<void>;
+  renameDraftTeam(
+    oldTeamName: string,
+    newTeamName: string,
+    afterRename?: () => Promise<void>
+  ): Promise<void>;
 }
 
 /**

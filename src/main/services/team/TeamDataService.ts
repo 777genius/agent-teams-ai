@@ -3417,13 +3417,19 @@ export class TeamDataService {
     );
   }
 
-  readonly renameDraftTeam = (oldName: string, newName: string): Promise<void> =>
+  /** The continuation keeps destination identity and lifecycle admission through draft provisioning. */
+  readonly renameDraftTeam = (
+    oldName: string,
+    newName: string,
+    afterRename?: () => Promise<void>
+  ): Promise<void> =>
     this.runConfigurationOperation(oldName, async () => {
-      if (oldName === newName) return;
+      if (oldName === newName) return afterRename?.();
       await assertDraftRenameDestinationAvailable(newName);
-      return this.runConfigurationOperation(newName, () =>
-        renameDraftTeamDirectory(oldName, newName)
-      );
+      return this.runConfigurationOperation(newName, async () => {
+        await renameDraftTeamDirectory(oldName, newName);
+        await afterRename?.();
+      });
     });
 
   async reconcileTeamArtifacts(

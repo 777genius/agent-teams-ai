@@ -916,6 +916,87 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
+  // Catches a destination edit committing after rename returns but before the assembled draft
+  // request reaches provisioning. The real rename/gates and HTTP mutation run with fake provisioning.
+  it('retains destination admission through renamed-draft provisioning', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-rename-launch-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService, createTeamCalls } = createServices(root);
+    const { context, events, lifecycle } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const source = 'rename-source';
+    const destination = 'rename-destination';
+    const originalRename = teamDataService.renameDraftTeam;
+    const originalCreate = services.teamApis!.provisioningStart.createTeam;
+    services.teamApis!.provisioningStart.createTeam = async (request, onProgress) => {
+      let result!: Awaited<ReturnType<typeof originalCreate>>;
+      await lifecycle.runLiveRosterMutation(request.teamName, async () => {
+        result = await originalCreate(request, onProgress);
+      });
+      return result;
+    };
+    let interleavedStatus: number | undefined;
+    let interleavedCode: string | undefined;
+    const rename = vi
+      .spyOn(teamDataService, 'renameDraftTeam')
+      .mockImplementation(async (oldName, newName, afterRename) => {
+        await originalRename(oldName, newName, afterRename);
+        // Deterministically consume the old gap before the launch caller resumes.
+        const snapshot = await services.teamPromptManagement!.get(newName);
+        const edit = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${newName}/update`,
+          payload: {
+            expectedContext: context.snapshot(),
+            expectedRevision: snapshot.configurationRevision,
+            metadata: { description: 'Edit won the rename gap' },
+          },
+        });
+        interleavedStatus = edit.statusCode;
+        interleavedCode = edit.json().code;
+      });
+    try {
+      await teamDataService.createTeamConfig({
+        teamName: source,
+        cwd: root,
+        members: [],
+        runtimeSelectionVersion: 1,
+        providerId: 'anthropic',
+        description: 'Saved before launch',
+      });
+      const launch = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${source}/launch`,
+        payload: {
+          teamName: destination,
+        },
+      });
+      expect(launch.statusCode).toBe(200);
+      expect(interleavedStatus).toBe(409);
+      expect(interleavedCode).toBe('TEAM_ACTIVE');
+      expect(createTeamCalls).toHaveLength(1);
+      expect(createTeamCalls[0]).toMatchObject({
+        teamName: destination,
+        description: 'Saved before launch',
+      });
+      expect(await new TeamMetaStore().getMeta(destination)).toMatchObject({
+        description: 'Saved before launch',
+      });
+      expect(events).toHaveLength(0);
+      await expect(
+        readFile(path.join(root, 'teams', source, 'team.meta.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      rename.mockRestore();
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-e2e-'));
