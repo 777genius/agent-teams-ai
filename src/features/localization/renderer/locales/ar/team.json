@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "يجب أن يحتوي الاسم على رسالة واحدة أو رقم واحد على الأقل",
-      "nameTooLong": "الاسم طويل جدا (ماكس 128 تشارز)",
+      "nameTooLong": "الاسم طويل جدا (ماكس 64 تشارز)",
       "selectWorkingDirectory": "دليل عمل مختار",
       "memberNameRequired": "اسم العضو لا يمكن أن يكون فارغا",
       "memberNameInvalid": "يجب أن يبدأ اسم العضو بالألبانوميريك، ويستخدم فقط [A-zA-Z0-9.]",

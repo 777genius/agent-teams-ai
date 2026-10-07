@@ -3863,7 +3863,7 @@ export default interface Resources {
         "memberNameRequired": "Member name cannot be empty",
         "memberNamesUnique": "Member names must be unique",
         "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
-        "nameTooLong": "Name is too long (max 128 chars)",
+        "nameTooLong": "Name is too long (max 64 chars)",
         "openCodeLeadModelRequired": "OpenCode lead requires a selected model.",
         "openCodeTeammateRequired": "OpenCode lead requires at least one OpenCode teammate.",
         "selectWorkingDirectory": "Select working directory (cwd)",
@@ -6472,6 +6472,19 @@ export default interface Resources {
       "warningMissingClaudeMd": "No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.",
       "warningUnknownTaskOwner": "Task {{description}} referenced unknown member {{owner}} and was imported without an owner.",
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
+    },
+    "templates": {
+      "label": "Team template",
+      "modelAfterProvider": "Model selection is available after choosing a provider.",
+      "names": {
+        "bug": "Fix a bug",
+        "feature": "Build a feature",
+        "research": "Research a solution",
+        "review": "Review code"
+      },
+      "placeholder": "Start from a team template",
+      "providerLabel": "Choose team provider",
+      "providerPlaceholder": "Choose a provider"
     },
     "terminalWorkspace": {
       "backgroundModeImage": "Image",

@@ -89,7 +89,7 @@ export function formatOpenCodeDefaultRouteLabel(
 }
 
 interface OpenCodeDefaultSelectionInput {
-  selectedProviderId: TeamProviderId;
+  selectedProviderId?: TeamProviderId;
   selectedModel: string | null | undefined;
   members: readonly MemberDraft[];
   syncModelsWithLead: boolean;

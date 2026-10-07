@@ -197,6 +197,7 @@ export function buildLaunchTeamMetaPayload(input: {
     description: syntheticRequest.description,
     color: syntheticRequest.color,
     cwd: request.cwd,
+    runtimeSelectionVersion: request.runtimeSelectionVersion,
     prompt: request.prompt,
     providerId: syntheticRequest.providerId,
     providerBackendId: syntheticRequest.providerBackendId,

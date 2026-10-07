@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "O nome deve conter pelo menos uma letra ou algarismo",
-      "nameTooLong": "O nome é muito longo (máx. 128 caracteres)",
+      "nameTooLong": "O nome é muito longo (máx. 64 caracteres)",
       "selectWorkingDirectory": "Selecionar diretório de trabalho (cwd)",
       "memberNameRequired": "O nome do membro não pode estar vazio",
       "memberNameInvalid": "Nome do membro deve começar com alfanumérico, usar apenas [a-zA-Z0-9. -], máximo 128 caracteres",

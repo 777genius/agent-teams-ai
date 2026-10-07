@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Tên phải chứa ít nhất một chữ cái hoặc chữ số",
-      "nameTooLong": "Tên quá dài (tối đa 128 ký tự)",
+      "nameTooLong": "Tên quá dài (tối đa 64 ký tự)",
       "selectWorkingDirectory": "Chọn thư mục làm việc (cwd)",
       "memberNameRequired": "Tên thành viên không được để trống",
       "memberNameInvalid": "Tên thành viên phải bắt đầu bằng ký tự chữ và số, chỉ dùng [a-zA-Z0-9._-], tối đa 128 ký tự",

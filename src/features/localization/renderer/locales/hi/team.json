@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "नाम में कम से कम एक अक्षर या अंक होना चाहिए",
-      "nameTooLong": "नाम बहुत लंबा है (अधिकतम 128 अक्षर)",
+      "nameTooLong": "नाम बहुत लंबा है (अधिकतम 64 अक्षर)",
       "selectWorkingDirectory": "चयन कार्य निर्देशिका (cwd)",
       "memberNameRequired": "सदस्य का नाम खाली नहीं हो सकता",
       "memberNameInvalid": "सदस्य का नाम अल्फ़ान्यूमेरिक से शुरू होना चाहिए, केवल [a-zA-Z0-9. -] का उपयोग करें, अधिकतम 128 अक्षर",

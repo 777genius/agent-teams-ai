@@ -4,6 +4,10 @@ import { validateMemberName, validateTeamName } from '@main/services/team/TeamId
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import {
+  requireTeamRuntimeSelection,
+  TeamRuntimeSelectionError,
+} from '@shared/utils/teamRuntimeSelection';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
@@ -283,12 +287,27 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       const createRequest = parseCreateTeamRequest(request.body);
       await getTeamDataApi(services).createTeamConfig(createRequest);
       services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
-      return reply.status(201).send({ teamName: createRequest.teamName });
+      return reply
+        .status(201)
+        .send({
+          teamName: createRequest.teamName,
+          draft: true,
+          runtimeSelectionVersion: createRequest.runtimeSelectionVersion,
+          runtimeSelection:
+            createRequest.runtimeSelectionVersion === 1 && !createRequest.providerId
+              ? 'unresolved'
+              : 'selected',
+        });
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in POST /api/teams:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      return reply
+        .status(getStatusCode(error))
+        .send({
+          error: getResponseErrorMessage(error),
+          ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+        });
     }
   });
 
@@ -334,6 +353,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         let response: TeamCreateResponse | TeamLaunchResponse;
         if (draftSavedRequest) {
           const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
+          requireTeamRuntimeSelection(createRequest);
           if (createRequest.teamName !== teamName) {
             // The draft directory was created under an earlier name; the final
             // create must use the final team name for the directory.
@@ -360,7 +380,12 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
+        return reply
+          .status(statusCode)
+          .send({
+            error: getResponseErrorMessage(error, statusCode),
+            ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+          });
       }
     }
   );

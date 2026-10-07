@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "نام باید حداقل شامل یک حرف یا رقم باشد",
-      "nameTooLong": "نام بیش از حد طولانی است (حداکثر ۱۲۸ نویسه)",
+      "nameTooLong": "نام بیش از حد طولانی است (حداکثر ۶۴ نویسه)",
       "selectWorkingDirectory": "انتخاب دایرکتوری کاری (cwd)",
       "memberNameRequired": "نام عضو نمی‌تواند خالی باشد",
       "memberNameInvalid": "نام عضو باید با حرف یا عدد شروع شود، فقط از [a-zA-Z0-9._-] استفاده کند، حداکثر ۱۲۸ نویسه",

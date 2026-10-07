@@ -514,6 +514,8 @@ async function createTeam(context, flags = {}) {
     body: {
       teamName: context.teamName,
       ...compactBody(flags, [
+        'runtimeSelectionVersion',
+        'syncModelsWithLead',
         'displayName',
         'description',
         'color',

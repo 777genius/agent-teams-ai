@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "नावात किमान एक अक्षर किंवा अंक असणे आवश्यक आहे",
-      "nameTooLong": "नाव खूप लांब आहे (कमाल 128 अक्षरे)",
+      "nameTooLong": "नाव खूप लांब आहे (कमाल 64 अक्षरे)",
       "selectWorkingDirectory": "वर्किंग डिरेक्टरी निवडा (cwd)",
       "memberNameRequired": "सदस्य नाव रिकामे असू शकत नाही",
       "memberNameInvalid": "सदस्य नाव अल्फान्यूमेरिकने सुरू झाले पाहिजे, फक्त [a-zA-Z0-9._-] वापरा, कमाल 128 अक्षरे",
