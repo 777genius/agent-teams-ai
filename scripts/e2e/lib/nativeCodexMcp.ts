@@ -86,6 +86,7 @@ function nativeRpc(child: ChildProcessWithoutNullStreams) {
       if (message.id !== undefined && typeof message.method === 'string') {
         child.stdin.write(
           JSON.stringify({
+            jsonrpc: '2.0',
             id: message.id,
             error: {
               code: -32601,
@@ -132,7 +133,7 @@ function nativeRpc(child: ChildProcessWithoutNullStreams) {
         reject(new Error(`Native Codex ${method} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
-      child.stdin.write(JSON.stringify({ id, method, params }) + '\n', (error) => {
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n', (error) => {
         if (error) fail(error);
       });
     });
@@ -156,7 +157,7 @@ function nativeRpc(child: ChildProcessWithoutNullStreams) {
     request,
     close,
     notify: (method: string) => {
-      child.stdin.write(JSON.stringify({ method }) + '\n');
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method }) + '\n');
     },
   };
 }

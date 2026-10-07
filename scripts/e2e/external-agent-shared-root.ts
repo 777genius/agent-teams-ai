@@ -46,6 +46,8 @@ interface Instance {
   client?: Cdp;
   snapshot?: Snapshot;
   baseUrl?: string;
+  mainStartTicks?: string;
+  ownedMcp?: OwnedMcp[];
 }
 async function evaluate<T>(
   client: Cdp,
@@ -186,16 +188,26 @@ async function launch(label: string): Promise<Instance> {
     })
   );
   // Register immediately so every launch failure still cleans up only its own process.
-  const instance = { label, userData, child, closed };
+  const instance: Instance = { label, userData, child, closed };
   instances.push(instance);
   await once(child, 'spawn');
   assert(child.pid);
+  instance.mainStartTicks = (await processIdentity(child.pid))?.startTicks;
+  assert(instance.mainStartTicks, 'Own app process birth identity missing');
   return instance;
 }
 function alive(instance: Instance): void {
   assert(
     instance.child.pid && instance.child.exitCode === null && instance.child.signalCode === null,
     `${instance.label} exited; inspect ${root}`
+  );
+}
+function transientCdp(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /^(?:Execution context was destroyed|Cannot find context with specified id|Inspected target navigated|Native CDP (?:closed|connection timeout|connection failed))/.test(
+      error.message
+    )
   );
 }
 async function attach(instance: Instance): Promise<void> {
@@ -215,19 +227,44 @@ async function attach(instance: Instance): Promise<void> {
       assert(Number.isInteger(port) && port > 0 && port < 65536);
       assert(lines[1]?.startsWith('/devtools/browser/'));
       const origin = `http://127.0.0.1:${port}`;
-      const version = await json<{ webSocketDebuggerUrl: string }>(`${origin}/json/version`);
+      let version: { webSocketDebuggerUrl: string };
+      let targets: Target[];
+      try {
+        version = await json<{ webSocketDebuggerUrl: string }>(`${origin}/json/version`);
+        targets = await json<Target[]>(`${origin}/json/list`);
+      } catch (error) {
+        if (
+          error instanceof TypeError &&
+          ['ECONNREFUSED', 'ECONNRESET', 'UND_ERR_SOCKET'].includes(
+            (error.cause as NodeJS.ErrnoException | undefined)?.code ?? ''
+          )
+        )
+          return false;
+        throw error;
+      }
       assert.equal(loopback(version.webSocketDebuggerUrl).pathname, lines[1]);
       assert.equal(loopback(version.webSocketDebuggerUrl).port, String(port));
-      const targets = await json<Target[]>(`${origin}/json/list`);
       for (const target of targets.filter(
         (candidate) => candidate.type === 'page' && candidate.webSocketDebuggerUrl
       )) {
         const wsUrl = target.webSocketDebuggerUrl!;
         assert.equal(loopback(wsUrl).port, String(port));
-        const client = await Cdp.connect(wsUrl);
+        let client: Cdp;
+        try {
+          client = await Cdp.connect(wsUrl);
+        } catch (error) {
+          if (transientCdp(error)) continue;
+          throw error;
+        }
         let selected = false;
         try {
-          const value = await evaluate(client, snapshot, [EXTERNAL_AGENT_RENDERER_MARKER]);
+          let value: Snapshot | null;
+          try {
+            value = await evaluate(client, snapshot, [EXTERNAL_AGENT_RENDERER_MARKER]);
+          } catch (error) {
+            if (transientCdp(error)) continue;
+            throw error;
+          }
           if (!value || value.info.cdp.rendererTargetId !== target.id) continue;
           assert.equal(value.info.cdp.status, 'ready');
           assert.equal(value.info.cdp.httpOrigin, origin);
@@ -252,6 +289,7 @@ async function attach(instance: Instance): Promise<void> {
   const http = await json<ConnectionInfoV1>(`${instance.baseUrl}/api/app/connection`);
   assert.deepEqual(http.context, attached.value.info.context);
   assert.equal(http.mcp.url, attached.value.info.mcp.url);
+  instance.ownedMcp = await captureOwnedMcp(instance);
 }
 async function refusesConnection(url: string): Promise<boolean> {
   const endpoint = loopback(url);
@@ -262,17 +300,205 @@ async function refusesConnection(url: string): Promise<boolean> {
       socket.destroy();
       resolve(false);
     });
-    socket.once('error', () => resolve(true));
+    socket.once('error', (error: NodeJS.ErrnoException) => resolve(error.code === 'ECONNREFUSED'));
     socket.once('timeout', () => {
       socket.destroy();
       resolve(false);
     });
   });
 }
+interface OwnedMcp {
+  pid: number;
+  startTicks: string;
+  ownerInstanceId: string;
+  appInstanceId: string;
+  commandSha256: string;
+}
+async function processIdentity(pid: number): Promise<{ startTicks: string; live: boolean } | null> {
+  try {
+    const stat = await readFile(`/proc/${pid}/stat`, 'utf8');
+    const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    assert(fields[19] && /^\d+$/.test(fields[19]), 'Invalid process birth identity');
+    return { startTicks: fields[19], live: fields[0] !== 'Z' };
+  } catch (error) {
+    if (['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) return null;
+    throw error;
+  }
+}
+async function proveMcp(instance: Instance, pid: number): Promise<OwnedMcp | null> {
+  const birth = await processIdentity(pid);
+  if (!birth?.live) return null;
+  const command = await readFile(`/proc/${pid}/cmdline`, 'utf8');
+  const args = command.split('\0').filter(Boolean);
+  const scriptRoot = `${instance.userData}/mcp-server/`;
+  if (
+    !args.some(
+      (arg) => arg.startsWith(scriptRoot) && /^[^/]+\/index\.js$/.test(arg.slice(scriptRoot.length))
+    )
+  )
+    return null;
+  const flag = (name: string) => args[args.indexOf(name) + 1];
+  assert(args.includes('--transport') && flag('--transport') === 'httpStream');
+  assert(args.includes('--host') && flag('--host') === '127.0.0.1');
+  assert(args.includes('--endpoint') && flag('--endpoint') === '/mcp');
+  const environment = (await readFile(`/proc/${pid}/environ`, 'utf8')).split('\0');
+  const value = (key: string) =>
+    environment.find((entry) => entry.startsWith(`${key}=`))?.slice(key.length + 1);
+  assert.equal(value('AGENT_TEAMS_MCP_CLAUDE_DIR'), claude);
+  assert.equal(value('AGENT_TEAMS_MCP_HTTP_OWNER_PID'), String(instance.child.pid));
+  assert.equal(
+    value('CLAUDE_TEAM_APP_PROFILE_SCOPE'),
+    createHash('sha256')
+      .update(JSON.stringify([instance.userData, claude]))
+      .digest('hex')
+  );
+  assert.equal(value('AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE'), 'agent-teams-mcp-http');
+  assert.equal(value('AGENT_TEAMS_MCP_HTTP_PORT'), flag('--port'));
+  assert.equal(value('AGENT_TEAMS_MCP_HTTP_HOST'), '127.0.0.1');
+  assert.equal(value('AGENT_TEAMS_MCP_HTTP_ENDPOINT'), '/mcp');
+  assert.equal(value('AGENT_TEAMS_MCP_TRANSPORT'), 'httpStream');
+  const ownerInstanceId = value('AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID');
+  const appInstanceId = value('CLAUDE_TEAM_APP_INSTANCE_ID');
+  assert(ownerInstanceId && appInstanceId, 'Owned MCP process identity missing');
+  const context = JSON.parse(
+    value('AGENT_TEAMS_BOUND_CONTEXT_JSON') ?? 'null'
+  ) as ConnectionInfoV1['context'];
+  assert.equal(context?.appInstanceId, appInstanceId);
+  assert(Number.isSafeInteger(context?.connectionGeneration) && context.connectionGeneration > 0);
+  assert.equal(context?.dataRootFingerprint, createHash('sha256').update(claude).digest('hex'));
+  if (instance.snapshot) assert.equal(appInstanceId, instance.snapshot.info.context.appInstanceId);
+  assert(instance.mainStartTicks && BigInt(birth.startTicks) >= BigInt(instance.mainStartTicks));
+  if ((await processIdentity(pid))?.startTicks !== birth.startTicks) return null;
+  return {
+    pid,
+    startTicks: birth.startTicks,
+    ownerInstanceId,
+    appInstanceId,
+    commandSha256: createHash('sha256').update(command).digest('hex'),
+  };
+}
+async function captureOwnedMcp(instance: Instance): Promise<OwnedMcp[]> {
+  const candidates: OwnedMcp[] = [];
+  for (const entry of await readdir('/proc')) {
+    if (!/^\d+$/.test(entry)) continue;
+    try {
+      const owned = await proveMcp(instance, Number(entry));
+      if (owned) candidates.push(owned);
+    } catch (error) {
+      if (['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? ''))
+        continue;
+      throw error;
+    }
+  }
+  // Stronger listener evidence is captured before failure when state and health are available.
+  try {
+    const state = JSON.parse(
+      await readFile(path.join(instance.userData, 'data/mcp-http-server/state.json'), 'utf8')
+    ) as Record<string, unknown>;
+    const owned = candidates.find((candidate) => candidate.pid === state.pid);
+    assert(owned, 'MCP state PID does not match proven sandbox child');
+    const health = await json<Record<string, unknown>>(
+      `${loopback(String(state.url)).origin}/health`
+    );
+    for (const key of [
+      'schemaVersion',
+      'service',
+      'transport',
+      'host',
+      'port',
+      'endpoint',
+      'claudeDirHash',
+      'launchSpecHash',
+      'ownerInstanceId',
+    ])
+      assert.equal(health[key], state[key], `Owned MCP health mismatch: ${key}`);
+    assert.equal(state.ownerInstanceId, owned.ownerInstanceId);
+    assert.equal(state.claudeDirHash, createHash('sha256').update(claude).digest('hex'));
+    assert.equal(state.service, 'agent-teams-mcp-http');
+    assert.equal(state.schemaVersion, 1);
+  } catch (error) {
+    // An absent/dead listener cannot invalidate independent immutable process evidence.
+    if (
+      !['ENOENT', 'ESRCH', 'ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT'].includes(
+        (error as NodeJS.ErrnoException).code ?? ''
+      ) &&
+      !(
+        error instanceof TypeError &&
+        (error.cause as NodeJS.ErrnoException | undefined)?.code === 'ECONNREFUSED'
+      )
+    )
+      throw error;
+  }
+  return candidates;
+}
+async function cleanupOwnedMcp(instance: Instance, owned: OwnedMcp): Promise<boolean> {
+  const same = async () => {
+    try {
+      const current = await proveMcp(instance, owned.pid);
+      return Boolean(
+        current &&
+        current.startTicks === owned.startTicks &&
+        current.ownerInstanceId === owned.ownerInstanceId &&
+        current.appInstanceId === owned.appInstanceId &&
+        current.commandSha256 === owned.commandSha256
+      );
+    } catch (error) {
+      if (['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) return false;
+      throw error;
+    }
+  };
+  if (!(await same())) return false;
+  const signal = async (value: NodeJS.Signals) => {
+    if (!(await same())) return;
+    try {
+      process.kill(owned.pid, value);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+    }
+  };
+  await signal('SIGTERM');
+  const deadline = Date.now() + 5000;
+  while (await same()) {
+    if (Date.now() >= deadline) {
+      await signal('SIGKILL');
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  await waitFor(
+    async () => !(await same()),
+    `${instance.label}: verified owned MCP process exit`,
+    5000
+  );
+  return true;
+}
 async function stop(instance: Instance): Promise<void> {
   const pid = instance.child.pid;
   if (!pid) return;
-  const signal = (value: NodeJS.Signals) => {
+  let ownershipError: unknown;
+  try {
+    instance.ownedMcp = await captureOwnedMcp(instance);
+  } catch (error) {
+    ownershipError = error;
+  }
+  let normalQuitRequested = false;
+  let hardFallback = false;
+  let detachedMcpCleanup = false;
+  let mainShutdownError: unknown;
+  const shutdownEvidence = {
+    label: instance.label,
+    mainPid: pid,
+    verifiedMcp: instance.ownedMcp ?? [],
+    hardFallback: false,
+    detachedMcpCleanup: false,
+    endpointsClosed: [] as string[],
+    ownershipError: ownershipError instanceof Error ? ownershipError.message : null,
+  };
+  const shutdown = (evidence.shutdown ??= []) as unknown[];
+  shutdown.push(shutdownEvidence);
+  const signal = async (value: NodeJS.Signals) => {
+    const birth = await processIdentity(pid);
+    if (!birth?.live || birth.startTicks !== instance.mainStartTicks) return;
     try {
       process.kill(-pid, value);
     } catch (error) {
@@ -281,14 +507,22 @@ async function stop(instance: Instance): Promise<void> {
   };
   // The normal quit path revokes authority and stops the detached MCP child.
   // SIGTERM first would bypass this app-owned teardown.
-  if (instance.client && instance.child.exitCode === null && instance.child.signalCode === null) {
+  const mainBirth = await processIdentity(pid);
+  if (
+    instance.client &&
+    mainBirth?.live &&
+    mainBirth.startTicks === instance.mainStartTicks &&
+    instance.child.exitCode === null &&
+    instance.child.signalCode === null
+  ) {
+    normalQuitRequested = true;
     await evaluate(instance.client, () => {
       void (window as unknown as { electronAPI: Api }).electronAPI.windowControls.close();
       return true;
     }).catch(() => undefined); // Renderer closure may destroy the acknowledgement.
   }
   let deadline: NodeJS.Timeout | undefined;
-  const graceful = await Promise.race([
+  const closedWithinBudget = await Promise.race([
     instance.closed.then(() => true),
     new Promise<false>((resolve) => {
       deadline = setTimeout(() => resolve(false), 45_000);
@@ -296,30 +530,63 @@ async function stop(instance: Instance): Promise<void> {
   ]);
   clearTimeout(deadline);
   instance.client?.close();
-  if (!graceful) {
-    signal('SIGTERM');
-    const timer = setTimeout(() => signal('SIGKILL'), 10_000);
+  if (!closedWithinBudget) {
+    hardFallback = true;
+    await signal('SIGTERM');
+    const exited = await Promise.race([
+      instance.closed.then(() => true),
+      new Promise<false>((resolve) => {
+        deadline = setTimeout(() => resolve(false), 10_000);
+      }),
+    ]);
+    clearTimeout(deadline);
+    if (!exited) await signal('SIGKILL');
     try {
-      await instance.closed;
-    } finally {
-      clearTimeout(timer);
+      await waitFor(
+        async () => instance.child.exitCode !== null || instance.child.signalCode !== null,
+        `${instance.label}: owned main exit after forced shutdown`,
+        5000
+      );
+    } catch (error) {
+      mainShutdownError = error;
     }
   }
+  for (const owned of instance.ownedMcp ?? [])
+    detachedMcpCleanup = (await cleanupOwnedMcp(instance, owned)) || detachedMcpCleanup;
+  const normalQuit =
+    normalQuitRequested &&
+    closedWithinBudget &&
+    instance.child.exitCode === 0 &&
+    instance.child.signalCode === null &&
+    !hardFallback &&
+    !detachedMcpCleanup;
+  Object.assign(shutdownEvidence, {
+    normalQuitRequested,
+    normalQuit,
+    exitCode: instance.child.exitCode,
+    signalCode: instance.child.signalCode,
+    hardFallback,
+    detachedMcpCleanup,
+  });
+  if (ownershipError) throw ownershipError;
+  if (mainShutdownError) throw mainShutdownError;
   if (instance.snapshot && instance.baseUrl) {
     for (const endpoint of [
       instance.baseUrl,
       instance.snapshot.info.mcp.url!,
       instance.snapshot.info.cdp.httpOrigin!,
-    ])
+    ]) {
       await waitFor(
         () => refusesConnection(endpoint),
         `${instance.label}: owned endpoint closed`,
         8000
       );
+      shutdownEvidence.endpointsClosed.push(endpoint);
+    }
   }
   assert(
-    graceful,
-    `${instance.label} required forced shutdown; preserve sandbox and inspect detached children`
+    normalQuit,
+    `${instance.label} did not complete requested normal app quit; preserve sandbox and inspect detached children`
   );
 }
 
@@ -375,6 +642,20 @@ try {
   );
   assert(owners[0]!.ownerInstanceId && owners[1]!.ownerInstanceId);
   assert.notEqual(owners[0]!.ownerInstanceId, owners[1]!.ownerInstanceId);
+  if (process.env.EXTERNAL_AGENT_VERIFY_FAILURE_CLEANUP === '1') {
+    assert(first.ownedMcp?.length === 1 && second.ownedMcp?.length === 1);
+    assert.equal(first.ownedMcp[0]!.ownerInstanceId, owners[0]!.ownerInstanceId);
+    assert.equal(second.ownedMcp[0]!.ownerInstanceId, owners[1]!.ownerInstanceId);
+    alive(first);
+    assert.equal((await processIdentity(first.child.pid!))?.startTicks, first.mainStartTicks);
+    evidence.failureInjection = {
+      label: first.label,
+      mainPid: first.child.pid,
+      mcp: first.ownedMcp[0],
+    };
+    process.kill(-first.child.pid!, 'SIGKILL');
+    throw new Error('Intentional owned app crash for detached MCP cleanup verification');
+  }
   const teamName = 'shared-root-conflict';
   const drafts: TeamCreateConfigRequest[] = ['first', 'second'].map((label) => ({
     runtimeSelectionVersion: 1,

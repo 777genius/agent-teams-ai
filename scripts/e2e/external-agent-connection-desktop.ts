@@ -500,14 +500,15 @@ async function readControl(): Promise<{ state: ControlState; info: ConnectionInf
 async function button(
   label: string,
   selector = false,
-  menuTrigger: string | null = null
+  menuTrigger: string | null = null,
+  teamDisplayName: string | null = null
 ): Promise<void> {
   assert(client);
   const point = await waitFor(
     () =>
       evaluate(
         client!,
-        (wanted: string, css: boolean, triggerLabel: string | null) => {
+        (wanted: string, css: boolean, triggerLabel: string | null, teamLabel: string | null) => {
           const visible = (node: Element): boolean => {
             const rect = node.getBoundingClientRect();
             const style = getComputedStyle(node);
@@ -526,7 +527,16 @@ async function button(
             throw new Error(
               `Expected one visible menu trigger: ${triggerLabel}, found ${triggers.length}`
             );
-          const scope = triggerLabel ? triggers[0]!.parentElement : document;
+          const cards = teamLabel
+            ? [...document.querySelectorAll('div[role="button"]')].filter(
+                (node) =>
+                  node.querySelector('h3')?.textContent?.trim() === teamLabel && visible(node)
+              )
+            : [];
+          if (teamLabel && cards.length > 1)
+            throw new Error(`Ambiguous visible team card: ${teamLabel}`);
+          if (teamLabel && cards.length === 0) return null;
+          const scope = teamLabel ? cards[0] : triggerLabel ? triggers[0]!.parentElement : document;
           if (!scope) return null;
           const matches = css
             ? [...scope.querySelectorAll(wanted)]
@@ -554,10 +564,11 @@ async function button(
           const hit = document.elementFromPoint(point.x, point.y);
           return hit && (hit === element || element.contains(hit)) ? point : null;
         },
-        [label, selector, menuTrigger]
+        [label, selector, menuTrigger, teamDisplayName]
       ),
     `visible button: ${label}`
   );
+  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
   await client.send('Input.dispatchMouseEvent', {
     type: 'mousePressed',
     button: 'left',
@@ -581,6 +592,134 @@ async function screenshot(label: string): Promise<void> {
     captureBeyondViewport: false,
   });
   await writeFile(path.join(root, `${label}.png`), Buffer.from(capture.data, 'base64'));
+}
+async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
+  const active = getClient();
+  const selectedName = 'external-e2e-copy-codex-source';
+  await evaluate(
+    active,
+    async (name: string, cwd: string) => {
+      const api = (window as unknown as { electronAPI: HarnessApi }).electronAPI;
+      await api.teams.createConfig({
+        teamName: name,
+        displayName: 'External E2E selected copy source',
+        cwd,
+        runtimeSelectionVersion: 1,
+        providerId: 'codex',
+        members: [],
+        syncModelsWithLead: true,
+      });
+      await api.config.update('general', { multimodelEnabled: false });
+    },
+    [selectedName, project]
+  );
+  const reload = async (): Promise<void> => {
+    const count = active.events.filter((event) => event.method === 'Page.loadEventFired').length;
+    await active.send('Page.reload');
+    await waitFor(
+      async () =>
+        active.events.filter((event) => event.method === 'Page.loadEventFired').length > count,
+      'copy mode renderer reload'
+    );
+    await waitFor(
+      async () =>
+        Boolean(await evaluate(active, rendererSnapshot, [EXTERNAL_AGENT_RENDERER_MARKER])),
+      'copy mode preload readiness'
+    );
+  };
+  try {
+    await reload();
+    assert.equal(
+      await evaluate(
+        active,
+        async () =>
+          (await (window as unknown as { electronAPI: HarnessApi }).electronAPI.config.get())
+            .general.multimodelEnabled
+      ),
+      false
+    );
+    for (const testCase of [
+      {
+        source: selectedName,
+        displayName: 'External E2E selected copy source',
+        destination: 'external-e2e-copy-selected',
+        provider: 'anthropic',
+      },
+      {
+        source: providerlessName,
+        displayName: 'External E2E feature',
+        destination: 'external-e2e-copy-unresolved',
+        provider: undefined,
+      },
+    ] as const) {
+      await assertNoLaunch(testCase.source);
+      await openMenu('Teams');
+      await button('Copy team', false, null, testCase.displayName);
+      await waitFor(
+        () => evaluate(active, () => Boolean(document.getElementById('team-name'))),
+        'copy team dialog'
+      );
+      const launchChecked = await evaluate(active, () =>
+        document.getElementById('launch-team')?.getAttribute('data-state')
+      );
+      if (launchChecked === 'checked') await button('#launch-team', true);
+      await evaluate(active, () => document.getElementById('team-name')?.focus());
+      await active.send('Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        key: 'a',
+        code: 'KeyA',
+        modifiers: 2,
+        windowsVirtualKeyCode: 65,
+      });
+      await active.send('Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        key: 'a',
+        code: 'KeyA',
+        windowsVirtualKeyCode: 65,
+      });
+      await active.send('Input.insertText', { text: testCase.destination });
+      assert.equal(
+        await evaluate(active, () =>
+          document.getElementById('launch-team')?.getAttribute('data-state')
+        ),
+        'unchecked',
+        'Copy proof must save only, never launch'
+      );
+      await button('Create');
+      const saved = await waitFor(
+        async () =>
+          evaluate(
+            active,
+            async (name: string) =>
+              (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.getSavedRequest(
+                name
+              ),
+            [testCase.destination]
+          ),
+        'copied draft persisted'
+      );
+      assert.equal(saved.runtimeSelectionVersion, 1);
+      assert.equal(saved.providerId, testCase.provider);
+      if (!testCase.provider) assert.equal(saved.model, undefined);
+      await assertNoLaunch(testCase.destination);
+      await waitFor(
+        () => evaluate(active, () => !document.getElementById('team-name')),
+        'copy dialog saved and closed'
+      );
+      evidence[`${testCase.destination}ProviderMode`] = {
+        provider: saved.providerId ?? null,
+        runtimeSelectionVersion: saved.runtimeSelectionVersion,
+        noLaunch: true,
+      };
+    }
+  } finally {
+    await evaluate(active, async () =>
+      (window as unknown as { electronAPI: HarnessApi }).electronAPI.config.update('general', {
+        multimodelEnabled: true,
+      })
+    );
+    await reload();
+  }
 }
 async function copyPrompt(
   info: ConnectionInfoV1,
@@ -994,11 +1133,13 @@ try {
   );
   await screenshot('providerless-draft');
   await copyPrompt(first.info, 'prompt-dark', true);
+  await verifyCopyProviderMode(teamName);
   await settingsSnapshot('settings-dark', first.info, 'dark');
 
   const reloadEventsBefore = active.events.filter(
     (event) => event.method === 'Page.loadEventFired'
   ).length;
+  const networkEventsBefore = active.events.length;
   await active.send('Page.reload');
   await waitFor(
     async () =>
@@ -1013,7 +1154,10 @@ try {
     return true;
   }, 'renderer reload rediscovery and marker');
   await waitFor(
-    async () => client!.events.some((event) => event.method === 'Network.requestWillBeSent'),
+    async () =>
+      active.events
+        .slice(networkEventsBefore)
+        .some((event) => event.method === 'Network.requestWillBeSent'),
     'raw CDP network event on renderer reload'
   );
   evidence.rendererReload = 'verified; new BrowserWindow recreation not exercised';
