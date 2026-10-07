@@ -33,7 +33,13 @@ export async function validateOfficeArchive(buffer: Buffer): Promise<void> {
     directoryOffset + directoryBytes !== end
   )
     throw new Error('Unsupported Office ZIP directory');
-  const records: { start: number; compressed: number; size: number; method: number }[] = [];
+  const records: {
+    local: number;
+    start: number;
+    compressed: number;
+    size: number;
+    method: number;
+  }[] = [];
   let cursor = directoryOffset;
   let declaredTotal = 0;
   for (let index = 0; index < entries; index++) {
@@ -77,10 +83,19 @@ export async function validateOfficeArchive(buffer: Buffer): Promise<void> {
       if (extra > cursor + 46 + nameBytes + extraBytes)
         throw new Error('Invalid Office ZIP extra data');
     }
-    records.push({ start, compressed, size, method });
+    records.push({ local, start, compressed, size, method });
     cursor = next;
   }
   if (cursor !== end) throw new Error('Invalid Office ZIP directory length');
+  // One physical record may be referenced repeatedly by central-directory entries.
+  // Reject duplicate/overlapping spans before any inflate work, including empty
+  // output streams. Disjoint spans bound total compressed work by the input size.
+  records.sort((left, right) => left.local - right.local);
+  let previousEnd = 0;
+  for (const record of records) {
+    if (record.local < previousEnd) throw new Error('Overlapping Office ZIP entries');
+    previousEnd = record.start + record.compressed;
+  }
   let actualTotal = 0;
   for (const record of records) {
     if (record.method === 0) {
