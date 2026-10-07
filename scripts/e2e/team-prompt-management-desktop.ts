@@ -312,7 +312,11 @@ async function captureOwnedProcesses() {
     for (const entry of await readdir('/proc')) {
       if (!/^\d+$/.test(entry)) continue;
       const identity = await processIdentity(Number(entry));
-      if (identity?.processGroup === spawnLease?.processGroup && (await groupLeaseCurrent()))
+      if (
+        identity &&
+        identity.processGroup === spawnLease?.processGroup &&
+        (await groupLeaseCurrent())
+      )
         ownedProcesses.set(identity.pid, identity);
     }
   }
