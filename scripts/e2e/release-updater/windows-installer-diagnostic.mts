@@ -173,6 +173,8 @@ interface SystemPowerShellReport {
   rejectedReasons: string[];
   limitReached: boolean;
   documents: string;
+  profileMetadataStatus: 'not-requested' | 'available' | 'unavailable';
+  documentsHResult: string | null;
   profiles: { path: string; exists: boolean; size: number | null; reparse: boolean }[];
 }
 export function checkSystemPowerShellReport(
@@ -236,11 +238,21 @@ export function checkSystemPowerShellReport(
     }
     checkOwner(root, ancestor, session);
   }
+  assert(['not-requested', 'available', 'unavailable'].includes(report.profileMetadataStatus));
+  const withoutMetadata = () => {
+    assert(report.documentsHResult === null || /^0x[a-f\d]{8}$/u.test(report.documentsHResult));
+    assert.equal(report.documents, '');
+    assert.deepEqual(report.profiles, []);
+    if (report.profileMetadataStatus === 'not-requested') assert.equal(report.owners.length, 0);
+    return (
+      report.profileMetadataStatus === 'unavailable' || report.rejected > 0 || report.limitReached
+    );
+  };
+  if (report.profileMetadataStatus !== 'available') return withoutMetadata();
+  assert.equal(report.documentsHResult, '0x00000000');
   const profileHomes = report.owners.map((owner) => path.win32.dirname(owner.executable));
-  assert(
-    path.win32.isAbsolute(report.documents) &&
-      path.win32.normalize(report.documents) === report.documents
-  );
+  assert.equal(path.win32.isAbsolute(report.documents), true);
+  assert.equal(path.win32.normalize(report.documents), report.documents);
   const profilePaths = [
     ...profileHomes,
     path.win32.join(report.documents, 'WindowsPowerShell'),
@@ -317,10 +329,10 @@ public sealed class InstallerProcessHandle : IDisposable {
   }
   public static bool CimCreation(string native,string cim) { return native.Substring(0,native.Length-2)+"0Z"==cim; }
   public bool Matches(string start,string image,string sid,int session,bool cimPrecision) { var now=Identity(); return (cimPrecision ? CimCreation(now[0],start) : now[0]==start) && String.Equals(now[1],image,StringComparison.OrdinalIgnoreCase) && now[2]==sid && now[3]==session.ToString(System.Globalization.CultureInfo.InvariantCulture); }
-  public static string Documents() {
+  public static string[] Documents() {
     var id=new Guid("FDD39AD0-238F-46AF-ADB4-6C85480369C7"); IntPtr value;
     int result=SHGetKnownFolderPath(ref id,0,IntPtr.Zero,out value);
-    try { if(result!=0) throw new InvalidOperationException("Token Documents unavailable"); return Marshal.PtrToStringUni(value); } finally { if(value!=IntPtr.Zero) Marshal.FreeCoTaskMem(value); }
+    try { return new[]{"0x"+result.ToString("x8",System.Globalization.CultureInfo.InvariantCulture),result==0 ? Marshal.PtrToStringUni(value) : ""}; } finally { if(value!=IntPtr.Zero) Marshal.FreeCoTaskMem(value); }
   }
   public void Dispose() { if(handle!=IntPtr.Zero) { CloseHandle(handle); handle=IntPtr.Zero; } }
 }
@@ -341,7 +353,7 @@ function Current($owner) {
   return $now
 }
 $known=@{}; $started=[DateTimeOffset]::FromUnixTimeMilliseconds([long]$d.startedMs); $next=0; $samples=@(30,90,150)
-$system=@{}; $handles=@{}; $rejected=@{}; $limitReached=$false; $profiles=@(); $documents=[InstallerProcessHandle]::Documents()
+$system=@{}; $handles=@{}; $rejected=@{}; $limitReached=$false; $profiles=@(); $documents=''; $profileMetadataStatus='not-requested'; $documentsHResult=$null
 $allowed=@('System32','SysWOW64' | ForEach-Object { Join-Path $d.systemRoot ($_+'\WindowsPowerShell\v1.0\powershell.exe') })
 function Assert-NoReparse([string]$file) {
   if ([IO.Path]::GetFullPath($file) -cne $file) { throw 'Noncanonical path' }
@@ -384,21 +396,26 @@ function Register-System($p,$parent) {
     $owner=@{pid=[int]$p.ProcessId; parent=[int]$p.ParentProcessId; executable=$id[1]; command=''; start=$id[0]; sid=$id[2]; session=[int]$id[3]; parentBefore=$before; parentAfter=$after; parentNativeStart=$parentNativeStart; parentNativeStartAfter=$parentNativeStartAfter; sha256=$hash; size=$size; peMachine=$machine; signature='Valid'; microsoftSigner=$true; handleVerified=$true; alive=$true}
     if (-not (Same-Handle $child $owner $true) -or -not $child.Alive) { throw 'Child exited during validation' }
     $reason='system child limit'; if ($system.Count -ge 8) { $script:limitReached=$true; throw 'System child limit' }
-    if ($system.Count -eq 0) {
-      $reason='profile metadata'; $psHome=[IO.Path]::GetDirectoryName($id[1]); Assert-NoReparse $documents
+    $system[$owner.pid]=$owner; $handles[$owner.pid]=$child; $child=$null
+    if ($system.Count -eq 1) {
+      try {
+      $lookup=[InstallerProcessHandle]::Documents(); $script:documentsHResult=$lookup[0]
+      if ($documentsHResult -ne '0x00000000') { throw 'Optional Documents unavailable' }
+      $script:documents=$lookup[1]; $psHome=[IO.Path]::GetDirectoryName($id[1]); Assert-NoReparse $documents
       $script:profiles=@(foreach ($home in @($psHome,(Join-Path $documents 'WindowsPowerShell'))) { foreach ($name in @('profile.ps1','Microsoft.PowerShell_profile.ps1')) {
         $profile=Join-Path $home $name; Assert-NoReparse $profile; $exists=Test-Path -LiteralPath $profile; $length=$null
         if ($exists) { $item=Get-Item -LiteralPath $profile -Force; if ($item.PSIsContainer) { throw 'Profile is not a file' }; $length=$item.Length }
         @{path=$profile; exists=[bool]$exists; size=$length; reparse=$false}
       } })
+      $script:profileMetadataStatus='available'
+      } catch { $script:documents=''; $script:profiles=@(); $script:profileMetadataStatus='unavailable' }
     }
-    $system[$owner.pid]=$owner; $handles[$owner.pid]=$child; $child=$null
   } catch { if ($rejected.Count -lt 8) { $rejected[[int]$p.ProcessId]=$reason } else { $script:limitReached=$true } }
   finally { if ($child) { $child.Dispose() }; if ($parentHandle) { $parentHandle.Dispose() } }
 }
 function Save-System([bool]$finished,[int]$sample=0) {
   $rows=@(foreach ($owner in @($system.Values | Sort-Object start,pid)) { $alive=$handles[$owner.pid].Alive; if ($alive -and -not (Same-Handle $handles[$owner.pid] $owner)) { throw 'Retained system identity changed' }; $owner.alive=$alive; $owner.lifetimeSeconds=([DateTimeOffset]::UtcNow-[DateTimeOffset]::Parse($owner.start)).TotalSeconds; $owner })
-  $json=ConvertTo-Json -InputObject @{finished=$finished; owners=$rows; rejected=$rejected.Count; rejectedReasons=@($rejected.Values | Sort-Object -Unique); limitReached=$limitReached; profiles=$profiles; documents=$documents} -Depth 12
+  $json=ConvertTo-Json -InputObject @{finished=$finished; owners=$rows; rejected=$rejected.Count; rejectedReasons=@($rejected.Values | Sort-Object -Unique); limitReached=$limitReached; profiles=$profiles; documents=$documents; profileMetadataStatus=$profileMetadataStatus; documentsHResult=$documentsHResult} -Depth 12
   [IO.File]::WriteAllText((Join-Path $d.evidence 'installer-system-powershell.json'),$json)
   if ($sample) { [IO.File]::WriteAllText((Join-Path $d.evidence ('installer-system-powershell-'+$sample+'.json')),$json) }
 }
