@@ -18,8 +18,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { readAsar } from './archive.mts';
 import { hashFile } from './inputs.mts';
-import { windowsNative } from './windows-native.mts';
+import { readPeArchitecture, windowsNative } from './windows-native.mts';
 import {
   appEnvironment,
   absent,
@@ -37,14 +38,28 @@ import type { ProfileOwnership } from './windows-ota-profile.mts';
 
 const execute = promisify(execFile);
 const repository = '777genius/agent-teams-ai';
-const sourceSha = '36c48514bce010d50d5b74660d2c2ab5a00d233b';
+const sourceIndex = process.argv.indexOf('--source');
+const sourceTag = sourceIndex < 0 ? 'v2.17.5' : process.argv[sourceIndex + 1];
+assert(sourceTag === 'v2.17.1' || sourceTag === 'v2.17.5', 'Pinned diagnostic source required');
+const priorSource = sourceTag === 'v2.17.1';
+const releaseId = priorSource ? 398386033 : 404985707;
+const sourceSha = priorSource
+  ? '395572f9ff2a261cb28224754883a39d2c3c8827'
+  : '36c48514bce010d50d5b74660d2c2ab5a00d233b';
 const sourceTagSha = '27fcfeeb10b9ab0fc781a7bdcf65fd70aa631c5c';
-const pin = {
-  id: 616289950,
-  name: 'Agent.Teams.AI.Setup.2.17.5-arm64.exe',
-  size: 218412277,
-  sha256: '8df843439e8120612804d8ee00667af546c9b7839c2b080083a30e2874e1ebfb',
-};
+const pin = priorSource
+  ? {
+      id: 595803042,
+      name: 'Agent.Teams.AI.Setup.2.17.1-arm64.exe',
+      size: 196906862,
+      sha256: 'd7bbfe282cba0467f389b24ca3f0cc0404efbbd21c0ce0d09a0e0080c9abfc43',
+    }
+  : {
+      id: 616289950,
+      name: 'Agent.Teams.AI.Setup.2.17.5-arm64.exe',
+      size: 218412277,
+      sha256: '8df843439e8120612804d8ee00667af546c9b7839c2b080083a30e2874e1ebfb',
+    };
 const assetRoute = `repos/${repository}/releases/assets/${pin.id}`;
 const assetApiUrl = `https://api.github.com/${assetRoute}`;
 interface SourceRelease {
@@ -65,15 +80,19 @@ interface SourceRelease {
 export function checkSource(
   release: SourceRelease,
   tag: { ref: string; object: { type: string; sha: string } },
-  annotated: { tag: string; object: { type: string; sha: string } }
+  annotated?: { tag: string; object: { type: string; sha: string } }
 ) {
-  assert.equal(release.id, 404985707);
-  assert.equal(release.tag_name, 'v2.17.5');
+  assert.equal(release.id, releaseId);
+  assert.equal(release.tag_name, sourceTag);
   assert.equal(release.target_commitish, sourceSha);
-  assert.equal(release.draft, true);
+  assert.equal(release.draft, !priorSource);
   assert.equal(release.prerelease, false);
-  assert.deepEqual(tag, { ref: 'refs/tags/v2.17.5', object: { type: 'tag', sha: sourceTagSha } });
-  assert.deepEqual(annotated, { tag: 'v2.17.5', object: { type: 'commit', sha: sourceSha } });
+  assert.deepEqual(tag, {
+    ref: `refs/tags/${sourceTag}`,
+    object: { type: priorSource ? 'commit' : 'tag', sha: priorSource ? sourceSha : sourceTagSha },
+  });
+  if (priorSource) assert.equal(annotated, undefined);
+  else assert.deepEqual(annotated, { tag: sourceTag, object: { type: 'commit', sha: sourceSha } });
   const assets = release.assets.filter((asset) => asset.name === pin.name);
   assert.equal(assets.length, 1);
   const asset = assets[0];
@@ -99,9 +118,9 @@ export function checkSource(
   return {
     releaseId: release.id,
     sourceSha,
-    tagObjectSha: sourceTagSha,
+    tagObjectSha: priorSource ? undefined : sourceTagSha,
     tag: release.tag_name,
-    draft: true,
+    draft: !priorSource,
     ...pin,
     assetApiUrl,
   };
@@ -476,6 +495,128 @@ Save-Owners
 }
 `;
 
+interface PostExitInventory {
+  entries: { path: string; directory: boolean; size: number | null }[];
+  truncated: boolean;
+  error?: string;
+  payload: { path: string; exists: boolean }[];
+}
+export function checkPostExitInventory(inventory: PostExitInventory) {
+  assert(!inventory.error, 'Rejected post-exit inventory');
+  assert(inventory.entries.length <= 128);
+  assert.equal(typeof inventory.truncated, 'boolean');
+  assert.deepEqual(
+    inventory.payload.map((item) => item.path),
+    ['AgentTeamsAI.exe', 'resources\\app.asar']
+  );
+  for (const item of inventory.entries) {
+    assert(item.path && !path.win32.parse(item.path).root && item.path !== '.');
+    assert.equal(path.win32.normalize(item.path), item.path);
+    assert(!item.path.split('\\').includes('..'));
+    assert.equal(typeof item.directory, 'boolean');
+    assert(
+      item.directory ? item.size === null : Number.isSafeInteger(item.size) && item.size! >= 0
+    );
+  }
+  for (const item of inventory.payload) assert.equal(typeof item.exists, 'boolean');
+}
+async function postExitInventory(root: string, install: string, output: string) {
+  const shell = await selectedWindowsPowerShell();
+  const script = path.join(root, 'post-exit-inventory.ps1');
+  await writeFile(
+    script,
+    String.raw`
+param([string]$Root,[string]$Install,[switch]$CheckOnly,[string]$Name)
+$ErrorActionPreference='Stop'
+if ((Split-Path -Leaf $Root) -notlike 'TEST-updater-windows-*' -or $Install -cne (Join-Path $Root 'install')) { throw 'Foreign inventory root' }
+function Guard([string]$Path) {
+  if ([IO.Path]::GetFullPath($Path) -cne $Path -or ($Path -cne $Root -and -not $Path.StartsWith($Root+'\',[StringComparison]::OrdinalIgnoreCase))) { throw 'Inventory outside TEST root' }
+  $p=$Path
+  while ($p -and $p.StartsWith($Root,[StringComparison]::OrdinalIgnoreCase)) {
+    if ((Test-Path -LiteralPath $p) -and ((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Inventory reparse point' }
+    if ($p -ceq $Root) { break }; $p=[IO.Path]::GetDirectoryName($p)
+  }
+}
+if ($CheckOnly) { if ($Name -cnotin @('AgentTeamsAI.exe','resources\app.asar')) { throw 'Foreign payload name' }; Guard (Join-Path $Install $Name); return }
+$rows=@(); $truncated=$false; $payload=@(); $inventoryError=$null; $queue=[Collections.Generic.Queue[object]]::new(); $queue.Enqueue(@{path=$Root; depth=0})
+try { Guard $Root
+while ($queue.Count -and $rows.Count -lt 128) {
+  $current=$queue.Dequeue(); Guard $current.path
+  foreach ($item in @(Get-ChildItem -LiteralPath $current.path -Force | Select-Object -First (129-$rows.Count))) {
+    if ($rows.Count -ge 128) { $truncated=$true; break }; Guard $item.FullName
+    $rows+=@{path=$item.FullName.Substring($Root.Length+1); directory=[bool]$item.PSIsContainer; size=$(if ($item.PSIsContainer) { $null } else { $item.Length })}
+    if ($item.PSIsContainer) { if ($current.depth -ge 8) { $truncated=$true } else { $queue.Enqueue(@{path=$item.FullName; depth=$current.depth+1}) } }
+  }
+}
+if ($queue.Count) { $truncated=$true }
+$payload=@(foreach ($name in @('AgentTeamsAI.exe','resources\app.asar')) { $p=Join-Path $Install $name; Guard $p; @{path=$name; exists=[bool](Test-Path -LiteralPath $p -PathType Leaf)} })
+} catch { $inventoryError='Inventory path/traversal rejected'; $payload=@() }
+ConvertTo-Json -InputObject @{entries=$rows; truncated=$truncated; payload=$payload; error=$inventoryError} -Depth 5
+`
+  );
+  const command = [
+    '-NoProfile',
+    '-NonInteractive',
+    '-File',
+    script,
+    '-Root',
+    root,
+    '-Install',
+    install,
+  ];
+  const options = {
+    env: await windowsShellTestEnvironment(root, shell),
+    timeout: 30_000,
+    maxBuffer: 131_072,
+  };
+  const result = await execute(shell.executable, command, options);
+  const inventory = JSON.parse(result.stdout) as PostExitInventory;
+  const report: Record<string, unknown> = {
+    capturedAt: new Date().toISOString(),
+    inventory,
+    qualifying: false,
+    maxEntries: 128,
+    maxTraversalDepth: 8,
+    limitation:
+      'Immediate snapshot; late extraction and transient path swaps are not excluded by these path checks',
+  };
+  const evidenceFile = path.join(output, 'installer-post-exit.json');
+  await writeFile(evidenceFile, JSON.stringify(report, null, 2));
+  checkPostExitInventory(inventory);
+  const guarded = (name: string) =>
+    execute(shell.executable, [...command, '-CheckOnly', '-Name', name], options);
+  for (const payload of inventory.payload) {
+    assert(['AgentTeamsAI.exe', 'resources\\app.asar'].includes(payload.path));
+    if (!payload.exists) continue;
+    const file = path.join(install, payload.path);
+    try {
+      await guarded(payload.path);
+      assert.equal((await realpath(file)).toLowerCase(), file.toLowerCase());
+      const hash = await hashFile(file);
+      await guarded(payload.path);
+      let candidate: Record<string, unknown>;
+      if (payload.path === 'AgentTeamsAI.exe')
+        candidate = { hash, pe: await readPeArchitecture(file) };
+      else {
+        const metadata = (await readAsar(file, ['package.json'])).get('package.json');
+        assert(metadata);
+        candidate = {
+          hash,
+          packageVersion: (JSON.parse(metadata.toString()) as { version: string }).version,
+        };
+      }
+      await guarded(payload.path);
+      assert.equal((await realpath(file)).toLowerCase(), file.toLowerCase());
+      if (payload.path === 'AgentTeamsAI.exe') report.executable = candidate;
+      else report.asar = candidate;
+    } catch (error) {
+      report.payloadError = String(error);
+    }
+  }
+  await writeFile(evidenceFile, JSON.stringify(report, null, 2));
+  return report;
+}
+
 async function sourceGuard() {
   async function api(route: string, paginate = false) {
     return JSON.parse(
@@ -491,22 +632,27 @@ async function sourceGuard() {
       ).stdout
     ) as unknown;
   }
-  const release = (await api('releases/404985707')) as SourceRelease;
+  const release = (await api(`releases/${releaseId}`)) as SourceRelease;
   release.assets = (
-    (await api('releases/404985707/assets', true)) as SourceRelease['assets'][]
+    (await api(`releases/${releaseId}/assets`, true)) as SourceRelease['assets'][]
   ).flat();
-  const ref = (await api('git/ref/tags/v2.17.5')) as {
+  const ref = (await api(`git/ref/tags/${sourceTag}`)) as {
     ref: string;
     object: { type: string; sha: string };
   };
-  const annotated = (await api(`git/tags/${sourceTagSha}`)) as {
-    tag: string;
-    object: { type: string; sha: string };
-  };
+  const annotated = priorSource
+    ? undefined
+    : ((await api(`git/tags/${sourceTagSha}`)) as {
+        tag: string;
+        object: { type: string; sha: string };
+      });
   return checkSource(
     release,
     { ref: ref.ref, object: { type: ref.object.type, sha: ref.object.sha } },
-    { tag: annotated.tag, object: { type: annotated.object.type, sha: annotated.object.sha } }
+    annotated && {
+      tag: annotated.tag,
+      object: { type: annotated.object.type, sha: annotated.object.sha },
+    }
   );
 }
 
@@ -658,7 +804,7 @@ async function run() {
   assert(process.argv.includes('--evidence') && path.basename(output).startsWith('TEST-'));
   await mkdir(output, { recursive: true });
   const evidence: Record<string, unknown> = {
-    scope: 'DIAGNOSTIC ONLY: fresh target 2.17.5 ARM NSIS observer',
+    scope: `DIAGNOSTIC ONLY: fresh pinned ${sourceTag} ARM NSIS observer`,
     qualifying: false,
     fullOtaProved: false,
     diagnosticHead: process.env.GITHUB_SHA,
@@ -811,6 +957,8 @@ async function run() {
     );
     evidence.result = await outcome;
     evidence.installerElapsedMs = Date.now() - Date.parse(startedAt);
+    if ((evidence.result as { code?: number }).code === 0)
+      evidence.postExit = await postExitInventory(root, install, output);
     await new Promise<void>((resolve) => log.end(resolve));
     if (logError) throw logError;
     assert(
