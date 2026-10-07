@@ -91,7 +91,14 @@ describe('large editor files on disk', () => {
   it('preserves sensitive-path and symlink escape checks', async () => {
     await fs.writeFile(path.join(root, '.env'), 'secret');
     await expect(service.readFile(root, path.join(root, '.env'))).rejects.toThrow();
-    await fs.symlink(os.tmpdir(), path.join(root, 'escape'));
-    await expect(service.readFile(root, path.join(root, 'escape', 'outside'))).rejects.toThrow();
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'editor-outside-test-'));
+    try {
+      await fs.writeFile(path.join(outside, 'outside.txt'), 'outside project');
+      await fs.symlink(outside, path.join(root, 'escape'));
+      await expect(service.readFile(root, path.join(root, 'escape', 'outside.txt')))
+        .rejects.toThrow('Path is outside allowed directories');
+    } finally {
+      await fs.rm(outside, { recursive: true, force: true });
+    }
   });
 });
