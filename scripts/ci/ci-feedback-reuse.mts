@@ -59,17 +59,20 @@ function sameRepository(value: unknown, id: number): boolean {
   return repo.full_name === REPOSITORY && repo.id === id;
 }
 
-const ELIGIBLE = [
-  [
-    'test (1/2)',
-    [
-      'Test workspace packages',
-      'Test CI scripts and OpenCode proof runner safety',
-      'Test root shard',
-      'Test feedback policy',
-    ],
-  ],
-  ['test (2/2)', ['Test root shard']],
+export function rootTestShards(value: unknown): 2 | 4 {
+  if (value === undefined || value === '2') return 2;
+  if (value === '4') return 4;
+  throw new Error('Invalid root test shard count');
+}
+
+const FIRST_SHARD_COMMANDS = [
+  'Test workspace packages',
+  'Test CI scripts and OpenCode proof runner safety',
+  'Test root shard',
+  'Test feedback policy',
+] as const;
+
+const OTHER_ELIGIBLE = [
   ['lint (main)', ['Lint source shard', 'Lint MCP package']],
   ['lint (renderer)', ['Lint source shard']],
   ['lint (features)', ['Lint source shard']],
@@ -90,6 +93,7 @@ export type ReuseContext = {
   linuxRunner: string;
   linuxArch: string;
   linuxImage: string;
+  rootTestShards?: unknown;
   windowsImage?: string;
   sourceRun?: string;
   now: number;
@@ -100,6 +104,20 @@ export async function provePostmergeReuse(
   read: GitHubRead
 ): Promise<ReuseResult> {
   try {
+    const shardCount = rootTestShards(context.rootTestShards);
+    const testNames = Array.from(
+      { length: shardCount },
+      (_, index) => `test (${index + 1}/${shardCount})`
+    );
+    const eligible: ReadonlyArray<readonly [string, readonly string[]]> = [
+      ...testNames.map(
+        (name, index): readonly [string, readonly string[]] => [
+          name,
+          index === 0 ? FIRST_SHARD_COMMANDS : ['Test root shard'],
+        ]
+      ),
+      ...OTHER_ELIGIBLE,
+    ];
     requireProof(context.repository === REPOSITORY, 'Foreign repository');
     const currentSha = sha(context.currentSha);
     requireProof(Number.isFinite(context.now), 'Missing current time');
@@ -271,7 +289,7 @@ export async function provePostmergeReuse(
       'Fast feedback',
       'validate',
       'Full qualification',
-      ...ELIGIBLE.map(([name]) => name),
+      ...eligible.map(([name]) => name),
     ];
     requireProof(jobs.length === expected.length, 'Unexpected or partial full job set');
     for (const name of expected) {
@@ -287,7 +305,7 @@ export async function provePostmergeReuse(
           fresh(job.completed_at, context.now),
         `Unqualified job: ${name}`
       );
-      if (!ELIGIBLE.some(([eligible]) => eligible === name)) continue;
+      if (!eligible.some(([eligibleName]) => eligibleName === name)) continue;
       const windows = name === 'Task change ledger Windows smoke';
       const runnerClass = windows ? 'windows-latest' : context.linuxRunner;
       const os = windows ? 'Windows' : 'Linux';
@@ -331,7 +349,7 @@ export async function provePostmergeReuse(
         `Missing actual OS/architecture proof: ${name}`
       );
       // Success of the job cannot hide conditional/skipped test or lint work.
-      const commands = ELIGIBLE.find(([eligible]) => eligible === name)![1];
+      const commands = eligible.find(([eligibleName]) => eligibleName === name)![1];
       for (const command of commands) {
         const commandSteps = steps.filter(
           (step) =>
@@ -345,7 +363,7 @@ export async function provePostmergeReuse(
         );
       }
       const allowedSkips =
-        name === 'test (2/2)'
+        testNames.slice(1).includes(name)
           ? [
               'Test workspace packages',
               'Test CI scripts and OpenCode proof runner safety',
