@@ -1,4 +1,8 @@
+import { createLogger } from '@shared/utils/logger';
+
 import type { EditorTabsStorage } from '../../core/application/editorTabsRepository';
+
+const log = createLogger('EditorTabSessions:storage');
 
 export const EDITOR_TABS_STORAGE_KEY = 'editor-project-tabs:v1';
 
@@ -7,6 +11,10 @@ export function createLocalEditorTabsStorage(
 ): EditorTabsStorage {
   let memory: string | null = null;
   let unavailable = false;
+  const useMemory = (): void => {
+    unavailable = true;
+    log.warn('Persistent editor tab storage unavailable; using session memory');
+  };
   return {
     read() {
       if (!unavailable) {
@@ -14,7 +22,7 @@ export function createLocalEditorTabsStorage(
           memory = getStorage().getItem(EDITOR_TABS_STORAGE_KEY);
           return memory;
         } catch {
-          unavailable = true;
+          useMemory();
         }
       }
       return memory;
@@ -25,7 +33,7 @@ export function createLocalEditorTabsStorage(
         try {
           getStorage().setItem(EDITOR_TABS_STORAGE_KEY, value);
         } catch {
-          unavailable = true;
+          useMemory();
         }
       }
     },
