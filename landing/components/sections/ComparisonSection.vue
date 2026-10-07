@@ -1181,6 +1181,10 @@ function getPowerLabel(power: number): string {
 }
 
 @media (max-width: 600px) {
+  .comparison-table__robot {
+    display: none;
+  }
+
   .comparison-section {
     --comparison-feature-width: 144px;
     --comparison-tool-width: 220px;
