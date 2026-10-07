@@ -31,7 +31,26 @@ env:
   PUBLISH_RELEASE: ${{ inputs.publish_release }}
 
 jobs:
+  signing-custody:
+    name: Validate signing source before release builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject untrusted new-build dispatch
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          REUSE_EXISTING_DRAFT: ${{ inputs.reuse_existing_draft_assets }}
+        run: |
+          set -euo pipefail
+          if [ "$REUSE_EXISTING_DRAFT" = true ]; then
+            exit 0
+          fi
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$GITHUB_REF" = refs/heads/release/macos-signing
+
   build:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
@@ -157,6 +176,7 @@ jobs:
           retention-days: 1
 
   prepare-runtime:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
@@ -332,6 +352,7 @@ jobs:
           exit 1
 
   prepare-terminal-platform-runtime:
+    needs: signing-custody
     if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 90
