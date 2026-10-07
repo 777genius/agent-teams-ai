@@ -5,7 +5,10 @@ export const DOCUMENT_PREVIEW_MAX_BYTES = 20 * 1024 * 1024;
 const FORMATS = new Set<DocumentFormat>(['pdf', 'docx', 'xlsx', 'pptx']);
 
 export function getDocumentFormat(fileName: string): DocumentFormat | null {
-  const extension = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
+  const separator = Math.max(fileName.lastIndexOf('/'), fileName.lastIndexOf('\\'));
+  const dot = fileName.lastIndexOf('.');
+  if (dot <= separator) return null;
+  const extension = fileName.slice(dot + 1).toLowerCase();
   return FORMATS.has(extension as DocumentFormat) ? (extension as DocumentFormat) : null;
 }
 

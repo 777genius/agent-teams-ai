@@ -21,8 +21,12 @@ const CSP =
 
 function safePath(url: URL): string | null {
   if (url.hostname !== 'viewer' || url.port || url.username || url.password) return null;
+  return decodedSafePath(url.pathname);
+}
+
+function decodedSafePath(pathname: string): string | null {
   try {
-    const value = decodeURIComponent(url.pathname);
+    const value = decodeURIComponent(pathname);
     if (value.includes('\\') || value.includes('\0') || value.split('/').includes('..'))
       return null;
     return value;
@@ -76,6 +80,10 @@ export function registerViewerProtocol(): void {
         // Vite serves source modules during desktop development. The endpoint is
         // fixed by main's environment, never selected by a document/renderer.
         const target = new URL(pathname + url.search, base);
+        const targetPath = decodedSafePath(target.pathname);
+        if (target.origin !== base.origin || !targetPath || !isDevViewerPath(targetPath)) {
+          return new Response(null, { status: 403 });
+        }
         response = await net.fetch(target.href, { method: request.method, redirect: 'error' });
       } else {
         if (
