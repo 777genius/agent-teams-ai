@@ -222,6 +222,30 @@ test('unknown, contradictory and malformed lifecycle input fails closed', () => 
   }
 });
 
+test('draft title/body edits keep fast feedback, while base or unknown edits require full CI', () => {
+  for (const changes of [{ title: { from: 'Old title' } }, { body: { from: null } }]) {
+    assert.equal(
+      selectFeedbackMode('pull_request', { ...prEvent('edited', true), changes }),
+      'fast'
+    );
+    assert.equal(
+      selectFeedbackMode('pull_request', { ...prEvent('edited', false), changes }),
+      'full'
+    );
+  }
+  for (const changes of [
+    {},
+    { base: { ref: { from: 'main' } } },
+    { title: { from: 1 } },
+    { draft: { from: true } },
+  ]) {
+    assert.equal(
+      selectFeedbackMode('pull_request', { ...prEvent('edited', true), changes }),
+      'full'
+    );
+  }
+});
+
 test('only complete successful full jobs or verified eligible reuse can satisfy the gate', () => {
   assert.equal(qualifyFull(fullNeeds(), 'true', 'false').ok, true);
   assert.equal(qualifyFull(fullNeeds(true), 'true', 'true').ok, true);

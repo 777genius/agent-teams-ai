@@ -23,6 +23,20 @@ export function selectFeedbackMode(eventName: unknown, event: unknown): 'fast' |
       return 'full';
     sha(object(pr.head).sha);
     sha(object(pr.base).sha);
+    if (payload.action === 'edited') {
+      const changes = object(payload.changes);
+      const fields = Object.keys(changes);
+      if (fields.length === 0 || fields.some((field) => field !== 'title' && field !== 'body')) {
+        return 'full';
+      }
+      for (const field of fields) {
+        const previous = object(changes[field]).from;
+        if (typeof previous !== 'string' && !(field === 'body' && previous === null)) {
+          return 'full';
+        }
+      }
+      return pr.draft ? 'fast' : 'full';
+    }
     if (
       typeof payload.action !== 'string' ||
       !['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'].includes(
