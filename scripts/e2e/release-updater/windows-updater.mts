@@ -26,6 +26,7 @@ import {
   ownPhysicalProfile,
   releasePhysicalProfile,
 } from './windows-ota-profile.mts';
+import { observeInstallerChild } from './windows-ota-observer.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
 import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
 
@@ -258,10 +259,22 @@ try {
   for (const stream of [setup.stdout, setup.stderr]) {
     stream?.on('data', (chunk: Buffer) => log.write(chunk));
   }
+  const finishInstallObservation = observeInstallerChild(
+    setup,
+    priorInstaller,
+    native,
+    async (receipt) => {
+      await writeFile(
+        path.join(output, 'nsis-spawn-lineage.json'),
+        JSON.stringify(receipt, null, 2)
+      );
+    },
+    env
+  );
   const setupCode = await new Promise<number | null>((resolve, reject) => {
     setup.once('error', reject);
     setup.once('exit', resolve);
-  });
+  }).finally(finishInstallObservation);
   evidence.priorInstall = { code: setupCode, arguments: ['/S', `/D=${install}`] };
   assert.equal(setupCode, 0, 'Official NSIS prior installation failed');
   assert.equal(
@@ -278,6 +291,12 @@ try {
     actualNsisExitCode: setupCode,
     env,
     native,
+    recordListing: async (receipt) => {
+      await writeFile(
+        path.join(output, 'prior-archive-listing.json'),
+        JSON.stringify(receipt, null, 2)
+      );
+    },
     recordDecoded: async (ledger) => {
       await writeFile(path.join(output, 'prior-decoded-pe.json'), JSON.stringify(ledger, null, 2));
     },
@@ -479,6 +498,48 @@ try {
   await screenshot('available-renderer');
   const nativeDirectory = path.join(root, 'native-capture');
   await mkdir(nativeDirectory);
+  // The original 211 fixed update overlay excludes the whole client area from drag regions.
+  // Use its existing close handler, establish owned foreground, then restore the candidate UI.
+  assert.equal(
+    await renderer.evaluate<number>('document.querySelectorAll("[role=dialog]").length'),
+    1
+  );
+  await renderer.evaluate(
+    'document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape", bubbles:true}))'
+  );
+  await waitFor(
+    () => renderer!.evaluate<boolean>('!document.querySelector("[role=dialog]")'),
+    'original update dialog closes before owned caption proof'
+  );
+  const captionReady = await waitFor(
+    () => native.capture(owner, path.join(nativeDirectory, 'caption-ready-native.png')),
+    'owned predecessor foreground without update overlay'
+  );
+  assert.equal(captionReady.pid, owner.pid);
+  assert.equal(captionReady.foreground, true);
+  assert(captionReady.width >= 300 && captionReady.height >= 200);
+  const captionImage = path.join(output, 'caption-ready-native.png');
+  await copyFile(captionReady.screenshot, captionImage);
+  assert((await stat(captionImage)).size > 1000);
+  evidence.captionReadyWindow = {
+    ...captionReady,
+    screenshot: captionImage,
+    sha256: (await hashFile(captionImage)).sha256,
+    dialogClosed: true,
+  };
+  await action('^(?:Update app|View details)$');
+  evidence.downloadButton = await action('^Download$', false);
+  const reopened = await renderer.evaluate<string>(
+    'document.querySelector("[role=dialog]").innerText'
+  );
+  assert(reopened.includes(targetVersion));
+  evidence.reopenedAvailableDialog = reopened;
+  const reopenedState = await state();
+  assert(
+    reopenedState.events.some(
+      (event) => event.type === 'available' && event.version === targetVersion
+    )
+  );
   const window = await waitFor(
     () => native.capture(owner, path.join(nativeDirectory, 'available-native.png')),
     'visible OS HWND belonging to official predecessor'

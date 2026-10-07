@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
 
 import {
   assetByName,
@@ -17,6 +14,8 @@ import {
   textProof,
 } from '../../ci/release/contract.ts';
 import { hashFile } from './inputs.mts';
+import { artifactDownloadTimeout, planCommand as command } from './windows-plan-command.mts';
+import { authenticateExecutor } from './execution-provenance.mts';
 import { validateWindowsProducerUpload } from './windows-plan-producer.mts';
 import {
   planWindowsInputs,
@@ -42,26 +41,6 @@ function positive(name: string) {
   assert(Number.isSafeInteger(value));
   return value;
 }
-async function command(executable: 'gh' | 'unzip', arguments_: string[], destination: string) {
-  const child = spawn(executable, arguments_, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    signal: AbortSignal.timeout(300_000),
-  });
-  let stderr = '';
-  child.stderr.on('data', (chunk: Buffer) => {
-    stderr = (stderr + chunk.toString()).slice(-32_768);
-  });
-  const exit = new Promise<void>((resolve, reject) => {
-    child.once('error', reject);
-    child.once('close', (code) =>
-      code === 0 ? resolve() : reject(new Error(`${executable} exited ${code}: ${stderr}`))
-    );
-  });
-  await Promise.all([
-    pipeline(child.stdout, createWriteStream(destination, { flags: 'wx' })),
-    exit,
-  ]);
-}
 async function api<T>(endpoint: string, destination: string): Promise<T> {
   await command('gh', ['api', `repos/${repository}/${endpoint}`], destination);
   return JSON.parse(await readFile(destination, 'utf8')) as T;
@@ -77,6 +56,7 @@ interface ProducerReceipt {
   artifactName: string;
   artifactSha256: string;
   toolingSha: string;
+  executionSha?: string;
   planDigest: string;
   inputDigest: string;
 }
@@ -94,6 +74,11 @@ async function downloadTrustedArtifact(
     /^[a-f\d]{64}$/u.test(artifactSha256) &&
       /^[a-f\d]{64}$/u.test(planDigest) &&
       /^[a-f\d]{40}$/u.test(toolingSha)
+  );
+  const executionIndex = args.indexOf('--execution-sha');
+  const execution = authenticateExecutor(
+    toolingSha,
+    executionIndex < 0 ? toolingSha : option('--execution-sha')
   );
   const workflow =
     kind === 'prepared'
@@ -138,6 +123,7 @@ async function downloadTrustedArtifact(
     id: number;
     name: string;
     expired: boolean;
+    size_in_bytes: number;
     digest: string;
     created_at: string;
     workflow_run: { id: number; head_sha: string };
@@ -150,7 +136,12 @@ async function downloadTrustedArtifact(
   assert.equal(artifact.workflow_run.head_sha, toolingSha);
   validateWindowsProducerUpload(job, runId, stepName, artifact.created_at);
   const zip = path.join(output, 'producer.zip');
-  await command('gh', ['api', `repos/${repository}/actions/artifacts/${artifactId}/zip`], zip);
+  await command(
+    'gh',
+    ['api', `repos/${repository}/actions/artifacts/${artifactId}/zip`],
+    zip,
+    artifactDownloadTimeout(artifact.size_in_bytes)
+  );
   assert.equal((await hashFile(zip)).sha256, artifactSha256);
   const planName = kind === 'prepared' ? 'stage-plan.json' : 'plan.json';
   await command('unzip', ['-p', zip, planName], path.join(output, 'plan.json'));
@@ -200,6 +191,7 @@ async function downloadTrustedArtifact(
     artifactName,
     artifactSha256,
     toolingSha,
+    executionSha: execution.executionSha,
     planDigest,
     inputDigest: digest(canonical(plan.input)),
   };
