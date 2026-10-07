@@ -107,6 +107,10 @@ describe('actual store older/head handoff with synthetic transport', () => {
     expect(store.getState().teamMessagesByName['TEST-sentry-head-handoff'].loadingOlder).toBe(
       false
     );
+    expect(store.getState().teamMessagesByName[team]).toMatchObject({
+      historyReloadRequired: true,
+      messagesError: 'Message history changed. Load older messages again to refresh it.',
+    });
     expect(store.getState().teamMessagesByName['TEST-sentry-head-handoff'].loadingHead).toBe(true);
     head.resolve(page('feed-head-result'));
     await loadingOlder;
@@ -115,6 +119,10 @@ describe('actual store older/head handoff with synthetic transport', () => {
     expect(store.getState().teamMessagesByName['TEST-sentry-head-handoff'].feedRevision).toBe(
       'feed-head-result'
     );
+    expect(store.getState().teamMessagesByName[team]).toMatchObject({
+      provenance: { head: [], pages: [], requestScope: { contextId: 'TEST-context' } },
+      historyReloadRequired: false,
+    });
     expect(__getTeamScopedTransientStateForTests(team).hasQueuedHeadRefreshAfterOlder).toBe(false);
     expect(boundary.getMessagesPage).toHaveBeenCalledTimes(2);
   });
@@ -136,6 +144,10 @@ describe('actual store older/head handoff with synthetic transport', () => {
       '[Renderer:unwrapIpc] [team:getMessagesPage] TEST-head-failure',
     ]);
     vi.mocked(console.error).mockClear();
+    expect(store.getState().teamMessagesByName[team]).toMatchObject({
+      messagesError: 'TEST-head-failure',
+      historyReloadRequired: true,
+    });
     expect(store.getState().teamMessagesByName['TEST-sentry-head-handoff'].loadingHead).toBe(false);
     expect(store.getState().teamMessagesByName['TEST-sentry-head-handoff'].loadingOlder).toBe(
       false

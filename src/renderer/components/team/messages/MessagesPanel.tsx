@@ -55,6 +55,7 @@ import {
 } from '../sidebar/teamSidebarUiState';
 
 import { MessageComposer } from './MessageComposer';
+import { MessageHistoryNotice } from './MessageHistoryNotice';
 import {
   FullScreenControl,
   LatestMessageControl,
@@ -205,6 +206,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   expandedChatHost,
 }: MessagesPanelProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
+  const messagesError = useStore((s) => s.teamMessagesByName[teamName]?.messagesError);
   const {
     sendTeamMessage,
     sendCrossTeamMessage,
@@ -222,6 +224,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     messagesHasMore,
     messagesLoadingHead,
     messagesLoadingOlder,
+    historyReloadRequired,
     loadOlderTeamMessages,
     refreshTeamMessagesHead,
     activeContextId,
@@ -245,6 +248,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         messagesHasMore: messagesState?.hasMore ?? false,
         messagesLoadingHead: messagesState?.loadingHead ?? false,
         messagesLoadingOlder: messagesState?.loadingOlder ?? false,
+        historyReloadRequired: messagesState?.historyReloadRequired ?? false,
         loadOlderTeamMessages: s.loadOlderTeamMessages,
         refreshTeamMessagesHead: s.refreshTeamMessagesHead,
         activeContextId: s.activeContextId,
@@ -252,14 +256,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     })
   );
   const bootstrapHeadRefreshAttemptedForTeamRef = useRef<string | null>(null);
-
   const loadOlderMessages = useCallback(async () => {
     if (!messagesHasMore || messagesLoadingHead || messagesLoadingOlder) {
       return;
     }
     await loadOlderTeamMessages(teamName);
   }, [loadOlderTeamMessages, messagesHasMore, messagesLoadingHead, messagesLoadingOlder, teamName]);
-
   const handleLoadOlderMessagesClick = useCallback(() => {
     void loadOlderMessages();
   }, [loadOlderMessages]);
@@ -816,7 +818,6 @@ export const MessagesPanel = memo(function MessagesPanel({
   const readState = useMemo(() => ({ readSet, getMessageKey: toMessageKey }), [readSet]);
 
   const { teamNames, teamColorByName } = teamMentionMeta;
-
   const workingDrafts = useComposerWorkingSummaries(activeContextId, teamName);
   const localDraftsByScope = useMemo(
     () => localDraftsByConversationScope(workingDrafts.summaries),
@@ -839,6 +840,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     scope,
     threadOpenedAt,
     scopedCount: threadMessages.length,
+    historyReloadRequired,
     hasMore,
     loadingOlder: loadingOlderMessages,
     loadOlder: loadOlderMessages,
@@ -1111,6 +1113,7 @@ export const MessagesPanel = memo(function MessagesPanel({
           {t('messages.outbox.storageWarning')}
         </p>
       ) : null}
+      <MessageHistoryNotice error={messagesError} />
       <MessagesTimelineSection
         messages={activityTimelineMessages}
         loading={loadingInitialMessages}
