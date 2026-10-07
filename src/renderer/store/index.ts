@@ -807,7 +807,7 @@ export function initializeNotificationListeners(): () => void {
           if (shouldDeferAutomaticTeamDataRefreshDuringLaunch(teamName)) {
             continue;
           }
-          if (!isTeamDataRefreshPending(teamName)) {
+          if (!isTeamDataRefreshPending(teamName, useStore.getState)) {
             void state.refreshTeamData(teamName, { withDedup: true });
           }
           continue;
@@ -841,7 +841,7 @@ export function initializeNotificationListeners(): () => void {
           if (shouldDeferAutomaticTeamDataRefreshDuringLaunch(teamName)) {
             continue;
           }
-          if (!isTeamDataRefreshPending(teamName)) {
+          if (!isTeamDataRefreshPending(teamName, useStore.getState)) {
             void current.refreshTeamData(teamName, { withDedup: true });
           }
           continue;
@@ -1236,7 +1236,7 @@ export function initializeNotificationListeners(): () => void {
       return;
     }
 
-    if (isTeamDataRefreshPending(teamName)) {
+    if (isTeamDataRefreshPending(teamName, useStore.getState)) {
       return;
     }
 

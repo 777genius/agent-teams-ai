@@ -995,4 +995,87 @@ describe('team slice context races', () => {
       }
     }
   );
+
+  it.each(['context-id', 'context-epoch', 'team-epoch'] as const)(
+    'dispatches current-scope getData before an old same-team read settles (%s)',
+    async (change) => {
+      const store = createSliceStore();
+      const old = deferred<TeamSnapshotLike>(),
+        current = deferred<TeamSnapshotLike>();
+      const oldData = teamSnapshot('shared-team', '/TEST-old/project');
+      const currentData = teamSnapshot('shared-team', '/TEST-current/project');
+      apiMock.teams.getData.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+      const oldSelection = store.getState().selectTeam('shared-team');
+      if (change === 'context-epoch') invalidateContextScopedRequestEpoch();
+      if (change === 'team-epoch') invalidateTeamLocalStateEpoch('shared-team');
+      store.setState({
+        activeContextId: change === 'context-id' ? 'TEST-remote' : 'local',
+        selectedTeamName: null,
+        selectedTeamData: null,
+        selectedTeamLoading: false,
+        teamDataCacheByName: {},
+      });
+      const currentSelection = store.getState().selectTeam('shared-team');
+      try {
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+        current.resolve(currentData);
+        await currentSelection;
+        expect(store.getState().selectedTeamData?.config.projectPath).toBe('/TEST-current/project');
+        old.resolve(oldData);
+        await oldSelection;
+        expect(store.getState().selectedTeamData?.config.projectPath).toBe('/TEST-current/project');
+        expect(store.getState().teamDataCacheByName['shared-team']?.config.projectPath).toBe(
+          '/TEST-current/project'
+        );
+      } finally {
+        old.resolve(oldData);
+        current.resolve(currentData);
+        await Promise.all([oldSelection, currentSelection]);
+      }
+    }
+  );
+
+  it('preserves a current full refresh and its queued freshness when an old scope completes', async () => {
+    const store = createSliceStore();
+    const old = deferred<TeamSnapshotLike>(),
+      current = deferred<TeamSnapshotLike>();
+    const oldData = teamSnapshot('shared-team', '/TEST-old-full/project');
+    const currentData = teamSnapshot('shared-team', '/TEST-current-full/project');
+    apiMock.teams.getData
+      .mockReturnValueOnce(old.promise)
+      .mockReturnValueOnce(current.promise)
+      .mockResolvedValue(currentData);
+    const oldRefresh = store.getState().refreshTeamData('shared-team', { withDedup: true });
+    invalidateContextScopedRequestEpoch();
+    store.setState({
+      selectedTeamName: 'shared-team',
+      selectedTeamData: null,
+      teamDataCacheByName: {},
+    });
+    const currentRefresh = store.getState().refreshTeamData('shared-team', { withDedup: true });
+    const fresh = store.getState().refreshTeamData('shared-team', { withDedup: true });
+    try {
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      expect(
+        __getTeamScopedTransientStateForTests('shared-team').hasPendingFreshTeamDataRefresh
+      ).toBe(true);
+      old.resolve(oldData);
+      await oldRefresh;
+      expect(
+        __getTeamScopedTransientStateForTests('shared-team').hasPendingFreshTeamDataRefresh
+      ).toBe(true);
+      current.resolve(currentData);
+      await Promise.all([currentRefresh, fresh]);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      expect(store.getState().selectedTeamData?.config.projectPath).toBe(
+        '/TEST-current-full/project'
+      );
+    } finally {
+      old.resolve(oldData);
+      current.resolve(currentData);
+      await Promise.all([oldRefresh, currentRefresh, fresh]);
+    }
+  });
 });
