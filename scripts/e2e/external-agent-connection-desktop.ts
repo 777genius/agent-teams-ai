@@ -764,13 +764,17 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
       await openMenu('Teams');
       await button('Copy team', false, null, testCase.displayName);
       await waitFor(
-        () => evaluate(active, () => Boolean(document.getElementById('team-name'))),
-        'copy team dialog'
+        () =>
+          evaluate(
+            active,
+            (source: string) =>
+              (document.getElementById('team-name') as HTMLInputElement | null)?.value.startsWith(
+                `${source}-`
+              ) === true,
+            [testCase.source]
+          ),
+        'copy source initializes after persisted draft hydration'
       );
-      const launchChecked = await evaluate(active, () =>
-        document.getElementById('launch-team')?.getAttribute('data-state')
-      );
-      if (launchChecked === 'checked') await button('#launch-team', true);
       await evaluate(active, () => document.getElementById('team-name')?.focus());
       await active.send('Input.dispatchKeyEvent', {
         type: 'keyDown',
@@ -795,6 +799,22 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
             [testCase.destination]
           ),
         'native input sets exact copied destination name'
+      );
+      const launchChecked = await evaluate(active, () =>
+        document.getElementById('launch-team')?.getAttribute('data-state')
+      );
+      assert(
+        launchChecked === 'checked' || launchChecked === 'unchecked',
+        'Initialized Copy dialog must expose a launch choice'
+      );
+      if (launchChecked === 'checked') await button('#launch-team', true);
+      await waitFor(
+        () =>
+          evaluate(
+            active,
+            () => document.getElementById('launch-team')?.getAttribute('data-state') === 'unchecked'
+          ),
+        'single launch opt-out is applied before saving Copy'
       );
       assert.equal(
         await evaluate(active, () =>
