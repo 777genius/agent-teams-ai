@@ -369,6 +369,8 @@
       "main": "dist-electron/main/index.cjs"
     },
     "mac": {
+      "identity": "ILLIA ZELENKO (86399583GS)",
+      "forceCodeSigning": true,
       "artifactName": "Agent.Teams.AI-${version}-${arch}-mac.${ext}",
       "category": "public.app-category.developer-tools",
       "minimumSystemVersion": "13.0",
