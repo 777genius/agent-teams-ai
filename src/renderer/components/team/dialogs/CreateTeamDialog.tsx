@@ -331,6 +331,7 @@ export const CreateTeamDialog = ({
   const {
     runtimeSelectionVersion,
     runtimeProviderId,
+    runtimeModel,
     setRuntimeSelection,
     teamName,
     setTeamName,
@@ -411,10 +412,6 @@ export const CreateTeamDialog = ({
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
     normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
   );
-  useEffect(() => {
-    if (runtimeSelectionVersion === 1 && runtimeProviderId)
-      setSelectedProviderIdRaw(runtimeProviderId);
-  }, [runtimeProviderId, runtimeSelectionVersion]);
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
@@ -644,6 +641,7 @@ export const CreateTeamDialog = ({
     passiveStatusPrefetchEnabled:
       openCodeCatalogEnabled && launchPreflightSelectionReady && Boolean(effectiveCwd),
     passiveProviderStatus: projectScopedOpenCodeStatus,
+    leadProviderResolved: !runtimeSelectionUnresolved,
     members,
     syncModelsWithLead,
     selectedProviderId,
@@ -712,6 +710,8 @@ export const CreateTeamDialog = ({
         value: selectedEffort,
       });
       setSelectedModelRaw(normalizedValue);
+      if (runtimeSelectionVersion === 1 && !runtimeSelectionUnresolved)
+        setRuntimeSelection(1, selectedProviderId, normalizedValue);
       setStoredCreateTeamModel(selectedProviderId, normalizedValue);
       if (nextEffort !== selectedEffort) {
         setSelectedEffortRaw(nextEffort);
@@ -723,6 +723,9 @@ export const CreateTeamDialog = ({
       runtimeProviderStatusById,
       selectedEffort,
       selectedProviderId,
+      runtimeSelectionVersion,
+      runtimeSelectionUnresolved,
+      setRuntimeSelection,
     ]
   );
   const setSelectedProviderId = useCallback(
@@ -1400,7 +1403,10 @@ export const CreateTeamDialog = ({
           : normalizeLeadProviderForMode(initialData.providerId, multimodelEnabled);
       setRuntimeSelection(
         initialData.runtimeSelectionVersion,
-        initialData.providerId ? copiedProviderId : undefined
+        initialData.providerId ? copiedProviderId : undefined,
+        initialData.runtimeSelectionVersion === 1 && initialData.providerId
+          ? normalizeExplicitTeamModelForUi(copiedProviderId, initialData.model ?? '')
+          : undefined
       );
       if (initialData.runtimeSelectionVersion === 1 && !initialData.providerId)
         setLaunchTeam(false);
@@ -1411,8 +1417,10 @@ export const CreateTeamDialog = ({
       if (Object.hasOwn(initialData, 'providerId')) {
         setSelectedProviderIdRaw(copiedProviderId);
       }
-      if (Object.hasOwn(initialData, 'model')) {
-        setSelectedModelRaw(normalizeExplicitTeamModelForUi(copiedProviderId, initialData.model));
+      if (initialData.runtimeSelectionVersion === 1 || Object.hasOwn(initialData, 'model')) {
+        setSelectedModelRaw(
+          normalizeExplicitTeamModelForUi(copiedProviderId, initialData.model ?? '')
+        );
       }
       if (Object.hasOwn(initialData, 'effort')) {
         setSelectedEffortRaw(initialData.effort ?? '');
@@ -1438,6 +1446,12 @@ export const CreateTeamDialog = ({
       );
       setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
       return;
+    }
+
+    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
+      const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
+      setSelectedProviderIdRaw(draftProviderId);
+      setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
     }
 
     if (members.length > 0) {
@@ -1799,7 +1813,7 @@ export const CreateTeamDialog = ({
       members: soloTeam
         ? []
         : buildMembersFromDrafts(effectiveMemberDrafts, {
-            inheritedProviderId: selectedProviderId,
+            inheritedProviderId: runtimeSelectionUnresolved ? undefined : selectedProviderId,
           }),
       cwd: effectiveCwd,
       prompt: prompt.trim() || undefined,

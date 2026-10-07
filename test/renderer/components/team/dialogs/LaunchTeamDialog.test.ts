@@ -21,6 +21,10 @@ type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
   state: {
+    runtimeSelectionVersion: undefined as 1 | undefined,
+    runtimeProviderId: undefined as TeamProviderId | undefined,
+    runtimeModel: undefined as string | undefined,
+    setRuntimeSelection: vi.fn(),
     teamName: 'team-alpha',
     setTeamName: vi.fn(),
     members: [
@@ -664,7 +668,12 @@ import {
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  TeamProviderId,
+} from '@shared/types';
 
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -1374,6 +1383,11 @@ describe('LaunchTeamDialog', () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     createTeamDraftMock.state.setCwdMode.mockReset();
+    createTeamDraftMock.state.runtimeSelectionVersion = undefined;
+    createTeamDraftMock.state.runtimeProviderId = undefined;
+    createTeamDraftMock.state.runtimeModel = undefined;
+    createTeamDraftMock.state.setRuntimeSelection.mockReset();
+    createTeamDraftMock.state.setMembers.mockReset();
     storeState.cliStatus = { providers: [] };
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusLoading = {};
@@ -2875,6 +2889,164 @@ describe('LaunchTeamDialog', () => {
         root.unmount();
         await flush();
       });
+      createTeamDraftMock.state.members = savedMembers;
+    }
+  });
+
+  it.each([
+    { source: 'draft', version: 1, model: undefined, expected: '' },
+    { source: 'draft', version: 1, model: 'gpt-5.4', expected: 'gpt-5.4' },
+    { source: 'copy', version: 1, model: undefined, expected: '' },
+    { source: 'copy', version: 1, model: 'gpt-5.4', expected: 'gpt-5.4' },
+    { source: 'draft', version: undefined, model: undefined, expected: 'gpt-5.5' },
+  ] as const)(
+    'restores $source lead model $model with marker $version without importing another remembered choice',
+    async ({ source, version, model, expected }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      localStorage.setItem('team:lastSelectedProvider', 'codex');
+      localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.5');
+      createTeamDraftMock.state.launchTeam = false;
+      createTeamDraftMock.state.runtimeSelectionVersion = version;
+      createTeamDraftMock.state.runtimeProviderId = version === 1 ? 'codex' : undefined;
+      createTeamDraftMock.state.runtimeModel = source === 'draft' ? model : undefined;
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const onCreate = vi.fn(async () => {});
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(CreateTeamDialog, {
+              open: true,
+              canCreate: true,
+              provisioningErrorsByTeam: {},
+              existingTeamNames: [],
+              activeTeams: [],
+              onClose: vi.fn(),
+              onOpenTeam: vi.fn(),
+              onCreate,
+              initialData:
+                source === 'copy'
+                  ? {
+                      teamName: 'team-alpha',
+                      runtimeSelectionVersion: 1,
+                      providerId: 'codex',
+                      model,
+                      syncModelsWithLead: false,
+                      members: [],
+                    }
+                  : undefined,
+            })
+          );
+          await flush();
+        });
+        expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
+        expect(teamRosterEditorSectionMock.lastProps?.model ?? '').toBe(expected);
+        const submit = Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === 'Create'
+        )!;
+        expect(submit.disabled).toBe(false);
+        await act(async () => {
+          submit.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledWith(
+          expect.objectContaining({
+            providerId: 'codex',
+            model: expected || undefined,
+          })
+        );
+        expect(onCreate).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('copies an unresolved draft without assigning a remembered OpenCode default to inheriting members', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('team:lastSelectedProvider', 'opencode');
+    localStorage.setItem('team:lastSelectedModel:opencode', '');
+    createTeamDraftMock.state.launchTeam = false;
+    createTeamDraftMock.state.runtimeSelectionVersion = 1;
+    const savedMembers = createTeamDraftMock.state.members;
+    createTeamDraftMock.state.members = [
+      {
+        id: 'explicit',
+        name: 'alice',
+        roleSelection: '',
+        customRole: 'Developer',
+        workflow: '',
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+      },
+      { id: 'inherit', name: 'bob', roleSelection: '', customRole: 'Developer', workflow: '' },
+    ] as typeof savedMembers;
+    storeState.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('opencode', '/tmp/project')]: createAuthoritativeProviderStatus(
+        'opencode',
+        ['opencode/big-pickle']
+      ),
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onCreate = vi.fn(async () => {});
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            existingTeamNames: [],
+            activeTeams: [],
+            onClose: vi.fn(),
+            onOpenTeam: vi.fn(),
+            onCreate,
+            initialData: {
+              teamName: 'team-alpha',
+              runtimeSelectionVersion: 1,
+              syncModelsWithLead: false,
+              members: [
+                {
+                  name: 'alice',
+                  role: 'Developer',
+                  providerId: 'opencode',
+                  model: 'opencode/big-pickle',
+                },
+                { name: 'bob', role: 'Developer' },
+              ],
+            },
+          })
+        );
+        await flush();
+      });
+      const submit = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Create'
+      )!;
+      expect(submit.disabled).toBe(false);
+      await act(async () => {
+        submit.click();
+        await flush();
+      });
+      const request = vi.mocked(api.teams.createConfig).mock.calls.at(-1)?.[0];
+      expect(request).toEqual(expect.objectContaining({ runtimeSelectionVersion: 1 }));
+      expect(request?.providerId).toBeUndefined();
+      expect(request?.model).toBeUndefined();
+      expect(request?.members).toEqual([
+        expect.objectContaining({
+          name: 'alice',
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+        }),
+        expect.objectContaining({ name: 'bob' }),
+      ]);
+      expect(request?.members[1]?.providerId).toBeUndefined();
+      expect(request?.members[1]?.model).toBeUndefined();
+      expect(onCreate).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
       createTeamDraftMock.state.members = savedMembers;
     }
   });
@@ -5020,7 +5192,8 @@ describe('LaunchTeamDialog', () => {
       });
       await settle();
       expect(runProviderPrepareDiagnostics).toHaveBeenCalled();
-      expect(submit().disabled).toBe(true);
+      expect(submit().textContent).toBe('Skip preflight and create');
+      expect(host.textContent).not.toContain('All selected providers are ready.');
       createTeamDraftMock.state.launchTeam = false;
       await act(async () => {
         render();
