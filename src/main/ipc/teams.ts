@@ -19,7 +19,10 @@ import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
-import { parseCreateTeamRequest } from '@main/services/team/TeamRequestValidation';
+import {
+  parseCreateTeamRequest,
+  TeamRequestValidationError,
+} from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
@@ -132,7 +135,10 @@ import {
 import { looksLikeCanonicalTaskId } from '@shared/utils/taskIdentity';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import { normalizeRuntimeSelectionVersion } from '@shared/utils/teamRuntimeSelection';
+import {
+  normalizeRuntimeSelectionVersion,
+  TeamRuntimeSelectionError,
+} from '@shared/utils/teamRuntimeSelection';
 import crypto from 'crypto';
 import { app, BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
@@ -3656,8 +3662,15 @@ async function handleCreateConfig(
   _event: IpcMainInvokeEvent,
   request: unknown
 ): Promise<IpcResult<void>> {
+  let payload: ReturnType<typeof parseCreateTeamRequest>;
+  try {
+    payload = parseCreateTeamRequest(request);
+  } catch (error) {
+    if (error instanceof TeamRequestValidationError || error instanceof TeamRuntimeSelectionError)
+      return teamReadFailureResult(error);
+    return wrapTeamHandler('createConfig', () => Promise.reject(error));
+  }
   return wrapTeamHandler('createConfig', async () => {
-    const payload = parseCreateTeamRequest(request);
     const create = (): Promise<void> => getTeamDataService().createTeamConfig(payload);
     if (teamBackupService) await teamBackupService.withTeamIdentityFence(payload.teamName, create);
     else await create();

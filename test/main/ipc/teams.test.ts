@@ -804,6 +804,8 @@ describe('ipc teams handlers', () => {
     service.getTeamData.mockReset();
     service.getAllTasks.mockReset();
     service.restoreMember.mockReset();
+    service.getSavedRequest.mockReset();
+    service.getSavedRequest.mockResolvedValue(null);
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
     service.getTeamData.mockResolvedValue({
       teamName: 'my-team',
@@ -2439,7 +2441,8 @@ describe('ipc teams handlers', () => {
   it('does not route slash commands through raw stdin when attachments are present', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
-    vi.stubEnv('HOME', os.tmpdir());
+    const attachmentsHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-attachments-home-'));
+    vi.stubEnv('HOME', attachmentsHome);
     try {
       const result = (await sendHandler!({} as never, 'my-team', {
         member: 'team-lead',
@@ -2468,6 +2471,7 @@ describe('ipc teams handlers', () => {
       );
     } finally {
       vi.unstubAllEnvs();
+      fs.rmSync(attachmentsHome, { recursive: true, force: true });
     }
   });
 
@@ -7236,13 +7240,16 @@ describe('ipc teams handlers', () => {
           members: [
             expect.objectContaining({
               name: 'builder',
-              providerId: undefined,
               providerBackendId: 'codex-native',
               effort: 'xhigh',
             }),
           ],
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).members[0]
+          .providerId
+      ).toBeUndefined();
     });
 
     it('handleCreateConfig rejects stale inherited teammate backends for the selected team provider', async () => {
@@ -7277,10 +7284,11 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-stale-top-level-runtime',
-          providerId: undefined,
-          providerBackendId: undefined,
         })
       );
+      const saved = mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest;
+      expect(saved.providerId).toBeUndefined();
+      expect(saved.providerBackendId).toBeUndefined();
     });
 
     it('handleCreateConfig validates teammate effort against default Anthropic provider metadata', async () => {
@@ -7323,10 +7331,12 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-default-anthropic-effort',
-          providerId: undefined,
           effort: 'max',
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).providerId
+      ).toBeUndefined();
     });
 
     it.each([true, false])(

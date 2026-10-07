@@ -9,13 +9,26 @@ function createStoredModelGetter(models: Partial<Record<TeamProviderId, string>>
 
 describe('resolveLaunchDialogPrefill', () => {
   it.each([
-    { runtimeSelectionVersion: 1 as const, expectedModel: '' },
-    { runtimeSelectionVersion: undefined, expectedModel: 'gpt-5.4' },
+    { runtimeSelectionVersion: 1 as const, source: 'stored', expectedModel: '' },
+    { runtimeSelectionVersion: 1 as const, source: 'lead', expectedModel: '' },
+    { runtimeSelectionVersion: 1 as const, source: 'previous', expectedModel: '' },
+    { runtimeSelectionVersion: undefined, source: 'stored', expectedModel: 'gpt-5.4' },
+    { runtimeSelectionVersion: undefined, source: 'lead', expectedModel: 'gpt-5.3-codex' },
+    { runtimeSelectionVersion: undefined, source: 'previous', expectedModel: 'gpt-5.4' },
   ])(
-    'keeps persisted default model intent when reopening marker $runtimeSelectionVersion',
-    ({ runtimeSelectionVersion, expectedModel }) => {
+    'keeps persisted default model intent for marker $runtimeSelectionVersion and $source model',
+    ({ runtimeSelectionVersion, source, expectedModel }) => {
       const result = resolveLaunchDialogPrefill({
-        members: [],
+        members: (source === 'lead'
+          ? [
+              {
+                name: 'team-lead',
+                agentType: 'team-lead',
+                providerId: 'codex',
+                model: 'gpt-5.3-codex',
+              },
+            ]
+          : []) as ResolvedTeamMember[],
         savedRequest: {
           teamName: 'default-model-team',
           runtimeSelectionVersion,
@@ -23,7 +36,8 @@ describe('resolveLaunchDialogPrefill', () => {
           cwd: '/sandbox/test-project',
           members: [],
         },
-        previousLaunchParams: undefined,
+        previousLaunchParams:
+          source === 'previous' ? { providerId: 'codex', model: 'gpt-5.4' } : undefined,
         multimodelEnabled: true,
         storedProviderId: 'anthropic',
         storedEffort: 'medium',

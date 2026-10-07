@@ -103,20 +103,24 @@ export function resolveLaunchDialogPrefill({
     multimodelEnabled
   );
 
-  const modelCandidates = [
-    {
-      providerId: currentLeadProviderId,
-      model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
-    },
-    {
-      providerId: savedRequestProviderId,
-      model: normalizeModelCandidate(savedRequest?.model, savedRequestProviderId),
-    },
-    {
-      providerId: previousLaunchProviderId,
-      model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
-    },
-  ];
+  const savedModel = normalizeModelCandidate(savedRequest?.model, savedRequestProviderId);
+  const modelCandidates =
+    savedRequest?.runtimeSelectionVersion === 1 && !savedModel
+      ? []
+      : [
+          {
+            providerId: currentLeadProviderId,
+            model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
+          },
+          {
+            providerId: savedRequestProviderId,
+            model: savedModel,
+          },
+          {
+            providerId: previousLaunchProviderId,
+            model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
+          },
+        ];
 
   const matchingModel = modelCandidates.find(
     (candidate) =>
