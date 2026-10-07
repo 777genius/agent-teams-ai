@@ -30,6 +30,8 @@ jobs:
       full: ${{ steps.plan.outputs.full }}
       reuse: ${{ steps.plan.outputs.reuse }}
       source_run: ${{ steps.plan.outputs.source_run }}
+      image: ${{ steps.plan.outputs.image }}
+      linux_arch: ${{ steps.plan.outputs.linux_arch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -167,6 +169,12 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: "CI image proof: ${{ steps.image.outputs.image }}"
+        run: echo 'Runner image identity recorded in job metadata'
+
       - name: Restore pnpm node-gyp executable bit
         run: |
           PNPM_STORE="$(pnpm store path)"
@@ -234,6 +242,12 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: "CI image proof: ${{ steps.image.outputs.image }}"
+        run: echo 'Runner image identity recorded in job metadata'
+
       - name: Restore pnpm node-gyp executable bit
         run: |
           PNPM_STORE="$(pnpm store path)"
@@ -266,7 +280,7 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     name: Task change ledger Windows smoke
     needs: plan
-    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse != 'true'
+    if: needs.plan.outputs.full == 'true'
     runs-on: windows-latest
     timeout-minutes: 15
 
@@ -289,16 +303,37 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: "CI image proof: ${{ steps.image.outputs.image }}"
+        run: echo 'Runner image identity recorded in job metadata'
+
+      - name: Verify reusable Windows evidence
+        id: windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE_REUSE: ${{ needs.plan.outputs.reuse }}
+          SOURCE_RUN: ${{ needs.plan.outputs.source_run }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          CI_LINUX_IMAGE: ${{ needs.plan.outputs.image }}
+          CI_LINUX_ARCH: ${{ needs.plan.outputs.linux_arch }}
+        run: node scripts/ci/ci-feedback.mts windows
+
       - name: Install dependencies
+        if: steps.windows.outputs.reuse != 'true'
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Test crash-safe app lock publication
+        if: steps.windows.outputs.reuse != 'true'
         run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
 
       - name: Test controller lock compatibility
+        if: steps.windows.outputs.reuse != 'true'
         run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
 
       - name: Test task change ledger
+        if: steps.windows.outputs.reuse != 'true'
         run: >-
           pnpm exec vitest run --maxWorkers=1
           test/main/services/team/TaskChangeLedgerReader.test.ts
@@ -333,6 +368,7 @@ jobs:
           test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts
 
       - name: Test startup cleanup deadline and late-response lifecycle
+        if: steps.windows.outputs.reuse != 'true'
         run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
   full-qualification:

@@ -6,10 +6,16 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { planFeedback, qualifyFull, selectFeedbackMode } from '../../scripts/ci/ci-feedback.mts';
+import {
+  planFeedback,
+  qualifyFull,
+  selectFeedbackMode,
+  windowsFeedback,
+} from '../../scripts/ci/ci-feedback.mts';
 import {
   MAX_AGE_MS,
   provePostmergeReuse,
+  runnerImage,
   REPOSITORY,
   WORKFLOW,
 } from '../../scripts/ci/ci-feedback-reuse.mts';
@@ -22,6 +28,8 @@ const treeSha = 'd'.repeat(40);
 const workflowSha = 'e'.repeat(40);
 const now = Date.parse('2026-10-07T12:00:00Z');
 const recent = '2026-10-07T11:00:00Z';
+const linuxImage = 'ubuntu24.04@20260901.1.0';
+const windowsImage = 'win25@20260927.1.0';
 const repository = { id: 123, full_name: REPOSITORY, default_branch: 'main' };
 const prefix = `repos/${REPOSITORY}`;
 const runEndpoint = `${prefix}/actions/runs/100`;
@@ -32,6 +40,7 @@ const context: ReuseContext = {
   currentSha,
   linuxRunner: 'ubicloud-standard-4',
   linuxArch: 'X64',
+  linuxImage,
   now,
 };
 const env = {
@@ -42,6 +51,9 @@ const env = {
   GITHUB_WORKFLOW_REF: `${REPOSITORY}/${WORKFLOW}@refs/heads/main`,
   CI_LINUX_RUNNER: context.linuxRunner,
   RUNNER_ARCH: context.linuxArch,
+  RUNNER_OS: 'Linux',
+  ImageOS: 'ubuntu24.04',
+  ImageVersion: '20260901.1.0',
 };
 
 function prEvent(action: string, draft: boolean): JsonObject {
@@ -68,7 +80,7 @@ function fullNeeds(reuse = false): JsonObject {
     validate: { result: 'success' },
     test: { result: reuse ? 'skipped' : 'success' },
     lint: { result: reuse ? 'skipped' : 'success' },
-    'task-change-ledger-windows': { result: reuse ? 'skipped' : 'success' },
+    'task-change-ledger-windows': { result: 'success' },
   };
 }
 
@@ -108,12 +120,60 @@ function fixture(): Map<string, unknown> {
   ];
   const jobs = names.map((name, index) => {
     const windows = name === 'Task change ledger Windows smoke';
-    const command = windows
-      ? 'Test task change ledger'
-      : name.startsWith('lint')
-        ? 'Lint source shard'
-        : 'Test root shard';
     const runnerClass = windows ? 'windows-latest' : context.linuxRunner;
+    const step = (name: string, conclusion = 'success'): JsonObject => ({
+      name,
+      status: 'completed',
+      conclusion,
+    });
+    const commands = name.startsWith('test')
+      ? [
+          step('Rebuild test SQLite native module for Node'),
+          step('Test workspace packages', name === 'test (2/2)' ? 'skipped' : 'success'),
+          step(
+            'Test CI scripts and OpenCode proof runner safety',
+            name === 'test (2/2)' ? 'skipped' : 'success'
+          ),
+          step('Test root shard'),
+          step('Test feedback policy', name === 'test (2/2)' ? 'skipped' : 'success'),
+        ]
+      : name.startsWith('lint')
+        ? [
+            step('Restore ESLint cache'),
+            step('Lint source shard'),
+            step('Lint MCP package', name === 'lint (main)' ? 'success' : 'skipped'),
+          ]
+        : windows
+          ? [
+              step('Decide Windows reuse'),
+              step('Test crash-safe app lock publication'),
+              step('Test controller lock compatibility'),
+              step('Test task change ledger'),
+              step('Test startup cleanup deadline and late-response lifecycle'),
+            ]
+          : name === 'plan'
+            ? [step('Plan feedback and verify reusable evidence')]
+            : name === 'validate'
+              ? [step('Audit dependencies'), step('Validate workspace truth gate')]
+              : [step('Require complete current-code qualification')];
+    const steps =
+      name === 'Fast feedback'
+        ? []
+        : [
+            step(
+              name === 'plan'
+                ? `CI source proof: PR=12 | base=${baseSha} | head=${headSha}`
+                : `CI runner proof: ${windows ? 'Windows' : 'Linux'} | X64 | ${runnerClass}`
+            ),
+            step('Checkout'),
+            step('Setup pnpm'),
+            step('Setup Node.js'),
+            step('Record runner image'),
+            step(`CI image proof: ${windows ? windowsImage : linuxImage}`),
+            step('Install dependencies'),
+            ...commands,
+            step('Post Checkout'),
+          ].map((step, index) => ({ ...step, number: index + 1 }));
     return {
       id: index + 1,
       run_id: 100,
@@ -126,17 +186,7 @@ function fixture(): Map<string, unknown> {
       runner_id: 200 + index,
       runner_name: `runner-${index}`,
       labels: [runnerClass],
-      steps: [
-        {
-          name:
-            name === 'plan'
-              ? `CI source proof: PR=12 | base=${baseSha} | head=${headSha}`
-              : `CI runner proof: ${windows ? 'Windows' : 'Linux'} | X64 | ${runnerClass}`,
-          status: 'completed',
-          conclusion: 'success',
-        },
-        { name: command, status: 'completed', conclusion: 'success' },
-      ],
+      steps,
     };
   });
   return new Map<string, unknown>([
@@ -164,7 +214,10 @@ function fixture(): Map<string, unknown> {
       `${prefix}/compare/${baseSha}...${headSha}`,
       { status: 'ahead', base_commit: { sha: baseSha }, merge_base_commit: { sha: baseSha } },
     ],
-    [`${prefix}/git/commits/${currentSha}`, { sha: currentSha, tree: { sha: treeSha } }],
+    [
+      `${prefix}/git/commits/${currentSha}`,
+      { sha: currentSha, tree: { sha: treeSha }, parents: [{ sha: baseSha }] },
+    ],
     [`${prefix}/git/commits/${headSha}`, { sha: headSha, tree: { sha: treeSha } }],
     [
       `${prefix}/contents/${WORKFLOW}?ref=${currentSha}`,
@@ -184,6 +237,12 @@ function record(data: Map<string, unknown>, key: string): JsonObject {
 
 function job(data: Map<string, unknown>, name = 'test (1/2)'): JsonObject {
   return (record(data, jobsEndpoint).jobs as JsonObject[]).find((item) => item.name === name)!;
+}
+
+function imageStep(data: Map<string, unknown>, name = 'test (1/2)'): JsonObject {
+  return (job(data, name).steps as JsonObject[]).find((step) =>
+    String(step.name).startsWith('CI image proof:')
+  )!;
 }
 
 async function proof(data = fixture()) {
@@ -267,6 +326,9 @@ test('only complete successful full jobs or verified eligible reuse can satisfy 
   const staleValidate = fullNeeds(true);
   (staleValidate.validate as JsonObject).result = 'skipped';
   assert.equal(qualifyFull(staleValidate, 'true', 'true').ok, false);
+  const skippedWindows = fullNeeds(true);
+  (skippedWindows['task-change-ledger-windows'] as JsonObject).result = 'skipped';
+  assert.equal(qualifyFull(skippedWindows, 'true', 'true').ok, false);
 });
 
 test('ordinary squash with exact inputs can reuse after GitHub drops PR links, while validate remains required', async () => {
@@ -285,6 +347,88 @@ test('ordinary squash with exact inputs can reuse after GitHub drops PR links, w
 });
 
 const mutations: [string, (data: Map<string, unknown>) => void][] = [
+  [
+    'source image changed with same runner class',
+    (data) => {
+      imageStep(data).name = 'CI image proof: ubuntu24.04@20261001.1.0';
+    },
+  ],
+  [
+    'source image missing',
+    (data) => {
+      job(data).steps = (job(data).steps as JsonObject[]).filter(
+        (step) => step !== imageStep(data)
+      );
+    },
+  ],
+  [
+    'source image unknown',
+    (data) => {
+      imageStep(data).name = 'CI image proof: unknown';
+    },
+  ],
+  [
+    'source image marker malformed',
+    (data) => {
+      imageStep(data).name = 'CI image proof:uubuntu24.04@20260901.1.0';
+    },
+  ],
+  [
+    'source image proof skipped',
+    (data) => {
+      imageStep(data).conclusion = 'skipped';
+    },
+  ],
+  [
+    'source image proof after commands',
+    (data) => {
+      imageStep(data).number = 100;
+    },
+  ],
+  [
+    'Windows image missing',
+    (data) => {
+      imageStep(data, 'Task change ledger Windows smoke').name = 'CI image proof: unknown';
+    },
+  ],
+  [
+    'squash parent drift with identical tree',
+    (data) => {
+      record(data, `${prefix}/git/commits/${currentSha}`).parents = [{ sha: treeSha }];
+    },
+  ],
+  [
+    'multiple merge parents',
+    (data) => {
+      record(data, `${prefix}/git/commits/${currentSha}`).parents = [
+        { sha: baseSha },
+        { sha: headSha },
+      ];
+    },
+  ],
+  [
+    'missing merge parents',
+    (data) => {
+      delete record(data, `${prefix}/git/commits/${currentSha}`).parents;
+    },
+  ],
+  [
+    'missing root-shard workspace commands',
+    (data) => {
+      job(data).steps = (job(data).steps as JsonObject[]).filter(
+        (step) => step.name !== 'Test workspace packages'
+      );
+    },
+  ],
+  [
+    'missing Windows lock scenario',
+    (data) => {
+      const windows = job(data, 'Task change ledger Windows smoke');
+      windows.steps = (windows.steps as JsonObject[]).filter(
+        (step) => step.name !== 'Test crash-safe app lock publication'
+      );
+    },
+  ],
   ['missing response', (data) => data.delete(prefix)],
   [
     'foreign repository',
@@ -470,8 +614,9 @@ const mutations: [string, (data: Map<string, unknown>) => void][] = [
   [
     'Windows commands skipped',
     (data) => {
-      (job(data, 'Task change ledger Windows smoke').steps as JsonObject[])[1].conclusion =
-        'skipped';
+      (job(data, 'Task change ledger Windows smoke').steps as JsonObject[]).find(
+        (step) => step.name === 'Test task change ledger'
+      )!.conclusion = 'skipped';
     },
   ],
   [
@@ -522,6 +667,154 @@ test('newer failed run never falls back to old success and rerun race invalidate
     return response;
   });
   assert.equal(newer.reuse, false);
+});
+
+for (const [status, conclusion] of [
+  ['in_progress', null],
+  ['completed', 'failure'],
+]) {
+  test(`final listing same run newer ${status}/${conclusion} attempt invalidates reuse`, async () => {
+    const stable = fixture();
+    let reads = 0;
+    const result = await provePostmergeReuse(context, async (endpoint) => {
+      const response = structuredClone(stable.get(endpoint));
+      if (endpoint === listEndpoint && ++reads > 1) {
+        const runs = (response as JsonObject).workflow_runs as JsonObject[];
+        runs[0].run_attempt = 3;
+        runs[0].status = status;
+        runs[0].conclusion = conclusion;
+      }
+      return response;
+    });
+    assert.equal(result.reuse, false);
+  });
+}
+
+test('final listing positively binds workflow, source head and repository as well as attempt', async () => {
+  for (const override of [
+    { workflow_id: 999 },
+    { event: 'push' },
+    { path: 'other.yml' },
+    { head_sha: treeSha },
+    { repository: { ...repository, id: 999 } },
+    { head_repository: { ...repository, full_name: 'other/repo' } },
+  ]) {
+    const stable = fixture();
+    let reads = 0;
+    const result = await provePostmergeReuse(context, async (endpoint) => {
+      const response = structuredClone(stable.get(endpoint));
+      if (endpoint === listEndpoint && ++reads > 1) {
+        Object.assign(((response as JsonObject).workflow_runs as JsonObject[])[0], override);
+      }
+      return response;
+    });
+    assert.equal(result.reuse, false);
+  }
+});
+
+test('image identity requires actual standard build facts and never falls back to a class or ImageID', async () => {
+  assert.equal(runnerImage({ ImageOS: 'ubuntu24.04', ImageVersion: '20260901.1.0' }), linuxImage);
+  for (const invalid of [
+    { ImageOS: 'ubuntu24.04' },
+    { ImageVersion: '20260901.1.0' },
+    { ImageID: linuxImage },
+    { ImageOS: 'unknown', ImageVersion: '20260901.1.0' },
+    { ImageOS: 'ubuntu24.04\nreuse=true', ImageVersion: '20260901.1.0' },
+    { ImageOS: 'ubuntu24.04', ImageVersion: '20260901.1.0\n' },
+  ]) {
+    assert.equal(runnerImage(invalid), 'unknown');
+  }
+  const missing = await planFeedback(
+    { ...env, ImageVersion: undefined },
+    { ref: 'refs/heads/main', deleted: false, after: currentSha, repository },
+    async () => {
+      throw new Error('API must not be called for missing image');
+    },
+    now
+  );
+  assert.equal(missing.reuse, false);
+  assert.equal(missing.image, 'unknown');
+});
+
+test('Windows reuses only the same authoritative source run with both current image identities', async () => {
+  const windowsEnv = {
+    ...env,
+    RUNNER_OS: 'Windows',
+    RUNNER_ARCH: 'X64',
+    MODE_REUSE: 'true',
+    SOURCE_RUN: '100',
+    ImageOS: 'win25',
+    ImageVersion: '20260927.1.0',
+    CI_LINUX_IMAGE: linuxImage,
+    CI_LINUX_ARCH: 'X64',
+  };
+  const data = fixture();
+  let reads = 0;
+  const read = async (endpoint: string): Promise<unknown> => {
+    reads++;
+    return structuredClone(data.get(endpoint));
+  };
+  assert.equal((await windowsFeedback(windowsEnv, read, now)).reuse, true);
+  assert.ok(reads > 0);
+  for (const override of [
+    { ImageVersion: '20261001.1.0' },
+    { SOURCE_RUN: '101' },
+    { CI_LINUX_IMAGE: 'ubuntu24.04@20261001.1.0' },
+    { CI_LINUX_ARCH: 'ARM64' },
+  ]) {
+    assert.equal((await windowsFeedback({ ...windowsEnv, ...override }, read, now)).reuse, false);
+  }
+  for (const override of [
+    { MODE_REUSE: 'false' },
+    { SOURCE_RUN: '' },
+    { SOURCE_RUN: 'not-an-id' },
+    { ImageVersion: undefined },
+    { CI_LINUX_IMAGE: 'unknown' },
+    { GITHUB_EVENT_NAME: 'pull_request' },
+    { RUNNER_OS: 'Linux' },
+    { RUNNER_ARCH: 'ARM64' },
+  ]) {
+    reads = 0;
+    assert.equal((await windowsFeedback({ ...windowsEnv, ...override }, read, now)).reuse, false);
+    assert.equal(reads, 0);
+  }
+  imageStep(data, 'Task change ledger Windows smoke').name = 'CI image proof: win25@20261001.1.0';
+  assert.equal((await windowsFeedback(windowsEnv, read, now)).reuse, false);
+});
+
+test('image and ordinary PR Windows CLI decisions expose safe outputs without contacting GitHub', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ci-image-fixture-'));
+  const cli = fileURLToPath(new URL('../../scripts/ci/ci-feedback.mts', import.meta.url));
+  try {
+    const outputFile = join(directory, 'outputs');
+    const run = (mode: string, override: Record<string, string | undefined>): string => {
+      writeFileSync(outputFile, '');
+      const child = spawnSync(process.execPath, [cli, mode], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ImageOS: 'win25',
+          ImageVersion: '20260927.1.0',
+          ImageID: undefined,
+          MODE_REUSE: 'false',
+          GITHUB_OUTPUT: outputFile,
+          GH_TOKEN: undefined,
+          GITHUB_TOKEN: undefined,
+          ...override,
+        },
+      });
+      assert.equal(child.status, 0, child.stderr);
+      return readFileSync(outputFile, 'utf8');
+    };
+    assert.equal(run('image', {}), `image=${windowsImage}\n`);
+    assert.equal(
+      run('image', { ImageVersion: undefined, ImageID: windowsImage }),
+      'image=unknown\n'
+    );
+    assert.equal(run('windows', {}), `reuse=false\nimage=${windowsImage}\n`);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('network failure, malformed event, invalid SHA and non-main pushes select full execution', async () => {
@@ -596,7 +889,10 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
       },
     });
     assert.equal(child.status, 0, child.stderr);
-    assert.equal(readFileSync(outputFile, 'utf8'), 'full=false\nreuse=false\nsource_run=\n');
+    assert.equal(
+      readFileSync(outputFile, 'utf8'),
+      `full=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
+    );
     const gate = spawnSync(process.execPath, [cli, 'gate'], {
       encoding: 'utf8',
       env: {

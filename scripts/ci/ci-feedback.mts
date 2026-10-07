@@ -2,10 +2,24 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { object, provePostmergeReuse, REPOSITORY, sha } from './ci-feedback-reuse.mts';
+import {
+  object,
+  provePostmergeReuse,
+  REPOSITORY,
+  runnerImage,
+  sha,
+  WORKFLOW,
+} from './ci-feedback-reuse.mts';
 import type { GitHubRead } from './ci-feedback-reuse.mts';
 
-export type Plan = { full: boolean; reuse: boolean; source_run: string; reason: string };
+export type Plan = {
+  full: boolean;
+  reuse: boolean;
+  source_run: string;
+  image: string;
+  linux_arch: string;
+  reason: string;
+};
 
 export function selectFeedbackMode(eventName: unknown, event: unknown): 'fast' | 'full' {
   try {
@@ -47,6 +61,8 @@ export function selectFeedbackMode(eventName: unknown, event: unknown): 'fast' |
     }
     if (payload.action === 'ready_for_review' && pr.draft) return 'full';
     if (payload.action === 'converted_to_draft' && !pr.draft) return 'full';
+    // The accepted draft/intermediate contract includes synchronize and reopened:
+    // every ready update runs full, and draft feedback never qualifies the merge gate.
     return pr.draft ? 'fast' : 'full';
   } catch {
     return 'full';
@@ -63,6 +79,8 @@ export async function planFeedback(
     full: true,
     reuse: false,
     source_run: '',
+    image: runnerImage(env),
+    linux_arch: ['X64', 'ARM64'].includes(env.RUNNER_ARCH ?? '') ? env.RUNNER_ARCH! : 'unknown',
     reason: 'Full qualification required',
   };
   if (env.GITHUB_REPOSITORY !== REPOSITORY) return fallback;
@@ -72,9 +90,10 @@ export async function planFeedback(
     return fallback;
   }
   if (selectFeedbackMode(env.GITHUB_EVENT_NAME, event) === 'fast') {
-    return { full: false, reuse: false, source_run: '', reason: 'Draft feedback' };
+    return { ...fallback, full: false, reason: 'Draft feedback' };
   }
   if (env.GITHUB_EVENT_NAME !== 'push') return fallback;
+  if (env.RUNNER_OS !== 'Linux') return fallback;
   if (
     env.GITHUB_WORKFLOW_REF !== `${REPOSITORY}/.github/workflows/ci.yml@refs/heads/main` ||
     env.GITHUB_WORKFLOW_SHA !== env.GITHUB_SHA
@@ -98,11 +117,48 @@ export async function planFeedback(
       currentSha: env.GITHUB_SHA!,
       linuxRunner: env.CI_LINUX_RUNNER ?? '',
       linuxArch: env.RUNNER_ARCH ?? '',
+      linuxImage: fallback.image,
       now,
     },
     read
   );
-  return { full: true, reuse: proof.reuse, source_run: proof.sourceRun, reason: proof.reason };
+  return { ...fallback, reuse: proof.reuse, source_run: proof.sourceRun, reason: proof.reason };
+}
+
+export async function windowsFeedback(
+  env: Record<string, string | undefined>,
+  read: GitHubRead,
+  now = Date.now()
+): Promise<{ reuse: boolean; image: string; reason: string }> {
+  const fallback = {
+    reuse: false,
+    image: runnerImage(env),
+    reason: 'Fresh Windows execution required',
+  };
+  if (env.MODE_REUSE !== 'true' || !/^[1-9]\d*$/.test(env.SOURCE_RUN ?? '')) return fallback;
+  if (
+    env.GITHUB_EVENT_NAME !== 'push' ||
+    env.GITHUB_REPOSITORY !== REPOSITORY ||
+    env.GITHUB_WORKFLOW_REF !== `${REPOSITORY}/${WORKFLOW}@refs/heads/main` ||
+    env.GITHUB_WORKFLOW_SHA !== env.GITHUB_SHA ||
+    env.RUNNER_OS !== 'Windows' ||
+    env.RUNNER_ARCH !== 'X64'
+  )
+    return fallback;
+  const proof = await provePostmergeReuse(
+    {
+      repository: env.GITHUB_REPOSITORY,
+      currentSha: env.GITHUB_SHA ?? '',
+      linuxRunner: env.CI_LINUX_RUNNER ?? '',
+      linuxArch: env.CI_LINUX_ARCH ?? '',
+      linuxImage: env.CI_LINUX_IMAGE ?? '',
+      windowsImage: fallback.image,
+      sourceRun: env.SOURCE_RUN,
+      now,
+    },
+    read
+  );
+  return { ...fallback, reuse: proof.reuse, reason: proof.reason };
 }
 
 export function qualifyFull(
@@ -129,7 +185,7 @@ export function qualifyFull(
       const result = object(needs[name]).result;
       if (
         result !== 'success' &&
-        !(reuse === 'true' && name !== 'validate' && result === 'skipped')
+        !(reuse === 'true' && (name === 'test' || name === 'lint') && result === 'skipped')
       ) {
         throw new Error(`Required job did not qualify: ${name}`);
       }
@@ -178,6 +234,25 @@ function ghRead(endpoint: string): unknown {
 }
 
 async function main(): Promise<void> {
+  const read: GitHubRead = async (endpoint) => {
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)
+      throw new Error('Missing authenticated API token');
+    return ghRead(endpoint);
+  };
+  const output = (value: string): void => {
+    if (!process.env.GITHUB_OUTPUT) throw new Error('Missing GITHUB_OUTPUT');
+    appendFileSync(process.env.GITHUB_OUTPUT, value);
+  };
+  if (process.argv[2] === 'image') {
+    output(`image=${runnerImage(process.env)}\n`);
+    return;
+  }
+  if (process.argv[2] === 'windows') {
+    const windows = await windowsFeedback(process.env, read);
+    output(`reuse=${windows.reuse}\nimage=${windows.image}\n`);
+    console.log(windows.reason);
+    return;
+  }
   if (process.argv[2] === 'gate') {
     let results: unknown;
     try {
@@ -190,22 +265,16 @@ async function main(): Promise<void> {
     if (!gate.ok) process.exitCode = 1;
     return;
   }
-  if (process.argv[2] !== 'plan') throw new Error('Expected plan or gate');
+  if (process.argv[2] !== 'plan') throw new Error('Expected plan, gate, image or windows');
   let event: unknown;
   try {
     event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8'));
   } catch {
     event = null;
   }
-  const plan = await planFeedback(process.env, event, async (endpoint) => {
-    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)
-      throw new Error('Missing authenticated API token');
-    return ghRead(endpoint);
-  });
-  if (!process.env.GITHUB_OUTPUT) throw new Error('Missing GITHUB_OUTPUT');
-  appendFileSync(
-    process.env.GITHUB_OUTPUT,
-    `full=${plan.full}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\n`
+  const plan = await planFeedback(process.env, event, read);
+  output(
+    `full=${plan.full}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
   );
   console.log(plan.reason);
 }

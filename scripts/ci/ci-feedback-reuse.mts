@@ -6,6 +6,20 @@ export type JsonObject = Record<string, unknown>;
 export type GitHubRead = (endpoint: string) => Promise<unknown>;
 export type ReuseResult = { reuse: boolean; sourceRun: string; reason: string };
 
+export function isRunnerImage(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[A-Za-z][A-Za-z0-9._-]{0,63}@[0-9][A-Za-z0-9._-]{0,63}$/.test(value) &&
+    !value.toLowerCase().startsWith('unknown@')
+  );
+}
+
+export function runnerImage(env: Record<string, string | undefined>): string {
+  // These are the standard image build facts, not ImageID or a mutable runner label.
+  const image = `${env.ImageOS ?? ''}@${env.ImageVersion ?? ''}`;
+  return isRunnerImage(image) ? image : 'unknown';
+}
+
 export function object(value: unknown): JsonObject {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Missing object');
@@ -46,12 +60,28 @@ function sameRepository(value: unknown, id: number): boolean {
 }
 
 const ELIGIBLE = [
-  ['test (1/2)', 'Test root shard'],
-  ['test (2/2)', 'Test root shard'],
-  ['lint (main)', 'Lint source shard'],
-  ['lint (renderer)', 'Lint source shard'],
-  ['lint (features)', 'Lint source shard'],
-  ['Task change ledger Windows smoke', 'Test task change ledger'],
+  [
+    'test (1/2)',
+    [
+      'Test workspace packages',
+      'Test CI scripts and OpenCode proof runner safety',
+      'Test root shard',
+      'Test feedback policy',
+    ],
+  ],
+  ['test (2/2)', ['Test root shard']],
+  ['lint (main)', ['Lint source shard', 'Lint MCP package']],
+  ['lint (renderer)', ['Lint source shard']],
+  ['lint (features)', ['Lint source shard']],
+  [
+    'Task change ledger Windows smoke',
+    [
+      'Test crash-safe app lock publication',
+      'Test controller lock compatibility',
+      'Test task change ledger',
+      'Test startup cleanup deadline and late-response lifecycle',
+    ],
+  ],
 ] as const;
 
 export type ReuseContext = {
@@ -59,6 +89,9 @@ export type ReuseContext = {
   currentSha: string;
   linuxRunner: string;
   linuxArch: string;
+  linuxImage: string;
+  windowsImage?: string;
+  sourceRun?: string;
   now: number;
 };
 
@@ -72,6 +105,10 @@ export async function provePostmergeReuse(
     requireProof(Number.isFinite(context.now), 'Missing current time');
     requireProof(/^[A-Za-z0-9._-]+$/.test(context.linuxRunner), 'Invalid runner class');
     requireProof(['X64', 'ARM64'].includes(context.linuxArch), 'Unknown Linux architecture');
+    requireProof(isRunnerImage(context.linuxImage), 'Unknown current Linux image');
+    if (context.windowsImage !== undefined) {
+      requireProof(isRunnerImage(context.windowsImage), 'Unknown current Windows image');
+    }
     const prefix = `repos/${REPOSITORY}`;
     const repo = object(await read(prefix));
     const repoId = positive(repo.id);
@@ -117,8 +154,23 @@ export async function provePostmergeReuse(
     // Never fall back to an older passing run when the newest run failed or was cancelled.
     runs.sort((a, b) => positive(b.id) - positive(a.id));
     const runId = positive(runs[0].id);
+    requireProof(
+      context.sourceRun === undefined || context.sourceRun === String(runId),
+      'Windows source run differs from verified Linux source run'
+    );
     const run = object(await read(`${prefix}/actions/runs/${runId}`));
     const attempt = positive(run.run_attempt);
+    const sameRun = (candidate: JsonObject): boolean =>
+      candidate.id === runId &&
+      candidate.workflow_id === workflowId &&
+      candidate.path === WORKFLOW &&
+      candidate.event === 'pull_request' &&
+      candidate.head_sha === headSha &&
+      candidate.run_attempt === attempt &&
+      candidate.status === 'completed' &&
+      candidate.conclusion === 'success' &&
+      sameRepository(candidate.repository, repoId) &&
+      sameRepository(candidate.head_repository, repoId);
     requireProof(
       run.id === runId &&
         run.workflow_id === workflowId &&
@@ -194,6 +246,11 @@ export async function provePostmergeReuse(
       'Commit identity mismatch'
     );
     const currentTree = sha(object(currentCommit.tree).sha);
+    const parents = array(currentCommit.parents).map(object);
+    requireProof(
+      parents.length === 1 && parents[0].sha === testedBase,
+      'Current commit is not an ordinary squash onto the exact tested base'
+    );
     requireProof(
       currentTree === sha(object(sourceCommit.tree).sha),
       'Current and source trees differ'
@@ -243,7 +300,27 @@ export async function provePostmergeReuse(
         `Missing runner class proof: ${name}`
       );
       const steps = array(job.steps).map(object);
+      const imageProofs = steps.filter(
+        (step) => typeof step.name === 'string' && step.name.startsWith('CI image proof:')
+      );
+      requireProof(
+        imageProofs.length === 1 &&
+          imageProofs[0].status === 'completed' &&
+          imageProofs[0].conclusion === 'success',
+        `Missing immutable runner image proof: ${name}`
+      );
+      const image = String(imageProofs[0].name).slice('CI image proof: '.length);
+      requireProof(
+        isRunnerImage(image) && imageProofs[0].name === `CI image proof: ${image}`,
+        `Unknown or malformed source image: ${name}`
+      );
+      const currentImage = windows ? context.windowsImage : context.linuxImage;
+      requireProof(
+        currentImage === undefined || image === currentImage,
+        `Runner image changed: ${name}`
+      );
       const runnerProof = `CI runner proof: ${os} | ${arch} | ${runnerClass}`;
+      const runnerSteps = steps.filter((step) => step.name === runnerProof);
       requireProof(
         steps.filter(
           (step) =>
@@ -254,14 +331,19 @@ export async function provePostmergeReuse(
         `Missing actual OS/architecture proof: ${name}`
       );
       // Success of the job cannot hide conditional/skipped test or lint work.
-      const command = ELIGIBLE.find(([eligible]) => eligible === name)?.[1];
-      requireProof(
-        steps.some(
+      const commands = ELIGIBLE.find(([eligible]) => eligible === name)![1];
+      for (const command of commands) {
+        const commandSteps = steps.filter(
           (step) =>
             step.name === command && step.status === 'completed' && step.conclusion === 'success'
-        ),
-        `Skipped command: ${name}`
-      );
+        );
+        requireProof(commandSteps.length === 1, `Missing or skipped command: ${name}: ${command}`);
+        requireProof(
+          positive(imageProofs[0].number) < positive(commandSteps[0].number) &&
+            positive(runnerSteps[0].number) < positive(commandSteps[0].number),
+          `Runner proof was recorded after commands: ${name}`
+        );
+      }
       const allowedSkips =
         name === 'test (2/2)'
           ? [
@@ -286,22 +368,18 @@ export async function provePostmergeReuse(
     }
     // Detect a rerun begun while metadata was being collected.
     const finalRun = object(await read(`${prefix}/actions/runs/${runId}`));
-    requireProof(
-      finalRun.run_attempt === attempt &&
-        finalRun.status === 'completed' &&
-        finalRun.conclusion === 'success',
-      'Source attempt changed during proof'
-    );
+    requireProof(sameRun(finalRun), 'Source attempt changed during proof');
     const finalListing = object(
       await read(
         `${prefix}/actions/workflows/${workflowId}/runs?event=pull_request&head_sha=${headSha}&per_page=100`
       )
     );
     const finalRuns = array(finalListing.workflow_runs).map(object);
+    finalRuns.sort((a, b) => positive(b.id) - positive(a.id));
     requireProof(
       finalListing.total_count === finalRuns.length &&
         finalRuns.length > 0 &&
-        Math.max(...finalRuns.map((item) => positive(item.id))) === runId,
+        sameRun(finalRuns[0]),
       'Latest source run changed during proof'
     );
     return { reuse: true, sourceRun: String(runId), reason: 'Verified identical-input full CI' };
