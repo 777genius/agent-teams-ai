@@ -1,9 +1,12 @@
-import { mkdtemp, writeFile, mkdir, symlink, truncate, readFile, rm } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { constants } from 'node:fs';
+import fs, { mkdtemp, writeFile, mkdir, symlink, truncate, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
+import { promisify } from 'node:util';
 import { deflateRawSync } from 'node:zlib';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DOCUMENT_PREVIEW_MAX_BYTES,
@@ -48,7 +51,32 @@ describe('bounded local document transport', () => {
     await mkdir(project);
   });
   afterEach(async () => {
+    vi.restoreAllMocks();
     await rm(sandbox, { recursive: true, force: true });
+  });
+
+  it.skipIf(process.platform === 'win32')('rejects a regular file swapped to a FIFO before descriptor open', async () => {
+    const file = path.join(project, 'swapped.pdf');
+    await writeFile(file, '%PDF-1.7');
+    const actualOpen = fs.open;
+    vi.spyOn(fs, 'open').mockImplementationOnce(async (...args: Parameters<typeof fs.open>) => {
+      await fs.unlink(file);
+      await promisify(execFile)('mkfifo', [file]);
+      return actualOpen(...args);
+    });
+    const reading = readDocumentPreview(project, file);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('FIFO read timed out')), 1000);
+      });
+      await expect(Promise.race([reading, timeout])).rejects.toThrow('Path changed during read');
+    } finally {
+      clearTimeout(timer);
+      const release = await fs.open(file, constants.O_RDWR | constants.O_NONBLOCK);
+      await release.close();
+      await reading.catch(() => undefined);
+    }
   });
 
   it('returns exact binary bytes and a basename without changing the source', async () => {

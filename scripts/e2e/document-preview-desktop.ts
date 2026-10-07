@@ -262,6 +262,7 @@ async function launch(): Promise<Cdp> {
           'window.electronAPI?.editor && document.querySelector("#root")?.childElementCount',
           'Electron renderer'
         );
+        await client.wait('!document.querySelector("#splash")', 'application splash dismissed');
         return client;
       }
     } catch (error) {

@@ -42,6 +42,19 @@ describe('large editor files on disk', () => {
     }
   });
 
+  it('classifies a PDF alias by its selected name while reading the safe canonical target', async () => {
+    const target = path.join(root, 'target.txt');
+    const alias = path.join(root, 'alias.pdf');
+    await fs.symlink('target.txt', alias);
+    for (const content of ['%PDF-1.7\nASCII PDF content', 'Damaged PDF without binary bytes']) {
+      await fs.writeFile(target, content);
+      const result = await service.readFile(root, alias);
+      expect(result.isBinary).toBe(true);
+      expect(result.content).toBe('');
+      expect(await fs.readFile(target, 'utf8')).toBe(content);
+    }
+  });
+
   // These fail if safe links are rejected/replaced, or canonical targets bypass containment.
   it('opens and saves an in-project file symlink without replacing the link', async () => {
     const target = path.join(root, 'target.txt');

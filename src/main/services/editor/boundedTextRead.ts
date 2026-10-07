@@ -2,8 +2,8 @@ import { constants } from 'node:fs';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 
-import { isDevicePath, isGitInternalPath, isPathWithinRoot, validateFilePath } from '@main/utils/pathValidation';
 import { getDocumentFormat } from '@features/document-preview';
+import { isDevicePath, isGitInternalPath, isPathWithinRoot, validateFilePath } from '@main/utils/pathValidation';
 import { EDITOR_FULL_MAX_BYTES, EDITOR_PREVIEW_MAX_BYTES, EDITOR_REDUCED_MODE_BYTES } from '@shared/editorPolicy';
 import fs from 'fs/promises';
 import { isBinaryFile } from 'isbinaryfile';
@@ -52,7 +52,7 @@ export async function assertEditorFilePathUnchanged(
 }
 
 /** Read through one descriptor, with an actual byte ceiling even if the path grows. */
-export async function boundedTextRead(filePath: string): Promise<ReadFileResult> {
+export async function boundedTextRead(filePath: string, logicalPath = filePath): Promise<ReadFileResult> {
   // Nonblocking open reaches the type check even if a validated path became a FIFO.
   const handle = await fs.open(filePath,
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
@@ -64,7 +64,7 @@ export async function boundedTextRead(filePath: string): Promise<ReadFileResult>
     const chunks: Buffer[] = [];
     const head = Buffer.allocUnsafe(512);
     const first = await handle.read(head, 0, head.length, 0);
-    const binary = getDocumentFormat(filePath) !== null || await isBinaryFile(head.subarray(0, first.bytesRead));
+    const binary = getDocumentFormat(logicalPath) !== null || await isBinaryFile(head.subarray(0, first.bytesRead));
     let length = first.bytesRead;
     chunks.push(head.subarray(0, length));
     while (!binary && length < budget) {

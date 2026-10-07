@@ -35,7 +35,8 @@ export async function readDocumentPreview(
   }
   const entry = await fs.lstat(realPath);
   if (!entry.isFile()) throw new Error('Not a regular file');
-  const handle = await fs.open(realPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const handle = await fs.open(realPath,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const before = await handle.stat();
     if (!before.isFile() || before.dev !== entry.dev || before.ino !== entry.ino) {
