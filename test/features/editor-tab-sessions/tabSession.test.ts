@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createEditorTabsRepository } from '../../../src/features/editor-tab-sessions/core/application/editorTabsRepository';
-import { decodeEditorTabSessions, editorSessionPathKey, normalizeEditorTabSession } from '../../../src/features/editor-tab-sessions/core/domain/tabSession';
+import {
+  decodeEditorTabSessions,
+  editorSessionPathKey,
+  normalizeEditorTabSession,
+} from '../../../src/features/editor-tab-sessions/core/domain/tabSession';
 import { createLocalEditorTabsStorage } from '../../../src/features/editor-tab-sessions/renderer/adapters/localEditorTabsStorage';
 
 describe('project editor tab metadata', () => {
@@ -15,21 +19,45 @@ describe('project editor tab metadata', () => {
   });
 
   it('rejects malformed/outside paths and deduplicates while preserving display spelling', () => {
-    const session = normalizeEditorTabSession('C:/Work', { paths: ['C:\\Work\\A.txt', 'c:/work/a.txt', 'c:/work/b.txt', 'c:/work/../secret.txt', 'c:/worker/file.txt', 'file:///c:/work/x', 42], active: 'C:\\WORK\\B.txt' });
-    expect(session).toEqual({ paths: ['C:\\Work\\A.txt', 'c:/work/b.txt'], active: 'c:/work/b.txt' });
-    expect(normalizeEditorTabSession('/', { paths: ['/a.txt'], active: '/missing.txt' }).active).toBe('/a.txt');
+    const session = normalizeEditorTabSession('C:/Work', {
+      paths: [
+        'C:\\Work\\A.txt',
+        'c:/work/a.txt',
+        'c:/work/b.txt',
+        'c:/work/../secret.txt',
+        'c:/worker/file.txt',
+        'file:///c:/work/x',
+        42,
+      ],
+      active: 'C:\\WORK\\B.txt',
+    });
+    expect(session).toEqual({
+      paths: ['C:\\Work\\A.txt', 'c:/work/b.txt'],
+      active: 'c:/work/b.txt',
+    });
+    expect(
+      normalizeEditorTabSession('/', { paths: ['/a.txt'], active: '/missing.txt' }).active
+    ).toBe('/a.txt');
     expect(decodeEditorTabSessions('{broken')).toEqual([]);
     expect(decodeEditorTabSessions('{"version":99,"projects":[]}')).toEqual([]);
   });
 
   it('restores independent ordered projects across fresh repository instances', () => {
     let disk: string | null = null;
-    const storage = { read: () => disk, write: (value: string) => { disk = value; } };
+    const storage = {
+      read: () => disk,
+      write: (value: string) => {
+        disk = value;
+      },
+    };
     const repository = createEditorTabsRepository(storage);
     repository.save('/a', { paths: ['/a/second.txt', '/a/first.txt'], active: '/a/first.txt' });
     repository.save('/b', { paths: ['/b/file.txt'], active: '/b/file.txt' });
     const restarted = createEditorTabsRepository(storage);
-    expect(restarted.load('/a/')).toEqual({ paths: ['/a/second.txt', '/a/first.txt'], active: '/a/first.txt' });
+    expect(restarted.load('/a/')).toEqual({
+      paths: ['/a/second.txt', '/a/first.txt'],
+      active: '/a/first.txt',
+    });
     expect(restarted.load('/b').paths).toEqual(['/b/file.txt']);
     restarted.save('/a', { paths: [], active: null });
     expect(repository.load('/a').paths).toEqual([]);
@@ -63,8 +91,17 @@ describe('project editor tab metadata', () => {
 
   it('bounds metadata without persisting document contents', () => {
     const disk: { raw: string | null } = { raw: null };
-    const repository = createEditorTabsRepository({ read: () => disk.raw, write: value => { disk.raw = value; } });
-    for (let index = 0; index < 40; index++) repository.save('/p' + index, { paths: Array.from({ length: 100 }, (_, file) => `/p${index}/${file}.txt`), active: null });
+    const repository = createEditorTabsRepository({
+      read: () => disk.raw,
+      write: (value) => {
+        disk.raw = value;
+      },
+    });
+    for (let index = 0; index < 40; index++)
+      repository.save('/p' + index, {
+        paths: Array.from({ length: 100 }, (_, file) => `/p${index}/${file}.txt`),
+        active: null,
+      });
     const projects = decodeEditorTabSessions(disk.raw);
     expect(projects).toHaveLength(32);
     expect(projects[0].paths).toHaveLength(64);
