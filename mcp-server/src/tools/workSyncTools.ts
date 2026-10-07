@@ -105,7 +105,7 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
       const status = await getController(teamName, claudeDir).workSync.memberWorkSyncStatus({
         ...(memberName ? { memberName } : {}),
         ...(from ? { from } : {}),
-        ...(controlUrl ? { controlUrl } : {}),
+        ...(controlUrl !== undefined ? { controlUrl } : {}),
         ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         ...(forceNudge ? { forceNudge } : {}),
       });
@@ -115,7 +115,7 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
           teamName,
           ...(memberName ? { memberName } : {}),
           ...(from ? { from } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
@@ -162,7 +162,7 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
           ...(taskIds ? { taskIds } : {}),
           ...(note ? { note } : {}),
           ...(leaseTtlMs ? { leaseTtlMs } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );

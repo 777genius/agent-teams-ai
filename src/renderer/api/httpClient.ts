@@ -59,6 +59,10 @@ import type {
   CodexStartChatgptLoginOptions,
 } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type {
+  ConnectionInfoV1,
+  ExternalAgentConnectionApi,
+} from '@features/external-agent-connection/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
@@ -220,6 +224,10 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  externalAgentConnection: ExternalAgentConnectionApi = {
+    getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
+    retryConnection: () => this.post<ConnectionInfoV1>('/api/app/connection/retry'),
+  };
   announcements: AnnouncementsApi = {
     getSnapshot: async () => this.unavailableAnnouncements(),
     refresh: async () => this.unavailableAnnouncements(),

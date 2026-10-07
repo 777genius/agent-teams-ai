@@ -38,12 +38,19 @@ function controlFlags(args: {
   waitTimeoutMs?: number;
 }): Record<string, unknown> {
   return {
-    ...(args.controlUrl ? { controlUrl: args.controlUrl } : {}),
+    ...(args.controlUrl !== undefined ? { controlUrl: args.controlUrl } : {}),
     ...(args.waitTimeoutMs ? { waitTimeoutMs: args.waitTimeoutMs } : {}),
   };
 }
 
 export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
+  server.addTool({
+    name: 'app_get_connection_info',
+    description: 'Discover the current desktop app connection and immutable context.',
+    parameters: z.object({}).strict(),
+    execute: async () =>
+      jsonTextContent(await getController('agent-teams-control').runtime.getConnectionInfo()),
+  });
   server.addTool({
     name: 'team_list',
     description: 'List teams through the local Agent Teams control API',
@@ -78,32 +85,49 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
     name: 'team_create',
     description:
       'Create a draft team configuration through the local Agent Teams control API. This does not launch the team.',
-    parameters: z.object({
-      ...teamContextSchema,
-      runtimeSelectionVersion: z.literal(1).optional(),
-      syncModelsWithLead: z.boolean().optional(),
-      displayName: z.string().min(1).optional(),
-      description: z.string().optional(),
-      color: z.string().min(1).optional(),
-      members: z.array(memberSchema).optional(),
-      cwd: z.string().min(1).optional(),
-      prompt: z.string().min(1).optional(),
-      providerId: providerIdSchema.optional(),
-      providerBackendId: z.string().min(1).optional(),
-      model: z.string().min(1).optional(),
-      effort: effortSchema.optional(),
-      fastMode: fastModeSchema.optional(),
-      limitContext: z.boolean().optional(),
-      skipPermissions: z.boolean().optional(),
-      worktree: z.string().min(1).optional(),
-      extraCliArgs: z.string().min(1).optional(),
-    }),
+    parameters: z
+      .object({
+        ...teamContextSchema,
+        runtimeSelectionVersion: z.literal(1).optional(),
+        expectedContext: z
+          .object({
+            appInstanceId: z.string().min(1),
+            dataRootFingerprint: z.string().min(1),
+            connectionGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+          })
+          .strict()
+          .optional(),
+        syncModelsWithLead: z.boolean().optional(),
+        displayName: z.string().min(1).optional(),
+        description: z.string().optional(),
+        color: z.string().min(1).optional(),
+        members: z.array(memberSchema).optional(),
+        cwd: z.string().min(1).optional(),
+        prompt: z.string().min(1).optional(),
+        providerId: providerIdSchema.optional(),
+        providerBackendId: z.string().min(1).optional(),
+        model: z.string().min(1).optional(),
+        effort: effortSchema.optional(),
+        fastMode: fastModeSchema.optional(),
+        limitContext: z.boolean().optional(),
+        skipPermissions: z.boolean().optional(),
+        worktree: z.string().min(1).optional(),
+        extraCliArgs: z.string().min(1).optional(),
+      })
+      .refine(
+        (value) => value.runtimeSelectionVersion !== 1 || value.expectedContext !== undefined,
+        {
+          message: 'expectedContext is required for runtimeSelectionVersion 1',
+          path: ['expectedContext'],
+        }
+      ),
     execute: async ({
       teamName,
       claudeDir,
       controlUrl,
       waitTimeoutMs,
       runtimeSelectionVersion,
+      expectedContext,
       syncModelsWithLead,
       displayName,
       description,
@@ -125,6 +149,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
         await getController(teamName, claudeDir).runtime.createTeam({
           ...controlFlags({ controlUrl, waitTimeoutMs }),
           ...(runtimeSelectionVersion !== undefined ? { runtimeSelectionVersion } : {}),
+          ...(expectedContext ? { expectedContext } : {}),
           ...(syncModelsWithLead !== undefined ? { syncModelsWithLead } : {}),
           ...(displayName ? { displayName } : {}),
           ...(description ? { description } : {}),

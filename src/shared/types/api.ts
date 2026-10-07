@@ -127,6 +127,7 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type {
   MemberWorkSyncMetricsRequest,
@@ -859,6 +860,7 @@ export interface ElectronAPI
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
   announcements: AnnouncementsApi;
+  externalAgentConnection: ExternalAgentConnectionApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
   workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];

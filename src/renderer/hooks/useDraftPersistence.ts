@@ -28,6 +28,7 @@ export function useDraftPersistence({
   const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
   const mountedRef = useRef(true);
+  const editRevisionRef = useRef(0);
 
   useEffect(() => {
     keyRef.current = key;
@@ -71,9 +72,10 @@ export function useDraftPersistence({
       return () => {
         cancelled = true;
       };
+    const loadRevision = editRevisionRef.current;
     void (async () => {
       const draft = await draftStorage.loadDraft(key);
-      if (cancelled) return;
+      if (cancelled || editRevisionRef.current !== loadRevision) return;
       if (draft != null && initialValue == null) {
         setValueState(draft);
         setIsSaved(true);
@@ -94,6 +96,7 @@ export function useDraftPersistence({
 
   const setValue = useCallback(
     (v: string) => {
+      editRevisionRef.current++;
       setValueState(v);
       setIsSaved(false);
 
@@ -124,6 +127,7 @@ export function useDraftPersistence({
   );
 
   const clearDraft = useCallback(() => {
+    editRevisionRef.current++;
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

@@ -102,8 +102,9 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
   brace-expansion@5.0.12: 3ae36edc21bd38f2596d0a98e3d223dc194dd5a639b7cba945ba690dfff4e8a3
   braces@3.0.3: 06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985
-  fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
+  fastmcp@3.35.0: d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809
   http-cache-semantics@4.2.0: 39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7
+  mcp-proxy@6.4.1: 7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5
   node-forge@1.4.0: 7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c
 
 importers:
@@ -737,7 +738,7 @@ importers:
         version: link:../agent-teams-controller
       fastmcp:
         specifier: ^3.35.0
-        version: 3.35.0(patch_hash=7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df)(supports-color@10.2.2)
+        version: 3.35.0(patch_hash=d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809)(supports-color@10.2.2)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -19436,7 +19437,7 @@ snapshots:
       semver: 7.8.5
       toad-cache: 3.7.4
 
-  fastmcp@3.35.0(patch_hash=7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df)(supports-color@10.2.2):
+  fastmcp@3.35.0(patch_hash=d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809)(supports-color@10.2.2):
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.3.6)
       '@standard-schema/spec': 1.1.0
@@ -19444,7 +19445,7 @@ snapshots:
       file-type: 21.3.2(supports-color@10.2.2)
       fuse.js: 7.3.0
       hono: 4.12.30
-      mcp-proxy: 6.4.1(supports-color@10.2.2)
+      mcp-proxy: 6.4.1(patch_hash=7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5)(supports-color@10.2.2)
       strict-event-emitter-types: 2.0.0
       undici: 7.30.0
       uri-templates: 0.2.0
@@ -20926,7 +20927,7 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-proxy@6.4.1(supports-color@10.2.2):
+  mcp-proxy@6.4.1(patch_hash=7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5)(supports-color@10.2.2):
     dependencies:
       pipenet: 1.4.0(supports-color@10.2.2)
     transitivePeerDependencies:
