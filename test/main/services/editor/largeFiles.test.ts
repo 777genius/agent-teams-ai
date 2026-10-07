@@ -19,6 +19,93 @@ afterEach(async () => { vi.restoreAllMocks(); await fs.rm(root, { recursive: tru
 // Regressions: the former 5MiB rejection/2MiB write ceiling, truncated editable text,
 // split UTF-8 at a bounded preview, growth beyond the read budget, and preview overwrite.
 describe('large editor files on disk', () => {
+  // These fail if safe links are rejected/replaced, or canonical targets bypass containment.
+  it('opens and saves an in-project file symlink without replacing the link', async () => {
+    const target = path.join(root, 'target.txt');
+    const link = path.join(root, 'link.txt');
+    await fs.writeFile(target, 'original');
+    await fs.symlink('target.txt', link);
+    const opened = await service.readFile(root, link);
+    expect(opened.content).toBe('original');
+    const saved = await service.writeFile(root, link, 'edited through link');
+    expect(await fs.readFile(target, 'utf8')).toBe('edited through link');
+    expect(await fs.readlink(link)).toBe('target.txt');
+    expect((await fs.lstat(link)).isSymbolicLink()).toBe(true);
+    expect(saved.mtimeMs).toBe((await fs.stat(target)).mtimeMs);
+    expect((await checkFileConflict(link, opened.mtimeMs - 2000)).hasConflict).toBe(true);
+  });
+
+  it('rejects reads and saves through a file symlink to an existing external target', async () => {
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'editor-outside-test-'));
+    try {
+      const target = path.join(outside, 'outside.txt');
+      const link = path.join(root, 'escape.txt');
+      await fs.writeFile(target, 'outside project');
+      await fs.symlink(target, link);
+      await expect(service.readFile(root, link)).rejects.toThrow('outside allowed directories');
+      await expect(service.writeFile(root, link, 'must not write')).rejects.toThrow('outside allowed directories');
+      expect(await fs.readFile(target, 'utf8')).toBe('outside project');
+      expect(await fs.readlink(link)).toBe(target);
+    } finally { await fs.rm(outside, { recursive: true, force: true }); }
+  });
+
+  it('still supports creating a missing regular file', async () => {
+    const file = path.join(root, 'new.txt');
+    await service.writeFile(root, file, 'new content');
+    expect((await service.readFile(root, file)).content).toBe('new content');
+  });
+
+  it('opens and saves safe links when the project root is itself a directory symlink', async () => {
+    const directory = path.join(root, 'project');
+    const projectLink = path.join(root, 'project-link');
+    await fs.mkdir(directory);
+    await fs.symlink(directory, projectLink, 'dir');
+    await fs.writeFile(path.join(directory, 'target.txt'), 'original');
+    await fs.symlink('target.txt', path.join(directory, 'link.txt'));
+    const file = path.join(projectLink, 'link.txt');
+    expect((await service.readFile(projectLink, file)).content).toBe('original');
+    await service.writeFile(projectLink, file, 'edited');
+    expect(await fs.readFile(path.join(directory, 'target.txt'), 'utf8')).toBe('edited');
+    expect(await fs.readlink(path.join(directory, 'link.txt'))).toBe('target.txt');
+  });
+
+  it('rejects a file link swapped after descriptor open', async () => {
+    const target = path.join(root, 'target.txt');
+    const replacement = path.join(root, 'replacement.txt');
+    const link = path.join(root, 'link.txt');
+    await fs.writeFile(target, 'original');
+    await fs.writeFile(replacement, 'replacement');
+    await fs.symlink(target, link);
+    const actualOpen = fs.open;
+    vi.spyOn(fs, 'open').mockImplementation(async (...args: Parameters<typeof fs.open>) => {
+      const handle = await actualOpen(...args);
+      if (args[0] === target) { await fs.unlink(link); await fs.symlink(replacement, link); }
+      return handle;
+    });
+    await expect(service.readFile(root, link)).rejects.toThrow('Path changed during read');
+  });
+
+  it('rejects a link swapped while an atomic save is being prepared', async () => {
+    const target = path.join(root, 'target.txt');
+    const replacement = path.join(root, 'replacement.txt');
+    const link = path.join(root, 'link.txt');
+    await fs.writeFile(target, 'original');
+    await fs.writeFile(replacement, 'replacement');
+    await fs.symlink(target, link);
+    const actualOpen = fs.open;
+    // atomicWrite uses fs.promises.open for its private temporary file.
+    vi.spyOn(fs, 'open').mockImplementation(async (...args: Parameters<typeof fs.open>) => {
+      const handle = await actualOpen(...args);
+      if (path.basename(String(args[0])).startsWith('.tmp.')) {
+        await fs.unlink(link); await fs.symlink(replacement, link);
+      }
+      return handle;
+    });
+    await expect(service.writeFile(root, link, 'must not publish')).rejects.toThrow('Path changed during write');
+    expect(await fs.readFile(target, 'utf8')).toBe('original');
+    expect(await fs.readFile(replacement, 'utf8')).toBe('replacement');
+  });
+
   it('opens and saves every byte of a 20MiB file, retaining its tail and conflict baseline', async () => {
     const file = path.join(root, 'large.txt');
     const text = 'start\n' + 'x\n'.repeat(10 * 1024 * 1024) + 'TAIL-完整';

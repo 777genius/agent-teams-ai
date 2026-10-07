@@ -22,7 +22,7 @@ import { shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { boundedTextRead } from './boundedTextRead';
+import { assertEditorFilePathUnchanged, boundedTextRead, resolveEditorFilePath } from './boundedTextRead';
 
 import type {
   BinaryPreviewResult,
@@ -173,16 +173,7 @@ export class ProjectFileService {
     return { entries, truncated: pendingEntries.length >= maxEntries };
   }
 
-  /**
-   * Read file content with security checks and binary detection.
-   *
-   * Security:
-   * - validateFilePath for traversal + sensitive check (SEC-1)
-   * - Device path blocking (SEC-4)
-   * - lstat + isFile check (SEC-4)
-   * - Size limits (SEC-4)
-   * - Post-read TOCTOU realpath verify (SEC-3)
-   */
+  /** Read bounded file content with containment, type and TOCTOU checks. */
   async readFile(projectRoot: string, filePath: string): Promise<ReadFileResult> {
     // 1. Path validation (traversal, sensitive, symlink)
     const validation = validateFilePath(filePath, projectRoot);
@@ -197,35 +188,20 @@ export class ProjectFileService {
       throw new Error('Cannot read device files');
     }
 
-    // 3. File type check
+    // A safe final symlink is allowed; the descriptor opens its validated canonical target.
     const stats = await fs.lstat(normalizedPath);
-    if (!stats.isFile()) {
+    if (!stats.isFile() && !stats.isSymbolicLink()) {
       throw new Error('Not a regular file');
     }
 
-    const result = await boundedTextRead(normalizedPath);
-
-    // 7. Post-read TOCTOU verify
-    const realPath = await fs.realpath(normalizedPath);
-    const postValidation = validateFilePath(realPath, projectRoot);
-    if (!postValidation.valid) {
-      throw new Error('Path changed during read (TOCTOU)');
-    }
+    const target = await resolveEditorFilePath(projectRoot, normalizedPath);
+    const result = await boundedTextRead(target);
+    await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target);
 
     return result;
   }
 
-  /**
-   * Write file content with atomic write and full security checks.
-   *
-   * Security:
-   * - validateFilePath for traversal + sensitive check (SEC-1)
-   * - Project-only containment — block writes outside projectRoot (SEC-14)
-   * - Block .git/ internal paths (SEC-12)
-   * - Device path blocking (SEC-4)
-   * - Content size limit (32MiB)
-   * - Atomic write via tmp + rename (SEC-9)
-   */
+  /** Atomically save a project target with containment, size and publish guards. */
   async writeFile(
     projectRoot: string,
     filePath: string,
@@ -262,21 +238,33 @@ export class ProjectFileService {
       );
     }
 
-    // Reject overwriting a document that could only be opened as a partial preview,
-    // including force-save callers that bypass renderer state.
+    const target = await resolveEditorFilePath(projectRoot, normalizedPath, true);
+    // Enforce the preview guard on the target, including force-save callers.
+    let existing: Awaited<ReturnType<typeof fs.lstat>> | undefined;
     try {
-      const existing = await fs.lstat(normalizedPath);
+      existing = await fs.lstat(target);
       if (!existing.isFile()) throw new Error('Not a regular file');
       if (existing.size > EDITOR_FULL_MAX_BYTES) throw new Error('Read-only large file preview');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
 
-    // 6. Atomic write
-    await atomicWriteAsync(normalizedPath, content);
+    // Publish to the target instead of replacing the symlink. Recheck on every rename retry.
+    await atomicWriteAsync(target, content, { beforeCommit: async () => {
+      await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target, true);
+      let current: typeof existing;
+      try { current = await fs.lstat(target); } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      if (existing ? !current?.isFile() || existing.dev !== current.dev ||
+          existing.ino !== current.ino || existing.size !== current.size ||
+          existing.mtimeMs !== current.mtimeMs : current !== undefined) {
+        throw new Error('File changed during write. Please retry.');
+      }
+    } });
 
     // 7. Get post-write stats
-    const stats = await fs.stat(normalizedPath);
+    const stats = await fs.stat(target);
     log.info('File saved:', normalizedPath, `(${stats.size} bytes)`);
 
     return {

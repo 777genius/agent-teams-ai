@@ -6,20 +6,23 @@ import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock fs/promises before importing the service
-vi.mock('fs/promises', () => ({
-  lstat: vi.fn(),
-  stat: vi.fn(),
-  readdir: vi.fn(),
-  readFile: vi.fn(),
-  realpath: vi.fn(),
-  writeFile: vi.fn(),
-  access: vi.fn(),
-  mkdir: vi.fn(),
-  rename: vi.fn(),
-  cp: vi.fn(),
-  copyFile: vi.fn(),
-  rm: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const mocked = {
+    lstat: vi.fn(),
+    stat: vi.fn(),
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    realpath: vi.fn(),
+    writeFile: vi.fn(),
+    access: vi.fn(),
+    mkdir: vi.fn(),
+    rename: vi.fn(),
+    cp: vi.fn(),
+    copyFile: vi.fn(),
+    rm: vi.fn(),
+  };
+  return { ...mocked, default: mocked };
+});
 
 vi.mock('@main/utils/atomicWrite', () => ({
   atomicWriteAsync: vi.fn(),
@@ -33,7 +36,8 @@ vi.mock('isbinaryfile', () => ({
   isBinaryFile: vi.fn(),
 }));
 
-vi.mock('@main/services/editor/boundedTextRead', () => ({
+vi.mock('@main/services/editor/boundedTextRead', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../../src/main/services/editor/boundedTextRead')>(),
   boundedTextRead: vi.fn(async (filePath: string) => {
     const stats = await fs.lstat(filePath);
     const binary = await isBinaryFile(filePath);
@@ -113,6 +117,7 @@ function createDirent(
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockRealpath.mockImplementation(async (filePath) => String(filePath));
   service = new ProjectFileService();
 });
 
@@ -277,7 +282,7 @@ describe('ProjectFileService.readFile', () => {
     mockLstat.mockResolvedValue(createStats({ size: content.length, mtimeMs: now }));
     mockIsBinary.mockResolvedValue(false);
     mockReadFile.mockResolvedValue(content);
-    mockRealpath.mockResolvedValue(filePath);
+    mockRealpath.mockImplementation(async (value) => String(value));
 
     const result = await service.readFile(PROJECT_ROOT, filePath);
 
@@ -294,7 +299,7 @@ describe('ProjectFileService.readFile', () => {
 
     mockLstat.mockResolvedValue(createStats({ size: 4096, mtimeMs: Date.now() }));
     mockIsBinary.mockResolvedValue(true);
-    mockRealpath.mockResolvedValue(filePath);
+    mockRealpath.mockImplementation(async (value) => String(value));
 
     const result = await service.readFile(PROJECT_ROOT, filePath);
 
@@ -334,7 +339,11 @@ describe('ProjectFileService.readFile', () => {
     mockIsBinary.mockResolvedValue(false);
     mockReadFile.mockResolvedValue('content');
     // realpath returns a path OUTSIDE project root (symlink swapped)
-    mockRealpath.mockResolvedValue('/etc/shadow');
+    let fileResolutions = 0;
+    mockRealpath.mockImplementation(async (value) => {
+      if (String(value) === PROJECT_ROOT) return PROJECT_ROOT;
+      return ++fileResolutions === 1 ? filePath : '/etc/shadow';
+    });
 
     await expect(service.readFile(PROJECT_ROOT, filePath)).rejects.toThrow(
       'Path changed during read (TOCTOU)'
@@ -364,7 +373,8 @@ describe('ProjectFileService.writeFile', () => {
 
     const result = await service.writeFile(PROJECT_ROOT, filePath, CONTENT);
 
-    expect(mockAtomicWrite).toHaveBeenCalledWith(path.resolve(filePath), CONTENT);
+    expect(mockAtomicWrite).toHaveBeenCalledWith(path.resolve(filePath), CONTENT,
+      { beforeCommit: expect.any(Function) });
     expect(result.size).toBe(28);
     expect(result.mtimeMs).toBe(now);
   });
