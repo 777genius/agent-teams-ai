@@ -23,7 +23,28 @@ const ACTIONS = new Set([
   'unlabeled',
   'edited',
 ]);
-const APP_ONLY_PATHS = new Set(['src/main/ipc/window.ts']);
+const SOURCE_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.css',
+  '.html',
+  '.svg',
+]);
+const FULL_PATHS = new Set(
+  [
+    'src/shared/utils/posthogBuildPolicy.ts',
+    'src/shared/utils/sentryBuildPolicy.ts',
+    'src/shared/utils/sentryArtifactInventory.ts',
+  ].map((path) => path.toLowerCase())
+);
+const REGULAR_MODES = new Set(['100644', '100755']);
+const ZERO_OID = '0'.repeat(40);
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -80,23 +101,71 @@ export function isMetadataOnlyEdit(input: PullRequestInput): boolean {
   );
 }
 
-/** Parse git --name-status -z without trimming or newline splitting filenames. */
-export function readNameStatus(diff: string): { status: string; paths: string[] }[] | undefined {
+function isGitPath(path: string): boolean {
+  return (
+    !/[\p{Cc}\p{Cf}\\]/u.test(path) &&
+    path.split('/').every((part) => part !== '' && part !== '.' && part !== '..')
+  );
+}
+
+function isOrdinarySource(path: string): boolean {
+  const foldedPath = path.toLowerCase();
+  return (
+    (path.startsWith('src/') || path.startsWith('test/')) &&
+    SOURCE_EXTENSIONS.has(path.slice(path.lastIndexOf('.'))) &&
+    !FULL_PATHS.has(foldedPath) &&
+    !foldedPath.startsWith('src/renderer/assets/participant-avatars/') &&
+    !foldedPath
+      .split('/')
+      .some((part) => part === 'config' || part === 'resources' || part === 'scripts') &&
+    !/(?:^|\/)(?:[^/]+\.)?(?:config|manifest|lock)\.[^/]+$/i.test(path)
+  );
+}
+
+/** Raw NUL diff carries file types at the merge-base and head, including both rename paths. */
+export function readRawDiff(diff: string):
+  | {
+      oldMode: string;
+      newMode: string;
+      status: string;
+      paths: string[];
+    }[]
+  | undefined {
   if (!diff || !diff.endsWith('\0')) return undefined;
   const fields = diff.slice(0, -1).split('\0');
-  const files: { status: string; paths: string[] }[] = [];
+  const files: { oldMode: string; newMode: string; status: string; paths: string[] }[] = [];
   const seenPaths = new Set<string>();
   for (let index = 0; index < fields.length; ) {
-    const status = fields[index++];
-    if (!status || !/^(?:[ADMTUXB]|[RC](?:100|[1-9]?\d))$/.test(status)) return undefined;
-    const count = /^[RC]/.test(status) ? 2 : 1;
+    const header = /^:(\d{6}) (\d{6}) ([a-fA-F0-9]{40}) ([a-fA-F0-9]{40}) (A|D|M|R\d{3})$/.exec(
+      fields[index++] ?? ''
+    );
+    if (!header) return undefined;
+    const oldMode = header[1]!;
+    const newMode = header[2]!;
+    const oldOid = header[3]!;
+    const newOid = header[4]!;
+    const status = header[5]!;
+    if (status.startsWith('R') && Number(status.slice(1)) > 100) return undefined;
+    if (
+      status === 'A'
+        ? oldMode !== '000000' || oldOid !== ZERO_OID
+        : !REGULAR_MODES.has(oldMode) || oldOid === ZERO_OID
+    )
+      return undefined;
+    if (
+      status === 'D'
+        ? newMode !== '000000' || newOid !== ZERO_OID
+        : !REGULAR_MODES.has(newMode) || newOid === ZERO_OID
+    )
+      return undefined;
+    const count = status.startsWith('R') ? 2 : 1;
     const paths = fields.slice(index, index + count);
-    if (paths.length !== count || paths.some((path) => !path)) return undefined;
+    if (paths.length !== count || paths.some((path) => !isGitPath(path))) return undefined;
     for (const path of paths) {
       if (seenPaths.has(path)) return undefined;
       seenPaths.add(path);
     }
-    files.push({ status, paths });
+    files.push({ oldMode, newMode, status, paths });
     index += count;
   }
   return files.length ? files : undefined;
@@ -116,12 +185,12 @@ export function classifyPackagedPr(
   if (input.action === 'ready_for_review' || input.action === 'edited')
     return full('review/base change');
   if (input.labels.includes('ci:full')) return full('ci:full requested');
-  const files = diff === undefined ? undefined : readNameStatus(diff);
-  if (!files) return full('missing, empty or malformed git diff');
-  if (files.some(({ status, paths }) => status !== 'M' || !APP_ONLY_PATHS.has(paths[0]!))) {
+  const files = diff === undefined ? undefined : readRawDiff(diff);
+  if (!files) return full('missing, empty, malformed or unsupported git diff');
+  if (files.some(({ paths }) => paths.some((path) => !isOrdinarySource(path)))) {
     return full('change outside app-only allowlist');
   }
-  return { scope: 'app', run: true, reason: 'draft modifications confined to window IPC' };
+  return { scope: 'app', run: true, reason: 'draft regular source/test changes' };
 }
 
 export function assertFullPackagedGate(input: {

@@ -1,21 +1,25 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { collectPackagedDecision } from './packaged-ci-cli.mts';
-import {
-  assertFullPackagedGate,
-  classifyPackagedPr,
-  readNameStatus,
-} from './packaged-ci-policy.mts';
+import { assertFullPackagedGate, classifyPackagedPr, readRawDiff } from './packaged-ci-policy.mts';
 
 const baseSha = 'a'.repeat(40);
 const headSha = 'b'.repeat(40);
-const safeDiff = 'M\0src/main/ipc/window.ts\0';
+function raw(
+  status: string,
+  paths: string[],
+  oldMode = status === 'A' ? '000000' : '100644',
+  newMode = status === 'D' ? '000000' : '100644'
+): string {
+  return `:${oldMode} ${newMode} ${oldMode === '000000' ? '0'.repeat(40) : baseSha} ${newMode === '000000' ? '0'.repeat(40) : headSha} ${status}\0${paths.join('\0')}\0`;
+}
+const safeDiff = raw('M', ['src/main/ipc/window.ts']);
 function event(overrides: Record<string, unknown> = {}) {
   return {
     action: 'synchronize',
@@ -24,9 +28,16 @@ function event(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// These tests turn red if any unsupported change or uncertain evidence gets the app lane.
-test('only draft modifications in the initial IPC allowlist get app smoke', () => {
-  assert.equal(classifyPackagedPr('pull_request', event(), safeDiff).scope, 'app');
+// This contract turns red if ordinary source/test work loses APP or packaging inputs gain it.
+test('draft regular source/test changes may accompany the existing window trigger', () => {
+  for (const diff of [
+    safeDiff,
+    safeDiff + raw('M', ['src/main/index.ts']) + raw('A', ['test/window.test.ts']),
+    safeDiff + raw('D', ['test/obsolete.ts']),
+    safeDiff + raw('R100', ['src/main/old.ts', 'test/renamed.ts']),
+    raw('M', ['src/renderer/main.tsx'], '100644', '100755'),
+  ])
+    assert.equal(classifyPackagedPr('pull_request', event(), diff).scope, 'app');
   for (const path of [
     'package.json',
     'pnpm-lock.yaml',
@@ -36,29 +47,114 @@ test('only draft modifications in the initial IPC allowlist get app smoke', () =
     'scripts/postinstall-electron.cjs',
     'scripts/ci/packaged-ci-policy.mts',
     'tsconfig.json',
-    'src/main/index.ts',
-    'unknown\nfile.ts',
+    'resources/icon.svg',
+    'src/renderer/assets/participant-avatars/avatar.svg',
+    'src/shared/utils/posthogBuildPolicy.ts',
+    'src/shared/utils/sentryBuildPolicy.ts',
+    'src/shared/utils/sentryArtifactInventory.ts',
+    'src/native/addon.node',
+    'src/runtime/agent.bin',
+    'test/fixture.wasm',
+    'src/settings.json',
+    'src/vite.config.ts',
+    'src/config/runtime.ts',
+    'src/unknown.extension',
+    'unknown/file.ts',
   ]) {
     assert.equal(
-      classifyPackagedPr('pull_request', event(), `${safeDiff}M\0${path}\0`).scope,
+      classifyPackagedPr('pull_request', event(), safeDiff + raw('M', [path])).scope,
       'full',
       path
     );
   }
+  for (const sensitive of [
+    'src/shared/utils/sentryBuildPolicy.ts',
+    'src/renderer/assets/participant-avatars/avatar.svg',
+  ]) {
+    for (const paths of [
+      [sensitive, 'src/main/renamed.ts'],
+      ['src/main/old.ts', sensitive],
+    ]) {
+      assert.equal(
+        classifyPackagedPr('pull_request', event(), safeDiff + raw('R100', paths)).scope,
+        'full',
+        paths.join(' -> ')
+      );
+    }
+  }
+});
+
+test('case aliases cannot bypass packaging inputs while ordinary component names remain APP', () => {
+  assert.equal(
+    classifyPackagedPr('pull_request', event(), safeDiff + raw('M', ['src/main/MyComponent.ts']))
+      .scope,
+    'app'
+  );
+  for (const path of ['SRC/main/MyComponent.ts', 'src/main/MyComponent.TS']) {
+    assert.equal(
+      classifyPackagedPr('pull_request', event(), safeDiff + raw('M', [path])).scope,
+      'full'
+    );
+  }
+  for (const alias of [
+    'src/shared/utils/POSTHOGbuildPolicy.ts',
+    'src/shared/utils/SENTRYbuildPolicy.ts',
+    'src/shared/utils/sENTRYArtifactInventory.ts',
+    'src/renderer/assets/PARTICIPANT-AVATARS/avatar.svg',
+    'src/CONFIG/runtime.ts',
+    'test/Resources/data.ts',
+    'src/Scripts/build.ts',
+  ]) {
+    for (const status of ['A', 'M', 'D']) {
+      assert.equal(
+        classifyPackagedPr('pull_request', event(), safeDiff + raw(status, [alias])).scope,
+        'full',
+        `${status} ${alias}`
+      );
+    }
+    for (const paths of [
+      [alias, 'src/main/renamed.ts'],
+      ['src/main/old.ts', alias],
+    ]) {
+      assert.equal(
+        classifyPackagedPr('pull_request', event(), safeDiff + raw('R100', paths)).scope,
+        'full',
+        paths.join(' -> ')
+      );
+    }
+  }
+});
+
+test('unsupported file types, raw headers and ambiguous paths require FULL', () => {
   for (const diff of [
     '',
-    'M\0src/main/ipc/window.ts',
-    'M\0',
-    'M100\0src/main/ipc/window.ts\0',
-    `${safeDiff}${safeDiff}`,
-    'diff --git a/window.ts b/window.ts\0',
-    'A\0src/main/ipc/window.ts\0',
-    'D\0src/main/ipc/window.ts\0',
-    'T\0src/main/ipc/window.ts\0',
-    'R100\0old.ts\0src/main/ipc/window.ts\0',
-    'R100\0src/main/ipc/window.ts\0new.ts\0',
-    'C100\0old.ts\0src/main/ipc/window.ts\0',
-    'M\0src/main/ipc/window.ts\n\0',
+    safeDiff.slice(0, -1),
+    safeDiff + safeDiff,
+    'M\0src/main/ipc/window.ts\0',
+    raw('M100', ['src/main/file.ts']),
+    raw('R999', ['src/old.ts', 'src/new.ts']),
+    raw('R100', ['src/old.ts']),
+    raw('A', ['src/new.ts'], '100644', '100644'),
+    raw('D', ['src/old.ts'], '100644', '100644'),
+    raw('M', ['src/a.ts'], '000000', '100644'),
+    raw('M', ['src/a.ts'], '100644', '000000'),
+    raw('M', ['src/a.ts'], '100664', '100644'),
+    raw('A', ['src/link.ts'], '000000', '120000'),
+    raw('D', ['src/submodule.ts'], '160000', '000000'),
+    raw('R100', ['src/old.ts', 'src/new.ts'], '120000', '100644'),
+    raw('M', ['src/a.ts']).replace(baseSha, 'abc1234'),
+    raw('M', ['src/a.ts']).replace(headSha, '0'.repeat(40)),
+    raw('C100', ['src/a.ts', 'src/b.ts']),
+    ...['T', 'U', 'X', 'B'].map((status) => raw(status, ['src/a.ts'])),
+    ...[
+      'src/../file.ts',
+      'src/./file.ts',
+      'src//file.ts',
+      '/src/file.ts',
+      'src/new\nname.ts',
+      'src/new\tname.ts',
+      'src/new\\name.ts',
+    ].map((path) => raw('M', [path])),
   ])
     assert.equal(
       classifyPackagedPr('pull_request', event(), diff).scope,
@@ -128,11 +224,12 @@ test('title/body edits skip work; base or ambiguous edits must verify code', () 
   }
 });
 
-test('NUL parsing preserves filenames and both sides of a rename', () => {
-  assert.deepEqual(readNameStatus('R100\0old\nname.ts\0new\tname.ts\0'), [
-    { status: 'R100', paths: ['old\nname.ts', 'new\tname.ts'] },
+test('raw NUL parsing keeps both rename filenames without trimming spaces', () => {
+  assert.deepEqual(readRawDiff(raw('R100', ['src/old name.ts', 'test/new name.ts']))?.[0]?.paths, [
+    'src/old name.ts',
+    'test/new name.ts',
   ]);
-  assert.equal(readNameStatus('R100\0old.ts\0'), undefined);
+  assert.equal(readRawDiff(raw('R100', ['src/old.ts'])), undefined);
 });
 
 test('a green intermediate matrix can never make the final gate green', () => {
@@ -175,21 +272,28 @@ test('CLI uses exact local git evidence and falls back to full after git/event f
     assert.equal(result.status, 0, result.stderr);
     return result.stdout.trim();
   }
-  function commit(): string {
+  function commit(paths = ['src', 'test']): string {
     for (const identity of ['GIT_AUTHOR_IDENT', 'GIT_COMMITTER_IDENT']) {
       assert.match(git(['var', identity]), /^iliya <iliyazelenkog@gmail\.com> /);
     }
-    git(['add', 'src']);
+    if (paths.length) git(['add', ...paths]);
     git(['commit', '-m', 'test: packaged policy fixture']);
     return git(['rev-parse', 'HEAD']);
   }
   try {
     git(['init', '--quiet']);
     mkdirSync(join(cwd, 'src/main/ipc'), { recursive: true });
+    mkdirSync(join(cwd, 'test'), { recursive: true });
     const path = join(cwd, 'src/main/ipc/window.ts');
     writeFileSync(path, 'first\n');
+    writeFileSync(join(cwd, 'test/obsolete.ts'), 'obsolete\n');
+    writeFileSync(join(cwd, 'src/main/old.ts'), 'stable rename content\n');
     const base = commit();
     writeFileSync(path, 'second\n');
+    writeFileSync(join(cwd, 'src/main/added.ts'), 'new source\n');
+    writeFileSync(join(cwd, 'test/added.test.ts'), 'new test\n');
+    rmSync(join(cwd, 'test/obsolete.ts'));
+    renameSync(join(cwd, 'src/main/old.ts'), join(cwd, 'test/renamed.ts'));
     const head = commit();
     const payload = event({
       pull_request: {
@@ -201,6 +305,24 @@ test('CLI uses exact local git evidence and falls back to full after git/event f
     writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
     assert.equal(collectPackagedDecision(env, cwd).scope, 'app');
     assert.equal(collectPackagedDecision(env, join(cwd, 'src')).scope, 'app');
+    git(['checkout', '--detach', base]);
+    mkdirSync(join(cwd, 'resources'), { recursive: true });
+    writeFileSync(join(cwd, 'resources/base-only.txt'), 'base branch advanced independently\n');
+    payload.pull_request.base.sha = commit(['resources']);
+    git(['checkout', '--detach', head]);
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
+    assert.equal(collectPackagedDecision(env, cwd).scope, 'app', 'diff must start at merge-base');
+    const link = join(cwd, 'src/main/link.ts');
+    symlinkSync('ipc/window.ts', link);
+    payload.pull_request.head.sha = commit();
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
+    assert.equal(collectPackagedDecision(env, cwd).scope, 'full', 'source symlink must stay full');
+    rmSync(link);
+    git(['add', 'src', 'test']);
+    git(['update-index', '--add', '--cacheinfo', `160000,${head},src/main/submodule.ts`]);
+    payload.pull_request.head.sha = commit([]);
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
+    assert.equal(collectPackagedDecision(env, cwd).scope, 'full', 'source gitlink must stay full');
     renameSync(path, join(cwd, 'src/main/ipc/new\nname.ts'));
     payload.pull_request.head.sha = commit();
     writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
