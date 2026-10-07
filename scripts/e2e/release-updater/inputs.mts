@@ -364,13 +364,15 @@ if (process.argv[2] === '--verify-appimage') {
   );
 }
 
-if (process.argv[2] === '--plan-downloads') {
+if (process.argv[2] === '--plan-downloads' || process.argv[2] === '--plan-target-version') {
   const directory = process.argv[3];
   const planSha256 = process.argv[4];
   assert(directory && planSha256);
   const prepared = await readLinuxPlan({ directory, planSha256 });
   process.stdout.write(
-    `${JSON.stringify({ releaseId: prepared.plan.input.target.id, targetVersion: prepared.targetVersion, assets: prepared.assets.map((item) => ({ name: item.name, id: item.assetId })) })}\n`
+    process.argv[2] === '--plan-target-version'
+      ? `${prepared.targetVersion}\n`
+      : `${JSON.stringify({ releaseId: prepared.plan.input.target.id, targetVersion: prepared.targetVersion, assets: prepared.assets.map((item) => ({ name: item.name, id: item.assetId })) })}\n`
   );
 }
 if (process.argv[2] === '--metadata-downloads') {

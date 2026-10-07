@@ -278,7 +278,7 @@ jobs:
                 target=2.17.2
                 stage=(--historical-preview)
                 if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.7 ]]; then
-                  target=$(node /workspace/scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" | jq -er .targetVersion)
+                  target=$(node /workspace/scripts/e2e/release-updater/inputs.mts --plan-target-version "$inputs/stage" "$TEST_PLAN_SHA")
                   test "$TEST_TARGET_MODE" = "staged-$target"
                   stage=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")
                 else test "$TEST_TARGET_MODE" = historical-2.17.2; fi

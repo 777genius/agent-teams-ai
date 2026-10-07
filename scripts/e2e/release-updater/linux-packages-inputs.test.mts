@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   canonical,
@@ -121,6 +123,28 @@ async function fixture(targetVersion: '2.17.6' | '2.17.7') {
     return { directory, planSha256: digest(bytes) };
   }
   return { directory, plan, source, target, persist, stage: await persist() };
+}
+
+for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
+  void test(`Linux plan target-version CLI authenticates ${targetVersion} without PATH tools`, async () => {
+    const input = await fixture(targetVersion);
+    try {
+      const cli = fileURLToPath(new URL('./inputs.mts', import.meta.url));
+      const run = (planSha256: string) =>
+        execFileSync(
+          process.execPath,
+          [cli, '--plan-target-version', input.directory, planSha256],
+          { encoding: 'utf8', env: { ...process.env, PATH: '' }, stdio: ['ignore', 'pipe', 'pipe'] }
+        );
+      assert.equal(run(input.stage.planSha256), `${targetVersion}\n`);
+      assert.throws(() => run('0'.repeat(64)), /Immutable staged plan digest/);
+      input.plan.input.target.tag = 'v2.17.8';
+      const unsupported = await input.persist();
+      assert.throws(() => run(unsupported.planSha256));
+    } finally {
+      await rm(input.directory, { recursive: true, force: true });
+    }
+  });
 }
 
 for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
