@@ -202,7 +202,7 @@ jobs:
           node --test test/scripts/nodeForgeSecurity.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
 
       - name: Test root shard
-        run: pnpm test:ci --shard=${{ matrix.shard }}/2
+        run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/2
 
       - name: Test feedback policy
         if: matrix.shard == 1
