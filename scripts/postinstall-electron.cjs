@@ -14,6 +14,13 @@ async function rebuildNativeModules(modules = NATIVE_MODULES) {
 }
 
 async function postinstallElectron(input = {}) {
+  const profile = input.profile ?? process.env.AGENT_TEAMS_INSTALL_PROFILE ?? 'desktop';
+  if (profile !== 'desktop' && profile !== 'node-ci') {
+    throw new Error(`Unknown install profile: ${profile}`);
+  }
+  // Node-only checks use the dependencies' Node builds, without Electron's ABI.
+  if (profile === 'node-ci') return;
+
   const prepare = input.prepare ?? prepareCpuFeaturesRebuild;
   const rebuild = input.rebuild ?? rebuildNativeModules;
   const ensure = input.ensure ?? ensureElectronInstall;

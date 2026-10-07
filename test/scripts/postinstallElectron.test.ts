@@ -2,13 +2,14 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireScript = createRequire(import.meta.url);
 const { postinstallElectron } = requireScript(
   path.join(process.cwd(), 'scripts/postinstall-electron.cjs')
 ) as {
   postinstallElectron(input: {
+    profile?: string;
     prepare: () => void;
     rebuild: (modules: string[]) => Promise<void>;
     ensure: (input: { strict: boolean }) => void;
@@ -17,6 +18,68 @@ const { postinstallElectron } = requireScript(
 };
 
 describe('Electron postinstall', () => {
+  beforeEach(() => {
+    vi.stubEnv('AGENT_TEAMS_INSTALL_PROFILE', undefined);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+  it('does not provision Electron or rebuild its ABI in the Node CI profile', async () => {
+    const effects: string[] = [];
+    await postinstallElectron({
+      profile: 'node-ci',
+      prepare: () => {
+        effects.push('prepare');
+      },
+      rebuild: async () => {
+        effects.push('rebuild');
+      },
+      ensure: () => {
+        effects.push('ensure');
+      },
+      logger: { warn: vi.fn() },
+    });
+    expect(effects).toEqual([]);
+  });
+
+  it('rejects an unknown profile before install side effects', async () => {
+    const effects: string[] = [];
+    await expect(
+      postinstallElectron({
+        profile: 'unknown',
+        prepare: () => {
+          effects.push('prepare');
+        },
+        rebuild: async () => {
+          effects.push('rebuild');
+        },
+        ensure: () => {
+          effects.push('ensure');
+        },
+        logger: { warn: vi.fn() },
+      })
+    ).rejects.toThrow('Unknown install profile');
+    expect(effects).toEqual([]);
+  });
+
+  it('selects the Node CI profile through the install environment', async () => {
+    vi.stubEnv('AGENT_TEAMS_INSTALL_PROFILE', 'node-ci');
+    const effects: string[] = [];
+    await postinstallElectron({
+      prepare: () => {
+        effects.push('prepare');
+      },
+      rebuild: async () => {
+        effects.push('rebuild');
+      },
+      ensure: () => {
+        effects.push('ensure');
+      },
+      logger: { warn: vi.fn() },
+    });
+    expect(effects).toEqual([]);
+  });
+
   it('rebuilds every required module before strict provisioning when preparation succeeds', async () => {
     const effects: unknown[] = [];
 
