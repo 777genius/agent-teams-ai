@@ -367,18 +367,37 @@ async function validatedJob(commands: MacCommands, value: Receipt, requireState:
 export async function oldMacDownloadedState(commands: MacCommands) {
   return validatedJob(commands, await receipt(commands), true);
 }
-async function safeSignal(commands: MacCommands, owner: MacIdentity, signal: NodeJS.Signals) {
+async function safeSignal(
+  commands: MacCommands,
+  owner: MacIdentity,
+  signal: NodeJS.Signals,
+  priorTerm = false
+) {
   const current = (await macProcesses(commands)).find((entry) => entry.pid === owner.pid);
-  if (!current) return;
+  if (!current) return false;
+  if (priorTerm && current.command !== owner.command) {
+    assert.deepEqual({ ...current, command: owner.command }, owner, 'PID identity changed');
+    assert(current.command === '<defunct>' || /^\([^()]+\)$/.test(current.command));
+    // A prior TERM can change sibling presentation. Never signal this uncertain PID.
+    await waitFor(
+      async () =>
+        (await macProcesses(commands)).some((entry) => entry.pid === owner.pid) ? null : true,
+      'post-TERM uncertain PID exited',
+      5000
+    );
+    return false;
+  }
   assert.deepEqual(current, owner, 'PID identity changed; no signal is safe');
   try {
     process.kill(owner.pid, signal);
+    return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
     assert(
       !(await macProcesses(commands)).some((entry) => entry.pid === owner.pid),
       'Signal raced a reused PID'
     );
+    return false;
   }
 }
 export async function oldMacStopApps(commands: MacCommands) {
@@ -391,9 +410,10 @@ export async function oldMacStopApps(commands: MacCommands) {
     (entry) =>
       entry.command.startsWith(`${value.app}/Contents/`) && !entry.command.endsWith('/ShipIt')
   );
+  let termSent = false;
   for (const entry of before) {
     owns(value, entry);
-    await safeSignal(commands, entry, 'SIGTERM');
+    termSent = (await safeSignal(commands, entry, 'SIGTERM', termSent)) || termSent;
   }
   await pause(1000);
   for (const entry of (await macProcesses(commands)).filter((item) =>
@@ -401,8 +421,7 @@ export async function oldMacStopApps(commands: MacCommands) {
   )) {
     const owner = before.find((item) => item.pid === entry.pid);
     assert(owner);
-    assert.deepEqual(entry, owner);
-    await safeSignal(commands, owner, 'SIGKILL');
+    await safeSignal(commands, owner, 'SIGKILL', termSent);
   }
   await waitFor(
     async () =>
@@ -783,7 +802,7 @@ export async function paintedMacDesktop(
   const pixels = JSON.parse(
     (await commands.checked('read-painted-aqua-ocr', reader, ['--image', screenshot])).stdout
   ) as { width: number; height: number; distinctColors: number; meanRgb: number; text: string };
-  assert(pixels.width >= 300 && pixels.height >= 200 && pixels.distinctColors >= 32);
+  if (!(pixels.width >= 300 && pixels.height >= 200 && pixels.distinctColors >= 32)) return null;
   if (
     /Preparing (?:your )?workspace/i.test(pixels.text) ||
     !/Providers\s*[&+]\s*plans/i.test(pixels.text) ||

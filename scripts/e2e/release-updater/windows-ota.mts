@@ -28,13 +28,13 @@ import {
 import { hashFile } from './inputs.mts';
 import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs } from './windows-mirror.mts';
-import { readPeArchitecture, windowsNative } from './windows-native.mts';
+import { assertCaptionProof, readPeArchitecture, windowsNative } from './windows-native.mts';
 import {
   proveWindowsDownload,
   proveWindowsProvider,
   windowsOtaMirror,
 } from './windows-ota-mirror.mts';
-import { windowsOtaObserver } from './windows-ota-observer.mts';
+import { assertNativeNames, windowsOtaObserver } from './windows-ota-observer.mts';
 import {
   absent,
   appEnvironment,
@@ -460,40 +460,85 @@ async function run() {
     await mkdir(directory);
     const deadline = Date.now() + 45_000;
     const attempts: unknown[] = [];
-    const result = await waitFor(
-      async () => {
-        const window = await native.capture(owner, path.join(directory, 'native.png'));
-        if (!window) return null;
-        const names = await observer.names(owner, window.hwnd);
-        const text = names.join('\n');
-        const contentReady =
-          name === 'available'
-            ? text.includes(targetVersion) && /^Download$/imu.test(text)
-            : /Providers\s*&\s*plans/iu.test(text) && /^Tasks$/imu.test(text);
-        const ready = contentReady && !/Preparing workspace/iu.test(text);
-        attempts.push({ window, names, ready, at: new Date().toISOString() });
-        if (!ready) return null;
-        assert(Date.now() <= deadline, 'Automatic real desktop must paint within 45 seconds');
-        const current = (await native.processes(executable)).find((item) => item.pid === owner.pid);
-        assert.equal(current?.start, owner.start);
-        const image = path.join(output, `${name}-native.png`);
-        await copyFile(window.screenshot, image);
-        assert((await stat(image)).size > 1000);
-        return {
-          ...window,
-          screenshot: image,
-          image: await hashFile(image),
-          names,
-          attempts,
-          ready: true,
-          timeoutMs: 45_000,
-        };
-      },
-      'real owned HWND accessibility content and screenshot',
-      45_000
-    );
-    await writeFile(path.join(output, `${name}-native.json`), JSON.stringify(result, null, 2));
-    return result;
+    const receipt = path.join(output, `${name}-native.json`);
+    const identity = { pid: owner.pid, start: owner.start, sid: owner.sid, session: owner.session };
+    // Read only the existing inspector; the automatic NSIS successor has no inspector.
+    const accessibility =
+      name === 'automatic-successor' || !main
+        ? { available: false, reason: 'No existing main inspector for this owner' }
+        : await main
+            .evaluate<boolean>('require("electron").app.isAccessibilitySupportEnabled()')
+            .then((enabled) => ({ available: true, enabled }))
+            .catch(() => ({ available: false, reason: 'Existing inspector AX state unavailable' }));
+    const persist = (details: object = {}) =>
+      writeFile(
+        receipt,
+        JSON.stringify({ identity, accessibility, attempts, ...details }, null, 2)
+      );
+    try {
+      const result = await waitFor(
+        async () => {
+          assert(attempts.length < 512, 'Native paint attempt budget exceeded');
+          const window = await native.capture(owner, path.join(directory, 'native.png'));
+          if (!window) {
+            attempts.push({ window: null, ready: false, at: new Date().toISOString() });
+            await persist();
+            return null;
+          }
+          const image = path.join(output, `${name}-native.png`);
+          await copyFile(window.screenshot, image);
+          const pixels = await hashFile(image);
+          const attempt = {
+            window,
+            image: pixels,
+            observation: null as Awaited<ReturnType<typeof observer.names>> | null,
+            ready: false,
+            at: new Date().toISOString(),
+          };
+          attempts.push(attempt);
+          await persist(); // Actual pixels survive any subsequent UIA/content failure.
+          assert((await stat(image)).size > 1000);
+          assertCaptionProof(owner.pid, window.hwnd, window.caption);
+          attempt.observation = await observer.names(owner, window.hwnd);
+          await persist(); // Includes UIA Error/HResult and partial owned subtree counters.
+          assertNativeNames(owner.pid, window.hwnd, attempt.observation);
+          const names = attempt.observation.Names;
+          const text = names.join('\n');
+          const contentReady =
+            name === 'available'
+              ? text.includes(targetVersion) && /^Download$/imu.test(text)
+              : /Providers\s*&\s*plans/iu.test(text) && /^Tasks$/imu.test(text);
+          attempt.ready = contentReady && !/Preparing workspace/iu.test(text);
+          await persist();
+          if (!attempt.ready) return null;
+          assert(Date.now() <= deadline, 'Automatic real desktop must paint within 45 seconds');
+          const current = (await native.processes(executable)).find(
+            (item) => item.pid === owner.pid
+          );
+          assert(current, 'Owned process disappeared after native paint');
+          assert.equal(current.start, owner.start);
+          assert.equal(current.sid, owner.sid);
+          assert.equal(current.session, owner.session);
+          return {
+            ...window,
+            screenshot: image,
+            image: pixels,
+            names,
+            attempts,
+            accessibility,
+            ready: true,
+            timeoutMs: 45_000,
+          };
+        },
+        'real owned HWND accessibility content and screenshot',
+        45_000
+      );
+      await persist(result);
+      return result;
+    } catch (error) {
+      await persist({ ready: false, error: String(error).slice(0, 4096) });
+      throw error;
+    }
   }
   async function finishEvidence() {
     if (logError) {

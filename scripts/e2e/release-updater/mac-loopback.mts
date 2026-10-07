@@ -481,23 +481,28 @@ export async function stopMacOwned(commands: MacCommands, owner: MacProcess, app
     );
     return group;
   };
+  // Post-signal presentation changes remain blocking; only members() authorizes signals.
+  const remaining = async () =>
+    (await macProcesses(commands)).filter(
+      (process) => process.pid === owner.pid || process.group === owner.group
+    );
   const before = await members();
   if (before.length) process.kill(-owner.group, 'SIGTERM');
   try {
     await waitFor(
-      async () => ((await members()).length === 0 ? true : null),
+      async () => ((await remaining()).length === 0 ? true : null),
       'Mac owned process group termination',
       3000
     );
   } catch {
     if ((await members()).length) process.kill(-owner.group, 'SIGKILL');
     await waitFor(
-      async () => ((await members()).length === 0 ? true : null),
+      async () => ((await remaining()).length === 0 ? true : null),
       'Mac owned process group forced termination',
       3000
     );
   }
-  return { before, remaining: await members() };
+  return { before, remaining: await remaining() };
 }
 
 // CoreGraphics reads the actual Aqua window owner. Renderer screenshots are separate evidence.

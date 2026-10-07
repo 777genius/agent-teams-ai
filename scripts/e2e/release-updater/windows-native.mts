@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, open, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import {
@@ -25,6 +26,34 @@ export interface WindowsProcess {
   session: number;
   sid: string;
 }
+export interface CaptionProof {
+  pid: number;
+  thread: number;
+  hwnd: string;
+  pointRoot: string;
+  pointPid: number;
+  pointThread: number;
+  hitTest: number;
+  sent: number;
+  error: number;
+  originalTopmost: boolean;
+  promoted: boolean;
+  restored: boolean;
+  restorationError: string | null;
+}
+export function assertCaptionProof(pid: number, hwnd: string, proof: CaptionProof | null) {
+  if (proof === null) return; // Original SetForegroundWindow fast path.
+  assert.equal(proof.pid, pid);
+  assert.equal(proof.hwnd, hwnd);
+  assert.equal(proof.pointRoot, hwnd);
+  assert.equal(proof.pointPid, pid);
+  assert(Number.isInteger(proof.thread) && proof.thread > 0);
+  assert.equal(proof.pointThread, proof.thread);
+  assert.equal(proof.hitTest, 2);
+  assert.equal(proof.sent, 3);
+  assert.equal(proof.restored, true);
+  assert.equal(proof.restorationError, null);
+}
 interface NativeWindow {
   pid: number;
   hwnd: string;
@@ -32,6 +61,7 @@ interface NativeWindow {
   height: number;
   foreground: boolean;
   screenshot: string;
+  caption: CaptionProof | null;
 }
 interface DesktopSession {
   station: string;
@@ -189,6 +219,92 @@ public static class TestWindowsNative {
   [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
   [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+  [StructLayout(LayoutKind.Sequential)] public struct Point { public int X,Y; }
+  [StructLayout(LayoutKind.Sequential)] public struct Mouse { public int X,Y; public uint Data,Flags,Time; public UIntPtr Extra; }
+  [StructLayout(LayoutKind.Sequential)] public struct Input { public uint Type; public Mouse Mouse; }
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point point);
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr hwnd,uint flags);
+  [DllImport("user32.dll",EntryPoint="GetWindowLongPtrW",SetLastError=true)] static extern IntPtr GetWindowLongPtr(IntPtr hwnd,int index);
+  [DllImport("user32.dll",SetLastError=true)] static extern bool SetWindowPos(IntPtr hwnd,IntPtr after,int x,int y,int width,int height,uint flags);
+  [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] inputs,int size);
+  public static object CaptionTrace;
+  public static int InputSize() {
+    int size=Marshal.SizeOf(typeof(Input));
+    if(IntPtr.Size!=8 || size!=40) throw new Exception("Unexpected native INPUT ABI");
+    return size;
+  }
+  static bool Topmost(IntPtr hwnd) {
+    Marshal.SetLastPInvokeError(0); IntPtr style=GetWindowLongPtr(hwnd,-20); int error=Marshal.GetLastWin32Error();
+    if(style==IntPtr.Zero && error!=0) throw new System.ComponentModel.Win32Exception(error);
+    return (style.ToInt64()&8)!=0;
+  }
+  static void SameThread(IntPtr hwnd,uint pid,uint thread,Action validate) {
+    validate(); if(OwnedThread(hwnd,pid)!=thread) throw new Exception("Owned HWND thread changed");
+  }
+  public sealed class CaptionPoint { public string Root="0"; public uint Pid,Thread; public ulong HitTest; }
+  static bool OwnedCaption(IntPtr hwnd,uint pid,uint thread,Point point,out CaptionPoint proof) {
+    IntPtr hit=WindowFromPoint(point); uint hitPid;
+    uint hitThread=GetWindowThreadProcessId(hit,out hitPid);
+    IntPtr root=GetAncestor(hit,2);
+    proof=new CaptionPoint { Root=root.ToInt64().ToString("x"),Pid=hitPid,Thread=hitThread };
+    if(root!=hwnd || hitPid!=pid || hitThread!=thread) return false;
+    UIntPtr result; long packed=((long)(ushort)point.Y<<16)|(ushort)point.X;
+    if(SendMessageTimeout(hwnd,0x84,UIntPtr.Zero,new IntPtr(packed),0x22,500,out result)==IntPtr.Zero) throw new Exception("Caption hit-test unavailable");
+    proof.HitTest=result.ToUInt64(); return proof.HitTest==2;
+  }
+  static bool FindCaption(IntPtr hwnd,uint pid,uint thread,Rect r,int y,out Point point,out CaptionPoint proof,out bool occluded) {
+    point=new Point(); proof=new CaptionPoint(); occluded=false;
+    foreach(int x in new int[] { (r.Left+r.Right)/2,r.Left+(r.Right-r.Left)/4,r.Right-(r.Right-r.Left)/4 }) {
+      if(x<0 || x>=GetSystemMetrics(0) || y<0 || y>=GetSystemMetrics(1)) continue;
+      point=new Point { X=x,Y=y };
+      if(OwnedCaption(hwnd,pid,thread,point,out proof)) return true;
+      if(proof.Root!=hwnd.ToInt64().ToString("x")) occluded=true;
+    }
+    return false;
+  }
+  static void CaptionClick(IntPtr hwnd,uint pid,uint thread,Action validate,Action progress) {
+    SameThread(hwnd,pid,thread,validate); Rect r;
+    if(!GetWindowRect(hwnd,out r)) throw new Exception("Owned window disappeared");
+    Point point=new Point { X=(r.Left+r.Right)/2,Y=r.Top+GetSystemMetrics(33)+GetSystemMetrics(4)/2 };
+    int width=GetSystemMetrics(0),height=GetSystemMetrics(1);
+    if(point.X<0 || point.Y<0 || point.X>=width || point.Y>=height || width>32767 || height>32767) throw new Exception("Caption outside bounded screen");
+    bool original=Topmost(hwnd),promoted=false,restored=false; uint sent=0; int error=0;
+    string restorationError=null; CaptionPoint proof=new CaptionPoint(); bool occluded;
+    CaptionTrace=new { pid,thread,hwnd=hwnd.ToInt64().ToString("x"),originalTopmost=original,promoted,sent,restored,phase="before-effects" };
+    progress();
+    try {
+      SameThread(hwnd,pid,thread,validate);
+      if(!FindCaption(hwnd,pid,thread,r,point.Y,out point,out proof,out occluded)) {
+        if(original || !occluded) throw new Exception("No accessible owned HTCAPTION point");
+        SameThread(hwnd,pid,thread,validate); promoted=true;
+        if(!SetWindowPos(hwnd,new IntPtr(-1),0,0,0,0,0x213) || !Topmost(hwnd)) throw new Exception("Owned TOPMOST promotion failed");
+      }
+      SameThread(hwnd,pid,thread,validate);
+      if(!FindCaption(hwnd,pid,thread,r,point.Y,out point,out proof,out occluded)) throw new Exception("Owned caption occluded or no HTCAPTION point");
+      Input[] inputs=new Input[] {
+        new Input { Mouse=new Mouse { X=(int)((long)point.X*65536/width)+1,Y=(int)((long)point.Y*65536/height)+1,Flags=0x8001 } },
+        new Input { Mouse=new Mouse { Flags=2 } }, new Input { Mouse=new Mouse { Flags=4 } }
+      };
+      SameThread(hwnd,pid,thread,validate);
+      if(width!=GetSystemMetrics(0) || height!=GetSystemMetrics(1) || point.X<0 || point.X>=width || point.Y<0 || point.Y>=height) throw new Exception("Selected caption outside unchanged primary screen");
+      if(!OwnedCaption(hwnd,pid,thread,point,out proof)) throw new Exception("Selected caption changed before input");
+      Marshal.SetLastPInvokeError(0); sent=SendInput(3,inputs,InputSize()); error=Marshal.GetLastWin32Error();
+      if(sent!=3) throw new Exception("Caption input incomplete or blocked; UIPI cause is unknown");
+      SameThread(hwnd,pid,thread,validate);
+      if(!OwnedCaption(hwnd,pid,thread,point,out proof)) throw new Exception("Caption ownership changed after input");
+      UIntPtr ignored;
+      if(SendMessageTimeout(hwnd,0,UIntPtr.Zero,IntPtr.Zero,0x22,500,out ignored)==IntPtr.Zero || GetForegroundWindow()!=hwnd) throw new Exception("Caption click did not activate owned HWND");
+    } finally {
+      try {
+        SameThread(hwnd,pid,thread,validate);
+        if(promoted && !SetWindowPos(hwnd,new IntPtr(-2),0,0,0,0,0x213)) throw new Exception("Owned TOPMOST restoration failed");
+        SameThread(hwnd,pid,thread,validate); restored=Topmost(hwnd)==original;
+        if(!restored) throw new Exception("Owned TOPMOST restoration uncertain");
+      } catch(Exception cleanup) { restorationError=cleanup.Message; }
+      CaptionTrace=new { pid,thread,hwnd=hwnd.ToInt64().ToString("x"),x=point.X,y=point.Y,pointRoot=proof.Root,pointPid=proof.Pid,pointThread=proof.Thread,hitTest=proof.HitTest,originalTopmost=original,promoted,sent,error,restored,restorationError };
+      if(restorationError!=null) throw new Exception(restorationError);
+    }
+  }
   public static object[] FocusTrace;
   static uint OwnedThread(IntPtr hwnd, uint expectedPid) {
     uint pid; uint thread=GetWindowThreadProcessId(hwnd, out pid);
@@ -209,7 +325,8 @@ public static class TestWindowsNative {
     }, IntPtr.Zero);
     return found;
   }
-  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file) {
+  public static int[] Capture(IntPtr hwnd, uint expectedPid, string file, Action validate, Action progress) {
+    CaptionTrace=null; validate();
     uint thread=OwnedThread(hwnd,expectedPid);
     ShowWindow(hwnd, 9);
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
@@ -223,16 +340,23 @@ public static class TestWindowsNative {
     uint foregroundThread=GetWindowThreadProcessId(foreground,out foregroundPid);
     FocusTrace=new object[] { hwnd.ToInt64().ToString("x"), expectedPid, thread, foreground.ToInt64().ToString("x"), foregroundPid, foregroundThread, GetCurrentThreadId(), accepted, synchronized };
     if (OwnedThread(hwnd,expectedPid) != thread) throw new Exception("HWND thread changed");
-    if ((accepted && !synchronized) || foreground != hwnd) return null;
+    if ((accepted && !synchronized) || foreground != hwnd) {
+      CaptionClick(hwnd,expectedPid,thread,validate,progress);
+      if(GetForegroundWindow()!=hwnd) throw new Exception("Owned foreground changed after caption fallback");
+    }
+    SameThread(hwnd,expectedPid,thread,validate);
     Rect r; if (!GetWindowRect(hwnd, out r)) throw new Exception("Window disappeared");
     // Copy actual desktop pixels belonging to this visible foreground HWND.
     int left=Math.Max(0,r.Left), top=Math.Max(0,r.Top);
     int width=Math.Min(r.Right,GetSystemMetrics(0))-left, height=Math.Min(r.Bottom,GetSystemMetrics(1))-top;
     if (width < 300 || height < 200) throw new Exception("Owned window has insufficient visible screen area");
+    if(GetForegroundWindow()!=hwnd) throw new Exception("Owned foreground changed before pixels");
     using (Bitmap image = new Bitmap(width,height)) {
       using (Graphics graphics = Graphics.FromImage(image)) graphics.CopyFromScreen(left,top,0,0,new Size(width,height));
       image.Save(file,ImageFormat.Png);
     }
+    SameThread(hwnd,expectedPid,thread,validate);
+    if(GetForegroundWindow()!=hwnd) throw new Exception("Owned foreground changed during pixels");
     return new int[] { (int)expectedPid, width, height };
   }
 }
@@ -241,6 +365,7 @@ Write-TestProgress 'after-native-compile'
 Write-TestProgress 'operation-entry'
 $result = $null
 switch ($data.operation) {
+  'compile' { $result=@{ inputSize=[TestWindowsNative]::InputSize(); pointerSize=[IntPtr]::Size } }
   'profile' {
     foreach($registry in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
       if (Test-Path -LiteralPath $registry) {
@@ -258,19 +383,24 @@ switch ($data.operation) {
   }
   'processes' { $result=@(Read-Owned $data.executable) }
   'capture' {
-    $process=@(Read-Owned $data.executable) | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) }
-    if (@($process).Count -ne 1) { throw 'Owned PID changed before native capture' }
+    $validate=[Action] {
+      $process=@(Read-Owned $data.executable | Where-Object { $_.pid -eq $data.pid -and (Test-SameStart $_.start $data.start) -and $_.sid -eq $data.sid -and $_.session -eq $data.session })
+      if ($process.Count -ne 1) { throw 'Owned process identity changed during native capture' }
+    }
+    $validate.Invoke()
     $handle=[TestWindowsNative]::VisibleWindow($data.pid)
     if ($handle -eq [IntPtr]::Zero) { $result=$null; break }
     $file=Test-OwnedPath $data.screenshot
-    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file) }
+    $attemptProgress=[Action] { Write-TestProgress 'caption-before-effects' @{ trace=[TestWindowsNative]::CaptionTrace } }
+    try { $pixels=[TestWindowsNative]::Capture($handle,$data.pid,$file,$validate,$attemptProgress) }
     finally {
+      Write-TestProgress 'caption-attempt' @{ trace=[TestWindowsNative]::CaptionTrace }
       $focus=[TestWindowsNative]::FocusTrace
       if ($null -ne $focus) { Write-TestProgress 'capture-focus' @{ desiredHwnd=$focus[0]; desiredPid=$focus[1]; desiredThread=$focus[2]; foregroundHwnd=$focus[3]; foregroundPid=$focus[4]; foregroundThread=$focus[5]; callerThread=$focus[6]; setForegroundAccepted=$focus[7]; synchronizationSucceeded=$focus[8] } }
     }
     if ($null -eq $pixels) { Write-TestProgress 'capture-foreground-pending'; $result=$null; break }
     if ($pixels[0] -ne $data.pid) { throw 'HWND owner changed' }
-    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file }
+    $result=@{ pid=$pixels[0]; hwnd=$handle.ToInt64().ToString('x'); width=$pixels[1]; height=$pixels[2]; foreground=$true; screenshot=$file; caption=[TestWindowsNative]::CaptionTrace }
   }
   'signature' {
     $file=Test-OwnedPath $data.file
@@ -413,6 +543,7 @@ export async function windowsNative(root: string, evidence: string) {
     );
     return JSON.parse(result.stdout.trim()) as T;
   }
+  await call('compile');
   return {
     priorFixtureGuard: (files: string[], registry: boolean) =>
       call<{
@@ -466,7 +597,11 @@ export async function readPeArchitecture(file: string) {
   }
 }
 
-if (process.argv.includes('--cleanup')) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href &&
+  process.argv.includes('--cleanup')
+) {
   assert.equal(process.env.GITHUB_ACTIONS, 'true');
   const index = process.argv.indexOf('--cleanup');
   const file = process.argv[index + 1];
