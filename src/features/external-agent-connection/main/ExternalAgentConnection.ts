@@ -12,6 +12,7 @@ interface ConnectionDependencies {
   getProfileFingerprint(): string;
   isLocalContext(): boolean;
   getControlUrl(): string | null;
+  getBoundControlUrl(): string | null;
   startControl(): Promise<void>;
   mcp: {
     getCurrentHandle(): { url: string; generation: number } | null;
@@ -22,11 +23,14 @@ interface ConnectionDependencies {
 /** Projects existing control/MCP lifecycle and native CDP discovery into one live DTO. */
 export class ExternalAgentConnection {
   private startError: string | null = null;
+  private starting = false;
+  private wasReady = false;
 
   constructor(private readonly deps: ConnectionDependencies) {}
 
   async retryConnection(): Promise<ConnectionInfoV1> {
     this.startError = null;
+    this.starting = true;
     try {
       if (!this.deps.isLocalContext() || !this.deps.context.isOpen) {
         throw new Error('Select the local app context before connecting.');
@@ -35,6 +39,8 @@ export class ExternalAgentConnection {
       await this.deps.mcp.ensureStarted();
     } catch (error) {
       this.startError = error instanceof Error ? error.message : 'Cannot start the app connection';
+    } finally {
+      this.starting = false;
     }
     return this.getConnectionInfo();
   }
@@ -43,7 +49,9 @@ export class ExternalAgentConnection {
     const context = this.deps.context.snapshot();
     const handle = this.deps.mcp.getCurrentHandle();
     const local = this.deps.isLocalContext();
-    const controlReady = local && this.deps.context.isOpen && Boolean(this.deps.getControlUrl());
+    const controlUrl = this.deps.getControlUrl();
+    const controlReady = local && this.deps.context.isOpen && Boolean(controlUrl);
+    const transportMatches = controlUrl === this.deps.getBoundControlUrl();
     const { cdp, reason: cdpReason } = local
       ? await this.deps.cdp.read(this.deps.getCdpEnabled(), this.deps.getMainContents(), context)
       : {
@@ -61,13 +69,22 @@ export class ExternalAgentConnection {
     const stable =
       liveContext.connectionGeneration === context.connectionGeneration &&
       liveContext.dataRootFingerprint === context.dataRootFingerprint &&
-      this.deps.mcp.getCurrentHandle() === handle;
-    const ready = controlReady && stable && handle !== null;
+      this.deps.mcp.getCurrentHandle() === handle &&
+      this.deps.getControlUrl() === controlUrl;
+    const ready = controlReady && stable && transportMatches && handle !== null;
+    if (ready) this.wasReady = true;
+    const failure =
+      this.startError ??
+      (!this.starting && this.wasReady && !handle
+        ? 'The MCP child stopped. Retry the app connection.'
+        : handle && !transportMatches
+          ? 'The control listener changed. Retry the app connection.'
+          : null);
     const reason = !local
       ? 'External connections support the local app context only.'
       : !stable
         ? 'App context changed during discovery. Refresh connection info.'
-        : (this.startError ?? cdpReason);
+        : (failure ?? cdpReason);
     return {
       schemaVersion: 1,
       context,
@@ -75,7 +92,7 @@ export class ExternalAgentConnection {
       profileFingerprint: this.deps.getProfileFingerprint(),
       observedAt: new Date().toISOString(),
       mcp: {
-        status: ready ? 'ready' : this.startError || !local ? 'error' : 'starting',
+        status: ready ? 'ready' : failure || !local ? 'error' : 'starting',
         transport: 'httpStream',
         url: ready ? handle.url : null,
         generation: handle?.generation ?? 0,
@@ -97,7 +114,7 @@ export class ExternalAgentConnection {
       },
       errorCode: !local
         ? 'LOCAL_CONTEXT_REQUIRED'
-        : this.startError
+        : failure
           ? 'MCP_START_FAILED'
           : cdp.status === 'error'
             ? 'CDP_DISCOVERY_FAILED'
@@ -105,7 +122,7 @@ export class ExternalAgentConnection {
       reason,
       recovery: !local
         ? 'Switch to the local context.'
-        : this.startError
+        : failure
           ? 'Retry the app connection.'
           : cdp.status === 'restart-required'
             ? 'Restart the app to apply renderer access settings.'

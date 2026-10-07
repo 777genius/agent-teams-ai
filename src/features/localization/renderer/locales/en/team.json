@@ -3151,6 +3151,19 @@
       }
     }
   },
+  "templates": {
+    "label": "Team template",
+    "placeholder": "Start from a team template",
+    "names": {
+      "feature": "Build a feature",
+      "bug": "Fix a bug",
+      "review": "Review code",
+      "research": "Research a solution"
+    },
+    "providerLabel": "Choose team provider",
+    "providerPlaceholder": "Choose a provider",
+    "modelAfterProvider": "Model selection is available after choosing a provider."
+  },
   "externalPrompt": {
     "title": "Manage teams with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",

@@ -15,6 +15,8 @@
   "sonarjs/publicly-writable-directories": "off",
   "sonarjs/use-type-alias": "warn"
 */
+import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
+import type { NativeRendererCdp } from '@features/external-agent-connection/main/NativeRendererCdp';
 import {
   buildWorkspaceTrustPathCandidates,
   type WorkspaceTrustWorkspace,
@@ -1345,6 +1347,139 @@ describe('TeamProvisioningService', () => {
     hoisted.paths.tasksBase = '';
     hoisted.paths.projectsBase = '';
   });
+
+  // Missing pending or mixed ownership would let a root switch kill a launch's HTTP MCP child.
+  it.each([
+    ['pending OpenCode', 'opencode', 'pending', false, false, true],
+    ['active OpenCode', 'opencode', 'active', false, false, true],
+    ['pending mixed roster', 'anthropic', 'pending', true, false, true],
+    ['active mixed queued lane', 'anthropic', 'active', false, true, true],
+    ['active mixed finished lane', 'anthropic', 'secondary', false, false, true],
+    ['runtime adapter OpenCode', 'opencode', 'adapter', false, false, true],
+    ['Anthropic runtime', 'anthropic', 'active', false, false, false],
+    ['stopped OpenCode', 'opencode', 'stopped', false, false, false],
+    ['finished unowned mixed lane', 'anthropic', 'active', false, false, false],
+  ] as const)(
+    'identifies HTTP MCP runtime consumers: %s',
+    (_name, provider, owner, mixedRoster, queuedLane, expected) => {
+      const service = new TeamProvisioningService();
+      const state = service as unknown as OpenCodeIsolationHarness & {
+        provisioningRunByTeam: Map<string, string>;
+      };
+      const run = createMemberSpawnRun();
+      run.request.providerId = provider;
+      run.allEffectiveMembers = mixedRoster ? [{ name: 'alice', providerId: 'opencode' }] : [];
+      run.mixedSecondaryLanes = [
+        { providerId: 'opencode', state: queuedLane ? 'queued' : 'finished' },
+      ];
+      state.runs.set(run.runId, run);
+      if (owner === 'pending') state.provisioningRunByTeam.set(run.teamName, run.runId);
+      if (owner === 'active' || owner === 'secondary')
+        state.aliveRunByTeam.set(run.teamName, run.runId);
+      if (owner === 'adapter')
+        state.runtimeAdapterRunByTeam.set(run.teamName, { runId: run.runId, providerId: provider });
+      if (owner === 'secondary')
+        state.setSecondaryRuntimeRun({
+          teamName: run.teamName,
+          runId: 'side-run',
+          providerId: 'opencode',
+          laneId: 'alice',
+          memberName: 'alice',
+        });
+      expect(service.hasLiveOpenCodeMcpConsumers()).toBe(expected);
+      expect(spawnCli).not.toHaveBeenCalled();
+    }
+  );
+
+  // Either ordering must stop a native IPC launch from crossing a root/context rebind.
+  it.each(['createTeam', 'launchTeam'] as const)(
+    'fences %s before its first await and rejects during context drain',
+    async (method) => {
+      const service = new TeamProvisioningService();
+      const internals = service as unknown as {
+        waitForOpenCodeAggregatePrimaryRestart(teamName: string): Promise<string | null>;
+        requestAdmissionBoundary: {
+          createTeam: typeof service.createTeam;
+          launchTeam: typeof service.launchTeam;
+        };
+        provisioningRunByTeam: Map<string, string>;
+      };
+      let resume!: () => void;
+      const wait = vi
+        .spyOn(internals, 'waitForOpenCodeAggregatePrimaryRestart')
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resume = () => resolve(null);
+            })
+        );
+      const boundary = vi
+        .spyOn(internals.requestAdmissionBoundary, method)
+        .mockRejectedValue(new Error('sandbox launch stopped'));
+      const applyContext = vi.fn();
+      const connection = createDesktopExternalAgentConnection({
+        appInstanceId: 'sandbox-launch-admission',
+        userDataPath: tempClaudeRoot,
+        getRoot: () => tempClaudeRoot,
+        getMainContents: () => null,
+        getCdpEnabled: () => false,
+        getAppVersion: () => 'test',
+        isLocalContext: () => true,
+        getControlUrl: () => 'http://127.0.0.1:41000',
+        startControl: async () => undefined,
+        reconfigureRoot: async () => undefined,
+        httpEnabled: true,
+        assertNoLiveRuntimeConsumers: () => {
+          if (service.hasLiveOpenCodeMcpConsumers())
+            throw new Error('Stop teams before context switch');
+        },
+        cdp: {
+          read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+        } as unknown as NativeRendererCdp,
+        mcp: {
+          getCurrentHandle: () => null,
+          ensureStarted: async () => undefined,
+          stop: async () => undefined,
+          appContext: { bind: () => () => undefined },
+        },
+      });
+      service.setLaunchAdmissionGuard(connection.assertLaunchAdmission);
+      const request: TeamCreateRequest = {
+        teamName: 'sandbox-admission',
+        cwd: tempClaudeRoot,
+        members: [],
+        providerId: 'opencode',
+      };
+      let finishChange!: () => void;
+      try {
+        const pending = service[method](request, vi.fn());
+        const stopped = expect(pending).rejects.toThrow('sandbox launch stopped');
+        // The reservation is visible synchronously, before metadata/run registration.
+        await expect(connection.changeContext(applyContext)).rejects.toThrow('Stop teams');
+        expect(applyContext).not.toHaveBeenCalled();
+        resume();
+        await stopped;
+        const changing = connection.changeContext(
+          () =>
+            new Promise<void>((resolve) => {
+              finishChange = resolve;
+            })
+        );
+        await vi.waitFor(() => expect(finishChange).toBeTypeOf('function'));
+        await expect(service[method](request, vi.fn())).rejects.toThrow('changing context');
+        expect(wait).toHaveBeenCalledTimes(1);
+        expect(boundary).toHaveBeenCalledTimes(1);
+        expect(internals.provisioningRunByTeam.size).toBe(0);
+        expect(spawnCli).not.toHaveBeenCalled();
+        finishChange();
+        await changing;
+      } finally {
+        resume?.();
+        finishChange?.();
+        await connection.shutdown();
+      }
+    }
+  );
 
   describe('warmup', () => {
     it('does not throw when spawnCli rejects', async () => {

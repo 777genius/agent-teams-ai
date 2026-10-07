@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ export const TeamTemplatePicker = ({
 }: {
   onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   return (
     <Select
       value=""
@@ -25,13 +27,13 @@ export const TeamTemplatePicker = ({
         if (template) onApply(applyTeamTemplate(template));
       }}
     >
-      <SelectTrigger aria-label="Team template">
-        <SelectValue placeholder="Start from a team template" />
+      <SelectTrigger aria-label={t('templates.label')}>
+        <SelectValue placeholder={t('templates.placeholder')} />
       </SelectTrigger>
       <SelectContent>
         {TEAM_TEMPLATES.map((template) => (
           <SelectItem key={template.id} value={template.id}>
-            {template.name}
+            {t(`templates.names.${template.id}`)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -46,14 +48,15 @@ export const UnselectedTeamProvider = ({
   onSelect: (provider: TeamProviderId) => void;
   anthropicOnly?: boolean;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore(
     (state) => state.appConfig?.general?.multimodelEnabled ?? true
   );
   return (
     <div className="space-y-1">
       <Select value="" onValueChange={(value) => onSelect(value as TeamProviderId)}>
-        <SelectTrigger aria-label="Choose team provider">
-          <SelectValue placeholder="Choose a provider" />
+        <SelectTrigger aria-label={t('templates.providerLabel')}>
+          <SelectValue placeholder={t('templates.providerPlaceholder')} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="anthropic">Claude</SelectItem>
@@ -65,9 +68,7 @@ export const UnselectedTeamProvider = ({
           ) : null}
         </SelectContent>
       </Select>
-      <p className="text-xs text-text-secondary">
-        Model selection is available after choosing a provider.
-      </p>
+      <p className="text-xs text-text-secondary">{t('templates.modelAfterProvider')}</p>
     </div>
   );
 };

@@ -4080,9 +4080,6 @@ export default interface Resources {
         "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
         "unsavedTitle": "Unsaved Changes"
       },
-      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
-      "showInFolder": "Show in folder",
-      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
       "draftRecovered": "Recovered unsaved changes from a previous session.",
       "empty": {
         "selectFile": "Select a file from the tree to edit"
@@ -4115,6 +4112,8 @@ export default interface Resources {
         "openFullSize": "Open full-size preview",
         "openSystemViewer": "Open in System Viewer"
       },
+      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
+      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
       "newFile": {
         "aria": {
           "newFileName": "New file name",
@@ -4198,6 +4197,7 @@ export default interface Resources {
         },
         "title": "Keyboard Shortcuts"
       },
+      "showInFolder": "Show in folder",
       "sidebar": {
         "explorer": "Explorer",
         "hide": "Hide sidebar",
@@ -6512,6 +6512,19 @@ export default interface Resources {
       "warningMissingClaudeMd": "No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.",
       "warningUnknownTaskOwner": "Task {{description}} referenced unknown member {{owner}} and was imported without an owner.",
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
+    },
+    "templates": {
+      "label": "Team template",
+      "modelAfterProvider": "Model selection is available after choosing a provider.",
+      "names": {
+        "bug": "Fix a bug",
+        "feature": "Build a feature",
+        "research": "Research a solution",
+        "review": "Review code"
+      },
+      "placeholder": "Start from a team template",
+      "providerLabel": "Choose team provider",
+      "providerPlaceholder": "Choose a provider"
     },
     "terminalWorkspace": {
       "backgroundModeImage": "Image",

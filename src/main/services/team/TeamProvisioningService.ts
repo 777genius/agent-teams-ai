@@ -68,6 +68,52 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     this.initializeTeamProvisioningService();
   }
 
+  private launchAdmissionGuard: (() => void) | null = null;
+  private pendingLaunchAdmissions = 0;
+
+  setLaunchAdmissionGuard(guard: () => void): void {
+    this.launchAdmissionGuard = guard;
+  }
+
+  private async withLaunchAdmission<T>(launch: () => Promise<T>): Promise<T> {
+    this.launchAdmissionGuard?.();
+    this.pendingLaunchAdmissions++;
+    try {
+      return await launch();
+    } finally {
+      this.pendingLaunchAdmissions--;
+    }
+  }
+
+  /** Tracked pending launches and live OpenCode lanes consume the app-owned HTTP bridge. */
+  hasLiveOpenCodeMcpConsumers(): boolean {
+    // Metadata/provider selection may still be unresolved before a run is registered.
+    if (this.pendingLaunchAdmissions > 0) return true;
+    if ([...this.runtimeAdapterRunByTeam.values()].some((run) => run.providerId === 'opencode')) {
+      return true;
+    }
+    if ([...this.secondaryRuntimeRunByTeam.values()].some((lanes) => lanes.size > 0)) {
+      return true;
+    }
+    for (const run of this.runs.values()) {
+      if (run.processKilled || run.cancelRequested) continue;
+      const pending = this.provisioningRunByTeam.get(run.teamName) === run.runId;
+      if (!pending && this.runTracking.getAliveRunId(run.teamName) !== run.runId) continue;
+      if (run.request.providerId === 'opencode') return true;
+      if (pending && run.allEffectiveMembers.some((member) => member.providerId === 'opencode')) {
+        return true;
+      }
+      if (
+        run.mixedSecondaryLanes.some(
+          (lane) => !lane.blockedBeforeLaunch && lane.state !== 'finished'
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
   }
@@ -185,17 +231,21 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.createTeam(request, onProgress);
+    return this.withLaunchAdmission(async () => {
+      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+      await this.waitForMemberLifecycleOperations(request.teamName);
+      return this.requestAdmissionBoundary.createTeam(request, onProgress);
+    });
   }
 
   async launchTeam(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.launchTeam(request, onProgress);
+    return this.withLaunchAdmission(async () => {
+      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+      await this.waitForMemberLifecycleOperations(request.teamName);
+      return this.requestAdmissionBoundary.launchTeam(request, onProgress);
+    });
   }
 }
