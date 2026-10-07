@@ -87,7 +87,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(worktree ? { worktree } : {}),
           ...(extraCliArgs ? { extraCliArgs } : {}),
           ...(allowExperimentalLocalModels !== undefined ? { allowExperimentalLocalModels } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
           ...(waitForReady !== undefined ? { waitForReady } : {}),
         })
@@ -106,7 +106,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       assertConfiguredTeam(teamName, claudeDir);
       return jsonTextContent(
         await getController(teamName, claudeDir).runtime.stopTeam({
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
           ...(waitForStop !== undefined ? { waitForStop } : {}),
         })
@@ -145,7 +145,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(observedAt ? { observedAt } : {}),
           ...(diagnostics ? { diagnostics } : {}),
           ...(metadata ? { metadata } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
@@ -195,7 +195,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(createdAt ? { createdAt } : {}),
           ...(summary ? { summary } : {}),
           ...(taskRefs ? { taskRefs } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
@@ -244,7 +244,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(createdAt ? { createdAt } : {}),
           ...(summary ? { summary } : {}),
           ...(metadata ? { metadata } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
@@ -281,7 +281,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
           ...(observedAt ? { observedAt } : {}),
           ...(status ? { status } : {}),
           ...(metadata ? { metadata } : {}),
-          ...(controlUrl ? { controlUrl } : {}),
+          ...(controlUrl !== undefined ? { controlUrl } : {}),
           ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
