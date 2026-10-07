@@ -648,6 +648,20 @@ jobs:
           test -f resources/terminal-platform/terminal-daemon
           test -f resources/terminal-platform/terminal-platform-node/index.mjs
 
+      - name: Verify Apple signing credentials (macOS)
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test "${APPLE_TEAM_ID:-}" = "86399583GS" || { echo "Unexpected APPLE_TEAM_ID" >&2; exit 1; }
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
+            test -n "${!name:-}" || { echo "Missing $name" >&2; exit 1; }
+          done
+
       - name: Package (macOS ${{ matrix.arch }})
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -657,6 +671,9 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: ${{ matrix.dist_command }} --publish never
+
+      - name: Verify signed and notarized bundle (macOS ${{ matrix.arch }})
+        run: bash scripts/ci/verify-macos-signing.sh "release/mac-${{ matrix.arch }}/Agent Teams AI.app" --notarized
 
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin ${{ matrix.arch }}
