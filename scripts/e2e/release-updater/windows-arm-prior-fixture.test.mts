@@ -152,7 +152,20 @@ void test('authenticated actual ARM211 7z listing preserves900files126directorie
   assertRepairManifest(
     entries.map((entry) => ({ ...entry, name: entry.name.replaceAll('\\', '/') }))
   );
-  assertRepairManifest(entries.map((entry) => ({ ...entry, name: entry.name.replace('\\', '/') })));
+  // Change exactly the first separator to exercise mixed Windows/POSIX member names.
+  const mixedSeparators = entries.map((entry) => {
+    const firstSeparator = entry.name.indexOf('\\');
+    const name =
+      firstSeparator < 0
+        ? entry.name
+        : `${entry.name.slice(0, firstSeparator)}/${entry.name.slice(firstSeparator + 1)}`;
+    return { ...entry, name };
+  });
+  assert(
+    mixedSeparators.some((entry) => entry.name.includes('/') && entry.name.includes('\\')),
+    'The fixture must retain mixed separators'
+  );
+  assertRepairManifest(mixedSeparators);
   for (const name of [
     '../outside',
     '..\\outside',

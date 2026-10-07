@@ -671,6 +671,31 @@ async function run() {
     if (!(await point('^Download$'))) await click('^(?:Update app|View details)$');
     await waitFor(() => point('^Download$'), 'original Download button');
     await screenshot('available');
+    // Original 211 fixed update overlays are no-drag; establish owned foreground first.
+    assert.equal(
+      await renderer!.evaluate<number>('document.querySelectorAll("[role=dialog]").length'),
+      1
+    );
+    await renderer!.evaluate(
+      'document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape", bubbles:true}))'
+    );
+    await waitFor(
+      () => renderer!.evaluate<boolean>('!document.querySelector("[role=dialog]")'),
+      'original update dialog closes before owned caption proof'
+    );
+    evidence.captionReadyNative = await nativePaint(initial.owner, 'caption-ready');
+    await click('^(?:Update app|View details)$');
+    await waitFor(() => point('^Download$'), 'reopened original Download button');
+    const reopened = await renderer!.evaluate<string>(
+      'document.querySelector("[role=dialog]").innerText'
+    );
+    assert(reopened.includes(targetVersion));
+    assert(
+      (await state()).events.some(
+        (event) => event.type === 'available' && event.version === targetVersion
+      )
+    );
+    evidence.reopenedAvailableDialog = reopened;
     evidence.availableNative = await nativePaint(initial.owner, 'available');
     const cachedInstaller = path.join(root, 'cache', 'installer.exe');
     const cachedBlockmap = path.join(root, 'cache', 'current.blockmap');
