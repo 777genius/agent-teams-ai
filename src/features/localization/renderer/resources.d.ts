@@ -1290,6 +1290,7 @@ export default interface Resources {
           "invalidDraft": "Check the limits and thresholds in your edited scopes.",
           "invalidLimit": "Enter a finite positive number.",
           "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
+          "legacyCombinedExplanation": "This migrated budget combines anonymous runs and the team named unassigned. It can be edited or deleted. Once deleted, it cannot be created again.",
           "newThreshold": "New threshold",
           "noThresholds": "No threshold notifications configured.",
           "notifications": "Budget notifications",
@@ -1377,7 +1378,7 @@ export default interface Resources {
         "tokens": "tokens",
         "tokensCost": "{{tokens}} tokens / {{cost}}",
         "total": "Total",
-        "unassigned": "Unassigned",
+        "unassigned": "Anonymous runs",
         "unknownAgent": "Unknown agent"
       },
       "metrics": {
@@ -4058,9 +4059,13 @@ export default interface Resources {
         "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
         "unsavedTitle": "Unsaved Changes"
       },
-      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
-      "showInFolder": "Show in folder",
-      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
+      "documentPreview": {
+        "limit": "Preview is available for documents up to {{size}} MiB.",
+        "loading": "Loading document preview...",
+        "readOnly": "Read-only document preview",
+        "title": "Document preview",
+        "unavailable": "Preview unavailable. The document may be encrypted, damaged, or unsupported."
+      },
       "draftRecovered": "Recovered unsaved changes from a previous session.",
       "empty": {
         "selectFile": "Select a file from the tree to edit"
@@ -4093,6 +4098,8 @@ export default interface Resources {
         "openFullSize": "Open full-size preview",
         "openSystemViewer": "Open in System Viewer"
       },
+      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
+      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
       "newFile": {
         "aria": {
           "newFileName": "New file name",
@@ -4176,6 +4183,7 @@ export default interface Resources {
         },
         "title": "Keyboard Shortcuts"
       },
+      "showInFolder": "Show in folder",
       "sidebar": {
         "explorer": "Explorer",
         "hide": "Hide sidebar",
