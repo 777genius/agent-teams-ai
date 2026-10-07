@@ -480,6 +480,15 @@ describe('ipc teams handlers', () => {
   };
 
   const service = {
+    runConfigurationOperation: vi.fn(
+      async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+        let result!: T;
+        await teamHandlerMocks.runLiveRosterMutation(teamName, async () => {
+          result = await operation();
+        });
+        return result;
+      }
+    ),
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
     getTeamData: vi.fn(
       (): Promise<TeamViewSnapshot & { messages?: InboxMessage[] }> =>

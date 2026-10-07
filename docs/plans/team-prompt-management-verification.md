@@ -31,6 +31,7 @@ Passed:
 - Production source-size and provisioning architecture guards passed without raising baselines.
 - Independent backend review accepted `8dcc611ad248cb08a84b95614cb7e7f55ddab2de`; later commits do not change backend semantics. Independent UI review accepted `34844cc41ade1f72d1446598d518d4d65d625722`; final harness review accepted the tested source above.
 - Two independent plan reviews accepted the bounded implementation plan.
+- The first full CI exposed four outdated fixtures (prototype-only service instances, missing mock/AST ports, and metadata already above the existing reader limit). Only these fixtures were corrected; all 283 tests in those suites and full project typecheck then passed on the worker. Native desktop product/harness source above remained unchanged.
 
 ## Limits
 

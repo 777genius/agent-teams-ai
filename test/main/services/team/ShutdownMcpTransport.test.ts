@@ -164,6 +164,8 @@ describe('shutdown MCP transport authority', () => {
           });
           return { ...connection, start: () => connection!.retryConnection() };
         },
+        teamDataService: {},
+        forwardTeamChangeToRendererAndHttp: vi.fn(),
         initializedBackupOwner: { initialize: restore },
         preparedMemberWorkSyncFeature: { startBackground, dispose: vi.fn() },
         startPreparedMemberWorkSyncFeature,
