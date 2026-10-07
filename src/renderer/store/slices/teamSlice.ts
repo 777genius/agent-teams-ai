@@ -1,6 +1,9 @@
 import {
   type QueuedMessagesHeadRead,
   queueMessagesHeadRead,
+  readTeamData,
+  readTeamMemberActivity,
+  readTeamMessagesPage,
 } from '@features/team-read-recovery/renderer';
 import {
   buildProviderMix,
@@ -877,11 +880,7 @@ function fetchTeamDataDeduped(
   }
 
   const request = withTimeout(
-    unwrapIpc('team:getData', () =>
-      normalizedOptions === undefined
-        ? api.teams.getData(teamName)
-        : api.teams.getData(teamName, normalizedOptions)
-    ),
+    unwrapIpc('team:getData', () => readTeamData(teamName, normalizedOptions)),
     TEAM_GET_DATA_TIMEOUT_MS,
     getTeamDataRequestLabel(teamName, normalizedOptions)
   ).finally(() => {
@@ -900,11 +899,7 @@ function fetchTeamDataFresh(
 ): Promise<TeamViewSnapshot> {
   const normalizedOptions = normalizeTeamGetDataOptions(options);
   return withTimeout(
-    unwrapIpc('team:getData', () =>
-      normalizedOptions === undefined
-        ? api.teams.getData(teamName)
-        : api.teams.getData(teamName, normalizedOptions)
-    ),
+    unwrapIpc('team:getData', () => readTeamData(teamName, normalizedOptions)),
     TEAM_GET_DATA_TIMEOUT_MS,
     getTeamDataRequestLabel(teamName, normalizedOptions)
   );
@@ -3358,7 +3353,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
       try {
         const page = await unwrapIpc('team:getMessagesPage', () =>
-          api.teams.getMessagesPage(teamName, { limit: 50 })
+          readTeamMessagesPage(teamName, { limit: 50 })
         );
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
           return {
@@ -3495,7 +3490,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       try {
         const baseFeedRevision = entry.feedRevision;
         const page = await unwrapIpc('team:getMessagesPage', () =>
-          api.teams.getMessagesPage(teamName, {
+          readTeamMessagesPage(teamName, {
             cursor: entry.nextCursor,
             limit: 50,
           })
@@ -3585,7 +3580,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const requestScope = captureTeamRequestScope(get, teamName);
       try {
         const meta = await unwrapIpc('team:getMemberActivityMeta', () =>
-          api.teams.getMemberActivityMeta(teamName)
+          readTeamMemberActivity(teamName)
         );
         if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
           return;
