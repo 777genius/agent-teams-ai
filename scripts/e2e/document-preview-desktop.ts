@@ -427,24 +427,30 @@ try {
     const context = await previewContext(cdp);
     const contentExpression = `(() => {
       const visit = (node) => {
-        let text=''; let paintedCanvases=0;
+        let text=''; let paintedCanvases=0; let cellInk=0;
         const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);
         while(walker.nextNode()) if(!walker.currentNode.parentElement?.closest('style,script') && walker.currentNode.parentElement?.getClientRects().length) text+=' '+walker.currentNode.textContent;
         for(const canvas of node.querySelectorAll?.('canvas')||[]) {
           if(canvas.width<100||canvas.height<100)continue;
           try {const data=canvas.getContext('2d')?.getImageData(0,0,canvas.width,canvas.height).data;let dark=0;
-            if(data)for(let i=0;i<data.length;i+=64) if(data[i+3]>0&&(data[i]<230||data[i+1]<230||data[i+2]<230))dark++;
+            if(data)for(let i=0;i<data.length;i+=16) {
+              const pixel=i/4; const x=pixel%canvas.width; const y=Math.floor(pixel/canvas.width);
+              if(data[i+3]>0&&(data[i]<230||data[i+1]<230||data[i+2]<230))dark++;
+              // Ignore row/column headers and pale grid lines. Metadata plus header
+              // ink is not proof that asynchronous workbook cells have painted.
+              if(x>100&&y>60&&y<canvas.height-70&&data[i+3]>0&&data[i]<100&&data[i+1]<100&&data[i+2]<100)cellInk++;
+            }
             if(dark>10)paintedCanvases++;
           }catch{}
         }
-        for(const element of node.querySelectorAll?.('*')||[]) if(element.shadowRoot) {const value=visit(element.shadowRoot);text+=' '+value.text;paintedCanvases+=value.paintedCanvases;}
-        return {text:text.replace(/\\s+/g,' ').trim(),paintedCanvases};
+        for(const element of node.querySelectorAll?.('*')||[]) if(element.shadowRoot) {const value=visit(element.shadowRoot);text+=' '+value.text;paintedCanvases+=value.paintedCanvases;cellInk+=value.cellInk;}
+        return {text:text.replace(/\\s+/g,' ').trim(),paintedCanvases,cellInk};
       };
       const info=visit(document.querySelector('#root'));let parentAccessible=false;
       try{parentAccessible=!!parent.electronAPI;}catch{}
       return {...info,api:!!window.electronAPI,parentAccessible};
     })()`;
-    let info: { text: string; paintedCanvases: number; parentAccessible: boolean; api: boolean };
+    let info: { text: string; paintedCanvases: number; cellInk: number; parentAccessible: boolean; api: boolean };
     const until = Date.now() + 60_000;
     while (true) {
       info = await cdp.evaluate(contentExpression, context);
@@ -452,7 +458,7 @@ try {
         extension === 'pdf'
           ? info.paintedCanvases > 0 && info.text.includes('The magic of Prince')
           : extension === 'xlsx'
-            ? info.paintedCanvases > 0 &&
+            ? info.cellInk > 100 &&
               info.text.includes('701 rows, 16 columns') &&
               info.text.includes('100%') &&
               !info.text.includes('Parsing Excel')
