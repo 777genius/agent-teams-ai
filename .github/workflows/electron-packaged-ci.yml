@@ -16,6 +16,11 @@ on:
 permissions:
   contents: read
 
+# Cancel obsolete PR checks without sharing custody with push or manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   packaged-smoke:
     if: github.event.pull_request.head.repo.full_name == github.repository
