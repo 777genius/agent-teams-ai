@@ -31,10 +31,10 @@ all five platform jobs succeeded. An `app` run deliberately leaves this gate red
 even if all smoke jobs pass. Forks retain the existing restriction on packaged
 jobs, so their skipped matrix cannot satisfy the full gate.
 
-The repository is currently unprotected. A check alone does not enforce merging:
-the operator must require a successful full gate and mandatory CI for the exact
-current PR head, plus independent technical review. This change does not create
-or alter branch protection or rulesets. A rerun retains its original event
+This change does not register `packaged full gate` as a repository-required
+status check. The operator must require a successful packaged full gate and all
+mandatory CI for the exact current PR head, plus independent technical review.
+Existing branch protection and rulesets remain in force. A rerun retains its original event
 payload; use a fresh ready-for-review/label event to change scope.
 
 Lightweight policy checks (no app or agent launch):
