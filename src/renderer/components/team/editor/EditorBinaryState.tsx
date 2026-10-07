@@ -3,6 +3,9 @@
  * based on file type from the preview registry.
  */
 
+import { Suspense } from 'react';
+
+import { DocumentPreview } from '@features/document-preview/renderer';
 import { getPreviewType, isPreviewable } from '@renderer/utils/previewRegistry';
 import { getBasename } from '@shared/utils/platformPath';
 
@@ -23,6 +26,11 @@ export const EditorBinaryState = ({
 
   if (previewType === 'image' && isPreviewable(fileName, size)) {
     return <EditorImagePreview filePath={filePath} fileName={fileName} size={size} />;
+  }
+
+  if (previewType === 'document') {
+    return <Suspense fallback={null}><DocumentPreview key={filePath} filePath={filePath} size={size}
+      fallback={<EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />} /></Suspense>;
   }
 
   return <EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />;
