@@ -52,7 +52,6 @@ async function reservePort(port: number): Promise<number> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   return address.port;
 }
-await reservePort(9222); // Fail before spawn, never steal/kill another inspector.
 const controlPort = await reservePort(0);
 await writeFile(path.join(claude, 'agent-teams-config.json'), JSON.stringify({
   general: { externalAgentCdpEnabled: true, theme: 'dark', appLocale: 'en', multimodelEnabled: true },
@@ -81,13 +80,17 @@ let mainPid: number | null = null;
 interface OwnedProcess { pid: number; startTicks: string }
 const ownedProcesses = new Map<number, OwnedProcess>();
 
+function getClient(): Cdp {
+  assert(client, 'A validated owned renderer is required');
+  return client;
+}
 function object(value: unknown): Record<string, unknown> {
   assert(value !== null && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
 }
 async function evaluate<T>(callback: (...args: never[]) => T | Promise<T>, args: unknown[] = []): Promise<T> {
   assert(client);
-  const result = await client.send<{ result: { value: T }; exceptionDetails?: { text: string; exception?: { description: string } } }>('Runtime.evaluate', {
+  const result = await getClient().send<{ result: { value: T }; exceptionDetails?: { text: string; exception?: { description: string } } }>('Runtime.evaluate', {
     expression: `${serializedFunction(callback)}(...${JSON.stringify(args)})`, awaitPromise: true, returnByValue: true,
   });
   if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
@@ -110,18 +113,18 @@ async function click(wanted: string, selector = false, cardName: string | null =
     return hit && (hit === element || element.contains(hit)) ? point : null;
   }, [wanted, selector, cardName]), `click ${wanted}`);
   assert(client);
-  await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
-  await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
-  await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
+  await getClient().send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await getClient().send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
+  await getClient().send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
 }
 async function key(key: string, code: string, windowsVirtualKeyCode: number) {
   assert(client);
-  await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode });
-  await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode });
+  await getClient().send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode });
+  await getClient().send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode });
 }
 async function screenshot(label: string) {
   assert(client);
-  const { data } = await client.send<{ data: string }>('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  const { data } = await getClient().send<{ data: string }>('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   const output = path.join(root, `${label}.png`);
   await writeFile(output, Buffer.from(data, 'base64'));
   (evidence.screenshots as string[]).push(output);
@@ -198,14 +201,35 @@ async function attach(): Promise<ConnectionInfoV1> {
     catch { return false; }
     if (!response.ok) return false;
     const expected = await response.json() as ConnectionInfoV1;
+    if (!expected.cdp.httpOrigin) return false;
+    const inspector = new URL(expected.cdp.httpOrigin);
+    assert.equal(inspector.protocol, 'http:');
+    assert.equal(inspector.hostname, '127.0.0.1');
+    assert(!inspector.username && !inspector.password && !inspector.search && !inspector.hash);
+    assert.equal(inspector.pathname, '/');
+    const inspectorPort = Number(inspector.port);
+    assert(Number.isInteger(inspectorPort) && inspectorPort > 0 && inspectorPort < 65536);
+    if (!expected.cdp.browserWsUrl) return false;
+    const browserWs = new URL(expected.cdp.browserWsUrl);
+    assert.equal(browserWs.protocol, 'ws:');
+    assert.equal(browserWs.hostname, inspector.hostname);
+    assert.equal(browserWs.port, inspector.port);
+    assert(browserWs.pathname.startsWith('/devtools/browser/'));
+    assert(!browserWs.username && !browserWs.password && !browserWs.search && !browserWs.hash);
     let targetResponse: Response;
-    try { targetResponse = await fetch('http://127.0.0.1:9222/json/list', { signal: AbortSignal.timeout(3000) }); }
+    try { targetResponse = await fetch(`${inspector.origin}/json/list`, { signal: AbortSignal.timeout(3000) }); }
     catch { return false; }
     if (!targetResponse.ok) return false;
     const targets = await targetResponse.json() as { id: string; type: string; webSocketDebuggerUrl?: string }[];
     for (const target of targets) {
       if (target.type !== 'page' || target.id !== expected.cdp.rendererTargetId || !target.webSocketDebuggerUrl) continue;
       assert.equal(target.webSocketDebuggerUrl, expected.cdp.rendererWsUrl);
+      const rendererWs = new URL(target.webSocketDebuggerUrl);
+      assert.equal(rendererWs.protocol, 'ws:');
+      assert.equal(rendererWs.hostname, inspector.hostname);
+      assert.equal(rendererWs.port, inspector.port);
+      assert.equal(rendererWs.pathname, `/devtools/page/${target.id}`);
+      assert(!rendererWs.username && !rendererWs.password && !rendererWs.search && !rendererWs.hash);
       client?.close();
       client = await Cdp.connect(target.webSocketDebuggerUrl);
       const snapshot = await evaluate(async (marker: string) => ({
@@ -215,11 +239,12 @@ async function attach(): Promise<ConnectionInfoV1> {
       if (!snapshot.marker) return false;
       assert.deepEqual(snapshot.info.context, expected.context, 'CDP target must belong to this exact app instance/root');
       assert.deepEqual(snapshot.marker, expected.context);
-      assert.equal(snapshot.info.cdp.httpOrigin, 'http://127.0.0.1:9222');
+      assert.equal(snapshot.info.cdp.httpOrigin, inspector.origin);
+      assert.equal(snapshot.info.cdp.browserWsUrl, browserWs.href);
       if (snapshot.info.mcp.status !== 'ready' || snapshot.info.control.status !== 'ready') return false;
       assert(snapshot.info.capabilities.configurationEdit && snapshot.info.capabilities.reversibleTrash, 'Management capability proof requires wired tools');
       mainPid = state.pid;
-      evidence.renderer = { targetId: target.id, context: snapshot.info.context, mcpUrl: snapshot.info.mcp.url };
+      evidence.renderer = { targetId: target.id, cdpOrigin: inspector.origin, cdpPort: inspectorPort, context: snapshot.info.context, mcpUrl: snapshot.info.mcp.url };
       return snapshot.info;
     }
     return false;
@@ -227,14 +252,14 @@ async function attach(): Promise<ConnectionInfoV1> {
 }
 async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: boolean) {
   assert(client);
-  await client.send('Emulation.setDeviceMetricsOverride', { width: narrow ? 320 : 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await getClient().send('Emulation.setDeviceMetricsOverride', { width: narrow ? 320 : 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await click('[data-testid="external-agent-prompt-open"]', true);
   await waitFor(() => evaluate(() => document.activeElement?.id === 'external-agent-task'), 'free request autofocus');
   const request = `Use feature and review templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
   if (theme === 'light') await waitFor(() => evaluate((value: string) => (document.getElementById('external-agent-task') as HTMLTextAreaElement | null)?.value === value, [request]), 'request survives reload under stable profile/root');
-  await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2 });
-  await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 0 });
-  await client.send('Input.insertText', { text: request });
+  await getClient().send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2 });
+  await getClient().send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 0 });
+  await getClient().send('Input.insertText', { text: request });
   const references = await evaluate(() => ({
     ids: [...document.querySelectorAll('[data-template-reference]')].map((node) => node.getAttribute('data-template-reference')).sort(),
     participants: document.querySelectorAll('[data-role="template-participant"]').length,
@@ -257,7 +282,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {
     await browser.send('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'] });
-    await client.send('Page.bringToFront');
+    await getClient().send('Page.bringToFront');
     await click('[data-testid="external-agent-prompt-copy"]', true);
     const copied = await waitFor(async () => {
       const text = await evaluate(async () => navigator.clipboard.readText());
@@ -300,7 +325,7 @@ try {
   await openTeams();
   await popup(info, 'dark', true);
   assert(client);
-  await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await getClient().send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   assert(info.mcp.url);
   evidence.native = await withNativeCodexMcp({ url: info.mcp.url, expectedContext: info.context, cwd: project,
     workRoot: path.join(root, 'native-codex'), requiredTools: ['app_get_connection_info', 'team_list', 'team_get', 'team_create', 'team_update', 'team_trash'] },
@@ -308,7 +333,7 @@ try {
       const calls = evidence.calls as Record<string, unknown>[];
       const call = async (tool: string, args: Record<string, unknown>) => {
         try {
-          const result = await nativeCall(tool, args);
+          const result = object(await nativeCall(tool, args));
           calls.push({ tool, teamName: args.teamName, outcome: 'success', revision: result.configurationRevision });
           return result;
         } catch (error) {
@@ -316,7 +341,9 @@ try {
           throw error;
         }
       };
-      await call('team_list', {});
+      const listed = await nativeCall('team_list', {});
+      assert(Array.isArray(listed), 'Native team_list must return an array');
+      calls.push({ tool: 'team_list', outcome: 'success', count: listed.length });
       const first = 'management-e2e-feature';
       const second = 'management-e2e-review';
       for (const teamName of [first, second]) {
@@ -379,7 +406,7 @@ try {
         await assert.rejects(access(path.join(claude, 'teams', teamName, filename)), { code: 'ENOENT' });
       return { client: 'codex-cli-app-server', nativeVersion, toolNames, edited, restored, noLaunchArtifacts: true };
     });
-  await client.send('Page.reload');
+  await getClient().send('Page.reload');
   await attach(); await openTeams();
   evidence.reloadUi = await waitFor(async () => {
     const facts = await listFacts();
@@ -387,7 +414,7 @@ try {
       facts.cards.every((card) => card.badges.length === 0) ? facts : false;
   }, 'reload retains teams and clears session-only change details');
   await evaluate(async () => (window as unknown as { electronAPI: ElectronAPI }).electronAPI.config.update('general', { theme: 'light' }));
-  await client.send('Page.reload');
+  await getClient().send('Page.reload');
   const light = await attach(); await openTeams();
   await popup(light, 'light', false);
   evidence.status = 'passed';

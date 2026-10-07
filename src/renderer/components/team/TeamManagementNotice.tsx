@@ -5,9 +5,10 @@ import type { TeamManagementCommittedChange } from '@features/team-prompt-manage
 export function TeamManagementNotice({ change }: Readonly<{ change?: TeamManagementCommittedChange }>) {
   const { t } = useAppTranslation('team');
   if (!change || change.kind === 'trashed') return null;
-  const facts = change.changedFields
-    .filter((field) => field !== 'deletedAt' && (field !== 'members' || !change.roster))
-    .map((field) => t(`managementChanges.fields.${field}`));
+  const facts: string[] = change.changedFields.flatMap((field) => {
+    if (field === 'deletedAt' || (field === 'members' && change.roster)) return [];
+    return [t(`managementChanges.fields.${field}`)];
+  });
   if (change.roster) facts.unshift(t('managementChanges.roster', {
     added: change.roster.added, removed: change.roster.removed,
   }));

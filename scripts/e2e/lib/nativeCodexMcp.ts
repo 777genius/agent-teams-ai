@@ -41,7 +41,7 @@ function record(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function toolValue(result: unknown, name: string): Record<string, unknown> {
+function toolValue(result: unknown, name: string): unknown {
   const response = record(result, `${name}: invalid native tool response`);
   const content = Array.isArray(response.content) ? response.content : [];
   const text = content
@@ -53,10 +53,10 @@ function toolValue(result: unknown, name: string): Record<string, unknown> {
     );
   }
   if (response.structuredContent !== undefined && response.structuredContent !== null) {
-    return record(response.structuredContent, `${name}: invalid structured content`);
+    return response.structuredContent;
   }
   assert.equal(typeof text, 'string', `${name}: missing tool result text`);
-  return record(JSON.parse(text as string), `${name}: non-object tool result`);
+  return JSON.parse(text as string) as unknown;
 }
 
 function nativeRpc(child: ChildProcessWithoutNullStreams) {
@@ -164,7 +164,7 @@ function nativeRpc(child: ChildProcessWithoutNullStreams) {
 
 /** Native Codex MCP calls only: never starts an inference turn or consumes provider auth. */
 export interface NativeCodexMcpClient {
-  call(tool: string, args: Record<string, unknown>): Promise<Record<string, unknown>>;
+  call(tool: string, args: Record<string, unknown>): Promise<unknown>;
   toolNames: string[];
   nativeVersion: string;
 }
@@ -273,7 +273,7 @@ export async function withNativeCodexMcp<T>(
         }),
         tool
       );
-    const discovered = await call('app_get_connection_info', {});
+    const discovered = record(await call('app_get_connection_info', {}), 'Native discovery must return an object');
     const liveContext = record(discovered.context, 'Native discovery context missing');
     for (const field of ['appInstanceId', 'dataRootFingerprint', 'connectionGeneration'] as const) {
       assert.equal(
@@ -290,7 +290,9 @@ export async function withNativeCodexMcp<T>(
 
 /** Existing create-only proof retains its exact native calls and assertions. */
 export async function verifyNativeCodexMcp(input: NativeCodexMcpInput): Promise<NativeCodexMcpEvidence> {
-  return withNativeCodexMcp(input, async ({ call, nativeVersion, toolNames }) => {
+  return withNativeCodexMcp(input, async ({ call: nativeCall, nativeVersion, toolNames }) => {
+    const call = async (tool: string, args: Record<string, unknown>) =>
+      record(await nativeCall(tool, args), `${tool}: non-object tool result`);
     const created = await call('team_create', {
       teamName: input.teamName,
       cwd: input.cwd,

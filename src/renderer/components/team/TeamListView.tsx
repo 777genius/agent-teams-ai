@@ -1306,7 +1306,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     const otherTeamsSectionKey = currentProjectPath
       ? `other:${normalizePath(currentProjectPath)}`
       : 'other';
-    const activeSections = currentProjectPath
+    const activeSections: { key: string; title: string | null; teams: TeamSummary[] }[] = currentProjectPath
       ? [
           {
             key: selectedProjectSectionKey,
