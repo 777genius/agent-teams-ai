@@ -194,7 +194,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "نام کم از کم ایک خط یا Detailit پر مشتمل ہوتا ہے۔",
-      "nameTooLong": "نام بہت طویل ہے (max 64 ق م)",
+      "nameTooLong": "نام بہت طویل ہے (زیادہ سے زیادہ 64 حروف)",
       "selectWorkingDirectory": "ورک منیجر منتخب کریں",
       "memberNameRequired": "ممبر نام خالی نہیں کیا جا سکتا",
       "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",

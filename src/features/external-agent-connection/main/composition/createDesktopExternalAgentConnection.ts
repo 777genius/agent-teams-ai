@@ -114,14 +114,16 @@ export function createDesktopExternalAgentConnection(
       }
     },
   });
+  const restoreLocalContext = async () => {
+    await deps.reconfigureRoot();
+    if (stopping) throw new Error('App connection is shutting down');
+    bindAuthority();
+    context.rebind(deps.getRoot());
+    return connection.retryConnection();
+  };
   const retryConnection = () =>
     serialize(async () => {
-      if (!stopping && deps.isLocalContext() && !context.isOpen) {
-        await deps.reconfigureRoot();
-        if (stopping) throw new Error('App connection is shutting down');
-        bindAuthority();
-        context.rebind(deps.getRoot());
-      }
+      if (!stopping && deps.isLocalContext() && !context.isOpen) return restoreLocalContext();
       return connection.retryConnection();
     });
   const change = (operation: () => Promise<void> | void, rootChanged: boolean) =>
@@ -135,15 +137,20 @@ export function createDesktopExternalAgentConnection(
       if (stopping) throw new Error('App connection is shutting down');
       revokeAuthority?.();
       revokeAuthority = null;
-      await operation();
-      if (rootChanged) await deps.reconfigureRoot();
-      if (stopping) throw new Error('App connection is shutting down');
-      bindAuthority();
-      if (deps.isLocalContext()) {
-        context.rebind(deps.getRoot());
-        await connection.retryConnection();
+      try {
+        await operation();
+        if (rootChanged) await deps.reconfigureRoot();
+        if (stopping) throw new Error('App connection is shutting down');
+        bindAuthority();
+        if (deps.isLocalContext()) {
+          context.rebind(deps.getRoot());
+          await connection.retryConnection();
+        }
+      } catch (error) {
+        // Restore the actual local root only; a partial remote transition remains closed.
+        if (!stopping && deps.isLocalContext()) await restoreLocalContext().catch(() => undefined);
+        throw error;
       }
-      // A failed operation leaves admission closed until an explicit recovery.
     });
   const closeAdmission = (): Promise<void> => {
     stopping = true;

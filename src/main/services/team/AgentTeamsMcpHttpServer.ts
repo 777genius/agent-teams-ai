@@ -24,6 +24,7 @@ import {
   assertNoLiveMcpConsumers,
   canCleanupPriorDesktopMcpChild,
   hasLiveMcpConsumers,
+  parseNativeProcessRows,
   processDetailsIncludeMarker,
 } from './mcpProcessOwnership';
 import { stopOwnedMcpChild, waitForOwnedMcpPortRelease } from './stopOwnedMcpChild';
@@ -613,34 +614,22 @@ async function readNativeProcessStartTimeMs(pid: number): Promise<number | null>
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseNativeProcessRows(output: string): RuntimeProcessTableRow[] {
-  const rows: RuntimeProcessTableRow[] = [];
-  for (const line of output.split('\n')) {
-    const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
-    if (!match) {
-      continue;
-    }
-    const pid = Number.parseInt(match[1], 10);
-    const ppid = Number.parseInt(match[2], 10);
-    const command = match[3]?.trim() ?? '';
-    if (pid > 0 && ppid >= 0 && command.length > 0) {
-      rows.push({ pid, ppid, command });
-    }
-  }
-  return rows;
-}
-
-async function listNativeProcessRows(): Promise<RuntimeProcessTableRow[]> {
+async function listNativeProcessRows(
+  includeEnvironment = false
+): Promise<RuntimeProcessTableRow[]> {
   if (process.platform === 'win32') {
     return [];
   }
   const output = await execFileText(
     'ps',
-    ['-ax', '-o', 'pid=,ppid=,command='],
+    [includeEnvironment ? 'axeww' : '-ax', '-o', 'pid=,ppid=,command='],
     2_000,
     4 * 1024 * 1024
   );
-  return output ? parseNativeProcessRows(output) : [];
+  const rows = output ? parseNativeProcessRows(output) : [];
+  if (includeEnvironment && rows.length === 0)
+    throw new Error('Cannot verify live MCP consumers. Retry the context change.');
+  return rows;
 }
 
 function execFileText(
@@ -736,8 +725,9 @@ export class AgentTeamsMcpHttpServer {
   assertNoLiveConsumers(): Promise<void> {
     return assertNoLiveMcpConsumers(
       this.handle,
-      this.deps.listProcessRows ?? listNativeProcessRows,
-      this.deps.readProcessDetails ?? readNativeProcessCommandWithEnv
+      this.deps.listProcessRows ?? (() => listNativeProcessRows(true)),
+      this.deps.readProcessDetails ??
+        (this.deps.listProcessRows ? readNativeProcessCommandWithEnv : async () => null)
     );
   }
 
@@ -1142,9 +1132,9 @@ export class AgentTeamsMcpHttpServer {
         const codeSuffix = typeof code === 'number' ? ` with code ${code}` : '';
         const signalSuffix = signal ? ` (${signal})` : '';
         const message = `Agent Teams MCP HTTP server exited before startup completed${codeSuffix}${signalSuffix}`;
-        if (!startupSettled && !expectedStop) {
+        if (!startupSettled) {
           reject(new Error(message));
-          logger.warn(message);
+          if (!expectedStop) logger.warn(message);
           return;
         }
         if (startupSettled && !expectedStop) {
