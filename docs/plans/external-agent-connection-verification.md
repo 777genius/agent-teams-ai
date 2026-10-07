@@ -4,10 +4,10 @@
 
 ## Tested source and artifact
 
-- Production and harness source: `5e3f16baf146661d705e84a685cdd8ae99cb94d2`. Delivery PR4 tree `afb68dc07884da4462929eadfd0909b963d7a5f4` is identical; subsequent documentation does not change the tested source.
+- Latest packaged source: `7a5a6bd48a84782621a9dbc63130f392dfb2a43f`, including the reviewed consumer-query extraction and current-main document-preview integration. Delivery PR4 tree `2821e838a07ff9c11e097ef2176f8776e3516317` is identical; subsequent documentation does not change the tested source. Earlier shared-root/crash evidence uses source `5e3f16baf146661d705e84a685cdd8ae99cb94d2`.
 - Linux unpacked Electron 44.4.5, application 2.17.6. No remote-debugging or main-inspector launch flags; the saved application setting enables renderer CDP with port 0.
 - Executable SHA256: `ee9faf5bb9fe78a750cc5099863c85c4459e7f04c387fd1f111c83e4e8c57c97`.
-- `app.asar` SHA256: `95db6b844566ecb93c373ac8f02c7644cfbc13cb761a1e745729ccbfe0d4060d`.
+- Latest `app.asar` SHA256: `0a25d30031586215cf3814f7b3abdf580bfc2b947216f8fd55487fdea83f5829`. Earlier shared-root/crash artifact: `95db6b844566ecb93c373ac8f02c7644cfbc13cb761a1e745729ccbfe0d4060d`.
 - Packaged `resources/mcp-server/index.js` SHA256: `9bfd6034a8373cd977fcb69ff482fb0d4c621817c05b0145c9475caa130a640a`.
 - Fuse values were read without modification from the same executable hash. The Linux harness uses `--no-sandbox --disable-gpu` under isolated Xvfb; this does not prove sandboxed macOS/Windows behavior or signing.
 
@@ -30,6 +30,7 @@
 
 Preserved hosted evidence under `/srv/workers/ea-cdp-20261007-5adf8c/`:
 
+- `external-agent-desktop-TEST-W0hD7A/evidence.json`: current-main integrated packaged acceptance passes; log `main-integration-e2e.log`. Local manifest: `/tmp/external-agent-mcp-cdp-20261007/desktop-main-integration-evidence.json`.
 - `external-agent-desktop-TEST-bMwdE8/evidence.json`, screenshots and prompt; log `final-main-e2e.log`.
 - `external-agent-shared-root-TEST-rOfYns/evidence.json`; log `final-shared-root-e2e.log`.
 - `external-agent-shared-root-TEST-6F5vBn/evidence.json`; log `final-failure-cleanup.log` (intentional failure).
@@ -41,7 +42,7 @@ Project typecheck, desktop build and unpacked packaging pass. Typed lint of the 
 
 Final relevant suites: IPC/supervisor/actual HTTP lifecycle **290**; dialog/OpenCode model authority/draft persistence **124**; corrected host fixtures **19**. Counts include existing tests. Old-code RED was reproduced for IPC early admission, expected pre-ready stop, failed context recovery, draft model intent, inherited-member materialization and launch opt-out. After the final assertion-only adjustment, six affected UI cases pass. Native adapter probes on Linux and macOS verify the portable `ps axeww` argument with their own test marker without emitting environment contents.
 
-Post-package source review extracted the unchanged MCP-consumer predicate from the provisioning facade into an explicit-input synchronous query (`0767493810`, formatting `c72d94e607`). Independent review accepted behavior equivalence and the architecture boundary. Existing provisioning service tests **479**, full project typecheck, focused lint and architecture/size guards pass; no tests were added for the extraction. Logs: `consumer-extraction-{tests,types,lint}.log`. The packaged artifact above precedes this source-only extraction.
+Post-package source review extracted the unchanged MCP-consumer predicate from the provisioning facade into an explicit-input synchronous query (`0767493810`, formatting `c72d94e607`). Independent review accepted behavior equivalence and the architecture boundary. Existing provisioning service tests **479**, full project typecheck, focused lint and architecture/size guards pass; no tests were added for the extraction. Logs: `consumer-extraction-{tests,types,lint}.log`. After merging current main, independent conflict/ancestry review, fresh frozen install, typecheck, build, package and main desktop acceptance pass again (`main-integration-{fresh-install,types,build,package,e2e}.log`).
 
 Earlier broad providerless/controller/MCP suites and installation/build checks remain historical evidence; they are not substituted for current-head CI of changed code. Hosted logs for final checks are `backend-final-{red,green}.log`, `ui-intent-{red,green}.log`, `copy-preflight-{red-corrected,green-suite}.log`, `ci-fixtures-green.log`, `ui-intent-contract-final.log`, `final-source-types.log`, `final-production-lint.log`, `final-build.log`, and `final-package.log` in the same scratch directory.
 
