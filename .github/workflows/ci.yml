@@ -1,4 +1,7 @@
 name: CI
+# Immutable event inputs are available through run.display_title before jobs start.
+run-name: >-
+  ${{ format('CI proof: PR={0} | head={1} | base={2} | action={3} | draft={4}', github.event.pull_request.number || 0, github.event.pull_request.head.sha || github.sha, github.event.pull_request.base.sha || 'none', github.event.action || github.event_name, github.event.pull_request.draft && 'true' || 'false') }}
 
 on:
   push:

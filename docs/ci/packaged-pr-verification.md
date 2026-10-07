@@ -79,7 +79,14 @@ title/body-only edit, for ready and draft PRs. A previous null body is valid.
 Strict proof requires the complete PR/repository/base/head identity, valid commit
 SHAs, nonempty current/previous titles, and only `title`/`body` change records
 containing `from`. Base changes, unknown fields and malformed/missing identity
-require full qualification. The draft lifecycle contract is unchanged.
+require full qualification. A metadata edit also requires an authenticated
+canonical producer for the exact current PR head and base, so an advance of
+`main` requires full CI even when only the description was edited. The workflow
+run name records immutable event inputs before queued jobs start. At most eight
+other source runs are examined; missing, conflicting or failed proof requires
+full CI. Metadata runs only carry continuity to a canonical producer. Final
+reads recheck run attempts, the listing and current PR inputs. The deliberate
+draft feedback and failed qualification-gate contract remains unchanged.
 
 Authenticated postmerge reuse checks at most eight newest source runs. It may
 cross only complete successful metadata runs whose exact skipped job set and

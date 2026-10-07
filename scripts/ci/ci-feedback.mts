@@ -11,6 +11,7 @@ import {
   WORKFLOW,
 } from './ci-feedback-reuse.mts';
 import type { GitHubRead } from './ci-feedback-reuse.mts';
+import { proveMetadataProducer } from './ci-feedback-metadata-proof.mts';
 
 export type Plan = {
   full: boolean;
@@ -149,12 +150,15 @@ export async function planFeedback(
   } catch {
     return fallback;
   }
-  if (isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event)) {
+  if (
+    isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
+    (await proveMetadataProducer(env, event, read))
+  ) {
     return {
       ...fallback,
       full: false,
       metadata: true,
-      reason: 'Title/body edit only; preserve code checks',
+      reason: 'Title/body edit with an authenticated same-head/base producer; preserve code checks',
     };
   }
   // An edited event that failed strict metadata proof always requires full CI.
