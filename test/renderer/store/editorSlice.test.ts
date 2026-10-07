@@ -62,6 +62,15 @@ vi.mock('@renderer/utils/editorBridge', () => ({
     register: vi.fn(),
     unregister: vi.fn(),
     isRegistered: false,
+    updateBaseline: vi.fn(),
+    revision: () => 'test',
+    captureSave: (filePath: string) => {
+      const content = mockBridge.getContent(filePath);
+      return content === null ? null : { content, document: null, revision: 'test' };
+    },
+    matchesSaveTarget: () => true,
+    matchesSaveSession: () => true,
+    matchesSaveDocument: () => true,
     updateView: vi.fn(),
     getView: vi.fn(),
   },
@@ -491,7 +500,7 @@ describe('editorSlice', () => {
         ['/project/a.ts', 'content a'],
         ['/project/b.ts', 'content b'],
       ]);
-      mockBridge.getAllModifiedContent.mockReturnValue(files);
+      mockBridge.getContent.mockImplementation((filePath: string) => files.get(filePath) ?? null);
       mockEditorAPI.writeFile.mockResolvedValue({ mtimeMs: Date.now(), size: 10 });
 
       store.setState({
@@ -509,7 +518,7 @@ describe('editorSlice', () => {
         ['/project/a.ts', 'content a'],
         ['/project/b.ts', 'content b'],
       ]);
-      mockBridge.getAllModifiedContent.mockReturnValue(files);
+      mockBridge.getContent.mockImplementation((filePath: string) => files.get(filePath) ?? null);
       mockEditorAPI.writeFile
         .mockResolvedValueOnce({ mtimeMs: Date.now(), size: 10 })
         .mockRejectedValueOnce(new Error('Disk full'));

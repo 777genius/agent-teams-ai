@@ -1,15 +1,12 @@
 /**
  * Editor slice — manages project editor state.
  *
- * Group 1: File tree state + actions (iter-1)
- * Group 2: Tab management (iter-2)
- * Group 3: Dirty/save state (iter-2)
- * Group 4: File operations (iter-3)
  */
 
 import { api } from '@renderer/api';
 import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
 import { editorBridge } from '@renderer/utils/editorBridge';
+import { createEditorSaveActions } from '@renderer/utils/editorSaveActions';
 import { invalidateQuickOpenCache } from '@renderer/utils/quickOpenCache';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { createLogger } from '@shared/utils/logger';
@@ -423,6 +420,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   // ═══════════════════════════════════════════════════════
 
   openEditor: async (projectPath: string) => {
+    editorBridge.destroy();
     const openSeq = ++editorOpenSeq;
     set({
       editorProjectPath: projectPath,
@@ -704,6 +702,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       editorActiveTabId: newActiveId,
       editorModifiedFiles: restModified,
       editorSaveError: restErrors,
+      editorSaving: omitKey(get().editorSaving, tabId),
     });
 
     scheduleSyncWatchedFiles(get);
@@ -768,120 +767,15 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     set({ editorModifiedFiles: omitKey(editorModifiedFiles, filePath) });
   },
 
-  saveFile: async (filePath: string) => {
-    const content = editorBridge.getContent(filePath);
-    if (content === null) {
-      log.error('saveFile: no content available for', filePath);
-      return;
-    }
-
-    set((s) => ({
-      editorSaving: { ...s.editorSaving, [filePath]: true },
-      editorSaveError: omitKey(s.editorSaveError, filePath),
-    }));
-
-    try {
-      // Pass baseline mtime for conflict detection (if available)
-      const baselineMtime = get().editorFileMtimes[filePath];
-      const result = await api.editor.writeFile(filePath, content, baselineMtime);
-
-      // Record save timestamp BEFORE clearing editorSaving (watcher race guard)
-      recentSaveTimestamps.set(filePath, Date.now());
-
-      // Update baseline mtime with the new value after successful save
-      set((s) => ({
-        editorModifiedFiles: omitKey(s.editorModifiedFiles, filePath),
-        editorSaving: omitKey(s.editorSaving, filePath),
-        editorFileMtimes: { ...s.editorFileMtimes, [filePath]: result.mtimeMs },
-        editorExternalChanges: omitKey(s.editorExternalChanges, filePath),
-      }));
-
-      try {
-        localStorage.removeItem(`editor-draft:${filePath}`);
-      } catch {
-        // localStorage may not be available
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      // Handle conflict errors specifically
-      if (message.startsWith('CONFLICT')) {
-        log.error('Save conflict detected:', filePath);
-        set((s) => ({
-          editorSaving: omitKey(s.editorSaving, filePath),
-          editorConflictFile: filePath,
-        }));
-        return;
-      }
-
-      log.error('Failed to save file:', message);
-      set((s) => ({
-        editorSaving: omitKey(s.editorSaving, filePath),
-        editorSaveError: { ...s.editorSaveError, [filePath]: message },
-      }));
-    }
-  },
-
-  saveAllFiles: async () => {
-    const { editorModifiedFiles } = get();
-    const modifiedContent = editorBridge.getAllModifiedContent(editorModifiedFiles);
-
-    const promises: Promise<void>[] = [];
-    for (const [filePath, content] of modifiedContent) {
-      promises.push(
-        (async () => {
-          set((s) => ({
-            editorSaving: { ...s.editorSaving, [filePath]: true },
-          }));
-
-          try {
-            const baselineMtime = get().editorFileMtimes[filePath];
-            const result = await api.editor.writeFile(filePath, content, baselineMtime);
-
-            // Record save timestamp BEFORE clearing editorSaving (watcher race guard)
-            recentSaveTimestamps.set(filePath, Date.now());
-
-            set((s) => ({
-              editorModifiedFiles: omitKey(s.editorModifiedFiles, filePath),
-              editorSaving: omitKey(s.editorSaving, filePath),
-              editorFileMtimes: { ...s.editorFileMtimes, [filePath]: result.mtimeMs },
-              editorExternalChanges: omitKey(s.editorExternalChanges, filePath),
-            }));
-            try {
-              localStorage.removeItem(`editor-draft:${filePath}`);
-            } catch {
-              // ignore
-            }
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-
-            if (message.startsWith('CONFLICT')) {
-              log.error('Save conflict detected:', filePath);
-              set((s) => ({
-                editorSaving: omitKey(s.editorSaving, filePath),
-                editorConflictFile: filePath,
-              }));
-              return;
-            }
-
-            log.error('Failed to save file:', filePath, message);
-            set((s) => ({
-              editorSaving: omitKey(s.editorSaving, filePath),
-              editorSaveError: { ...s.editorSaveError, [filePath]: message },
-            }));
-          }
-        })()
-      );
-    }
-
-    await Promise.allSettled(promises);
-  },
+  ...createEditorSaveActions(set, get, (filePath) => recentSaveTimestamps.set(filePath, Date.now())),
 
   discardChanges: (filePath: string) => {
+    editorBridge.deleteState(filePath);
     const { editorModifiedFiles, editorSaveError } = get();
     set({
       editorModifiedFiles: omitKey(editorModifiedFiles, filePath),
       editorSaveError: omitKey(editorSaveError, filePath),
+      editorSaving: omitKey(get().editorSaving, filePath),
     });
 
     try {
@@ -1300,47 +1194,6 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     set((s) => ({
       editorFileMtimes: { ...s.editorFileMtimes, [filePath]: mtimeMs },
     }));
-  },
-
-  forceOverwrite: async (filePath: string) => {
-    const content = editorBridge.getContent(filePath);
-    if (content === null) {
-      log.error('forceOverwrite: no content available for', filePath);
-      return;
-    }
-
-    set((s) => ({
-      editorSaving: { ...s.editorSaving, [filePath]: true },
-      editorConflictFile: null,
-    }));
-
-    try {
-      // No baselineMtimeMs → skip conflict check on backend
-      const result = await api.editor.writeFile(filePath, content);
-
-      // Record save timestamp BEFORE clearing editorSaving (watcher race guard)
-      recentSaveTimestamps.set(filePath, Date.now());
-
-      set((s) => ({
-        editorModifiedFiles: omitKey(s.editorModifiedFiles, filePath),
-        editorSaving: omitKey(s.editorSaving, filePath),
-        editorFileMtimes: { ...s.editorFileMtimes, [filePath]: result.mtimeMs },
-        editorExternalChanges: omitKey(s.editorExternalChanges, filePath),
-      }));
-
-      try {
-        localStorage.removeItem(`editor-draft:${filePath}`);
-      } catch {
-        // localStorage may not be available
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      log.error('Failed to force overwrite:', message);
-      set((s) => ({
-        editorSaving: omitKey(s.editorSaving, filePath),
-        editorSaveError: { ...s.editorSaveError, [filePath]: message },
-      }));
-    }
   },
 
   resolveConflict: () => {

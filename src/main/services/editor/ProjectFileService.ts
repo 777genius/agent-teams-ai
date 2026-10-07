@@ -16,11 +16,13 @@ import {
   validateFileName,
   validateFilePath,
 } from '@main/utils/pathValidation';
+import { EDITOR_FULL_MAX_BYTES } from '@shared/editorPolicy';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 import * as fs from 'fs/promises';
-import { isBinaryFile } from 'isbinaryfile';
 import * as path from 'path';
+
+import { boundedTextRead } from './boundedTextRead';
 
 import type {
   BinaryPreviewResult,
@@ -38,25 +40,7 @@ import type {
 // Constants
 // =============================================================================
 
-const MAX_FILE_SIZE_FULL = 2 * 1024 * 1024; // 2 MB
-const MAX_FILE_SIZE_PREVIEW = 5 * 1024 * 1024; // 5 MB
-const MAX_WRITE_SIZE = 2 * 1024 * 1024; // 2 MB
 const MAX_DIR_ENTRIES = 500;
-const PREVIEW_LINE_COUNT = 100;
-
-/**
- * Extract the first N lines from text using indexOf — O(1) allocations vs split().
- * For a 5MB file with 100k lines, avoids creating 100k string objects.
- */
-function sliceFirstNLines(text: string, n: number): string {
-  let pos = 0;
-  for (let i = 0; i < n; i++) {
-    const next = text.indexOf('\n', pos);
-    if (next === -1) return text;
-    pos = next + 1;
-  }
-  return text.slice(0, pos > 0 ? pos - 1 : 0);
-}
 
 const PREVIEW_MIME_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -219,28 +203,7 @@ export class ProjectFileService {
       throw new Error('Not a regular file');
     }
 
-    // 4. Size check — reject files beyond preview limit
-    if (stats.size > MAX_FILE_SIZE_PREVIEW) {
-      throw new Error(
-        `File too large (${(stats.size / 1024 / 1024).toFixed(1)}MB). Open in external editor.`
-      );
-    }
-
-    // 5. Binary check
-    const binary = await isBinaryFile(normalizedPath);
-    if (binary) {
-      return {
-        content: '',
-        size: stats.size,
-        mtimeMs: stats.mtimeMs,
-        truncated: false,
-        encoding: 'binary',
-        isBinary: true,
-      };
-    }
-
-    // 6. Read content
-    const raw = await fs.readFile(normalizedPath, 'utf8');
+    const result = await boundedTextRead(normalizedPath);
 
     // 7. Post-read TOCTOU verify
     const realPath = await fs.realpath(normalizedPath);
@@ -249,18 +212,7 @@ export class ProjectFileService {
       throw new Error('Path changed during read (TOCTOU)');
     }
 
-    // 8. Tiered response
-    const isPreview = stats.size > MAX_FILE_SIZE_FULL;
-    const content = isPreview ? sliceFirstNLines(raw, PREVIEW_LINE_COUNT) : raw;
-
-    return {
-      content,
-      size: stats.size,
-      mtimeMs: stats.mtimeMs,
-      truncated: isPreview,
-      encoding: 'utf-8',
-      isBinary: false,
-    };
+    return result;
   }
 
   /**
@@ -271,7 +223,7 @@ export class ProjectFileService {
    * - Project-only containment — block writes outside projectRoot (SEC-14)
    * - Block .git/ internal paths (SEC-12)
    * - Device path blocking (SEC-4)
-   * - Content size limit (2MB)
+   * - Content size limit (32MiB)
    * - Atomic write via tmp + rename (SEC-9)
    */
   async writeFile(
@@ -304,10 +256,20 @@ export class ProjectFileService {
 
     // 5. Content size check
     const byteLength = Buffer.byteLength(content, 'utf8');
-    if (byteLength > MAX_WRITE_SIZE) {
+    if (byteLength > EDITOR_FULL_MAX_BYTES) {
       throw new Error(
-        `Content too large (${(byteLength / 1024 / 1024).toFixed(1)}MB). Maximum is 2MB.`
+        `Content too large (${(byteLength / 1024 / 1024).toFixed(1)}MB). Maximum is 32MiB.`
       );
+    }
+
+    // Reject overwriting a document that could only be opened as a partial preview,
+    // including force-save callers that bypass renderer state.
+    try {
+      const existing = await fs.lstat(normalizedPath);
+      if (!existing.isFile()) throw new Error('Not a regular file');
+      if (existing.size > EDITOR_FULL_MAX_BYTES) throw new Error('Read-only large file preview');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
 
     // 6. Atomic write
@@ -746,4 +708,4 @@ export class ProjectFileService {
   }
 }
 
-export { MAX_DIR_ENTRIES, MAX_FILE_SIZE_FULL, MAX_FILE_SIZE_PREVIEW, MAX_WRITE_SIZE };
+export { MAX_DIR_ENTRIES };

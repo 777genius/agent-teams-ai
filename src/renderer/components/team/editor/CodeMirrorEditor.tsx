@@ -17,7 +17,7 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { gotoLine, search, searchKeymap } from '@codemirror/search';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import {
   EditorView,
@@ -38,18 +38,18 @@ import {
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { baseEditorTheme } from '@renderer/utils/codemirrorTheme';
 import { editorBridge } from '@renderer/utils/editorBridge';
+import { EDITOR_DRAFT_MAX_CHARS } from '@shared/editorPolicy';
 
 import type { Extension } from '@codemirror/state';
+import type { EditorDocumentMode } from '@shared/editorPolicy';
 import type { EditorSelectionInfo } from '@shared/types/editor';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const MAX_CACHED_STATES = 30;
-const DIRTY_DEBOUNCE_MS = 300;
 const AUTOSAVE_DELAY_MS = 30_000;
-const MAX_DRAFT_SIZE = 500 * 1024; // 500KB
+const MAX_DRAFT_SIZE = EDITOR_DRAFT_MAX_CHARS;
 const MAX_DRAFTS = 10;
 /** Compartment for dynamic line wrap toggling */
 const lineWrapCompartment = new Compartment();
@@ -67,6 +67,8 @@ interface CodeMirrorEditorProps {
   fileName: string;
   /** File modification time (for draft comparison) */
   mtimeMs?: number;
+  mode?: EditorDocumentMode;
+  readOnly?: boolean;
   /** Cursor position callback for status bar */
   onCursorChange?: (line: number, col: number) => void;
   /** Called when a draft was recovered from localStorage */
@@ -87,23 +89,27 @@ function buildEditableExtensions(
   onUpdate: () => void,
   onCursorMove: (line: number, col: number) => void,
   onSelectionEmit: (info: EditorSelectionInfo | null) => void,
-  onScrollReposition: (info: EditorSelectionInfo | null) => void
+  onScrollReposition: (info: EditorSelectionInfo | null) => void,
+  reduced: boolean,
+  readOnly: boolean
 ): Extension[] {
-  const syncLang = getSyncLanguageExtension(fileName);
-  const asyncLang = getAsyncLanguageDesc(fileName);
+  const syncLang = reduced ? null : getSyncLanguageExtension(fileName);
+  const asyncLang = reduced ? null : getAsyncLanguageDesc(fileName);
 
   const extensions: Extension[] = [
     // Theme
     baseEditorTheme,
-    syntaxHighlighting(oneDarkHighlightStyle),
+    ...(reduced ? [] : [syntaxHighlighting(oneDarkHighlightStyle)]),
+    EditorState.readOnly.of(readOnly),
+    EditorView.editable.of(!readOnly),
+    EditorView.clipboardInputFilter.of((text, state) => text.replace(/\r\n|\r|\n/g, state.lineBreak)),
+    ...(readOnly ? [EditorState.transactionFilter.of((transaction) => transaction.docChanged ? [] : transaction)] : []),
 
     // UI
     lineNumbers(),
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    bracketMatching(),
-    indentOnInput(),
-    foldGutter(),
+    ...(reduced ? [] : [bracketMatching(), indentOnInput(), foldGutter()]),
 
     // History
     history(),
@@ -138,7 +144,7 @@ function buildEditableExtensions(
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap.filter((k) => k.run !== gotoLine),
-      ...foldKeymap,
+      ...(reduced ? [] : foldKeymap),
     ]),
 
     // Update listener for dirty flag + cursor position + selection
@@ -237,6 +243,8 @@ export const CodeMirrorEditor = ({
   content,
   fileName,
   mtimeMs,
+  mode,
+  readOnly = false,
   onCursorChange,
   onDraftRecovered,
   onSelectionChange,
@@ -244,12 +252,10 @@ export const CodeMirrorEditor = ({
 }: CodeMirrorEditorProps): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const stateCacheRef = useRef(new Map<string, EditorState>());
-  const scrollTopCacheRef = useRef(new Map<string, number>());
-  const lruOrderRef = useRef<string[]>([]);
+  const reduced = mode === 'large' || readOnly;
+  const stateCacheRef = useRef(editorBridge.states);
+  const scrollTopCacheRef = useRef(editorBridge.scrolls);
 
-  // Dirty flag debounce
-  const dirtyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Autosave debounce
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Selection debounce
@@ -258,7 +264,6 @@ export const CodeMirrorEditor = ({
   const docChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markFileModified = useStore((s) => s.markFileModified);
-  const discardChanges = useStore((s) => s.discardChanges);
   const saveFile = useStore((s) => s.saveFile);
   const lineWrap = useStore((s) => s.editorLineWrap);
 
@@ -286,18 +291,15 @@ export const CodeMirrorEditor = ({
   }, [saveFile]);
 
   const handleDocChanged = useCallback(() => {
-    // Debounced dirty flag
-    if (dirtyTimerRef.current) clearTimeout(dirtyTimerRef.current);
-    dirtyTimerRef.current = setTimeout(() => {
-      markFileModified(filePathRef.current);
-    }, DIRTY_DEBOUNCE_MS);
-
+    // Synchronous dirty state protects rapid save/tab-close before a debounce fires.
+    if (readOnly) return;
+    markFileModified(filePathRef.current);
     // Debounced autosave
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
       const view = viewRef.current;
-      if (view) {
-        saveDraft(filePathRef.current, view.state.doc.toString());
+      if (view && view.state.doc.length <= MAX_DRAFT_SIZE) {
+        saveDraft(filePathRef.current, view.state.sliceDoc());
       }
     }, AUTOSAVE_DELAY_MS);
 
@@ -305,9 +307,9 @@ export const CodeMirrorEditor = ({
     if (docChangeTimerRef.current) clearTimeout(docChangeTimerRef.current);
     docChangeTimerRef.current = setTimeout(() => {
       const view = viewRef.current;
-      if (view) onDocChangeRef.current?.(view.state.doc.toString());
+      if (view && !reduced && onDocChangeRef.current) onDocChangeRef.current(view.state.sliceDoc());
     }, DOC_CHANGE_DEBOUNCE_MS);
-  }, [markFileModified]);
+  }, [markFileModified, readOnly, reduced]);
 
   const handleCursorMove = useCallback((line: number, col: number) => {
     onCursorChangeRef.current?.(line, col);
@@ -339,26 +341,6 @@ export const CodeMirrorEditor = ({
     }
   }, []);
 
-  // LRU touch
-  const touchLru = useCallback(
-    (fp: string) => {
-      const order = lruOrderRef.current;
-      const idx = order.indexOf(fp);
-      if (idx !== -1) order.splice(idx, 1);
-      order.push(fp);
-
-      // Evict if too many
-      while (order.length > MAX_CACHED_STATES) {
-        const evicted = order.shift()!;
-        stateCacheRef.current.delete(evicted);
-        scrollTopCacheRef.current.delete(evicted);
-        // Clean dirty flag + draft to prevent stale indicators
-        discardChanges(evicted);
-      }
-    },
-    [discardChanges]
-  );
-
   // Mount: create EditorView, register bridge
   useEffect(() => {
     if (!containerRef.current) return;
@@ -369,26 +351,31 @@ export const CodeMirrorEditor = ({
       handleDocChanged,
       handleCursorMove,
       handleSelectionEmit,
-      handleScrollReposition
+      handleScrollReposition,
+      reduced,
+      readOnly
     );
 
     // Line wrap (dynamically reconfigurable via Compartment)
-    extensions.push(lineWrapCompartment.of(lineWrapRef.current ? EditorView.lineWrapping : []));
+    extensions.push(lineWrapCompartment.of(!reduced && lineWrapRef.current ? EditorView.lineWrapping : []));
 
     // Check for cached state or draft recovery
+    editorBridge.prepareState(filePath, mtimeMs, readOnly, !!useStore.getState().editorModifiedFiles[filePath] || !!useStore.getState().editorSaving[filePath]);
     let initialState = stateCacheRef.current.get(filePath);
+    if (initialState) initialState = initialState.update({ effects: StateEffect.reconfigure.of([extensions, EditorState.lineSeparator.of(initialState.lineBreak)]) }).state;
     if (!initialState) {
       let initialContent = content;
       let draftRecovered = false;
 
       // Draft recovery: compare draft.timestamp with file mtimeMs
       try {
-        const draftJson = localStorage.getItem(`editor-draft:${filePath}`);
+        const draftJson = !readOnly && !reduced ? localStorage.getItem(`editor-draft:${filePath}`) : null;
         if (draftJson) {
           const draft = JSON.parse(draftJson) as { content: string; timestamp: number };
           const fileMtime = mtimeMs ?? 0;
 
-          if (fileMtime === 0 || draft.timestamp > fileMtime) {
+          if (typeof draft.content === 'string' && draft.content.length <= MAX_DRAFT_SIZE &&
+              (fileMtime === 0 || draft.timestamp > fileMtime)) {
             // Draft is newer than file (or file is new) — recover draft
             initialContent = draft.content;
             draftRecovered = true;
@@ -403,7 +390,7 @@ export const CodeMirrorEditor = ({
 
       initialState = EditorState.create({
         doc: initialContent,
-        extensions,
+        extensions: [extensions, EditorState.lineSeparator.of(content.includes('\r\n') ? '\r\n' : '\n')],
       });
       stateCacheRef.current.set(filePath, initialState);
 
@@ -415,7 +402,8 @@ export const CodeMirrorEditor = ({
       }
     }
 
-    touchLru(filePath);
+    const sessionState = useStore.getState();
+    editorBridge.touchState(filePath, { ...sessionState.editorModifiedFiles, ...sessionState.editorSaving });
 
     const view = new EditorView({
       state: initialState,
@@ -431,7 +419,8 @@ export const CodeMirrorEditor = ({
     viewRef.current = view;
 
     // Register with bridge
-    editorBridge.register(stateCacheRef.current, scrollTopCacheRef.current, view);
+    stateCacheRef.current.set(filePath, initialState);
+    editorBridge.register(stateCacheRef.current, scrollTopCacheRef.current, view, filePath);
 
     // Report initial cursor position
     const pos = view.state.selection.main.head;
@@ -441,26 +430,26 @@ export const CodeMirrorEditor = ({
     // Capture ref values for cleanup — React hooks exhaustive-deps requires
     // refs used in cleanup to be captured in the effect body, not read
     // from .current inside the cleanup function.
+    const revision = editorBridge.revision(filePath);
     const scrollTopCache = scrollTopCacheRef.current;
     const stateCache = stateCacheRef.current;
-    const dirtyTimer = dirtyTimerRef;
     const autosaveTimer = autosaveTimerRef;
     const selectionTimer = selectionTimerRef;
     const docChangeTimer = docChangeTimerRef;
 
     return () => {
       // Save scroll position before destroying
-      scrollTopCache.set(filePath, view.scrollDOM.scrollTop);
-
-      // Save current state to cache
-      stateCache.set(filePath, view.state);
+      if (editorBridge.revision(filePath) === revision) {
+        scrollTopCache.set(filePath, view.scrollDOM.scrollTop);
+        stateCache.set(filePath, view.state);
+      }
 
       // Clear timers
-      if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       if (selectionTimer.current) clearTimeout(selectionTimer.current);
       if (docChangeTimer.current) clearTimeout(docChangeTimer.current);
 
+      editorBridge.releaseView(view);
       view.destroy();
       viewRef.current = null;
     };
@@ -472,9 +461,9 @@ export const CodeMirrorEditor = ({
     const view = viewRef.current;
     if (!view) return;
     view.dispatch({
-      effects: lineWrapCompartment.reconfigure(lineWrap ? EditorView.lineWrapping : []),
+      effects: lineWrapCompartment.reconfigure(!reduced && lineWrap ? EditorView.lineWrapping : []),
     });
-  }, [lineWrap]);
+  }, [lineWrap, reduced]);
 
   // Scroll to pending line (from search-in-files result click)
   const pendingGoToLine = useStore((s) => s.editorPendingGoToLine);
@@ -495,12 +484,5 @@ export const CodeMirrorEditor = ({
     setPendingGoToLine(null);
   }, [pendingGoToLine, setPendingGoToLine, filePath]);
 
-  // Cleanup bridge on full unmount
-  useEffect(() => {
-    return () => {
-      editorBridge.unregister();
-    };
-  }, []);
-
-  return <div ref={containerRef} className="size-full overflow-hidden" />;
+  return <div ref={containerRef} data-editor-file={filePath} className="size-full overflow-hidden" />;
 };
