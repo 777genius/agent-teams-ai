@@ -108,7 +108,7 @@ export function ExternalAgentPromptDialog({
     let writingClipboard = false;
     try {
       const live = await api.getConnectionInfo();
-      if (!mounted.current || currentTask.current !== task) return;
+      if (!mounted.current) return;
       if (
         live.context.appInstanceId !== connection.context.appInstanceId ||
         live.context.dataRootFingerprint !== connection.context.dataRootFingerprint ||
@@ -117,6 +117,7 @@ export function ExternalAgentPromptDialog({
         throw new Error(t('externalPrompt.contextChanged'));
       }
       const prompt = createPrompt(task, live);
+      if (currentTask.current !== task) return;
       const freshSignature = snapshotSignature(live);
       setPreviewBlocked(false);
       setCopySnapshot(live);
@@ -126,7 +127,13 @@ export function ExternalAgentPromptDialog({
       if (mounted.current && currentTask.current === task)
         setReceipt({ task, signature: freshSignature });
     } catch (cause) {
-      if (!mounted.current || currentTask.current !== task) return;
+      if (!mounted.current) return;
+      if (!writingClipboard) {
+        setPreviewBlocked(true);
+        setGenerated(null);
+        setExpanded(false);
+      }
+      if (currentTask.current !== task) return;
       setError(
         writingClipboard
           ? t('externalPrompt.copyFailed')
@@ -134,11 +141,7 @@ export function ExternalAgentPromptDialog({
             ? cause.message
             : t('externalPrompt.connectionRequired')
       );
-      if (!writingClipboard) {
-        setPreviewBlocked(true);
-        setGenerated(null);
-      }
-      setExpanded(writingClipboard);
+      if (writingClipboard) setExpanded(true);
     } finally {
       if (mounted.current) setBusy(false);
     }
