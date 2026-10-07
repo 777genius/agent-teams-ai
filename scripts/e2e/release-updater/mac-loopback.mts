@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 import { canonical, digest } from '../../ci/release/contract.ts';
 import { waitFor } from './cdp.mts';
+import { serializeMacPfBaseline } from './mac-pf-baseline.mts';
 
 import type { ChildProcess } from 'node:child_process';
 
@@ -23,6 +24,7 @@ export interface CommandResult {
 export class MacCommands {
   readonly commands: CommandResult[] = [];
   readonly output: string;
+  private progressSequence = 0;
   constructor(output: string) {
     this.output = output;
   }
@@ -34,6 +36,14 @@ export class MacCommands {
   ): Promise<CommandResult> {
     assert(binary.startsWith('/'), 'Native command must use an absolute executable path');
     assert(/^[a-z0-9-]+$/.test(label));
+    // Diagnostic write failures must not change command execution or block cleanup.
+    const progressId = `${process.pid}-command-${++this.progressSequence}-${label}`;
+    const progress = { label, executable: binary, timeout, startedAt: new Date().toISOString() };
+    await writeFile(
+      path.join(this.output, `${progressId}-start.json`),
+      `${canonical({ ...progress, state: 'START' })}\n`,
+      { flag: 'wx', mode: 0o600 }
+    ).catch(() => undefined);
     let stdout = '';
     let stderr = '';
     let exitCode = 0;
@@ -63,11 +73,19 @@ export class MacCommands {
     };
     await writeFile(path.join(this.output, logFile), bytes, { flag: 'wx' });
     this.commands.push(result);
+    await writeFile(
+      path.join(this.output, `${progressId}-complete.json`),
+      `${canonical({ ...progress, state: 'COMPLETE' })}\n`,
+      { flag: 'wx', mode: 0o600 }
+    ).catch(() => undefined);
     return result;
   }
   async checked(label: string, binary: string, args: string[], timeout?: number) {
     const result = await this.run(label, binary, args, timeout);
-    assert.equal(result.exitCode, 0, `${label} failed; see ${result.logFile}`);
+    const diagnostics = label.startsWith('pf-')
+      ? `\nPF stderr: ${result.stderr.slice(0, 4096)}\nPF stdout: ${result.stdout.slice(0, 4096)}`
+      : '';
+    assert.equal(result.exitCode, 0, `${label} failed; see ${result.logFile}${diagnostics}`);
     return result;
   }
 }
@@ -106,7 +124,8 @@ async function readPfReceipt(commands: MacCommands) {
   const runnerRoot = await realpath(process.env.RUNNER_TEMP ?? '');
   assert(
     receipt.applicationRoot.startsWith(`${runnerRoot}/TEST-mac-current-`) &&
-      receipt.applicationRoot.endsWith('/home/Applications/Agent Teams AI.app') &&
+      receipt.applicationRoot.endsWith('/Applications/Agent Teams AI.app') &&
+      path.dirname(path.dirname(path.dirname(receipt.applicationRoot))) === runnerRoot &&
       (await realpath(receipt.applicationRoot)) === receipt.applicationRoot,
     "PF receipt install path must be this job's original TEST application"
   );
@@ -269,10 +288,19 @@ export async function containMacNetwork(commands: MacCommands, applicationRoot: 
   ]);
   // Disabled PF may have an empty active ruleset even when /etc/pf.conf contains anchors.
   // Restore the actual active baseline, not a newly loaded approximation of it.
-  const originalPolicy = `${nat.stdout}\n${rules.stdout}`;
+  const originalPolicy = serializeMacPfBaseline(nat.stdout, rules.stdout);
   await writeFile(path.join(commands.output, 'pf-baseline-active.conf'), originalPolicy, {
     flag: 'wx',
   });
+  // A rendered pfctl dump is not necessarily a reloadable config. Reject an
+  // unparseable baseline before replacing any active PF policy.
+  await commands.checked('pf-parse-active-baseline', '/usr/bin/sudo', [
+    '-n',
+    '/sbin/pfctl',
+    '-n',
+    '-f',
+    path.join(commands.output, 'pf-baseline-active.conf'),
+  ]);
   const conf = await readFile('/etc/pf.conf');
   await writeFile(path.join(commands.output, 'pf-original.conf'), conf, { flag: 'wx' });
   // Resolve the public control before PF blocks DNS, then reuse those exact addresses.
@@ -382,13 +410,16 @@ interface MacProcess {
   start: string;
   command: string;
 }
+class MacProcessReadError extends Error {}
 export async function macProcesses(commands: MacCommands): Promise<MacProcess[]> {
-  const raw = await commands.checked(
+  const raw = await commands.run(
     'process-identities',
     '/bin/ps',
     ['-axww', '-o', 'pid=,uid=,pgid=,lstart=,comm='],
     1000
   );
+  if (raw.exitCode !== 0)
+    throw new MacProcessReadError(`process-identities failed; see ${raw.logFile}`);
   const processes = raw.stdout
     .trim()
     .split('\n')
@@ -453,23 +484,28 @@ export async function stopMacOwned(commands: MacCommands, owner: MacProcess, app
     );
     return group;
   };
+  // Post-signal presentation changes remain blocking; only members() authorizes signals.
+  const remaining = async () =>
+    (await macProcesses(commands)).filter(
+      (process) => process.pid === owner.pid || process.group === owner.group
+    );
   const before = await members();
   if (before.length) process.kill(-owner.group, 'SIGTERM');
   try {
     await waitFor(
-      async () => ((await members()).length === 0 ? true : null),
+      async () => ((await remaining()).length === 0 ? true : null),
       'Mac owned process group termination',
       3000
     );
   } catch {
     if ((await members()).length) process.kill(-owner.group, 'SIGKILL');
     await waitFor(
-      async () => ((await members()).length === 0 ? true : null),
+      async () => ((await remaining()).length === 0 ? true : null),
       'Mac owned process group forced termination',
       3000
     );
   }
-  return { before, remaining: await members() };
+  return { before, remaining: await remaining() };
 }
 
 // CoreGraphics reads the actual Aqua window owner. Renderer screenshots are separate evidence.
@@ -528,7 +564,14 @@ export async function captureMacWindow(
     'visible native Mac application window',
     10_000
   );
-  await macOwner(commands, owner.pid, owner.command);
+  let current: MacProcess;
+  try {
+    current = await macOwner(commands, owner.pid, owner.command);
+  } catch (error) {
+    if (!(error instanceof MacProcessReadError)) throw error;
+    current = await macOwner(commands, owner.pid, owner.command);
+  }
+  assert.deepEqual(current, owner, 'Native capture owner identity changed');
   const screenshot = path.join(commands.output, 'native-window.png');
   await commands.checked('capture-aqua-window', '/usr/sbin/screencapture', [
     '-x',

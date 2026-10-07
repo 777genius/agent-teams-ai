@@ -27,6 +27,7 @@ import {
   releasePhysicalProfile,
 } from './windows-ota-profile.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
+import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
 
 import type { TransportState } from './transport.mts';
 import type { WindowsProcess } from './windows-native.mts';
@@ -71,6 +72,7 @@ const priorInstaller = path.join(root, 'prior.Setup.exe');
 const targetInstaller = path.join(root, 'target.Setup.exe');
 const firewallGroup = `TEST-updater-windows-${randomUUID()}`;
 const firewallNames: string[] = [];
+let fixtureDecoder: string | undefined;
 const profileFile = path.join(output, 'profile-ownership.json');
 let profile: ProfileOwnership | undefined;
 const native = await windowsNative(root, output);
@@ -248,7 +250,7 @@ try {
     env,
     windowsVerbatimArguments: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-    signal: AbortSignal.timeout(180_000),
+    signal: AbortSignal.timeout(process.arch === 'arm64' ? 480_000 : 180_000),
   });
   setup.on('error', (error) => {
     evidence.installError = String(error);
@@ -267,6 +269,31 @@ try {
     0,
     'Prior installer unexpectedly auto-launched before transport hooks'
   );
+  evidence.predecessorFixture = await prepareArmPriorFixture({
+    mode: 'predecessor',
+    targetVersion: inputs.targetVersion,
+    root,
+    install,
+    priorInstaller,
+    actualNsisExitCode: setupCode,
+    env,
+    native,
+    recordDecoded: async (ledger) => {
+      await writeFile(path.join(output, 'prior-decoded-pe.json'), JSON.stringify(ledger, null, 2));
+    },
+    ownDecoder: async (file) => {
+      fixtureDecoder = file;
+      const name = `${firewallGroup}-${firewallNames.length}`;
+      firewallNames.push(name);
+      const ownershipFile = path.join(output, 'ownership.json');
+      const owned = JSON.parse(await readFile(ownershipFile, 'utf8')) as Record<string, unknown>;
+      await writeFile(
+        ownershipFile,
+        JSON.stringify({ ...owned, fixtureDecoder, firewallNames }, null, 2)
+      );
+      await native.addFirewall(firewallGroup, name, file);
+    },
+  });
   evidence.pe = await readPeArchitecture(executable);
   assert.equal(
     (evidence.pe as { architecture: string }).architecture,
@@ -554,7 +581,11 @@ try {
       cleanup[0]?.status === 'fulfilled',
       'Retain Firewall containment after failed process cleanup'
     );
-    for (const setup of [priorInstaller, targetInstaller]) {
+    for (const setup of [
+      priorInstaller,
+      targetInstaller,
+      ...(fixtureDecoder ? [fixtureDecoder] : []),
+    ]) {
       await native.stop(await native.processes(setup));
       assert.equal((await native.processes(setup)).length, 0);
     }

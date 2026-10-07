@@ -1,4 +1,6 @@
 import { parse } from 'yaml';
+import { assertArmPriorFixture, usesRepairedArm211 } from './windowsArmPriorFixture.js';
+import type { ArmPriorFixture } from './windowsArmPriorFixture.js';
 
 import {
   canonical,
@@ -337,9 +339,47 @@ function noSandbox(command: unknown) {
     'Disabled Electron sandbox'
   );
 }
+export function checkWindowsPriorFixture(
+  value: Json,
+  architecture: string,
+  mode: string,
+  targetVersion: string
+) {
+  if (!usesRepairedArm211(architecture, mode, targetVersion)) {
+    requireThat(
+      value.predecessorFixture === undefined,
+      'Unrepaired Windows case cannot claim a fixture'
+    );
+    return;
+  }
+  const fixture = object(
+    value.predecessorFixture,
+    'Explicit repaired original ARM211 fixture'
+  ) as unknown as ArmPriorFixture;
+  assertArmPriorFixture(fixture);
+  equal(at(value, 'initialInstall', 'code'), 0, 'Actual original NSIS exit');
+  const args = list(at(value, 'initialInstall', 'arguments'), 'Original NSIS arguments');
+  equal(args[0], '/S', 'Original NSIS silent mode');
+  equal(args.length, 2, 'Original NSIS argument count');
+  equal(
+    args[1],
+    `/D=${fixture.registry.installLocation}`,
+    'Actual original installation directory'
+  );
+  const uninstall = `"${fixture.registry.installLocation}\\Uninstall AgentTeamsAI.exe" /currentuser`;
+  equal(fixture.registry.uninstallString, uninstall, 'Original owned uninstaller');
+  equal(fixture.registry.quietUninstallString, `${uninstall} /S`, 'Original quiet uninstaller');
+  equal(fixture.registry.version, '2.17.1', 'Original registry version');
+  equal(
+    at(value, 'installedBefore', 'packageVersion'),
+    '2.17.1',
+    'Original repaired prior version'
+  );
+}
 function checkWindows(value: Json, row: Row, plan: StagePlan, p: string, d: string) {
   equal(value.mode, row.mode, 'Windows mode');
   equal(value.arch, row.architecture, 'Windows architecture');
+  checkWindowsPriorFixture(value, row.architecture, row.mode, version(plan.input.target.tag));
   truth(value, 'finalReleaseProved', 'finalPromotionFeed');
   equal(value.inputDigest, d, 'Windows input digest');
   equal(at(value, 'targetBinding', 'plan', 'sha256'), p, 'Windows plan hash');
