@@ -100,6 +100,7 @@ function createHost(publish = writeTeamControlApiState) {
   // eslint-disable-next-line sonarjs/code-eval -- trusted local source, no user input
   const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
+    externalAgentConnection: null,
     isShutdownStarted,
     assertStartupActive,
     startupStage: createStartupStage(isShutdownStarted),
