@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { hashFile } from './inputs.mts';
 import { planCommand } from './windows-plan-command.mts';
-import { validateWindowsProducerUpload } from './windows-plan-producer.mts';
+import { validateW11DiagnosticUpload } from './windows-diagnostic-upload.mts';
 import type { WindowsProducerJob } from './windows-plan-producer.mts';
 
 const repository = '777genius/agent-teams-ai';
@@ -64,12 +64,13 @@ assert.equal(
 assert.equal(artifact.workflow_run.id, run.id);
 assert.equal(artifact.workflow_run.head_sha, run.head_sha);
 assert(upload[0]);
-validateWindowsProducerUpload(
-  upload[0],
-  run.id,
-  'Run actions/upload-artifact@v7',
-  artifact.created_at
+const uploadLog = path.join(output, 'reuse-upload.log');
+await planCommand(
+  'gh',
+  ['api', `repos/${repository}/actions/jobs/${upload[0].id}/logs`],
+  uploadLog
 );
+validateW11DiagnosticUpload(upload[0], artifact.created_at, await readFile(uploadLog, 'utf8'));
 const zip = path.join(output, 'reuse.zip');
 await planCommand(
   'gh',

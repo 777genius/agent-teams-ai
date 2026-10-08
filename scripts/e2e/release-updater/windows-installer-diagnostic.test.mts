@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { validateW11DiagnosticUpload } from './windows-diagnostic-upload.mts';
+import { validateWindowsProducerUpload } from './windows-plan-producer.mts';
+import type { WindowsProducerJob } from './windows-plan-producer.mts';
 import { assertInstallerDiagnostic, installerCommand } from './windows-installer-diagnostic.mts';
 
 const env = {
@@ -52,4 +56,64 @@ void test('stock Win32_Process stage matches only the expected TEST install dire
     '[redacted]'
   );
   assert.throws(() => installerCommand(ps, command, 'C:\\Windows', 'C:\\real-project'));
+});
+
+const fixture = JSON.parse(
+  await readFile(new URL('./fixtures/w11-diagnostic-upload.json', import.meta.url), 'utf8')
+) as { job: WindowsProducerJob; artifactCreatedAt: string; log: string };
+void test('actual W11 quantized API clocks fail old rule, exact successful upload proves custody', () => {
+  assert.throws(() =>
+    validateWindowsProducerUpload(
+      fixture.job,
+      37704738528,
+      'Run actions/upload-artifact@v7',
+      fixture.artifactCreatedAt
+    )
+  );
+  const proof = validateW11DiagnosticUpload(fixture.job, fixture.artifactCreatedAt, fixture.log);
+  assert.equal(proof.uploadLogFinalizedAt, '2026-10-08T00:06:24.9460193Z');
+  assert.equal(proof.artifactId, 11519836033);
+  assert.equal(proof.qualifying, false);
+});
+void test('wrong, missing, repeated or reordered upload identity cannot establish custody', () => {
+  for (const token of [
+    '11519836033',
+    'TEST-windows-ota-inputs-37704738528-1',
+    'f527dc188ebd821b243b84c4531d719bc700474df977111f0a6958dc25ff20f1',
+    '874799445',
+  ]) {
+    assert.throws(() =>
+      validateW11DiagnosticUpload(
+        fixture.job,
+        fixture.artifactCreatedAt,
+        fixture.log.replaceAll(token, 'wrong')
+      )
+    );
+  }
+  assert.throws(() =>
+    validateW11DiagnosticUpload(fixture.job, fixture.artifactCreatedAt, fixture.log + fixture.log)
+  );
+  const reversed = fixture.log.trim().split('\n').reverse().join('\n');
+  assert.throws(() =>
+    validateW11DiagnosticUpload(fixture.job, fixture.artifactCreatedAt, reversed)
+  );
+});
+void test('job identity, outcome and artifact creation remain bounded independently of upload log', () => {
+  for (const job of [
+    { ...fixture.job, id: 1 },
+    { ...fixture.job, run_id: 1 },
+    { ...fixture.job, conclusion: 'failure' },
+  ]) {
+    assert.throws(() => validateW11DiagnosticUpload(job, fixture.artifactCreatedAt, fixture.log));
+  }
+  for (const created of ['invalid', '2026-10-08T00:06:23Z', '2026-10-08T00:06:30Z']) {
+    assert.throws(() => validateW11DiagnosticUpload(fixture.job, created, fixture.log));
+  }
+  assert.throws(() =>
+    validateW11DiagnosticUpload(
+      fixture.job,
+      fixture.artifactCreatedAt,
+      fixture.log.replace('00:06:24.9460193Z', '00:06:25.9460193Z')
+    )
+  );
 });

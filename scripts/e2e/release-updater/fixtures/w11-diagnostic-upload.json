@@ -1,0 +1,150 @@
+{
+  "job": {
+    "id": 113076297087,
+    "run_id": 37704738528,
+    "workflow_name": "Windows official installer fresh and native OTA",
+    "head_branch": "release-tooling-v2.17.6-windows-ota-preflight",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/37704738528",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAaU99dfw",
+    "head_sha": "87c576272e8366e733381a56ad7607d08114fb70",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/113076297087",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/37704738528/job/113076297087",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-10-07T23:52:57Z",
+    "started_at": "2026-10-07T23:53:12Z",
+    "completed_at": "2026-10-08T00:06:29Z",
+    "name": "verified-windows-inputs",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-10-07T23:53:13Z",
+        "completed_at": "2026-10-07T23:53:14Z"
+      },
+      {
+        "name": "Set up runner",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-10-07T23:53:14Z",
+        "completed_at": "2026-10-07T23:53:14Z"
+      },
+      {
+        "name": "Require the exact reviewed tooling SHA",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-10-07T23:53:14Z",
+        "completed_at": "2026-10-07T23:53:14Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-10-07T23:53:14Z",
+        "completed_at": "2026-10-07T23:53:20Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-10-07T23:53:20Z",
+        "completed_at": "2026-10-07T23:53:23Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-10-07T23:53:23Z",
+        "completed_at": "2026-10-07T23:53:28Z"
+      },
+      {
+        "name": "Run pnpm install --frozen-lockfile --ignore-scripts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-10-07T23:53:28Z",
+        "completed_at": "2026-10-07T23:53:39Z"
+      },
+      {
+        "name": "Verify native helper imports do not intercept controller cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-10-07T23:53:39Z",
+        "completed_at": "2026-10-07T23:53:39Z"
+      },
+      {
+        "name": "Verify immutable native producer and extract exact plan-bound inputs",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-10-07T23:53:39Z",
+        "completed_at": "2026-10-08T00:06:11Z"
+      },
+      {
+        "name": "Run actions/upload-artifact@v7",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-10-08T00:06:11Z",
+        "completed_at": "2026-10-08T00:06:24Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-10-08T00:06:24Z",
+        "completed_at": "2026-10-08T00:06:25Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-10-08T00:06:25Z",
+        "completed_at": "2026-10-08T00:06:25Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-10-08T00:06:25Z",
+        "completed_at": "2026-10-08T00:06:25Z"
+      },
+      {
+        "name": "Complete runner",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20,
+        "started_at": "2026-10-08T00:06:25Z",
+        "completed_at": "2026-10-08T00:06:25Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21,
+        "started_at": "2026-10-08T00:06:25Z",
+        "completed_at": "2026-10-08T00:06:25Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/113076297087",
+    "labels": ["ubicloud-standard-4"],
+    "runner_id": 4262,
+    "runner_name": "gr5d090awg4e1mfy0fr7f1r48j",
+    "runner_group_id": 1,
+    "runner_group_name": "Default"
+  },
+  "artifactCreatedAt": "2026-10-08T00:06:25Z",
+  "log": "2026-10-08T00:06:11.9926492Z ##[group]Run actions/upload-artifact@v7\n2026-10-08T00:06:11.9926670Z with:\n2026-10-08T00:06:11.9926970Z   name: TEST-windows-ota-inputs-37704738528-1\n2026-10-08T00:06:11.9927161Z   path: .artifacts/TEST-windows-inputs/\n2026-10-08T00:06:11.9927344Z   if-no-files-found: error\n2026-10-08T00:06:11.9927529Z   compression-level: 0\n2026-10-08T00:06:11.9927662Z   retention-days: 2\n2026-10-08T00:06:11.9927785Z   overwrite: false\n2026-10-08T00:06:11.9927919Z   include-hidden-files: false\n2026-10-08T00:06:11.9928068Z   archive: true\n2026-10-08T00:06:11.9928190Z env:\n2026-10-08T00:06:11.9928337Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n2026-10-08T00:06:11.9928530Z ##[endgroup]\n2026-10-08T00:06:12.1314496Z With the provided path, there will be 19 files uploaded\n2026-10-08T00:06:12.1316580Z Artifact name is valid!\n2026-10-08T00:06:12.1316761Z Root directory input is valid!\n2026-10-08T00:06:12.6059126Z Uploading artifact: TEST-windows-ota-inputs-37704738528-1.zip\n2026-10-08T00:06:12.6082293Z Beginning upload of artifact content to blob storage\n2026-10-08T00:06:14.0063260Z Uploaded bytes 8388608\n2026-10-08T00:06:14.0475546Z Uploaded bytes 16777216\n2026-10-08T00:06:14.0615067Z Uploaded bytes 25165824\n2026-10-08T00:06:14.0948624Z Uploaded bytes 33554432\n2026-10-08T00:06:14.4154235Z Uploaded bytes 41943040\n2026-10-08T00:06:14.4350240Z Uploaded bytes 50331648\n2026-10-08T00:06:14.4380685Z Uploaded bytes 58720256\n2026-10-08T00:06:14.4629352Z Uploaded bytes 67108864\n2026-10-08T00:06:14.7995766Z Uploaded bytes 75497472\n2026-10-08T00:06:14.8163272Z Uploaded bytes 83886080\n2026-10-08T00:06:14.8262664Z Uploaded bytes 92274688\n2026-10-08T00:06:14.8475742Z Uploaded bytes 100663296\n2026-10-08T00:06:15.1843190Z Uploaded bytes 109051904\n2026-10-08T00:06:15.2294008Z Uploaded bytes 117440512\n2026-10-08T00:06:15.2614651Z Uploaded bytes 125829120\n2026-10-08T00:06:15.2897057Z Uploaded bytes 134217728\n2026-10-08T00:06:15.5813552Z Uploaded bytes 142606336\n2026-10-08T00:06:15.6573384Z Uploaded bytes 150994944\n2026-10-08T00:06:15.6856911Z Uploaded bytes 159383552\n2026-10-08T00:06:15.7004170Z Uploaded bytes 167772160\n2026-10-08T00:06:15.9496547Z Uploaded bytes 176160768\n2026-10-08T00:06:16.0747087Z Uploaded bytes 184549376\n2026-10-08T00:06:16.0819465Z Uploaded bytes 192937984\n2026-10-08T00:06:16.0905228Z Uploaded bytes 201326592\n2026-10-08T00:06:16.3206681Z Uploaded bytes 209715200\n2026-10-08T00:06:16.4384031Z Uploaded bytes 218103808\n2026-10-08T00:06:16.4434137Z Uploaded bytes 226492416\n2026-10-08T00:06:16.5228927Z Uploaded bytes 234881024\n2026-10-08T00:06:16.7193007Z Uploaded bytes 243269632\n2026-10-08T00:06:16.8328831Z Uploaded bytes 251658240\n2026-10-08T00:06:16.8864008Z Uploaded bytes 260046848\n2026-10-08T00:06:16.8937325Z Uploaded bytes 268435456\n2026-10-08T00:06:17.1110023Z Uploaded bytes 276824064\n2026-10-08T00:06:17.2294587Z Uploaded bytes 285212672\n2026-10-08T00:06:17.3185721Z Uploaded bytes 293601280\n2026-10-08T00:06:17.3711516Z Uploaded bytes 301989888\n2026-10-08T00:06:17.4962324Z Uploaded bytes 310378496\n2026-10-08T00:06:17.6139843Z Uploaded bytes 318767104\n2026-10-08T00:06:17.6767511Z Uploaded bytes 327155712\n2026-10-08T00:06:17.7266503Z Uploaded bytes 335544320\n2026-10-08T00:06:17.9196513Z Uploaded bytes 343932928\n2026-10-08T00:06:17.9840513Z Uploaded bytes 352321536\n2026-10-08T00:06:18.0417664Z Uploaded bytes 360710144\n2026-10-08T00:06:18.0992853Z Uploaded bytes 369098752\n2026-10-08T00:06:18.3026290Z Uploaded bytes 377487360\n2026-10-08T00:06:18.3673068Z Uploaded bytes 385875968\n2026-10-08T00:06:18.4610413Z Uploaded bytes 394264576\n2026-10-08T00:06:18.4658649Z Uploaded bytes 402653184\n2026-10-08T00:06:18.7839516Z Uploaded bytes 411041792\n2026-10-08T00:06:18.7890457Z Uploaded bytes 419430400\n2026-10-08T00:06:18.8334976Z Uploaded bytes 427819008\n2026-10-08T00:06:18.9287433Z Uploaded bytes 436207616\n2026-10-08T00:06:19.1503014Z Uploaded bytes 444596224\n2026-10-08T00:06:19.1995835Z Uploaded bytes 452984832\n2026-10-08T00:06:19.2650427Z Uploaded bytes 461373440\n2026-10-08T00:06:19.3268097Z Uploaded bytes 469762048\n2026-10-08T00:06:19.6164176Z Uploaded bytes 478150656\n2026-10-08T00:06:19.6273980Z Uploaded bytes 486539264\n2026-10-08T00:06:19.6316756Z Uploaded bytes 494927872\n2026-10-08T00:06:19.6968624Z Uploaded bytes 503316480\n2026-10-08T00:06:19.9873452Z Uploaded bytes 511705088\n2026-10-08T00:06:20.0128416Z Uploaded bytes 520093696\n2026-10-08T00:06:20.0391973Z Uploaded bytes 528482304\n2026-10-08T00:06:20.2027803Z Uploaded bytes 536870912\n2026-10-08T00:06:20.3460032Z Uploaded bytes 545259520\n2026-10-08T00:06:20.3715591Z Uploaded bytes 553648128\n2026-10-08T00:06:20.4302963Z Uploaded bytes 562036736\n2026-10-08T00:06:20.5718521Z Uploaded bytes 570425344\n2026-10-08T00:06:20.7285046Z Uploaded bytes 578813952\n2026-10-08T00:06:20.8160070Z Uploaded bytes 587202560\n2026-10-08T00:06:20.8979338Z Uploaded bytes 595591168\n2026-10-08T00:06:20.9278454Z Uploaded bytes 603979776\n2026-10-08T00:06:21.1188976Z Uploaded bytes 612368384\n2026-10-08T00:06:21.1982978Z Uploaded bytes 620756992\n2026-10-08T00:06:21.2731428Z Uploaded bytes 629145600\n2026-10-08T00:06:21.3319022Z Uploaded bytes 637534208\n2026-10-08T00:06:21.5364277Z Uploaded bytes 645922816\n2026-10-08T00:06:21.5593794Z Uploaded bytes 654311424\n2026-10-08T00:06:21.7239491Z Uploaded bytes 662700032\n2026-10-08T00:06:21.8129680Z Uploaded bytes 671088640\n2026-10-08T00:06:21.9181362Z Uploaded bytes 679477248\n2026-10-08T00:06:21.9405557Z Uploaded bytes 687865856\n2026-10-08T00:06:22.0810837Z Uploaded bytes 696254464\n2026-10-08T00:06:22.1839530Z Uploaded bytes 704643072\n2026-10-08T00:06:22.2822138Z Uploaded bytes 713031680\n2026-10-08T00:06:22.3506213Z Uploaded bytes 721420288\n2026-10-08T00:06:22.4667141Z Uploaded bytes 729808896\n2026-10-08T00:06:22.6589899Z Uploaded bytes 738197504\n2026-10-08T00:06:22.6905542Z Uploaded bytes 746586112\n2026-10-08T00:06:22.7392597Z Uploaded bytes 754974720\n2026-10-08T00:06:22.8839935Z Uploaded bytes 763363328\n2026-10-08T00:06:23.0210352Z Uploaded bytes 771751936\n2026-10-08T00:06:23.0957102Z Uploaded bytes 780140544\n2026-10-08T00:06:23.1154758Z Uploaded bytes 788529152\n2026-10-08T00:06:23.2616419Z Uploaded bytes 796917760\n2026-10-08T00:06:23.3926505Z Uploaded bytes 805306368\n2026-10-08T00:06:23.4860626Z Uploaded bytes 813694976\n2026-10-08T00:06:23.5315332Z Uploaded bytes 822083584\n2026-10-08T00:06:23.6522755Z Uploaded bytes 830472192\n2026-10-08T00:06:23.8649819Z Uploaded bytes 838860800\n2026-10-08T00:06:23.9060100Z Uploaded bytes 847249408\n2026-10-08T00:06:23.9758276Z Uploaded bytes 855638016\n2026-10-08T00:06:24.0531229Z Uploaded bytes 864026624\n2026-10-08T00:06:24.2163272Z Uploaded bytes 872415232\n2026-10-08T00:06:24.3758485Z Uploaded bytes 874799445\n2026-10-08T00:06:24.4861415Z Finished uploading artifact content to blob storage!\n2026-10-08T00:06:24.4862301Z SHA256 digest of uploaded artifact is f527dc188ebd821b243b84c4531d719bc700474df977111f0a6958dc25ff20f1\n2026-10-08T00:06:24.4863625Z Finalizing artifact upload\n2026-10-08T00:06:24.9460193Z Artifact TEST-windows-ota-inputs-37704738528-1 successfully finalized. Artifact ID 11519836033\n2026-10-08T00:06:24.9460830Z Artifact TEST-windows-ota-inputs-37704738528-1 has been successfully uploaded! Final size is 874799445 bytes. Artifact ID is 11519836033\n2026-10-08T00:06:24.9462978Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/37704738528/artifacts/11519836033\n"
+}
