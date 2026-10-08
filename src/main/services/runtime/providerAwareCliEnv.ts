@@ -23,6 +23,7 @@ import {
 } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
+import type { CodexLaunchDialect } from './codexCliBinary';
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type ProviderEnvTargetId = CliProviderId | TeamProviderId | undefined;
@@ -37,6 +38,7 @@ const AGGREGATE_PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST = [
 ] as const;
 
 export interface ProviderAwareCliEnvOptions {
+  codexLaunchDialect?: CodexLaunchDialect;
   binaryPath?: string | null;
   providerId?: ProviderEnvTargetId;
   providerBackendId?: string | null;
@@ -214,7 +216,8 @@ export async function buildProviderAwareCliEnv(
       env,
       resolvedProviderId,
       options.providerBackendId,
-      options.binaryPath
+      options.binaryPath,
+      options.codexLaunchDialect
     );
     const connectionIssues = await providerConnectionService.getConfiguredConnectionIssues(
       env,

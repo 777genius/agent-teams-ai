@@ -276,8 +276,8 @@ export async function verifyCarryReadiness(...args: Parameters<typeof verifyRead
 }
 export async function verifyFullReadiness(...args: Parameters<typeof verifyReadiness>) {
   requireThat(
-    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.7',
-    'Prepared full publisher requires full217'
+    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.10',
+    'Prepared full publisher requires full220'
   );
   return verifyReadiness(...args);
 }
@@ -287,8 +287,8 @@ export async function publishCarriedRelease(...args: Parameters<typeof publishPr
 }
 export async function publishFullRelease(...args: Parameters<typeof publishPreparedRelease>) {
   requireThat(
-    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.7',
-    'Prepared full publisher requires full217'
+    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.10',
+    'Prepared full publisher requires full220'
   );
   return publishPreparedRelease(...args);
 }

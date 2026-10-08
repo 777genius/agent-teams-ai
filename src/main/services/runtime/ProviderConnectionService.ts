@@ -30,7 +30,7 @@ import {
   isUsableAnthropicCompatibleEndpoint,
 } from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
-import { isCodexExecBinary } from './codexCliBinary';
+import { type CodexLaunchDialect, isCodexExecBinary } from './codexCliBinary';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
@@ -199,13 +199,14 @@ function buildCodexLaunchArgs(
   binaryPath: string | null | undefined,
   loginMethod: 'chatgpt' | 'api',
   options: {
+    dialect?: CodexLaunchDialect;
     customProviderConfigOverrides?: readonly string[];
     cliConfigOverrides?: readonly string[];
   } = {}
 ): string[] {
   const customProviderConfigOverrides = options.customProviderConfigOverrides ?? [];
   const cliConfigOverrides = [...(options.cliConfigOverrides ?? [])];
-  if (isCodexExecBinary(binaryPath)) {
+  if (options.dialect === 'native' || (!options.dialect && isCodexExecBinary(binaryPath))) {
     return [
       '-c',
       `forced_login_method="${loginMethod}"`,
@@ -227,14 +228,6 @@ function buildCodexLaunchArgs(
   }
 
   return ['--settings', JSON.stringify({ codex: codexSettings })];
-}
-
-function buildCodexForcedLoginLaunchArgs(
-  binaryPath: string | null | undefined,
-  loginMethod: 'chatgpt' | 'api',
-  cliConfigOverrides: readonly string[] = []
-): string[] {
-  return buildCodexLaunchArgs(binaryPath, loginMethod, { cliConfigOverrides });
 }
 
 function isCodexCustomProviderBaseUrlUsable(baseUrl: string): boolean {
@@ -379,7 +372,10 @@ async function checkCodexCliLoginStatus({
 }): Promise<CodexCliLoginStatusCheckResult> {
   const executable = binaryPath?.trim() || 'codex';
   const args = [
-    ...buildCodexForcedLoginLaunchArgs(executable, 'chatgpt', CODEX_LOGIN_STATUS_CONFIG_OVERRIDES),
+    ...buildCodexLaunchArgs(executable, 'chatgpt', {
+      dialect: 'native',
+      cliConfigOverrides: CODEX_LOGIN_STATUS_CONFIG_OVERRIDES,
+    }),
     'login',
     'status',
   ];
@@ -1082,7 +1078,8 @@ export class ProviderConnectionService {
     env: NodeJS.ProcessEnv,
     providerId: CliProviderId,
     runtimeBackendOverride?: string | null,
-    binaryPath?: string | null
+    binaryPath?: string | null,
+    dialect?: CodexLaunchDialect
   ): Promise<string[]> {
     if (providerId !== 'codex') {
       return [];
@@ -1106,12 +1103,13 @@ export class ProviderConnectionService {
     });
 
     if (readiness.effectiveAuthMode === 'chatgpt') {
-      return buildCodexLaunchArgs(binaryPath, 'chatgpt');
+      return buildCodexLaunchArgs(binaryPath, 'chatgpt', { dialect });
     }
 
     if (readiness.effectiveAuthMode === 'api_key') {
       const customProvider = this.getConfiguredCodexCustomProvider();
       return buildCodexLaunchArgs(binaryPath, 'api', {
+        dialect,
         customProviderConfigOverrides: customProvider
           ? buildCodexCustomProviderConfigOverrides(customProvider)
           : [],

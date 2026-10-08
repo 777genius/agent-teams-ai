@@ -28,7 +28,7 @@ import type { ManualBundle } from './mac-manual-inputs.mts';
 
 // These fail on target/predecessor substitution, stale producer attempts, or unsafe archive paths.
 function fixture() {
-  const names = platformNames('2.17.7');
+  const names = platformNames('2.17.10');
   const originals = [
     ...names.windows,
     ...names.linux,
@@ -38,7 +38,7 @@ function fixture() {
     ...textProof(name, `TEST-${name}`),
     assetId: 100 + index,
     releaseId: 999,
-    tag: 'v2.17.7',
+    tag: 'v2.17.10',
   }));
   const plan: StagePlan = {
     schemaVersion: 1,
@@ -48,7 +48,7 @@ function fixture() {
       toolingSha: '1'.repeat(40),
       target: {
         id: 999,
-        tag: 'v2.17.7',
+        tag: 'v2.17.10',
         applicationSha: '2'.repeat(40),
         createdAt: '2026-10-07T00:00:00Z',
         name: 'TEST',
@@ -115,7 +115,7 @@ function fixture() {
   }
   return { plan, expected, bundle };
 }
-void test('217 target is independent of frozen211 and captured latest216', () => {
+void test('220 target is independent of frozen211 and captured latest216', () => {
   const { plan, expected, bundle } = fixture();
   checkManualBundle(bundle, plan, expected);
   assert.equal(
@@ -284,7 +284,7 @@ void test('context refuses local, foreign workflow and moving source execution',
 void test('release reread accepts download counters but rejects asset and snapshot substitution', () => {
   const before: Release = {
     id: 999,
-    tag_name: 'v2.17.7',
+    tag_name: 'v2.17.10',
     target_commitish: '2'.repeat(40),
     created_at: '2026-10-07T00:00:00Z',
     draft: true,

@@ -3162,20 +3162,52 @@
     "label": "Team template",
     "placeholder": "Start from a team template",
     "names": {
-      "feature": "Build a feature",
-      "bug": "Fix a bug",
-      "review": "Review code",
-      "research": "Research a solution"
+      "software-product": "Software Product Team",
+      "marketing": "Marketing Team",
+      "content": "Content Studio",
+      "research": "Research Team",
+      "sales": "Sales Team",
+      "customer-support": "Customer Support Team",
+      "operations": "Operations Team",
+      "learning": "Learning Team"
     },
     "providerLabel": "Choose team provider",
     "providerPlaceholder": "Choose a provider",
-    "modelAfterProvider": "Model selection is available after choosing a provider."
+    "modelAfterProvider": "Model selection is available after choosing a provider.",
+    "descriptions": {
+      "software-product": "Design, build and validate apps, websites and digital products.",
+      "marketing": "Develop campaigns and messaging for a product or small business.",
+      "content": "Create clear articles, newsletters, educational content and scripts.",
+      "research": "Investigate markets, topics and practical decisions using evidence.",
+      "sales": "Understand customer needs and prepare offers, outreach and follow-ups.",
+      "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
+      "operations": "Organize projects and everyday work with practical plans and process improvements.",
+      "learning": "Learn a topic or skill through clear explanations, practice and feedback."
+    }
   },
   "externalPrompt": {
+    "runCodex": "Run in Codex",
+    "runClaude": "Run in Claude Code",
+    "runCancel": "Cancel run",
+    "runCodexNotReady": "Codex needs authenticated one-shot readiness and an available account.",
+    "runClaudeNotReady": "Claude Code needs authenticated native one-shot readiness.",
+    "runCodexMissing": "Codex is unavailable. Install or reconnect it in provider settings.",
+    "runClaudeMissing": "Claude Code is unavailable. Install or reconnect it in provider settings.",
+    "runTask": "Running request: {{task}}",
+    "runCompletedHelp": "The agent process finished successfully. Check its output for the result of each requested change.",
+    "runRequestFailed": "Cannot update the run. Refresh the connection and provider status, then retry.",
+    "runStatuses": {
+      "preparing": "Preparing",
+      "running": "Running",
+      "completed": "Process completed",
+      "failed": "Run failed",
+      "cancelled": "Cancelled"
+    },
     "title": "Manage teams with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
-    "taskPlaceholder": "Create development and review teams for the dashboard, using feature and review as the starting points.",
+    "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
+    "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
     "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
     "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
     "templatesTitle": "Available team templates (reference)",
@@ -3189,7 +3221,7 @@
     "localOnly": "External prompts require the local desktop app context.",
     "retry": "Retry connection",
     "preview": "View final prompt",
-    "previewLabel": "Final prompt (read only)",
+    "previewLabel": "Final prompt",
     "copy": "Copy prompt for agent",
     "copying": "Copying...",
     "copied": "Copied",
@@ -3198,7 +3230,8 @@
     "responsibilitiesFor": "Responsibilities for {{name}}",
     "requestHelp": "Name the templates to use and describe any edits in your request.",
     "editAvailable": "Editing draft/stopped configuration is available.",
-    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+    "trashAvailable": "Reversible trash for draft/stopped teams is available.",
+    "previewPlaceholder": "Enter a request to see the final prompt. A ready MCP connection is required."
   },
   "managementChanges": {
     "title": "Recent changes",

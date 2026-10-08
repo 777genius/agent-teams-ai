@@ -1065,12 +1065,30 @@ describe('buildProviderAwareCliEnv', () => {
       }),
       'codex',
       undefined,
-      '/mock/claude-multimodel'
+      '/mock/claude-multimodel',
+      undefined
     );
     expect(result.providerArgs).toEqual([
       '--settings',
       '{"codex":{"forced_login_method":"chatgpt"}}',
     ]);
+    getConfiguredConnectionLaunchArgsMock.mockResolvedValue([
+      '-c',
+      'forced_login_method="chatgpt"',
+    ]);
+    const native = await buildProviderAwareCliEnv({
+      binaryPath: '/sandbox/bin/renamed-provider',
+      providerId: 'codex',
+      codexLaunchDialect: 'native',
+    });
+    expect(getConfiguredConnectionLaunchArgsMock).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      'codex',
+      undefined,
+      '/sandbox/bin/renamed-provider',
+      'native'
+    );
+    expect(native.providerArgs).toEqual(['-c', 'forced_login_method="chatgpt"']);
   });
 
   it('returns Codex custom provider launch args after API-key env application', async () => {
@@ -1109,7 +1127,8 @@ describe('buildProviderAwareCliEnv', () => {
       }),
       'codex',
       undefined,
-      '/mock/claude-multimodel'
+      '/mock/claude-multimodel',
+      undefined
     );
     expect(result.providerArgs).toEqual(['--settings', customSettings]);
     expect(result.env.OPENAI_API_KEY).toBe('stored-key');
@@ -1159,7 +1178,8 @@ describe('buildProviderAwareCliEnv', () => {
       launchArgsEnv,
       'codex',
       undefined,
-      '/mock/claude-multimodel'
+      '/mock/claude-multimodel',
+      undefined
     );
     const connectionIssuesEnv = getConfiguredConnectionIssuesMock.mock.calls[0]?.[0] as
       | NodeJS.ProcessEnv

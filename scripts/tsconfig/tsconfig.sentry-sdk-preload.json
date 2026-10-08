@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.sentry-sdk-e2e.json",
-  "files": ["scripts/e2e/sentry-sdk-envelope/preload.mts"],
+  "files": ["../../scripts/e2e/sentry-sdk-envelope/preload.mts"],
   "include": []
 }

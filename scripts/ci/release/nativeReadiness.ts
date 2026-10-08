@@ -142,7 +142,7 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
     package: ['inputs', 'Download and verify immutable official packages'],
     'mac-manual': [
       'prepare-mac-manual-inputs',
-      'Authenticate prepared plan and uploaded original 211 and target 217 bytes',
+      'Authenticate prepared plan and uploaded original 211 and target 220 bytes',
     ],
     mac: [
       'prepare-mac-inputs',
@@ -420,12 +420,44 @@ function checkLinux(value: Json, row: Row, plan: StagePlan, p: string, d: string
           (command.length === 1 && command[0] === sealed.join(' ')),
         'Sealed successor command changed'
       );
-      equal(at(kernel, 'markers', 'HOME'), at(seal, 'home'), 'Sealed HOME');
-      equal(
-        at(kernel, 'markers', 'AGENT_TEAMS_ELECTRON_USER_DATA_DIR'),
-        at(seal, 'userData'),
-        'Sealed profile'
+      const inspector = object(value.automaticReadOnlyInspector, 'automatic successor Inspector');
+      const identity = object(inspector.identity, 'automatic successor identity');
+      requireThat(
+        typeof identity.pid === 'number' &&
+          Number.isSafeInteger(identity.pid) &&
+          identity.pid > 0 &&
+          typeof identity.start === 'string' &&
+          identity.start.length > 0,
+        'Missing automatic successor generation'
       );
+      equal(identity.pid, at(kernel, 'identity', 'pid'), 'Successor Inspector PID');
+      equal(identity.start, at(kernel, 'identity', 'start'), 'Successor Inspector start');
+      equal(identity.pid, at(value, 'automaticProcess', 'pid'), 'Automatic successor PID');
+      equal(identity.start, at(value, 'automaticProcess', 'start'), 'Automatic successor start');
+      const actual = object(inspector.actual, 'automatic successor runtime');
+      equal(actual.pid, identity.pid, 'Successor runtime PID');
+      for (const field of ['home', 'profile', 'userData', 'version', 'executable'])
+        requireThat(
+          typeof actual[field] === 'string' && actual[field].trim().length > 0,
+          `Missing successor runtime ${field}`
+        );
+      equal(actual.home, at(seal, 'home'), 'Successor HOME');
+      equal(actual.profile, at(seal, 'userData'), 'Successor profile');
+      equal(actual.userData, at(seal, 'userData'), 'Successor Electron userData');
+      const argv = list(actual.argv, 'successor argv');
+      const execArgv = list(actual.execArgv, 'successor execArgv');
+      requireThat(
+        [...argv, ...execArgv].every((item) => typeof item === 'string'),
+        'Invalid successor runtime arguments'
+      );
+      equal(argv, sealed, 'Successor argv');
+      equal(execArgv, at(seal, 'runtime', 'execArgv'), 'Successor execArgv');
+      equal(actual.version, value.targetVersion, 'Successor version');
+      equal(actual.executable, at(kernel, 'executable'), 'Successor executable');
+      const markers = object(at(kernel, 'markers'), 'successor kernel markers');
+      if (markers.HOME !== undefined) equal(markers.HOME, at(seal, 'home'), 'Sealed HOME');
+      if (markers.AGENT_TEAMS_ELECTRON_USER_DATA_DIR !== undefined)
+        equal(markers.AGENT_TEAMS_ELECTRON_USER_DATA_DIR, at(seal, 'userData'), 'Sealed profile');
     }
   }
   if (!fresh) {
@@ -531,11 +563,11 @@ export async function verifyNativeReadiness(
   if (full)
     requireThat(
       receipt.schemaVersion === 2 &&
-        plan.input.target.tag === 'v2.17.7' &&
+        plan.input.target.tag === 'v2.17.10' &&
         plan.input.toolingSha === plan.input.target.applicationSha &&
         plan.input.macProductMinimum === '13.0' &&
         !plan.input.macSource,
-      'Full217 requires one frozen source and schema2 native proof'
+      'Full220 requires one frozen source and schema2 native proof'
     );
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const d = digest(canonical(plan.input));
@@ -656,7 +688,7 @@ export async function verifyNativeReadiness(
     equal(artifact.workflow_run.head_sha, executionSha, 'artifact tooling');
     requireThat(
       time(artifact.created_at) >= time(upload.started_at) &&
-        time(artifact.created_at) < time(upload.completed_at) + 1000,
+        time(artifact.created_at) <= time(upload.completed_at) + 1000,
       'Artifact outside current upload'
     );
     const archive = await port.archive(receipt.repository, reference.artifactId, [

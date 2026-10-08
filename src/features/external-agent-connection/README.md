@@ -31,8 +31,25 @@ settings restart states, and controller/MCP HTTP contracts. Packaged CDP and a
 native external client additionally need isolated desktop E2E proof. All test
 state must use disposable sandbox projects and separate userData/data roots.
 
-The prompt popup persists its task by stable profile/root, displays all four
-templates through the shared roster presentation, and reads fresh connection
-info for each clipboard write. Its current instructions allow creating drafts
-only; edit/trash tools and management result notices remain separate planned
-extensions. Copy and opening the popup never mutate or launch a team.
+The prompt popup persists its task by stable profile/root and shows the final
+read-only prompt immediately below the request, with its copy action alongside
+the label. Four compact real-world team templates follow through the shared
+roster presentation. Fresh connection info is read for each clipboard write;
+management instructions expose only wired create/edit/trash capabilities.
+Copy and opening the popup never mutate or launch a team.
+
+The desktop prompt popup also offers native Codex and Claude Code one-shot runs.
+Its optional `directRun` contract is absent in HTTP/browser mode: provider process
+execution is deliberately desktop-only. Main reserves one active run before
+awaiting readiness, validates current app/root/generation again before spawn,
+and builds the final prompt from authoritative templates. Native processes use
+a fresh temporary cwd and only this app's per-run MCP configuration. Management
+tools permit drafts, stopped configuration edits and reversible Trash; launch,
+stop, task execution, built-in shell and file edits are unavailable.
+
+Snapshot polling recovers an existing run when reopening the popup. The snapshot
+retains its original task, real elapsed time, bounded redacted output and truthful
+process completion status. Provider authentication and custom endpoint policy
+remain owned by the existing provider services. Root switches and app shutdown
+cancel owned runs. Native CLI compatibility still requires sandbox protocol proof
+for the installed binary version; unit lifecycle checks do not replace that proof.

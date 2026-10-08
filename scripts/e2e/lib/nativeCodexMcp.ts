@@ -171,10 +171,14 @@ export interface NativeCodexMcpClient {
 
 /** Shared native discovery/call session; consumers never need a second RPC implementation. */
 export async function withNativeCodexMcp<T>(
-  input: Omit<NativeCodexMcpInput, 'teamName'> & { requiredTools?: readonly string[] },
+  input: Omit<NativeCodexMcpInput, 'teamName'> & {
+    requiredTools?: readonly string[];
+    perRunConfig?: { serverName: string; args: readonly string[] };
+  },
   use: (client: NativeCodexMcpClient) => Promise<T>
 ): Promise<T> {
   const requiredTools = input.requiredTools ?? REQUIRED_TOOLS;
+  const serverName = input.perRunConfig?.serverName ?? SERVER_NAME;
   const endpoint = new URL(input.url);
   assert(
     endpoint.protocol === 'http:' &&
@@ -203,10 +207,18 @@ export async function withNativeCodexMcp<T>(
   const version = await execute('codex', ['--version'], options);
   const nativeVersion = version.stdout.trim();
   assert(nativeVersion.startsWith('codex-cli '), 'Unexpected native Codex binary version');
-  await execute('codex', ['mcp', 'add', SERVER_NAME, '--url', input.url], options);
+  if (!input.perRunConfig)
+    await execute('codex', ['mcp', 'add', serverName, '--url', input.url], options);
   const child = spawn(
     'codex',
-    ['app-server', '--listen', 'stdio://', '-c', 'cli_auth_credentials_store="file"'],
+    [
+      'app-server',
+      '--listen',
+      'stdio://',
+      '-c',
+      'cli_auth_credentials_store="file"',
+      ...(input.perRunConfig?.args ?? []),
+    ],
     { cwd: input.cwd, env, stdio: ['pipe', 'pipe', 'pipe'] }
   );
   const rpc = nativeRpc(child);
@@ -233,7 +245,7 @@ export async function withNativeCodexMcp<T>(
       const status = record(
         await rpc.request(
           'mcpServerStatus/list',
-          { threadId, serverName: SERVER_NAME },
+          { threadId, serverName },
           Math.max(1, deadline - Date.now())
         ),
         'Invalid native MCP status response'
@@ -241,7 +253,7 @@ export async function withNativeCodexMcp<T>(
       assert(Array.isArray(status.data), 'Native MCP status missing data');
       const server = status.data
         .map((entry) => record(entry, 'Invalid native MCP server status'))
-        .find((entry) => entry.name === SERVER_NAME);
+        .find((entry) => entry.name === serverName);
       if (server) {
         if (
           ['authenticationRequired', 'failed', 'cancelled', 'disabled'].includes(
@@ -266,7 +278,7 @@ export async function withNativeCodexMcp<T>(
     const call = async (tool: string, args: Record<string, unknown>) =>
       toolValue(
         await rpc.request('mcpServer/tool/call', {
-          server: SERVER_NAME,
+          server: serverName,
           threadId,
           tool,
           arguments: args,

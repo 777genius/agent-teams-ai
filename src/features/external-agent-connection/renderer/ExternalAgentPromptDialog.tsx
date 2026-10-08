@@ -4,25 +4,28 @@ import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@renderer/components/ui/collapsible';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
 
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+
+import { ExternalAgentRunActions } from './ExternalAgentRunActions';
 import { TeamTemplateReferences } from './TeamTemplateReferences';
 
-import type { ConnectionInfoV1, ExternalAgentConnectionApi } from '../contracts';
+import type {
+  ConnectionInfoV1,
+  ExternalAgentConnectionApi,
+  ExternalAgentRunApi,
+} from '../contracts';
 
 interface Props {
   api: ExternalAgentConnectionApi;
   connection: ConnectionInfoV1;
   isLight: boolean;
   onSettings(): void;
+  runApi?: ExternalAgentRunApi;
 }
 
 function createPrompt(task: string, connection: ConnectionInfoV1): string {
@@ -51,13 +54,13 @@ export const ExternalAgentPromptDialog = ({
   connection,
   isLight,
   onSettings,
+  runApi,
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: settingsT } = useAppTranslation('settings');
   const request = useDraftPersistence({
     key: `externalAgentPrompt:${connection.profileFingerprint}:${connection.context.dataRootFingerprint}`,
   });
-  const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +91,7 @@ export const ExternalAgentPromptDialog = ({
     currentConnection.control.status === 'ready' &&
     currentConnection.capabilities.draftCreation;
   const taskPresent = Boolean(request.value.trim());
+  const taskTooLong = Boolean(runApi) && request.value.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH;
   const copied = receipt?.task === request.value && receipt.signature === signature;
   const preview = useMemo(() => {
     if (previewBlocked || !ready || !taskPresent) return '';
@@ -132,7 +136,6 @@ export const ExternalAgentPromptDialog = ({
       if (!writingClipboard) {
         setPreviewBlocked(true);
         setGenerated(null);
-        setExpanded(false);
       }
       if (currentTask.current !== task) return;
       setError(
@@ -142,11 +145,30 @@ export const ExternalAgentPromptDialog = ({
             ? cause.message
             : t('externalPrompt.connectionRequired')
       );
-      if (writingClipboard) setExpanded(true);
     } finally {
       if (mounted.current) setBusy(false);
     }
   };
+
+  const copyAction = (testId: string): React.JSX.Element => (
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => void copy()}
+      disabled={busy || !ready || !taskPresent}
+      data-testid={testId}
+      className="h-auto min-h-8 max-w-full whitespace-normal bg-blue-600 text-white hover:bg-blue-500"
+    >
+      {copied ? (
+        <Check className="size-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3.5 shrink-0" aria-hidden="true" />
+      )}
+      {t(
+        busy ? 'externalPrompt.copying' : copied ? 'externalPrompt.copied' : 'externalPrompt.copy'
+      )}
+    </Button>
+  );
 
   return (
     <div className="min-w-0 space-y-4" data-testid="external-agent-prompt-content">
@@ -164,8 +186,22 @@ export const ExternalAgentPromptDialog = ({
           }}
           placeholder={t('externalPrompt.taskPlaceholder')}
           className="min-h-24 text-sm"
-          aria-describedby="external-agent-task-help"
+          aria-invalid={taskTooLong}
+          aria-describedby={
+            taskTooLong
+              ? 'external-agent-task-help external-agent-task-error'
+              : 'external-agent-task-help'
+          }
         />
+        {taskTooLong && (
+          <p
+            id="external-agent-task-error"
+            className="text-xs text-[var(--warning-text)]"
+            role="alert"
+          >
+            {t('externalPrompt.taskTooLong', { limit: EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH })}
+          </p>
+        )}
         <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
           {t('externalPrompt.requestHelp')}{' '}
           {currentConnection.capabilities.configurationEdit
@@ -178,69 +214,74 @@ export const ExternalAgentPromptDialog = ({
             : ''}
         </p>
       </div>
-      <TeamTemplateReferences isLight={isLight} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
-          {t('externalPrompt.connectionStatus', {
-            mcp: settingsT(
-              `general.externalAgentConnection.statuses.${currentConnection.mcp.status}`
-            ),
-            cdp: settingsT(
-              `general.externalAgentConnection.statuses.${currentConnection.cdp.status}`
-            ),
-          })}
-        </p>
-        <Button type="button" variant="link" size="sm" onClick={onSettings}>
-          {t('externalPrompt.connectionSettings')}
-        </Button>
-      </div>
-      {!ready && (
-        <p className="text-xs text-[var(--warning-text)]" role="status">
-          {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
-        </p>
-      )}
-      <Collapsible open={expanded} onOpenChange={setExpanded} className="min-w-0 space-y-2">
+      <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="outline" size="sm" disabled={!preview}>
-              {t('externalPrompt.preview')}
-            </Button>
-          </CollapsibleTrigger>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void copy()}
-            disabled={busy || !ready || !taskPresent}
-            data-testid="external-agent-prompt-copy"
-            className="h-auto min-h-8 max-w-full whitespace-normal"
-          >
-            {copied ? (
-              <Check className="size-3.5 shrink-0" />
-            ) : (
-              <Copy className="size-3.5 shrink-0" />
-            )}
-            {t(
-              busy
-                ? 'externalPrompt.copying'
-                : copied
-                  ? 'externalPrompt.copied'
-                  : 'externalPrompt.copy'
-            )}
+          <Label id="external-agent-prompt-preview-label">{t('externalPrompt.previewLabel')}</Label>
+          {copyAction('external-agent-prompt-copy')}
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
+          {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
+        </p>
+        <div
+          id="external-agent-prompt-preview"
+          role="region"
+          aria-labelledby="external-agent-prompt-preview-label"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (
+              !(event.ctrlKey || event.metaKey) ||
+              event.altKey ||
+              event.key.toLowerCase() !== 'a'
+            )
+              return;
+            const selection = event.currentTarget.ownerDocument.defaultView?.getSelection();
+            if (!selection) return;
+            event.preventDefault();
+            const range = event.currentTarget.ownerDocument.createRange();
+            range.selectNodeContents(event.currentTarget);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }}
+          className="h-36 max-h-36 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-[var(--color-border)] px-3 py-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
+          data-testid="external-agent-prompt-preview"
+        >
+          {preview || (
+            <span className="text-[var(--color-text-muted)]">
+              {t('externalPrompt.previewPlaceholder')}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
+            {t('externalPrompt.connectionStatus', {
+              mcp: settingsT(
+                `general.externalAgentConnection.statuses.${currentConnection.mcp.status}`
+              ),
+              cdp: settingsT(
+                `general.externalAgentConnection.statuses.${currentConnection.cdp.status}`
+              ),
+            })}
+          </p>
+          <Button type="button" variant="link" size="sm" onClick={onSettings}>
+            {t('externalPrompt.connectionSettings')}
           </Button>
         </div>
-        <CollapsibleContent>
-          <Textarea
-            readOnly
-            value={preview}
-            aria-label={t('externalPrompt.previewLabel')}
-            className="min-h-64 select-text resize-y font-mono text-xs"
-            data-testid="external-agent-prompt-preview"
-          />
-        </CollapsibleContent>
-      </Collapsible>
-      <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
-        {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
-      </p>
+        {!ready && (
+          <p className="text-xs text-[var(--warning-text)]" role="status">
+            {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
+          </p>
+        )}
+      </div>
+      {runApi && (
+        <ExternalAgentRunActions
+          api={runApi}
+          task={request.value}
+          context={currentConnection.context}
+          ready={ready}
+          copyAction={copyAction('external-agent-run-copy')}
+        />
+      )}
+      <TeamTemplateReferences isLight={isLight} />
     </div>
   );
 };

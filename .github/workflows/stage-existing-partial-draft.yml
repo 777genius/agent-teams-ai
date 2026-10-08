@@ -53,7 +53,7 @@ jobs:
       - name: Check all typed native harnesses before preparing immutable inputs
         if: ${{ inputs.operation == 'prepare' }}
         run: |
-          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json
           pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
       - name: Prepare or resume immutable plan
         env:

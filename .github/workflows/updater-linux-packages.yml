@@ -14,7 +14,7 @@ on:
       - 'scripts/ci/release/contract.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
-      - 'tsconfig.updater-e2e.json'
+      - 'scripts/tsconfig/tsconfig.updater-e2e.json'
   workflow_dispatch:
     inputs:
       mode:
@@ -23,12 +23,12 @@ on:
         options: [availability, ota]
         default: availability
       target_mode:
-        description: '2.17.6/2.17.7 require exact prepared stage; 2.17.2 is historical infrastructure evidence only'
+        description: '2.17.6/2.17.10 require exact prepared stage; 2.17.2 is historical infrastructure evidence only'
         type: choice
-        options: [staged-2.17.7, staged-2.17.6, historical-2.17.2]
-        default: staged-2.17.7
+        options: [staged-2.17.10, staged-2.17.6, historical-2.17.2]
+        default: staged-2.17.10
       stage_artifact:
-        description: 'Required immutable prepared stage artifact for 2.17.6/2.17.7'
+        description: 'Required immutable prepared stage artifact for 2.17.6/2.17.10'
         type: string
       stage_run_id:
         description: 'Producer run ID for that prepared stage artifact'
@@ -80,7 +80,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Require explicit prepared artifact identity
-        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.7'
+        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.10'
         env:
           TEST_STAGE_NAME: ${{ inputs.stage_artifact }}
           TEST_STAGE_RUN: ${{ inputs.stage_run_id }}
@@ -91,7 +91,7 @@ jobs:
           [[ "$TEST_STAGE_RUN" =~ ^[1-9][0-9]*$ ]]
           [[ "$TEST_PLAN_SHA" =~ ^[a-f0-9]{64}$ ]]
       - name: Download immutable prepared stage for the current target
-        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.7'
+        if: inputs.target_mode == 'staged-2.17.6' || inputs.target_mode == 'staged-2.17.10'
         uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.stage_artifact }}
@@ -113,7 +113,7 @@ jobs:
             gh release download v2.17.1 --repo 777genius/agent-teams-ai --pattern "$old" --output "$inputs/$old"
           done
           flags=(--historical-preview)
-          if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.7 ]]; then
+          if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.10 ]]; then
             node scripts/e2e/release-updater/inputs.mts --plan-downloads "$inputs/stage" "$TEST_PLAN_SHA" > "$inputs/target-download-identities.json"
             release=$(jq -er '.releaseId' "$inputs/target-download-identities.json")
             target=$(jq -er '.targetVersion' "$inputs/target-download-identities.json")
@@ -277,7 +277,7 @@ jobs:
                 node --version > /evidence/node-version.txt
                 target=2.17.2
                 stage=(--historical-preview)
-                if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.7 ]]; then
+                if [[ "$TEST_TARGET_MODE" == staged-2.17.6 || "$TEST_TARGET_MODE" == staged-2.17.10 ]]; then
                   target=$(node /workspace/scripts/e2e/release-updater/inputs.mts --plan-target-version "$inputs/stage" "$TEST_PLAN_SHA")
                   test "$TEST_TARGET_MODE" = "staged-$target"
                   stage=(--stage "$inputs/stage" --plan-sha256 "$TEST_PLAN_SHA")

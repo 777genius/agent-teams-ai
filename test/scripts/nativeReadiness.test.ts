@@ -52,7 +52,7 @@ it('matches official Windows matrix job names without treating included architec
 });
 
 // Receipt policy only: these synthetic claims never qualify a native run.
-it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor cases', () => {
+it('requires honest byte-bound repaired ARM211 receipts for216/220 predecessor cases', () => {
   const bytes = {
     size: 100,
     sha256: 'a'.repeat(64),
@@ -95,7 +95,7 @@ it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor c
     initialInstall: { code: 0, arguments: ['/S', `/D=${install}`] },
     installedBefore: { packageVersion: '2.17.1' },
   };
-  for (const targetVersion of ['2.17.6', '2.17.7'])
+  for (const targetVersion of ['2.17.6', '2.17.10'])
     expect(() => checkWindowsPriorFixture(value, 'arm64', 'cold', targetVersion)).not.toThrow();
   const mutations = [
     (v: typeof value) => {
@@ -138,10 +138,10 @@ it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor c
   for (const mutate of mutations) {
     const invalid = structuredClone(value);
     mutate(invalid);
-    for (const targetVersion of ['2.17.6', '2.17.7'])
+    for (const targetVersion of ['2.17.6', '2.17.10'])
       expect(() => checkWindowsPriorFixture(invalid, 'arm64', 'cold', targetVersion)).toThrow();
   }
-  for (const targetVersion of ['2.17.6', '2.17.7'])
+  for (const targetVersion of ['2.17.6', '2.17.10'])
     expect(() => checkWindowsPriorFixture({}, 'arm64', 'cold', targetVersion)).toThrow();
   for (const [arch, mode, version] of [
     ['x64', 'cold', '2.17.6'],
@@ -154,7 +154,7 @@ it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor c
 });
 
 it('selects repaired original ARM211 for reviewed predecessor probes and OTA scenarios', () => {
-  for (const version of ['2.17.6', '2.17.7']) {
+  for (const version of ['2.17.6', '2.17.10']) {
     for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
       expect(usesRepairedArm211('arm64', mode, version)).toBe(true);
       expect(usesRepairedArm211('x64', mode, version)).toBe(false);
@@ -162,14 +162,14 @@ it('selects repaired original ARM211 for reviewed predecessor probes and OTA sce
     expect(usesRepairedArm211('arm64', 'fresh', version)).toBe(false);
     expect(usesRepairedArm211('arm64', 'unsupported', version)).toBe(false);
   }
-  for (const version of ['2.17.5', '2.17.8', '2.18.0', '2.17.7-beta.1']) {
+  for (const version of ['2.17.5', '2.17.7', '2.17.8', '2.17.9', '2.18.0', '2.17.10-beta.1']) {
     for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
       expect(usesRepairedArm211('arm64', mode, version)).toBe(false);
     }
   }
 });
 
-it.each(['2.17.6', '2.17.7'])(
+it.each(['2.17.6', '2.17.10'])(
   'marks only successful plan-bound Windows %s native proofs as final',
   (targetVersion) => {
     // Synthetic predicate inputs prove policy only; they never qualify a native execution.
@@ -206,6 +206,7 @@ it.each(['2.17.6', '2.17.7'])(
       { stagedMetadata: undefined },
       { stagedMetadata: { releaseId: 9999 } },
       { plan: { input: { target: { tag: 'v2.17.5', id: 1234 } } } },
+      { targetVersion: '2.17.7' },
       { targetVersion: '2.17.8' },
       { architecture: 'ia32' },
       { mode: 'unsupported' },
@@ -229,7 +230,7 @@ import type {
 // The closed synthetic matrix is intentionally kept together for scenario mutation tests.
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function fixture(full = false) {
-  const targetVersion = full ? '2.17.7' : '2.17.4';
+  const targetVersion = full ? '2.17.10' : '2.17.4';
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const toolingSha = full ? 'b'.repeat(40) : 'a'.repeat(40);
   const applicationSha = 'b'.repeat(40);
@@ -361,7 +362,7 @@ function fixture(full = false) {
       'Read exact official predecessor and draft bytes',
       'Download and verify immutable official packages',
       full
-        ? 'Authenticate prepared plan and uploaded original 211 and target 217 bytes'
+        ? 'Authenticate prepared plan and uploaded original 211 and target 220 bytes'
         : 'Authenticate and hash real release inputs without native application execution',
     ];
     const name = producerNames[index] ?? 'prepare-mac-inputs';
@@ -560,13 +561,34 @@ function fixture(full = false) {
             },
             initialPackage: {},
             automaticLaunchSeal: {
-              launch: { command: ['app'], home: '/TEST-home', userData: '/TEST-profile' },
+              launch: {
+                command: ['app'],
+                home: '/TEST-home',
+                userData: '/TEST-profile',
+                runtime: { pid: 99, argv: ['app'], execArgv: [] },
+              },
               target: { sha256: 'payload' },
             },
             automaticSealAfterPaint: {
+              identity: { pid: 379, start: '116167' },
               command: ['app'],
-              markers: { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' },
+              markers: {},
+              executable: 'app',
               payload: { sha256: 'payload' },
+            },
+            automaticProcess: { pid: 379, start: '116167' },
+            automaticReadOnlyInspector: {
+              identity: { pid: 379, start: '116167' },
+              actual: {
+                pid: 379,
+                argv: ['app'],
+                execArgv: [],
+                home: '/TEST-home',
+                profile: '/TEST-profile',
+                userData: '/TEST-profile',
+                version: targetVersion,
+                executable: 'app',
+              },
             },
             automaticPackage: {},
             automaticDesktop: {},
@@ -676,6 +698,32 @@ describe('native readiness publication boundary', () => {
     const f = fixture();
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
   });
+  it.each([
+    { created: '2026-10-07T13:33:28Z', accepted: true },
+    { created: '2026-10-07T13:33:28.001Z', accepted: false },
+  ])(
+    'enforces the inclusive one-second GitHub upload timestamp bound at $created',
+    async ({ created, accepted }) => {
+      const f = fixture();
+      const reference = f.receipt.artifacts.find((item) =>
+        item.entries.some((entry) => entry.scenario === 'mac-arm64-older')
+      );
+      assert(reference);
+      const job = f.jobs.get(reference.runId)?.find((item) => item.id === reference.jobId);
+      assert(job);
+      const upload = job.steps.at(-1);
+      assert(upload);
+      // Actual artifact11486205136/upload-job112816351119 API timestamps.
+      upload.started_at = '2026-10-07T13:33:24Z';
+      upload.completed_at = '2026-10-07T13:33:27Z';
+      job.completed_at = '2026-10-07T13:33:34Z';
+      const artifact = await f.port.artifact(f.receipt.repository, reference.artifactId);
+      artifact.created_at = created;
+      const result = verifyNativeReadiness(f.port, f.plan, f.p, f.receipt);
+      if (accepted) await expect(result).resolves.toBeUndefined();
+      else await expect(result).rejects.toThrow('Artifact outside current upload');
+    }
+  );
   it('rejects a native family assembled from two individually successful current runs', async () => {
     const f = fixture();
     const reference = f.receipt.artifacts.find((item) =>
@@ -778,6 +826,67 @@ describe('native readiness publication boundary', () => {
     f.reseal('mac-arm64-current');
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
   });
+  it('accepts matching present Linux kernel markers alongside genuine successor runtime proof', async () => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+    f.reseal('linux-deb-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+  });
+  it.each([
+    { field: ['actual'], replacement: undefined },
+    { field: ['identity'], replacement: undefined },
+    { field: ['identity', 'pid'], replacement: 99 },
+    { field: ['identity', 'start'], replacement: '116168' },
+    { field: ['identity', 'start'], replacement: '' },
+    { field: ['actual', 'pid'], replacement: 99 },
+    { field: ['actual', 'home'], replacement: '/foreign-home' },
+    { field: ['actual', 'profile'], replacement: '/foreign-profile' },
+    { field: ['actual', 'userData'], replacement: '/foreign-user-data' },
+    { field: ['actual', 'argv'], replacement: ['app', '--foreign-flag'] },
+    { field: ['actual', 'execArgv'], replacement: ['--inspect=12345'] },
+    { field: ['actual', 'version'], replacement: '2.17.1' },
+    { field: ['actual', 'executable'], replacement: '/foreign-app' },
+    { field: ['actual', 'home'], replacement: '' },
+    { field: ['actual', 'profile'], replacement: undefined },
+    { field: ['actual', 'userData'], replacement: undefined },
+    { field: ['actual', 'argv'], replacement: undefined },
+    { field: ['actual', 'execArgv'], replacement: undefined },
+  ])(
+    'rejects missing or conflicting Linux successor $field proof',
+    async ({ field, replacement }) => {
+      const f = fixture();
+      const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+      kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+      let value = f.values.get('linux-deb-ota')!.automaticReadOnlyInspector as Record<
+        string,
+        unknown
+      >;
+      for (const key of field.slice(0, -1)) value = value[key] as Record<string, unknown>;
+      if (replacement === undefined) delete value[field.at(-1)!];
+      else value[field.at(-1)!] = replacement;
+      f.reseal('linux-deb-ota');
+      await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+    }
+  );
+  it.each([
+    { pid: 99, start: '116167' },
+    { pid: 379, start: '116168' },
+  ])('rejects a different automatic Linux successor generation $pid/$start', async (process) => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+    f.values.get('linux-deb-ota')!.automaticProcess = process;
+    f.reseal('linux-deb-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+  it('rejects a conflicting present Linux kernel profile marker despite matching runtime', async () => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/foreign-profile' };
+    f.reseal('linux-deb-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
   it('rejects a changed sealed Linux successor profile', async () => {
     const f = fixture();
     (
@@ -825,17 +934,17 @@ function manualValue(
   const profileBefore = {
     passiveBefore: [passiveTeam, passiveProject],
     passivePreserved: [passiveTeam, passiveProject],
-    replacementSignature: signature('2.17.7'),
+    replacementSignature: signature('2.17.10'),
     profileBefore: file,
     preservedBeforeLaunch: file,
   };
   const phases: Record<string, unknown>[] = [
-    { freshSignature: signature('2.17.7') },
+    { freshSignature: signature('2.17.10') },
     { oldSignature: signature('2.17.1') },
     profileBefore,
   ];
-  for (const [index, label] of ['fresh217', 'original211', 'manual217'].entries()) {
-    const profile = `${root}/${label === 'fresh217' ? 'fresh-profile' : 'migration-profile'}`;
+  for (const [index, label] of ['fresh220', 'original211', 'manual220'].entries()) {
+    const profile = `${root}/${label === 'fresh220' ? 'fresh-profile' : 'migration-profile'}`;
     const executable = `${root}/Agent Teams AI.app/Contents/MacOS/Agent Teams AI`;
     const bytes = Buffer.alloc(1200, index + 1);
     entries[manualCapturePaths[index]!] = bytes;
@@ -844,10 +953,10 @@ function manualValue(
       profile,
       before: label === 'original211' ? 'system' : 'light',
       theme: 'light',
-      ...(label === 'fresh217'
+      ...(label === 'fresh220'
         ? {}
         : {
-            configProof: label === 'manual217' ? normalized : file,
+            configProof: label === 'manual220' ? normalized : file,
             migrationState: {
               theme: 'light',
               projectPaths: [projectPath],
@@ -862,7 +971,7 @@ function manualValue(
         userData: `${profile}/user-data`,
         executable,
         arch: architecture,
-        version: label === 'original211' ? '2.17.1' : '2.17.7',
+        version: label === 'original211' ? '2.17.1' : '2.17.10',
         packaged: true,
       },
       foregroundBefore: { pid: 42, executable },
@@ -880,7 +989,7 @@ function manualValue(
     repository: plan.input.repository,
     toolingSha: plan.input.toolingSha,
     sourceSha: plan.input.target.applicationSha,
-    version: '2.17.7',
+    version: '2.17.10',
     architecture,
     actualMacOs: '15.6',
     minimumOs13ExecutionProven: false,
@@ -948,7 +1057,7 @@ function manualValue(
   };
 }
 
-describe('full217 frozen-source native readiness', () => {
+describe('full220 frozen-source native readiness', () => {
   it('accepts exactly 18 scenarios, 14 artifacts and four complete workflow cohorts', async () => {
     const f = fixture(true);
     expect(f.receipt.artifacts).toHaveLength(14);
@@ -971,7 +1080,7 @@ describe('full217 frozen-source native readiness', () => {
       'lost passive team after replacement',
       (v: Record<string, unknown>) => {
         delete (
-          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual220')!
             .migrationState as Record<string, unknown>
         ).team;
       },
@@ -980,7 +1089,7 @@ describe('full217 frozen-source native readiness', () => {
       'lost custom project after replacement',
       (v: Record<string, unknown>) => {
         (
-          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual220')!
             .migrationState as Record<string, unknown>
         ).projectPaths = [];
       },
@@ -1007,7 +1116,7 @@ describe('full217 frozen-source native readiness', () => {
     [
       'invalid migrated config byte proof',
       (v: Record<string, unknown>) => {
-        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!.configProof =
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual220')!.configProof =
           { sha256: 'invalid', size: 20 };
       },
     ],
@@ -1015,7 +1124,7 @@ describe('full217 frozen-source native readiness', () => {
     [
       'missing migration config bytes',
       (v: Record<string, unknown>) => {
-        delete (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!
+        delete (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual220')!
           .configProof;
       },
     ],
@@ -1038,7 +1147,7 @@ describe('full217 frozen-source native readiness', () => {
     [
       'profile reset',
       (v: Record<string, unknown>) => {
-        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual217')!.theme =
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual220')!.theme =
           'system';
       },
     ],
@@ -1242,21 +1351,24 @@ it.each(['native failure', 'changed feed', 'extra asset'])(
   }
 );
 
-it('rejects legacy full217 promotion before any command or regenerated feed', async () => {
-  await expect(
-    promoteExistingDraft({
-      environment: {
-        RELEASE_REPOSITORY: '777genius/agent-teams-ai',
-        RELEASE_TAG: 'v2.17.7',
-        PUBLISH_RELEASE: 'true',
-        PATH: '',
-      },
-      now: () => {
-        throw new Error('Prepared feed bytes must not be regenerated');
-      },
-    })
-  ).rejects.toThrow('Full217 requires publish-full-release.ts');
-});
+it.each(['v2.17.7', 'v2.17.8', 'v2.17.9', 'v2.17.10'])(
+  'rejects legacy %s promotion before any command or regenerated feed',
+  async (tag) => {
+    await expect(
+      promoteExistingDraft({
+        environment: {
+          RELEASE_REPOSITORY: '777genius/agent-teams-ai',
+          RELEASE_TAG: tag,
+          PUBLISH_RELEASE: 'true',
+          PATH: '',
+        },
+        now: () => {
+          throw new Error('Prepared feed bytes must not be regenerated');
+        },
+      })
+    ).rejects.toThrow('Full220 requires publish-full-release.ts');
+  }
+);
 
 it('reads only the closed manual outcome/capture archive set', () => {
   const paths = ['TEST-mac-manual-evidence/native-manual-receipt.json', ...manualCapturePaths];

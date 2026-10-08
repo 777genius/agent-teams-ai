@@ -14,23 +14,23 @@ Attachments API Engineer/Backend Lead - материал для кратких r
 
 ## Проверенная отправная точка и gaps
 
-| Уже есть | Что требуется для нового сценария |
-| --- | --- |
-| `src/features/team-templates/core/index.ts`: четыре `TeamTemplateV1`; `ExternalAgentPromptAction/Dialog` и `TeamTemplateReferences` уже реализованы. | Менять help/prompt по proven capabilities; read-only UI не строить заново. |
-| `RosterParticipantFrame/Identity` уже общие для `MemberDraftRow`, `LeadModelRow` и каталога; create/launch используют тот же roster composition. | Сохранить прямой reuse этих display primitives, без новой extraction или disabled editor. |
-| MCP `team_list/get/create`; controller связывает их с HTTP. | Нет configuration-update/trash tools; добавить узкие tools, не arbitrary patch/shell. |
-| HTTP create/get; IPC updateConfig/replaceMembers/deleteTeam. | Общие application use cases и HTTP parity; HTTP не вызывает IPC handler. |
-| Edit dialog сохраняет config и roster отдельными вызовами; только roster использует `runLiveRosterMutation`. `updateConfig/deleteTeam/restoreTeam` обходят этот gate. | Configuration-only edit без runtime side effects; общий persistence/lifecycle seam с manual writers, честные partial results. |
-| `runLiveRosterMutation/tryRunLiveRosterMutation` и launch admission используют existing team lock; `fingerprintSavedLaunchSettings` исключает presentation/roster. | Переиспользовать lock, но добавить management revision и fresh snapshot, а не выдавать saved-launch fingerprint за полную revision. |
-| deleteTeam записывает deletedAt в config.json; restore снимает marker. | Draft без config не поддерживает trash. deleteDraft вызывает permanent deletion и категорически не подходит. |
-| TeamChangeEvent проходит IPC и HTTP SSE; store coalesces fetchTeams, защищает context/request ordering. | Явный сигнал после committed management mutation и короткая информация об изменении; watcher не знает его причины. |
-| TeamList сортирует running/project/activity и отдельно показывает Trash. | Временный приоритет created/edited без изменения lastActivity/runtime status. |
+| Уже есть                                                                                                                                                              | Что требуется для нового сценария                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `src/features/team-templates/core/index.ts`: четыре `TeamTemplateV1`; `ExternalAgentPromptAction/Dialog` и `TeamTemplateReferences` уже реализованы.                  | Менять help/prompt по proven capabilities; read-only UI не строить заново.                                                          |
+| `RosterParticipantFrame/Identity` уже общие для `MemberDraftRow`, `LeadModelRow` и каталога; create/launch используют тот же roster composition.                      | Сохранить прямой reuse этих display primitives, без новой extraction или disabled editor.                                           |
+| MCP `team_list/get/create`; controller связывает их с HTTP.                                                                                                           | Нет configuration-update/trash tools; добавить узкие tools, не arbitrary patch/shell.                                               |
+| HTTP create/get; IPC updateConfig/replaceMembers/deleteTeam.                                                                                                          | Общие application use cases и HTTP parity; HTTP не вызывает IPC handler.                                                            |
+| Edit dialog сохраняет config и roster отдельными вызовами; только roster использует `runLiveRosterMutation`. `updateConfig/deleteTeam/restoreTeam` обходят этот gate. | Configuration-only edit без runtime side effects; общий persistence/lifecycle seam с manual writers, честные partial results.       |
+| `runLiveRosterMutation/tryRunLiveRosterMutation` и launch admission используют existing team lock; `fingerprintSavedLaunchSettings` исключает presentation/roster.    | Переиспользовать lock, но добавить management revision и fresh snapshot, а не выдавать saved-launch fingerprint за полную revision. |
+| deleteTeam записывает deletedAt в config.json; restore снимает marker.                                                                                                | Draft без config не поддерживает trash. deleteDraft вызывает permanent deletion и категорически не подходит.                        |
+| TeamChangeEvent проходит IPC и HTTP SSE; store coalesces fetchTeams, защищает context/request ordering.                                                               | Явный сигнал после committed management mutation и короткая информация об изменении; watcher не знает его причины.                  |
+| TeamList сортирует running/project/activity и отдельно показывает Trash.                                                                                              | Временный приоритет created/edited без изменения lastActivity/runtime status.                                                       |
 
 ## Scope и ограничения первой поставки
 
 In scope: уточнить existing popup/help и единый prompt builder, MCP create/update/trash, draft-trash/restore parity, list refresh и краткую информацию о последних изменениях. Existing request persistence/read-only каталог сохраняются; их переписывание в оценку не входит.
 
-Каталог остаётся `feature/bug/review/research`, без маркетинга и Full SaaS HQ. Все четыре коротких определения входят в copied prompt: UI не угадывает references через regex/NLP, агент выбирает по запросу. Каталог - data, не authorization/permissions. Existing teams агент читает через list/get; popup не копирует все team snapshots или workspace.
+Каталог: `software-product/marketing/content/research`. Это команды разработки цифрового продукта, маркетинга, контента и исследований; по 2-3 специалиста плюс существующий Coordinator. Все четыре коротких определения входят в copied prompt: UI не угадывает references через regex/NLP, агент выбирает по запросу. Каталог - data, не authorization/permissions. Existing teams агент читает через list/get; popup не копирует все team snapshots или workspace.
 
 Допустимые edits: displayName, description/color, lead instructions, active teammate names/roles/workflows. Directory teamName не переименовывается. Provider/model, marker, cwd/worktree/isolation, flags, MCP policy, credentials и launch identity сохраняются; runtime настройка и перенос между проектами здесь не поручены.
 
@@ -43,25 +43,26 @@ Out of scope: launch/назначение задач/сообщения аген
 ```text
 Управлять командами с помощью промпта                 Закрыть
 Что нужно сделать?
-[Создай команды разработки и проверки для импорта CSV.
- Основой возьми feature и review. В старой team-a ...]
+[Создай маркетинговую команду для моего проекта.
+ Возьми за основу шаблон маркетинга, добавь дизайнера.]
 Назови шаблоны ниже, измени роли/имена словами, запроси несколько команд.
 Можно менять остановленные команды и убирать их в корзину.
 
-Доступные шаблоны команд (справка)
-Build a feature          Plan, implement, independently review
-[Coordinator] [planner / Architect] [builder / Developer] [...]
-Fix a bug               ...       [раскрыть обязанности]
-Review code             ...       [раскрыть обязанности]
-Research a solution     ...       [раскрыть обязанности]
-
+Финальный промпт                    [Скопировать prompt для агента]
+[Постоянно видимый текст только для чтения; можно выделить и скопировать]
 MCP ready • UI access off            [Настройки подключения]
-[Посмотреть итоговый prompt]         [Скопировать prompt для агента]
+
+Доступные шаблоны команд (справка)
+Software Product Team   Design, build, validate
+[Coordinator] [designer / Product Designer] [engineer / Software Engineer] [qa]
+Marketing Team          Campaign strategy, copy and analysis
+Content Studio          Research, writing and editing
+Research Team           Source gathering and analysis
 ```
 
 Поле запроса первое и получает initial focus; пустое поле блокирует Copy с inline подсказкой, без validation step. Пример - placeholder. Сохранять запрос отдельно от createTeamDraft, scoped к стабильному profile/root через existing draft hook, без ephemeral appInstanceId в storage key; Copy/закрытие его не очищают. Поздняя hydration не стирает fresh input.
 
-Все четыре названия/descriptions видны; workflow раскрывается shared Collapsible. Карточки справочные: нет применения или скрытого изменения manual draft. Роли/coordinator видны; model/provider/permissions controls отсутствуют.
+Финальный промпт отображается сразу после поля запроса, без раскрытия, с Copy рядом с его заголовком. Шаблоны ниже этого блока. Все четыре названия/descriptions видны; workflow раскрывается shared Collapsible. Карточки справочные: нет применения или скрытого изменения manual draft. Роли/coordinator видны; model/provider/permissions controls отсутствуют.
 
 DRY: `TeamTemplateReferences.tsx` уже использует `RosterParticipantFrame`/`RosterParticipantIdentity` из `src/renderer/components/team/members/RosterParticipantFrame.tsx`, palette/avatar helpers и layout tokens. CreateTeamDialog/launch сохраняют inputs/actions внутри того же presentation; каталог оставляет статические name/role/workflow. Не монтировать MemberDraftRow с no-op callbacks, не запускать provider discovery ради справки, не копировать MemberCard и не делать schema-driven UI. Frozen rows/dialogs не увеличивать сверх cap.
 
@@ -87,13 +88,13 @@ Ownership: connection feature владеет popup/bootstrap, `team-templates` -
 
 Для update использовать узкие группы, не обещать общую транзакцию нескольких файлов:
 
-| Контракт | Write и ожидаемый результат |
-| --- | --- |
-| create | Existing draft writer, marker=1, existing name-conflict fence. Новый draft unresolved; no launch. Tracking management intent additive, не permission/identity bypass. |
-| update metadata | Draft пишет team.meta; обычная команда использует canonical config writer и синхронизирует соответствующие existing saved-launch metadata, чтобы следующий launch не вернул старые values. Не синтезировать launch metadata для imported legacy команды. |
-| update lead instructions | Сохранённое `team.meta.prompt`. Не менять legacy/providerless semantics или создавать launch metadata с defaults ради успешного ответа. Нет saved request - unsupported, не no-op success. |
-| update roster | Merge с authoritative roster до `TeamDataService.replaceMembers`: этот writer сейчас сбрасывает omitted provider/model/MCP fields. Сохранять их у прежних members, lead и removed tombstones; новым - existing inheritance, unresolved draft не получает provider defaults. |
-| trash | Только deletedAt: draft team.meta, обычная команда config. Никаких unlink/rm/permanent coordinator. Already trashed - unchanged, без новой даты/ложной activity. |
+| Контракт                 | Write и ожидаемый результат                                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| create                   | Existing draft writer, marker=1, existing name-conflict fence. Новый draft unresolved; no launch. Tracking management intent additive, не permission/identity bypass.                                                                                                       |
+| update metadata          | Draft пишет team.meta; обычная команда использует canonical config writer и синхронизирует соответствующие existing saved-launch metadata, чтобы следующий launch не вернул старые values. Не синтезировать launch metadata для imported legacy команды.                    |
+| update lead instructions | Сохранённое `team.meta.prompt`. Не менять legacy/providerless semantics или создавать launch metadata с defaults ради успешного ответа. Нет saved request - unsupported, не no-op success.                                                                                  |
+| update roster            | Merge с authoritative roster до `TeamDataService.replaceMembers`: этот writer сейчас сбрасывает omitted provider/model/MCP fields. Сохранять их у прежних members, lead и removed tombstones; новым - existing inheritance, unresolved draft не получает provider defaults. |
+| trash                    | Только deletedAt: draft team.meta, обычная команда config. Никаких unlink/rm/permanent coordinator. Already trashed - unchanged, без новой даты/ложной activity.                                                                                                            |
 
 Один запрос может использовать несколько tools на одну команду. После каждого call fresh get даёт revision для следующего. Metadata + roster в двух calls - отдельные commits данных: failure второго не откатывает первый. No-op возвращает unchanged, без Edited/event. Агент не подменяет edit новой командой и не скрывает failure новым именем.
 
@@ -141,17 +142,17 @@ Management использует canonical roster reader с requireCompleteMember
 
 ## Edge cases и recovery
 
-| Ситуация | Поведение / evidence |
-| --- | --- |
-| Несколько команд, failure на второй | Первые successes видны; separate readback/result. Нет all-or-nothing или automatic rollback/trash успешных. |
-| Потерян mutation response | Get исходного teamName, сверить desired fields/deletedAt/revision. Confirmed state - success; conflicting/uncertain - stop, не blind retry/new name. |
-| Concurrent manual edit/launch/recreate | Общий normalized gate + fresh revision/identity/lifecycle check до write. Busy/stale - явный отказ и fresh get, без blind retry/overwrite; launch после trash тоже отклоняется. |
-| Missing/already trashed | Missing - not-found; trash again unchanged; update trashed rejection. Не auto-restore. |
-| Empty/invalid roster/name collision | Общая create/roster validation до commit; lead-only разрешён, malformed строка не silently dropped. |
-| Root switch/reload/SSE gap | Context fence защищает write; scoped fetch восстанавливает list. Root/reload очищает notices; пропущенные details не восстанавливаются. |
-| Data saved, event/refresh failure | Mutation success сохраняется; notice может отсутствовать. Snapshot refresh без повторного mutation. |
-| Duplicate/late event или initial fetch in flight | operationId/committedAt и existing context/request epochs защищают notice/list; один follow-up refresh, без прогресс-state machine. |
-| Crash между writes | Readback/partial outcome; не подтверждать полный desired edit по наличию только team directory. |
+| Ситуация                                         | Поведение / evidence                                                                                                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Несколько команд, failure на второй              | Первые successes видны; separate readback/result. Нет all-or-nothing или automatic rollback/trash успешных.                                                                     |
+| Потерян mutation response                        | Get исходного teamName, сверить desired fields/deletedAt/revision. Confirmed state - success; conflicting/uncertain - stop, не blind retry/new name.                            |
+| Concurrent manual edit/launch/recreate           | Общий normalized gate + fresh revision/identity/lifecycle check до write. Busy/stale - явный отказ и fresh get, без blind retry/overwrite; launch после trash тоже отклоняется. |
+| Missing/already trashed                          | Missing - not-found; trash again unchanged; update trashed rejection. Не auto-restore.                                                                                          |
+| Empty/invalid roster/name collision              | Общая create/roster validation до commit; lead-only разрешён, malformed строка не silently dropped.                                                                             |
+| Root switch/reload/SSE gap                       | Context fence защищает write; scoped fetch восстанавливает list. Root/reload очищает notices; пропущенные details не восстанавливаются.                                         |
+| Data saved, event/refresh failure                | Mutation success сохраняется; notice может отсутствовать. Snapshot refresh без повторного mutation.                                                                             |
+| Duplicate/late event или initial fetch in flight | operationId/committedAt и existing context/request epochs защищают notice/list; один follow-up refresh, без прогресс-state machine.                                             |
+| Crash между writes                               | Readback/partial outcome; не подтверждать полный desired edit по наличию только team directory.                                                                                 |
 
 ## Phases, проверки и оценка
 

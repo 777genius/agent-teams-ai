@@ -15,6 +15,7 @@ on:
       - 'src/main/utils/childProcess.ts'
       - 'src/main/utils/pathDecoder.ts'
       - 'tsconfig*.json'
+      - 'scripts/tsconfig/**'
   push:
     branches: [main]
     paths:
@@ -29,6 +30,7 @@ on:
       - 'src/main/utils/childProcess.ts'
       - 'src/main/utils/pathDecoder.ts'
       - 'tsconfig*.json'
+      - 'scripts/tsconfig/**'
 
 # Cancel obsolete PR checks without sharing custody with push or manual runs.
 concurrency:

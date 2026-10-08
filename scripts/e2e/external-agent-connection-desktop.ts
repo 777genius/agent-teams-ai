@@ -928,9 +928,19 @@ async function copyPrompt(
       .map((card) => card.getAttribute('data-template-reference'))
       .sort()
   );
-  assert.deepEqual(references, ['bug', 'feature', 'research', 'review']);
+  assert.deepEqual(references, [
+    'content',
+    'customer-support',
+    'learning',
+    'marketing',
+    'operations',
+    'research',
+    'sales',
+    'software-product',
+  ]);
+  await button('[data-template-reference="software-product"] > button', true);
   await button(
-    '[data-template-reference="feature"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
     true
   );
   await waitFor(
@@ -939,9 +949,9 @@ async function copyPrompt(
         active,
         (workflow: string) =>
           document
-            .querySelector('[data-template-reference="feature"]')
+            .querySelector('[data-template-reference="software-product"]')
             ?.textContent?.includes(workflow) ?? false,
-        [TEAM_TEMPLATES.find((template) => template.id === 'feature')!.teamPrompt]
+        [TEAM_TEMPLATES.find((template) => template.id === 'software-product')!.teamPrompt]
       ),
     'reference coordinator responsibilities'
   );
@@ -962,7 +972,25 @@ async function copyPrompt(
   });
   const task = `Create one saved draft for ${label} in ${project}. Do not launch agents.`;
   await active.send('Input.insertText', { text: task });
-  await button('View final prompt');
+  await waitFor(
+    () =>
+      evaluate(
+        active,
+        (request: string) => {
+          const preview = document.querySelector<HTMLElement>(
+            '[data-testid="external-agent-prompt-preview"]'
+          );
+          return Boolean(
+            preview &&
+            !preview.isContentEditable &&
+            preview.getClientRects().length &&
+            preview.textContent?.includes(request)
+          );
+        },
+        [task]
+      ),
+    'visible read-only final prompt without a reveal action'
+  );
   assert(info.cdp.browserWsUrl);
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {
@@ -1012,8 +1040,8 @@ async function copyPrompt(
         (
           document.querySelector(
             '[data-testid="external-agent-prompt-preview"]'
-          ) as HTMLTextAreaElement | null
-        )?.value
+          ) as HTMLElement | null
+        )?.textContent
     );
     assert.equal(preview, copied, 'Preview and actual clipboard must show the same live prompt');
     await screenshot(label);
@@ -1066,24 +1094,42 @@ async function copyPrompt(
             ),
           'actual clipboard rejection is shown'
         );
+        await evaluate(active, () => {
+          document
+            .querySelector<HTMLElement>('[data-testid="external-agent-prompt-preview"]')
+            ?.focus();
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 2,
+          windowsVirtualKeyCode: 65,
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyUp',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 0,
+          windowsVirtualKeyCode: 65,
+        });
         const failed = await evaluate(active, () => {
           const dialog = document.querySelector('[data-testid="external-agent-prompt-dialog"]');
           const previewField = document.querySelector(
             '[data-testid="external-agent-prompt-preview"]'
-          ) as HTMLTextAreaElement | null;
+          ) as HTMLElement | null;
           if (!previewField) throw new Error('Clipboard failure must expose preview');
-          previewField.focus();
-          previewField.select();
+          const selection = window.getSelection();
           return {
             success: dialog?.textContent?.includes('Prompt copied.') ?? false,
             buttonText: dialog
               ?.querySelector('[data-testid="external-agent-prompt-copy"]')
               ?.textContent?.trim(),
-            preview: previewField.value,
-            readOnly: previewField.readOnly,
-            disabled: previewField.disabled,
+            preview: previewField.textContent ?? '',
+            readOnly: !previewField.isContentEditable,
+            disabled: previewField.hasAttribute('disabled'),
             visible: Boolean(previewField.getBoundingClientRect().height),
-            selectedLength: previewField.selectionEnd - previewField.selectionStart,
+            selectedLength: selection?.toString().length ?? 0,
           };
         });
         assert.equal(failed.success, false);
@@ -1258,7 +1304,7 @@ try {
     'raw CDP console event'
   );
 
-  const template = TEAM_TEMPLATES.find((item) => item.id === 'feature');
+  const template = TEAM_TEMPLATES.find((item) => item.id === 'software-product');
   assert(template);
   const teamName = 'external-e2e-feature';
   const draft: TeamCreateConfigRequest = {

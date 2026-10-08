@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildHttpHealthIdentity, resolveStartOptions } from '../src/index';
+import { buildHttpHealthIdentity, resolveStartOptions, resolveToolProfile } from '../src/index';
 
 describe('agent-teams MCP start options', () => {
+  it('defaults to full tools, accepts the fixed management profile and refuses unknown profiles', () => {
+    expect(resolveToolProfile(['node', 'index.js'])).toBe('full');
+    expect(resolveToolProfile(['node', 'index.js', '--tool-profile', 'management'])).toBe(
+      'management'
+    );
+    expect(() => resolveToolProfile(['node', 'index.js', '--tool-profile', 'typo'])).toThrow(
+      'Unknown MCP tool profile'
+    );
+  });
   it('defaults to stdio transport', () => {
     expect(resolveStartOptions(['node', 'index.js'], {})).toEqual({
       transportType: 'stdio',

@@ -26,6 +26,7 @@ import {
   EXTERNAL_AGENT_RENDERER_MARKER,
   type ConnectionInfoV1,
 } from '../../src/features/external-agent-connection/contracts/index.ts';
+import { nativeAgentRunArgs } from '../../src/features/external-agent-connection/main/nativeAgentRunArgs.ts';
 import { TEAM_TEMPLATES } from '../../src/features/team-templates/index.ts';
 import type { ElectronAPI } from '../../src/shared/types/api.ts';
 import { withNativeCodexMcp } from './lib/nativeCodexMcp.ts';
@@ -252,6 +253,16 @@ async function key(key: string, code: string, windowsVirtualKeyCode: number) {
 }
 async function screenshot(label: string) {
   assert(client);
+  await waitFor(
+    () =>
+      evaluate(() =>
+        [...document.querySelectorAll('[data-template-reference] button > svg')].every((icon) =>
+          icon.getAnimations().every((animation) => animation.playState !== 'running')
+        )
+      ),
+    'Template chevrons settle before screenshot',
+    5_000
+  );
   const { data } = await getClient().send<{ data: string }>('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: false,
@@ -570,7 +581,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
       deviceScaleFactor: 1,
       mobile: false,
     });
-  const request = `Use feature and review templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
+  const request = `Use Software Product Team and Content Studio templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
   if (theme === 'light')
     await waitFor(
       () =>
@@ -597,6 +608,29 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     modifiers: 0,
   });
   await getClient().send('Input.insertText', { text: request });
+  const templateIds = [
+    'software-product',
+    'marketing',
+    'content',
+    'research',
+    'sales',
+    'customer-support',
+    'operations',
+    'learning',
+  ];
+  assert(
+    await evaluate(() =>
+      [...document.querySelectorAll('[data-template-reference]')].every(
+        (card) =>
+          card.getAttribute('data-state') === 'closed' &&
+          !card.querySelector('[data-role="template-participant"]') &&
+          Boolean(card.querySelector('button svg'))
+      )
+    ),
+    'Every team starts collapsed with a thematic icon'
+  );
+  for (const templateId of templateIds)
+    await click(`[data-template-reference="${templateId}"] > button`, true);
   const references = await evaluate(() => ({
     ids: [...document.querySelectorAll('[data-template-reference]')]
       .map((node) => node.getAttribute('data-template-reference'))
@@ -610,7 +644,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     ).length,
     theme: document.documentElement.className,
   }));
-  assert.deepEqual(references.ids, ['bug', 'feature', 'research', 'review']);
+  assert.deepEqual(references.ids, [...templateIds].sort());
   assert.equal(
     references.participants,
     TEAM_TEMPLATES.reduce((sum, template) => sum + template.members.length + 1, 0)
@@ -623,7 +657,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
   assert.equal(references.editableControls, 0, 'References must be read-only');
   assert(references.theme.split(' ').includes(theme));
   await click(
-    '[data-template-reference="feature"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
     true
   );
   await waitFor(
@@ -631,11 +665,15 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
       evaluate(
         (text: string) =>
           document
-            .querySelector('[data-template-reference="feature"]')
+            .querySelector('[data-template-reference="software-product"]')
             ?.textContent?.includes(text) ?? false,
-        [TEAM_TEMPLATES.find((template) => template.id === 'feature')!.teamPrompt]
+        [TEAM_TEMPLATES.find((template) => template.id === 'software-product')!.teamPrompt]
       ),
     'read-only coordinator responsibilities'
+  );
+  await click(
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
+    true
   );
   await key('Tab', 'Tab', 9);
   assert(
@@ -644,7 +682,59 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     ),
     'Keyboard focus stays in popup'
   );
-  await click('View final prompt');
+  assert(
+    await evaluate(() => {
+      const task = document.querySelector('#external-agent-task');
+      const preview = document.querySelector<HTMLElement>(
+        '[data-testid="external-agent-prompt-preview"]'
+      );
+      const copy = document.querySelector('[data-testid="external-agent-prompt-copy"]');
+      const label = document.querySelector('#external-agent-prompt-preview-label');
+      const references = document.querySelector('[data-template-reference]');
+      return Boolean(
+        task &&
+        preview &&
+        copy &&
+        label &&
+        references &&
+        !preview.isContentEditable &&
+        !preview.matches('input,textarea') &&
+        preview.textContent &&
+        preview.scrollHeight > preview.clientHeight &&
+        preview.clientHeight <= 150 &&
+        preview.getClientRects().length &&
+        task.parentElement?.nextElementSibling?.contains(preview) &&
+        label.parentElement?.contains(copy) &&
+        preview.compareDocumentPosition(references) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    }),
+    'Final prompt is visible immediately after the request, with adjacent copy before templates'
+  );
+  await evaluate(() =>
+    document.querySelector<HTMLElement>('[data-testid="external-agent-prompt-preview"]')?.focus()
+  );
+  await getClient().send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 2,
+    windowsVirtualKeyCode: 65,
+  });
+  await getClient().send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 0,
+    windowsVirtualKeyCode: 65,
+  });
+  assert(
+    await evaluate(
+      () =>
+        window.getSelection()?.toString() ===
+        document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
+    ),
+    'Native Select All must select only the final prompt'
+  );
   assert(info.cdp.browserWsUrl);
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {
@@ -664,15 +754,29 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     assert(copied.includes('Use team_update') && copied.includes('Use team_trash'));
     assert.equal(
       await evaluate(
-        () =>
-          (
-            document.querySelector(
-              '[data-testid="external-agent-prompt-preview"]'
-            ) as HTMLTextAreaElement | null
-          )?.readOnly
+        () => document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
       ),
-      true
+      copied,
+      'Final text matches the actual copied prompt'
     );
+    assert(
+      await evaluate(() =>
+        ['codex', 'claude'].every((provider) =>
+          Boolean(document.querySelector(`[data-testid="external-agent-run-${provider}"] svg`))
+        )
+      ),
+      'Native run buttons reuse their provider logos'
+    );
+    await evaluate(async () => navigator.clipboard.writeText('TEST clipboard reset'));
+    await click('[data-testid="external-agent-run-copy"]', true);
+    await waitFor(async () => {
+      const text = await evaluate(async () => navigator.clipboard.readText());
+      const previewNow = await evaluate(
+        () => document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
+      );
+      return text.includes(request) && text === previewNow;
+    }, 'Run-area Copy writes its freshly generated preview through the native clipboard');
+    await evaluate(() => window.getSelection()?.removeAllRanges());
     evidence[`${theme}Popup`] = {
       ...references,
       clipboardVerified: true,
@@ -690,7 +794,26 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
     dialog.scrollTop = 0;
   });
+  for (const templateId of templateIds)
+    await click(`[data-template-reference="${templateId}"] > button`, true);
+  await evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    dialog.scrollTop = 0;
+  });
   await screenshot(`popup-${theme}-${narrow ? '320' : '1280'}`);
+  await evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    dialog.scrollTop = dialog.scrollHeight;
+  });
+  await screenshot(`templates-collapsed-${theme}`);
+  await click('[data-template-reference="marketing"] > button', true);
+  await evaluate(() => {
+    document
+      .querySelector('[data-template-reference="marketing"]')
+      ?.scrollIntoView({ block: 'start' });
+  });
+  await screenshot(`template-marketing-expanded-${theme}`);
+
   await key('Escape', 'Escape', 27);
   await waitFor(
     () => evaluate(() => !document.querySelector('[data-testid="external-agent-prompt-dialog"]')),
@@ -738,6 +861,18 @@ try {
   };
   await captureOwnedProcesses();
   const info = await attach();
+  const nativeAvailability = await evaluate(async () => {
+    const api = (window as unknown as { electronAPI: ElectronAPI }).electronAPI
+      .externalAgentConnection?.directRun;
+    if (!api) throw new Error('Native run IPC must be wired in the desktop app');
+    const availability = await api.getAvailability();
+    if (await api.getSnapshot())
+      throw new Error('A fresh sandbox must have no previous native run');
+    return availability;
+  });
+  assert.equal(typeof nativeAvailability.codex, 'boolean');
+  assert.equal(typeof nativeAvailability.anthropic, 'boolean');
+  evidence.nativeAvailability = nativeAvailability;
   await openTeams();
   await popup(info, 'dark', true);
   assert(client);
@@ -754,6 +889,12 @@ try {
       expectedContext: info.context,
       cwd: project,
       workRoot: path.join(root, 'native-codex'),
+      perRunConfig: {
+        serverName: 'agent-teams',
+        args: nativeAgentRunArgs('codex', info).flatMap((arg, index, args) =>
+          arg === '-c' ? [arg, args[index + 1]] : []
+        ),
+      },
       requiredTools: [
         'app_get_connection_info',
         'team_list',
@@ -764,6 +905,18 @@ try {
       ],
     },
     async ({ call: nativeCall, nativeVersion, toolNames }) => {
+      assert.deepEqual(
+        toolNames,
+        [
+          'app_get_connection_info',
+          'team_create',
+          'team_get',
+          'team_list',
+          'team_trash',
+          'team_update',
+        ],
+        'Native per-run Codex config must expose only management tools'
+      );
       const calls = evidence.calls as Record<string, unknown>[];
       const call = async (tool: string, args: Record<string, unknown>) => {
         try {

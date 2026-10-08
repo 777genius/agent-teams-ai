@@ -13,8 +13,11 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["../../src/shared/*"]
     }
   },
-  "include": ["scripts/e2e/sentry-sdk-envelope/main.mts", "scripts/e2e/sentry-sdk-envelope/run.mts"]
+  "include": [
+    "../../scripts/e2e/sentry-sdk-envelope/main.mts",
+    "../../scripts/e2e/sentry-sdk-envelope/run.mts"
+  ]
 }

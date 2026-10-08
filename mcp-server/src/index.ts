@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 import { FastMCP } from 'fastmcp';
 
-import { registerTools } from './tools';
+import { registerTools, type McpToolProfile } from './tools';
 
 const HTTP_TRANSPORT = 'httpStream';
 const STDIO_TRANSPORT = 'stdio';
@@ -46,6 +46,7 @@ export function createServer(
   input: {
     healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null;
     startOptions?: AgentTeamsMcpStartOptions;
+    toolProfile?: McpToolProfile;
   } = {}
 ) {
   const httpOptions =
@@ -53,6 +54,12 @@ export function createServer(
   const bound =
     process.env.AGENT_TEAMS_BOUND_CONTROL_URL !== undefined ||
     process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON !== undefined;
+  if (
+    input.toolProfile === 'management' &&
+    (!process.env.AGENT_TEAMS_BOUND_CONTROL_URL || !process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON)
+  ) {
+    throw new Error('Management MCP requires a bound desktop context');
+  }
   if (bound && httpOptions && !['127.0.0.1', '::1', 'localhost'].includes(httpOptions.host)) {
     throw new Error('Desktop-bound MCP must listen on loopback');
   }
@@ -90,7 +97,7 @@ export function createServer(
       : {}),
   });
 
-  registerTools(server);
+  registerTools(server, input.toolProfile);
 
   return server;
 }
@@ -107,6 +114,14 @@ function getArgValue(argv: string[], name: string): string | null {
     }
   }
   return null;
+}
+
+export function resolveToolProfile(argv: string[] = process.argv): McpToolProfile {
+  const profile = getArgValue(argv, '--tool-profile') ?? 'full';
+  if (profile !== 'full' && profile !== 'management') {
+    throw new Error(`Unknown MCP tool profile: ${profile}`);
+  }
+  return profile;
 }
 
 function normalizeEndpoint(value: string | null | undefined): `/${string}` {
@@ -197,6 +212,7 @@ async function main(): Promise<void> {
   const startOptions = resolveStartOptions();
   const server = createServer({
     startOptions,
+    toolProfile: resolveToolProfile(),
     healthIdentity: buildHttpHealthIdentity(startOptions),
   });
   await server.start(startOptions);
