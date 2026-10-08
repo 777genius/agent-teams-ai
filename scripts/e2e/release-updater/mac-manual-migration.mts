@@ -81,7 +81,7 @@ const evidence: Record<string, unknown> = {
   repository: plan.input.repository,
   toolingSha,
   sourceSha: plan.input.target.applicationSha,
-  version: '2.17.7',
+  version: '2.17.8',
   architecture,
   actualMacOs: os,
   minimumOs13ExecutionProven: Number(os.split('.')[0]) === 13,
@@ -175,7 +175,7 @@ async function stop() {
   child = undefined;
   launchRegistered = false;
 }
-async function installed(label: string, version: '2.17.1' | '2.17.7') {
+async function installed(label: string, version: '2.17.1' | '2.17.8') {
   const resources = path.join(app, 'Contents', 'Resources');
   const packageBytes = (await readAsar(path.join(resources, 'app.asar'), ['package.json'])).get(
     'package.json'
@@ -570,7 +570,7 @@ try {
     app,
     path.join(root, 'fresh-mount')
   );
-  phases.push({ freshSignature: await installed('fresh', '2.17.7') });
+  phases.push({ freshSignature: await installed('fresh', '2.17.8') });
   for (const script of ['smokePackagedApp.cjs', 'smokePackagedNative.cjs', 'smokePackagedMcp.cjs'])
     await commands.checked(
       'installed-packaged-smoke',
@@ -578,7 +578,7 @@ try {
       [path.resolve('scripts/electron-builder', script), app, 'darwin'],
       180_000
     );
-  await launch('fresh217', path.join(root, 'fresh-profile'), '2.17.7');
+  await launch('fresh218', path.join(root, 'fresh-profile'), '2.17.8');
   await noAppProcesses();
   await rm(app, { recursive: true });
   await macDmgInstall(
@@ -625,7 +625,7 @@ try {
   );
   assert.deepEqual(passivePreserved, passiveBefore);
   phases.push({
-    replacementSignature: await installed('replacement217', '2.17.7'),
+    replacementSignature: await installed('replacement218', '2.17.8'),
     profileBefore,
     passiveBefore,
     passivePreserved,
@@ -634,7 +634,7 @@ try {
       'seeded-config.json'
     ),
   });
-  assert.equal(await launch('manual217', profile, '2.17.7', undefined, theme), theme);
+  assert.equal(await launch('manual218', profile, '2.17.8', undefined, theme), theme);
   evidence.passed = true;
 } catch (error) {
   failure = error instanceof Error ? error : new Error(String(error));
