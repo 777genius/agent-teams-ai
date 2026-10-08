@@ -4,24 +4,21 @@ import type { ConnectionInfoV1, ExternalAgentRunProvider } from '../contracts';
 
 const SERVER_NAME = 'agent-teams';
 
+export interface NativeManagementMcp {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
 /** Per-run config only. The registered team group contains no launch/stop/delete/restore tools. */
 export function nativeAgentRunArgs(
   provider: ExternalAgentRunProvider,
-  connection: ConnectionInfoV1
+  connection: ConnectionInfoV1,
+  managementMcp?: NativeManagementMcp
 ): string[] {
-  const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } = agentTeamsController;
-  const managementTools = (
-    AGENT_TEAMS_MCP_TOOL_GROUPS.find((group) => group.id === 'team')?.toolNames ?? []
-  ).filter((tool) =>
-    [
-      'app_get_connection_info',
-      'team_list',
-      'team_get',
-      'team_create',
-      'team_update',
-      'team_trash',
-    ].includes(tool)
-  );
+  const { AGENT_TEAMS_MANAGEMENT_TOOL_NAMES, AGENT_TEAMS_REGISTERED_TOOL_NAMES } =
+    agentTeamsController;
+  const managementTools = AGENT_TEAMS_MANAGEMENT_TOOL_NAMES;
   const tools = managementTools.filter(
     (tool) =>
       (tool !== 'team_update' || connection.capabilities.configurationEdit) &&
@@ -31,6 +28,7 @@ export function nativeAgentRunArgs(
   if (!tools.includes('app_get_connection_info') || !tools.includes('team_create'))
     throw new Error('Management MCP tools are unavailable');
   if (provider === 'anthropic') {
+    if (!managementMcp) throw new Error('Bound management MCP launch is unavailable');
     const namespaced = (tool: string) => `mcp__${SERVER_NAME}__${tool}`;
     return [
       '-p',
@@ -47,7 +45,15 @@ export function nativeAgentRunArgs(
       JSON.stringify({ disableAllHooks: true }),
       '--disable-slash-commands',
       '--mcp-config',
-      JSON.stringify({ mcpServers: { [SERVER_NAME]: { type: 'http', url: connection.mcp.url } } }),
+      JSON.stringify({
+        mcpServers: {
+          [SERVER_NAME]: {
+            type: 'stdio',
+            ...managementMcp,
+            args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
+          },
+        },
+      }),
       '--allowedTools',
       tools.map(namespaced).join(','),
       '--disallowedTools',

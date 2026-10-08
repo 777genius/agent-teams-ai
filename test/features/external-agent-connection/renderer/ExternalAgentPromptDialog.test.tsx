@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { ExternalAgentPromptDialog } from '@features/external-agent-connection/renderer/ExternalAgentPromptDialog';
 import { TEAM_TEMPLATES } from '@features/team-templates';
+import { draftStorage } from '@renderer/services/draftStorage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -118,6 +119,56 @@ describe('external prompt freshness and clipboard fallback', () => {
       )
     );
   };
+
+  // RED when a restored oversized task enables a native run instead of explaining its limit.
+  it('keeps an oversized restored request intact with inline validation and blocks native runs until corrected', async () => {
+    const oversized = 'x'.repeat(20_001);
+    vi.mocked(draftStorage.loadDraft).mockResolvedValueOnce(oversized);
+    const runApi = {
+      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
+      getSnapshot: vi.fn(async () => null),
+      start: vi.fn(),
+      cancel: vi.fn(),
+    };
+    await render({
+      getConnectionInfo: vi.fn(async () => snapshot()),
+      retryConnection: vi.fn(),
+      directRun: runApi,
+    });
+    const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
+    const validation = host.querySelector('#external-agent-task-error')!;
+    expect(task.value).toBe(oversized);
+    expect(task.hasAttribute('maxlength')).toBe(false);
+    expect(task.getAttribute('aria-invalid')).toBe('true');
+    expect(task.getAttribute('aria-describedby')).toContain(validation.id);
+    expect(validation.getAttribute('role')).toBe('alert');
+    expect(validation.textContent).toBe(
+      'Native runs support requests up to 20000 characters. Shorten the request to run it.'
+    );
+    expect(preview()?.textContent).toContain(oversized);
+    await copy();
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(writeText.mock.calls[0]?.[0]).toContain(oversized);
+    const buttons = ['codex', 'claude'].map(
+      (provider) =>
+        host.querySelector<HTMLButtonElement>(`[data-testid="external-agent-run-${provider}"]`)!
+    );
+    for (const button of buttons) {
+      expect(button.disabled).toBe(true);
+      await act(async () => button.click());
+    }
+    expect(runApi.start).not.toHaveBeenCalled();
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        task,
+        'x'.repeat(20_000)
+      );
+      task.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelector('#external-agent-task-error')).toBeNull();
+    expect(task.getAttribute('aria-invalid')).toBe('false');
+    for (const button of buttons) expect(button.disabled).toBe(false);
+  });
 
   // RED when reopening loses the owned run or textarea edits change what the active run claims to execute.
   it('recovers the active native run, blocks duplicates and cancels its immutable task after edits and reopening', async () => {

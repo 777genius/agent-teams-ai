@@ -86,7 +86,11 @@ export function composeExternalAgentConnection(options: {
         return null;
       return status;
     },
-    prepare: prepareNativeAgentRun,
+    prepare: (provider, connectionInfo) =>
+      prepareNativeAgentRun(provider, connectionInfo, {
+        controlUrl: options.getControlUrl(),
+        claudeDir: getClaudeBasePath(),
+      }),
   });
   return {
     ...connection,

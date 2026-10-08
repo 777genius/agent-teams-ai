@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { TEAM_TEMPLATES } from '@features/team-templates';
 import { boundedDiagnosticString } from '@shared/utils/diagnosticsRedaction';
 
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
 import { buildExternalAgentPrompt } from '../core/domain/connectionPrompt';
 import { canRunExternalAgent } from '../core/domain/runReadiness';
 
@@ -44,7 +45,6 @@ interface ActiveRun {
   interrupt(): void;
 }
 const MAX_LOG_LENGTH = 64_000;
-const MAX_TASK_LENGTH = 20_000;
 
 function validateRequest(input: unknown): ExternalAgentRunRequest {
   if (!input || typeof input !== 'object') throw new Error('Invalid run request');
@@ -55,7 +55,7 @@ function validateRequest(input: unknown): ExternalAgentRunRequest {
     !['anthropic', 'codex'].includes(String(value.providerId)) ||
     typeof value.task !== 'string' ||
     !value.task.trim() ||
-    value.task.length > MAX_TASK_LENGTH ||
+    value.task.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH ||
     !expected ||
     typeof expected.appInstanceId !== 'string' ||
     typeof expected.dataRootFingerprint !== 'string' ||

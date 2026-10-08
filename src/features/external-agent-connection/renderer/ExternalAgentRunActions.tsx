@@ -3,6 +3,8 @@ import { CliLogsRichView } from '@renderer/components/team/CliLogsRichView';
 import { Button } from '@renderer/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+
 import { useExternalAgentRun } from './useExternalAgentRun';
 
 import type { AppConnectionContext, ExternalAgentRunApi } from '../contracts';
@@ -23,6 +25,7 @@ export function ExternalAgentRunActions({
   const blocked =
     !ready ||
     !task.trim() ||
+    task.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH ||
     run.loading ||
     run.submitting ||
     run.active ||

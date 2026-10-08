@@ -3198,6 +3198,7 @@
     "title": "Manage teams with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
+    "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
     "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
     "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
     "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",

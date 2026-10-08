@@ -7,12 +7,16 @@ import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServe
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { resolveAgentTeamsMcpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
 import { killProcessTreeAndWait, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
+
+import { BOUND_CONTROL_CONTEXT_ENV, BOUND_CONTROL_URL_ENV } from '../contracts';
 
 import { nativeAgentRunArgs } from './nativeAgentRunArgs';
 
 import type { ConnectionInfoV1, ExternalAgentRunProvider } from '../contracts';
 import type { PreparedExternalAgentRun } from './ExternalAgentRunService';
+import type { NativeManagementMcp } from './nativeAgentRunArgs';
 import type { ChildProcess } from 'node:child_process';
 
 export { nativeAgentRunArgs } from './nativeAgentRunArgs';
@@ -21,7 +25,8 @@ const MAX_PROTOCOL_LINE = 2 * 1024 * 1024;
 /** Native binaries and environment stay main-owned; input prompt is written through stdin. */
 export async function prepareNativeAgentRun(
   provider: ExternalAgentRunProvider,
-  connection: ConnectionInfoV1
+  connection: ConnectionInfoV1,
+  desktop?: { controlUrl: string | null; claudeDir: string }
 ): Promise<PreparedExternalAgentRun> {
   const binary =
     provider === 'codex'
@@ -39,7 +44,21 @@ export async function prepareNativeAgentRun(
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
   delete env.ELECTRON_RUN_AS_NODE;
-  const nativeArgs = nativeAgentRunArgs(provider, connection);
+  let managementMcp: NativeManagementMcp | undefined;
+  if (provider === 'anthropic') {
+    if (!desktop?.controlUrl) throw new Error('Bound desktop control URL is unavailable');
+    const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
+    managementMcp = {
+      ...launchSpec,
+      env: {
+        ...launchSpec.env,
+        [BOUND_CONTROL_URL_ENV]: desktop.controlUrl,
+        [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(connection.context),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.claudeDir,
+      },
+    };
+  }
+  const nativeArgs = nativeAgentRunArgs(provider, connection, managementMcp);
   const customModel =
     provider === 'codex' ? providerConnectionService.getConfiguredCodexCustomProviderModel() : null;
   const args = [

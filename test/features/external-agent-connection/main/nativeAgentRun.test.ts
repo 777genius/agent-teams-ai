@@ -25,6 +25,13 @@ vi.mock('@main/services/infrastructure/codexAppServer/CodexBinaryResolver', () =
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolveNative: async () => '/sandbox/bin/claude' },
 }));
+vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
+  resolveAgentTeamsMcpLaunchSpec: async () => ({
+    command: '/sandbox/bin/mcp-node',
+    args: ['/sandbox/mcp/index.js'],
+    env: { ELECTRON_RUN_AS_NODE: '1', AGENT_TEAMS_MCP_TRANSPORT: 'httpStream' },
+  }),
+}));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: vi.fn(async () => ({
     env: { CLAUDECODE: 'nested', ELECTRON_RUN_AS_NODE: '1', TEST_PROVIDER_AUTH: 'retained' },
@@ -100,6 +107,18 @@ const allowed = [
   'team_update',
   'team_trash',
 ];
+const desktop = { controlUrl: 'http://127.0.0.1:41001', claudeDir: '/sandbox/bound-root' };
+const managementMcp = {
+  command: '/sandbox/bin/mcp-node',
+  args: ['/sandbox/mcp/index.js'],
+  env: {
+    ELECTRON_RUN_AS_NODE: '1',
+    AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
+    AGENT_TEAMS_BOUND_CONTROL_URL: desktop.controlUrl,
+    AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(connection.context),
+    AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.claudeDir,
+  },
+};
 
 describe('native one-shot provider transport', () => {
   let child: FakeChild;
@@ -132,8 +151,15 @@ describe('native one-shot provider transport', () => {
     expect(args).not.toContain('--dangerously-bypass-approvals-and-sandbox');
   });
 
-  it('removes Claude built-ins and denies every other registered MCP tool rather than using broad skip', () => {
-    const args = nativeAgentRunArgs('anthropic', connection);
+  it('removes Claude built-ins and uses a bound management-only stdio MCP without broad skip', () => {
+    const args = nativeAgentRunArgs('anthropic', connection, managementMcp);
+    const config = JSON.parse(args[args.indexOf('--mcp-config') + 1]);
+    expect(config.mcpServers['agent-teams']).toEqual({
+      ...managementMcp,
+      type: 'stdio',
+      args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
+    });
+    expect(() => nativeAgentRunArgs('anthropic', connection)).toThrow('Bound management MCP');
     expect(args[args.indexOf('--tools') + 1]).toBe('');
     expect(args).toContain('--strict-mcp-config');
     const authorized = args[args.indexOf('--allowedTools') + 1].split(',');
@@ -153,7 +179,7 @@ describe('native one-shot provider transport', () => {
 
   it('writes prompt through stdin in sandbox cwd, preserves provider auth and fails a Claude error result even with exit zero', async () => {
     providerLaunch.model = 'custom/not-a-claude-model';
-    const runtime = await prepareNativeAgentRun('anthropic', connection);
+    const runtime = await prepareNativeAgentRun('anthropic', connection, desktop);
     const output: string[] = [];
     const result = runtime.launch('Private sandbox request', (text) => output.push(text));
     const [binary, args, options] = vi.mocked(spawnCli).mock.calls[0];
@@ -164,6 +190,12 @@ describe('native one-shot provider transport', () => {
     expect(options?.env?.TEST_PROVIDER_AUTH).toBe('retained');
     expect(options?.env?.CLAUDECODE).toBeUndefined();
     expect(options?.env?.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    const config = JSON.parse(args[args.indexOf('--mcp-config') + 1]);
+    expect(config.mcpServers['agent-teams']).toEqual({
+      ...managementMcp,
+      type: 'stdio',
+      args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
+    });
     expect(child.stdin.read()?.toString()).toBe('Private sandbox request');
     child.stdout.write('{"type":"result","subtype":"error_max_turns","is_error":true}\n');
     child.close(0);

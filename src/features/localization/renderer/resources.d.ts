@@ -4278,6 +4278,7 @@ export default interface Resources {
       "taskLabel": "What should the agent do?",
       "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
       "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
+      "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
       "templatesTitle": "Available team templates (reference)",
       "title": "Manage teams with a prompt",
       "trashAvailable": "Reversible trash for draft/stopped teams is available."

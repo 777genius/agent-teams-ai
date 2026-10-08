@@ -9,6 +9,8 @@ import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
 
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+
 import { ExternalAgentRunActions } from './ExternalAgentRunActions';
 import { TeamTemplateReferences } from './TeamTemplateReferences';
 
@@ -89,6 +91,7 @@ export const ExternalAgentPromptDialog = ({
     currentConnection.control.status === 'ready' &&
     currentConnection.capabilities.draftCreation;
   const taskPresent = Boolean(request.value.trim());
+  const taskTooLong = Boolean(runApi) && request.value.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH;
   const copied = receipt?.task === request.value && receipt.signature === signature;
   const preview = useMemo(() => {
     if (previewBlocked || !ready || !taskPresent) return '';
@@ -163,8 +166,22 @@ export const ExternalAgentPromptDialog = ({
           }}
           placeholder={t('externalPrompt.taskPlaceholder')}
           className="min-h-24 text-sm"
-          aria-describedby="external-agent-task-help"
+          aria-invalid={taskTooLong}
+          aria-describedby={
+            taskTooLong
+              ? 'external-agent-task-help external-agent-task-error'
+              : 'external-agent-task-help'
+          }
         />
+        {taskTooLong && (
+          <p
+            id="external-agent-task-error"
+            className="text-xs text-[var(--warning-text)]"
+            role="alert"
+          >
+            {t('externalPrompt.taskTooLong', { limit: EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH })}
+          </p>
+        )}
         <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
           {t('externalPrompt.requestHelp')}{' '}
           {currentConnection.capabilities.configurationEdit

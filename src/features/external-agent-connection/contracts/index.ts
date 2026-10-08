@@ -49,6 +49,8 @@ export interface ExternalAgentConnectionApi {
 export type ExternalAgentRunProvider = 'anthropic' | 'codex';
 export type ExternalAgentRunAvailability = Record<ExternalAgentRunProvider, boolean>;
 export type ExternalAgentRunStatus = 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
+/** Maximum raw task length accepted by native run admission, before trimming. */
+export const EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH = 20_000;
 export interface ExternalAgentRunRequest {
   providerId: ExternalAgentRunProvider;
   task: string;
