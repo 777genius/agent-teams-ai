@@ -5,7 +5,7 @@ on:
     paths:
       - 'scripts/e2e/release-updater/**'
       - '.github/workflows/updater-native-feasibility.yml'
-      - 'tsconfig.updater-e2e.json'
+      - 'scripts/tsconfig/tsconfig.updater-e2e.json'
       - 'tsconfig.json'
       - 'package.json'
       - 'pnpm-lock.yaml'

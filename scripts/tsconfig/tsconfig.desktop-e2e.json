@@ -1,0 +1,11 @@
+{
+  "extends": "./e2e-base.json",
+  "include": [
+    "../../scripts/e2e/external-agent-connection-desktop.ts",
+    "../../scripts/e2e/team-prompt-management-desktop.ts",
+    "../../src/types/**/*.d.ts",
+    "../../scripts/e2e/external-agent-shared-root.ts",
+    "../../scripts/e2e/opencode-status-recovery/**/*.mts"
+  ],
+  "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
+}

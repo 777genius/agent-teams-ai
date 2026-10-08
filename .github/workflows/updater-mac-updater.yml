@@ -52,7 +52,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check authenticated input boundary
         run: |
-          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json
           pnpm lint:ci:files -- scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts
           ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts scripts/e2e/release-updater/mac-lifecycle.test.mts
       - name: Retrieve only the authenticated immutable prepared metadata plan
@@ -142,7 +142,7 @@ jobs:
       - parallel:
           - name: Check typed native Mac harness
             run: |
-              node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+              node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json
               pnpm lint:ci:files -- scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-stop-owned.test.mts scripts/e2e/release-updater/mac-capture-read.test.mts
           - name: Verify compiler-independent observer serialization
             run: pnpm exec tsx --test scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts scripts/e2e/release-updater/mac-stop-owned.test.mts scripts/e2e/release-updater/mac-capture-read.test.mts

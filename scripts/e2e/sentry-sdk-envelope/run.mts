@@ -56,7 +56,7 @@ if (process.argv[2] === '--typecheck') {
     await writeFile(
       config,
       JSON.stringify({
-        extends: join(repository, 'tsconfig.sentry-sdk-e2e.json'),
+        extends: join(repository, 'scripts/tsconfig/tsconfig.sentry-sdk-e2e.json'),
         compilerOptions: { typeRoots: [join(repository, 'node_modules/@types')] },
         files: entries.map((entry) => fileURLToPath(new URL(entry, import.meta.url))),
         include: [],

@@ -276,7 +276,7 @@ try {
   evidence.eventCapture = { dropped: eventsDropped, limit: 2000 };
   evidence.rendererErrors = rendererErrors;
   evidence.rendererErrorCount = rendererErrorCount;
-  const files = ['scripts/e2e/sentry-tab-identity/run.mts', 'scripts/e2e/sentry-tab-identity/renderer.mts', 'tsconfig.sentry-e2e.json', 'src/renderer/store/slices/tabSlice.ts', 'src/renderer/store/slices/sessionDetailSlice.ts', 'src/renderer/store/session/sessionRequestIdentity.ts'];
+  const files = ['scripts/e2e/sentry-tab-identity/run.mts', 'scripts/e2e/sentry-tab-identity/renderer.mts', 'scripts/tsconfig/tsconfig.sentry-e2e.json', 'scripts/tsconfig/e2e-base.json', 'src/renderer/store/slices/tabSlice.ts', 'src/renderer/store/slices/sessionDetailSlice.ts', 'src/renderer/store/session/sessionRequestIdentity.ts'];
   evidence.sourceHashes = Object.fromEntries(await Promise.all(files.map(async file => [file, createHash('sha256').update(await readFile(path.join(repo, file))).digest('hex')])));
   evidence.finished = new Date().toISOString();
   await writeFile(path.join(output, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
