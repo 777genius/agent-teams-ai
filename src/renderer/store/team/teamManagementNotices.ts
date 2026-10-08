@@ -1,8 +1,10 @@
-import { captureTeamLocalStateEpoch, isTeamLocalStateEpochCurrent } from './teamLocalStateEpoch';
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '../utils/contextScopedRequestEpoch';
+
+import { captureTeamLocalStateEpoch, isTeamLocalStateEpochCurrent } from './teamLocalStateEpoch';
+
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamChangeEvent, TeamSummary } from '@shared/types';
 
