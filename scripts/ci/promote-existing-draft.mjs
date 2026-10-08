@@ -389,9 +389,9 @@ export async function promoteExistingDraft({
     throw new Error('RELEASE_MODE must be full or carry-mac');
   if (mode === 'carry-mac') return delegateCarryAssembly(environment);
   const config = parsePromotionConfig(environment);
-  if (config.tag === 'v2.17.7' || config.tag === 'v2.17.8')
+  if (config.tag === 'v2.17.7' || config.tag === 'v2.17.8' || config.tag === 'v2.17.9')
     throw new Error(
-      'Full218 requires publish-full-release.ts with immutable prepared plan and native receipt; legacy feed regeneration is forbidden'
+      'Full219 requires publish-full-release.ts with immutable prepared plan and native receipt; legacy feed regeneration is forbidden'
     );
   const layout = getPromotionLayout(config.version);
   const release = JSON.parse(

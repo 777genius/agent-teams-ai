@@ -245,7 +245,7 @@ export async function loadInputs(
   }
   assert(
     historicalPreview,
-    '2.17.6/2.17.8 require authenticated staged inputs; use --historical-preview only for old 2.17.2 evidence'
+    '2.17.6/2.17.9 require authenticated staged inputs; use --historical-preview only for old 2.17.2 evidence'
   );
   const catalog = JSON.parse(
     await readFile(path.join(directory, 'input-catalog.json'), 'utf8')

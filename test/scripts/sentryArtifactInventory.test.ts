@@ -90,6 +90,35 @@ function parse(value: unknown) {
 }
 
 describe('emitted Sentry artifact inventory', () => {
+  it('inventories a producer-associated empty v3 map and rejects substituted or mismatched maps', () => {
+    const bundle = fixture();
+    const raw = {
+      version: 3,
+      file: 'index.cjs',
+      sources: [],
+      sourcesContent: [],
+      names: [],
+      mappings: '',
+    };
+    const original = JSON.stringify(raw);
+    chunk(bundle).map = { ...raw, toString: () => original, toUrl: () => '' };
+    const asset = bundle['index.cjs.map'] as OutputAsset;
+    asset.source = original;
+    const evidence = collectSentryArtifactInventory(bundle, options);
+    expect(evidence.runtime.artifacts).toHaveLength(1);
+    expect(evidence.artifacts[0]?.originalMap).toEqual({
+      relativeFile: 'dist-electron/main/index.cjs.map',
+      sha256: createHash('sha256').update(original).digest('hex'),
+      bytes: Buffer.byteLength(original),
+    });
+    for (const change of [{ mappings: ';' }, { file: 'other.cjs' }, { debug_id: OTHER_ID }]) {
+      asset.source = JSON.stringify({ ...raw, ...change });
+      expect(() => collectSentryArtifactInventory(bundle, options)).toThrow();
+    }
+    asset.source = original;
+    chunk(bundle).map = null;
+    expect(() => collectSentryArtifactInventory(bundle, options)).toThrow('differs from chunk map');
+  });
   it('admits only the pinned raw PPTX worker origin and bytes while preserving application guards', () => {
     const source = 'self.onmessage = () => self.postMessage("vendor");';
     const worker: OutputAsset = {

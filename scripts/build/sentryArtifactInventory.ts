@@ -139,7 +139,6 @@ function verifyMap(json: string, chunk: OutputChunk, id: string): void {
     typeof value.mappings !== 'string' ||
     !/^[A-Za-z0-9+/,;]*$/.test(value.mappings) ||
     !Array.isArray(value.sources) ||
-    !value.sources.length ||
     !value.sources.every((source) => typeof source === 'string') ||
     !Array.isArray(value.names) ||
     !value.names.every((name) => typeof name === 'string') ||
