@@ -1309,3 +1309,20 @@ test('four-shard postmerge reuse crosses only exact same-topology harmless metad
   skippedTest.name = String(skippedTest.name).replace('/4)', '/2)');
   assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, false);
 });
+
+
+void test('postmerge reuse authenticates real metadata Full qualification without accepting its name alone', async () => {
+  const data = metadataFixture(1, 4);
+  const gate = metadataJobs(data)[1];
+  assert(gate);
+  gate.name = 'Full qualification';
+  const decision = (gate.steps as JsonObject[])[0];
+  assert(decision);
+  decision.name = 'Verify completed current-code qualification after metadata edits';
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, true);
+  decision.conclusion = 'skipped';
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, false);
+  decision.conclusion = 'success';
+  decision.name = 'Preserve existing current-code checks after metadata edits';
+  assert.equal((await proof(data, { ...context, rootTestShards: '4' })).reuse, false);
+});

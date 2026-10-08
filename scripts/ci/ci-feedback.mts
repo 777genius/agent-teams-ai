@@ -130,6 +130,18 @@ export function isMetadataOnlyPrEdit(eventName: unknown, event: unknown): boolea
   }
 }
 
+export async function qualifyMetadata(
+  env: Record<string, string | undefined>,
+  event: unknown,
+  read: GitHubRead
+): Promise<boolean> {
+  return (
+    env.GITHUB_REPOSITORY === REPOSITORY &&
+    isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
+    object(object(event).pull_request).draft === false &&
+    (await proveMetadataProducer(env, event, read, true))
+  );
+}
 export async function planFeedback(
   env: Record<string, string | undefined>,
   event: unknown,
@@ -154,7 +166,9 @@ export async function planFeedback(
   }
   if (
     isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
-    (await proveMetadataProducer(env, event, read))
+    (await proveMetadataProducer(
+      env, event, read, object(object(event).pull_request).draft === false
+    ))
   ) {
     return {
       ...fallback,
@@ -324,6 +338,14 @@ function ghRead(endpoint: string): unknown {
   }
 }
 
+function readEvent(): unknown {
+  try {
+    return JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const read: GitHubRead = async (endpoint) => {
     if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)
@@ -344,6 +366,16 @@ async function main(): Promise<void> {
     console.log(windows.reason);
     return;
   }
+  if (process.argv[2] === 'metadata-gate') {
+    const qualified = await qualifyMetadata(process.env, readEvent(), read);
+    console.log(
+      qualified
+        ? 'Authenticated completed current-code qualification'
+        : 'Metadata qualification failed'
+    );
+    if (!qualified) process.exitCode = 1;
+    return;
+  }
   if (process.argv[2] === 'gate') {
     let results: unknown;
     try {
@@ -362,13 +394,7 @@ async function main(): Promise<void> {
     return;
   }
   if (process.argv[2] !== 'plan') throw new Error('Expected plan, gate, image or windows');
-  let event: unknown;
-  try {
-    event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8'));
-  } catch {
-    event = null;
-  }
-  const plan = await planFeedback(process.env, event, read);
+  const plan = await planFeedback(process.env, readEvent(), read);
   output(
     `full=${plan.full}\nmetadata=${plan.metadata}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
   );
