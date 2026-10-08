@@ -560,13 +560,34 @@ function fixture(full = false) {
             },
             initialPackage: {},
             automaticLaunchSeal: {
-              launch: { command: ['app'], home: '/TEST-home', userData: '/TEST-profile' },
+              launch: {
+                command: ['app'],
+                home: '/TEST-home',
+                userData: '/TEST-profile',
+                runtime: { pid: 99, argv: ['app'], execArgv: [] },
+              },
               target: { sha256: 'payload' },
             },
             automaticSealAfterPaint: {
+              identity: { pid: 379, start: '116167' },
               command: ['app'],
-              markers: { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' },
+              markers: {},
+              executable: 'app',
               payload: { sha256: 'payload' },
+            },
+            automaticProcess: { pid: 379, start: '116167' },
+            automaticReadOnlyInspector: {
+              identity: { pid: 379, start: '116167' },
+              actual: {
+                pid: 379,
+                argv: ['app'],
+                execArgv: [],
+                home: '/TEST-home',
+                profile: '/TEST-profile',
+                userData: '/TEST-profile',
+                version: targetVersion,
+                executable: 'app',
+              },
             },
             automaticPackage: {},
             automaticDesktop: {},
@@ -802,6 +823,67 @@ describe('native readiness publication boundary', () => {
     const f = fixture();
     f.values.get('mac-arm64-current')!.observation = { events: [] };
     f.reseal('mac-arm64-current');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+  it('accepts matching present Linux kernel markers alongside genuine successor runtime proof', async () => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+    f.reseal('linux-deb-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+  });
+  it.each([
+    { field: ['actual'], replacement: undefined },
+    { field: ['identity'], replacement: undefined },
+    { field: ['identity', 'pid'], replacement: 99 },
+    { field: ['identity', 'start'], replacement: '116168' },
+    { field: ['identity', 'start'], replacement: '' },
+    { field: ['actual', 'pid'], replacement: 99 },
+    { field: ['actual', 'home'], replacement: '/foreign-home' },
+    { field: ['actual', 'profile'], replacement: '/foreign-profile' },
+    { field: ['actual', 'userData'], replacement: '/foreign-user-data' },
+    { field: ['actual', 'argv'], replacement: ['app', '--foreign-flag'] },
+    { field: ['actual', 'execArgv'], replacement: ['--inspect=12345'] },
+    { field: ['actual', 'version'], replacement: '2.17.1' },
+    { field: ['actual', 'executable'], replacement: '/foreign-app' },
+    { field: ['actual', 'home'], replacement: '' },
+    { field: ['actual', 'profile'], replacement: undefined },
+    { field: ['actual', 'userData'], replacement: undefined },
+    { field: ['actual', 'argv'], replacement: undefined },
+    { field: ['actual', 'execArgv'], replacement: undefined },
+  ])(
+    'rejects missing or conflicting Linux successor $field proof',
+    async ({ field, replacement }) => {
+      const f = fixture();
+      const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+      kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+      let value = f.values.get('linux-deb-ota')!.automaticReadOnlyInspector as Record<
+        string,
+        unknown
+      >;
+      for (const key of field.slice(0, -1)) value = value[key] as Record<string, unknown>;
+      if (replacement === undefined) delete value[field.at(-1)!];
+      else value[field.at(-1)!] = replacement;
+      f.reseal('linux-deb-ota');
+      await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+    }
+  );
+  it.each([
+    { pid: 99, start: '116167' },
+    { pid: 379, start: '116168' },
+  ])('rejects a different automatic Linux successor generation $pid/$start', async (process) => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { HOME: '/TEST-home', AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/TEST-profile' };
+    f.values.get('linux-deb-ota')!.automaticProcess = process;
+    f.reseal('linux-deb-ota');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+  it('rejects a conflicting present Linux kernel profile marker despite matching runtime', async () => {
+    const f = fixture();
+    const kernel = f.values.get('linux-deb-ota')!.automaticSealAfterPaint as { markers: object };
+    kernel.markers = { AGENT_TEAMS_ELECTRON_USER_DATA_DIR: '/foreign-profile' };
+    f.reseal('linux-deb-ota');
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
   });
   it('rejects a changed sealed Linux successor profile', async () => {
