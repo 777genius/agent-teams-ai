@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 
 import { hashFile, stageArguments } from './inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { automaticNoUpdatePollResult } from './linux-packages-poll.mts';
 import { waitMacStartupReady } from './mac-startup-readiness.mts';
 import {
   cdpCallFunction,
@@ -743,12 +744,7 @@ try {
                 check:
                   'Original public updater.check on same automatic PID after onStatus subscription',
               };
-              if (
-                proof.events.some((event) => event.type === 'error') ||
-                statuses.some((status) => status.type === 'error')
-              )
-                assertAutomaticNoUpdate(successor, targetVersion, proof);
-              return statuses.some((status) => status.type === 'not-available') ? proof : null;
+              return automaticNoUpdatePollResult(successor, targetVersion, proof);
             }, 'same automatic successor genuine no-update');
             assertAutomaticNoUpdate(successor, targetVersion, terminal);
             transportRoutes(false, automaticRequestStart);
