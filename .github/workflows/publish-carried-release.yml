@@ -110,7 +110,8 @@ jobs:
       contents: write
       actions: read
     env:
-      CHECKOUT_SHA: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
+      CHECKOUT_SHA: e7b35bdc2470ea2cd676c95a787d6887d85fa533
+      APPLICATION_SHA: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
       ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
       RELEASE_TAG: v2.17.10
       PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
@@ -122,7 +123,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
+          ref: e7b35bdc2470ea2cd676c95a787d6887d85fa533
           persist-credentials: false
       - name: Bind workflow origin and immutable full220 checkout
         env:
@@ -133,20 +134,21 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_REPOSITORY" == 777genius/agent-teams-ai && "$DISPATCH_TAG" == "$RELEASE_TAG" ]]
           [[ "$GITHUB_SHA" == "$ACTUAL_WORKFLOW_SHA" && "$ACTUAL_WORKFLOW_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$CHECKOUT_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ ]]
           [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
-          [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$CHECKOUT_SHA" ]]
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPLICATION_SHA" ]]
           [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
           [[ "$PREPARED_ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
           [[ "$(printf '%s' "$NATIVE_RECEIPT_JSON" | wc -c)" -le 100000 ]]
           NATIVE_RECEIPT_SHA256=$(printf '%s' "$NATIVE_RECEIPT_JSON" | sha256sum | cut -d ' ' -f 1)
-          jq -n --arg workflowSha "$ACTUAL_WORKFLOW_SHA" --arg checkoutSha "$CHECKOUT_SHA" \
+          jq -n --arg workflowSha "$ACTUAL_WORKFLOW_SHA" --arg checkoutSha "$CHECKOUT_SHA" --arg applicationSha "$APPLICATION_SHA" \
             --arg workflowRef "$WORKFLOW_PATH" --arg repository "$GITHUB_REPOSITORY" \
             --arg tag "$RELEASE_TAG" --arg planSha256 "$PLAN_DIGEST" \
             --arg nativeReceiptSha256 "$NATIVE_RECEIPT_SHA256" \
             --arg artifactSha256 "$PREPARED_ARTIFACT_SHA256" \
             --argjson preparedRunId "$PREPARED_RUN_ID" --argjson preparedArtifactId "$PREPARED_ARTIFACT_ID" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:false}' > execution-identity.json
+            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,applicationSha:$applicationSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:false}' > execution-identity.json
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
