@@ -1,11 +1,108 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
+import { promisify } from 'node:util';
+import { gunzipSync } from 'node:zlib';
 import { uniqueWindowsOwners } from './windows-native.mts';
 import { observerFailureReceipt } from './windows-observer-receipt.mts';
-import { observeInstallerChild } from './windows-ota-observer.mts';
+import { observeInstallerChild, windowsObserverJsonSource } from './windows-ota-observer.mts';
+import { selectedWindowsPowerShell, windowsShellTestEnvironment } from './windows-powershell.mts';
 import type { WindowsProcess } from './windows-native.mts';
+import type { NativeNames } from './windows-ota-observer.mts';
+
+async function actualBulletReceipt() {
+  const directory = new URL('./fixtures/', import.meta.url);
+  const raw = gunzipSync(
+    await readFile(new URL('w9-observer-bullet-invalid-stdout.txt.gz', directory))
+  ).toString('utf8');
+  assert.equal(
+    createHash('sha256').update(raw).digest('hex'),
+    '2070334ad30e879de9308c4d2c1348ed467b23537bf00f2d5fbf78a08431e7fb'
+  );
+  const expected = JSON.parse(
+    gunzipSync(await readFile(new URL('w9-observer-bullet-receipt.json.gz', directory))).toString(
+      'utf8'
+    )
+  ) as NativeNames;
+  return { raw, expected };
+}
+void test('actual W9 observer bullet receipt is malformed JSON, not a newline or schema failure', async () => {
+  const { raw, expected } = await actualBulletReceipt();
+  assert.equal(raw.charCodeAt(1734), 7);
+  assert.throws(() => JSON.parse(raw), SyntaxError);
+  assert.equal(expected.Error, null);
+  assert.equal(expected.Visited, 178);
+  assert.equal(expected.Names.filter((name) => name === '\u0007 ').length, 10);
+  assert(expected.Names.includes('Download'));
+});
+void test(
+  'selected PS7 observer producer serializes actual UIA bullet names and every control losslessly',
+  {
+    skip:
+      process.platform !== 'win32'
+        ? 'Requires selected installed PS7 on disposable GitHub Windows VM'
+        : false,
+  },
+  async () => {
+    const { expected } = await actualBulletReceipt();
+    const shell = await selectedWindowsPowerShell();
+    const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-updater-windows-json-'));
+    try {
+      const env = await windowsShellTestEnvironment(root, shell);
+      const input = {
+        shell,
+        value: {
+          ...expected,
+          Names: [
+            ...expected.Names,
+            ...Array.from({ length: 32 }, (_, i) => `control:${String.fromCharCode(i)}:end`),
+            'quotes:" backslash:\\ newline:\n Unicode:Привіт 😀',
+          ],
+        },
+      };
+      const file = path.join(root, 'input.json');
+      await writeFile(file, JSON.stringify(input));
+      const script = path.join(root, 'serialize.ps1');
+      await writeFile(
+        script,
+        String.raw`
+param([string]$InputFile)
+$ErrorActionPreference='Stop'
+$data=ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($InputFile))
+if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.ToString() -ne $data.shell.version -or $PSHOME -ne $data.shell.psHome -or [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName -ne $data.shell.executable) { throw 'Selected installed PS7 identity changed' }
+$result=$data.value; $result.Names=[string[]]$result.Names
+${windowsObserverJsonSource}`
+      );
+      const result = await promisify(execFile)(
+        shell.executable,
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          script,
+          '-InputFile',
+          file,
+        ],
+        { env, timeout: 20_000, windowsHide: true, maxBuffer: 4_194_304 }
+      );
+      assert.equal(result.stderr, '');
+      assert(
+        /^[\x20-\x7e]+$/u.test(result.stdout),
+        'Producer must emit encoded JSON without console control characters'
+      );
+      assert.deepEqual(JSON.parse(result.stdout), input.value);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+);
 
 const owner: WindowsProcess = {
   pid: 2468,

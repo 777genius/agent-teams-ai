@@ -606,6 +606,11 @@ public static class TestOtaObserver {
 `;
 
 const execute = promisify(execFile);
+export const windowsObserverJsonSource = String.raw`
+$json=ConvertTo-Json -InputObject $result -Depth 12 -Compress -EscapeHandling EscapeNonAscii
+if ($json -cmatch '[^\x20-\x7e]') { throw 'Observer JSON encoder emitted a control or non-ASCII character' }
+[Console]::Out.Write($json)
+`;
 const script = String.raw`
 param([string]$InputFile,[string]$TrustedModulePath)
 $ErrorActionPreference='Stop'
@@ -693,7 +698,7 @@ switch ($data.operation) {
   }
   default { throw 'Unknown TEST observer operation' }
 }
-ConvertTo-Json -InputObject $result -Depth 12 -Compress
+${windowsObserverJsonSource}
 `;
 
 export async function windowsOtaObserver(root: string, evidence: string) {

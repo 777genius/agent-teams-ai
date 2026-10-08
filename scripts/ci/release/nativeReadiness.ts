@@ -1,4 +1,16 @@
-import { parse } from 'yaml';
+import { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRows.js';
+import type { NativeScenarioRow as Row } from './nativeReadinessRows.js';
+export { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRows.js';
+import { checkMacManual, manualCapturePaths } from './macManualReadiness.js';
+import {
+  at,
+  list,
+  object,
+  release216Execution,
+  validateWorkflow,
+  verifyRelease216Execution,
+} from './nativeReadinessAuthority.js';
+import type { ExecutionProof } from './nativeReadinessAuthority.js';
 import { assertArmPriorFixture, usesRepairedArm211 } from './windowsArmPriorFixture.js';
 import type { ArmPriorFixture } from './windowsArmPriorFixture.js';
 
@@ -30,7 +42,7 @@ export interface NativeArtifactReference {
   entries: NativeEntryReference[];
 }
 export interface NativeReadinessReceipt {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   repository: string;
   toolingSha: string;
   planSha256: string;
@@ -72,6 +84,7 @@ export interface NativeArtifact {
   workflow_run: { id: number; head_sha: string };
 }
 export interface NativeReadinessPort {
+  executionProof?(repository: string, executionSha: string): Promise<ExecutionProof>;
   run(repository: string, runId: number): Promise<NativeRun>;
   jobs(repository: string, runId: number, attempt: number): Promise<NativeJob[]>;
   artifact(repository: string, artifactId: number): Promise<NativeArtifact>;
@@ -86,133 +99,6 @@ export interface NativeReadinessPort {
   }>;
 }
 type Json = Record<string, unknown>;
-interface Row {
-  scenario: string;
-  workflow: string;
-  job: string;
-  jobName: string;
-  artifact: string;
-  path: string;
-  execute: string;
-  upload: string;
-  architecture: 'x64' | 'arm64';
-  mode: string;
-  kind: 'windows' | 'appimage' | 'package' | 'mac-current' | 'mac-old';
-}
-const workflow = (name: string) => `.github/workflows/${name}.yml`;
-// These are closed producer contracts, not caller-supplied success predicates.
-export function nativeScenarioRows(runId: number, attempt: number): Row[] {
-  const suffix = `${runId}-${attempt}`;
-  const rows: Row[] = [];
-  for (const architecture of ['x64', 'arm64'] as const) {
-    const runner = architecture === 'x64' ? 'windows-2025' : 'windows-11-arm';
-    for (const mode of ['fresh', 'full', 'cold', 'warm']) {
-      const fresh = mode === 'fresh';
-      rows.push({
-        scenario: `windows-${architecture}-${mode}`,
-        architecture,
-        mode,
-        kind: 'windows',
-        workflow: workflow('updater-windows-ota'),
-        job: fresh ? 'fresh-windows' : 'windows-ota',
-        jobName: fresh
-          ? `fresh-windows (${runner}, ${architecture})`
-          : `windows-ota (${runner}, ${mode}, ${architecture})`,
-        artifact: fresh
-          ? `TEST-windows-fresh-${architecture}-${suffix}`
-          : `TEST-windows-ota-${architecture}-${mode}-${suffix}`,
-        path: 'summary.json',
-        execute: fresh
-          ? 'Fresh official target installation on a separate native VM'
-          : 'Original updater download install and automatic native restart',
-        upload: fresh
-          ? 'Preserve independently installed target reference and native proof'
-          : 'Preserve actual transport installer successor preference and UI proof',
-      });
-    }
-  }
-  for (const mode of ['ota', 'fresh'])
-    rows.push({
-      scenario: `linux-appimage-${mode}`,
-      architecture: 'x64',
-      mode,
-      kind: 'appimage',
-      workflow: workflow('updater-native-feasibility'),
-      job: 'linux-native-ota',
-      jobName: 'linux-native-ota',
-      artifact: `TEST-linux-native-ota-${suffix}`,
-      path: `${mode}/evidence.json`,
-      execute: 'Exercise real OTA and separate fresh target desktop',
-      upload: 'Preserve native OTA proof on success and failure',
-    });
-  for (const [format, image] of [
-    ['deb', 'ubuntu:24.04'],
-    ['rpm', 'fedora:44'],
-    ['pacman', 'archlinux:base'],
-  ]) {
-    for (const mode of ['ota', 'fresh'])
-      rows.push({
-        scenario: `linux-${format}-${mode}`,
-        architecture: 'x64',
-        mode,
-        kind: 'package',
-        workflow: workflow('updater-linux-packages'),
-        job: 'native',
-        jobName: `native (${format}, ${image})`,
-        artifact: `TEST-linux-${format}-native-${suffix}`,
-        path: `TEST-linux-package-evidence/${mode}/native/evidence.json`,
-        execute:
-          'Real native package install and unprivileged GUI in offline disposable containers',
-        upload: 'Preserve real native evidence even on failure',
-      });
-  }
-  for (const architecture of ['arm64', 'x64'] as const) {
-    rows.push({
-      scenario: `mac-${architecture}-current`,
-      architecture,
-      mode: 'current',
-      kind: 'mac-current',
-      workflow: workflow('updater-mac-updater'),
-      job: 'mac-current-no-update',
-      jobName: `mac-current-no-update (${architecture})`,
-      artifact: `TEST-mac-current-no-update-${architecture}-staged-${suffix}`,
-      path: 'TEST-mac-updater-evidence/mac-current-no-update.json',
-      execute: 'Native signed current Mac app completes genuine no-update with OS containment',
-      upload: 'Preserve native UI, Aqua capture, logs, source hashes and failure gates',
-    });
-    for (const mode of ['older', 'fresh'])
-      rows.push({
-        scenario: `mac-${architecture}-${mode}`,
-        architecture,
-        mode,
-        kind: 'mac-old',
-        workflow: workflow('updater-mac-old-updater'),
-        job: 'mac-older-and-fresh',
-        jobName: `mac-older-and-fresh (${mode}, ${architecture}, staged)`,
-        artifact: `TEST-mac-${mode}-${architecture}-staged-${suffix}`,
-        path: `TEST-mac-old-evidence-${mode}/mac-native-result.json`,
-        execute: 'Real signed Squirrel OTA or fresh carried install in a separate Aqua VM',
-        upload: 'Preserve native OTA, automatic Aqua successor, preferences and binding evidence',
-      });
-  }
-  return rows;
-}
-function object(value: unknown, label: string): Json {
-  requireThat(
-    value && typeof value === 'object' && !Array.isArray(value),
-    `Missing object: ${label}`
-  );
-  return value as Json;
-}
-function list(value: unknown, label: string): unknown[] {
-  requireThat(Array.isArray(value), `Missing array: ${label}`);
-  return value;
-}
-function at(value: unknown, ...keys: string[]): unknown {
-  let result = value;
-  for (const key of keys) result = object(result, keys.join('.'))[key];
-  return result;
-}
 function equal(actual: unknown, expected: unknown, label: string): void {
   requireThat(canonical(actual) === canonical(expected), `Native proof mismatch: ${label}`);
 }
@@ -240,52 +126,37 @@ function successful(value: NativeStep) {
 }
 function step(job: NativeJob, name: string) {
   const matches = job.steps.filter((item) => item.name === name);
-  requireThat(matches.length === 1, `Missing/duplicate native step: ${name}`);
-  const result = matches[0]!;
+  const result = matches[0];
+  requireThat(matches.length === 1 && result, `Missing/duplicate native step: ${name}`);
   successful(result);
   return result;
 }
-function validateWorkflow(source: string, row: Row) {
-  const jobs = object(at(parse(source), 'jobs'), 'workflow jobs');
-  const producer = object(jobs[row.job], row.job);
-  const steps = list(producer.steps, 'workflow steps').map((item) => object(item, 'workflow step'));
-  const native = steps.filter((item) => item.name === row.execute);
-  const upload = steps.filter((item) => item.name === row.upload);
-  requireThat(
-    native.length === 1 && typeof native[0]?.run === 'string',
-    'Untrusted native execution step'
-  );
-  requireThat(
-    upload.length === 1 && /^actions\/upload-artifact@/.test(String(upload[0]?.uses)),
-    'Untrusted native upload step'
-  );
-  const order = steps.indexOf(native[0]!) < steps.indexOf(upload[0]!);
-  requireThat(order, 'Upload must follow native execution');
-}
 function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
-  const name =
-    row.kind === 'windows'
-      ? 'verified-windows-inputs'
-      : row.kind === 'appimage'
-        ? 'verified-inputs'
-        : row.kind === 'package'
-          ? 'inputs'
-          : 'prepare-mac-inputs';
+  const kind = row.kind === 'mac-current' || row.kind === 'mac-old' ? 'mac' : row.kind;
+  const producers = {
+    windows: [
+      'verified-windows-inputs',
+      'Verify immutable native producer and extract exact plan-bound inputs',
+    ],
+    appimage: ['verified-inputs', 'Read exact official predecessor and draft bytes'],
+    package: ['inputs', 'Download and verify immutable official packages'],
+    'mac-manual': [
+      'prepare-mac-manual-inputs',
+      'Authenticate prepared plan and uploaded original 211 and target 217 bytes',
+    ],
+    mac: [
+      'prepare-mac-inputs',
+      'Authenticate and hash real release inputs without native application execution',
+    ],
+  } as const;
+  const [name, preparation] = producers[kind];
   const matches = jobs.filter((job) => job.name === name);
-  requireThat(matches.length === 1, 'Missing current immutable input producer');
-  const job = matches[0]!;
+  const job = matches[0];
+  requireThat(matches.length === 1 && job, 'Missing current immutable input producer');
   successful(job);
   equal(job.run_id, run.id, 'input producer run');
   equal(job.run_attempt, run.run_attempt, 'input producer attempt');
   equal(job.head_sha, run.head_sha, 'input producer tooling');
-  const preparation =
-    row.kind === 'windows'
-      ? 'Verify immutable native producer and extract exact plan-bound inputs'
-      : row.kind === 'appimage'
-        ? 'Read exact official predecessor and draft bytes'
-        : row.kind === 'package'
-          ? 'Download and verify immutable official packages'
-          : 'Authenticate and hash real release inputs without native application execution';
   step(job, preparation);
   if (row.kind === 'appimage' || row.kind === 'package') {
     step(job, 'Require explicit prepared artifact identity');
@@ -296,6 +167,7 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
         : 'Download immutable prepared stage for the current target'
     );
   }
+  if (row.kind === 'mac-manual') step(job, 'Upload authenticated manual migration inputs');
   if (row.kind === 'mac-current' || row.kind === 'mac-old')
     step(job, 'Upload authenticated immutable Mac inputs');
 }
@@ -304,9 +176,10 @@ function byteLedger(values: unknown[], expected: StagePlan['outputs']) {
     const matches = values
       .map((item) => object(item, 'input proof'))
       .filter((item) => item.name === proof.name);
-    requireThat(matches.length === 1, `Missing/duplicate native input: ${proof.name}`);
+    const matched = matches[0];
+    requireThat(matches.length === 1 && matched, `Missing/duplicate native input: ${proof.name}`);
     for (const field of ['sha256', 'sha512', 'size'] as const)
-      equal(matches[0]![field], proof[field], `${proof.name}.${field}`);
+      equal(matched[field], proof[field], `${proof.name}.${field}`);
   }
 }
 function events(value: unknown, expectedVersion: string) {
@@ -513,7 +386,7 @@ function checkLinux(value: Json, row: Row, plan: StagePlan, p: string, d: string
     else present(value, 'successor', 'automaticWindow');
   } else {
     equal(value.mode, row.mode, 'Linux package mode');
-    const kind = row.scenario.split('-')[1]!;
+    const kind = row.scenario.split('-')[1] ?? '';
     equal(value.scope, `Linux ${kind} ${row.mode}`, 'Linux package format');
     const container = object(value.container, 'Linux container');
     requireThat(typeof container.uid === 'number' && container.uid > 0, 'Root GUI is forbidden');
@@ -580,9 +453,11 @@ function checkMac(value: Json, row: Row, plan: StagePlan, p: string, d: string) 
     textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`),
     'Mac manifest byte proof'
   );
+  const macFeed = plan.feeds['latest-mac.yml'];
+  requireThat(typeof macFeed === 'string', 'Missing Mac feed');
   equal(
     at(input, 'binding', 'draftFeed', 'proof'),
-    textProof('latest-mac.yml', plan.feeds['latest-mac.yml']!),
+    textProof('latest-mac.yml', macFeed),
     'Mac feed byte proof'
   );
   equal(at(input, 'binding', 'draftFeed', 'releaseId'), plan.input.target.id, 'Mac feed target');
@@ -603,10 +478,11 @@ function checkMac(value: Json, row: Row, plan: StagePlan, p: string, d: string) 
     object(item, 'Mac command')
   );
   const os = commands.filter((item) => item.command === '/usr/bin/sw_vers -productVersion');
+  const actualOs = os[0];
   requireThat(
     os.length === 1 &&
-      os[0]!.exitCode === 0 &&
-      String(os[0]!.stdout).trim() === value.testedOperatingSystem,
+      actualOs?.exitCode === 0 &&
+      String(actualOs.stdout).trim() === value.testedOperatingSystem,
     'Actual OS command missing'
   );
   for (const command of commands)
@@ -616,21 +492,15 @@ function checkMac(value: Json, row: Row, plan: StagePlan, p: string, d: string) 
       'Mac command digest'
     );
   const current = row.kind === 'mac-current';
-  equal(
-    value.scenario,
-    current
-      ? 'mac-current-no-update'
-      : row.mode === 'older'
-        ? 'mac-2.17.0-to-carried-2.17.1'
-        : 'mac-fresh-2.17.1',
-    'Mac scenario'
-  );
+  let scenario = row.mode === 'older' ? 'mac-2.17.0-to-carried-2.17.1' : 'mac-fresh-2.17.1';
+  if (current) scenario = 'mac-current-no-update';
+  equal(value.scenario, scenario, 'Mac scenario');
   signature(value.signatureBefore, row.architecture, row.mode === 'older' ? '2.17.0' : macVersion);
   signature(current ? value.signatureAfter : value.signatureFinal, row.architecture, macVersion);
   if (current) {
     present(value, 'nativeWindow', 'observation');
     requireThat(
-      typeof value.renderedNoUpdate === 'string' && /Up to date/.test(value.renderedNoUpdate),
+      typeof value.renderedNoUpdate === 'string' && value.renderedNoUpdate.includes('Up to date'),
       'Rendered genuine no-update absent'
     );
     events(at(value, 'observation', 'events'), macVersion);
@@ -653,13 +523,24 @@ export async function verifyNativeReadiness(
   receipt: NativeReadinessReceipt
 ): Promise<void> {
   sha(planSha256);
+  const full = plan.input.mode === 'full';
   requireThat(
-    plan.input.mode === 'carry-mac' && plan.input.macSource,
-    'This native matrix requires carried Mac'
+    full || (plan.input.mode === 'carry-mac' && plan.input.macSource),
+    'Unsupported native matrix'
   );
+  if (full)
+    requireThat(
+      receipt.schemaVersion === 2 &&
+        plan.input.target.tag === 'v2.17.7' &&
+        plan.input.toolingSha === plan.input.target.applicationSha &&
+        plan.input.macProductMinimum === '13.0' &&
+        !plan.input.macSource,
+      'Full217 requires one frozen source and schema2 native proof'
+    );
+  const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const d = digest(canonical(plan.input));
   for (const [field, expected] of Object.entries({
-    schemaVersion: 1,
+    schemaVersion: receipt.schemaVersion === 2 ? 2 : 1,
     repository: plan.input.repository,
     toolingSha: plan.input.toolingSha,
     planSha256,
@@ -669,15 +550,40 @@ export async function verifyNativeReadiness(
   }))
     equal(at(receipt, field), expected, `receipt.${field}`);
   requireThat(
-    Array.isArray(receipt.artifacts) && receipt.artifacts.length === 18,
-    'Exactly 18 native outcome artifacts required'
+    Array.isArray(receipt.artifacts) && receipt.artifacts.length === (full ? 14 : 18),
+    'Exact native outcome artifact count required'
   );
   const seenScenarios = new Set<string>();
   const seenArtifacts = new Set<number>();
   const seenJobs = new Set<number>();
   const cachedRuns = new Map<number, { run: NativeRun; jobs: NativeJob[] }>();
   const sources = new Map<string, string>();
-  for (const reference of receipt.artifacts) {
+  const verifiedExecutors = new Set<string>();
+  const familyRuns = new Map<string, string>();
+  async function executionFor(row: Row) {
+    const executionSha =
+      receipt.schemaVersion === 2 && !full
+        ? release216Execution(row.kind, plan, planSha256, d)
+        : plan.input.toolingSha;
+    if (
+      receipt.schemaVersion === 2 &&
+      !full &&
+      (row.kind === 'windows' || row.kind === 'mac-old') &&
+      !verifiedExecutors.has(executionSha)
+    ) {
+      requireThat(
+        typeof port.executionProof === 'function',
+        'Missing complete executor proof capability'
+      );
+      verifyRelease216Execution(
+        await port.executionProof(receipt.repository, executionSha),
+        row.kind
+      );
+      verifiedExecutors.add(executionSha);
+    }
+    return executionSha;
+  }
+  async function verifyArtifact(reference: NativeArtifactReference) {
     for (const id of [reference.runId, reference.runAttempt, reference.jobId, reference.artifactId])
       positive(id);
     sha(reference.artifactSha256);
@@ -687,14 +593,19 @@ export async function verifyNativeReadiness(
     );
     seenArtifacts.add(reference.artifactId);
     seenJobs.add(reference.jobId);
-    const matches = nativeScenarioRows(reference.runId, reference.runAttempt).filter(
+    const matches = scenarioRows(reference.runId, reference.runAttempt).filter(
       (row) => row.artifact === reference.artifactName
     );
+    const row = matches[0];
     requireThat(
-      matches.length > 0 && reference.entries.length === matches.length,
+      matches.length > 0 && row && reference.entries.length === matches.length,
       'Unknown/partial native artifact'
     );
-    const row = matches[0]!;
+    const executionSha = await executionFor(row);
+    const cohort = `${reference.runId}:${reference.runAttempt}`;
+    const familyRun = familyRuns.get(row.kind);
+    requireThat(!familyRun || familyRun === cohort, 'Mixed native family runs');
+    familyRuns.set(row.kind, cohort);
     let state = cachedRuns.get(reference.runId);
     if (!state) {
       state = {
@@ -708,17 +619,17 @@ export async function verifyNativeReadiness(
     equal(run.id, reference.runId, 'run identity');
     equal(run.repository.full_name, receipt.repository, 'run repository');
     equal(run.run_attempt, reference.runAttempt, 'current run attempt');
-    equal(run.head_sha, plan.input.toolingSha, 'native tooling SHA');
+    equal(run.head_sha, executionSha, 'native tooling SHA');
     equal(run.event, 'workflow_dispatch', 'native run event');
     equal(run.path.split('@')[0], row.workflow, 'native workflow');
     const jobs = state.jobs.filter((job) => job.id === reference.jobId);
-    requireThat(jobs.length === 1, 'Native job outside current attempt');
-    const job = jobs[0]!;
+    const job = jobs[0];
+    requireThat(jobs.length === 1 && job, 'Native job outside current attempt');
     validatePreparation(state.jobs, row, run);
     successful(job);
     equal(job.run_id, reference.runId, 'native job run');
     equal(job.run_attempt, reference.runAttempt, 'native job attempt');
-    equal(job.head_sha, plan.input.toolingSha, 'native job SHA');
+    equal(job.head_sha, executionSha, 'native job SHA');
     equal(job.name, row.jobName, 'native matrix job');
     const execution = step(job, row.execute);
     const upload = step(job, row.upload);
@@ -732,7 +643,7 @@ export async function verifyNativeReadiness(
     );
     let source = sources.get(row.workflow);
     if (!source) {
-      source = await port.workflow(receipt.repository, plan.input.toolingSha, row.workflow);
+      source = await port.workflow(receipt.repository, executionSha, row.workflow);
       sources.set(row.workflow, source);
     }
     validateWorkflow(source, row);
@@ -742,24 +653,24 @@ export async function verifyNativeReadiness(
     equal(artifact.expired, false, 'artifact expiry');
     equal(artifact.digest, `sha256:${reference.artifactSha256}`, 'API artifact digest');
     equal(artifact.workflow_run.id, reference.runId, 'artifact run');
-    equal(artifact.workflow_run.head_sha, plan.input.toolingSha, 'artifact tooling');
+    equal(artifact.workflow_run.head_sha, executionSha, 'artifact tooling');
     requireThat(
       time(artifact.created_at) >= time(upload.started_at) &&
         time(artifact.created_at) < time(upload.completed_at) + 1000,
       'Artifact outside current upload'
     );
-    const archive = await port.archive(
-      receipt.repository,
-      reference.artifactId,
-      matches.map((item) => item.path)
-    );
+    const archive = await port.archive(receipt.repository, reference.artifactId, [
+      ...matches.map((item) => item.path),
+      ...(row.kind === 'mac-manual' ? manualCapturePaths : []),
+    ]);
     equal(archive.sha256, reference.artifactSha256, 'Downloaded ZIP digest');
-    for (const entry of reference.entries) {
+    function verifyEntry(entry: NativeEntryReference) {
       const actualRows = matches.filter(
         (item) => item.scenario === entry.scenario && item.path === entry.path
       );
+      const actualRow = actualRows[0];
       requireThat(
-        actualRows.length === 1 && !seenScenarios.has(entry.scenario),
+        actualRows.length === 1 && actualRow && !seenScenarios.has(entry.scenario),
         'Unknown/duplicate native scenario'
       );
       seenScenarios.add(entry.scenario);
@@ -781,16 +692,28 @@ export async function verifyNativeReadiness(
           time(value.finishedAt) <= time(execution.completed_at) + 1000,
         'Native outcome outside execution interval'
       );
-      const actualRow = actualRows[0]!;
       if (actualRow.kind === 'windows') checkWindows(value, actualRow, plan, planSha256, d);
       else if (actualRow.kind === 'appimage' || actualRow.kind === 'package')
         checkLinux(value, actualRow, plan, planSha256, d);
+      else if (actualRow.kind === 'mac-manual')
+        checkMacManual(
+          value,
+          actualRow.architecture,
+          plan,
+          planSha256,
+          d,
+          reference.runId,
+          reference.runAttempt,
+          archive.entries
+        );
       else checkMac(value, actualRow, plan, planSha256, d);
     }
+    for (const entry of reference.entries) verifyEntry(entry);
   }
-  const expected = nativeScenarioRows(1, 1).map((row) => row.scenario);
+  for (const reference of receipt.artifacts) await verifyArtifact(reference);
+  const expected = scenarioRows(1, 1).map((row) => row.scenario);
   requireThat(
-    seenScenarios.size === 22 && expected.every((name) => seenScenarios.has(name)),
-    'Exact 22-scenario native matrix missing'
+    seenScenarios.size === (full ? 18 : 22) && expected.every((name) => seenScenarios.has(name)),
+    'Exact native scenario matrix missing'
   );
 }
