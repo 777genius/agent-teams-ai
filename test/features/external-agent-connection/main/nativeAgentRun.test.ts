@@ -6,26 +6,31 @@ import {
   nativeAgentRunArgs,
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main/nativeAgentRun';
+import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConnectionInfoV1 } from '@features/external-agent-connection/contracts';
 import type { ChildProcess } from 'node:child_process';
 
-const providerLaunch = vi.hoisted(() => ({ args: [] as string[], model: null as string | null }));
+const providerLaunch = vi.hoisted(() => ({
+  args: [] as string[],
+  model: null as string | null,
+  binary: '/sandbox/bin/codex',
+}));
 
 vi.mock('@main/services/infrastructure/codexAppServer/CodexBinaryResolver', () => ({
-  CodexBinaryResolver: { resolve: async () => '/sandbox/bin/codex' },
+  CodexBinaryResolver: { resolve: async () => providerLaunch.binary },
 }));
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolveNative: async () => '/sandbox/bin/claude' },
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildProviderAwareCliEnv: async () => ({
+  buildProviderAwareCliEnv: vi.fn(async () => ({
     env: { CLAUDECODE: 'nested', ELECTRON_RUN_AS_NODE: '1', TEST_PROVIDER_AUTH: 'retained' },
     providerArgs: providerLaunch.args,
     connectionIssues: {},
-  }),
+  })),
 }));
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: { getConfiguredCodexCustomProviderModel: () => providerLaunch.model },
@@ -102,6 +107,7 @@ describe('native one-shot provider transport', () => {
     vi.clearAllMocks();
     providerLaunch.args = [];
     providerLaunch.model = null;
+    providerLaunch.binary = '/sandbox/bin/codex';
     child = new FakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as unknown as ChildProcess);
     vi.mocked(killProcessTreeAndWait).mockImplementation(async () => {
@@ -176,6 +182,7 @@ describe('native one-shot provider transport', () => {
   });
 
   it('forwards the saved API-key custom provider model when user config is excluded', async () => {
+    providerLaunch.binary = '/sandbox/bin/renamed-provider';
     providerLaunch.model = 'custom/sandbox-review-model';
     providerLaunch.args = [
       '-c',
@@ -184,8 +191,16 @@ describe('native one-shot provider transport', () => {
       'model_providers.agent_teams_custom.base_url="https://sandbox-provider.invalid/v1"',
     ];
     const runtime = await prepareNativeAgentRun('codex', connection);
+    expect(buildProviderAwareCliEnv).toHaveBeenCalledWith(
+      expect.objectContaining({
+        binaryPath: '/sandbox/bin/renamed-provider',
+        codexLaunchDialect: 'native',
+      })
+    );
     const result = runtime.launch('Sandbox request', () => {});
     const args = vi.mocked(spawnCli).mock.calls[0][1];
+    expect(vi.mocked(spawnCli).mock.calls[0][0]).toBe('/sandbox/bin/renamed-provider');
+    expect(args).not.toContain('--settings');
     expect(args).toContain('--ignore-user-config');
     expect(args[args.indexOf('--model') + 1]).toBe('custom/sandbox-review-model');
     expect(args).toContain('model_provider="agent_teams_custom"');

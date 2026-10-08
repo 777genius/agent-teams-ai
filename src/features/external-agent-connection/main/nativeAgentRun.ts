@@ -31,6 +31,7 @@ export async function prepareNativeAgentRun(
   const preparedEnv = await buildProviderAwareCliEnv({
     binaryPath: binary,
     providerId: provider,
+    codexLaunchDialect: provider === 'codex' ? 'native' : undefined,
     providerBackendId: provider === 'codex' ? 'codex-native' : 'cli-sdk',
   });
   if (preparedEnv.connectionIssues[provider]) throw new Error('Provider connection is unavailable');
