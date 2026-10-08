@@ -139,10 +139,11 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const request = input instanceof Request ? input : null;
-    if (!request && typeof input !== 'string' && !(input instanceof URL)) {
-      return originalFetch(input, init);
-    }
-    const requestUrl = request?.url ?? (input instanceof URL ? input.href : String(input));
+    let requestUrl: string;
+    if (typeof input === 'string') requestUrl = input;
+    else if (input instanceof URL) requestUrl = input.href;
+    else if (input instanceof Request) requestUrl = input.url;
+    else return originalFetch(input, init);
     const url = new URL(requestUrl);
     if (url.origin !== baseUrl) {
       return originalFetch(input, init);
@@ -368,7 +369,7 @@ function enableManagement(services: HttpServices, teamDataService: TeamDataServi
         release();
       }
     },
-    getContext: async () => context.snapshot(),
+    getContext: () => Promise.resolve(context.snapshot()),
     getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
     getSavedRequest: (name) => teamDataService.getSavedRequest(name),
     getTeamData: (name) => teamDataService.getTeamData(name),
@@ -785,9 +786,8 @@ describe('MCP team tools over the local REST control API', () => {
         })
       );
       await writeFile(path.join(directory, 'members.meta.json'), '{');
-      services.teamApis!.runtime.getRuntimeState = async () => {
-        throw new Error('Runtime status temporarily unavailable');
-      };
+      services.teamApis!.runtime.getRuntimeState = () =>
+        Promise.reject(new Error('Runtime status temporarily unavailable'));
       let entered!: () => void;
       const admission = new Promise<void>((resolve) => {
         entered = resolve;
@@ -1076,10 +1076,7 @@ describe('MCP team tools over the local REST control API', () => {
     const get = async () =>
       (
         await app.inject({ method: 'GET', url: `/api/teams/${teamName}?configuration=1` })
-      ).json() as {
-        configurationRevision: string;
-        savedRequest: TeamCreateRequest | null;
-      };
+      ).json<{ configurationRevision: string; savedRequest: TeamCreateRequest | null }>();
     const update = (expectedRevision: string, metadata: Record<string, string>) =>
       app.inject({
         method: 'POST',
@@ -1172,7 +1169,7 @@ describe('MCP team tools over the local REST control API', () => {
         description: 'Saved after fault',
       });
       const idle = services.teamApis!.runtime.getRuntimeState;
-      services.teamApis!.runtime.getRuntimeState = async (name) => ({
+      services.teamApis!.runtime.getRuntimeState = (name) => Promise.resolve({
         teamName: name,
         isAlive: true,
         runId: 'test-alive',
@@ -1183,7 +1180,7 @@ describe('MCP team tools over the local REST control API', () => {
         description: 'Active overwrite',
       });
       expect(active.json().code).toBe('TEAM_ACTIVE');
-      services.teamApis!.runtime.getRuntimeState = async (name) => ({
+      services.teamApis!.runtime.getRuntimeState = (name) => Promise.resolve({
         teamName: name,
         isAlive: false,
         runId: 'test-provisioning',
@@ -1606,7 +1603,7 @@ describe('MCP team tools over the local REST control API', () => {
     const app = Fastify();
     const { services } = createServices(claudeRoot);
     let launchRequest: TeamLaunchRequest | null = null;
-    services.teamApis!.provisioningStart!.launchTeam = (
+    services.teamApis!.provisioningStart.launchTeam = (
       request: TeamLaunchRequest
     ): Promise<TeamLaunchResponse> => {
       launchRequest = request;
@@ -1616,7 +1613,7 @@ describe('MCP team tools over the local REST control API', () => {
         alreadyLaunching: true,
       });
     };
-    services.teamApis!.provisioningStatus!.getProvisioningStatus = () =>
+    services.teamApis!.provisioningStatus.getProvisioningStatus = () =>
       Promise.reject(
         new Error('team_launch should not wait for provisioning status after already_launching')
       );

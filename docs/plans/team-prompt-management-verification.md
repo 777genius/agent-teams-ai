@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `c2d039cabd33a447118e7a1bdb7b3aea1d4eaa05`.
+- Source: `12fcf8eebca55a56554a8ede6048f9d68231bbff`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-2A5LFk/evidence.json`.
-- Evidence SHA256: `a5b0979b624b54d44530c6d6cf8c6cac6d9ff9db77545be230b9bb3ecd00a6f0`.
-- Later commits extract the identical configuration query check into the existing HTTP parser, rename one local variable and update documentation. MCP, controller and desktop harness match the tested source; the extracted HTTP path passed the same 66 tests, full typecheck and focused lint. Source-size guard passed 3,340 production files, with teams HTTP at 799/800 and no baseline increase. Independent review accepted semantic parity.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-dJwhm7/evidence.json`.
+- Evidence SHA256: `825f974d18f48af3ac1187b2b94c73e18f6f82cced48dddf3d203c4f1de17dac`.
+- Later commits change only test fixtures and documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,340 production files, with teams HTTP at 799/800 and no baseline increase.
 
 ## Actual desktop and native MCP proof
 
@@ -22,7 +22,7 @@ Passed:
 - Read-only shared template roster, 14 identities across four references, no member editing controls.
 - Real clipboard copy contains the request, templates, MCP and independent CDP endpoints.
 - Dark 320px and light 1280px popup screenshots; manual visual inspection passed.
-- Normal main-process quit: `mainExitedNormally=true`. Six remaining owned launcher/child leases required the harness fallback; no owned processes remain.
+- Normal main-process quit: `mainExitedNormally=true`, no fallback kills and no remaining owned processes.
 
 ## Focused validation and review
 
@@ -40,6 +40,8 @@ Passed:
 - Final integration with main passed the full pinned project typecheck. The latest HTTP suites passed 61 tests, including real persisted task-interval repair before managed snapshots; the nearest renderer suite passed 61 tests, including nonselected split panes, context changes, pending-trash cancellation and restore. Focused lint and source-size guards passed (legacy store 2,594 lines against the unchanged 2,595 ceiling). Independent backend review accepted the repair at `c2d0a8ee07d16b804d5231083f1dc47d924cc10c`; independent UI review accepted `b7b00c37c19e975e073a61df00104ad646196d82`. Their application/MCP/controller/harness code is unchanged by the subsequent main integration.
 
 - Ordinary HTTP/MCP reads retain the existing tolerant snapshot path; explicit `configuration=1` / MCP `configuration=true` requests the admitted coherent configuration revision. Malformed, empty or non-object config rejects with typed `TEAM_CONFIGURATION_UNREADABLE` before writes. Independent review accepted `4596d618c287638a5912bcb00f65e27cfb366dff`; a subsequent test-only assertion permits the canonical lead alongside the unchanged builder. Final nearest HTTP suites passed 66 tests; all 67 MCP and 391 controller tests, project/MCP typechecks, focused lint and controller/MCP builds passed. Actual native desktop proof above uses the opt-in path.
+
+- A final review identified partial canonical roster normalization discarding identities/tombstones. Management opts into `requireCompleteMembers` on the existing reader: skipped entries, case-insensitive identity collisions, suffix pruning and invalid lifecycle markers reject before writes; tolerant ordinary reads and legitimate trim/backend migrations remain. Four regression cases failed on the previous reader; all 72 nearest HTTP/reader tests then passed with exact byte/event assertions. Full project typecheck, focused lint and source-size guard passed. Independent review accepted exact `12fcf8eebca55a56554a8ede6048f9d68231bbff`, followed by the fresh native desktop proof above. This protects canonical identities/markers, not arbitrary unknown metadata fields.
 
 ## Limits
 
