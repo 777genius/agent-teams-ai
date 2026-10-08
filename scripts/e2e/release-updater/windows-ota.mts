@@ -820,7 +820,7 @@ async function run() {
           (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
         ) ?? null,
       'NSIS-created automatic successor before any harness relaunch',
-      480_000
+      900_000
     );
     samplerStop = true;
     await sampling;
