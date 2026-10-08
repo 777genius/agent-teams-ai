@@ -50,8 +50,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/14.png?v=1cff3f1128ca">
-    <img src="docs/screenshots/previews/14.webp?v=1cff3f1128ca" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  <a href="docs/screenshots/12.png">
+    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -91,8 +91,8 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/12.png">
-    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
+  <a href="docs/screenshots/14.png?v=1cff3f1128ca">
+    <img src="docs/screenshots/previews/14.webp?v=1cff3f1128ca" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
