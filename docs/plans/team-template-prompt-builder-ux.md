@@ -135,6 +135,8 @@ Session highlight живёт до reload/context reset либо вытеснен
 
 Нет spinner выполнения внешнего prompt: приложение не знает, подключился ли агент и завершил ли все tools. Copied означает clipboard success; UI показывает committed changes/connection status. Краткий disabled Copy лишь на фактическом snapshot/clipboard await; никаких задержек или batch-complete по idle timer.
 
+Management использует canonical roster reader с requireCompleteMembers: пропущенные записи, case-insensitive identity collisions, suffix filtering и invalid lifecycle markers отклоняются до writes; обычный reader остаётся tolerant.
+
 Обычный HTTP/MCP team_get сохраняет legacy read path; strict configurationRevision snapshot запрашивается явно (MCP configuration=true, HTTP configuration=1). Existing task-interval repair выполняется до managed GET snapshot. Created/edited используют existing config-event fanout для global tasks и всех видимых split panes, без runtime activity. Async continuation и deferred refresh проверяют context/team epochs; принятый trash синхронно отменяет старый timer, restore разрешает обычный refresh.
 
 ## Edge cases и recovery

@@ -606,7 +606,7 @@ describe('MCP team tools over the local REST control API', () => {
   });
 
   // Catches unreadable persisted roster being treated as empty, allowing edits to erase tombstones.
-  it.each([
+  it.each<[string, string]>([
     ['malformed', '{"members":[{"name":"removed-builder","removedAt":1}'],
     [
       'oversized',
@@ -614,6 +614,29 @@ describe('MCP team tools over the local REST control API', () => {
         members: [{ name: 'removed-builder', removedAt: 1, workflow: 'x'.repeat(256 * 1024) }],
       }),
     ],
+    ...(
+      [
+        ['partial-entry', { name: 17, agentId: 'unreadable-identity', removedAt: 1 }],
+        ['invalid-tombstone', { name: 'removed-builder', agentId: 'historical', removedAt: '1' }],
+        ['duplicate-identity', { name: 'Builder', agentId: 'historical', removedAt: 1 }],
+        ['suppressed-alias', { name: 'builder-2', agentId: 'historical-alias', removedAt: 1 }],
+      ] as const
+    ).map(([label, damaged]): [string, string] => [
+      label,
+      JSON.stringify({
+        version: 1,
+        members: [
+          {
+            name: 'builder',
+            agentId: 'original-builder',
+            providerId: 'codex',
+            providerBackendId: 'auto',
+            role: ' Engineer ',
+          },
+          damaged,
+        ],
+      }),
+    ]),
   ])('rejects %s member metadata without rewriting saved files', async (_label, unreadable) => {
     const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-unreadable-'));
     setClaudeBasePathOverride(root);
@@ -630,6 +653,19 @@ describe('MCP team tools over the local REST control API', () => {
       const initial = await services.teamPromptManagement!.get(teamName);
       const savedMetadata = await readFile(metaPath);
       await writeFile(membersPath, unreadable);
+      const ordinary = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      expect(ordinary.statusCode).toBe(200);
+      expect(ordinary.json()).not.toHaveProperty('configurationRevision');
+      if (_label !== 'malformed' && _label !== 'oversized')
+        expect(ordinary.json().savedRequest.members).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              name: 'builder',
+              role: 'Engineer',
+              providerBackendId: 'codex-native',
+            }),
+          ])
+        );
       const get = await app.inject({
         method: 'GET',
         url: `/api/teams/${teamName}?configuration=1`,

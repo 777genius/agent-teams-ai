@@ -167,7 +167,7 @@ export class TeamPromptManagement {
     const before = await this.fingerprint(teamName);
     const [meta, membersMeta, savedRequest] = await Promise.all([
       this.metaStore.getMeta(teamName),
-      this.membersStore.getMeta(teamName),
+      this.membersStore.getMeta(teamName, { requireCompleteMembers: true }),
       this.ports.getSavedRequest(teamName),
     ]);
     if (before.membersMetadataPresent && !membersMeta)

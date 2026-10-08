@@ -32,7 +32,7 @@ function normalizeFastMode(value: unknown): TeamMember['fastMode'] {
 }
 
 function normalizeMember(member: TeamMember): TeamMember | null {
-  const trimmedName = member.name?.trim();
+  const trimmedName = typeof member.name === 'string' ? member.name.trim() : undefined;
   if (!trimmedName) {
     return null;
   }
@@ -73,7 +73,11 @@ export class TeamMembersMetaStore {
     return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
   }
 
-  async getMeta(teamName: string): Promise<TeamMembersMetaFile | null> {
+  /** Management may require every persisted member identity and lifecycle marker to survive read. */
+  async getMeta(
+    teamName: string,
+    options?: { requireCompleteMembers?: boolean }
+  ): Promise<TeamMembersMetaFile | null> {
     const metaPath = this.getMetaPath(teamName);
     try {
       const stat = await fs.promises.stat(metaPath);
@@ -115,14 +119,27 @@ export class TeamMembersMetaStore {
     }
 
     const deduped = new Map<string, TeamMember>();
+    const identities = options?.requireCompleteMembers ? new Set<string>() : undefined;
     for (const item of file.members) {
       if (!item || typeof item !== 'object') {
+        if (options?.requireCompleteMembers) return null;
         continue;
       }
+      if (
+        options?.requireCompleteMembers &&
+        [item.removedAt, item.joinedAt].some(
+          (value) => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))
+        )
+      )
+        return null;
       const normalized = normalizeMember(item);
       if (!normalized) {
+        if (options?.requireCompleteMembers) return null;
         continue;
       }
+      const identity = normalized.name.toLowerCase();
+      if (identities?.has(identity)) return null;
+      identities?.add(identity);
       deduped.set(normalized.name, normalized);
     }
 
@@ -133,6 +150,7 @@ export class TeamMembersMetaStore {
     const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
+        if (options?.requireCompleteMembers) return null;
         deduped.delete(name);
       }
     }
