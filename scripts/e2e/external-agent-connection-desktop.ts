@@ -928,10 +928,19 @@ async function copyPrompt(
       .map((card) => card.getAttribute('data-template-reference'))
       .sort()
   );
-  assert.deepEqual(references, ['content', 'marketing', 'research', 'software-product']);
+  assert.deepEqual(references, [
+    'content',
+    'customer-support',
+    'learning',
+    'marketing',
+    'operations',
+    'research',
+    'sales',
+    'software-product',
+  ]);
   await button('[data-template-reference="software-product"] > button', true);
   await button(
-    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
     true
   );
   await waitFor(

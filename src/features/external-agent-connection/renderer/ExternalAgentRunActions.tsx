@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { CliLogsRichView } from '@renderer/components/team/CliLogsRichView';
 import { Button } from '@renderer/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -8,17 +9,20 @@ import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
 import { useExternalAgentRun } from './useExternalAgentRun';
 
 import type { AppConnectionContext, ExternalAgentRunApi } from '../contracts';
+import type { ReactNode } from 'react';
 
 export function ExternalAgentRunActions({
   api,
   task,
   context,
   ready,
+  copyAction,
 }: Readonly<{
   api: ExternalAgentRunApi;
   task: string;
   context: AppConnectionContext;
   ready: boolean;
+  copyAction?: ReactNode;
 }>): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const run = useExternalAgentRun(api, task, context);
@@ -37,6 +41,7 @@ export function ExternalAgentRunActions({
       data-testid="external-agent-run-actions"
     >
       <div className="flex flex-wrap items-center gap-2">
+        {copyAction}
         <Button
           type="button"
           variant="outline"
@@ -45,6 +50,7 @@ export function ExternalAgentRunActions({
           onClick={() => void run.start('codex')}
           data-testid="external-agent-run-codex"
         >
+          <ProviderBrandLogo providerId="codex" className="size-4 shrink-0" />
           {t('externalPrompt.runCodex')}
         </Button>
         <Button
@@ -55,6 +61,7 @@ export function ExternalAgentRunActions({
           onClick={() => void run.start('anthropic')}
           data-testid="external-agent-run-claude"
         >
+          <ProviderBrandLogo providerId="anthropic" className="size-4 shrink-0" />
           {t('externalPrompt.runClaude')}
         </Button>
         {run.active && (

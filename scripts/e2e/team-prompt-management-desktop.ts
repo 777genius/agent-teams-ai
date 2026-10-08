@@ -608,7 +608,16 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     modifiers: 0,
   });
   await getClient().send('Input.insertText', { text: request });
-  const templateIds = ['software-product', 'marketing', 'content', 'research'];
+  const templateIds = [
+    'software-product',
+    'marketing',
+    'content',
+    'research',
+    'sales',
+    'customer-support',
+    'operations',
+    'learning',
+  ];
   assert(
     await evaluate(() =>
       [...document.querySelectorAll('[data-template-reference]')].every(
@@ -635,7 +644,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     ).length,
     theme: document.documentElement.className,
   }));
-  assert.deepEqual(references.ids, ['content', 'marketing', 'research', 'software-product']);
+  assert.deepEqual(references.ids, [...templateIds].sort());
   assert.equal(
     references.participants,
     TEAM_TEMPLATES.reduce((sum, template) => sum + template.members.length + 1, 0)
@@ -648,7 +657,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
   assert.equal(references.editableControls, 0, 'References must be read-only');
   assert(references.theme.split(' ').includes(theme));
   await click(
-    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
     true
   );
   await waitFor(
@@ -663,7 +672,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     'read-only coordinator responsibilities'
   );
   await click(
-    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for Coordinator"]',
     true
   );
   await key('Tab', 'Tab', 9);
@@ -750,6 +759,24 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
       copied,
       'Final text matches the actual copied prompt'
     );
+    assert(
+      await evaluate(() =>
+        ['codex', 'claude'].every((provider) =>
+          Boolean(document.querySelector(`[data-testid="external-agent-run-${provider}"] svg`))
+        )
+      ),
+      'Native run buttons reuse their provider logos'
+    );
+    await evaluate(async () => navigator.clipboard.writeText('TEST clipboard reset'));
+    await click('[data-testid="external-agent-run-copy"]', true);
+    await waitFor(async () => {
+      const text = await evaluate(async () => navigator.clipboard.readText());
+      const previewNow = await evaluate(
+        () => document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
+      );
+      return text.includes(request) && text === previewNow;
+    }, 'Run-area Copy writes its freshly generated preview through the native clipboard');
+    await evaluate(() => window.getSelection()?.removeAllRanges());
     evidence[`${theme}Popup`] = {
       ...references,
       clipboardVerified: true,
