@@ -63,7 +63,7 @@ export interface ManualBundle {
   }[];
 }
 export function manualNames(architecture: 'arm64' | 'x64') {
-  const names = platformNames('2.17.7').mac.filter((name) => name.includes(`-${architecture}`));
+  const names = platformNames('2.17.8').mac.filter((name) => name.includes(`-${architecture}`));
   const dmg = names.find((name) => name.endsWith('.dmg'));
   const zip = names.find((name) => name.endsWith('.zip'));
   assert(dmg && zip);
@@ -90,7 +90,7 @@ export function checkManualBundle(
     attempt: number;
   }
 ) {
-  assert.equal(nativeReleaseScenario(plan).targetVersion, '2.17.7');
+  assert.equal(nativeReleaseScenario(plan).targetVersion, '2.17.8');
   assert.equal(bundle.schemaVersion, 1);
   for (const key of ['toolingSha', 'planDigest', 'inputDigest', 'runId', 'attempt'] as const)
     assert.equal(bundle[key], expected[key]);
@@ -210,7 +210,7 @@ export async function prepareManualInputs(
 ) {
   await mkdir(output);
   const { plan, receipt } = await downloadPreparedStageArtifact(output, authority);
-  assert.equal(nativeReleaseScenario(plan).targetVersion, '2.17.7');
+  assert.equal(nativeReleaseScenario(plan).targetVersion, '2.17.8');
   assert.equal(receipt.inputDigest, inputDigest);
   const port = new GitHubReleasePort();
   const source = await port.releaseById(repository, nativePredecessor.id);

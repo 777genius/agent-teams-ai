@@ -22,7 +22,7 @@ import type { WindowsProofPin } from './windows-plan-inputs.mts';
 // These tests reject substitutions of release identity, asset identity, bytes,
 // or the prepared Windows feed, independently of the eventual native E2E.
 async function fixture(targetVersion = '2.17.6') {
-  const full = targetVersion === '2.17.7';
+  const full = targetVersion === '2.17.8';
   const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-windows-plan-contract-'));
   const source: Release = {
     id: 398386033,
@@ -168,7 +168,7 @@ void test('bundle accepts matching actual byte proofs and preserves the prepared
   }
 });
 
-for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
+for (const targetVersion of ['2.17.6', '2.17.8'] as const) {
   for (const variant of [
     'target-sha',
     'asset-id',
@@ -214,17 +214,17 @@ for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
   }
 }
 
-void test('full 217 bytes use independent 211 predecessor while captured latest is 216', async () => {
-  const input = await fixture('2.17.7');
+void test('full 218 bytes use independent 211 predecessor while captured latest is 216', async () => {
+  const input = await fixture('2.17.8');
   try {
     const result = await input.verify();
-    assert.equal(result.targetVersion, '2.17.7');
+    assert.equal(result.targetVersion, '2.17.8');
     assert.equal(result.source.tag_name, 'v2.17.1');
     assert.equal(result.plan?.input.latest.tag, 'v2.17.6');
     assert.equal(result.plan?.input.macSource, null);
     assert.deepEqual(
       result.verified.map((pin) => pin.tag),
-      [...Array<string>(4).fill('v2.17.1'), ...Array<string>(4).fill('v2.17.7')]
+      [...Array<string>(4).fill('v2.17.1'), ...Array<string>(4).fill('v2.17.8')]
     );
   } finally {
     await rm(input.root, { recursive: true, force: true });

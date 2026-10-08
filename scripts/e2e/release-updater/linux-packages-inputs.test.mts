@@ -21,7 +21,7 @@ import { nativeReleaseScenario } from './native-release-scenario.mts';
 
 import type { Original, Release, Snapshot, StagePlan } from '../../ci/release/contract.ts';
 
-async function fixture(targetVersion: '2.17.6' | '2.17.7') {
+async function fixture(targetVersion: '2.17.6' | '2.17.8') {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'TEST-linux-plan-contract-'));
   const source: Release = {
     id: 398386033,
@@ -51,7 +51,7 @@ async function fixture(targetVersion: '2.17.6' | '2.17.7') {
     name: release.name,
     body: release.body,
   });
-  const full = targetVersion === '2.17.7';
+  const full = targetVersion === '2.17.8';
   const names = platformNames(targetVersion);
   const originals: Original[] = [];
   async function add(release: Release, name: string) {
@@ -125,7 +125,7 @@ async function fixture(targetVersion: '2.17.6' | '2.17.7') {
   return { directory, plan, source, target, persist, stage: await persist() };
 }
 
-for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
+for (const targetVersion of ['2.17.6', '2.17.8'] as const) {
   void test(`Linux plan target-version CLI authenticates ${targetVersion} without PATH tools`, async () => {
     const input = await fixture(targetVersion);
     try {
@@ -138,7 +138,7 @@ for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
         );
       assert.equal(run(input.stage.planSha256), `${targetVersion}\n`);
       assert.throws(() => run('0'.repeat(64)), /Immutable staged plan digest/);
-      input.plan.input.target.tag = 'v2.17.8';
+      input.plan.input.target.tag = 'v2.17.7';
       const unsupported = await input.persist();
       assert.throws(() => run(unsupported.planSha256));
     } finally {
@@ -147,7 +147,7 @@ for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
   });
 }
 
-for (const targetVersion of ['2.17.6', '2.17.7'] as const) {
+for (const targetVersion of ['2.17.6', '2.17.8'] as const) {
   void test(`Linux native ${targetVersion} binds raw metadata, actual bytes and independent 211`, async () => {
     const input = await fixture(targetVersion);
     try {
@@ -188,8 +188,8 @@ for (const variant of [
   'source-sha',
   'original-output',
 ] as const) {
-  void test(`full217 Linux rejects ${variant} substitution`, async () => {
-    const input = await fixture('2.17.7');
+  void test(`full218 Linux rejects ${variant} substitution`, async () => {
+    const input = await fixture('2.17.8');
     try {
       const asset = input.target.assets.find((p) => p.name.endsWith('.AppImage'));
       assert(asset);
@@ -230,7 +230,7 @@ for (const variant of [
 }
 
 for (const variant of [
-  'carry217',
+  'carry218',
   'full216',
   'floor12',
   'missing-mac',
@@ -238,15 +238,15 @@ for (const variant of [
   'unreviewed-version',
 ] as const) {
   void test(`shared native scenario rejects ${variant}`, async () => {
-    const input = await fixture('2.17.7');
+    const input = await fixture('2.17.8');
     try {
-      if (variant === 'carry217') input.plan.input.mode = 'carry-mac';
+      if (variant === 'carry218') input.plan.input.mode = 'carry-mac';
       if (variant === 'full216' || variant === 'unreviewed-version') {
-        const targetTag = variant === 'full216' ? 'v2.17.6' : 'v2.17.8';
+        const targetTag = variant === 'full216' ? 'v2.17.6' : 'v2.17.7';
         input.plan.input.target.tag = targetTag;
         for (const original of input.plan.input.originals) {
           original.tag = targetTag;
-          original.name = original.name.replace('2.17.7', targetTag.slice(1));
+          original.name = original.name.replace('2.17.8', targetTag.slice(1));
         }
       }
       if (variant === 'floor12') input.plan.input.macProductMinimum = '12.0';
@@ -263,7 +263,7 @@ for (const variant of [
 }
 
 void test('external plan hash rejects changed target version before downloading assets', async () => {
-  const input = await fixture('2.17.7');
+  const input = await fixture('2.17.8');
   try {
     input.plan.input.target.tag = 'v2.17.6';
     await input.persist();

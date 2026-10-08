@@ -129,7 +129,7 @@ export function fullNativeScenarioRows(runId: number, attempt: number): NativeSc
       jobName: `mac-manual (${architecture})`,
       artifact: `TEST-mac-manual-${architecture}-${runId}-${attempt}`,
       path: 'TEST-mac-manual-evidence/native-manual-receipt.json',
-      execute: 'Fresh 217 and original 211 manual replacement in owned sandbox profiles',
+      execute: 'Fresh 218 and original 211 manual replacement in owned sandbox profiles',
       upload: 'Preserve native ownership, preference, signing, runtime and cleanup evidence',
     });
   return rows;
