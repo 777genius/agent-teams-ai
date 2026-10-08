@@ -58,7 +58,8 @@ export interface TeamViewSnapshotAssemblerPorts<
   resolveLeadRuntimeSettings(teamMeta: TeamViewSnapshotRuntimeMeta | null): Pick<TeamMemberSnapshot,
     | 'providerId' | 'providerBackendId' | 'model' | 'effort' | 'selectedFastMode'
     | 'configuredRuntimeSettings' | 'resolvedFastMode' | 'laneOwnerProviderId'>;
-  observeTeamAlive(teamName: string, isAlive: boolean): void;
+  observeTeamAlive(teamName: string): void;
+  observeTeamInactive(teamName: string): void;
   readConfig(teamName: string): Promise<TeamConfig | null>;
   readTasks(teamName: string): Promise<readonly TeamTask[]>;
   readInboxNames(teamName: string): Promise<string[]>;
@@ -322,7 +323,11 @@ export class TeamViewSnapshotAssembler<
       msBetween,
     });
 
-    this.ports.observeTeamAlive(teamName, isAlive);
+    if (isAlive) {
+      this.ports.observeTeamAlive(teamName);
+    } else {
+      this.ports.observeTeamInactive(teamName);
+    }
 
     return {
       teamName,

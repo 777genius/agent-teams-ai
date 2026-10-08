@@ -416,9 +416,11 @@ export class TeamDataService {
     });
     this.teamViewSnapshotAssembler = new TeamViewSnapshotAssembler({
       resolveLeadRuntimeSettings: (teamMeta) => resolveSyntheticLeadRuntimeSettings(teamMeta),
-      observeTeamAlive: (teamName, isAlive) => {
-        if (isAlive) this.processHealthTeams.add(teamName);
-        else this.processHealthTeams.delete(teamName);
+      observeTeamAlive: (teamName) => {
+        this.processHealthTeams.add(teamName);
+      },
+      observeTeamInactive: (teamName) => {
+        this.processHealthTeams.delete(teamName);
       },
       readConfig: (teamName) => this.readSnapshotConfig(teamName),
       readTasks: (teamName) => this.taskReadModelService.readTasksForUiSnapshot(teamName),
