@@ -1,0 +1,12 @@
+{
+  "extends": "./e2e-base.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals", "react"]
+  },
+  "include": [
+    "../../test/main/services/team/TeamMessageHistoryRetrievalGate.test.ts",
+    "../../test/main/services/team/TeamInboxReader.test.ts",
+    "../../test/main/services/team/TeamMessageFeedService.test.ts"
+  ],
+  "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
+}

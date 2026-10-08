@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["scripts/e2e/release-updater/**/*.mts"]
+  "include": ["../../scripts/e2e/release-updater/**/*.mts"]
 }
