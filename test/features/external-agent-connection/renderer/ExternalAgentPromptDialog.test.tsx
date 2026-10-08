@@ -75,7 +75,7 @@ describe('external prompt freshness and clipboard fallback', () => {
     vi.unstubAllGlobals();
   });
   const preview = () =>
-    host.querySelector<HTMLTextAreaElement>('[data-testid="external-agent-prompt-preview"]');
+    host.querySelector<HTMLDivElement>('[data-testid="external-agent-prompt-preview"]');
   const copy = async () => {
     await act(async () =>
       host.querySelector<HTMLButtonElement>('[data-testid="external-agent-prompt-copy"]')!.click()
@@ -103,18 +103,43 @@ describe('external prompt freshness and clipboard fallback', () => {
     const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
     const finalPrompt = preview();
     expect(finalPrompt).not.toBeNull();
-    expect(finalPrompt?.readOnly).toBe(true);
-    expect(finalPrompt?.value).toContain('Create a review team for the sandbox');
+    expect(finalPrompt?.tagName).toBe('DIV');
+    expect(finalPrompt?.hasAttribute('contenteditable')).toBe(false);
+    expect(finalPrompt?.getAttribute('role')).toBe('region');
+    expect(finalPrompt?.tabIndex).toBe(0);
+    expect(finalPrompt?.textContent).toContain('Create a review team for the sandbox');
     const promptSection = task.parentElement?.nextElementSibling;
     expect(promptSection?.contains(finalPrompt)).toBe(true);
     const label = promptSection?.querySelector('label');
-    expect(label?.htmlFor).toBe(finalPrompt?.id);
+    expect(finalPrompt?.getAttribute('aria-labelledby')).toBe(label?.id);
     expect(
       label?.parentElement?.querySelector('[data-testid="external-agent-prompt-copy"]')
     ).not.toBeNull();
     const templates = host.querySelector('section');
     expect(promptSection?.nextElementSibling).toBe(templates);
     expect(finalPrompt?.closest('[data-state="closed"]')).toBeNull();
+  });
+
+  // RED when template rosters start expanded or their full header does not toggle them.
+  it('starts all template rosters collapsed and toggles participants through the header', async () => {
+    await render({
+      getConnectionInfo: vi.fn().mockResolvedValue(snapshot()),
+      retryConnection: vi.fn(),
+    });
+    const templates = Array.from(host.querySelectorAll('[data-template-reference]'));
+    expect(templates).toHaveLength(4);
+    for (const template of templates) {
+      expect(template.getAttribute('data-state')).toBe('closed');
+      expect(template.querySelector('[data-role="template-participant"]')).toBeNull();
+    }
+    const header = templates[0].querySelector<HTMLButtonElement>('button')!;
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    await act(async () => header.click());
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    expect(templates[0].querySelector('[data-role="template-participant"]')).not.toBeNull();
+    await act(async () => header.click());
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    expect(templates[0].querySelector('[data-role="template-participant"]')).toBeNull();
   });
 
   // RED when freshness failure leaves the previously visible endpoint selectable.
@@ -130,9 +155,11 @@ describe('external prompt freshness and clipboard fallback', () => {
           ? vi.fn().mockRejectedValue(new Error('Discovery failed'))
           : vi.fn().mockResolvedValue(live);
       await render({ getConnectionInfo, retryConnection: vi.fn() });
-      expect(preview()?.value).toContain('http://127.0.0.1:43001/mcp');
+      expect(preview()?.textContent).toContain('http://127.0.0.1:43001/mcp');
       await copy();
-      expect(preview()?.value ?? '').toBe('');
+      expect(preview()?.textContent).toBe(
+        'Enter a request to see the final prompt. A ready MCP connection is required.'
+      );
       expect(writeText).not.toHaveBeenCalled();
     }
   );
@@ -156,11 +183,13 @@ describe('external prompt freshness and clipboard fallback', () => {
       );
       task.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    expect(preview()?.value).toContain('Create another team for this sandbox');
+    expect(preview()?.textContent).toContain('Create another team for this sandbox');
     const foreign = snapshot();
     foreign.context.dataRootFingerprint = 'another-root';
     await act(async () => finishRead(foreign));
-    expect(preview()?.value ?? '').toBe('');
+    expect(preview()?.textContent).toBe(
+      'Enter a request to see the final prompt. A ready MCP connection is required.'
+    );
     expect(task.value).toBe('Create another team for this sandbox');
     expect(writeText).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain(
@@ -185,15 +214,29 @@ describe('external prompt freshness and clipboard fallback', () => {
     };
     await render(api);
     await copy();
-    expect(preview()?.value ?? '').toBe('');
+    expect(preview()?.textContent).toBe(
+      'Enter a request to see the final prompt. A ready MCP connection is required.'
+    );
     writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
     await copy();
     const freshPrompt = writeText.mock.calls[0]?.[0];
     expect(freshPrompt).toContain('http://127.0.0.1:43003/mcp');
-    expect(preview()?.value).toBe(freshPrompt);
+    expect(preview()?.textContent).toBe(freshPrompt);
     expect(host.textContent).toContain(
       'Clipboard write failed. Select and copy the final prompt manually.'
     );
+    for (const modifier of ['ctrlKey', 'metaKey']) {
+      preview()!.focus();
+      const shortcut = new KeyboardEvent('keydown', {
+        key: 'a',
+        [modifier]: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      preview()!.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented).toBe(true);
+      expect(window.getSelection()?.toString()).toBe(freshPrompt);
+    }
     await copy();
     expect(writeText).toHaveBeenLastCalledWith(freshPrompt);
     expect(host.textContent).toContain('Copied');

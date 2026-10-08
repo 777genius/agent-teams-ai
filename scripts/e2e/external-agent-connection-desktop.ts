@@ -929,6 +929,7 @@ async function copyPrompt(
       .sort()
   );
   assert.deepEqual(references, ['content', 'marketing', 'research', 'software-product']);
+  await button('[data-template-reference="software-product"] > button', true);
   await button(
     '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
     true
@@ -967,11 +968,14 @@ async function copyPrompt(
       evaluate(
         active,
         (request: string) => {
-          const preview = document.querySelector<HTMLTextAreaElement>(
+          const preview = document.querySelector<HTMLElement>(
             '[data-testid="external-agent-prompt-preview"]'
           );
           return Boolean(
-            preview?.readOnly && preview.getClientRects().length && preview.value.includes(request)
+            preview &&
+            !preview.isContentEditable &&
+            preview.getClientRects().length &&
+            preview.textContent?.includes(request)
           );
         },
         [task]
@@ -1027,8 +1031,8 @@ async function copyPrompt(
         (
           document.querySelector(
             '[data-testid="external-agent-prompt-preview"]'
-          ) as HTMLTextAreaElement | null
-        )?.value
+          ) as HTMLElement | null
+        )?.textContent
     );
     assert.equal(preview, copied, 'Preview and actual clipboard must show the same live prompt');
     await screenshot(label);
@@ -1081,24 +1085,42 @@ async function copyPrompt(
             ),
           'actual clipboard rejection is shown'
         );
+        await evaluate(active, () => {
+          document
+            .querySelector<HTMLElement>('[data-testid="external-agent-prompt-preview"]')
+            ?.focus();
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 2,
+          windowsVirtualKeyCode: 65,
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyUp',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 0,
+          windowsVirtualKeyCode: 65,
+        });
         const failed = await evaluate(active, () => {
           const dialog = document.querySelector('[data-testid="external-agent-prompt-dialog"]');
           const previewField = document.querySelector(
             '[data-testid="external-agent-prompt-preview"]'
-          ) as HTMLTextAreaElement | null;
+          ) as HTMLElement | null;
           if (!previewField) throw new Error('Clipboard failure must expose preview');
-          previewField.focus();
-          previewField.select();
+          const selection = window.getSelection();
           return {
             success: dialog?.textContent?.includes('Prompt copied.') ?? false,
             buttonText: dialog
               ?.querySelector('[data-testid="external-agent-prompt-copy"]')
               ?.textContent?.trim(),
-            preview: previewField.value,
-            readOnly: previewField.readOnly,
-            disabled: previewField.disabled,
+            preview: previewField.textContent ?? '',
+            readOnly: !previewField.isContentEditable,
+            disabled: previewField.hasAttribute('disabled'),
             visible: Boolean(previewField.getBoundingClientRect().height),
-            selectedLength: previewField.selectionEnd - previewField.selectionStart,
+            selectedLength: selection?.toString().length ?? 0,
           };
         });
         assert.equal(failed.success, false);

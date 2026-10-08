@@ -172,14 +172,14 @@ export const ExternalAgentPromptDialog = ({
       </div>
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Label htmlFor="external-agent-prompt-preview">{t('externalPrompt.previewLabel')}</Label>
+          <Label id="external-agent-prompt-preview-label">{t('externalPrompt.previewLabel')}</Label>
           <Button
             type="button"
             size="sm"
             onClick={() => void copy()}
             disabled={busy || !ready || !taskPresent}
             data-testid="external-agent-prompt-copy"
-            className="h-auto min-h-8 max-w-full whitespace-normal"
+            className="h-auto min-h-8 max-w-full whitespace-normal bg-blue-600 text-white hover:bg-blue-500"
           >
             {copied ? (
               <Check className="size-3.5 shrink-0" />
@@ -198,14 +198,35 @@ export const ExternalAgentPromptDialog = ({
         <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
           {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
         </p>
-        <Textarea
+        <div
           id="external-agent-prompt-preview"
-          readOnly
-          value={preview}
-          placeholder={t('externalPrompt.previewPlaceholder')}
-          className="h-36 max-h-80 min-h-36 select-text resize-y font-mono text-xs"
+          role="region"
+          aria-labelledby="external-agent-prompt-preview-label"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (
+              !(event.ctrlKey || event.metaKey) ||
+              event.altKey ||
+              event.key.toLowerCase() !== 'a'
+            )
+              return;
+            const selection = event.currentTarget.ownerDocument.defaultView?.getSelection();
+            if (!selection) return;
+            event.preventDefault();
+            const range = event.currentTarget.ownerDocument.createRange();
+            range.selectNodeContents(event.currentTarget);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }}
+          className="h-36 max-h-36 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-[var(--color-border)] px-3 py-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
           data-testid="external-agent-prompt-preview"
-        />
+        >
+          {preview || (
+            <span className="text-[var(--color-text-muted)]">
+              {t('externalPrompt.previewPlaceholder')}
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
             {t('externalPrompt.connectionStatus', {
