@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `2eecb5f59cc5aa137dab903113ce37c78047f53b`.
+- Source: `d61faf9d72615ee74179081e56971568e8bd5b12`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-xxliGy/evidence.json`.
-- Evidence SHA256: `aca70ca52bb9105b6971083fd43a8887648bf20936e008b7aae86126341a14b8`.
-- Later commits change only a test assertion and documentation; application, MCP, controller and desktop harness match the tested source.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-okV4er/evidence.json`.
+- Evidence SHA256: `e60089b69c4027647ee66d595cae069b3801cf5abd6fb5eec318e4c13fa938f9`.
+- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source.
 
 ## Actual desktop and native MCP proof
 
@@ -36,6 +36,8 @@ Passed:
 - A later P2 review found unreadable roster metadata could be normalized to empty and overwritten. Existing-file presence plus the canonical metadata reader now rejects this before writes/events. All seven focused HTTP tests passed, including malformed/oversized byte-preservation proofs and genuinely missing metadata support.
 - A later P1 review found destination admission ended between draft rename and provisioning. An existing rename continuation now holds destination identity/lifecycle gates through provisioning; occupied-destination preflight and reentry remain intact. The new deterministic HTTP regression failed on prior production code (interleaved edit returned 200) and passed on the fix (409 TEAM_ACTIVE). All 217 tests in the nearest HTTP/data suites, project typecheck and focused lint passed. Independent review accepted the final five-file fix. No real agent/runtime launch was used for this concurrency proof.
 - Final review found config-only stopped rosters could lose saved policies on replacement. Such roster edits now reject before writes; GET exposes the original members and trash preserves them. New saved drafts without config remain writable. Fingerprint reads enforce existing 10 MiB config/256 KiB metadata limits before allocation and cap actual reads if files grow. Independent review accepted both fixes; project typecheck and focused lint passed. The nearest HTTP suite checks exact saved bytes, original policies, no events on rejection and oversized-file refusal. Its initial 10 MiB deep-comparison assertion exceeded the timeout; direct Buffer.equals preserves exact equality without that overhead.
+
+- Final integration with main passed the full pinned project typecheck. The latest HTTP suites passed 61 tests, including real persisted task-interval repair before managed snapshots; the nearest renderer suite passed 61 tests, including nonselected split panes, context changes, pending-trash cancellation and restore. Focused lint and source-size guards passed (legacy store 2,594 lines against the unchanged 2,595 ceiling). Independent backend review accepted the repair at `c2d0a8ee07d16b804d5231083f1dc47d924cc10c`; independent UI review accepted `b7b00c37c19e975e073a61df00104ad646196d82`. Their application/MCP/controller/harness code is unchanged by the subsequent main integration.
 
 ## Limits
 
