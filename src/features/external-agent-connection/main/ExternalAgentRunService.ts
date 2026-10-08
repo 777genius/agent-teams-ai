@@ -30,6 +30,7 @@ export interface ExternalAgentRunDependencies {
   getProviderStatus(
     provider: ExternalAgentRunRequest['providerId']
   ): Promise<CliProviderStatus | null>;
+  getCodexLaunchAllowed(): Promise<boolean>;
   prepare(
     provider: ExternalAgentRunRequest['providerId'],
     connection: ConnectionInfoV1
@@ -176,7 +177,9 @@ export class ExternalAgentRunService implements ExternalAgentRunApi {
 
   private async assertReady(request: ExternalAgentRunRequest): Promise<void> {
     const provider = await this.deps.getProviderStatus(request.providerId);
-    if (!canRunExternalAgent(provider))
+    const codexLaunchAllowed =
+      request.providerId === 'codex' ? await this.deps.getCodexLaunchAllowed() : undefined;
+    if (!canRunExternalAgent(provider, codexLaunchAllowed))
       throw new Error('Provider is not authenticated and ready for native one-shot execution');
   }
 

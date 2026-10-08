@@ -80,12 +80,8 @@ export function composeExternalAgentConnection(options: {
     },
     getConnectionInfo: connection.getConnectionInfo,
     withExpectedContext: connection.withExpectedContext,
-    async getProviderStatus(providerId) {
-      const status = await options.nativeRun[0].getProviderStatus(providerId);
-      if (providerId === 'codex' && (await options.nativeRun[1]())?.launchAllowed !== true)
-        return null;
-      return status;
-    },
+    getProviderStatus: (providerId) => options.nativeRun[0].getProviderStatus(providerId),
+    getCodexLaunchAllowed: async () => (await options.nativeRun[1]())?.launchAllowed === true,
     prepare: (provider, connectionInfo) =>
       prepareNativeAgentRun(provider, connectionInfo, {
         controlUrl: options.getControlUrl(),

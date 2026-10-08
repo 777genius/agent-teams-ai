@@ -15,7 +15,10 @@ export function sameExternalAgentRunContext(
 }
 
 /** One-shot authority is independent of team launch and its model catalog. */
-export function canRunExternalAgent(provider: CliProviderStatus | null | undefined): boolean {
+export function canRunExternalAgent(
+  provider: CliProviderStatus | null | undefined,
+  codexLaunchAllowed = provider?.connection?.codex?.launchAllowed
+): boolean {
   if (
     !provider ||
     !provider.supported ||
@@ -24,7 +27,7 @@ export function canRunExternalAgent(provider: CliProviderStatus | null | undefin
     !hasAuthoritativeProviderStatusEvidence(provider)
   )
     return false;
-  if (provider.providerId === 'codex') return provider.connection?.codex?.launchAllowed === true;
+  if (provider.providerId === 'codex') return codexLaunchAllowed === true;
   return (
     provider.providerId === 'anthropic' &&
     (!provider.resolvedBackendId ||
