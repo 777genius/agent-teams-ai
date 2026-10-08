@@ -11,6 +11,8 @@ on:
       plan_digest: { type: string, required: true }
       native_receipt_json: { type: string, required: true }
       publish_release: { type: boolean, default: false }
+      full_ready: { type: boolean, default: false }
+      prepared_artifact_sha256: { type: string }
 
 permissions:
   contents: read
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   publish-reviewed-carry:
+    if: ${{ !inputs.full_ready }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -97,3 +100,77 @@ jobs:
           name: carried-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: publication-result.json
           if-no-files-found: warn
+
+  verify-prepared-full218:
+    if: ${{ inputs.full_ready }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Draft asset reads require push permission; the command omits --publish.
+    permissions:
+      contents: write
+      actions: read
+    env:
+      CHECKOUT_SHA: 3781d144dbf013a2f6d0ef73ea64e472548286c7
+      ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
+      RELEASE_TAG: v2.17.8
+      PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+      PREPARED_RUN_ATTEMPT: '1'
+      PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+      PREPARED_ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+      PLAN_DIGEST: ${{ inputs.plan_digest }}
+      NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 3781d144dbf013a2f6d0ef73ea64e472548286c7
+          persist-credentials: false
+      - name: Bind workflow origin and immutable full218 checkout
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_TAG: ${{ inputs.release_tag }}
+          WORKFLOW_PATH: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == 777genius/agent-teams-ai && "$DISPATCH_TAG" == "$RELEASE_TAG" ]]
+          [[ "$GITHUB_SHA" == "$ACTUAL_WORKFLOW_SHA" && "$ACTUAL_WORKFLOW_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$CHECKOUT_SHA" ]]
+          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$PREPARED_ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$(printf '%s' "$NATIVE_RECEIPT_JSON" | wc -c)" -le 100000 ]]
+          NATIVE_RECEIPT_SHA256=$(printf '%s' "$NATIVE_RECEIPT_JSON" | sha256sum | cut -d ' ' -f 1)
+          jq -n --arg workflowSha "$ACTUAL_WORKFLOW_SHA" --arg checkoutSha "$CHECKOUT_SHA" \
+            --arg workflowRef "$WORKFLOW_PATH" --arg repository "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" --arg planSha256 "$PLAN_DIGEST" \
+            --arg nativeReceiptSha256 "$NATIVE_RECEIPT_SHA256" \
+            --arg artifactSha256 "$PREPARED_ARTIFACT_SHA256" \
+            --argjson preparedRunId "$PREPARED_RUN_ID" --argjson preparedArtifactId "$PREPARED_ARTIFACT_ID" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:false}' > execution-identity.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate immutable full218 tooling types
+        run: |
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+      - name: Verify prepared full218 readiness without publication
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
+          # The original CLI authenticates checkout tooling; workflow origin stays in the sidecar.
+          GITHUB_SHA="$CHECKOUT_SHA" pnpm exec tsx scripts/ci/publish-full-release.ts --plan-digest "$PLAN_DIGEST" --output publication-result.json
+      - name: Preserve full218 readiness and workflow checkout identity
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full218-readiness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication-result.json
+            execution-identity.json
+          if-no-files-found: error
