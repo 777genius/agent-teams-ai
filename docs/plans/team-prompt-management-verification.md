@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `a629331edab4271c54e6ad9c7aa8ec8b7930b8bb`.
+- Source: `ce7eb25d54a7b753cfbf36ae124964fdd3c83fc1`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-E5gsXY/evidence.json`.
-- Evidence SHA256: `3b63796e50734147e8384b5f4679eb39ba212b7111d14f24de2b8e1176cbcf36`.
-- Subsequent documentation edits and the integration of main CI/release qualification fixes do not change application, MCP, controller or desktop harness code; these match the tested source. Source-size guard passed 3,342 production files, with teams HTTP at 799/800 and no baseline increase.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-hGt0vs/evidence.json`.
+- Evidence SHA256: `6f7c567954bd1f13b67ba26124aaaf23ce6889d9b83b80d16245aed9762eb12f`.
+- Subsequent documentation edits do not change application, MCP, controller or desktop harness code; these match the tested source. Source-size guard passed 3,342 production files, with teams HTTP at 799/800 and no baseline increase.
 
 ## Actual desktop and native MCP proof
 
@@ -22,7 +22,7 @@ Passed:
 - Read-only shared template roster, 14 identities across four references, no member editing controls.
 - Real clipboard copy contains the request, templates, MCP and independent CDP endpoints.
 - Dark 320px and light 1280px popup screenshots; manual visual inspection passed.
-- Normal main-process quit: `mainExitedNormally=true`; six leased dev-wrapper processes were stopped after the graceful window, with no remaining owned processes.
+- Normal main-process quit: `mainExitedNormally=true`; one leased dev-wrapper process was stopped after the graceful window, with no remaining owned processes.
 
 ## Focused validation and review
 
@@ -48,6 +48,8 @@ Passed:
 - Review then identified lossy normalization of recognized optional team/member settings. Management requires complete known metadata through one shared fidelity helper, including nested launch identity and MCP policy; legitimate defaults, trimming and backend migrations remain supported. Present unreadable team metadata rejects before tolerant saved-request reads. Roster replacement also preserves the file-level backend fallback. Fourteen new regressions failed on the prior source; all 254 nearest HTTP/reader/data-service tests and the pinned typecheck passed on the fix. Source-size guard passed; production and the owned HTTP fixture had no full-lint errors. The legacy data-service fixture retains exactly the same 479 pre-existing lint errors as its prior version; these were compared independently, with no new errors or suppression. Independent review accepted the seven-file patch. The fresh native desktop proof above passed afterwards. Unknown future metadata fields are outside this preservation contract.
 
 - Valid but partial member metadata can still leave config-only rows visible through the canonical resolver. Roster admission now requires every resolved non-lead row to have a metadata identity, including tombstones, using the existing resolver and settings-lead rules. This replaces the broad file-presence rejection and permits canonical hidden aliases. The new partial case failed on the prior source; all 120 nearest HTTP/resolver tests passed on the fix, including permitted metadata/lead/trash operations and exact full-array preservation. A fixture literal-type mismatch was corrected without changing data/assertions; pinned typecheck, full focused lint and size guard passed. Independent review accepted exact `a629331edab4271c54e6ad9c7aa8ec8b7930b8bb`, followed by the fresh native proof above.
+
+- Management rejects a present non-string config deletion marker before admission or writes, preserving ordinary tolerant reads and existing string semantics. The three added cases failed on previous production code; all 96 nearest HTTP tests and pinned typecheck passed. Targeted full ESLint passed with zero errors and the same 53 existing warnings after increasing Node's heap from its exhausted default; source-size guard passed without changing ceilings. Independent review accepted exact `ce7eb25d54a7b753cfbf36ae124964fdd3c83fc1`; the complete fresh native desktop proof above passed afterwards, including the integrated main CI/release fixes.
 
 ## Limits
 
