@@ -10,6 +10,53 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
+import {
+  persistTerminalCommandHistory as persistCommandHistory,
+  readStoredTerminalCommandHistory as readStoredCommandHistory,
+} from '../adapters/terminalCommandHistoryStorage';
+import { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
+import {
+  persistTerminalCommandRuns,
+  readStoredTerminalCommandRuns,
+} from '../adapters/terminalCommandRunsStorage';
+import {
+  createTerminalLocalAutocompleteCandidates,
+  isTerminalLocalAutocompleteDraftEligible,
+  resolveTerminalLocalAutocompleteSuggestion,
+} from '../model/terminalCommandAutocomplete';
+import {
+  closeSupersededTerminalCommandRuns,
+  createTerminalCommandScreenLines,
+  settleScopedTerminalCommandRuns,
+  TERMINAL_COMMAND_HISTORY_LIMIT as COMMAND_HISTORY_LIMIT,
+  type TerminalCommandRunPresentation,
+  type TerminalCommandScreenLine,
+  upsertTerminalCommandRun,
+} from '../model/terminalCommandRuns';
+import {
+  formatTerminalPromptLabel,
+  formatWorkingDirectory,
+} from '../model/terminalPathPresentation';
+
+export { normalizeTerminalCommandRunEventDetail } from '../adapters/terminalCommandRunEvents';
+export {
+  resolveTerminalLocalAutocompleteSuggestion,
+  type TerminalLocalAutocompleteCandidate,
+  type TerminalLocalAutocompleteOptions,
+} from '../model/terminalCommandAutocomplete';
+export {
+  closeSupersededTerminalCommandRuns,
+  inferTerminalCommandCompletion,
+  inferTerminalCommandOutputStatus,
+  settleTerminalCommandRuns,
+  type TerminalCommandRunPresentation,
+  upsertTerminalCommandRun,
+} from '../model/terminalCommandRuns';
+export {
+  formatTerminalPromptLabel,
+  formatWorkingDirectory,
+} from '../model/terminalPathPresentation';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   AlertDialog,
@@ -55,7 +102,6 @@ import {
 import {
   resolveTerminalTopologyControlState,
   TerminalCommandDock,
-  type TerminalCommandPresentationMetadata,
   TerminalScreen,
   TerminalWorkspace,
   useWorkspaceSnapshot,
@@ -81,7 +127,6 @@ import type {
   TerminalWorkspaceBootstrap,
   TerminalWorkspaceBootstrapRequest,
 } from '../../contracts';
-import type { ScreenLine, ScreenLineSemanticMark } from '@terminal-platform/runtime-types';
 
 export interface TerminalWorkspacePanelProps {
   teamName: string;
@@ -100,20 +145,11 @@ export interface TerminalWorkspacePanelProps {
   stopTeamRuntime: (teamName: string) => Promise<void>;
 }
 
-const COMMAND_HISTORY_LIMIT = 80;
-const COMMAND_RUNS_STORAGE_LIMIT = COMMAND_HISTORY_LIMIT * 4;
 const TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS = 75;
-const TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH = 2;
-const TERMINAL_LOCAL_AUTOCOMPLETE_MAX_DRAFT_LENGTH = 160;
-const TERMINAL_LOCAL_AUTOCOMPLETE_DANGEROUS_MIN_PREFIX_LENGTH = 8;
 const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
 const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
 const TERMINAL_APPEARANCE_SETTINGS_VERSION = 1;
-const ANSI_ESCAPE_SEQUENCE_PATTERN = new RegExp(
-  `${String.fromCharCode(27)}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`,
-  'gu'
-);
 type TerminalWorkspaceSnapshot = ReturnType<WorkspaceKernel['getSnapshot']>;
 type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
@@ -199,41 +235,6 @@ interface TerminalCommandContextMenuState {
   outputText: string;
   x: number;
   y: number;
-}
-
-type TerminalCommandScreenLine =
-  | string
-  | (Pick<ScreenLine, 'semantic_marks' | 'text'> & {
-      isActiveCursorLine?: boolean;
-      historyCapturedAtMs?: bigint;
-      isHistoryTailLine?: boolean;
-      source?: 'history' | 'live';
-    });
-
-export interface TerminalCommandRunPresentation extends TerminalCommandPresentationMetadata {
-  clientEventId: string;
-  paneId: string;
-  sessionId: string;
-  startedAtMs: number;
-  status: NonNullable<TerminalCommandPresentationMetadata['status']>;
-}
-
-export interface TerminalLocalAutocompleteCandidate {
-  command: string;
-  cwd?: string | null;
-  paneId?: string | null;
-  sessionId?: string | null;
-  startedAtMs?: number | null;
-  status?: TerminalCommandRunPresentation['status'] | null;
-}
-
-export interface TerminalLocalAutocompleteOptions {
-  candidates: readonly TerminalLocalAutocompleteCandidate[];
-  cwd?: string | null;
-  dismissedDraft?: string | null;
-  draft: string;
-  paneId?: string | null;
-  sessionId?: string | null;
 }
 
 const TERMINAL_TAB_COLOR_OPTIONS = [
@@ -3157,142 +3158,6 @@ function readStoredTerminalTabPreferences(teamName: string): TerminalTabPreferen
   }
 }
 
-function readStoredCommandHistory(teamName: string): string[] | null {
-  const raw = readStoredValue(storageKey(teamName, 'command-history'));
-  if (!raw) return null;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return parsed
-      .filter((entry): entry is string => typeof entry === 'string')
-      .map((entry) => normalizeStoredTerminalCommandHistoryEntry(entry))
-      .filter((entry): entry is string => Boolean(entry))
-      .slice(-COMMAND_HISTORY_LIMIT);
-  } catch {
-    return null;
-  }
-}
-
-function normalizeStoredTerminalCommandHistoryEntry(value: string): string | null {
-  const entry = stripStoredShellPromptPrefix(value.trim()).trim();
-  return entry.length > 0 ? entry : null;
-}
-
-function stripStoredShellPromptPrefix(value: string): string {
-  const command = findStoredShellPromptCommand(value);
-  if (command !== null) {
-    return command;
-  }
-
-  return isStoredShellPromptOnly(value) ? '' : value;
-}
-
-function findStoredShellPromptCommand(value: string): string | null {
-  for (let index = value.length - 1; index >= 0; index -= 1) {
-    const marker = value[index] ?? '';
-    if (!isShellPromptMarker(marker)) continue;
-
-    const command = value.slice(index + 1);
-    if (!command.startsWith(' ') || command.trim().length === 0) continue;
-
-    const prefix = value.slice(0, index).trimEnd();
-    if (looksLikeStoredShellPromptPrefix(prefix)) {
-      return command.trimStart();
-    }
-  }
-
-  return null;
-}
-
-function isStoredShellPromptOnly(value: string): boolean {
-  const trimmed = value.trimEnd();
-  const marker = trimmed.at(-1) ?? '';
-  if (!isShellPromptMarker(marker)) {
-    return false;
-  }
-
-  return looksLikeStoredShellPromptPrefix(trimmed.slice(0, -1).trimEnd());
-}
-
-function looksLikeStoredShellPromptPrefix(value: string): boolean {
-  let remaining = value.trim();
-  let hasEnvironmentPrefix = false;
-
-  while (remaining.startsWith('(')) {
-    const closeIndex = remaining.indexOf(')');
-    if (closeIndex < 2 || closeIndex > 48) {
-      return false;
-    }
-
-    hasEnvironmentPrefix = true;
-    remaining = remaining.slice(closeIndex + 1).trimStart();
-  }
-
-  if (!remaining || remaining.length > 260) {
-    return false;
-  }
-
-  const firstToken = firstWhitespaceSeparatedToken(remaining);
-  const locationToken = lastWhitespaceSeparatedToken(remaining);
-  const hasUserHostPrefix = firstToken.includes('@') && firstToken !== locationToken;
-
-  return (
-    isPathLikePromptToken(locationToken) ||
-    ((hasEnvironmentPrefix || hasUserHostPrefix) && isSafePromptToken(locationToken))
-  );
-}
-
-function firstWhitespaceSeparatedToken(value: string): string {
-  const trimmed = value.trim();
-  const spaceIndex = trimmed.indexOf(' ');
-  const tabIndex = trimmed.indexOf('\t');
-  const index =
-    spaceIndex === -1 ? tabIndex : tabIndex === -1 ? spaceIndex : Math.min(spaceIndex, tabIndex);
-  return index === -1 ? trimmed : trimmed.slice(0, index);
-}
-
-function lastWhitespaceSeparatedToken(value: string): string {
-  const trimmed = value.trim();
-  const spaceIndex = trimmed.lastIndexOf(' ');
-  const tabIndex = trimmed.lastIndexOf('\t');
-  const index = Math.max(spaceIndex, tabIndex);
-  return index === -1 ? trimmed : trimmed.slice(index + 1);
-}
-
-function isPathLikePromptToken(value: string): boolean {
-  return (
-    value === '~' ||
-    value.startsWith('~/') ||
-    value.startsWith('/') ||
-    value.startsWith('./') ||
-    value.startsWith('../') ||
-    isWindowsDrivePath(value)
-  );
-}
-
-function isWindowsDrivePath(value: string): boolean {
-  const driveLetter = value.charCodeAt(0);
-  const isLetter =
-    (driveLetter >= 65 && driveLetter <= 90) || (driveLetter >= 97 && driveLetter <= 122);
-  return isLetter && value[1] === ':' && value.length > 2;
-}
-
-function isSafePromptToken(value: string): boolean {
-  if (value.length === 0 || value.length > 181) {
-    return false;
-  }
-
-  return Array.from(value).every((char) => {
-    const code = char.charCodeAt(0);
-    return code > 32 && char !== '%' && char !== '$' && char !== '#';
-  });
-}
-
-function isShellPromptMarker(value: string): boolean {
-  return value === '%' || value === '$' || value === '#';
-}
-
 function persistValue(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -3398,99 +3263,6 @@ function persistTerminalTabPreferences(
     );
   } catch {
     // Best-effort tab UI preference persistence.
-  }
-}
-
-function persistCommandHistory(teamName: string, entries: readonly string[]): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'command-history'),
-      JSON.stringify(entries.slice(-COMMAND_HISTORY_LIMIT))
-    );
-  } catch {
-    // Best-effort command history persistence.
-  }
-}
-
-function readStoredTerminalCommandRuns(teamName: string): TerminalCommandRunPresentation[] {
-  const raw = readStoredValue(storageKey(teamName, 'command-runs'));
-  if (!raw) return [];
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return capTerminalCommandRuns(
-      parsed
-        .map((entry) => normalizeStoredTerminalCommandRun(entry))
-        .filter((entry): entry is TerminalCommandRunPresentation => entry !== null)
-    );
-  } catch {
-    return [];
-  }
-}
-
-function normalizeStoredTerminalCommandRun(value: unknown): TerminalCommandRunPresentation | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const clientEventId =
-    typeof value.clientEventId === 'string' && value.clientEventId.trim()
-      ? value.clientEventId.trim()
-      : null;
-  const command = typeof value.command === 'string' ? value.command.trim() : '';
-  const paneId = typeof value.paneId === 'string' && value.paneId.trim() ? value.paneId : null;
-  const sessionId =
-    typeof value.sessionId === 'string' && value.sessionId.trim() ? value.sessionId : null;
-  const startedAtMs =
-    typeof value.startedAtMs === 'number' && Number.isFinite(value.startedAtMs)
-      ? value.startedAtMs
-      : 0;
-  const storedStatus = isTerminalCommandRunPresentationStatus(value.status)
-    ? value.status
-    : 'unknown';
-  const status = storedStatus === 'running' ? 'unknown' : storedStatus;
-
-  if (!clientEventId || !command || !paneId || !sessionId) {
-    return null;
-  }
-
-  const run: TerminalCommandRunPresentation = {
-    clientEventId,
-    command,
-    paneId,
-    sessionId,
-    startedAtMs,
-    status,
-  };
-
-  if (typeof value.durationMs === 'number' && Number.isFinite(value.durationMs)) {
-    run.durationMs = Math.max(0, value.durationMs);
-  }
-  if (typeof value.exitCode === 'number' && Number.isFinite(value.exitCode)) {
-    run.exitCode = Math.trunc(value.exitCode);
-  }
-
-  return run;
-}
-
-function isTerminalCommandRunPresentationStatus(
-  value: unknown
-): value is TerminalCommandRunPresentation['status'] {
-  return value === 'failed' || value === 'running' || value === 'succeeded' || value === 'unknown';
-}
-
-function persistTerminalCommandRuns(
-  teamName: string,
-  runs: readonly TerminalCommandRunPresentation[]
-): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'command-runs'),
-      JSON.stringify(capTerminalCommandRuns(runs))
-    );
-  } catch {
-    // Best-effort command presentation persistence.
   }
 }
 
@@ -3677,235 +3449,6 @@ function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
   return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
 }
 
-export function formatWorkingDirectory(path?: string | null, fallback = ''): string {
-  const normalizedPath = trimTrailingSlashes(path?.trim() || '');
-  if (!normalizedPath) {
-    return fallback;
-  }
-
-  return compactUserHome(normalizedPath);
-}
-
-export function formatTerminalPromptLabel(path?: string | null, localShellLabel = ''): string {
-  const workingDirectory = formatWorkingDirectory(path, '');
-  return workingDirectory || localShellLabel;
-}
-
-function trimTrailingSlashes(value: string): string {
-  let end = value.length;
-  while (end > 1 && value[end - 1] === '/') {
-    end -= 1;
-  }
-  return value.slice(0, end);
-}
-
-function compactUserHome(path: string): string {
-  const usersPrefix = '/Users/';
-  if (!path.startsWith(usersPrefix)) {
-    return path;
-  }
-
-  const rest = path.slice(usersPrefix.length);
-  const nextSlashIndex = rest.indexOf('/');
-  if (nextSlashIndex === -1) {
-    return '~';
-  }
-
-  return `~${rest.slice(nextSlashIndex)}`;
-}
-
-function createTerminalLocalAutocompleteCandidates({
-  commandHistory,
-  commandRuns,
-  cwd,
-}: {
-  commandHistory: readonly string[];
-  commandRuns: readonly TerminalCommandRunPresentation[];
-  cwd?: string | null;
-}): TerminalLocalAutocompleteCandidate[] {
-  const historyCandidates = commandHistory.map((command, index) => ({
-    command,
-    cwd,
-    startedAtMs: index,
-    status: 'unknown' as const,
-  }));
-  const runCandidates = commandRuns.map((run) => ({
-    command: run.command,
-    cwd,
-    paneId: run.paneId,
-    sessionId: run.sessionId,
-    startedAtMs: run.startedAtMs,
-    status: run.status,
-  }));
-
-  return [...historyCandidates, ...runCandidates];
-}
-
-export function resolveTerminalLocalAutocompleteSuggestion(
-  options: TerminalLocalAutocompleteOptions
-): string | null {
-  if (
-    !isTerminalLocalAutocompleteDraftEligible(options.draft) ||
-    options.dismissedDraft === options.draft
-  ) {
-    return null;
-  }
-
-  const scopedCwd = normalizeOptionalPath(options.cwd);
-  const statsByCommand = new Map<
-    string,
-    {
-      command: string;
-      frequency: number;
-      lastUsedAtMs: number;
-      sameCwd: boolean;
-      samePane: boolean;
-      sameSession: boolean;
-      statusScore: number;
-    }
-  >();
-
-  options.candidates.forEach((candidate, index) => {
-    const command = normalizeAutocompleteCommand(candidate.command);
-    if (
-      !command ||
-      command === options.draft ||
-      !command.startsWith(options.draft) ||
-      command.length > 320 ||
-      command.includes('\n') ||
-      command.includes('\r') ||
-      !canSuggestTerminalAutocompleteCommand(options.draft, command)
-    ) {
-      return;
-    }
-
-    const existing = statsByCommand.get(command);
-    const startedAtMs =
-      typeof candidate.startedAtMs === 'number' && Number.isFinite(candidate.startedAtMs)
-        ? candidate.startedAtMs
-        : index;
-    const sameCwd = Boolean(scopedCwd && normalizeOptionalPath(candidate.cwd) === scopedCwd);
-    const samePane = Boolean(options.paneId && candidate.paneId === options.paneId);
-    const sameSession = Boolean(options.sessionId && candidate.sessionId === options.sessionId);
-    const statusScore = scoreTerminalAutocompleteStatus(candidate.status ?? null);
-
-    if (!existing) {
-      statsByCommand.set(command, {
-        command,
-        frequency: 1,
-        lastUsedAtMs: startedAtMs,
-        sameCwd,
-        samePane,
-        sameSession,
-        statusScore,
-      });
-      return;
-    }
-
-    existing.frequency += 1;
-    existing.lastUsedAtMs = Math.max(existing.lastUsedAtMs, startedAtMs);
-    existing.sameCwd ||= sameCwd;
-    existing.samePane ||= samePane;
-    existing.sameSession ||= sameSession;
-    existing.statusScore = Math.max(existing.statusScore, statusScore);
-  });
-
-  const ranked = Array.from(statsByCommand.values()).sort((left, right) => {
-    const scoreDelta =
-      scoreTerminalLocalAutocompleteCandidate(right) -
-      scoreTerminalLocalAutocompleteCandidate(left);
-    if (scoreDelta !== 0) return scoreDelta;
-
-    const recencyDelta = right.lastUsedAtMs - left.lastUsedAtMs;
-    if (recencyDelta !== 0) return recencyDelta;
-
-    const lengthDelta = left.command.length - right.command.length;
-    if (lengthDelta !== 0) return lengthDelta;
-
-    return left.command.localeCompare(right.command);
-  });
-
-  return ranked[0]?.command ?? null;
-}
-
-function isTerminalLocalAutocompleteDraftEligible(draft: string): boolean {
-  return (
-    draft.length >= TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH &&
-    draft.length <= TERMINAL_LOCAL_AUTOCOMPLETE_MAX_DRAFT_LENGTH &&
-    draft.trimStart() === draft &&
-    draft.trim().length >= TERMINAL_LOCAL_AUTOCOMPLETE_MIN_DRAFT_LENGTH &&
-    !draft.includes('\n') &&
-    !draft.includes('\r')
-  );
-}
-
-function normalizeAutocompleteCommand(command: string): string {
-  return command.trim();
-}
-
-function canSuggestTerminalAutocompleteCommand(draft: string, command: string): boolean {
-  if (!isDangerousTerminalCommand(command)) {
-    return true;
-  }
-
-  return draft.trim().length >= TERMINAL_LOCAL_AUTOCOMPLETE_DANGEROUS_MIN_PREFIX_LENGTH;
-}
-
-function isDangerousTerminalCommand(command: string): boolean {
-  const normalized = command.trim().replace(/\s+/g, ' ').toLowerCase();
-  return (
-    normalized === 'rm' ||
-    normalized.startsWith('rm ') ||
-    normalized === 'sudo' ||
-    normalized.startsWith('sudo ') ||
-    normalized.startsWith('chmod -r ') ||
-    normalized.startsWith('chmod -r') ||
-    normalized.startsWith('git reset --hard')
-  );
-}
-
-function scoreTerminalAutocompleteStatus(
-  status: TerminalCommandRunPresentation['status'] | null
-): number {
-  switch (status) {
-    case 'succeeded':
-      return 140;
-    case 'running':
-      return 30;
-    case 'unknown':
-      return 20;
-    case 'failed':
-      return -160;
-    default:
-      return 0;
-  }
-}
-
-function scoreTerminalLocalAutocompleteCandidate(candidate: {
-  command: string;
-  frequency: number;
-  lastUsedAtMs: number;
-  sameCwd: boolean;
-  samePane: boolean;
-  sameSession: boolean;
-  statusScore: number;
-}): number {
-  return (
-    1000 +
-    candidate.statusScore +
-    (candidate.samePane ? 220 : 0) +
-    (candidate.sameSession ? 90 : 0) +
-    (candidate.sameCwd ? 120 : 0) +
-    Math.min(160, candidate.frequency * 28) +
-    Math.min(220, Math.max(0, candidate.lastUsedAtMs) / 1000)
-  );
-}
-
-function normalizeOptionalPath(path: string | null | undefined): string | null {
-  const trimmed = trimTrailingSlashes(path?.trim() || '');
-  return trimmed ? trimmed : null;
-}
-
 function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
   if (themeId === 'terminal-platform-default') return t('terminalWorkspace.themeDark');
   if (themeId === 'terminal-platform-light') return t('terminalWorkspace.themeLight');
@@ -3972,536 +3515,6 @@ function formatTerminalTabColorLabel(t: TeamTFunction, colorId: TerminalTabColor
     case 'violet':
       return t('terminalWorkspace.tabColorViolet');
   }
-}
-
-export function normalizeTerminalCommandRunEventDetail(
-  event: Event
-): (TerminalCommandRunPresentation & { durationMs?: number }) | null {
-  const detail = (event as CustomEvent<unknown>).detail;
-  if (!isRecord(detail)) {
-    return null;
-  }
-
-  const command = typeof detail.command === 'string' ? detail.command.trim() : '';
-  const clientEventId =
-    typeof detail.clientEventId === 'string' && detail.clientEventId.trim()
-      ? detail.clientEventId.trim()
-      : null;
-  const paneId = typeof detail.paneId === 'string' ? detail.paneId : null;
-  const sessionId = typeof detail.sessionId === 'string' ? detail.sessionId : null;
-  const startedAtMs =
-    typeof detail.startedAtMs === 'number' && Number.isFinite(detail.startedAtMs)
-      ? detail.startedAtMs
-      : Date.now();
-
-  if (!command || !clientEventId || !paneId || !sessionId) {
-    return null;
-  }
-
-  const durationMs =
-    typeof detail.durationMs === 'number' && Number.isFinite(detail.durationMs)
-      ? detail.durationMs
-      : undefined;
-
-  return {
-    clientEventId,
-    command,
-    durationMs,
-    paneId,
-    sessionId,
-    startedAtMs,
-    status: 'running',
-  };
-}
-
-export function upsertTerminalCommandRun(
-  runs: TerminalCommandRunPresentation[],
-  nextRun: TerminalCommandRunPresentation,
-  status: TerminalCommandRunPresentation['status']
-): TerminalCommandRunPresentation[] {
-  const existingIndex = runs.findIndex((run) => run.clientEventId === nextRun.clientEventId);
-  const existingRun = existingIndex >= 0 ? runs[existingIndex] : undefined;
-  if (status === 'running' && existingRun && existingRun.status !== 'running') {
-    return runs;
-  }
-
-  const next = {
-    ...nextRun,
-    status,
-  };
-  const merged =
-    existingIndex >= 0
-      ? runs.map((run, index) => (index === existingIndex ? { ...run, ...next } : run))
-      : [...runs, next];
-
-  return capTerminalCommandRuns(merged);
-}
-
-function capTerminalCommandRuns(
-  runs: readonly TerminalCommandRunPresentation[]
-): TerminalCommandRunPresentation[] {
-  const countsByPane = new Map<string, number>();
-  const keptReversed: TerminalCommandRunPresentation[] = [];
-
-  for (let index = runs.length - 1; index >= 0; index -= 1) {
-    const run = runs[index];
-    if (!run) continue;
-
-    const scopeKey = `${run.sessionId}\u001f${run.paneId}`;
-    const count = countsByPane.get(scopeKey) ?? 0;
-    if (count >= COMMAND_HISTORY_LIMIT) {
-      continue;
-    }
-
-    countsByPane.set(scopeKey, count + 1);
-    keptReversed.push(run);
-  }
-
-  return keptReversed.reverse().slice(-COMMAND_RUNS_STORAGE_LIMIT);
-}
-
-export function settleTerminalCommandRuns(
-  runs: TerminalCommandRunPresentation[],
-  screenLines: readonly TerminalCommandScreenLine[],
-  nowMs: number,
-  allowEmptyCompletion: boolean
-): TerminalCommandRunPresentation[] {
-  let changed = false;
-  const next = runs.map((run) => {
-    const applicableScreenLines = getTerminalCommandScreenLinesForRun(screenLines, run.startedAtMs);
-    const completion = inferTerminalCommandCompletion(applicableScreenLines, run.command);
-    const failureWithoutPrompt = completion.completed
-      ? null
-      : inferTerminalCommandFailureWithoutPrompt(applicableScreenLines, run.command);
-    if (failureWithoutPrompt) {
-      if (run.status === 'failed') {
-        return run;
-      }
-
-      changed = true;
-      return {
-        ...run,
-        durationMs: run.durationMs ?? Math.max(0, nowMs - run.startedAtMs),
-        status: 'failed' as const,
-      };
-    }
-
-    if (!completion.completed) {
-      return run;
-    }
-
-    const inferredStatus = inferTerminalCommandCompletionStatus(completion);
-    const hasAuthoritativeExitCode = typeof completion.exitCode === 'number';
-    if (run.status !== 'running') {
-      const shouldApplyAuthoritativeStatus =
-        hasAuthoritativeExitCode && run.status !== inferredStatus;
-      const shouldSettleRecoveredUnknown =
-        run.status === 'unknown' && completion.outputLines.length > 0;
-      const shouldPromoteInferredFailure = run.status !== 'failed' && inferredStatus === 'failed';
-      if (
-        shouldApplyAuthoritativeStatus ||
-        shouldSettleRecoveredUnknown ||
-        shouldPromoteInferredFailure
-      ) {
-        changed = true;
-        return {
-          ...run,
-          ...(hasAuthoritativeExitCode ? { exitCode: completion.exitCode } : {}),
-          status: inferredStatus,
-        };
-      }
-
-      return run;
-    }
-
-    if (completion.outputLines.length === 0 && !hasAuthoritativeExitCode && !allowEmptyCompletion) {
-      return run;
-    }
-
-    changed = true;
-    return {
-      ...run,
-      durationMs: Math.max(0, nowMs - run.startedAtMs),
-      ...(hasAuthoritativeExitCode ? { exitCode: completion.exitCode } : {}),
-      status:
-        completion.outputLines.length > 0 || hasAuthoritativeExitCode ? inferredStatus : 'unknown',
-    };
-  });
-
-  return changed ? next : runs;
-}
-
-function settleScopedTerminalCommandRuns(
-  runs: TerminalCommandRunPresentation[],
-  sessionId: string | null,
-  paneId: string | null,
-  screenLines: readonly TerminalCommandScreenLine[],
-  nowMs: number,
-  allowEmptyCompletion: boolean
-): TerminalCommandRunPresentation[] {
-  if (!sessionId || !paneId) {
-    return runs;
-  }
-
-  const scopedRuns = runs.filter((run) => run.sessionId === sessionId && run.paneId === paneId);
-  if (scopedRuns.length === 0) {
-    return runs;
-  }
-
-  const settledScopedRuns = settleTerminalCommandRuns(
-    scopedRuns,
-    screenLines,
-    nowMs,
-    allowEmptyCompletion
-  );
-  if (settledScopedRuns === scopedRuns) {
-    return runs;
-  }
-
-  let scopedIndex = 0;
-  return runs.map((run) => {
-    if (run.sessionId !== sessionId || run.paneId !== paneId) {
-      return run;
-    }
-
-    const settledRun = settledScopedRuns[scopedIndex];
-    scopedIndex += 1;
-    return settledRun ?? run;
-  });
-}
-
-export function closeSupersededTerminalCommandRuns(
-  runs: TerminalCommandRunPresentation[],
-  nextRun: TerminalCommandRunPresentation,
-  screenLines: readonly TerminalCommandScreenLine[],
-  nowMs: number
-): TerminalCommandRunPresentation[] {
-  const settledRuns = settleTerminalCommandRuns(runs, screenLines, nowMs, true);
-  let changed = settledRuns !== runs;
-
-  const next = settledRuns.map((run) => {
-    if (
-      run.clientEventId === nextRun.clientEventId ||
-      run.sessionId !== nextRun.sessionId ||
-      run.paneId !== nextRun.paneId ||
-      run.startedAtMs >= nextRun.startedAtMs ||
-      run.status !== 'running'
-    ) {
-      return run;
-    }
-
-    changed = true;
-    const applicableScreenLines = getTerminalCommandScreenLinesForRun(screenLines, run.startedAtMs);
-    const completion = inferTerminalCommandCompletion(applicableScreenLines, run.command);
-    const failureWithoutPrompt = completion.completed
-      ? null
-      : inferTerminalCommandFailureWithoutPrompt(applicableScreenLines, run.command);
-    const inferredStatus = failureWithoutPrompt
-      ? 'failed'
-      : completion.completed &&
-          (completion.outputLines.length > 0 || typeof completion.exitCode === 'number')
-        ? inferTerminalCommandCompletionStatus(completion)
-        : 'unknown';
-
-    return {
-      ...run,
-      durationMs: run.durationMs ?? Math.max(0, nextRun.startedAtMs - run.startedAtMs),
-      ...(typeof completion.exitCode === 'number' ? { exitCode: completion.exitCode } : {}),
-      status: inferredStatus,
-    };
-  });
-
-  return changed ? next : runs;
-}
-
-export function inferTerminalCommandCompletion(
-  lines: readonly TerminalCommandScreenLine[],
-  command: string
-): { completed: boolean; exitCode?: number | null; outputLines: string[] } {
-  const commandLineIndex = findLatestTerminalCommandLineIndex(lines, command);
-  if (commandLineIndex === -1) {
-    return { completed: false, outputLines: [] };
-  }
-
-  for (let index = commandLineIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    const commandFinishedMark = getTerminalCommandFinishedMark(line);
-    if (commandFinishedMark) {
-      const exitCode = commandFinishedMark.exit_code;
-      return {
-        completed: true,
-        ...(typeof exitCode === 'number' && Number.isFinite(exitCode)
-          ? { exitCode: Math.trunc(exitCode) }
-          : { exitCode: null }),
-        outputLines: collectTerminalCommandOutputLines(lines, commandLineIndex + 1, index),
-      };
-    }
-
-    if (isTerminalPromptBoundaryLine(line)) {
-      return {
-        completed: true,
-        outputLines: collectTerminalCommandOutputLines(lines, commandLineIndex + 1, index),
-      };
-    }
-  }
-
-  return { completed: false, outputLines: [] };
-}
-
-function inferTerminalCommandFailureWithoutPrompt(
-  lines: readonly TerminalCommandScreenLine[],
-  command: string
-): { outputLines: string[] } | null {
-  const commandLineIndex = findLatestTerminalCommandLineIndex(lines, command);
-  if (commandLineIndex === -1 || commandLineIndex >= lines.length - 1) {
-    return null;
-  }
-
-  const outputLines = lines
-    .slice(commandLineIndex + 1)
-    .map((line) => getTerminalCommandScreenLineText(line).trimEnd())
-    .filter((line) => line.trim().length > 0);
-  if (outputLines.length === 0) {
-    return null;
-  }
-
-  return inferTerminalCommandOutputStatus(outputLines) === 'failed' ? { outputLines } : null;
-}
-
-function findLatestTerminalCommandLineIndex(
-  lines: readonly TerminalCommandScreenLine[],
-  command: string
-): number {
-  const normalizedCommand = normalizeCommandForPromptMatch(command);
-  let rawCommandLineIndex = -1;
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const screenLine = lines[index];
-    const line = getTerminalCommandScreenLineText(screenLine);
-    const promptCommands = extractCommandCandidatesFromPromptLine(line);
-    const normalizedLine = normalizeCommandForPromptMatch(line);
-
-    if (
-      promptCommands.some(
-        (promptCommand) =>
-          isTerminalCommandFragmentMatch(promptCommand, normalizedCommand) ||
-          (isTerminalHistoryScreenLine(screenLine) &&
-            isDuplicatedLeadingTerminalCommandEcho(promptCommand, normalizedCommand))
-      ) ||
-      (hasTerminalCommandScreenLineMark(screenLine, 'input_start') &&
-        normalizedLine.endsWith(normalizedCommand))
-    ) {
-      return rawCommandLineIndex === -1 ? index : rawCommandLineIndex;
-    }
-
-    if (
-      normalizedLine === normalizedCommand ||
-      (isTerminalHistoryScreenLine(screenLine) &&
-        isDuplicatedLeadingTerminalCommandEcho(normalizedLine, normalizedCommand))
-    ) {
-      rawCommandLineIndex = index;
-      continue;
-    }
-
-    if (rawCommandLineIndex !== -1 && isTerminalPromptBoundaryLine(screenLine)) {
-      return rawCommandLineIndex;
-    }
-  }
-
-  return rawCommandLineIndex;
-}
-
-function createTerminalCommandScreenLines(
-  lines: readonly Pick<ScreenLine, 'semantic_marks' | 'text'>[],
-  cursorRow: number | null
-): TerminalCommandScreenLine[] {
-  return lines.map((line, index) => ({
-    ...line,
-    source: 'live',
-    ...(index === cursorRow ? { isActiveCursorLine: true } : {}),
-  }));
-}
-
-function collectTerminalCommandOutputLines(
-  lines: readonly TerminalCommandScreenLine[],
-  startIndex: number,
-  endIndex: number
-): string[] {
-  return lines
-    .slice(startIndex, endIndex)
-    .map((line) => getTerminalCommandScreenLineText(line).trimEnd())
-    .filter((line) => line.trim().length > 0);
-}
-
-function getTerminalCommandScreenLineText(line: TerminalCommandScreenLine | undefined): string {
-  return typeof line === 'string' ? line : (line?.text ?? '');
-}
-
-function getTerminalCommandFinishedMark(
-  line: TerminalCommandScreenLine | undefined
-): ScreenLineSemanticMark | null {
-  if (typeof line === 'string' || !line) {
-    return null;
-  }
-
-  return line.semantic_marks?.find((mark) => mark.kind === 'command_finished') ?? null;
-}
-
-function hasTerminalCommandScreenLineMark(
-  line: TerminalCommandScreenLine | undefined,
-  kind: ScreenLineSemanticMark['kind']
-): boolean {
-  return (
-    typeof line !== 'string' && Boolean(line?.semantic_marks?.some((mark) => mark.kind === kind))
-  );
-}
-
-function isTerminalPromptBoundaryLine(line: TerminalCommandScreenLine | undefined): boolean {
-  const text = getTerminalCommandScreenLineText(line);
-  if (isTerminalPromptCommandLine(text)) {
-    return true;
-  }
-
-  if (!isTerminalPromptOnlyLine(text)) {
-    return false;
-  }
-
-  return (
-    typeof line === 'string' ||
-    (line?.source === 'history' && line.isHistoryTailLine === true) ||
-    line?.isActiveCursorLine === true
-  );
-}
-
-function isTerminalHistoryScreenLine(
-  line: TerminalCommandScreenLine | undefined
-): line is Exclude<TerminalCommandScreenLine, string> & { source: 'history' } {
-  return typeof line !== 'string' && line?.source === 'history';
-}
-
-function getTerminalCommandScreenLinesForRun(
-  lines: readonly TerminalCommandScreenLine[],
-  startedAtMs: number
-): TerminalCommandScreenLine[] {
-  const startedAt = BigInt(Math.max(0, Math.trunc(startedAtMs)));
-  return lines.filter(
-    (line) =>
-      !isTerminalHistoryScreenLine(line) ||
-      line.historyCapturedAtMs === undefined ||
-      line.historyCapturedAtMs >= startedAt
-  );
-}
-
-function inferTerminalCommandCompletionStatus(completion: {
-  exitCode?: number | null;
-  outputLines: readonly string[];
-}): TerminalCommandRunPresentation['status'] {
-  if (typeof completion.exitCode === 'number') {
-    return completion.exitCode === 0 ? 'succeeded' : 'failed';
-  }
-
-  return inferTerminalCommandOutputStatus(completion.outputLines);
-}
-
-function isTerminalPromptOnlyLine(line: string): boolean {
-  const text = line.trim();
-  if (!text) {
-    return false;
-  }
-
-  if (text === '%' || text === '$' || text === '#') {
-    return true;
-  }
-
-  return /(?:^|\s)[%$#]\s*$/u.test(text) && !/(?:^|\s)[%$#]\s+\S/u.test(text);
-}
-
-function isTerminalPromptCommandLine(line: string): boolean {
-  return extractCommandFromPromptLine(line).length > 0;
-}
-
-function extractCommandFromPromptLine(line: string): string {
-  return extractCommandCandidatesFromPromptLine(line).at(-1) ?? '';
-}
-
-function extractCommandCandidatesFromPromptLine(line: string): string[] {
-  const trimmed = line.trimEnd();
-  const wrappedPromptCommand = /^<\s{2,}(.+)$/u.exec(trimmed);
-  if (wrappedPromptCommand?.[1]) {
-    return [wrappedPromptCommand[1].trim()];
-  }
-
-  const candidates: string[] = [];
-  for (let index = 0; index < trimmed.length; index += 1) {
-    const marker = trimmed[index] ?? '';
-    if (marker !== '%' && marker !== '$' && marker !== '#') {
-      continue;
-    }
-
-    const command = trimmed.slice(index + 1);
-    if (command.startsWith(' ')) {
-      candidates.push(command.trim());
-    }
-  }
-
-  return candidates;
-}
-
-function normalizeCommandForPromptMatch(command: string): string {
-  return command.trim().replace(/\s+/g, ' ');
-}
-
-function isTerminalCommandFragmentMatch(fragment: string, normalizedCommand: string): boolean {
-  const normalizedFragment = normalizeCommandForPromptMatch(fragment);
-  if (!normalizedFragment) {
-    return false;
-  }
-
-  if (normalizedFragment === normalizedCommand) {
-    return true;
-  }
-
-  if (normalizedCommand.startsWith(normalizedFragment)) {
-    return true;
-  }
-
-  return normalizedFragment.length >= 8 && normalizedCommand.includes(normalizedFragment);
-}
-
-function isDuplicatedLeadingTerminalCommandEcho(
-  candidate: string,
-  normalizedCommand: string
-): boolean {
-  const normalizedCandidate = normalizeCommandForPromptMatch(candidate);
-  return (
-    normalizedCommand.length > 0 &&
-    normalizedCandidate.length === normalizedCommand.length + 1 &&
-    normalizedCandidate.startsWith(normalizedCommand.slice(0, 1)) &&
-    normalizedCandidate.slice(1) === normalizedCommand
-  );
-}
-
-export function inferTerminalCommandOutputStatus(
-  outputLines: readonly string[]
-): TerminalCommandRunPresentation['status'] {
-  const output = stripAnsiEscapeSequences(outputLines.join('\n')).toLowerCase();
-  if (
-    /(?:^|\n)\s*(?:fatal|error):/u.test(output) ||
-    /(?:^|\n)\s*(?:npm|pnpm|yarn)\s+err!?/u.test(output) ||
-    /(?:^|\n)\s*traceback\s+\(most recent call last\):/u.test(output) ||
-    /(?:^|\n)\s*exception:/u.test(output) ||
-    /(?:command not found|no such file or directory|permission denied|not a git repository)/u.test(
-      output
-    ) ||
-    /(?:exit(?:ed)?\s+(?:with\s+)?(?:status|code)|exit\s+code)\s+[1-9]\d*/u.test(output)
-  ) {
-    return 'failed';
-  }
-
-  return 'succeeded';
-}
-
-function stripAnsiEscapeSequences(value: string): string {
-  return value.replace(ANSI_ESCAPE_SEQUENCE_PATTERN, '');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
