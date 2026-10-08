@@ -110,7 +110,7 @@ jobs:
       contents: write
       actions: read
     env:
-      CHECKOUT_SHA: a0a8c4d895cfcbe3c790507fe9938b02e4464706
+      CHECKOUT_SHA: 2dfb660aa4ee533948688ba63f31247d94b445fe
       APPLICATION_SHA: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
       ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
       RELEASE_TAG: v2.17.10
@@ -123,7 +123,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: a0a8c4d895cfcbe3c790507fe9938b02e4464706
+          ref: 2dfb660aa4ee533948688ba63f31247d94b445fe
           persist-credentials: false
       - name: Bind workflow origin and immutable full220 checkout
         env:
@@ -159,14 +159,20 @@ jobs:
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+      - name: Validate exact G closed executor and publisher authority
+        run: |
+          set -euo pipefail
+          pnpm exec eslint --parser-options '{"projectService":false,"project":["./tsconfig.release-tooling.json","./tsconfig.updater-e2e.json"]}' scripts/ci/publish-full-release.ts scripts/ci/release/release220ExecutionPins.ts scripts/ci/release/release220PublisherAuthority.ts scripts/ci/release/nativeReadinessAuthority.ts scripts/ci/release/nativeReadinessGithub.ts scripts/e2e/release-updater/release220-publisher-authority.test.mts
+          pnpm exec eslint --config eslint.fast.config.js scripts/ci/release/nativeReadiness.ts
+          pnpm exec tsx --test scripts/e2e/release-updater/release220-publisher-authority.test.mts
+          pnpm exec vitest run --maxWorkers=1 test/scripts/release220ExecutionAuthority.test.ts test/scripts/nativeReadiness.test.ts
       - name: Verify prepared full220 readiness without publication
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
-          # The original CLI authenticates checkout tooling; workflow origin stays in the sidecar.
-          GITHUB_SHA="$CHECKOUT_SHA" pnpm exec tsx scripts/ci/publish-full-release.ts --plan-digest "$PLAN_DIGEST" --output publication-result.json
+          pnpm exec tsx scripts/ci/publish-full-release.ts --execution-identity execution-identity.json --plan-digest "$PLAN_DIGEST" --output publication-result.json
       - name: Preserve full220 readiness and workflow checkout identity
         if: always()
         uses: actions/upload-artifact@v7
