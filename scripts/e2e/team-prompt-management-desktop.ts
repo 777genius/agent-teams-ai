@@ -782,7 +782,9 @@ try {
         });
         assert.equal(created.runtimeSelectionVersion, 1);
         assert.equal(created.runtimeSelection, 'unresolved');
-        assertProviderless(await call('team_get', { teamName }), ['developer']);
+        assertProviderless(await call('team_get', { teamName, configuration: true }), [
+          'developer',
+        ]);
       }
       evidence.createdUi = await waitFor(async () => {
         const facts = await listFacts();
@@ -794,7 +796,7 @@ try {
           ? facts
           : false;
       }, 'two canonical Created cards');
-      let fresh = await call('team_get', { teamName: first });
+      let fresh = await call('team_get', { teamName: first, configuration: true });
       await call('team_update', {
         teamName: first,
         expectedContext: info.context,
@@ -812,7 +814,7 @@ try {
           ? facts
           : false;
       }, 'committed metadata fact');
-      fresh = await call('team_get', { teamName: first });
+      fresh = await call('team_get', { teamName: first, configuration: true });
       await call('team_update', {
         teamName: first,
         expectedContext: info.context,
@@ -822,7 +824,7 @@ try {
           { name: 'auditor', role: 'reviewer', workflow: 'Independent sandbox review.' },
         ],
       });
-      const edited = await call('team_get', { teamName: first });
+      const edited = await call('team_get', { teamName: first, configuration: true });
       const editedSaved = assertProviderless(edited, ['developer', 'auditor']);
       const editedByName = new Map(
         (editedSaved.members as unknown[]).map((value) => {
@@ -843,9 +845,10 @@ try {
         }),
         /TEAM_REVISION_MISMATCH/
       );
-      const unchanged = assertProviderless(await call('team_get', { teamName: second }), [
-        'developer',
-      ]);
+      const unchanged = assertProviderless(
+        await call('team_get', { teamName: second, configuration: true }),
+        ['developer']
+      );
       assert.notEqual(unchanged.description, 'Must never save');
       evidence.partialUi = await waitFor(async () => {
         const facts = await listFacts();
@@ -860,13 +863,13 @@ try {
           : false;
       }, 'partial outcome preserved and factual recent group without duplicates');
       await screenshot('partial-management-results');
-      fresh = await call('team_get', { teamName: second });
+      fresh = await call('team_get', { teamName: second, configuration: true });
       await call('team_trash', {
         teamName: second,
         expectedContext: info.context,
         expectedRevision: fresh.configurationRevision,
       });
-      const trashed = await call('team_get', { teamName: second });
+      const trashed = await call('team_get', { teamName: second, configuration: true });
       assert.equal(typeof trashed.deletedAt, 'string');
       assertProviderless(trashed, ['developer']);
       await access(path.join(claude, 'teams', second, 'team.meta.json'));
@@ -880,7 +883,7 @@ try {
       await screenshot('trash-before-restore');
       await click('Restore team', false, second);
       const restored = await waitFor(async () => {
-        const team = await call('team_get', { teamName: second });
+        const team = await call('team_get', { teamName: second, configuration: true });
         return !team.deletedAt ? team : false;
       }, 'UI restores the original draft');
       const restoredSaved = assertProviderless(restored, ['developer']);

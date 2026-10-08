@@ -407,7 +407,7 @@ describe('MCP team tools over the local REST control API', () => {
     const teamName = 'managed-draft';
     const base = { claudeDir: root, controlUrl, teamName, expectedContext };
     const get = async () =>
-      parseJsonToolResult(await getTool('team_get').execute(base)) as {
+      parseJsonToolResult(await getTool('team_get').execute({ ...base, configuration: true })) as {
         configurationRevision: string;
         deletedAt?: string;
         savedRequest: TeamCreateRequest;
@@ -630,7 +630,10 @@ describe('MCP team tools over the local REST control API', () => {
       const initial = await services.teamPromptManagement!.get(teamName);
       const savedMetadata = await readFile(metaPath);
       await writeFile(membersPath, unreadable);
-      const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      const get = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=1`,
+      });
       expect(get.statusCode).toBe(409);
       expect(get.json().error).toContain('TEAM_MEMBERS_METADATA_UNREADABLE');
       const update = await app.inject({
@@ -665,6 +668,139 @@ describe('MCP team tools over the local REST control API', () => {
         { name: 'replacement' },
       ]);
     } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Catches malformed or non-object config becoming a generic 500 or being mistaken for a draft.
+  it.each(['{', '', 'null', '[]'])(
+    'rejects unreadable config %j with a typed management error and no writes',
+    async (unreadable) => {
+      const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-config-json-'));
+      setClaudeBasePathOverride(root);
+      const app = Fastify();
+      const { services, teamDataService } = createServices(root);
+      const { context, events } = enableManagement(services, teamDataService, root);
+      registerTeamRoutes(app, services);
+      const teamName = 'unreadable-config';
+      const directory = path.join(root, 'teams', teamName);
+      const configPath = path.join(directory, 'config.json');
+      try {
+        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        const initial = await services.teamPromptManagement!.get(teamName);
+        const metaBytes = await readFile(path.join(directory, 'team.meta.json'));
+        await writeFile(configPath, unreadable);
+        const get = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${teamName}?configuration=1`,
+        });
+        expect(get.statusCode).toBe(409);
+        expect(get.json().error).toContain('TEAM_CONFIGURATION_UNREADABLE');
+        const edit = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: {
+            expectedContext: context.snapshot(),
+            expectedRevision: initial.configurationRevision,
+            metadata: { description: 'Must not write' },
+          },
+        });
+        expect(edit.statusCode).toBe(409);
+        expect(edit.json().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
+        expect(await readFile(configPath, 'utf8')).toBe(unreadable);
+        expect(await readFile(path.join(directory, 'team.meta.json'))).toEqual(metaBytes);
+        expect(events).toHaveLength(0);
+      } finally {
+        await app.close();
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        TeamConfigReader.clearCacheForTests();
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  // Catches default live reads waiting on the configuration writer gate or requiring readable
+  // management metadata. Also preserves the existing runtime-overlay failure fallback.
+  it('keeps ordinary snapshots available while a configuration operation holds the team gate', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-ordinary-read-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'ordinary-live-read';
+    const directory = path.join(root, 'teams', teamName);
+    let release!: () => void;
+    let operation: Promise<void> | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await writeFile(
+        path.join(directory, 'config.json'),
+        JSON.stringify({
+          name: 'Existing live team',
+          projectPath: root,
+          members: [{ name: 'builder', agentId: 'existing-builder' }],
+        })
+      );
+      await writeFile(path.join(directory, 'members.meta.json'), '{');
+      services.teamApis!.runtime.getRuntimeState = async () => {
+        throw new Error('Runtime status temporarily unavailable');
+      };
+      let entered!: () => void;
+      const admission = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      operation = teamDataService.runConfigurationOperation(teamName, async () => {
+        entered();
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      });
+      await admission;
+      const response = await Promise.race([
+        app.inject({ method: 'GET', url: `/api/teams/${teamName}` }),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new Error('Ordinary snapshot waited for the configuration gate')),
+            2000
+          );
+        }),
+      ]);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        teamName,
+        members: [expect.objectContaining({ name: 'builder', agentId: 'existing-builder' })],
+      });
+      expect(response.json()).not.toHaveProperty('configurationRevision');
+      const disabled = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=0&legacy=ignored`,
+      });
+      expect(disabled.statusCode).toBe(200);
+      expect(disabled.json()).not.toHaveProperty('configurationRevision');
+      for (const query of ['configuration=true', 'configuration=1&configuration=0']) {
+        const invalid = await app.inject({ method: 'GET', url: `/api/teams/${teamName}?${query}` });
+        expect(invalid.statusCode).toBe(400);
+      }
+      release();
+      await operation;
+      const explicit = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=1`,
+      });
+      expect(explicit.statusCode).toBe(409);
+      expect(explicit.json().error).toContain('TEAM_MEMBERS_METADATA_UNREADABLE');
+      expect(await readFile(path.join(directory, 'members.meta.json'), 'utf8')).toBe('{');
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      release?.();
+      await operation;
       await app.close();
       setAppDataBasePath(null);
       setClaudeBasePathOverride(null);
@@ -708,7 +844,10 @@ describe('MCP team tools over the local REST control API', () => {
       );
       const configBytes = await readFile(configPath);
       const metaBytes = await readFile(metaPath);
-      const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      const get = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=1`,
+      });
       expect(get.statusCode).toBe(200);
       expect(get.json().members).toEqual(
         expect.arrayContaining([
@@ -779,7 +918,10 @@ describe('MCP team tools over the local REST control API', () => {
             : await readFile(targetPath);
         const oversized = Buffer.concat([original, Buffer.alloc(limit + 1, ' ')]);
         await writeFile(targetPath, oversized);
-        const get = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+        const get = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${teamName}?configuration=1`,
+        });
         expect(get.statusCode).toBe(409);
         expect(get.json().error).toContain('TEAM_CONFIGURATION_UNREADABLE');
         const edit = await app.inject({
@@ -857,7 +999,10 @@ describe('MCP team tools over the local REST control API', () => {
           }),
         ],
       });
-      const response = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=1`,
+      });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
         configurationRevision: before.configurationRevision,
@@ -891,7 +1036,9 @@ describe('MCP team tools over the local REST control API', () => {
     const expectedContext = context.snapshot();
     const configPath = path.join(root, 'teams', teamName, 'config.json');
     const get = async () =>
-      (await app.inject({ method: 'GET', url: `/api/teams/${teamName}` })).json() as {
+      (
+        await app.inject({ method: 'GET', url: `/api/teams/${teamName}?configuration=1` })
+      ).json() as {
         configurationRevision: string;
         savedRequest: TeamCreateRequest | null;
       };
@@ -1260,6 +1407,10 @@ describe('MCP team tools over the local REST control API', () => {
 
       const restDraft = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team');
       expect(restDraft.status).toBe(200);
+      const unavailable = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team?configuration=1');
+      expect(unavailable.status).toBe(501);
+      expect(unavailable.body).toMatchObject({ error: expect.stringContaining('not available') });
+
       expect(restDraft.body).toMatchObject({
         teamName: 'mcp-e2e-team',
         pendingCreate: true,

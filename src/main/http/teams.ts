@@ -24,6 +24,7 @@ import {
 } from './teamRouteParsers';
 
 import type { HttpServices } from './index';
+import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
 import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
   TeamHttpHandlerApis,
@@ -297,7 +298,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             createRequest,
             (
               request.body as CreateTeamBody & {
-                expectedContext?: import('@features/external-agent-connection/contracts').AppConnectionContext;
+                expectedContext?: AppConnectionContext;
               }
             ).expectedContext
           )
@@ -325,39 +326,56 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   });
 
-  app.get<{ Params: { teamName: string } }>('/api/teams/:teamName', async (request, reply) => {
-    try {
-      const validatedTeamName = validateTeamName(request.params.teamName);
-      if (!validatedTeamName.valid) {
-        return reply.status(400).send({ error: validatedTeamName.error });
-      }
+  app.get<{ Params: { teamName: string }; Querystring: { configuration?: string } }>(
+    '/api/teams/:teamName',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
 
-      const teamName = validatedTeamName.value!;
-      const draftSavedRequest = managementFeature
-        ? null
-        : await getDraftSavedRequest(services, teamName);
-      if (draftSavedRequest) {
-        return reply.send({
-          teamName,
-          pendingCreate: true,
-          savedRequest: draftSavedRequest,
-        });
-      }
+        if (
+          request.query.configuration !== undefined &&
+          request.query.configuration !== '1' &&
+          request.query.configuration !== '0'
+        )
+          throw new HttpBadRequestError('configuration must be 1 or 0');
+        const teamName = validatedTeamName.value!;
+        const configuration = request.query.configuration === '1';
+        if (configuration && !managementFeature)
+          throw new HttpFeatureUnavailableError(
+            'Team configuration snapshots are not available in this mode'
+          );
+        const draftSavedRequest = configuration
+          ? null
+          : await getDraftSavedRequest(services, teamName);
+        if (draftSavedRequest) {
+          return reply.send({
+            teamName,
+            pendingCreate: true,
+            savedRequest: draftSavedRequest,
+          });
+        }
 
-      const taskActivityApi = services.teamApis?.taskActivity;
-      await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
-      return reply.send(
-        managementFeature
-          ? await managementFeature.get(teamName)
-          : await getTeamDataWithRuntimeOverlay(services, teamName)
-      );
-    } catch (error) {
-      if (shouldLogError(error)) {
-        logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));
+        const taskActivityApi = services.teamApis?.taskActivity;
+        await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+        return reply.send(
+          configuration && managementFeature
+            ? await managementFeature.get(teamName)
+            : await getTeamDataWithRuntimeOverlay(services, teamName)
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
-  });
+  );
 
   app.post<{ Params: { teamName: string }; Body: LaunchBody }>(
     '/api/teams/:teamName/launch',

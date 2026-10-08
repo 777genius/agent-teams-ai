@@ -68,15 +68,18 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'team_get',
-    description: 'Get a team snapshot through the local Agent Teams control API',
+    description:
+      'Get a team snapshot. Set configuration=true for a coherent saved configurationRevision before team_update or team_trash; ordinary reads remain available during provisioning.',
     parameters: z.object({
       ...teamContextSchema,
+      configuration: z.boolean().optional(),
     }),
-    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs }) => {
+    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, configuration }) => {
       return jsonTextContent(
-        await getController(teamName, claudeDir).runtime.getTeam(
-          controlFlags({ controlUrl, waitTimeoutMs })
-        )
+        await getController(teamName, claudeDir).runtime.getTeam({
+          ...controlFlags({ controlUrl, waitTimeoutMs }),
+          ...(configuration !== undefined ? { configuration } : {}),
+        })
       );
     },
   });

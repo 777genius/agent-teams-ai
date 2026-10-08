@@ -442,9 +442,15 @@ describe('agent-teams-mcp tools', () => {
           ],
         };
       }
-      if (method === 'GET' && url === '/api/teams/alpha') {
+      if (
+        method === 'GET' &&
+        (url === '/api/teams/alpha' || url === '/api/teams/alpha?configuration=1')
+      ) {
         return {
           body: {
+            ...(url.endsWith('?configuration=1')
+              ? { configurationRevision: 'saved-revision' }
+              : {}),
             teamName: 'alpha',
             members: [{ name: 'builder', role: 'Engineer' }],
             tasks: [],
@@ -475,6 +481,17 @@ describe('agent-teams-mcp tools', () => {
         })
       );
       expect(fetched.teamName).toBe('alpha');
+      expect(fetched).not.toHaveProperty('configurationRevision');
+      // Catches the explicit coherent-snapshot option being dropped by MCP/controller forwarding.
+      const configuration = parseJsonToolResult(
+        await getTool('team_get').execute({
+          claudeDir,
+          teamName: 'alpha',
+          controlUrl: server.baseUrl,
+          configuration: true,
+        })
+      );
+      expect(configuration.configurationRevision).toBe('saved-revision');
 
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
@@ -513,6 +530,11 @@ describe('agent-teams-mcp tools', () => {
         {
           method: 'GET',
           url: '/api/teams/alpha',
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          url: '/api/teams/alpha?configuration=1',
           body: undefined,
         },
         {

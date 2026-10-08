@@ -514,9 +514,13 @@ async function getConnectionInfo(context) {
 
 async function getTeam(context, flags = {}) {
   const baseUrls = resolveControlBaseUrls(context, flags);
-  return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}`, {
-    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
-  });
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}${flags.configuration === true ? '?configuration=1' : ''}`,
+    {
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
 }
 
 async function updateTeam(context, flags = {}) {

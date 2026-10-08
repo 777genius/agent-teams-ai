@@ -93,7 +93,24 @@ export class TeamPromptManagement {
         this.readFingerprintFile(directory, name)
       )
     );
-    const config = contents[0] ? (JSON.parse(contents[0]) as Record<string, unknown>) : null;
+    let config: Record<string, unknown> | null = null;
+    if (contents[0] !== null) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(contents[0]);
+      } catch {
+        throw new TeamManagementError(
+          'TEAM_CONFIGURATION_UNREADABLE',
+          'config.json is invalid JSON'
+        );
+      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new TeamManagementError(
+          'TEAM_CONFIGURATION_UNREADABLE',
+          'config.json must contain a configuration object'
+        );
+      config = parsed as Record<string, unknown>;
+    }
     const hash = createHash('sha256').update(
       JSON.stringify({ teamName, directory: [identity.dev, identity.ino, identity.birthtimeMs] })
     );
