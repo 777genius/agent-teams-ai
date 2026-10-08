@@ -6,7 +6,7 @@
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
 - Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-E5gsXY/evidence.json`.
 - Evidence SHA256: `3b63796e50734147e8384b5f4679eb39ba212b7111d14f24de2b8e1176cbcf36`.
-- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,342 production files, with teams HTTP at 799/800 and no baseline increase.
+- Subsequent documentation edits and the integration of main CI/release qualification fixes do not change application, MCP, controller or desktop harness code; these match the tested source. Source-size guard passed 3,342 production files, with teams HTTP at 799/800 and no baseline increase.
 
 ## Actual desktop and native MCP proof
 
