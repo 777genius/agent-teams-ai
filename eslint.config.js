@@ -14,6 +14,7 @@ import boundaries from 'eslint-plugin-boundaries';
 import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
+import { featureOverrides } from './eslint.feature-overrides.mts';
 
 export default defineConfig([
   // Global ignores
@@ -628,27 +629,13 @@ export default defineConfig([
     },
   },
 
-  {
-    name: 'team-transcript-project-resolver-sonar-override',
-    files: ['src/main/services/team/TeamTranscriptProjectResolver.ts'],
-    rules: {
-      'sonarjs/no-identical-functions': 'off',
-    },
-  },
+  ...featureOverrides(jsxA11y),
 
   // Preload script (Electron bridge)
   {
     name: 'electron-preload',
     files: ['src/preload/**/*.ts'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
-  },
-
-  // Keep this feature-renderer accessibility rule aligned with fast lint.
-  {
-    name: 'feature-renderer-keyboard-accessibility',
-    files: ['src/features/**/renderer/**/*.{ts,tsx}'],
-    plugins: { 'jsx-a11y': jsxA11y },
-    rules: { 'jsx-a11y/no-noninteractive-element-interactions': 'error' },
   },
 
   // Renderer process (React + A11y + Tailwind)
