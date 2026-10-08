@@ -597,6 +597,20 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     modifiers: 0,
   });
   await getClient().send('Input.insertText', { text: request });
+  const templateIds = ['software-product', 'marketing', 'content', 'research'];
+  assert(
+    await evaluate(() =>
+      [...document.querySelectorAll('[data-template-reference]')].every(
+        (card) =>
+          card.getAttribute('data-state') === 'closed' &&
+          !card.querySelector('[data-role="template-participant"]') &&
+          Boolean(card.querySelector('button svg'))
+      )
+    ),
+    'Every team starts collapsed with a thematic icon'
+  );
+  for (const templateId of templateIds)
+    await click(`[data-template-reference="${templateId}"] > button`, true);
   const references = await evaluate(() => ({
     ids: [...document.querySelectorAll('[data-template-reference]')]
       .map((node) => node.getAttribute('data-template-reference'))
@@ -651,11 +665,11 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
   assert(
     await evaluate(() => {
       const task = document.querySelector('#external-agent-task');
-      const preview = document.querySelector<HTMLTextAreaElement>(
+      const preview = document.querySelector<HTMLElement>(
         '[data-testid="external-agent-prompt-preview"]'
       );
       const copy = document.querySelector('[data-testid="external-agent-prompt-copy"]');
-      const label = document.querySelector('label[for="external-agent-prompt-preview"]');
+      const label = document.querySelector('#external-agent-prompt-preview-label');
       const references = document.querySelector('[data-template-reference]');
       return Boolean(
         task &&
@@ -663,8 +677,11 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
         copy &&
         label &&
         references &&
-        preview.readOnly &&
-        preview.value &&
+        !preview.isContentEditable &&
+        !preview.matches('input,textarea') &&
+        preview.textContent &&
+        preview.scrollHeight > preview.clientHeight &&
+        preview.clientHeight <= 150 &&
         preview.getClientRects().length &&
         task.parentElement?.nextElementSibling?.contains(preview) &&
         label.parentElement?.contains(copy) &&
@@ -692,14 +709,10 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     assert(copied.includes('Use team_update') && copied.includes('Use team_trash'));
     assert.equal(
       await evaluate(
-        () =>
-          (
-            document.querySelector(
-              '[data-testid="external-agent-prompt-preview"]'
-            ) as HTMLTextAreaElement | null
-          )?.readOnly
+        () => document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
       ),
-      true
+      copied,
+      'Final text matches the actual copied prompt'
     );
     evidence[`${theme}Popup`] = {
       ...references,
@@ -718,7 +731,26 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
     dialog.scrollTop = 0;
   });
+  for (const templateId of templateIds)
+    await click(`[data-template-reference="${templateId}"] > button`, true);
+  await evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    dialog.scrollTop = 0;
+  });
   await screenshot(`popup-${theme}-${narrow ? '320' : '1280'}`);
+  await evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    dialog.scrollTop = dialog.scrollHeight;
+  });
+  await screenshot(`templates-collapsed-${theme}`);
+  await click('[data-template-reference="marketing"] > button', true);
+  await evaluate(() => {
+    document
+      .querySelector('[data-template-reference="marketing"]')
+      ?.scrollIntoView({ block: 'start' });
+  });
+  await screenshot(`template-marketing-expanded-${theme}`);
+
   await key('Escape', 'Escape', 27);
   await waitFor(
     () => evaluate(() => !document.querySelector('[data-testid="external-agent-prompt-dialog"]')),
