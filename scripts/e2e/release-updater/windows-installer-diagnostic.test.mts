@@ -117,3 +117,40 @@ void test('job identity, outcome and artifact creation remain bounded independen
     )
   );
 });
+
+void test('known System32 and SysWOW64 aliases accept quoted or unquoted executable tokens only', () => {
+  const native = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+  for (const image of [ps, native]) {
+    for (const token of [ps, native.toUpperCase()]) {
+      for (const quoted of [true, false]) {
+        const executableToken = quoted ? `"${token}"` : token;
+        const args = `${executableToken} ${body}`;
+        const result = installerCommand(image, args, 'C:\\Windows', root);
+        assert.equal(result.command, args);
+        assert.equal(result.stage, 'IS_POWERSHELL_AVAILABLE/Get-Command');
+        assert.equal(result.format.knownExecutableToken, true);
+        assert.equal(result.format.quotedExecutableToken, quoted);
+        assert.equal(result.stopEligible, false);
+      }
+    }
+  }
+});
+void test('executable-token grammar and exact approved body never disclose unknown arguments', () => {
+  for (const args of [
+    `${ps} ${body}\n`,
+    `${ps} ${body}\r\n`,
+    `${ps}.evil ${body}`,
+    `"${ps}"suffix ${body}`,
+    `"${ps}"\n${body}`,
+    `${ps} ${body}; secret=value`,
+    `${ps} -noprofile -NonInteractive ${body.slice(27)}`,
+    `C:\\secret-token.exe ${body}`,
+    `${ps} -C "Write-Output secret-body"`,
+  ]) {
+    const result = installerCommand(ps, args, 'C:\\Windows', root);
+    assert.equal(result.command, '[redacted]');
+    assert.equal(result.stage, 'unrecognized-redacted');
+    assert.equal(result.stopEligible, false);
+    assert(!JSON.stringify(result.format).includes('secret'));
+  }
+});

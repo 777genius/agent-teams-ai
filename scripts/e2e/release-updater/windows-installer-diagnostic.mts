@@ -61,7 +61,7 @@ export async function captureInstallerDiagnostic(values: {
       ].map((key) => [key, values.environment?.[key] ?? null])
     ),
   };
-  for (const delay of [5_000, 25_000, 90_000]) {
+  for (const delay of [30_000, 150_000, 420_000]) {
     await new Promise<void>((resolve) => setTimeout(resolve, delay));
     const owner = values.owner();
     try {
@@ -73,6 +73,7 @@ export async function captureInstallerDiagnostic(values: {
       const snapshot = await values.snapshot(owner);
       snapshot.descendants = snapshot.descendants.map((child) => ({
         ...child,
+        producerFormat: child.format,
         ...installerCommand(child.executable, child.command, systemRoot, values.root),
       }));
       snapshots.push(snapshot);
@@ -115,22 +116,27 @@ export function installerCommand(
   root: string
 ) {
   assert(path.win32.isAbsolute(root));
-  const ps = ['System32', 'SysWOW64'].some(
-    (directory) =>
-      executable.toLowerCase() ===
-      path.win32
-        .join(systemRoot, directory, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
-        .toLowerCase()
+  const paths = ['System32', 'SysWOW64'].map((directory) =>
+    path.win32
+      .join(systemRoot, directory, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+      .toLowerCase()
   );
-  const prefix = `"${executable}" `;
-  const commandBody = command.startsWith(prefix)
-    ? command.slice(prefix.length).replace(/^-NoProfile -NonInteractive /u, '')
-    : '';
+  const ps = paths.includes(executable.toLowerCase());
+  const prefix = /^(?:"([^"\r\n]+)"|([^"\s]+))[ \t]+(-[^\r\n]*)(?![\s\S])/u.exec(command);
+  const token = prefix?.[1] ?? prefix?.[2] ?? '';
+  const commandBody = prefix?.[3]?.replace(/^-NoProfile -NonInteractive /u, '') ?? '';
+  const knownExecutableToken = paths.includes(token.toLowerCase());
   const rule = installerCommandRules(root).find((item) => item.body === commandBody);
-  const stage = ps && rule ? rule.stage : 'unrecognized-redacted';
+  const stage = ps && knownExecutableToken && rule ? rule.stage : 'unrecognized-redacted';
   const architecture = ps ? 'native' : 'unknown';
   return {
     stage,
+    format: {
+      quotedExecutableToken: Boolean(prefix?.[1]),
+      knownExecutableToken,
+      matchesActualImage: token.toLowerCase() === executable.toLowerCase(),
+      approvedBody: Boolean(rule),
+    },
     command: stage === 'unrecognized-redacted' ? '[redacted]' : command,
     architecture: /\\SysWOW64\\/iu.test(executable) && ps ? 'x86' : architecture,
     executable,
@@ -144,6 +150,7 @@ export interface InstallerDiagnosticSnapshot {
     executable: string;
     command: string;
     machine: number | null;
+    format?: ReturnType<typeof installerCommand>['format'];
     pid: number;
     parent: number;
     start: string;
@@ -174,17 +181,21 @@ function Read-InstallerDiagnostic {
         if($sid.ReturnValue -ne 0 -or $sid.Sid -ne $roots[0].sid -or $child.SessionId -ne $roots[0].session -or $child.CreationDate.ToUniversalTime() -lt [DateTime]$parent.start) { throw 'Diagnostic descendant identity unavailable' }
         $command='[redacted]'
         $ps=@([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),[IO.Path]::Combine($env:SystemRoot,'SysWOW64','WindowsPowerShell','v1.0','powershell.exe'))
-        $body=[string]$child.CommandLine; $prefix='"'+$child.ExecutablePath+'" '
-        if($body.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)) { $body=$body.Substring($prefix.Length) } else { $body='' }
-        $body=$body -replace '^-NoProfile -NonInteractive ',''
-        if($ps -contains $child.ExecutablePath -and @($data.commands | Where-Object { $_.body -ceq $body }).Count -eq 1) { $command=$child.CommandLine }
+        $parsed=[regex]::Match([string]$child.CommandLine,'^(?:"([^"\r\n]+)"|([^"\s]+))[ \t]+(-[^\r\n]*)(?![\s\S])')
+        $token=if($parsed.Groups[1].Success){$parsed.Groups[1].Value}else{$parsed.Groups[2].Value}
+        $body=$parsed.Groups[3].Value -creplace '^-NoProfile -NonInteractive ',''
+        $knownToken=@($ps | Where-Object { [string]::Equals($_,$token,[StringComparison]::OrdinalIgnoreCase) }).Count -eq 1
+        $knownImage=@($ps | Where-Object { [string]::Equals($_,$child.ExecutablePath,[StringComparison]::OrdinalIgnoreCase) }).Count -eq 1
+        $approvedBody=@($data.commands | Where-Object { $_.body -ceq $body }).Count -eq 1
+        $format=@{quotedExecutableToken=$parsed.Groups[1].Success;knownExecutableToken=$knownToken;matchesActualImage=[string]::Equals($token,$child.ExecutablePath,[StringComparison]::OrdinalIgnoreCase);approvedBody=$approvedBody}
+        if($knownImage -and $knownToken -and $approvedBody) { $command=$child.CommandLine }
         $machine=$null
         if($ps -contains $child.ExecutablePath) {
           $bytes=[IO.File]::ReadAllBytes($child.ExecutablePath); $offset=[BitConverter]::ToInt32($bytes,60)
           if($offset -lt 64 -or $offset+6 -gt $bytes.Length -or [BitConverter]::ToUInt32($bytes,$offset) -ne 17744) { throw 'Diagnostic PE header invalid' }
           $machine=[BitConverter]::ToUInt16($bytes,$offset+4)
         }
-        $node=@{machine=$machine;pid=[int]$child.ProcessId;parent=[int]$child.ParentProcessId;start=$child.CreationDate.ToUniversalTime().ToString('o');sid=$sid.Sid;session=[int]$child.SessionId;executable=$child.ExecutablePath;command=$command;stopEligible=$false}
+        $node=@{format=$format;machine=$machine;pid=[int]$child.ProcessId;parent=[int]$child.ParentProcessId;start=$child.CreationDate.ToUniversalTime().ToString('o');sid=$sid.Sid;session=[int]$child.SessionId;executable=$child.ExecutablePath;command=$command;stopEligible=$false}
         $nodes+=,$node; $next+=,$node
       }
     }
