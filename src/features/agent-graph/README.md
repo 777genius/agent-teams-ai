@@ -7,8 +7,9 @@ Read first:
 - [Feature root guidance](../CLAUDE.md)
 - [Stable Slot Layout Plan](./STABLE_SLOT_LAYOUT_PLAN.md)
 
-Public entrypoint:
-- `@features/agent-graph/renderer`
+Public entrypoints:
+- `@features/agent-graph` exposes graph layout and domain APIs
+- `@features/agent-graph/renderer` exposes renderer integration APIs
 
 Responsibilities:
 - `packages/agent-graph` owns reusable graph rendering and low-level graph mechanics

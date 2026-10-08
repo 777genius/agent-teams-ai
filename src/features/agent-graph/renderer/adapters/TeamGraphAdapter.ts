@@ -19,6 +19,7 @@ import {
   type GraphParticle,
   TASK_COLUMN_MAX_VISIBLE_ROWS,
 } from '@claude-teams/agent-graph';
+import { buildOrderedVisibleTeamGraphOwnerIds } from '@features/agent-graph';
 import { getUnreadCount } from '@renderer/services/commentReadStorage';
 import {
   agentAvatarUrl,
@@ -37,7 +38,6 @@ import {
 } from '@shared/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { buildOrderedVisibleTeamGraphOwnerIds } from '@shared/utils/teamGraphDefaultLayout';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
   isBootstrapConfirmedProvisionedButNotAliveFailure,

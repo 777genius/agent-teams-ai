@@ -10,7 +10,7 @@ import {
   normalizeTeamGraphSlotAssignmentsForVisibleOwners,
   pruneTeamGraphSlotAssignmentsForVisibleOwners,
   seedStableSlotAssignmentsForMembers,
-} from '../../../src/renderer/store/team/teamGraphLayout';
+} from '../../../src/features/agent-graph';
 
 describe('teamGraphLayout', () => {
   it('migrates legacy name-keyed assignments to stable owner ids', () => {

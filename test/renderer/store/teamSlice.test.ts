@@ -1276,6 +1276,74 @@ describe('teamSlice actions', () => {
     expect(store.getState().warmTaskChangeSummaries).not.toHaveBeenCalled();
   });
 
+  it('preserves graph no-op subscription behavior for assignments, modes, and same-owner swaps', () => {
+    const store = createSliceStore();
+    store.setState({
+      slotLayoutVersion: 'stable-slots-v1',
+      slotAssignmentsByTeam: {
+        'my-team': { 'agent-alice': { ringIndex: 0, sectorIndex: 2 } },
+      },
+      graphLayoutModeByTeam: { 'my-team': 'radial' },
+    });
+    const before = store.getState();
+    const listener = vi.fn();
+    const unsubscribe = store.subscribe(listener);
+
+    store
+      .getState()
+      .setTeamGraphOwnerSlotAssignment('my-team', 'agent-alice', { ringIndex: 0, sectorIndex: 2 });
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(store.getState().slotAssignmentsByTeam).toBe(before.slotAssignmentsByTeam);
+
+    store.getState().setTeamGraphLayoutMode('my-team', 'radial');
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(store.getState().graphLayoutModeByTeam).toBe(before.graphLayoutModeByTeam);
+
+    const beforeSwaps = store.getState();
+    store.getState().swapTeamGraphGridOwners('my-team', 'agent-alice', 'agent-alice');
+    store.getState().swapTeamGraphOwnerSlots('my-team', 'agent-alice', 'agent-alice');
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(store.getState()).toBe(beforeSwaps);
+    unsubscribe();
+  });
+
+  it('preserves other team graph slots and sessions when assigning a slot from an older version', () => {
+    const store = createSliceStore();
+    store.setState({
+      slotLayoutVersion: 'legacy-layout-version',
+      slotAssignmentsByTeam: {
+        'other-team': { 'agent-bob': { ringIndex: 1, sectorIndex: 3 } },
+        'my-team': { 'agent-alice': { ringIndex: 0, sectorIndex: 1 } },
+      },
+      graphLayoutSessionByTeam: {
+        'other-team': { mode: 'manual', signature: 'other-signature' },
+        'my-team': { mode: 'default', signature: 'my-signature' },
+      },
+    });
+    const before = store.getState();
+
+    store
+      .getState()
+      .setTeamGraphOwnerSlotAssignment('my-team', 'agent-alice', { ringIndex: 0, sectorIndex: 2 });
+
+    const after = store.getState();
+    expect(after.slotLayoutVersion).toBe('stable-slots-v1');
+    expect(after.slotAssignmentsByTeam).toEqual({
+      'other-team': { 'agent-bob': { ringIndex: 1, sectorIndex: 3 } },
+      'my-team': { 'agent-alice': { ringIndex: 0, sectorIndex: 2 } },
+    });
+    expect(after.graphLayoutSessionByTeam).toEqual({
+      'other-team': { mode: 'manual', signature: 'other-signature' },
+      'my-team': { mode: 'manual', signature: 'my-signature' },
+    });
+    expect(after.slotAssignmentsByTeam['other-team']).toBe(
+      before.slotAssignmentsByTeam['other-team']
+    );
+    expect(after.graphLayoutSessionByTeam['other-team']).toBe(
+      before.graphLayoutSessionByTeam['other-team']
+    );
+  });
+
   it('commits owner slot drops in the current session while persistence is disabled', () => {
     const store = createSliceStore();
 
