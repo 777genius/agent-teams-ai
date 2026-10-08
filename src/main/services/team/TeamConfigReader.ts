@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { readBootstrapLaunchSnapshot } from './TeamBootstrapStateReader';
+import { isReadableTeamConfigPayload } from './TeamConfigPayload';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import {
@@ -37,6 +38,7 @@ const logger = createLogger('Service:TeamConfigReader');
 const TEAM_LIST_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
 const LARGE_CONFIG_BYTES = 512 * 1024;
 const CONFIG_HEAD_BYTES = 64 * 1024;
+export { isReadableTeamConfigPayload } from './TeamConfigPayload';
 export const MAX_CONFIG_READ_BYTES = 10 * 1024 * 1024; // 10MB hard limit for full config reads
 const PER_TEAM_READ_TIMEOUT_MS = 5_000;
 const GET_CONFIG_SLOW_READ_WARN_MS = 500;
@@ -1068,15 +1070,12 @@ export class TeamConfigReader {
       fingerprintHighResolution = fingerprint?.highResolution ?? null;
 
       // Safety: refuse special files and huge/binary configs
-      if (!fingerprint?.isFile) {
+      if (!fingerprint?.isFile || fingerprint.numericSize > MAX_CONFIG_READ_BYTES) {
         TeamConfigReader.invalidatePathForGeneration(configPath, cacheGeneration);
-        return null;
-      }
-      if (fingerprint.numericSize > MAX_CONFIG_READ_BYTES) {
-        TeamConfigReader.invalidatePathForGeneration(configPath, cacheGeneration);
-        logger.warn(
-          `Refusing to load oversized config.json (${fingerprint.numericSize} bytes) for team: ${teamName}`
-        );
+        if (fingerprint?.isFile)
+          logger.warn(
+            `Refusing to load oversized config.json (${fingerprint.numericSize} bytes) for team: ${teamName}`
+          );
         return null;
       }
 
@@ -1087,7 +1086,7 @@ export class TeamConfigReader {
       const parseStartedAt = performance.now();
       const config = JSON.parse(raw) as TeamConfig;
       parseMs = Math.round(performance.now() - parseStartedAt);
-      if (typeof config.name !== 'string' || config.name.trim() === '') {
+      if (!isReadableTeamConfigPayload(config)) {
         TeamConfigReader.invalidatePathForGeneration(configPath, cacheGeneration);
         return null;
       }

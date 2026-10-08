@@ -2,7 +2,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { MAX_CONFIG_READ_BYTES, TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import {
+  isReadableTeamConfigPayload,
+  MAX_CONFIG_READ_BYTES,
+  TeamConfigReader,
+} from '@main/services/team/TeamConfigReader';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import {
   MAX_TEAM_METADATA_BYTES,
@@ -104,10 +108,10 @@ export class TeamPromptManagement {
           'config.json is invalid JSON'
         );
       }
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      if (!isReadableTeamConfigPayload(parsed))
         throw new TeamManagementError(
           'TEAM_CONFIGURATION_UNREADABLE',
-          'config.json must contain a configuration object'
+          'config.json does not contain a readable team configuration'
         );
       config = parsed as Record<string, unknown>;
     }

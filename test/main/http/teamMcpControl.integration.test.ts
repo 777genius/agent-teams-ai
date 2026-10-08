@@ -713,8 +713,22 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
-  // Catches malformed or non-object config becoming a generic 500 or being mistaken for a draft.
-  it.each(['{', '', 'null', '[]'])(
+  // Catches unreadable config becoming a generic 500 or falling back to draft trash metadata,
+  // leaving a present config unmarked and resurrectable after repair.
+  it.each([
+    '{',
+    '',
+    'null',
+    '[]',
+    '{}',
+    '{"name":" "}',
+    '{"name":17}',
+    '{"name":"Valid","members":{}}',
+    '{"name":"Valid","members":[null]}',
+    '{"name":"Valid","members":[{"name":17}]}',
+    '{"name":"Valid","members":[{"name":"builder","agentId":17}]}',
+    '{"name":"Valid","projectPath":"/sandbox","members":[{"name":"builder","role":17}]}',
+  ])(
     'rejects unreadable config %j with a typed management error and no writes',
     async (unreadable) => {
       const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-config-json-'));
@@ -748,6 +762,16 @@ describe('MCP team tools over the local REST control API', () => {
         });
         expect(edit.statusCode).toBe(409);
         expect(edit.json().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
+        const trash = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/trash`,
+          payload: {
+            expectedContext: context.snapshot(),
+            expectedRevision: initial.configurationRevision,
+          },
+        });
+        expect(trash.statusCode).toBe(409);
+        expect(trash.json().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
         expect(await readFile(configPath, 'utf8')).toBe(unreadable);
         expect(await readFile(path.join(directory, 'team.meta.json'))).toEqual(metaBytes);
         expect(events).toHaveLength(0);
@@ -1074,9 +1098,10 @@ describe('MCP team tools over the local REST control API', () => {
     const expectedContext = context.snapshot();
     const configPath = path.join(root, 'teams', teamName, 'config.json');
     const get = async () =>
-      (
-        await app.inject({ method: 'GET', url: `/api/teams/${teamName}?configuration=1` })
-      ).json<{ configurationRevision: string; savedRequest: TeamCreateRequest | null }>();
+      (await app.inject({ method: 'GET', url: `/api/teams/${teamName}?configuration=1` })).json<{
+        configurationRevision: string;
+        savedRequest: TeamCreateRequest | null;
+      }>();
     const update = (expectedRevision: string, metadata: Record<string, string>) =>
       app.inject({
         method: 'POST',
@@ -1169,30 +1194,32 @@ describe('MCP team tools over the local REST control API', () => {
         description: 'Saved after fault',
       });
       const idle = services.teamApis!.runtime.getRuntimeState;
-      services.teamApis!.runtime.getRuntimeState = (name) => Promise.resolve({
-        teamName: name,
-        isAlive: true,
-        runId: 'test-alive',
-        progress: null,
-      });
+      services.teamApis!.runtime.getRuntimeState = (name) =>
+        Promise.resolve({
+          teamName: name,
+          isAlive: true,
+          runId: 'test-alive',
+          progress: null,
+        });
       snapshot = await get();
       const active = await update(snapshot.configurationRevision, {
         description: 'Active overwrite',
       });
       expect(active.json().code).toBe('TEAM_ACTIVE');
-      services.teamApis!.runtime.getRuntimeState = (name) => Promise.resolve({
-        teamName: name,
-        isAlive: false,
-        runId: 'test-provisioning',
-        progress: {
+      services.teamApis!.runtime.getRuntimeState = (name) =>
+        Promise.resolve({
           teamName: name,
+          isAlive: false,
           runId: 'test-provisioning',
-          state: 'assembling',
-          message: 'Test fixture',
-          startedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      });
+          progress: {
+            teamName: name,
+            runId: 'test-provisioning',
+            state: 'assembling',
+            message: 'Test fixture',
+            startedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        });
       const provisioning = await update(snapshot.configurationRevision, {
         description: 'Provisioning overwrite',
       });
