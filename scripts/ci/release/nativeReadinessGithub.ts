@@ -10,6 +10,8 @@ import { manualCapturePaths } from './macManualReadiness.js';
 import { canonical, fileProof, requireThat } from './contract.js';
 import { executablePath } from './github.js';
 import { RELEASE216_TOOLING } from './nativeReadinessAuthority.js';
+import { RELEASE220_EXECUTION as full220Pins } from './release220ExecutionPins.js';
+import type { Release220ExecutionProof } from './nativeReadinessAuthority.js';
 import type { ExecutionProof, ExecutionTree } from './nativeReadinessAuthority.js';
 import type {
   NativeArtifact,
@@ -113,6 +115,35 @@ export class GitHubNativeReadinessPort implements NativeReadinessPort {
       api<ExecutionTree>(`${root}/git/trees/${commit.tree.sha}?recursive=1`),
     ]);
     return { repository: repo, commit, comparison, baseTree, executionTree };
+  }
+
+  async release220ExecutionProof(): Promise<Release220ExecutionProof> {
+    const repo = full220Pins.repository;
+    const root = repository(repo);
+    const [commit, comparison, baseTree, executionTree, ci, jobs, baseCi, baseJobs] =
+      await Promise.all([
+        api<ExecutionProof['commit']>(`${root}/git/commits/${full220Pins.head}`),
+        api<Release220ExecutionProof['comparison']>(
+          `${root}/compare/${full220Pins.base}...${full220Pins.head}`
+        ),
+        api<ExecutionTree>(`${root}/git/trees/${full220Pins.baseTree}?recursive=1`),
+        api<ExecutionTree>(`${root}/git/trees/${full220Pins.tree}?recursive=1`),
+        api<Release220ExecutionProof['ci']>(`${root}/actions/runs/${full220Pins.ciRun}`),
+        this.jobs(repo, full220Pins.ciRun, full220Pins.ciAttempt),
+        api<Release220ExecutionProof['ci']>(`${root}/actions/runs/${full220Pins.baseCiRun}`),
+        this.jobs(repo, full220Pins.baseCiRun, full220Pins.ciAttempt),
+      ]);
+    return {
+      repository: repo,
+      commit,
+      comparison,
+      baseTree,
+      executionTree,
+      ci,
+      jobs,
+      baseCi,
+      baseJobs,
+    };
   }
 
   run(repo: string, runId: number): Promise<NativeRun> {

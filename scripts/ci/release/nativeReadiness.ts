@@ -7,10 +7,13 @@ import {
   list,
   object,
   release216Execution,
+  release220Execution,
   validateWorkflow,
   verifyRelease216Execution,
+  verifyRelease220Execution,
 } from './nativeReadinessAuthority.js';
-import type { ExecutionProof } from './nativeReadinessAuthority.js';
+import { RELEASE220_EXECUTION } from './release220ExecutionPins.js';
+import type { Release220ExecutionProof, ExecutionProof } from './nativeReadinessAuthority.js';
 import { assertArmPriorFixture, usesRepairedArm211 } from './windowsArmPriorFixture.js';
 import type { ArmPriorFixture } from './windowsArmPriorFixture.js';
 
@@ -84,6 +87,7 @@ export interface NativeArtifact {
   workflow_run: { id: number; head_sha: string };
 }
 export interface NativeReadinessPort {
+  release220ExecutionProof?(): Promise<Release220ExecutionProof>;
   executionProof?(repository: string, executionSha: string): Promise<ExecutionProof>;
   run(repository: string, runId: number): Promise<NativeRun>;
   jobs(repository: string, runId: number, attempt: number): Promise<NativeJob[]>;
@@ -592,10 +596,11 @@ export async function verifyNativeReadiness(
   const verifiedExecutors = new Set<string>();
   const familyRuns = new Map<string, string>();
   async function executionFor(row: Row) {
-    const executionSha =
-      receipt.schemaVersion === 2 && !full
-        ? release216Execution(row.kind, plan, planSha256, d)
-        : plan.input.toolingSha;
+    let executionSha = plan.input.toolingSha;
+    if (receipt.schemaVersion === 2 && !full)
+      executionSha = release216Execution(row.kind, plan, planSha256, d);
+    else if (full && plan.input.toolingSha === RELEASE220_EXECUTION.base)
+      executionSha = release220Execution(row.kind, plan, planSha256, d);
     if (
       receipt.schemaVersion === 2 &&
       !full &&
@@ -610,6 +615,18 @@ export async function verifyNativeReadiness(
         await port.executionProof(receipt.repository, executionSha),
         row.kind
       );
+      verifiedExecutors.add(executionSha);
+    }
+    if (
+      full &&
+      executionSha === RELEASE220_EXECUTION.head &&
+      !verifiedExecutors.has(executionSha)
+    ) {
+      requireThat(
+        typeof port.release220ExecutionProof === 'function',
+        'Missing closed full220 executor proof capability'
+      );
+      verifyRelease220Execution(await port.release220ExecutionProof());
       verifiedExecutors.add(executionSha);
     }
     return executionSha;

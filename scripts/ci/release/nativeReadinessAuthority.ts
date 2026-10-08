@@ -3,6 +3,7 @@ import { parse } from 'yaml';
 import { canonical, compareNames, digest, requireThat } from './contract.js';
 import type { StagePlan } from './contract.js';
 import { RELEASE216_EXECUTORS } from './release216ExecutionPins.js';
+import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 
 type Json = Record<string, unknown>;
 interface Row {
@@ -130,4 +131,157 @@ export function verifyRelease216Execution(
 }
 export function verifyRelease216MacExecution(proof: ExecutionProof): void {
   verifyRelease216Execution(proof, 'mac-old');
+}
+
+export interface Release220ExecutionProof extends ExecutionProof {
+  comparison: ExecutionProof['comparison'] & {
+    ahead_by: number;
+    behind_by: number;
+    total_commits: number;
+    commits: { sha: string }[];
+    files: { filename: string; status: string; sha: string }[];
+  };
+  ci: {
+    actor: { login: string };
+    id: number;
+    run_attempt: number;
+    head_sha: string;
+    path: string;
+    event: string;
+    status: string;
+    conclusion: string | null;
+    repository: { full_name: string };
+    head_repository: { full_name: string };
+  };
+  jobs: {
+    id: number;
+    run_id: number;
+    run_attempt: number;
+    head_sha: string;
+    name: string;
+    status: string;
+    conclusion: string | null;
+    steps?: { name: string; status: string; conclusion: string | null }[];
+  }[];
+  baseCi: Release220ExecutionProof['ci'];
+  baseJobs: Release220ExecutionProof['jobs'];
+}
+export function release220Execution(kind: string, plan: StagePlan, planSha: string, input: string) {
+  requireThat(
+    planSha === pins.plan &&
+      input === pins.input &&
+      plan.input.repository === pins.repository &&
+      plan.input.mode === 'full' &&
+      plan.input.toolingSha === pins.base &&
+      plan.input.target.applicationSha === pins.application &&
+      plan.input.target.tag === 'v2.17.10' &&
+      plan.input.macProductMinimum === '13.0' &&
+      plan.input.macSource === null,
+    'Closed full220 executor requires original P10/D10/E10 application graph'
+  );
+  return kind === 'package' ? pins.head : pins.base;
+}
+export function verifyRelease220Execution(proof: Release220ExecutionProof): void {
+  requireThat(proof.repository === pins.repository, 'Wrong full220 execution repository');
+  requireThat(
+    proof.commit.sha === pins.head &&
+      proof.commit.tree.sha === pins.tree &&
+      proof.executionTree.sha === pins.tree &&
+      proof.baseTree.sha === pins.baseTree &&
+      canonical(proof.commit.parents.map((parent) => parent.sha)) === canonical([pins.base]) &&
+      proof.comparison.status === 'ahead' &&
+      proof.comparison.base_commit.sha === pins.base &&
+      proof.comparison.merge_base_commit.sha === pins.base &&
+      proof.comparison.ahead_by === 1 &&
+      proof.comparison.behind_by === 0 &&
+      proof.comparison.total_commits === 1 &&
+      canonical(proof.comparison.commits.map((commit) => commit.sha)) === canonical([pins.head]),
+    'Unapproved full220 execution ancestry or tree'
+  );
+  const original = treeRecords(proof.baseTree, pins.baseRecords);
+  const actual = treeRecords(proof.executionTree, pins.records);
+  const delta = [...new Set([...original.keys(), ...actual.keys()])]
+    .sort(compareNames)
+    .map((name) => [name, original.get(name) ?? null, actual.get(name) ?? null])
+    .filter((item) => canonical(item[1]) !== canonical(item[2]));
+  requireThat(digest(canonical(delta)) === pins.delta, 'Unapproved full220 complete tree delta');
+  requireThat(
+    canonical(
+      proof.comparison.files
+        .map(({ filename, status, sha }) => ({ filename, status, sha }))
+        .sort((a, b) => compareNames(a.filename, b.filename))
+    ) === canonical(pins.files),
+    'Unapproved full220 compared leaf blobs'
+  );
+  for (const file of pins.files)
+    requireThat(
+      canonical(actual.get(file.filename)) === canonical(['100644', 'blob', file.sha]),
+      'Wrong reviewed full220 blob'
+    );
+  // Closed E11 targeted harness quality plus cryptographically unchanged E10 full CI.
+  // Full E11 CI failed its unrelated development dependency audit; it is not reused.
+  verify220QualityRun(
+    proof.ci,
+    pins.ciRun,
+    pins.head,
+    '.github/workflows/stage-existing-partial-draft.yml'
+  );
+  verify220QualityJobs(proof.jobs, proof.ci, ['assemble-draft']);
+  const steps = proof.jobs[0]?.steps ?? [];
+  requireThat(
+    pins.ciSteps.every((name) => {
+      const matches = steps.filter((step) => step.name === name);
+      return (
+        matches.length === 1 &&
+        matches[0]?.status === 'completed' &&
+        matches[0].conclusion === 'success'
+      );
+    }),
+    'Missing successful reviewed E11 typed quality or immutable input step'
+  );
+  verify220QualityRun(proof.baseCi, pins.baseCiRun, pins.base, '.github/workflows/ci.yml');
+  verify220QualityJobs(proof.baseJobs, proof.baseCi, pins.ciJobs, pins.ciSkippedJob);
+}
+function verify220QualityRun(
+  ci: Release220ExecutionProof['ci'],
+  run: number,
+  head: string,
+  path: string
+): void {
+  requireThat(
+    ci.id === run &&
+      ci.run_attempt === pins.ciAttempt &&
+      ci.actor.login === '777genius' &&
+      ci.repository.full_name === pins.repository &&
+      ci.head_repository.full_name === pins.repository &&
+      ci.head_sha === head &&
+      ci.path === path &&
+      ci.event === 'workflow_dispatch' &&
+      ci.status === 'completed' &&
+      ci.conclusion === 'success',
+    'Missing exact closed full220 quality whole run success'
+  );
+}
+function verify220QualityJobs(
+  jobs: Release220ExecutionProof['jobs'],
+  ci: Release220ExecutionProof['ci'],
+  names: readonly string[],
+  skipped?: string
+): void {
+  requireThat(
+    canonical(jobs.map((job) => job.name).sort(compareNames)) ===
+      canonical([...names].sort(compareNames)) &&
+      new Set(jobs.map((job) => job.id)).size === jobs.length &&
+      jobs.every(
+        (job) =>
+          Number.isSafeInteger(job.id) &&
+          job.id > 0 &&
+          job.run_id === ci.id &&
+          job.run_attempt === ci.run_attempt &&
+          job.head_sha === ci.head_sha &&
+          job.status === 'completed' &&
+          job.conclusion === (job.name === skipped ? 'skipped' : 'success')
+      ),
+    'Incomplete or unsuccessful current closed full220 quality jobs'
+  );
 }
