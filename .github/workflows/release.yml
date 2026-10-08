@@ -18,13 +18,13 @@ on:
         default: false
         type: boolean
 
-      prepared_run_id: { type: string, description: Full219 prepared stage run ID }
-      prepared_run_attempt: { type: string, description: Full219 prepared stage run attempt }
-      prepared_artifact_id: { type: string, description: Full219 prepared stage artifact ID }
+      prepared_run_id: { type: string, description: Full220 prepared stage run ID }
+      prepared_run_attempt: { type: string, description: Full220 prepared stage run attempt }
+      prepared_artifact_id: { type: string, description: Full220 prepared stage artifact ID }
       prepared_artifact_sha256:
-        { type: string, description: Full219 prepared stage whole ZIP SHA256 }
-      plan_digest: { type: string, description: Full219 prepared plan SHA256 }
-      native_receipt_json: { type: string, description: Full219 complete native readiness receipt }
+        { type: string, description: Full220 prepared stage whole ZIP SHA256 }
+      plan_digest: { type: string, description: Full220 prepared plan SHA256 }
+      native_receipt_json: { type: string, description: Full220 complete native readiness receipt }
 
 permissions:
   contents: write
@@ -1093,14 +1093,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Require prepared full219 publication
-        if: ${{ inputs.release_tag == 'v2.17.7' || inputs.release_tag == 'v2.17.8' || inputs.release_tag == 'v2.17.9' }}
+      - name: Require prepared full220 publication
+        if: ${{ inputs.release_tag == 'v2.17.7' || inputs.release_tag == 'v2.17.8' || inputs.release_tag == 'v2.17.9' || inputs.release_tag == 'v2.17.10' }}
         run: |
-          echo 'Full219 must be staged and qualified before publication; use reuse_existing_draft_assets=true' >&2
+          echo 'Full220 must be staged and qualified before publication; use reuse_existing_draft_assets=true' >&2
           exit 1
 
       - name: Promote validated release assets
-        if: ${{ inputs.release_tag != 'v2.17.7' && inputs.release_tag != 'v2.17.8' && inputs.release_tag != 'v2.17.9' }}
+        if: ${{ inputs.release_tag != 'v2.17.7' && inputs.release_tag != 'v2.17.8' && inputs.release_tag != 'v2.17.9' && inputs.release_tag != 'v2.17.10' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_REPOSITORY: ${{ github.repository }}
@@ -1137,14 +1137,14 @@ jobs:
           echo "reuse_existing_draft_assets requires publish_release=true" >&2
           exit 1
 
-      - name: Preserve failed unpublished217 and218 tags
-        if: ${{ inputs.publish_release && (inputs.release_tag == 'v2.17.7' || inputs.release_tag == 'v2.17.8') }}
+      - name: Preserve unpublished217,218 and219 tags
+        if: ${{ inputs.publish_release && (inputs.release_tag == 'v2.17.7' || inputs.release_tag == 'v2.17.8' || inputs.release_tag == 'v2.17.9') }}
         run: |
-          echo 'v2.17.7 and v2.17.8 are frozen after failed builds; publish v2.17.9 instead' >&2
+          echo 'v2.17.7, v2.17.8 and v2.17.9 are frozen unpublished; publish v2.17.10 instead' >&2
           exit 1
 
-      - name: Publish byte-preserved prepared full219 after native readiness
-        if: ${{ inputs.publish_release && inputs.release_tag == 'v2.17.9' }}
+      - name: Publish byte-preserved prepared full220 after native readiness
+        if: ${{ inputs.publish_release && inputs.release_tag == 'v2.17.10' }}
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1157,7 +1157,7 @@ jobs:
         run: pnpm exec tsx scripts/ci/publish-full-release.ts --plan-digest "$PLAN_DIGEST" --output publication-result.json --publish
 
       - name: Promote existing validated draft
-        if: ${{ inputs.publish_release && inputs.release_tag != 'v2.17.7' && inputs.release_tag != 'v2.17.8' && inputs.release_tag != 'v2.17.9' }}
+        if: ${{ inputs.publish_release && inputs.release_tag != 'v2.17.7' && inputs.release_tag != 'v2.17.8' && inputs.release_tag != 'v2.17.9' && inputs.release_tag != 'v2.17.10' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_REPOSITORY: ${{ github.repository }}

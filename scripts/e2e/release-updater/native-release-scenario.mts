@@ -26,7 +26,7 @@ export function nativeReleaseScenario(plan: StagePlan) {
   } else {
     assert.equal(
       plan.input.target.tag,
-      'v2.17.9',
+      'v2.17.10',
       'Only reviewed native release scenarios supported'
     );
     assert.equal(plan.input.mode, 'full');

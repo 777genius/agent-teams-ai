@@ -142,7 +142,7 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
     package: ['inputs', 'Download and verify immutable official packages'],
     'mac-manual': [
       'prepare-mac-manual-inputs',
-      'Authenticate prepared plan and uploaded original 211 and target 219 bytes',
+      'Authenticate prepared plan and uploaded original 211 and target 220 bytes',
     ],
     mac: [
       'prepare-mac-inputs',
@@ -563,11 +563,11 @@ export async function verifyNativeReadiness(
   if (full)
     requireThat(
       receipt.schemaVersion === 2 &&
-        plan.input.target.tag === 'v2.17.9' &&
+        plan.input.target.tag === 'v2.17.10' &&
         plan.input.toolingSha === plan.input.target.applicationSha &&
         plan.input.macProductMinimum === '13.0' &&
         !plan.input.macSource,
-      'Full219 requires one frozen source and schema2 native proof'
+      'Full220 requires one frozen source and schema2 native proof'
     );
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const d = digest(canonical(plan.input));

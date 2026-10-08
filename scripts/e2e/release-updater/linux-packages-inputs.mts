@@ -67,7 +67,7 @@ export function packageKind(value: unknown): PackageKind {
 }
 export function packageName(kind: PackageKind, version: string) {
   assert(
-    ['2.17.1', '2.17.2', '2.17.6', '2.17.9'].includes(version),
+    ['2.17.1', '2.17.2', '2.17.6', '2.17.10'].includes(version),
     'Only exact release scenarios supported'
   );
   return {
@@ -111,7 +111,7 @@ export async function packageInputs(
   }
   assert(
     historicalPreview,
-    '2.17.6/2.17.9 native packages require authenticated stage; historical 2.17.2 must be explicit'
+    '2.17.6/2.17.10 native packages require authenticated stage; historical 2.17.2 must be explicit'
   );
   const source = JSON.parse(
     await readFile(path.join(directory, 'source-api.json'), 'utf8')
