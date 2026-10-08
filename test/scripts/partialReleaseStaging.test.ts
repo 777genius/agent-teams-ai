@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -215,6 +215,140 @@ async function prepared(store = new TestReleaseStorage()) {
 }
 
 describe('append-only partial release assembly', () => {
+  it('batches independent staging downloads and outputs within four, with the manifest last', async () => {
+    const { store, plan } = await prepared();
+    let active = 0,
+      peak = 0;
+    const download = store.download.bind(store);
+    vi.spyOn(store, 'download').mockImplementation(async (...args) => {
+      peak = Math.max(peak, ++active);
+      try {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        await download(...args);
+      } finally {
+        active--;
+      }
+    });
+    let uploading = 0,
+      uploadPeak = 0;
+    const upload = store.upload.bind(store);
+    vi.spyOn(store, 'upload').mockImplementation(async (...args) => {
+      if (path.basename(args[2]) === MANIFEST) {
+        expect(active).toBe(0);
+        expect(uploading).toBe(0);
+        expect(store.releases.get('v2.17.2')!.assets).toHaveLength(plan.outputs.length);
+      }
+      uploadPeak = Math.max(uploadPeak, ++uploading);
+      try {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        await upload(...args);
+      } finally {
+        uploading--;
+      }
+    });
+    await stageDraft(store, plan);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(uploadPeak).toBeGreaterThan(1);
+    expect(uploadPeak).toBeLessThanOrEqual(4);
+    expect(store.uploads.at(-1)).toBe(MANIFEST);
+  });
+  it.each(['original', 'corrupt original', 'output'] as const)(
+    'settles every started %s operation before cleanup and preserves its failure without manifest upload',
+    async (phase) => {
+      const { store, plan } = await prepared();
+      const failure = new Error('Exact transport failure');
+      let active = 0,
+        started = 0,
+        finished = 0;
+      let directory = '';
+      let failedFile = '';
+      const lateFailures: unknown[] = [];
+      const operation = async (file: string, action: () => Promise<void>) => {
+        directory = path.dirname(file);
+        const index = started++;
+        if (index === 0) failedFile = file;
+        active++;
+        try {
+          if (file === failedFile) {
+            if (phase === 'corrupt original') {
+              await writeFile(file, 'corrupt bytes');
+              return;
+            }
+            throw failure;
+          }
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          await access(directory);
+          await action();
+        } catch (error) {
+          if (error !== failure) lateFailures.push(error);
+          throw error;
+        } finally {
+          active--;
+          finished++;
+        }
+      };
+      if (phase !== 'output') {
+        const download = store.download.bind(store);
+        vi.spyOn(store, 'download').mockImplementation((...args) =>
+          operation(args[2], () => download(...args))
+        );
+      } else {
+        const upload = store.upload.bind(store);
+        vi.spyOn(store, 'upload').mockImplementation((...args) =>
+          operation(args[2], () => upload(...args))
+        );
+      }
+      if (phase === 'corrupt original')
+        await expect(stageDraft(store, plan)).rejects.toThrow('Byte proof mismatch');
+      else await expect(stageDraft(store, plan)).rejects.toBe(failure);
+      expect(started).toBeGreaterThan(1);
+      expect(active).toBe(0);
+      expect(finished).toBe(started);
+      expect(lateFailures).toEqual([]);
+      await expect(access(directory)).rejects.toThrow();
+      expect(store.uploads).not.toContain(MANIFEST);
+    }
+  );
+  it.each([false, true])(
+    'verifies every byte with bounded concurrency, corruption=%s',
+    async (corrupt) => {
+      const { store, plan } = await prepared();
+      await stageDraft(store, plan);
+      let active = 0,
+        peak = 0,
+        started = 0,
+        finished = 0;
+      const validations: number[] = [];
+      const minimum = store.minimum.bind(store);
+      vi.spyOn(store, 'minimum').mockImplementation((...args) => {
+        expect(active).toBe(0);
+        validations.push(finished);
+        return minimum(...args);
+      });
+      const download = store.download.bind(store);
+      vi.spyOn(store, 'download').mockImplementation(async (...args) => {
+        const index = started++;
+        peak = Math.max(peak, ++active);
+        try {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          if (corrupt && index === 0) await writeFile(args[2], 'corrupt bytes');
+          else await download(...args);
+        } finally {
+          active--;
+          finished++;
+        }
+      });
+      if (corrupt)
+        await expect(verifyDraftBytes(store, plan)).rejects.toThrow('Byte proof mismatch');
+      else await verifyDraftBytes(store, plan);
+      expect(peak).toBeGreaterThan(1);
+      expect(peak).toBeLessThanOrEqual(4);
+      expect(active).toBe(0);
+      expect(finished).toBe(started);
+      expect(validations).toEqual(corrupt ? [0] : [0, plan.outputs.length + 1]);
+    }
+  );
   it('preserves all Mac bytes/date/floor absence and emits real two-architecture Windows/four-format Linux feeds', async () => {
     const { store, output, plan } = await prepared();
     expect(await readFile(path.join(output, 'latest-mac.yml'))).toEqual(

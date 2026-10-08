@@ -360,6 +360,17 @@ async function materializeGenerated(plan: StagePlan, directory: string): Promise
     flag: 'wx',
   });
 }
+// Drain each bounded batch before propagating its first failure or cleaning up files.
+async function inBatches<T>(
+  items: readonly T[],
+  operation: (item: T) => Promise<void>
+): Promise<void> {
+  for (let start = 0; start < items.length; start += 4) {
+    const results = await Promise.allSettled(items.slice(start, start + 4).map(operation));
+    const failure = results.find((result) => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
+  }
+}
 export async function stageDraft(
   port: ReleasePort,
   plan: StagePlan
@@ -377,7 +388,7 @@ export async function stageDraft(
   let uploaded = 0;
   let unchanged = 0;
   try {
-    for (const original of plan.input.originals) {
+    await inBatches(plan.input.originals, async (original) => {
       const release = await port.release(plan.input.repository, original.tag);
       await port.download(
         plan.input.repository,
@@ -385,13 +396,16 @@ export async function stageDraft(
         path.join(directory, original.name)
       );
       sameProof(await fileProof(path.join(directory, original.name), original.name), original);
-    }
+    });
     await materializeGenerated(plan, directory);
     const manifestProof = await fileProof(path.join(directory, MANIFEST), MANIFEST);
-    for (const proof of [...plan.outputs, manifestProof]) {
+    await inBatches(plan.outputs, async (proof) => {
       if (await reconcileOutput(port, plan, directory, proof)) uploaded++;
       else unchanged++;
-    }
+    });
+    // The manifest becomes visible only after every output has passed byte verification.
+    if (await reconcileOutput(port, plan, directory, manifestProof)) uploaded++;
+    else unchanged++;
     const final = await validateOrigins(port, plan, true);
     if (plan.input.macSource)
       await port.publicRelease(plan.input.repository, plan.input.macSource.release.tag);
@@ -461,11 +475,14 @@ async function verifyDestination(
 export async function verifyDraftBytes(port: ReleasePort, plan: StagePlan): Promise<void> {
   checkPlan(plan);
   const target = await validateOrigins(port, plan, true);
-  for (const proof of [...plan.outputs, textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`)]) {
-    const asset = assetByName(target, proof.name);
-    checkMetadata(asset, proof);
-    await verifyDestination(port, plan, asset, proof);
-  }
+  await inBatches(
+    [...plan.outputs, textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`)],
+    async (proof) => {
+      const asset = assetByName(target, proof.name);
+      checkMetadata(asset, proof);
+      await verifyDestination(port, plan, asset, proof);
+    }
+  );
   await validateOrigins(port, plan, true);
   if (plan.input.macSource)
     await port.publicRelease(plan.input.repository, plan.input.macSource.release.tag);

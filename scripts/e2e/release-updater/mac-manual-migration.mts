@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -19,6 +20,8 @@ import {
   macProcessSnapshot,
   prepareMacWindow,
   stopMacOwned,
+  runMacSmokeOwned,
+  macOwnedForeground,
 } from './mac-loopback.mts';
 import { checkManualContext, manualNames, readManualInputs } from './mac-manual-inputs.mts';
 import { macDebugPort, macDebugTargets } from './mac-old-ui.mts';
@@ -66,6 +69,8 @@ const expected = {
 const { plan, bundle, authority } = await readManualInputs(inputs, expected);
 const root = await mkdtemp(path.join(runner, 'TEST-mac-manual-owned-'));
 const app = path.join(root, 'Agent Teams AI.app');
+const smokeCustodyNonce = randomUUID();
+await writeFile(path.join(root, '.test-only-smoke-custody'), `mac-manual-owned:${smokeCustodyNonce}`, { flag: 'wx', mode: 0o600 });
 const executable = path.join(app, 'Contents', 'MacOS', 'Agent Teams AI');
 const architecture = process.arch;
 const names = manualNames(architecture);
@@ -108,6 +113,10 @@ await writeFile(
   foregroundSource,
   `import AppKit
 import Foundation
+if CommandLine.arguments.count == 3 {
+  guard let pid = Int32(CommandLine.arguments[1]), let target = NSRunningApplication(processIdentifier: pid), target.executableURL?.path == CommandLine.arguments[2] else { exit(3) }
+  target.activate(options: [.activateIgnoringOtherApps])
+}
 guard let app = NSWorkspace.shared.frontmostApplication, let executable = app.executableURL?.path else { exit(2) }
 FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["pid": Int(app.processIdentifier), "executable": executable], options: [.sortedKeys]))
 `,
@@ -121,9 +130,7 @@ await commands.checked('compile-frontmost-reader', '/usr/bin/xcrun', [
 ]);
 async function foreground() {
   assert(owner);
-  const observed = JSON.parse(
-    (await commands.checked('actual-frontmost-application', foregroundBinary, [])).stdout
-  ) as { pid: number; executable: string };
+  const observed = await macOwnedForeground(commands, owner, foregroundBinary);
   assert.equal(observed.pid, owner.pid);
   assert.equal(observed.executable, owner.command);
   assert.deepEqual(await macOwner(commands, owner.pid, executable), owner);
@@ -573,13 +580,16 @@ try {
     path.join(root, 'fresh-mount')
   );
   phases.push({ freshSignature: await installed('fresh', '2.17.10') });
-  for (const script of ['smokePackagedApp.cjs', 'smokePackagedNative.cjs', 'smokePackagedMcp.cjs'])
-    await commands.checked(
-      'installed-packaged-smoke',
-      process.execPath,
-      [path.resolve('scripts/electron-builder', script), app, 'darwin'],
-      180_000
-    );
+  const custodyOutput = path.join(output, 'smoke-custody');
+  await mkdir(custodyOutput, { mode: 0o700 });
+  phases.push({ smokeCustody: await runMacSmokeOwned(new MacCommands(custodyOutput), app, smokeCustodyNonce, () => commands.activeChildPid, () => commands.checked(
+    'installed-packaged-smoke', process.execPath,
+    [path.resolve('scripts/electron-builder/smokePackagedApp.cjs'), app, 'darwin'], 180_000
+  )) });
+  await persist();
+  for (const script of ['smokePackagedNative.cjs', 'smokePackagedMcp.cjs'])
+    await commands.checked('installed-packaged-smoke', process.execPath,
+      [path.resolve('scripts/electron-builder', script), app, 'darwin'], 180_000);
   await launch('fresh220', path.join(root, 'fresh-profile'), '2.17.10');
   await noAppProcesses();
   await rm(app, { recursive: true });

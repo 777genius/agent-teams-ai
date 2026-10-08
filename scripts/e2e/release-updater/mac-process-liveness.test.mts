@@ -25,10 +25,15 @@ void test('native snapshot preserves exact identity and excludes only proven Z/X
   for (const state of ['R', 'S+', 'T', 'U', 'I'])
     assert.equal(activeMacProcess({ ...rows[0], state }), true);
   assert.equal(activeMacProcess({ ...rows[0], state: 'X' }), false);
-  assert.throws(
-    () => parseMacProcessSnapshot('60018 501 60018 1 ? Thu Oct 8 12:26:21 2026 /TEST-owned/app'),
-    /Invalid native process state/
-  );
+  for (const state of ['?<E', '?<Es']) {
+    const observed = parseMacProcessSnapshot(
+      `25607 501 25607 9088 ${state} Thu Oct 8 14:02:15 2026 (Agent Teams AI)`
+    );
+    const entry = observed[0];
+    assert(entry);
+    assert.equal(activeMacProcess(entry), true);
+  }
+  assert.throws(() => parseMacProcessSnapshot('bad row'), /Invalid native process state/);
 });
 
 void test('zombie-only owned group requires no signals; live foreign group still rejects before signaling', async (context) => {

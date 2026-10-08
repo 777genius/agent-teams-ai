@@ -23,6 +23,7 @@ export interface CommandResult {
 }
 export class MacCommands {
   readonly commands: CommandResult[] = [];
+  activeChildPid: number | undefined;
   readonly output: string;
   private progressSequence = 0;
   constructor(output: string) {
@@ -48,11 +49,13 @@ export class MacCommands {
     let stderr = '';
     let exitCode = 0;
     try {
-      const result = await execute(binary, args, {
+      const pending = execute(binary, args, {
         timeout,
         maxBuffer: 4_194_304,
         env: { ...process.env, LC_ALL: 'C' },
       });
+      this.activeChildPid = pending.child.pid;
+      const result = await pending;
       stdout = result.stdout;
       stderr = result.stderr;
     } catch (error) {
@@ -61,6 +64,7 @@ export class MacCommands {
       stderr = `${result.stderr ?? ''}\n${result.message}`;
       exitCode = typeof result.code === 'number' ? result.code : 128;
     }
+    this.activeChildPid = undefined;
     const logFile = `${process.pid}-${String(this.commands.length + 1).padStart(3, '0')}-${label}.log`;
     const bytes = `stdout:\n${stdout}\nstderr:\n${stderr}`;
     const result = {
@@ -426,7 +430,7 @@ export function parseMacProcessSnapshot(stdout: string): MacProcessSnapshot[] {
       const parts = line.trim().split(/\s+/);
       const state = parts[4];
       assert(
-        parts.length >= 11 && typeof state === 'string' && /^[A-Z][A-Za-z+<>-]*$/.test(state),
+        parts.length >= 11 && typeof state === 'string' && /^[A-Z?][A-Za-z+<>-]*$/.test(state),
         'Invalid native process state'
       );
       const pid = Number(parts[0]);
@@ -548,6 +552,134 @@ export async function stopMacOwned(commands: MacCommands, owner: MacProcess, app
     );
   }
   return { before, remaining: await remaining() };
+}
+
+export async function macOwnedForeground(commands: MacCommands, owner: MacProcess, reader: string) {
+  return waitFor(async () => {
+    assert.deepEqual(await macOwner(commands, owner.pid, owner.command), owner, 'Owned focus PID identity changed');
+    const observed = JSON.parse((await commands.checked('actual-frontmost-application', reader, [String(owner.pid), owner.command])).stdout) as { pid: number; executable: string };
+    if (observed.pid !== owner.pid) return null;
+    assert.equal(observed.executable, owner.command, 'Owned frontmost executable changed');
+    return observed;
+  }, 'Exact owned application foreground', 3000);
+}
+
+export interface MacSmokeObservation {
+  process: MacProcessSnapshot;
+  crashpadDatabase?: string;
+}
+export function macSmokeCustody(
+  observations: MacSmokeObservation[], leaderPid: number, app: string,
+  uid: number, started: number, finished: number, profiles: readonly string[]
+): MacProcessSnapshot[] {
+  const owned = new Map<number, MacProcessSnapshot>();
+  const leader = observations.find(({ process }) => process.pid === leaderPid)?.process;
+  assert(leader, 'Smoke leader native identity was not observed');
+  const qualifies = (item: MacProcessSnapshot) => {
+    const start = Date.parse(item.start);
+    assert(item.uid === uid && item.command.startsWith(`${app}/Contents/`) &&
+      Number.isFinite(start) && start >= started - 1000 && start <= finished,
+    'Smoke process custody UID/path/start mismatch');
+  };
+  qualifies(leader);
+  assert.equal(leader.group, leader.pid, 'Smoke leader must own its detached group');
+  owned.set(leader.pid, leader);
+  for (const observation of observations) {
+    const item = observation.process;
+    qualifies(item);
+    const previous = owned.get(item.pid);
+    if (previous) {
+      assert.deepEqual(processIdentity(item), processIdentity(previous), 'Smoke PID identity changed');
+      owned.set(item.pid, item);
+      continue;
+    }
+    const parent = owned.get(item.parentPid);
+    const database = observation.crashpadDatabase;
+    const roleBound = database !== undefined && profiles.some(profile => database.startsWith(`${path.dirname(profile)}/`) && path.basename(database) === 'Crashpad');
+    if (parent || (item.group === leader.group) || roleBound) owned.set(item.pid, item);
+  }
+  for (const { process: item } of observations)
+    assert(owned.has(item.pid), `Unproved live smoke bundle process PID ${item.pid} PPID ${item.parentPid} state ${item.state}`);
+  return [...owned.values()];
+}
+export async function stopMacSmokeCustody(commands: MacCommands, owners: MacProcessSnapshot[], app: string) {
+  const stop = async (signal: 'SIGTERM' | 'SIGKILL') => {
+    for (const owner of owners) {
+      const current = (await macProcessSnapshot(commands)).find(item => item.pid === owner.pid);
+      if (!current || !activeMacProcess(current)) continue;
+      assert.deepEqual(processIdentity(current), processIdentity(owner), 'Smoke PID identity changed before signal');
+      assert(current.parentPid === owner.parentPid || current.parentPid === 1, 'Smoke parent identity changed before signal');
+      assert(current.uid === process.getuid?.() && current.command.startsWith(`${app}/Contents/`));
+      process.kill(current.pid, signal);
+    }
+  };
+  const remaining = async () => (await macProcessSnapshot(commands)).filter(item =>
+    activeMacProcess(item) && (owners.some(owner => owner.pid === item.pid) || item.command.startsWith(`${app}/Contents/`)));
+  await stop('SIGTERM');
+  try { await waitFor(async () => (await remaining()).length === 0 ? true : null, 'Smoke bundle termination', 3000); }
+  catch { await stop('SIGKILL'); await waitFor(async () => (await remaining()).length === 0 ? true : null, 'Smoke bundle forced termination', 3000); }
+  return { owners, remaining: await remaining() };
+}
+async function macSmokeObservation(commands: MacCommands, item: MacProcessSnapshot, profiles: Set<string>, seedProfile: boolean): Promise<MacSmokeObservation> {
+        let args: string;
+        try { args = (await execute('/bin/ps', ['-p', String(item.pid), '-o', 'args='], { timeout: 1000 })).stdout; }
+        catch (error) {
+          const current = (await macProcessSnapshot(commands)).find(value => value.pid === item.pid);
+          if (current && activeMacProcess(current)) throw error;
+          return { process: item };
+        }
+        const profile = /--user-data-dir=(\S+)/.exec(args)?.[1];
+        if (profile && seedProfile) {
+          const profileRoot = path.dirname(profile), info = await stat(profileRoot);
+          assert(path.basename(profileRoot).startsWith('agent-teams-smoke-TEST-') && info.uid === item.uid && (info.mode & 0o777) === 0o700);
+          assert(path.isAbsolute(profile));
+          assert.equal(await readFile(path.join(profileRoot, '.test-only'), 'utf8'), 'packaged-app-smoke-test-v1');
+          profiles.add(await realpath(profile));
+        }
+        const database = /--database=(\S+)/.exec(args)?.[1];
+        return { process: item, ...(/(?:^|\s)--type=crashpad-handler(?:\s|$)/.test(args) && database ? { crashpadDatabase: await realpath(database) } : {}) };
+}
+export async function runMacSmokeOwned(commands: MacCommands, app: string, nonce: string, smokeParent: () => number | undefined, run: () => Promise<CommandResult>) {
+  assert.equal(await realpath(app), app, 'Smoke bundle must be canonical');
+  assert(/^[a-f0-9-]{36}$/.test(nonce));
+  assert.equal(await readFile(path.join(path.dirname(app), '.test-only-smoke-custody'), 'utf8'), `mac-manual-owned:${nonce}`);
+  const root = path.dirname(app), rootStat = await stat(root);
+  assert(path.basename(root).startsWith('TEST-mac-manual-owned-') && rootStat.uid === process.getuid?.() && (rootStat.mode & 0o777) === 0o700, 'Smoke bundle root custody invalid');
+  assert(!(await macProcessSnapshot(commands)).some(item => activeMacProcess(item) && item.command.startsWith(`${app}/Contents/`)), 'Smoke baseline bundle must be empty');
+  const observations: MacSmokeObservation[] = [], profiles = new Set<string>();
+  const started = Date.now();
+  let done = false, observationError: Error | undefined;
+  const observe = async () => {
+    while (!done) {
+      const all = await macProcessSnapshot(commands);
+      const parent = all.find(item => item.pid === smokeParent());
+      const parentOwned = parent !== undefined && parent.uid === process.getuid?.() && parent.parentPid === process.pid && parent.command === process.execPath;
+      const snapshot = all.filter(item => activeMacProcess(item) && item.command.startsWith(`${app}/Contents/`));
+      for (const item of snapshot) {
+        assert.equal(item.uid, process.getuid?.(), 'Foreign smoke process UID');
+        const previous = observations.find(value => value.process.pid === item.pid && value.process.start === item.start);
+        if (previous) {
+          assert.deepEqual(processIdentity(previous.process), processIdentity(item), 'Smoke PID identity changed');
+          observations.push({ ...previous, process: item });
+          continue;
+        }
+        const seedProfile = parentOwned && item.parentPid === parent?.pid && item.group === item.pid && item.command === path.join(app, 'Contents/MacOS/Agent Teams AI') && Date.parse(item.start) >= started - 1000;
+        observations.push(await macSmokeObservation(commands, item, profiles, seedProfile));
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  };
+  const observing = observe().catch((error: unknown) => { observationError = error instanceof Error ? error : new Error('Smoke observation failed with non-Error cause'); });
+  let result: CommandResult;
+  try { result = await run(); } finally {
+    done = true; await observing;
+    await writeFile(path.join(commands.output, 'smoke-process-custody.json'), `${canonical({ started, finished: Date.now(), observations, profiles: [...profiles], observationError: observationError?.message ?? null })}\n`, { flag: 'wx' });
+  }
+  if (observationError) throw observationError;
+  const leaderPid = Number(/\[smokePackagedApp\] spawned: pid=(\d+)/.exec(result.stdout)?.[1]);
+  const owners = macSmokeCustody(observations, leaderPid, app, process.getuid?.() ?? -1, started, Date.now(), [...profiles]);
+  const cleanup = await stopMacSmokeCustody(commands, owners, app);
+  return { observations, profiles: [...profiles], cleanup };
 }
 
 // CoreGraphics reads the actual Aqua window owner. Renderer screenshots are separate evidence.
