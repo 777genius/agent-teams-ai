@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `fe7cf534507be036de0d5f818d65c61606c3933f`.
+- Source: `4d83f9537a50656187c735383524307a348e586c`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-EWVSyt/evidence.json`.
-- Evidence SHA256: `92edbb4551a535daf11daa5447d8e1acd7f1d642e9a7b65945965cc58c3992ad`.
-- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,344 production files, with teams HTTP at 799/800 and no baseline increase.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-0OUUn5/evidence.json`.
+- Evidence SHA256: `b9a329c05db9ae17411b43ce6f9f0a1ccb7245b8aef78439451c362191bec1e0`.
+- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,342 production files, with teams HTTP at 799/800 and no baseline increase.
 
 ## Actual desktop and native MCP proof
 
@@ -44,6 +44,8 @@ Passed:
 - A final review identified partial canonical roster normalization discarding identities/tombstones. Management opts into `requireCompleteMembers` on the existing reader: skipped entries, case-insensitive identity collisions, suffix pruning and invalid lifecycle markers reject before writes; tolerant ordinary reads and legitimate trim/backend migrations remain. Four regression cases failed on the previous reader; all 72 nearest HTTP/reader tests then passed with exact byte/event assertions. Full project typecheck, focused lint and source-size guard passed. Independent review accepted exact `12fcf8eebca55a56554a8ede6048f9d68231bbff`, followed by the fresh native desktop proof above. This protects canonical identities/markers, not arbitrary unknown metadata fields.
 
 - Canonical config and management now share a minimum readable-payload predicate, rejecting missing/blank names and unsafe roster shapes before GET/update/trash writes. All 80 nearest HTTP/reader tests, pinned project typecheck, full focused lint and source-size guard passed. Independent review accepted `05a0fecd34176de286b159440ed4fefdc5d6de16`. A fresh desktop attempt stopped before MCP calls on a missed disclosure click; the harness now waits for stable rendered geometry before real CDP mouse input, preserving the exact responsibility assertion. Independent harness review accepted that bounded fix; the complete fresh native run above then passed.
+
+- Review then identified lossy normalization of recognized optional team/member settings. Management requires complete known metadata through one shared fidelity helper, including nested launch identity and MCP policy; legitimate defaults, trimming and backend migrations remain supported. Present unreadable team metadata rejects before tolerant saved-request reads. Roster replacement also preserves the file-level backend fallback. Fourteen new regressions failed on the prior source; all 254 nearest HTTP/reader/data-service tests and the pinned typecheck passed on the fix. Source-size guard passed; production and the owned HTTP fixture had no full-lint errors. The legacy data-service fixture retains exactly the same 479 pre-existing lint errors as its prior version; these were compared independently, with no new errors or suppression. Independent review accepted the seven-file patch. The fresh native desktop proof above passed afterwards. Unknown future metadata fields are outside this preservation contract.
 
 ## Limits
 
