@@ -13,7 +13,17 @@ import {
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import { ChevronDown, Code2, Megaphone, PenLine, Search } from 'lucide-react';
+import {
+  ChevronDown,
+  ClipboardList,
+  Code2,
+  GraduationCap,
+  Handshake,
+  Headset,
+  Megaphone,
+  PenLine,
+  Search,
+} from 'lucide-react';
 
 import type { TeamTemplateV1 } from '@features/team-templates';
 import type { LucideIcon } from 'lucide-react';
@@ -23,6 +33,10 @@ const TEMPLATE_ICONS = {
   marketing: Megaphone,
   content: PenLine,
   research: Search,
+  sales: Handshake,
+  'customer-support': Headset,
+  operations: ClipboardList,
+  learning: GraduationCap,
 } satisfies Record<TeamTemplateV1['id'], LucideIcon>;
 
 export function TeamTemplateReferences({
@@ -83,26 +97,27 @@ export function TeamTemplateReferences({
                     <RosterParticipantIdentity
                       avatarSrc={avatars.get(member.name) ?? agentAvatarUrl(member.name, 32)}
                     >
-                      <span className="min-w-0 break-words text-xs font-medium">{member.name}</span>
+                      <span className="min-w-0 break-words text-xs font-medium">{member.role}</span>
                     </RosterParticipantIdentity>
-                    <p className="flex min-h-8 min-w-0 items-center break-words text-xs text-[var(--color-text-secondary)]">
-                      {member.role}
-                    </p>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto min-h-8 max-w-full justify-start whitespace-normal text-left"
-                        aria-label={t('externalPrompt.responsibilitiesFor', { name: member.name })}
-                      >
-                        {t('externalPrompt.responsibilities')}
-                        <ChevronDown className="size-3.5 shrink-0" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="min-w-0 whitespace-pre-wrap break-words text-xs text-[var(--color-text-muted)] md:col-span-3">
-                      {member.workflow}
-                    </CollapsibleContent>
+                    <div className="min-w-0 space-y-1 md:col-span-2">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto min-h-8 max-w-full justify-start whitespace-normal text-left"
+                          aria-label={t('externalPrompt.responsibilitiesFor', {
+                            name: member.role,
+                          })}
+                        >
+                          {t('externalPrompt.responsibilities')}
+                          <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="min-w-0 whitespace-pre-wrap break-words text-xs text-[var(--color-text-muted)]">
+                        {member.workflow}
+                      </CollapsibleContent>
+                    </div>
                   </RosterParticipantFrame>
                 </Collapsible>
               ))}

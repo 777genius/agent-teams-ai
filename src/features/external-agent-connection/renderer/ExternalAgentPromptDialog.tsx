@@ -150,6 +150,26 @@ export const ExternalAgentPromptDialog = ({
     }
   };
 
+  const copyAction = (testId: string): React.JSX.Element => (
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => void copy()}
+      disabled={busy || !ready || !taskPresent}
+      data-testid={testId}
+      className="h-auto min-h-8 max-w-full whitespace-normal bg-blue-600 text-white hover:bg-blue-500"
+    >
+      {copied ? (
+        <Check className="size-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3.5 shrink-0" aria-hidden="true" />
+      )}
+      {t(
+        busy ? 'externalPrompt.copying' : copied ? 'externalPrompt.copied' : 'externalPrompt.copy'
+      )}
+    </Button>
+  );
+
   return (
     <div className="min-w-0 space-y-4" data-testid="external-agent-prompt-content">
       <div className="space-y-2">
@@ -197,27 +217,7 @@ export const ExternalAgentPromptDialog = ({
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Label id="external-agent-prompt-preview-label">{t('externalPrompt.previewLabel')}</Label>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void copy()}
-            disabled={busy || !ready || !taskPresent}
-            data-testid="external-agent-prompt-copy"
-            className="h-auto min-h-8 max-w-full whitespace-normal bg-blue-600 text-white hover:bg-blue-500"
-          >
-            {copied ? (
-              <Check className="size-3.5 shrink-0" />
-            ) : (
-              <Copy className="size-3.5 shrink-0" />
-            )}
-            {t(
-              busy
-                ? 'externalPrompt.copying'
-                : copied
-                  ? 'externalPrompt.copied'
-                  : 'externalPrompt.copy'
-            )}
-          </Button>
+          {copyAction('external-agent-prompt-copy')}
         </div>
         <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
           {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
@@ -278,6 +278,7 @@ export const ExternalAgentPromptDialog = ({
           task={request.value}
           context={currentConnection.context}
           ready={ready}
+          copyAction={copyAction('external-agent-run-copy')}
         />
       )}
       <TeamTemplateReferences isLight={isLight} />

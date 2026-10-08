@@ -3165,7 +3165,11 @@
       "software-product": "Software Product Team",
       "marketing": "Marketing Team",
       "content": "Content Studio",
-      "research": "Research Team"
+      "research": "Research Team",
+      "sales": "Sales Team",
+      "customer-support": "Customer Support Team",
+      "operations": "Operations Team",
+      "learning": "Learning Team"
     },
     "providerLabel": "Choose team provider",
     "providerPlaceholder": "Choose a provider",
@@ -3174,7 +3178,11 @@
       "software-product": "Design, build and validate apps, websites and digital products.",
       "marketing": "Develop campaigns and messaging for a product or small business.",
       "content": "Create clear articles, newsletters, educational content and scripts.",
-      "research": "Investigate markets, topics and practical decisions using evidence."
+      "research": "Investigate markets, topics and practical decisions using evidence.",
+      "sales": "Understand customer needs and prepare offers, outreach and follow-ups.",
+      "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
+      "operations": "Organize projects and everyday work with practical plans and process improvements.",
+      "learning": "Learn a topic or skill through clear explanations, practice and feedback."
     }
   },
   "externalPrompt": {

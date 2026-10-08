@@ -101,9 +101,9 @@ describe('external prompt freshness and clipboard fallback', () => {
   });
   const preview = () =>
     host.querySelector<HTMLDivElement>('[data-testid="external-agent-prompt-preview"]');
-  const copy = async () => {
+  const copy = async (testId = 'external-agent-prompt-copy') => {
     await act(async () =>
-      host.querySelector<HTMLButtonElement>('[data-testid="external-agent-prompt-copy"]')!.click()
+      host.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`)!.click()
     );
   };
   const render = async (api: ExternalAgentConnectionApi, connection = snapshot()) => {
@@ -146,7 +146,10 @@ describe('external prompt freshness and clipboard fallback', () => {
       'Native runs support requests up to 20000 characters. Shorten the request to run it.'
     );
     expect(preview()?.textContent).toContain(oversized);
-    await copy();
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="external-agent-run-copy"]')!.disabled
+    ).toBe(false);
+    await copy('external-agent-run-copy');
     expect(writeText).toHaveBeenCalledOnce();
     expect(writeText.mock.calls[0]?.[0]).toContain(oversized);
     const buttons = ['codex', 'claude'].map(
@@ -268,6 +271,9 @@ describe('external prompt freshness and clipboard fallback', () => {
     )!;
     expect(codex.disabled).toBe(true);
     expect(claude.disabled).toBe(true);
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="external-agent-run-copy"]')!.disabled
+    ).toBe(false);
     await act(async () => finishAvailability({ codex: true, anthropic: false }));
     expect(codex.disabled).toBe(false);
     expect(claude.disabled).toBe(true);
@@ -275,6 +281,58 @@ describe('external prompt freshness and clipboard fallback', () => {
     await act(async () => claude.click());
     expect(runApi.start).not.toHaveBeenCalled();
     expect(runApi.getAvailability).toHaveBeenCalledOnce();
+    await copy('external-agent-run-copy');
+    expect(writeText).toHaveBeenCalledOnce();
+  });
+
+  // RED when the two copy entrypoints start separate writes or disagree about busy/copied state.
+  it('shares busy and copied feedback between preview and run-area copy actions', async () => {
+    let finishWrite!: () => void;
+    writeText.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve;
+        })
+    );
+    const api = {
+      getConnectionInfo: vi.fn(async () => snapshot()),
+      retryConnection: vi.fn(),
+      directRun: {
+        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false })),
+        getSnapshot: vi.fn(async () => null),
+        start: vi.fn(),
+        cancel: vi.fn(),
+      },
+    };
+    await render(api);
+    const copyButtons = ['external-agent-prompt-copy', 'external-agent-run-copy'].map(
+      (testId) => host.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`)!
+    );
+    expect(copyButtons.every((button) => !button.disabled)).toBe(true);
+    await copy('external-agent-run-copy');
+    for (const button of copyButtons) {
+      expect(button.disabled).toBe(true);
+      expect(button.textContent).toBe('Copying...');
+    }
+    await copy();
+    expect(api.getConnectionInfo).toHaveBeenCalledOnce();
+    expect(writeText).toHaveBeenCalledOnce();
+    await act(async () => finishWrite());
+    for (const button of copyButtons) {
+      expect(button.disabled).toBe(false);
+      expect(button.textContent).toBe('Copied');
+    }
+    expect(writeText.mock.calls[0]?.[0]).toBe(preview()?.textContent);
+    const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        task,
+        'Another sandbox request'
+      );
+      task.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    for (const button of copyButtons) expect(button.textContent).toBe('Copy prompt for agent');
+    expect(api.directRun.start).not.toHaveBeenCalled();
   });
 
   // RED when the final prompt requires reveal, follows the templates, or has a detached copy action.
@@ -303,14 +361,14 @@ describe('external prompt freshness and clipboard fallback', () => {
     expect(finalPrompt?.closest('[data-state="closed"]')).toBeNull();
   });
 
-  // RED when template rosters start expanded or their full header does not toggle them.
-  it('starts all template rosters collapsed and toggles participants through the header', async () => {
+  // RED when rosters start expanded, repeat participant roles or replace read-only responsibilities.
+  it('starts all eight template rosters collapsed and shows each role once with read-only responsibilities', async () => {
     await render({
       getConnectionInfo: vi.fn().mockResolvedValue(snapshot()),
       retryConnection: vi.fn(),
     });
     const templates = Array.from(host.querySelectorAll('[data-template-reference]'));
-    expect(templates).toHaveLength(4);
+    expect(templates).toHaveLength(8);
     for (const template of templates) {
       expect(template.getAttribute('data-state')).toBe('closed');
       expect(template.querySelector('[data-role="template-participant"]')).toBeNull();
@@ -319,7 +377,25 @@ describe('external prompt freshness and clipboard fallback', () => {
     expect(header.getAttribute('aria-expanded')).toBe('false');
     await act(async () => header.click());
     expect(header.getAttribute('aria-expanded')).toBe('true');
-    expect(templates[0].querySelector('[data-role="template-participant"]')).not.toBeNull();
+    const participants = templates[0].querySelectorAll('[data-role="template-participant"]');
+    expect(participants).toHaveLength(4);
+    expect(participants[0].textContent).not.toContain('team-lead');
+    expect(participants[0].textContent?.match(/Coordinator/g)).toHaveLength(1);
+    const designer = participants[1];
+    expect(designer.textContent?.match(/Product Designer/g)).toHaveLength(1);
+    expect(designer.textContent).not.toContain('designer');
+    expect(designer.querySelector('img')?.getAttribute('alt')).toBe('');
+    expect(designer.querySelector('input, textarea, select, [contenteditable="true"]')).toBeNull();
+    const responsibilities = designer.querySelector<HTMLButtonElement>('button')!;
+    expect(responsibilities.getAttribute('aria-label')).toBe(
+      'Responsibilities for Product Designer'
+    );
+    expect(responsibilities.getAttribute('aria-expanded')).toBe('false');
+    expect(designer.textContent).not.toContain('Turn user needs into clear flows');
+    await act(async () => responsibilities.click());
+    expect(responsibilities.getAttribute('aria-expanded')).toBe('true');
+    expect(designer.textContent).toContain('Turn user needs into clear flows');
+    expect(designer.querySelector('input, textarea, select, [contenteditable="true"]')).toBeNull();
     await act(async () => header.click());
     expect(header.getAttribute('aria-expanded')).toBe('false');
     expect(templates[0].querySelector('[data-role="template-participant"]')).toBeNull();
@@ -394,14 +470,20 @@ describe('external prompt freshness and clipboard fallback', () => {
         .mockRejectedValueOnce(new Error('Discovery failed'))
         .mockResolvedValue(live),
       retryConnection: vi.fn(),
+      directRun: {
+        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false })),
+        getSnapshot: vi.fn(async () => null),
+        start: vi.fn(),
+        cancel: vi.fn(),
+      },
     };
     await render(api);
-    await copy();
+    await copy('external-agent-run-copy');
     expect(preview()?.textContent).toBe(
       'Enter a request to see the final prompt. A ready MCP connection is required.'
     );
     writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
-    await copy();
+    await copy('external-agent-run-copy');
     const freshPrompt = writeText.mock.calls[0]?.[0];
     expect(freshPrompt).toContain('http://127.0.0.1:43003/mcp');
     expect(preview()?.textContent).toBe(freshPrompt);

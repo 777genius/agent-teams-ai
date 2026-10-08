@@ -6559,16 +6559,24 @@ export default interface Resources {
     "templates": {
       "descriptions": {
         "content": "Create clear articles, newsletters, educational content and scripts.",
+        "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
+        "learning": "Learn a topic or skill through clear explanations, practice and feedback.",
         "marketing": "Develop campaigns and messaging for a product or small business.",
+        "operations": "Organize projects and everyday work with practical plans and process improvements.",
         "research": "Investigate markets, topics and practical decisions using evidence.",
+        "sales": "Understand customer needs and prepare offers, outreach and follow-ups.",
         "software-product": "Design, build and validate apps, websites and digital products."
       },
       "label": "Team template",
       "modelAfterProvider": "Model selection is available after choosing a provider.",
       "names": {
         "content": "Content Studio",
+        "customer-support": "Customer Support Team",
+        "learning": "Learning Team",
         "marketing": "Marketing Team",
+        "operations": "Operations Team",
         "research": "Research Team",
+        "sales": "Sales Team",
         "software-product": "Software Product Team"
       },
       "placeholder": "Start from a team template",
