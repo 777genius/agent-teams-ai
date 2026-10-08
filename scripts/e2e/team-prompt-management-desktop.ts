@@ -769,10 +769,13 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     );
     await evaluate(async () => navigator.clipboard.writeText('TEST clipboard reset'));
     await click('[data-testid="external-agent-run-copy"]', true);
-    await waitFor(
-      async () => (await evaluate(async () => navigator.clipboard.readText())) === copied,
-      'Run-area Copy writes the same fresh prompt through the native clipboard'
-    );
+    await waitFor(async () => {
+      const text = await evaluate(async () => navigator.clipboard.readText());
+      const previewNow = await evaluate(
+        () => document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
+      );
+      return text.includes(request) && text === previewNow;
+    }, 'Run-area Copy writes its freshly generated preview through the native clipboard');
     await evaluate(() => window.getSelection()?.removeAllRanges());
     evidence[`${theme}Popup`] = {
       ...references,
