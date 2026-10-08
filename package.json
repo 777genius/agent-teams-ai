@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.17.8",
+  "version": "2.17.9",
   "dynamicFlags": {
     "showSponsorFluxion": true
   },

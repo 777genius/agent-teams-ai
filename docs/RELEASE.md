@@ -29,17 +29,17 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.17.8 (Prepared draft)
+## v2.17.9 (Prepared draft)
 
-Source base: reviewed PR #862 at `a03226ece341ed970f4545f58d89f77c2e7361c7`.
-The unpublished failed `v2.17.7` tag remains unchanged. All five platforms use freshly built `2.17.8` apps. Publish `2.17.6` before preparing this release's GitHub draft.
+Source base: `main` at `3781d144dbf013a2f6d0ef73ea64e472548286c7`.
+The unpublished failed `v2.17.7` and `v2.17.8` tags remain unchanged. All five platforms use freshly built `2.17.9` apps. Publish `2.17.6` before preparing this release's GitHub draft.
 Existing runtime locks remain unchanged. Verify the final reviewed source and native installer evidence before publication.
 
 Release body source for GitHub release:
 
-<!-- RELEASE_BODY_START v2.17.8 -->
+<!-- RELEASE_BODY_START v2.17.9 -->
 
-Agent Teams 2.17.8 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
+Agent Teams 2.17.9 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
 
 ### What's New
 
@@ -56,23 +56,23 @@ Cost figures are estimates, not provider invoices.
 
 | Platform | Version | Download |
 | --- | --- | --- |
-| Windows x64 | 2.17.8 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/Agent.Teams.AI.Setup.2.17.8.exe) |
-| Windows ARM64 | 2.17.8 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/Agent.Teams.AI.Setup.2.17.8-arm64.exe) |
-| Linux x64 | 2.17.8 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/Agent.Teams.AI-2.17.8.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/agent-teams-ai_2.17.8_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/agent-teams-ai-2.17.8.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/agent-teams-ai-2.17.8.pacman) |
-| macOS Apple Silicon | 2.17.8 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/Agent.Teams.AI-2.17.8-arm64.dmg) |
-| macOS Intel | 2.17.8 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.8/Agent.Teams.AI-2.17.8-x64.dmg) |
+| Windows x64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe) |
+| Windows ARM64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe) |
+| Linux x64 | 2.17.9 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
+| macOS Apple Silicon | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg) |
+| macOS Intel | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg) |
 
 ### macOS installation
 
-macOS 2.17.8 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+macOS 2.17.9 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
 
-If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.8 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.9 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
 
 Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
 
 Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
 
-<!-- RELEASE_BODY_END v2.17.8 -->
+<!-- RELEASE_BODY_END v2.17.9 -->
 
 ## v2.17.5 (Draft)
 

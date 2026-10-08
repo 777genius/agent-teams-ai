@@ -52,7 +52,7 @@ it('matches official Windows matrix job names without treating included architec
 });
 
 // Receipt policy only: these synthetic claims never qualify a native run.
-it('requires honest byte-bound repaired ARM211 receipts for216/218 predecessor cases', () => {
+it('requires honest byte-bound repaired ARM211 receipts for216/219 predecessor cases', () => {
   const bytes = {
     size: 100,
     sha256: 'a'.repeat(64),
@@ -95,7 +95,7 @@ it('requires honest byte-bound repaired ARM211 receipts for216/218 predecessor c
     initialInstall: { code: 0, arguments: ['/S', `/D=${install}`] },
     installedBefore: { packageVersion: '2.17.1' },
   };
-  for (const targetVersion of ['2.17.6', '2.17.8'])
+  for (const targetVersion of ['2.17.6', '2.17.9'])
     expect(() => checkWindowsPriorFixture(value, 'arm64', 'cold', targetVersion)).not.toThrow();
   const mutations = [
     (v: typeof value) => {
@@ -138,10 +138,10 @@ it('requires honest byte-bound repaired ARM211 receipts for216/218 predecessor c
   for (const mutate of mutations) {
     const invalid = structuredClone(value);
     mutate(invalid);
-    for (const targetVersion of ['2.17.6', '2.17.8'])
+    for (const targetVersion of ['2.17.6', '2.17.9'])
       expect(() => checkWindowsPriorFixture(invalid, 'arm64', 'cold', targetVersion)).toThrow();
   }
-  for (const targetVersion of ['2.17.6', '2.17.8'])
+  for (const targetVersion of ['2.17.6', '2.17.9'])
     expect(() => checkWindowsPriorFixture({}, 'arm64', 'cold', targetVersion)).toThrow();
   for (const [arch, mode, version] of [
     ['x64', 'cold', '2.17.6'],
@@ -154,7 +154,7 @@ it('requires honest byte-bound repaired ARM211 receipts for216/218 predecessor c
 });
 
 it('selects repaired original ARM211 for reviewed predecessor probes and OTA scenarios', () => {
-  for (const version of ['2.17.6', '2.17.8']) {
+  for (const version of ['2.17.6', '2.17.9']) {
     for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
       expect(usesRepairedArm211('arm64', mode, version)).toBe(true);
       expect(usesRepairedArm211('x64', mode, version)).toBe(false);
@@ -162,14 +162,14 @@ it('selects repaired original ARM211 for reviewed predecessor probes and OTA sce
     expect(usesRepairedArm211('arm64', 'fresh', version)).toBe(false);
     expect(usesRepairedArm211('arm64', 'unsupported', version)).toBe(false);
   }
-  for (const version of ['2.17.5', '2.17.7', '2.18.0', '2.17.8-beta.1']) {
+  for (const version of ['2.17.5', '2.17.7', '2.17.8', '2.18.0', '2.17.9-beta.1']) {
     for (const mode of ['predecessor', 'full', 'cold', 'warm']) {
       expect(usesRepairedArm211('arm64', mode, version)).toBe(false);
     }
   }
 });
 
-it.each(['2.17.6', '2.17.8'])(
+it.each(['2.17.6', '2.17.9'])(
   'marks only successful plan-bound Windows %s native proofs as final',
   (targetVersion) => {
     // Synthetic predicate inputs prove policy only; they never qualify a native execution.
@@ -207,6 +207,7 @@ it.each(['2.17.6', '2.17.8'])(
       { stagedMetadata: { releaseId: 9999 } },
       { plan: { input: { target: { tag: 'v2.17.5', id: 1234 } } } },
       { targetVersion: '2.17.7' },
+      { targetVersion: '2.17.8' },
       { architecture: 'ia32' },
       { mode: 'unsupported' },
       { mode: 'fresh', freshInstallProved: false },
@@ -229,7 +230,7 @@ import type {
 // The closed synthetic matrix is intentionally kept together for scenario mutation tests.
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function fixture(full = false) {
-  const targetVersion = full ? '2.17.8' : '2.17.4';
+  const targetVersion = full ? '2.17.9' : '2.17.4';
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const toolingSha = full ? 'b'.repeat(40) : 'a'.repeat(40);
   const applicationSha = 'b'.repeat(40);
@@ -361,7 +362,7 @@ function fixture(full = false) {
       'Read exact official predecessor and draft bytes',
       'Download and verify immutable official packages',
       full
-        ? 'Authenticate prepared plan and uploaded original 211 and target 218 bytes'
+        ? 'Authenticate prepared plan and uploaded original 211 and target 219 bytes'
         : 'Authenticate and hash real release inputs without native application execution',
     ];
     const name = producerNames[index] ?? 'prepare-mac-inputs';
@@ -933,17 +934,17 @@ function manualValue(
   const profileBefore = {
     passiveBefore: [passiveTeam, passiveProject],
     passivePreserved: [passiveTeam, passiveProject],
-    replacementSignature: signature('2.17.8'),
+    replacementSignature: signature('2.17.9'),
     profileBefore: file,
     preservedBeforeLaunch: file,
   };
   const phases: Record<string, unknown>[] = [
-    { freshSignature: signature('2.17.8') },
+    { freshSignature: signature('2.17.9') },
     { oldSignature: signature('2.17.1') },
     profileBefore,
   ];
-  for (const [index, label] of ['fresh218', 'original211', 'manual218'].entries()) {
-    const profile = `${root}/${label === 'fresh218' ? 'fresh-profile' : 'migration-profile'}`;
+  for (const [index, label] of ['fresh219', 'original211', 'manual219'].entries()) {
+    const profile = `${root}/${label === 'fresh219' ? 'fresh-profile' : 'migration-profile'}`;
     const executable = `${root}/Agent Teams AI.app/Contents/MacOS/Agent Teams AI`;
     const bytes = Buffer.alloc(1200, index + 1);
     entries[manualCapturePaths[index]!] = bytes;
@@ -952,10 +953,10 @@ function manualValue(
       profile,
       before: label === 'original211' ? 'system' : 'light',
       theme: 'light',
-      ...(label === 'fresh218'
+      ...(label === 'fresh219'
         ? {}
         : {
-            configProof: label === 'manual218' ? normalized : file,
+            configProof: label === 'manual219' ? normalized : file,
             migrationState: {
               theme: 'light',
               projectPaths: [projectPath],
@@ -970,7 +971,7 @@ function manualValue(
         userData: `${profile}/user-data`,
         executable,
         arch: architecture,
-        version: label === 'original211' ? '2.17.1' : '2.17.8',
+        version: label === 'original211' ? '2.17.1' : '2.17.9',
         packaged: true,
       },
       foregroundBefore: { pid: 42, executable },
@@ -988,7 +989,7 @@ function manualValue(
     repository: plan.input.repository,
     toolingSha: plan.input.toolingSha,
     sourceSha: plan.input.target.applicationSha,
-    version: '2.17.8',
+    version: '2.17.9',
     architecture,
     actualMacOs: '15.6',
     minimumOs13ExecutionProven: false,
@@ -1056,7 +1057,7 @@ function manualValue(
   };
 }
 
-describe('full218 frozen-source native readiness', () => {
+describe('full219 frozen-source native readiness', () => {
   it('accepts exactly 18 scenarios, 14 artifacts and four complete workflow cohorts', async () => {
     const f = fixture(true);
     expect(f.receipt.artifacts).toHaveLength(14);
@@ -1079,7 +1080,7 @@ describe('full218 frozen-source native readiness', () => {
       'lost passive team after replacement',
       (v: Record<string, unknown>) => {
         delete (
-          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual218')!
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual219')!
             .migrationState as Record<string, unknown>
         ).team;
       },
@@ -1088,7 +1089,7 @@ describe('full218 frozen-source native readiness', () => {
       'lost custom project after replacement',
       (v: Record<string, unknown>) => {
         (
-          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual218')!
+          (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual219')!
             .migrationState as Record<string, unknown>
         ).projectPaths = [];
       },
@@ -1115,7 +1116,7 @@ describe('full218 frozen-source native readiness', () => {
     [
       'invalid migrated config byte proof',
       (v: Record<string, unknown>) => {
-        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual218')!.configProof =
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual219')!.configProof =
           { sha256: 'invalid', size: 20 };
       },
     ],
@@ -1123,7 +1124,7 @@ describe('full218 frozen-source native readiness', () => {
     [
       'missing migration config bytes',
       (v: Record<string, unknown>) => {
-        delete (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual218')!
+        delete (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual219')!
           .configProof;
       },
     ],
@@ -1146,7 +1147,7 @@ describe('full218 frozen-source native readiness', () => {
     [
       'profile reset',
       (v: Record<string, unknown>) => {
-        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual218')!.theme =
+        (v.phases as Record<string, unknown>[]).find((p) => p.label === 'manual219')!.theme =
           'system';
       },
     ],
@@ -1350,21 +1351,24 @@ it.each(['native failure', 'changed feed', 'extra asset'])(
   }
 );
 
-it('rejects legacy full218 promotion before any command or regenerated feed', async () => {
-  await expect(
-    promoteExistingDraft({
-      environment: {
-        RELEASE_REPOSITORY: '777genius/agent-teams-ai',
-        RELEASE_TAG: 'v2.17.8',
-        PUBLISH_RELEASE: 'true',
-        PATH: '',
-      },
-      now: () => {
-        throw new Error('Prepared feed bytes must not be regenerated');
-      },
-    })
-  ).rejects.toThrow('Full218 requires publish-full-release.ts');
-});
+it.each(['v2.17.7', 'v2.17.8', 'v2.17.9'])(
+  'rejects legacy %s promotion before any command or regenerated feed',
+  async (tag) => {
+    await expect(
+      promoteExistingDraft({
+        environment: {
+          RELEASE_REPOSITORY: '777genius/agent-teams-ai',
+          RELEASE_TAG: tag,
+          PUBLISH_RELEASE: 'true',
+          PATH: '',
+        },
+        now: () => {
+          throw new Error('Prepared feed bytes must not be regenerated');
+        },
+      })
+    ).rejects.toThrow('Full219 requires publish-full-release.ts');
+  }
+);
 
 it('reads only the closed manual outcome/capture archive set', () => {
   const paths = ['TEST-mac-manual-evidence/native-manual-receipt.json', ...manualCapturePaths];

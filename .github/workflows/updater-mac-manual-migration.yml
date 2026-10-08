@@ -1,4 +1,4 @@
-name: Native Mac 218 fresh and manual migration
+name: Native Mac 219 fresh and manual migration
 
 on:
   workflow_dispatch:
@@ -52,7 +52,7 @@ jobs:
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
           pnpm lint:ci:files -- scripts/e2e/release-updater/mac-manual-inputs.mts scripts/e2e/release-updater/mac-manual-migration.mts scripts/e2e/release-updater/mac-manual-inputs.test.mts
           ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-manual-inputs.test.mts
-      - name: Authenticate prepared plan and uploaded original 211 and target 218 bytes
+      - name: Authenticate prepared plan and uploaded original 211 and target 219 bytes
         env:
           GH_TOKEN: ${{ github.token }}
           PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
@@ -108,7 +108,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./node_modules/.bin/tsx scripts/e2e/release-updater/mac-manual-inputs.mts --operation retrieve --output "$RUNNER_TEMP/TEST-mac-manual-inputs"
-      - name: Fresh 218 and original 211 manual replacement in owned sandbox profiles
+      - name: Fresh 219 and original 211 manual replacement in owned sandbox profiles
         timeout-minutes: 30
         run: ./node_modules/.bin/tsx scripts/e2e/release-updater/mac-manual-migration.mts --inputs "$RUNNER_TEMP/TEST-mac-manual-inputs" --evidence "$RUNNER_TEMP/TEST-mac-manual-evidence"
       - name: Preserve native ownership, preference, signing, runtime and cleanup evidence
