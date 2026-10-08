@@ -233,10 +233,11 @@ for (const [name, url] of [
 ] as const) {
   void test(`foreign or unknown worker identity fails without any release: ${name}`, async () => {
     const peer = protocolPeer();
+    const records: Parameters<Parameters<typeof attachMacWorkerInspector>[2]>[0][] = [];
     const control = await attachMacWorkerInspector(
       peer.client,
       asar,
-      () => Promise.resolve(),
+      (receipts) => { records.push(structuredClone(receipts)); return Promise.resolve(); },
     );
     peer.emit("NodeWorker.attachedToWorker", {
       ...attachment,
@@ -244,6 +245,11 @@ for (const [name, url] of [
     });
     await assert.rejects(control.guard(new Promise<never>(() => undefined)));
     assert(!peer.commands.includes("NodeWorker.sendMessageToWorker"));
+    if (name === "unknown original module") {
+      assert.equal(records.length, 1);
+      assert.equal(records[0]?.[0]?.workerInfo.url, url);
+      assert.equal(records[0]?.[0]?.released, false);
+    } else assert.equal(records.length, 0);
     await assert.rejects(control.stop());
     assert.equal(peer.subscribed(), false);
   });
@@ -296,4 +302,22 @@ void test("durable receipt failure prevents the worker release and fails the pro
   );
   assert(!peer.commands.includes("NodeWorker.sendMessageToWorker"));
   await assert.rejects(control.stop(), /owned receipt failed/u);
+});
+
+void test("original owned internal storage worker is released only after durable identity receipt", async () => {
+  const peer = protocolPeer();
+  const records: Parameters<Parameters<typeof attachMacWorkerInspector>[2]>[0][] = [];
+  const url = pathToFileURL(path.join(asar, "dist-electron/main/internal-storage-worker.cjs")).href;
+  const control = await attachMacWorkerInspector(peer.client, asar, (receipts) => {
+    assert.equal(peer.commands.includes("NodeWorker.sendMessageToWorker"), receipts[0]?.released === true);
+    records.push(structuredClone(receipts));
+    return Promise.resolve();
+  });
+  peer.emit("NodeWorker.attachedToWorker", { ...attachment, workerInfo: { ...attachment.workerInfo, url } });
+  await control.guard(waitFor(() => Promise.resolve(records.at(-1)?.[0]?.released ? true : null), "owned storage worker release", 1000));
+  assert.equal(records[0]?.[0]?.workerInfo.url, url);
+  assert.equal(records[0]?.[0]?.released, false);
+  assert.equal(records.at(-1)?.[0]?.released, true);
+  assert.equal(peer.commands.filter(value => value === "NodeWorker.sendMessageToWorker").length, 1);
+  await control.stop();
 });

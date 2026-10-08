@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -498,25 +498,48 @@ async function launch(
   const seededTheme = before === 'light' ? 'dark' : 'light';
   const theme = seed ? seededTheme : (expectedTheme ?? before);
   if (seed) {
-    await workerInspector.guard(macMigrationState(renderer, passiveTeam, { theme, projectPath: passiveProject }));
-    await waitFor(
-      async () => {
-        try {
-          const persisted = JSON.parse(
-            await readFile(path.join(claude, 'agent-teams-config.json'), 'utf8')
-          ) as { general: { theme: string; customProjectPaths: string[] } };
-          return (
-            persisted.general.theme === theme &&
-            persisted.general.customProjectPaths.includes(passiveProject)
-          );
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-          throw error;
-        }
-      },
-      'owned seeded preference persisted before byte proof',
-      10_000
-    );
+    async function persistedPreference(requireProject: boolean) {
+      const observations: Record<string, unknown>[] = [];
+      await workerInspector!.guard(waitFor(
+        async () => {
+          const observed: Record<string, unknown> = { at: new Date().toISOString(), file: path.join(claude, 'agent-teams-config.json'), requireProject };
+          try {
+            const bytes = await readFile(path.join(claude, 'agent-teams-config.json'));
+            Object.assign(observed, { size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+            const persisted = JSON.parse(bytes.toString('utf8')) as {
+              general?: { theme?: unknown; customProjectPaths?: unknown };
+            };
+            const matches = persisted.general?.theme === theme;
+            const paths = persisted.general?.customProjectPaths;
+            const projectMatches = Array.isArray(paths) && (paths as unknown[]).includes(passiveProject);
+            Object.assign(observed, {
+              themeMatches: matches,
+              projectMatches,
+              projectCount: Array.isArray(paths) ? paths.length : null,
+            });
+            return matches && (!requireProject || projectMatches);
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            observed.error = { name: error instanceof Error ? error.name : 'Unknown', code: code ?? null };
+            if (code === 'ENOENT') return false;
+            throw error;
+          } finally {
+            observations.push(observed);
+            if (observations.length > 100) observations.shift();
+            await writeFile(
+              path.join(launchOutput, requireProject ? 'seeded-config-observation.json' : 'seeded-theme-observation.json'),
+              `${canonical(observations)}\n`
+            );
+          }
+        },
+        requireProject ? 'owned seeded preference persisted before byte proof' : 'owned seeded theme persisted before project mutation',
+        10_000
+      ));
+    }
+    await workerInspector.guard(macMigrationState(
+      renderer, passiveTeam, { theme, projectPath: passiveProject }, () => persistedPreference(false)
+    ));
+    await persistedPreference(true);
   }
   const after = await preference(
     '(async()=> (await window.electronAPI.config.get()).general.theme)()'

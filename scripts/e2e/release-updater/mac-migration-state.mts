@@ -12,7 +12,8 @@ export interface MacMigrationState {
 export async function macMigrationState(
   client: Pick<Cdp, 'send'>,
   teamName: string,
-  seed?: { theme: string; projectPath: string }
+  seed?: { theme: string; projectPath: string },
+  afterThemePersisted?: () => Promise<void>
 ): Promise<MacMigrationState> {
   const api = await client.send<{
     result: { objectId?: string };
@@ -22,6 +23,19 @@ export async function macMigrationState(
   const objectId = api.result.objectId;
   assert(objectId, 'Public app API object required');
   try {
+    if (seed) {
+      const updated = await client.send<{ exceptionDetails?: unknown }>('Runtime.callFunctionOn', {
+        objectId,
+        functionDeclaration: `async function(theme) { await this.config.update('general',{theme}); }`,
+        arguments: [{ value: seed.theme }],
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      assert.equal(updated.exceptionDetails, undefined);
+      // The public IPC resolves before its legacy fire-and-forget disk write.
+      // The owned host may require durable bytes before a second config mutation.
+      await afterThemePersisted?.();
+    }
     const result = await client.send<{
       result: { value: MacMigrationState };
       exceptionDetails?: unknown;
@@ -29,7 +43,6 @@ export async function macMigrationState(
       objectId,
       functionDeclaration: `async function(teamName,seed) {
         if(seed) {
-          await this.config.update('general',{theme:seed.theme});
           await this.config.addCustomProjectPath(seed.projectPath);
         }
         const config=await this.config.get(),teams=await this.teams.list();

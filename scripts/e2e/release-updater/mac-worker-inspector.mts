@@ -25,6 +25,7 @@ export async function attachMacWorkerInspector(
     "team-data-worker.cjs",
     "team-fs-worker.cjs",
     "task-change-worker.cjs",
+    "internal-storage-worker.cjs",
   ]);
   const receipts: WorkerReceipt[] = [];
   const sessions = new Set<string>();
@@ -75,14 +76,16 @@ export async function attachMacWorkerInspector(
       path.dirname(worker),
       path.join(asar, "dist-electron", "main"),
     );
+    sessions.add(attachment.sessionId);
+    const receipt = { ...attachment, released: false };
+    receipts.push(receipt);
+    // Retain validated owned-path identity even if its original module is unknown.
+    // Failure remains closed: no worker protocol command precedes this guard.
+    await record();
     assert(
       allowed.has(path.basename(worker)),
       "Only original packaged workers may be released",
     );
-    sessions.add(attachment.sessionId);
-    const receipt = { ...attachment, released: false };
-    receipts.push(receipt);
-    await record();
     const reply = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         replies.delete(attachment.sessionId);

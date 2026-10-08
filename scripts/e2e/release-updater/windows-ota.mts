@@ -30,7 +30,12 @@ import {
 import { hashFile } from './inputs.mts';
 import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs } from './windows-mirror.mts';
-import { assertCaptionProof, readPeArchitecture, windowsNative } from './windows-native.mts';
+import {
+  assertCaptionProof,
+  certifiedWindowsCaptureRetry,
+  readPeArchitecture,
+  windowsNative,
+} from './windows-native.mts';
 import {
   windowsNativePaintContentReady,
   type WindowsNativePaintPhase,
@@ -486,11 +491,29 @@ async function run() {
         receipt,
         JSON.stringify({ identity, accessibility, attempts, ...details }, null, 2)
       );
+    const capture = () => native.capture(owner, path.join(directory, 'native.png'));
+    const captureAutomatic = certifiedWindowsCaptureRetry(
+      owner,
+      capture,
+      async () =>
+        (await native.processes(owner.executable)).find((item) => item.pid === owner.pid) ?? null,
+      async (error, failure) => {
+        attempts.push({
+          ready: false,
+          captureFailure: failure,
+          proof: error.proof,
+          error: String(error.cause),
+          at: new Date().toISOString(),
+        });
+        await persist();
+      },
+      deadline
+    );
     try {
       const result = await waitFor(
         async () => {
           assert(attempts.length < 512, 'Native paint attempt budget exceeded');
-          const window = await native.capture(owner, path.join(directory, 'native.png'));
+          const window = await (name === 'automatic-successor' ? captureAutomatic() : capture());
           if (!window) {
             attempts.push({ window: null, ready: false, at: new Date().toISOString() });
             await persist();

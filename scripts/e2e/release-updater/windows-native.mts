@@ -36,6 +36,157 @@ export interface WindowsProcess {
   session: number;
   sid: string;
 }
+export interface WindowsCaptureRaceProof {
+  owner: WindowsProcess;
+  hwnd: string;
+  focus: Record<string, unknown>;
+  diagnostics: string;
+}
+export class WindowsCaptureBeforePixelsRace extends Error {
+  readonly proof: WindowsCaptureRaceProof;
+  constructor(proof: WindowsCaptureRaceProof, options?: ErrorOptions) {
+    super('Certified owned foreground changed before pixels', options);
+    this.proof = proof;
+  }
+}
+function object(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+export function certifyWindowsCaptureRace(
+  input: Record<string, unknown>,
+  result: Record<string, unknown>,
+  progress: string,
+  diagnostics: string
+): WindowsCaptureRaceProof | null {
+  if (
+    result.operation !== 'capture' ||
+    result.code !== 1 ||
+    result.killed !== false ||
+    result.signal !== null ||
+    typeof result.stderr !== 'string' ||
+    !result.stderr.includes(
+      'Exception calling "Capture" with "11" argument(s): "Owned foreground changed before pixels"'
+    )
+  )
+    return null;
+  if (
+    typeof input.pid !== 'number' ||
+    !Number.isSafeInteger(input.pid) ||
+    input.pid <= 0 ||
+    typeof input.start !== 'string' ||
+    !input.start ||
+    typeof input.executable !== 'string' ||
+    typeof input.sid !== 'string' ||
+    typeof input.session !== 'number' ||
+    typeof input.parent !== 'number' ||
+    typeof input.command !== 'string' ||
+    input.diagnosticOnly !== false
+  )
+    return null;
+  let frames: Record<string, unknown>[];
+  try {
+    frames = progress
+      .trim()
+      .split(/\r?\n/u)
+      .map((line) => {
+        const frame = object(JSON.parse(line) as unknown);
+        if (!frame) throw new Error('Malformed capture progress');
+        return frame;
+      });
+  } catch {
+    return null;
+  }
+  const last = frames.at(-1);
+  const focus = object(last?.details);
+  if (
+    last?.operation !== 'capture' ||
+    last.phase !== 'capture-focus' ||
+    focus?.synchronizationSucceeded !== true ||
+    focus.desiredPid !== input.pid ||
+    focus.foregroundPid !== input.pid ||
+    typeof focus.desiredHwnd !== 'string' ||
+    !/^0*[1-9a-f][0-9a-f]*$/iu.test(focus.desiredHwnd) ||
+    focus.foregroundHwnd !== focus.desiredHwnd ||
+    focus.desiredThread !== focus.foregroundThread ||
+    typeof focus.desiredThread !== 'number' ||
+    !Number.isSafeInteger(focus.desiredThread) ||
+    focus.desiredThread <= 0
+  )
+    return null;
+  for (const geometry of [focus.ownedGeometry, focus.foregroundGeometry]) {
+    const value = object(geometry);
+    if (
+      value?.pid !== input.pid ||
+      value.hwnd !== focus.desiredHwnd ||
+      value.thread !== focus.desiredThread
+    )
+      return null;
+  }
+  return {
+    owner: {
+      pid: input.pid,
+      start: input.start,
+      executable: input.executable,
+      sid: input.sid,
+      session: input.session,
+      parent: input.parent,
+      command: input.command,
+    },
+    hwnd: focus.desiredHwnd,
+    focus,
+    diagnostics,
+  };
+}
+async function readCaptureRaceProof(
+  input: Record<string, unknown>,
+  result: Record<string, unknown>,
+  progress: string,
+  diagnostics: string
+) {
+  try {
+    return certifyWindowsCaptureRace(input, result, await readFile(progress, 'utf8'), diagnostics);
+  } catch {
+    return null;
+  } // Missing/malformed progress never qualifies for retry.
+}
+function sameWindowsProcess(actual: WindowsProcess | null, expected: WindowsProcess) {
+  assert(
+    actual?.pid === expected.pid &&
+      actual.start === expected.start &&
+      actual.executable === expected.executable &&
+      actual.sid === expected.sid &&
+      actual.session === expected.session &&
+      actual.parent === expected.parent &&
+      actual.command === expected.command,
+    'Capture retry ownership changed'
+  );
+}
+export function certifiedWindowsCaptureRetry<T>(
+  owner: WindowsProcess,
+  capture: () => Promise<T>,
+  readOwner: () => Promise<WindowsProcess | null>,
+  persist: (error: WindowsCaptureBeforePixelsRace, failure: number) => Promise<void>,
+  deadline: number,
+  now: () => number = Date.now
+) {
+  let failures = 0;
+  return async () => {
+    for (;;) {
+      assert(now() < deadline, 'Native paint deadline exceeded before capture');
+      try {
+        return await capture();
+      } catch (error) {
+        if (!(error instanceof WindowsCaptureBeforePixelsRace)) throw error;
+        sameWindowsProcess(error.proof.owner, owner);
+        await persist(error, ++failures);
+        if (failures >= 3 || now() >= deadline) throw error;
+        sameWindowsProcess(await readOwner(), owner);
+      }
+    }
+  };
+}
 export function windowsCaptureRequest(
   owner: WindowsProcess,
   screenshot: string,
@@ -636,6 +787,10 @@ export async function windowsNative(root: string, evidence: string, purpose: Nat
         error: error instanceof Error ? (error.stack ?? error.message) : String(error),
       };
       await writeFile(resultFile, JSON.stringify(record, null, 2));
+      if (operation === 'capture') {
+        const proof = await readCaptureRaceProof(values, record, progress, resultFile);
+        if (proof) throw new WindowsCaptureBeforePixelsRace(proof, { cause: error });
+      }
       throw new Error(
         `Native Windows ${operation} failed; diagnostics: ${resultFile}; ${JSON.stringify({ elapsedMs: record.elapsedMs, code: record.code, killed: record.killed, signal: record.signal })}`,
         { cause: error }
