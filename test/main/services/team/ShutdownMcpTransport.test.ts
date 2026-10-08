@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import {
   createDesktopExternalAgentConnection,
   getDesktopMcpChildEnvironment,
+  isDesktopMcpEnvironmentBound,
   type NativeRendererCdp,
 } from '@features/external-agent-connection/main';
 import * as memberWorkSync from '@features/member-work-sync/main';
@@ -18,12 +19,19 @@ import {
 } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { buildOpenCodeAppScopedMcpUrl } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
-import { refreshDesktopBridgeEnvironment } from '@main/startExternalAgentConnection';
+import {
+  composeExternalAgentConnection,
+  refreshDesktopBridgeEnvironment,
+} from '@main/startExternalAgentConnection';
 import { startPreparedMemberWorkSyncFeature } from '@main/startMemberWorkSyncFeature';
 import * as pathDecoder from '@main/utils/pathDecoder';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: { getPath: () => '/sandbox/shutdown-profile', getVersion: () => 'test' },
+}));
 
 // Execute exact source boundaries without booting Electron, discovering binaries,
 // or contacting providers. Extract AST nodes, not a rewritten algorithm.
@@ -107,6 +115,71 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
 }
 
 describe('shutdown MCP transport authority', () => {
+  it('drains admitted mutations and tears down transport when native run shutdown fails', async () => {
+    const connection = composeExternalAgentConnection({
+      appInstanceId: 'sandbox-native-stop-failure',
+      nativeRun: [{ getProviderStatus: vi.fn() }, () => undefined],
+      cdp: {
+        read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+      } as unknown as NativeRendererCdp,
+      getMainContents: () => null,
+      isLocalContext: () => true,
+      getControlUrl: () => 'http://127.0.0.1:41000',
+      startControl: async () => undefined,
+      reconfigureRoot: async () => undefined,
+    });
+    const stopError = new Error('owned native process could not be stopped');
+    const nativeStop = vi.spyOn(connection.directRun, 'shutdown').mockRejectedValue(stopError);
+    const transportStop = vi.spyOn(server, 'stop').mockImplementation(async () => {
+      expect(server.appContext.read(getClaudeBasePath())).toBeNull();
+    });
+    let finishMutation!: () => void;
+    const mutationDone = new Promise<void>((resolve) => {
+      finishMutation = resolve;
+    });
+    let mutation: Promise<void> | undefined;
+    let closing: Promise<void> | undefined;
+    let closeSettled = false;
+    try {
+      const { context } = await connection.getConnectionInfo();
+      mutation = connection.withExpectedContext(context, () => mutationDone);
+      closing = connection.closeAdmission();
+      const closeFailure = expect(closing).rejects.toBe(stopError);
+      void closing.then(
+        () => {
+          closeSettled = true;
+        },
+        () => {
+          closeSettled = true;
+        }
+      );
+      // Allow the native rejection to propagate without releasing the admitted mutation.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(nativeStop).toHaveBeenCalledExactlyOnceWith();
+      expect(closeSettled).toBe(false);
+      expect(transportStop).not.toHaveBeenCalled();
+      await expect(connection.withExpectedContext(context, async () => undefined)).rejects.toThrow(
+        'APP_CONTEXT_MISMATCH'
+      );
+      expect(server.appContext.read(getClaudeBasePath())).not.toBeNull();
+      expect(isDesktopMcpEnvironmentBound()).toBe(true);
+      finishMutation();
+      await mutation;
+      await closeFailure;
+      await expect(connection.shutdown()).rejects.toBe(stopError);
+      expect(transportStop).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
+      expect(server.appContext.read(getClaudeBasePath())).toBeNull();
+      expect(isDesktopMcpEnvironmentBound()).toBe(false);
+    } finally {
+      finishMutation();
+      await mutation;
+      await closing?.catch(() => undefined);
+      await connection.shutdown().catch(() => undefined);
+      nativeStop.mockRestore();
+      transportStop.mockRestore();
+    }
+  });
+
   it('binds before the first bridge consumer and refuses pre-control startup without spawning', async () => {
     const initialize = sourceNode('initializeServices') as ts.FunctionDeclaration;
     const boundaries = initialize.body!.statements.filter((statement) => {

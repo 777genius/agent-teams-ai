@@ -102,12 +102,18 @@ export function composeExternalAgentConnection(options: {
     },
     async closeAdmission() {
       const drain = connection.closeAdmission();
-      await directRun.shutdown();
-      await drain;
+      try {
+        await directRun.shutdown();
+      } finally {
+        await drain;
+      }
     },
     async shutdown() {
-      await directRun.shutdown();
-      await connection.shutdown();
+      try {
+        await directRun.shutdown();
+      } finally {
+        await connection.shutdown();
+      }
     },
     async start(): Promise<void> {
       if (!isOpenCodeMcpHttpBridgeEnabled() && configManager.getConfig().httpServer?.enabled) {
