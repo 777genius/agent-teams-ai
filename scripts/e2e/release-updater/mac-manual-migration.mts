@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { canonical, fileProof } from '../../ci/release/contract.ts';
 import { readAsar } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { waitMacStartupReady } from './mac-startup-readiness.mts';
 import { macMigrationState } from './mac-migration-state.mts';
 import { macInputCommand } from './mac-input-artifact.mts';
 import {
@@ -461,6 +462,12 @@ async function launch(
     version,
     packaged: true,
   });
+  const startupReadiness = await waitMacStartupReady(renderer, version);
+  await writeFile(
+    path.join(launchOutput, 'startup-readiness.json'),
+    `${canonical(startupReadiness)}\n`,
+    { flag: 'wx' }
+  );
   async function preference(expression: string) {
     const result = await renderer!.send<{
       result: { value: string };

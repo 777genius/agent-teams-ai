@@ -20,6 +20,8 @@ export interface CommandResult {
   stderr: string;
   outputSha256: string;
   logFile: string;
+  elapsedMs?: number;
+  execFailure?: { code: number | string | null; signal: string | null; killed: boolean };
 }
 export class MacCommands {
   readonly commands: CommandResult[] = [];
@@ -45,6 +47,8 @@ export class MacCommands {
       `${canonical({ ...progress, state: 'START' })}\n`,
       { flag: 'wx', mode: 0o600 }
     ).catch(() => undefined);
+    const nativeStarted = Date.now();
+    let execFailure: CommandResult['execFailure'];
     let stdout = '';
     let stderr = '';
     let exitCode = 0;
@@ -59,7 +63,18 @@ export class MacCommands {
       stdout = result.stdout;
       stderr = result.stderr;
     } catch (error) {
-      const result = error as Error & { stdout?: string; stderr?: string; code?: number };
+      const result = error as Error & {
+        stdout?: string;
+        stderr?: string;
+        code?: number | string;
+        signal?: string;
+        killed?: boolean;
+      };
+      execFailure = {
+        code: result.code ?? null,
+        signal: result.signal ?? null,
+        killed: result.killed === true,
+      };
       stdout = result.stdout ?? '';
       stderr = `${result.stderr ?? ''}\n${result.message}`;
       exitCode = typeof result.code === 'number' ? result.code : 128;
@@ -74,12 +89,19 @@ export class MacCommands {
       stderr,
       outputSha256: digest(bytes),
       logFile,
+      elapsedMs: Date.now() - nativeStarted,
+      ...(execFailure ? { execFailure } : {}),
     };
     await writeFile(path.join(this.output, logFile), bytes, { flag: 'wx' });
     this.commands.push(result);
     await writeFile(
       path.join(this.output, `${progressId}-complete.json`),
-      `${canonical({ ...progress, state: 'COMPLETE' })}\n`,
+      `${canonical({
+        ...progress,
+        state: 'COMPLETE',
+        elapsedMs: result.elapsedMs,
+        ...(execFailure ? { execFailure } : {}),
+      })}\n`,
       { flag: 'wx', mode: 0o600 }
     ).catch(() => undefined);
     return result;
@@ -457,7 +479,7 @@ export async function macProcessSnapshot(commands: MacCommands): Promise<MacProc
     'process-identities',
     '/bin/ps',
     ['-axww', '-o', 'pid=,uid=,pgid=,ppid=,stat=,lstart=,comm='],
-    1000
+    5000
   );
   if (raw.exitCode !== 0)
     throw new MacProcessReadError(`process-identities failed; see ${raw.logFile}`);

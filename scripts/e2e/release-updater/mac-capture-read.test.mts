@@ -44,7 +44,7 @@ async function fixture(context: TestContext) {
       if (label === 'process-identities') {
         assert.equal(binary, '/bin/ps');
         assert.deepEqual(args, ['-axww', '-o', 'pid=,uid=,pgid=,ppid=,stat=,lstart=,comm=']);
-        assert.equal(timeout, 1000);
+        assert.equal(timeout, 5000);
         const snapshot = snapshots.shift();
         assert(snapshot, 'unexpected additional process read');
         script = `process.stdout.write(${JSON.stringify(snapshot.rows.map(row).join('\n'))});process.exit(${snapshot.exitCode});`;
@@ -113,7 +113,7 @@ void test('capture retries one COMPLETE failed ps read and retains both records 
       timeout: number;
     };
     assert.equal(complete.state, 'COMPLETE');
-    assert.equal(complete.timeout, 1000);
+    assert.equal(complete.timeout, 5000);
   }
   assert.deepEqual(f.calls, [
     'aqua-windows',
@@ -189,4 +189,22 @@ void test('ordinary process and cleanup callers remain fail closed on transport 
       assert.deepEqual(f.calls, ['process-identities']);
     });
   }
+});
+
+void test('native command timeout retains raw signal/code and elapsed telemetry', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-mac-command-timeout-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const commands = new MacCommands(root);
+  const failed = await commands.run('timeout-observation', process.execPath, ['-e', 'setTimeout(() => {}, 1000)'], 20);
+  assert.notEqual(failed.exitCode, 0);
+  assert.equal(failed.execFailure?.killed, true);
+  assert.equal(typeof failed.execFailure?.signal, 'string');
+  assert.equal(failed.execFailure?.code, null);
+  assert(Number(failed.elapsedMs) >= 10);
+  const file = (await readdir(root)).find(name => name.endsWith('-timeout-observation-complete.json'));
+  assert(file);
+  const complete = JSON.parse(await readFile(path.join(root, file), 'utf8')) as { execFailure: unknown; elapsedMs: number; timeout: number };
+  assert.deepEqual(complete.execFailure, failed.execFailure);
+  assert.equal(complete.elapsedMs, failed.elapsedMs);
+  assert.equal(complete.timeout, 20);
 });

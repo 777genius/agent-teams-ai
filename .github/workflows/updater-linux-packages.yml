@@ -168,7 +168,7 @@ jobs:
     # distro below. Ubuntu 22 avoids Ubuntu 24's host-global userns restriction.
     # No host sysctl, privileged container, extra capability or AppArmor bypass.
     runs-on: ${{ vars.CI_LINUX_2204_RUNNER || 'ubicloud-standard-4-ubuntu-2204' }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

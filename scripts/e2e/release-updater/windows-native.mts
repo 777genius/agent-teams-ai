@@ -607,7 +607,7 @@ export async function windowsNative(root: string, evidence: string, purpose: Nat
         ],
         {
           env: operation === 'profile' ? windowsProfileCaptureEnvironment(env) : env,
-          timeout: 20_000,
+          timeout: operation === 'compile' ? 60_000 : 20_000,
           windowsHide: true,
           maxBuffer: 2_097_152,
         }
