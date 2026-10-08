@@ -4,11 +4,6 @@ import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@renderer/components/ui/collapsible';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -57,7 +52,6 @@ export const ExternalAgentPromptDialog = ({
   const request = useDraftPersistence({
     key: `externalAgentPrompt:${connection.profileFingerprint}:${connection.context.dataRootFingerprint}`,
   });
-  const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +126,6 @@ export const ExternalAgentPromptDialog = ({
       if (!writingClipboard) {
         setPreviewBlocked(true);
         setGenerated(null);
-        setExpanded(false);
       }
       if (currentTask.current !== task) return;
       setError(
@@ -142,7 +135,6 @@ export const ExternalAgentPromptDialog = ({
             ? cause.message
             : t('externalPrompt.connectionRequired')
       );
-      if (writingClipboard) setExpanded(true);
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -178,34 +170,9 @@ export const ExternalAgentPromptDialog = ({
             : ''}
         </p>
       </div>
-      <TeamTemplateReferences isLight={isLight} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
-          {t('externalPrompt.connectionStatus', {
-            mcp: settingsT(
-              `general.externalAgentConnection.statuses.${currentConnection.mcp.status}`
-            ),
-            cdp: settingsT(
-              `general.externalAgentConnection.statuses.${currentConnection.cdp.status}`
-            ),
-          })}
-        </p>
-        <Button type="button" variant="link" size="sm" onClick={onSettings}>
-          {t('externalPrompt.connectionSettings')}
-        </Button>
-      </div>
-      {!ready && (
-        <p className="text-xs text-[var(--warning-text)]" role="status">
-          {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
-        </p>
-      )}
-      <Collapsible open={expanded} onOpenChange={setExpanded} className="min-w-0 space-y-2">
+      <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="outline" size="sm" disabled={!preview}>
-              {t('externalPrompt.preview')}
-            </Button>
-          </CollapsibleTrigger>
+          <Label htmlFor="external-agent-prompt-preview">{t('externalPrompt.previewLabel')}</Label>
           <Button
             type="button"
             size="sm"
@@ -228,19 +195,39 @@ export const ExternalAgentPromptDialog = ({
             )}
           </Button>
         </div>
-        <CollapsibleContent>
-          <Textarea
-            readOnly
-            value={preview}
-            aria-label={t('externalPrompt.previewLabel')}
-            className="min-h-64 select-text resize-y font-mono text-xs"
-            data-testid="external-agent-prompt-preview"
-          />
-        </CollapsibleContent>
-      </Collapsible>
-      <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
-        {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
-      </p>
+        <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
+          {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
+        </p>
+        <Textarea
+          id="external-agent-prompt-preview"
+          readOnly
+          value={preview}
+          placeholder={t('externalPrompt.previewPlaceholder')}
+          className="h-36 max-h-80 min-h-36 select-text resize-y font-mono text-xs"
+          data-testid="external-agent-prompt-preview"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="break-words text-xs text-[var(--color-text-secondary)]" aria-live="polite">
+            {t('externalPrompt.connectionStatus', {
+              mcp: settingsT(
+                `general.externalAgentConnection.statuses.${currentConnection.mcp.status}`
+              ),
+              cdp: settingsT(
+                `general.externalAgentConnection.statuses.${currentConnection.cdp.status}`
+              ),
+            })}
+          </p>
+          <Button type="button" variant="link" size="sm" onClick={onSettings}>
+            {t('externalPrompt.connectionSettings')}
+          </Button>
+        </div>
+        {!ready && (
+          <p className="text-xs text-[var(--warning-text)]" role="status">
+            {currentConnection.reason ?? t('externalPrompt.connectionRequired')}
+          </p>
+        )}
+      </div>
+      <TeamTemplateReferences isLight={isLight} />
     </div>
   );
 };

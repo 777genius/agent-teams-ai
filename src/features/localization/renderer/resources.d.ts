@@ -4252,13 +4252,14 @@ export default interface Resources {
       "loading": "Reading the local app connection...",
       "localOnly": "External prompts require the local desktop app context.",
       "preview": "View final prompt",
-      "previewLabel": "Final prompt (read only)",
+      "previewLabel": "Final prompt",
+      "previewPlaceholder": "Enter a request to see the final prompt. A ready MCP connection is required.",
       "requestHelp": "Name the templates to use and describe any edits in your request.",
       "responsibilities": "Responsibilities",
       "responsibilitiesFor": "Responsibilities for {{name}}",
       "retry": "Retry connection",
       "taskLabel": "What should the agent do?",
-      "taskPlaceholder": "Create development and review teams for the dashboard, using feature and review as the starting points.",
+      "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
       "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
       "templatesTitle": "Available team templates (reference)",
       "title": "Manage teams with a prompt",
@@ -6538,13 +6539,19 @@ export default interface Resources {
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
     },
     "templates": {
+      "descriptions": {
+        "content": "Create clear articles, newsletters, educational content and scripts.",
+        "marketing": "Develop campaigns and messaging for a product or small business.",
+        "research": "Investigate markets, topics and practical decisions using evidence.",
+        "software-product": "Design, build and validate apps, websites and digital products."
+      },
       "label": "Team template",
       "modelAfterProvider": "Model selection is available after choosing a provider.",
       "names": {
-        "bug": "Fix a bug",
-        "feature": "Build a feature",
-        "research": "Research a solution",
-        "review": "Review code"
+        "content": "Content Studio",
+        "marketing": "Marketing Team",
+        "research": "Research Team",
+        "software-product": "Software Product Team"
       },
       "placeholder": "Start from a team template",
       "providerLabel": "Choose team provider",

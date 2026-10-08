@@ -94,6 +94,29 @@ describe('external prompt freshness and clipboard fallback', () => {
     );
   };
 
+  // RED when the final prompt requires reveal, follows the templates, or has a detached copy action.
+  it('shows the selectable final prompt immediately after the request with its copy action before templates', async () => {
+    await render({
+      getConnectionInfo: vi.fn().mockResolvedValue(snapshot()),
+      retryConnection: vi.fn(),
+    });
+    const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
+    const finalPrompt = preview();
+    expect(finalPrompt).not.toBeNull();
+    expect(finalPrompt?.readOnly).toBe(true);
+    expect(finalPrompt?.value).toContain('Create a review team for the sandbox');
+    const promptSection = task.parentElement?.nextElementSibling;
+    expect(promptSection?.contains(finalPrompt)).toBe(true);
+    const label = promptSection?.querySelector('label');
+    expect(label?.htmlFor).toBe(finalPrompt?.id);
+    expect(
+      label?.parentElement?.querySelector('[data-testid="external-agent-prompt-copy"]')
+    ).not.toBeNull();
+    const templates = host.querySelector('section');
+    expect(promptSection?.nextElementSibling).toBe(templates);
+    expect(finalPrompt?.closest('[data-state="closed"]')).toBeNull();
+  });
+
   // RED when freshness failure leaves the previously visible endpoint selectable.
   it.each(['app changed', 'root changed', 'MCP stopped', 'read failed'] as const)(
     'withdraws the old selectable prompt after %s instead of offering clipboard fallback',
@@ -107,14 +130,9 @@ describe('external prompt freshness and clipboard fallback', () => {
           ? vi.fn().mockRejectedValue(new Error('Discovery failed'))
           : vi.fn().mockResolvedValue(live);
       await render({ getConnectionInfo, retryConnection: vi.fn() });
-      const reveal = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.textContent === 'View final prompt'
-      )!;
-      await act(async () => reveal.click());
       expect(preview()?.value).toContain('http://127.0.0.1:43001/mcp');
       await copy();
       expect(preview()?.value ?? '').toBe('');
-      expect(reveal.disabled).toBe(true);
       expect(writeText).not.toHaveBeenCalled();
     }
   );
@@ -129,10 +147,6 @@ describe('external prompt freshness and clipboard fallback', () => {
       getConnectionInfo: vi.fn().mockReturnValue(pendingRead),
       retryConnection: vi.fn(),
     });
-    const reveal = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'View final prompt'
-    )!;
-    await act(async () => reveal.click());
     await copy();
     const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
     await act(async () => {
@@ -147,7 +161,6 @@ describe('external prompt freshness and clipboard fallback', () => {
     foreign.context.dataRootFingerprint = 'another-root';
     await act(async () => finishRead(foreign));
     expect(preview()?.value ?? '').toBe('');
-    expect(reveal.disabled).toBe(true);
     expect(task.value).toBe('Create another team for this sandbox');
     expect(writeText).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain(
