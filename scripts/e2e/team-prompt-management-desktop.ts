@@ -570,7 +570,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
       deviceScaleFactor: 1,
       mobile: false,
     });
-  const request = `Use feature and review templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
+  const request = `Use Software Product Team and Content Studio templates to create two teams in ${project}. Edit the first team, retain partial successes, and trash only the second. Do not launch.`;
   if (theme === 'light')
     await waitFor(
       () =>
@@ -610,7 +610,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     ).length,
     theme: document.documentElement.className,
   }));
-  assert.deepEqual(references.ids, ['bug', 'feature', 'research', 'review']);
+  assert.deepEqual(references.ids, ['content', 'marketing', 'research', 'software-product']);
   assert.equal(
     references.participants,
     TEAM_TEMPLATES.reduce((sum, template) => sum + template.members.length + 1, 0)
@@ -623,7 +623,7 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
   assert.equal(references.editableControls, 0, 'References must be read-only');
   assert(references.theme.split(' ').includes(theme));
   await click(
-    '[data-template-reference="feature"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
     true
   );
   await waitFor(
@@ -631,11 +631,15 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
       evaluate(
         (text: string) =>
           document
-            .querySelector('[data-template-reference="feature"]')
+            .querySelector('[data-template-reference="software-product"]')
             ?.textContent?.includes(text) ?? false,
-        [TEAM_TEMPLATES.find((template) => template.id === 'feature')!.teamPrompt]
+        [TEAM_TEMPLATES.find((template) => template.id === 'software-product')!.teamPrompt]
       ),
     'read-only coordinator responsibilities'
+  );
+  await click(
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
+    true
   );
   await key('Tab', 'Tab', 9);
   assert(
@@ -644,7 +648,31 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     ),
     'Keyboard focus stays in popup'
   );
-  await click('View final prompt');
+  assert(
+    await evaluate(() => {
+      const task = document.querySelector('#external-agent-task');
+      const preview = document.querySelector<HTMLTextAreaElement>(
+        '[data-testid="external-agent-prompt-preview"]'
+      );
+      const copy = document.querySelector('[data-testid="external-agent-prompt-copy"]');
+      const label = document.querySelector('label[for="external-agent-prompt-preview"]');
+      const references = document.querySelector('[data-template-reference]');
+      return Boolean(
+        task &&
+        preview &&
+        copy &&
+        label &&
+        references &&
+        preview.readOnly &&
+        preview.value &&
+        preview.getClientRects().length &&
+        task.parentElement?.nextElementSibling?.contains(preview) &&
+        label.parentElement?.contains(copy) &&
+        preview.compareDocumentPosition(references) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    }),
+    'Final prompt is visible immediately after the request, with adjacent copy before templates'
+  );
   assert(info.cdp.browserWsUrl);
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {

@@ -928,9 +928,9 @@ async function copyPrompt(
       .map((card) => card.getAttribute('data-template-reference'))
       .sort()
   );
-  assert.deepEqual(references, ['bug', 'feature', 'research', 'review']);
+  assert.deepEqual(references, ['content', 'marketing', 'research', 'software-product']);
   await button(
-    '[data-template-reference="feature"] button[aria-label="Responsibilities for team-lead"]',
+    '[data-template-reference="software-product"] button[aria-label="Responsibilities for team-lead"]',
     true
   );
   await waitFor(
@@ -939,9 +939,9 @@ async function copyPrompt(
         active,
         (workflow: string) =>
           document
-            .querySelector('[data-template-reference="feature"]')
+            .querySelector('[data-template-reference="software-product"]')
             ?.textContent?.includes(workflow) ?? false,
-        [TEAM_TEMPLATES.find((template) => template.id === 'feature')!.teamPrompt]
+        [TEAM_TEMPLATES.find((template) => template.id === 'software-product')!.teamPrompt]
       ),
     'reference coordinator responsibilities'
   );
@@ -962,7 +962,22 @@ async function copyPrompt(
   });
   const task = `Create one saved draft for ${label} in ${project}. Do not launch agents.`;
   await active.send('Input.insertText', { text: task });
-  await button('View final prompt');
+  await waitFor(
+    () =>
+      evaluate(
+        active,
+        (request: string) => {
+          const preview = document.querySelector<HTMLTextAreaElement>(
+            '[data-testid="external-agent-prompt-preview"]'
+          );
+          return Boolean(
+            preview?.readOnly && preview.getClientRects().length && preview.value.includes(request)
+          );
+        },
+        [task]
+      ),
+    'visible read-only final prompt without a reveal action'
+  );
   assert(info.cdp.browserWsUrl);
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {
@@ -1258,7 +1273,7 @@ try {
     'raw CDP console event'
   );
 
-  const template = TEAM_TEMPLATES.find((item) => item.id === 'feature');
+  const template = TEAM_TEMPLATES.find((item) => item.id === 'software-product');
   assert(template);
   const teamName = 'external-e2e-feature';
   const draft: TeamCreateConfigRequest = {

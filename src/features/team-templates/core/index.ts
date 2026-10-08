@@ -4,82 +4,88 @@ import type { TeamCreateConfigRequest } from '@shared/types';
 export const TEAM_TEMPLATES: readonly TeamTemplateV1[] = [
   {
     schemaVersion: 1,
-    id: 'feature',
+    id: 'software-product',
     version: 1,
-    name: 'Build a feature',
-    description: 'Plan, implement and independently review a focused feature.',
+    name: 'Software Product Team',
+    description: 'Design, build and validate apps, websites and digital products.',
     teamPrompt:
-      'Coordinate a focused feature delivery. Confirm acceptance and constraints, assign bounded ownership, keep implementation and independent review separate, and report verified behavior and remaining risks. Do not broaden scope without agreement.',
+      'Coordinate a small software product team. Clarify the user problem, scope and acceptance criteria, connect design with implementation, and arrange independent validation. Keep ownership clear and report working outcomes, evidence and remaining risks.',
     members: [
       {
-        name: 'planner',
-        role: 'Architect',
+        name: 'designer',
+        role: 'Product Designer',
         workflow:
-          'Explore the existing architecture. Clarify acceptance and propose the smallest coherent implementation with edge cases and verification.',
+          'Turn user needs into clear flows, interface proposals and acceptance criteria. Check the existing product and discuss feasibility with the engineer.',
       },
       {
-        name: 'builder',
-        role: 'Developer',
+        name: 'engineer',
+        role: 'Software Engineer',
         workflow:
-          'Implement the accepted scope. Respect ownership, preserve unrelated changes, and verify observable behavior.',
+          'Build the agreed product using existing patterns. Respect ownership, preserve unrelated changes and verify working behavior.',
       },
       {
-        name: 'reviewer',
-        role: 'Reviewer',
+        name: 'qa',
+        role: 'QA Engineer',
         workflow:
-          'Independently review the final change for correctness, security, regressions and acceptance. Report actionable findings with evidence.',
+          'Independently check user journeys, edge cases and regressions against the agreed acceptance criteria. Report reproducible defects and verification gaps.',
       },
     ],
   },
   {
     schemaVersion: 1,
-    id: 'bug',
+    id: 'marketing',
     version: 1,
-    name: 'Fix a bug',
-    description: 'Reproduce, repair and verify a concrete regression.',
+    name: 'Marketing Team',
+    description: 'Develop campaigns and messaging for a product or small business.',
     teamPrompt:
-      'Coordinate a bug fix. Establish the observed failure and expected behavior, identify its cause, assign a bounded repair, and independently verify the regression and nearby risks. Report evidence rather than assumptions.',
+      'Coordinate a marketing team around the business goal and audience. Connect positioning, campaign copy and measurement, keep deliverables consistent across channels, and report recommendations with supporting evidence and assumptions.',
     members: [
       {
-        name: 'investigator',
+        name: 'strategist',
+        role: 'Marketing Strategist',
+        workflow:
+          'Define the audience, positioning, campaign channels and measurable goals. Use market evidence to turn the business brief into a focused campaign plan.',
+      },
+      {
+        name: 'copywriter',
+        role: 'Copywriter',
+        workflow:
+          'Create campaign copy and messaging for the agreed audience and channels. Keep claims accurate, voice consistent and calls to action clear.',
+      },
+      {
+        name: 'analyst',
+        role: 'Marketing Analyst',
+        workflow:
+          'Examine available market and performance data, challenge campaign assumptions and recommend improvements. Separate measured results from forecasts and identify missing evidence.',
+      },
+    ],
+  },
+  {
+    schemaVersion: 1,
+    id: 'content',
+    version: 1,
+    name: 'Content Studio',
+    description: 'Create clear articles, newsletters, educational content and scripts.',
+    teamPrompt:
+      'Coordinate a content studio. Clarify the audience, purpose, format and voice, connect research with writing and editing, and deliver a coherent finished draft with supported claims and any unresolved questions.',
+    members: [
+      {
+        name: 'researcher',
         role: 'Researcher',
         workflow:
-          'Reproduce the failure safely. Trace the cause and identify a focused regression check that fails on the old behavior.',
+          'Collect relevant sources and verify factual claims for the content brief. Give the writer useful findings, source references and any uncertainty.',
       },
       {
-        name: 'fixer',
-        role: 'Developer',
+        name: 'writer',
+        role: 'Writer',
         workflow:
-          'Repair the confirmed cause with a minimal coherent change. Preserve surrounding behavior and run the focused regression check.',
+          'Turn the brief and research into clear content for the intended audience and format. Keep the agreed voice and link factual claims to supporting sources.',
       },
       {
-        name: 'verifier',
-        role: 'Reviewer',
+        name: 'editor',
+        role: 'Editor',
         workflow:
-          'Independently verify the fix against the original failure and likely neighboring regressions.',
-      },
-    ],
-  },
-  {
-    schemaVersion: 1,
-    id: 'review',
-    version: 1,
-    name: 'Review code',
-    description: 'Independent correctness and security review without automatic edits.',
-    teamPrompt:
-      'Coordinate an evidence-backed review. Agree on the change and base being reviewed, split correctness and security concerns, reconcile overlapping findings, and present only actionable defects with severity, location and impact. Do not modify code unless requested.',
-    members: [
-      {
-        name: 'correctness',
-        role: 'Reviewer',
-        workflow:
-          'Review behavior, edge cases, lifecycle and compatibility. Validate each finding against the actual code and tests.',
-      },
-      {
-        name: 'security',
-        role: 'Security reviewer',
-        workflow:
-          'Review trust boundaries, input validation, permissions and data exposure. Explain a plausible failure or exploit for each finding.',
+          'Improve structure, clarity and consistency. Check claims against the supplied sources, flag gaps and refine the draft without changing its intended meaning.',
       },
     ],
   },
@@ -87,22 +93,22 @@ export const TEAM_TEMPLATES: readonly TeamTemplateV1[] = [
     schemaVersion: 1,
     id: 'research',
     version: 1,
-    name: 'Research a solution',
-    description: 'Investigate evidence and compare practical options before coding.',
+    name: 'Research Team',
+    description: 'Investigate markets, topics and practical decisions using evidence.',
     teamPrompt:
-      'Coordinate research before implementation. Define the question and decision criteria, collect current primary evidence and repository constraints, compare practical options, and report a recommendation with uncertainty and next verification steps. Do not implement unless requested.',
+      'Coordinate a research team. Define the question, scope and decision criteria, connect source gathering with analysis, and present useful findings and recommendations with citations, uncertainty and next verification steps.',
     members: [
       {
         name: 'researcher',
         role: 'Researcher',
         workflow:
-          'Gather relevant current primary sources and concrete repository evidence. Distinguish facts from inference and cite supporting sources.',
+          'Gather relevant sources and data, recording provenance and uncertainty. Check source quality and distinguish established facts from unsupported claims.',
       },
       {
-        name: 'critic',
-        role: 'Architect',
+        name: 'analyst',
+        role: 'Analyst',
         workflow:
-          'Challenge assumptions, compare options against constraints, identify gaps and recommend the smallest reliable solution.',
+          'Compare the collected evidence against the research question and decision criteria. Challenge assumptions and produce findings and practical recommendations, explaining limitations.',
       },
     ],
   },

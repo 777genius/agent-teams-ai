@@ -28,8 +28,9 @@ settings restart states, and controller/MCP HTTP contracts. Packaged CDP and a
 native external client additionally need isolated desktop E2E proof. All test
 state must use disposable sandbox projects and separate userData/data roots.
 
-The prompt popup persists its task by stable profile/root, displays all four
-templates through the shared roster presentation, and reads fresh connection
-info for each clipboard write. Its current instructions allow creating drafts
-only; edit/trash tools and management result notices remain separate planned
-extensions. Copy and opening the popup never mutate or launch a team.
+The prompt popup persists its task by stable profile/root and shows the final
+read-only prompt immediately below the request, with its copy action alongside
+the label. Four compact real-world team templates follow through the shared
+roster presentation. Fresh connection info is read for each clipboard write;
+management instructions expose only wired create/edit/trash capabilities.
+Copy and opening the popup never mutate or launch a team.
