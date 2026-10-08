@@ -2,7 +2,7 @@ import { at, list, object } from './nativeReadinessAuthority.js';
 import { canonical, digest, platformNames, requireThat } from './contract.js';
 import type { StagePlan } from './contract.js';
 
-export const manualCapturePaths = ['fresh219', 'original211', 'manual219'].map(
+export const manualCapturePaths = ['fresh220', 'original211', 'manual220'].map(
   (label) => `TEST-mac-manual-evidence/${label}/native-window.png`
 );
 const predecessor = {
@@ -47,7 +47,7 @@ export function checkMacManual(
     repository: plan.input.repository,
     toolingSha: plan.input.toolingSha,
     sourceSha: plan.input.target.applicationSha,
-    version: '2.17.9',
+    version: '2.17.10',
     architecture,
     passed: true,
     cleanupPassed: true,
@@ -118,7 +118,7 @@ function checkDownloads(input: Record<string, unknown>, plan: StagePlan) {
   for (const arch of ['arm64', 'x64'] as const) {
     const oldName = `Agent.Teams.AI-2.17.1-${arch}.dmg`;
     for (const name of [
-      ...platformNames('2.17.9').mac.filter(
+      ...platformNames('2.17.10').mac.filter(
         (name) => name.includes(`-${arch}`) && /\.(dmg|zip)$/.test(name)
       ),
       oldName,
@@ -160,9 +160,9 @@ function phase(phases: Record<string, unknown>[], key: string, label?: string) {
 
 function checkSignatures(phases: Record<string, unknown>[], architecture: string) {
   for (const [key, version, team, minimum] of [
-    ['freshSignature', '2.17.9', '86399583GS', '13.0'],
+    ['freshSignature', '2.17.10', '86399583GS', '13.0'],
     ['oldSignature', '2.17.1', '6C84CW694S', '12.0'],
-    ['replacementSignature', '2.17.9', '86399583GS', '13.0'],
+    ['replacementSignature', '2.17.10', '86399583GS', '13.0'],
   ] as const) {
     const signature = object(phase(phases, key)[key], 'manual signature');
     for (const [field, expected] of Object.entries({
@@ -172,7 +172,7 @@ function checkSignatures(phases: Record<string, unknown>[], architecture: string
       architecture,
     }))
       equal(signature[field], expected, `signature.${field}`);
-    if (version === '2.17.9') {
+    if (version === '2.17.10') {
       proof(signature.asar);
       const locks = list(signature.locks, 'runtime locks');
       equal(locks.length, 2, 'runtime lock count');
@@ -202,7 +202,7 @@ function checkProfiles(
     'preserved config bytes'
   );
   const original = phase(phases, '', 'original211');
-  const migrated = phase(phases, '', 'manual219');
+  const migrated = phase(phases, '', 'manual220');
   equal(original.profile, migrated.profile, 'same owned migration profile');
   requireThat(
     ['dark', 'light'].includes(String(original.theme)) && original.before !== original.theme,
@@ -243,17 +243,17 @@ function checkProfiles(
   );
   const root = String(value.ownedRoot);
   requireThat(/^\/.+\/TEST-mac-manual-owned-[^/]+$/.test(root), 'Missing owned sandbox root');
-  for (const [index, label] of ['fresh219', 'original211', 'manual219'].entries()) {
+  for (const [index, label] of ['fresh220', 'original211', 'manual220'].entries()) {
     const item = phase(phases, '', label);
     const roots = object(item.roots, 'owned roots');
-    const profile = `${root}/${label === 'fresh219' ? 'fresh-profile' : 'migration-profile'}`;
+    const profile = `${root}/${label === 'fresh220' ? 'fresh-profile' : 'migration-profile'}`;
     equal(item.profile, profile, 'owned profile');
     for (const [key, expected] of Object.entries({
       home: `${profile}/home`,
       nodeHome: `${profile}/home`,
       userData: `${profile}/user-data`,
       arch: architecture,
-      version: label === 'original211' ? '2.17.1' : '2.17.9',
+      version: label === 'original211' ? '2.17.1' : '2.17.10',
       packaged: true,
     }))
       equal(roots[key], expected, `roots.${key}`);
