@@ -53,6 +53,11 @@ import {
 } from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
+import {
+  cancelNewlyTrashedTeamRefreshes,
+  captureTeamManagementRefreshScope,
+  continueAcceptedTeamManagementChange,
+} from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
@@ -1356,6 +1361,7 @@ export function initializeNotificationListeners(): () => void {
 
   // Track team deletions and clean up activity maps
   const unsubscribeTeamDeletion = useStore.subscribe((state, prevState) => {
+    cancelNewlyTrashedTeamRefreshes(state, prevState, teamRefreshTimers);
     // The listener fires on every store write; only diff team names when the
     // teams array reference actually changed.
     if (state.teams === prevState.teams) {
@@ -1587,7 +1593,17 @@ export function initializeNotificationListeners(): () => void {
   });
 
   if (api.teams?.onTeamChange) {
-    const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+    const cleanup = api.teams.onTeamChange(function handleTeamChange(
+      _event: unknown,
+      event: TeamChangeEvent,
+      managementAccepted = false
+    ): void {
+      if (event.management && !managementAccepted) {
+        void continueAcceptedTeamManagementChange(useStore.getState, event, () => {
+          if (!disposed) handleTeamChange(_event, event, true);
+        });
+        return;
+      }
       const messageRefreshRelevant =
         Boolean(event.teamName) && shouldRefreshTeamMessages(event.teamName);
       noteTeamChangeEventBurst(event.teamName, event.type, messageRefreshRelevant);
@@ -1628,7 +1644,11 @@ export function initializeNotificationListeners(): () => void {
         }
       };
 
-      if (RELEVANT_TEAM_CHANGE_EVENT_TYPES.has(event.type) && !isStaleRuntimeEvent) {
+      if (
+        !event.management &&
+        RELEVANT_TEAM_CHANGE_EVENT_TYPES.has(event.type) &&
+        !isStaleRuntimeEvent
+      ) {
         noteRelevantTeamActivity(event.teamName);
       }
 
@@ -2173,8 +2193,10 @@ export function initializeNotificationListeners(): () => void {
         return;
       }
 
+      const isCurrent = captureTeamManagementRefreshScope(useStore.getState, event.teamName);
       const timer = setTimeout(() => {
         teamRefreshTimers.delete(event.teamName);
+        if (!isCurrent()) return;
         const current = useStore.getState();
         noteTeamRefreshFanout({
           teamName: event.teamName,

@@ -77,11 +77,12 @@ export function registerBoundControlHttp(app: FastifyInstance, context: BoundCon
       const release = context.admit(expected);
       try {
         if (
-          route.url === '/api/teams' &&
           request.method === 'POST' &&
-          body?.runtimeSelectionVersion === 1
+          ((route.url === '/api/teams' && body?.runtimeSelectionVersion === 1) ||
+            route.url === '/api/teams/:teamName/update' ||
+            route.url === '/api/teams/:teamName/trash')
         ) {
-          context.assertExpected(body.expectedContext);
+          context.assertExpected(body?.expectedContext);
         }
         return await original.call(this, request, reply);
       } finally {

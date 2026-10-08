@@ -13,16 +13,19 @@ import { access } from 'fs/promises';
 import { join } from 'path';
 
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
   parseDraftLaunchCreateRequest,
   parseLaunchRequest,
+  parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
 
 import type { HttpServices } from './index';
+import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
 import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
   TeamHttpHandlerApis,
@@ -115,6 +118,9 @@ function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamD
 }
 
 function getStatusCode(error: unknown, fallback: number = 500): number {
+  if (error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number')
+    return error.statusCode;
+  if (error instanceof Error && error.message.startsWith('TEAM_TRASHED:')) return 409;
   if (error instanceof HttpBadRequestError) {
     return 400;
   }
@@ -255,6 +261,9 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  const managementFeature =
+    services.teamPromptManagement ?? services.externalAgentConnection?.teamPromptManagement;
+  registerTeamManagementRoutes(app, services);
   registerTeamMemberDiagnosticsRoute(app, services, {
     logger,
     shouldLogError,
@@ -285,59 +294,81 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
       const createRequest = parseCreateTeamRequest(request.body);
-      await getTeamDataApi(services).createTeamConfig(createRequest);
+      const management = managementFeature
+        ? await managementFeature.create(
+            createRequest,
+            (
+              request.body as CreateTeamBody & {
+                expectedContext?: AppConnectionContext;
+              }
+            ).expectedContext
+          )
+        : undefined;
+      if (!management) await getTeamDataApi(services).createTeamConfig(createRequest);
       services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
-      return reply
-        .status(201)
-        .send({
-          teamName: createRequest.teamName,
-          draft: true,
-          runtimeSelectionVersion: createRequest.runtimeSelectionVersion,
-          runtimeSelection:
-            createRequest.runtimeSelectionVersion === 1 && !createRequest.providerId
-              ? 'unresolved'
-              : 'selected',
-        });
+      return reply.status(201).send({
+        ...management,
+        teamName: createRequest.teamName,
+        draft: true,
+        runtimeSelectionVersion: createRequest.runtimeSelectionVersion,
+        runtimeSelection:
+          createRequest.runtimeSelectionVersion === 1 && !createRequest.providerId
+            ? 'unresolved'
+            : 'selected',
+      });
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in POST /api/teams:', getErrorMessage(error));
       }
-      return reply
-        .status(getStatusCode(error))
-        .send({
-          error: getResponseErrorMessage(error),
-          ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
-        });
+      return reply.status(getStatusCode(error)).send({
+        error: getResponseErrorMessage(error),
+        ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+      });
     }
   });
 
-  app.get<{ Params: { teamName: string } }>('/api/teams/:teamName', async (request, reply) => {
-    try {
-      const validatedTeamName = validateTeamName(request.params.teamName);
-      if (!validatedTeamName.valid) {
-        return reply.status(400).send({ error: validatedTeamName.error });
-      }
+  app.get<{ Params: { teamName: string }; Querystring: { configuration?: string } }>(
+    '/api/teams/:teamName',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
 
-      const teamName = validatedTeamName.value!;
-      const draftSavedRequest = await getDraftSavedRequest(services, teamName);
-      if (draftSavedRequest) {
-        return reply.send({
-          teamName,
-          pendingCreate: true,
-          savedRequest: draftSavedRequest,
-        });
-      }
+        const configuration = parseTeamConfigurationReadQuery(request.query);
+        const teamName = validatedTeamName.value!;
+        if (configuration && !managementFeature)
+          throw new HttpFeatureUnavailableError(
+            'Team configuration snapshots are not available in this mode'
+          );
+        const savedDraft = configuration ? null : await getDraftSavedRequest(services, teamName);
+        if (savedDraft) {
+          return reply.send({
+            teamName,
+            pendingCreate: true,
+            savedRequest: savedDraft,
+          });
+        }
 
-      const taskActivityApi = services.teamApis?.taskActivity;
-      await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
-      return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
-    } catch (error) {
-      if (shouldLogError(error)) {
-        logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));
+        const taskActivityApi = services.teamApis?.taskActivity;
+        await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+        return reply.send(
+          configuration && managementFeature
+            ? await managementFeature.get(teamName)
+            : await getTeamDataWithRuntimeOverlay(services, teamName)
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
-  });
+  );
 
   app.post<{ Params: { teamName: string }; Body: LaunchBody }>(
     '/api/teams/:teamName/launch',
@@ -349,27 +380,37 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
 
         const teamName = validatedTeamName.value!;
-        const draftSavedRequest = await getDraftSavedRequest(services, teamName);
-        let response: TeamCreateResponse | TeamLaunchResponse;
-        if (draftSavedRequest) {
-          const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
-          requireTeamRuntimeSelection(createRequest);
-          if (createRequest.teamName !== teamName) {
-            // The draft directory was created under an earlier name; the final
-            // create must use the final team name for the directory.
-            await getTeamDataApi(services).renameDraftTeam(teamName, createRequest.teamName);
+        const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
+          const draftSavedRequest = await getDraftSavedRequest(services, teamName);
+          let response!: TeamCreateResponse | TeamLaunchResponse;
+          if (draftSavedRequest) {
+            const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
+            requireTeamRuntimeSelection(createRequest);
+            const provision = async () => {
+              response = await getTeamProvisioningStartApi(services).createTeam(
+                createRequest,
+                () => undefined
+              );
+              services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+            };
+            if (createRequest.teamName !== teamName)
+              await getTeamDataApi(services).renameDraftTeam(
+                teamName,
+                createRequest.teamName,
+                provision
+              );
+            else await provision();
+          } else {
+            response = await getTeamProvisioningStartApi(services).launchTeam(
+              parseLaunchRequest(teamName, request.body),
+              () => undefined
+            );
           }
-          response = await getTeamProvisioningStartApi(services).createTeam(
-            createRequest,
-            () => undefined
-          );
-          services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
-        } else {
-          response = await getTeamProvisioningStartApi(services).launchTeam(
-            parseLaunchRequest(teamName, request.body),
-            () => undefined
-          );
-        }
+          return response;
+        };
+        const response = managementFeature
+          ? await managementFeature.runLaunch(teamName, launch)
+          : await launch();
         TeamConfigReader.invalidateListTeamsCache();
         return reply.send(response);
       } catch (error) {
@@ -380,12 +421,10 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply
-          .status(statusCode)
-          .send({
-            error: getResponseErrorMessage(error, statusCode),
-            ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
-          });
+        return reply.status(statusCode).send({
+          error: getResponseErrorMessage(error, statusCode),
+          ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+        });
       }
     }
   );

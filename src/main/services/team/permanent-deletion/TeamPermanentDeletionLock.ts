@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -48,6 +49,7 @@ const PROCESS_INSTANCE_ID = crypto.randomUUID();
 // Shared by every lifecycle-owner instance in this desktop process. A failed
 // filesystem heartbeat cannot let another local owner overtake physical work.
 const localScopeDrain = new KeyedMutex();
+const scopeOwnership = new AsyncLocalStorage<Map<string, { active: boolean }>>();
 
 function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
@@ -438,8 +440,20 @@ export class TeamPermanentDeletionLock {
   }
 
   async withLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {
-    return localScopeDrain.run(this.getPermanentDeletionLockPath(scope), () =>
-      this.withAcquiredLock(scope, operation)
+    const pathKey = this.getPermanentDeletionLockPath(scope);
+    const owned = scopeOwnership.getStore();
+    if (owned?.get(pathKey)?.active) return operation();
+    return localScopeDrain.run(pathKey, () =>
+      this.withAcquiredLock(scope, async () => {
+        const token = { active: true };
+        const inherited = new Map(owned);
+        inherited.set(pathKey, token);
+        try {
+          return await scopeOwnership.run(inherited, operation);
+        } finally {
+          token.active = false;
+        }
+      })
     );
   }
 

@@ -119,69 +119,102 @@ describe('agent-teams-mcp tools', () => {
     };
   }
 
-  it.each(['task_complete', 'task_set_status'])('issue-618 resolves dependencies through %s with owner notices and deduplicated retries', async (completionTool) => {
-    const claudeDir = makeClaudeDir();
-    const teamName = 'issue618';
-    writeTeamConfig(claudeDir, teamName, {
-      projectPath: claudeDir,
-      members: [{ name: 'lead', role: 'team-lead' }, { name: 'alice', role: 'developer' }],
-    });
-    const call = async (name: string, args: Record<string, unknown>) =>
-      parseJsonToolResult(await getTool(name).execute({ claudeDir, teamName, ...args }));
-    let sequence = 0;
-    const create = async (blockedBy: string[] = []) =>
-      await call('task_create', { subject: `Disposable dependency test ${++sequence}`, owner: 'alice', blockedBy });
-    const inbox = (owner: string): Array<{ text: string; messageId?: string }> => {
-      const file = path.join(claudeDir, 'teams', teamName, 'inboxes', `${owner}.json`);
-      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
-    };
-    const first = await create();
-    const second = await create();
-    const dependent = await create([first.id, second.id]);
-    const protectedCalls: Array<[string, Record<string, unknown>]> = [
-      ['task_start', {}], ['task_complete', {}],
-      ['task_set_status', { status: 'in_progress' }], ['task_set_status', { status: 'completed' }],
-    ];
-    for (const blockerStatus of ['pending', 'in_progress']) {
-      await call('task_set_status', { taskId: first.id, actor: 'alice', status: blockerStatus });
-      const before = fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8');
-      const notices = inbox('alice');
-      for (const [name, args] of protectedCalls) {
-        await expect(call(name, { taskId: dependent.id, actor: 'alice', ...args })).rejects.toThrow('unresolved dependencies');
+  it.each(['task_complete', 'task_set_status'])(
+    'issue-618 resolves dependencies through %s with owner notices and deduplicated retries',
+    async (completionTool) => {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'issue618';
+      writeTeamConfig(claudeDir, teamName, {
+        projectPath: claudeDir,
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+        ],
+      });
+      const call = async (name: string, args: Record<string, unknown>) =>
+        parseJsonToolResult(await getTool(name).execute({ claudeDir, teamName, ...args }));
+      let sequence = 0;
+      const create = async (blockedBy: string[] = []) =>
+        await call('task_create', {
+          subject: `Disposable dependency test ${++sequence}`,
+          owner: 'alice',
+          blockedBy,
+        });
+      const inbox = (owner: string): Array<{ text: string; messageId?: string }> => {
+        const file = path.join(claudeDir, 'teams', teamName, 'inboxes', `${owner}.json`);
+        return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+      };
+      const first = await create();
+      const second = await create();
+      const dependent = await create([first.id, second.id]);
+      const protectedCalls: Array<[string, Record<string, unknown>]> = [
+        ['task_start', {}],
+        ['task_complete', {}],
+        ['task_set_status', { status: 'in_progress' }],
+        ['task_set_status', { status: 'completed' }],
+      ];
+      for (const blockerStatus of ['pending', 'in_progress']) {
+        await call('task_set_status', { taskId: first.id, actor: 'alice', status: blockerStatus });
+        const before = fs.readFileSync(
+          path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`),
+          'utf8'
+        );
+        const notices = inbox('alice');
+        for (const [name, args] of protectedCalls) {
+          await expect(
+            call(name, { taskId: dependent.id, actor: 'alice', ...args })
+          ).rejects.toThrow('unresolved dependencies');
+        }
+        expect(
+          fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8')
+        ).toBe(before);
+        expect(inbox('alice')).toEqual(notices);
       }
-      expect(fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8')).toBe(before);
-      expect(inbox('alice')).toEqual(notices);
-    }
-    const finish = async (taskId: string) => await call(completionTool, { taskId, actor: 'alice', status: 'completed' });
-    await finish(first.id);
-    const partial = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
-    expect(partial).toHaveLength(1);
-    expect(partial[0].text).toContain('Still waiting on:');
-    expect(partial[0].text).not.toContain('task_start');
-    for (const [name, args] of protectedCalls) {
-      await expect(call(name, { taskId: dependent.id, actor: 'alice', ...args })).rejects.toThrow(`#${second.displayId} (pending)`);
-    }
-    await finish(second.id);
-    await finish(second.id);
-    await call('task_complete', { taskId: second.id, actor: 'alice' });
-    await call('task_set_status', { taskId: second.id, actor: 'alice', status: 'completed' });
-    const notices = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
-    expect(notices).toHaveLength(2);
-    expect(notices[1].text).toContain(`task_get { teamName: "${teamName}", taskId: "${dependent.id}" }`);
-    expect(notices[1].text).toContain(`task_start { teamName: "${teamName}", taskId: "${dependent.id}", actor: "alice" }`);
-    expect(inbox('lead').filter((row) => row.text.includes('Dependency resolved'))).toHaveLength(0);
-    const stored = JSON.parse(fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8'));
-    expect(stored.comments.map((comment: { id: string }) => comment.id)).toEqual([
-      `dep-resolved-${first.id}-${dependent.id}`, `dep-resolved-${second.id}-${dependent.id}`,
-    ]);
-    for (const [name, args] of protectedCalls) {
-      expect((await call(name, { taskId: dependent.id, actor: 'alice', ...args })).status).toBe(
-        name === 'task_start' || args.status === 'in_progress' ? 'in_progress' : 'completed'
+      const finish = async (taskId: string) =>
+        await call(completionTool, { taskId, actor: 'alice', status: 'completed' });
+      await finish(first.id);
+      const partial = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
+      expect(partial).toHaveLength(1);
+      expect(partial[0].text).toContain('Still waiting on:');
+      expect(partial[0].text).not.toContain('task_start');
+      for (const [name, args] of protectedCalls) {
+        await expect(call(name, { taskId: dependent.id, actor: 'alice', ...args })).rejects.toThrow(
+          `#${second.displayId} (pending)`
+        );
+      }
+      await finish(second.id);
+      await finish(second.id);
+      await call('task_complete', { taskId: second.id, actor: 'alice' });
+      await call('task_set_status', { taskId: second.id, actor: 'alice', status: 'completed' });
+      const notices = inbox('alice').filter((row) => row.text.includes('Dependency resolved'));
+      expect(notices).toHaveLength(2);
+      expect(notices[1].text).toContain(
+        `task_get { teamName: "${teamName}", taskId: "${dependent.id}" }`
       );
+      expect(notices[1].text).toContain(
+        `task_start { teamName: "${teamName}", taskId: "${dependent.id}", actor: "alice" }`
+      );
+      expect(inbox('lead').filter((row) => row.text.includes('Dependency resolved'))).toHaveLength(
+        0
+      );
+      const stored = JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'tasks', teamName, `${dependent.id}.json`), 'utf8')
+      );
+      expect(stored.comments.map((comment: { id: string }) => comment.id)).toEqual([
+        `dep-resolved-${first.id}-${dependent.id}`,
+        `dep-resolved-${second.id}-${dependent.id}`,
+      ]);
+      for (const [name, args] of protectedCalls) {
+        expect((await call(name, { taskId: dependent.id, actor: 'alice', ...args })).status).toBe(
+          name === 'task_start' || args.status === 'in_progress' ? 'in_progress' : 'completed'
+        );
+      }
+      await finish(dependent.id);
+      expect(
+        inbox('lead').filter((row) => row.messageId?.startsWith('board-complete:'))
+      ).toHaveLength(1);
     }
-    await finish(dependent.id);
-    expect(inbox('lead').filter((row) => row.messageId?.startsWith('board-complete:'))).toHaveLength(1);
-  });
+  );
 
   it('registers the full expected MCP tool surface', () => {
     expect([...tools.keys()].sort()).toEqual([...AGENT_TEAMS_REGISTERED_TOOL_NAMES].sort());
@@ -246,6 +279,34 @@ describe('agent-teams-mcp tools', () => {
         true
       );
     }
+  });
+
+  // Catches broad patch/force/permanent-delete requests being admitted as configuration edits.
+  it('requires fresh management expectations and exactly one narrow update group', () => {
+    const target = {
+      teamName: 'alpha',
+      expectedRevision: 'revision',
+      expectedContext: {
+        appInstanceId: 'test-app',
+        dataRootFingerprint: 'test-root',
+        connectionGeneration: 1,
+      },
+    };
+    const update = getTool('team_update').parameters;
+    const trash = getTool('team_trash').parameters;
+    expect(update?.safeParse({ ...target, metadata: { description: '' } }).success).toBe(true);
+    expect(update?.safeParse({ ...target, leadInstructions: '' }).success).toBe(true);
+    expect(update?.safeParse({ ...target, members: [] }).success).toBe(true);
+    expect(update?.safeParse({ ...target, metadata: { displayName: '' } }).success).toBe(false);
+    expect(update?.safeParse({ ...target, metadata: { providerId: 'codex' } }).success).toBe(false);
+    expect(update?.safeParse({ ...target, metadata: {}, members: [] }).success).toBe(false);
+    expect(
+      update?.safeParse({ ...target, members: [{ name: 'builder', model: 'forbidden' }] }).success
+    ).toBe(false);
+    expect(update?.safeParse({ teamName: 'alpha', members: [] }).success).toBe(false);
+    expect(trash?.safeParse(target).success).toBe(true);
+    expect(trash?.safeParse({ ...target, permanent: true }).success).toBe(false);
+    expect(trash?.safeParse({ ...target, force: true }).success).toBe(false);
   });
 
   it('accepts an omitted team_create roster while rejecting malformed provided rosters', () => {
@@ -381,9 +442,15 @@ describe('agent-teams-mcp tools', () => {
           ],
         };
       }
-      if (method === 'GET' && url === '/api/teams/alpha') {
+      if (
+        method === 'GET' &&
+        (url === '/api/teams/alpha' || url === '/api/teams/alpha?configuration=1')
+      ) {
         return {
           body: {
+            ...(url.endsWith('?configuration=1')
+              ? { configurationRevision: 'saved-revision' }
+              : {}),
             teamName: 'alpha',
             members: [{ name: 'builder', role: 'Engineer' }],
             tasks: [],
@@ -414,6 +481,17 @@ describe('agent-teams-mcp tools', () => {
         })
       );
       expect(fetched.teamName).toBe('alpha');
+      expect(fetched).not.toHaveProperty('configurationRevision');
+      // Catches the explicit coherent-snapshot option being dropped by MCP/controller forwarding.
+      const configuration = parseJsonToolResult(
+        await getTool('team_get').execute({
+          claudeDir,
+          teamName: 'alpha',
+          controlUrl: server.baseUrl,
+          configuration: true,
+        })
+      );
+      expect(configuration.configurationRevision).toBe('saved-revision');
 
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
@@ -452,6 +530,11 @@ describe('agent-teams-mcp tools', () => {
         {
           method: 'GET',
           url: '/api/teams/alpha',
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          url: '/api/teams/alpha?configuration=1',
           body: undefined,
         },
         {

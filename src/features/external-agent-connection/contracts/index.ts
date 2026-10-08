@@ -28,7 +28,12 @@ export interface ConnectionInfoV1 {
     rendererWsUrl: string | null;
     targetGeneration: number;
   };
-  capabilities: { draftCreation: boolean; rendererControl: boolean };
+  capabilities: {
+    draftCreation: boolean;
+    rendererControl: boolean;
+    configurationEdit?: boolean;
+    reversibleTrash?: boolean;
+  };
   errorCode: string | null;
   reason: string | null;
   recovery: string | null;

@@ -4248,10 +4248,12 @@ export default interface Resources {
       "copying": "Copying...",
       "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
       "description": "Write a request for your external agent. Templates below are read-only references.",
+      "editAvailable": "Editing draft/stopped configuration is available.",
       "loading": "Reading the local app connection...",
       "localOnly": "External prompts require the local desktop app context.",
       "preview": "View final prompt",
       "previewLabel": "Final prompt (read only)",
+      "requestHelp": "Name the templates to use and describe any edits in your request.",
       "responsibilities": "Responsibilities",
       "responsibilitiesFor": "Responsibilities for {{name}}",
       "retry": "Retry connection",
@@ -4259,7 +4261,8 @@ export default interface Resources {
       "taskPlaceholder": "Create development and review teams for the dashboard, using feature and review as the starting points.",
       "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
       "templatesTitle": "Available team templates (reference)",
-      "title": "Manage teams with a prompt"
+      "title": "Manage teams with a prompt",
+      "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
       "board": {
@@ -4587,6 +4590,20 @@ export default interface Resources {
       },
       "title": "Live runtime status",
       "updated": "updated {{value}}"
+    },
+    "managementChanges": {
+      "created": "Created",
+      "edited": "Edited",
+      "fields": {
+        "color": "Color changed",
+        "description": "Description changed",
+        "displayName": "Name changed",
+        "leadInstructions": "Lead instructions changed",
+        "members": "Members changed"
+      },
+      "hidden": "Some recent changes are hidden by the current filters.",
+      "roster": "Roles: +{{added}}/-{{removed}}",
+      "title": "Recent changes"
     },
     "memberDraft": {
       "actions": {

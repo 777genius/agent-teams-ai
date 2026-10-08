@@ -209,6 +209,7 @@ export function buildLaunchSyntheticRequest(input: {
 
   try {
     const cfg = JSON.parse(input.configRaw) as Record<string, unknown>;
+    if (typeof cfg.description === 'string') syntheticRequest.description = cfg.description;
     if (typeof cfg.color === 'string' && cfg.color.trim().length > 0) {
       syntheticRequest.color = cfg.color.trim();
     }

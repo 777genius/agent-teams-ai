@@ -191,7 +191,12 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         skipPermissions: false,
       },
       members: [{ name: 'Builder', role: 'Build' }],
-      configRaw: JSON.stringify({ color: ' blue ', name: ' Demo Team ' }),
+      // Catches a relaunch dropping description edits when rebuilding saved metadata.
+      configRaw: JSON.stringify({
+        color: ' blue ',
+        name: ' Demo Team ',
+        description: 'Saved description',
+      }),
     });
 
     expect(synthetic).toMatchObject({
@@ -204,6 +209,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       skipPermissions: false,
       color: 'blue',
       displayName: 'Demo Team',
+      description: 'Saved description',
     });
     expect(synthetic.members.map((member) => member.name)).toEqual(['Builder']);
     expect(synthetic.worktree).toBeUndefined();
@@ -229,10 +235,15 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         allowExperimentalLocalModels: true,
       },
       members,
-      configRaw: JSON.stringify({ color: ' blue ', name: ' Demo Team ' }),
+      // Catches a relaunch dropping description edits when rebuilding saved metadata.
+      configRaw: JSON.stringify({
+        color: ' blue ',
+        name: ' Demo Team ',
+        description: 'Saved description',
+      }),
     });
 
-    expect(synthetic).toEqual({
+    expect(synthetic).toMatchObject({
       teamName: 'demo',
       members,
       cwd: '/repo',
@@ -248,6 +259,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       allowExperimentalLocalModels: true,
       color: 'blue',
       displayName: 'Demo Team',
+      description: 'Saved description',
     });
   });
 

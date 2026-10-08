@@ -188,6 +188,8 @@ declare module 'agent-teams-controller' {
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;
+    updateTeam(flags: Record<string, unknown>): Promise<unknown>;
+    trashTeam(flags: Record<string, unknown>): Promise<unknown>;
     launchTeam(flags: Record<string, unknown>): Promise<unknown>;
     stopTeam(flags?: Record<string, unknown>): Promise<unknown>;
     getRuntimeState(flags?: Record<string, unknown>): Promise<unknown>;

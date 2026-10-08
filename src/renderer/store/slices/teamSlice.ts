@@ -93,6 +93,10 @@ import {
   isTeamLocalStateEpochCurrent,
 } from '../team/teamLocalStateEpoch';
 import {
+  reconcileTeamManagementNotices,
+  retainTeamManagementNotice,
+} from '../team/teamManagementNotices';
+import {
   isMemberActivityMetaStale,
   structurallyShareMemberActivityFacts,
 } from '../team/teamMemberActivityMeta';
@@ -187,6 +191,7 @@ import type {
 } from '../team/teamMessagesCache';
 import type { AppState } from '../types';
 import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -308,6 +313,7 @@ let latestTeamsFetchRequestId = 0,
   deletedTasksFetchId = 0;
 let inFlightGlobalTasksRefresh: Promise<void> | null = null;
 let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
+let pendingTeamsRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
 const reportedTaskEndKeys = new Set<string>();
 const reportedTaskFirstOutputKeys = new Set<string>();
@@ -442,6 +448,7 @@ export function isTeamDataRefreshPending(teamName: string, get: () => AppState):
 }
 
 export function __resetTeamSliceModuleStateForTests(): void {
+  pendingTeamsRefreshScope = null;
   resetToolApprovalSettingsSync();
   teamDataReadWork.clear();
   for (const teamName of postPaintTeamEnrichmentTimers.keys()) {
@@ -1469,6 +1476,12 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   kanbanFilterQuery: string | null;
   provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
+  teamManagementNoticeByTeam: Record<string, TeamManagementCommittedChange>;
+  receiveTeamManagementChange: (
+    teamName: string,
+    change: TeamManagementCommittedChange
+  ) => Promise<boolean>;
+  clearDeletedTeamLocalState: (teamName: string) => void;
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
@@ -1772,6 +1785,7 @@ const failedMessageState = (error: unknown) => ({
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   teams: [],
+  teamManagementNoticeByTeam: {},
   teamByName: {},
   teamBySessionId: {},
   branchByPath: {},
@@ -2002,13 +2016,72 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
+  clearDeletedTeamLocalState: (teamName) => {
+    invalidateTeamLocalStateEpoch(teamName);
+    clearTaskFirstOutputTrackingForTeam(teamName);
+    clearPendingReplyRefreshTimer(teamName);
+    clearPendingReplyRefreshWaits(teamName);
+    clearTeamScopedTransientState(teamName);
+    set((state) => {
+      const clearedState = collectTeamScopedStateRemovals(state, teamName);
+      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
+      if (state.selectedTeamName === teamName) {
+        return {
+          selectedTeamName: null,
+          selectedTeamData: null,
+          selectedTeamLoading: false,
+          selectedTeamError: null,
+          ...clearedState,
+          ...tombstones,
+        };
+      }
+      return {
+        ...clearedState,
+        ...tombstones,
+      };
+    });
+  },
+
+  receiveTeamManagementChange: async (teamName, change) => {
+    const scope = captureContextRequestScope(get);
+    if (get().connectionMode !== 'local') return false;
+    try {
+      const live = await api.externalAgentConnection.getConnectionInfo();
+      if (
+        !isContextRequestScopeCurrent(get, scope) ||
+        live.context.appInstanceId !== change.context.appInstanceId ||
+        live.context.dataRootFingerprint !== change.context.dataRootFingerprint
+      )
+        return false;
+      const current = get().teamManagementNoticeByTeam;
+      const next = retainTeamManagementNotice(current, teamName, change);
+      if (next === current) return false;
+      set({ teamManagementNoticeByTeam: next });
+      if (change.kind === 'trashed') {
+        get().clearDeletedTeamLocalState(teamName);
+        void get().fetchAllTasks();
+      }
+      if (change.kind !== 'edited') await get().fetchTeams();
+      if (!isContextRequestScopeCurrent(get, scope)) return false;
+      return true;
+    } catch (error) {
+      logger.warn('Management notice refresh failed', error);
+      if (isContextRequestScopeCurrent(get, scope)) void get().fetchTeams();
+      return false;
+    }
+  },
+
   fetchTeams: async () => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain).
     // Only effective during initial load (when teamsLoading is set to true below).
     // Refreshes are already serialized by the throttle timer in onTeamChange.
-    if (get().teamsLoading) return;
+    if (get().teamsLoading) {
+      pendingTeamsRefreshScope = captureContextRequestScope(get);
+      return;
+    }
     const requestScope = captureContextRequestScope(get);
     const requestId = ++latestTeamsFetchRequestId;
+    const noticesAtStart = get().teamManagementNoticeByTeam;
     // Only show loading spinner on initial load — avoids flickering when refreshing
     const isInitialLoad = get().teams.length === 0;
     if (isInitialLoad) {
@@ -2029,7 +2102,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Atomic update: set teams AND clean up provisioning snapshots in one call
       // to prevent any render cycle with duplicate cards.
       set((state) => {
-        const nextTeams = structurallySharePlainValue(state.teams, teams);
+        const visibleTeams = teams.filter((team) => {
+          const notice = state.teamManagementNoticeByTeam[team.teamName];
+          return !(notice?.kind === 'trashed' && notice !== noticesAtStart[team.teamName]);
+        });
+        const nextTeams = structurallySharePlainValue(state.teams, visibleTeams);
         const indexes = buildTeamSummaryIndexes(nextTeams);
         const nextTeamByName = structurallySharePlainValue(state.teamByName, indexes.teamByName);
         const nextTeamBySessionId = structurallySharePlainValue(
@@ -2042,6 +2119,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         );
 
         if (
+          reconcileTeamManagementNotices(
+            state.teamManagementNoticeByTeam,
+            noticesAtStart,
+            nextTeams
+          ) === state.teamManagementNoticeByTeam &&
           nextTeams === state.teams &&
           nextTeamByName === state.teamByName &&
           nextTeamBySessionId === state.teamBySessionId &&
@@ -2059,6 +2141,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamsLoading: false,
           teamsError: null,
           provisioningSnapshotByTeam: nextSnapshots,
+          teamManagementNoticeByTeam: reconcileTeamManagementNotices(
+            state.teamManagementNoticeByTeam,
+            noticesAtStart,
+            nextTeams
+          ),
         };
       });
     } catch (error) {
@@ -2079,6 +2166,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
               : 'Failed to fetch teams'
           : null,
       });
+    } finally {
+      if (pendingTeamsRefreshScope && isContextRequestScopeCurrent(get, requestScope)) {
+        const pending = pendingTeamsRefreshScope;
+        pendingTeamsRefreshScope = null;
+        if (isContextRequestScopeCurrent(get, pending)) await get().fetchTeams();
+      }
     }
   },
 
@@ -3844,29 +3937,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       });
       throw error;
     }
-    invalidateTeamLocalStateEpoch(teamName);
-    clearTaskFirstOutputTrackingForTeam(teamName);
-    clearPendingReplyRefreshTimer(teamName);
-    clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
-    set((state) => {
-      const clearedState = collectTeamScopedStateRemovals(state, teamName);
-      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-      if (state.selectedTeamName === teamName) {
-        return {
-          selectedTeamName: null,
-          selectedTeamData: null,
-          selectedTeamLoading: false,
-          selectedTeamError: null,
-          ...clearedState,
-          ...tombstones,
-        };
-      }
-      return {
-        ...clearedState,
-        ...tombstones,
-      };
-    });
+    get().clearDeletedTeamLocalState(teamName);
     await get().fetchTeams();
     await get().fetchAllTasks();
   },

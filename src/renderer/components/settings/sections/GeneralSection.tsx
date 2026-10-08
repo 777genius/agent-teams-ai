@@ -13,7 +13,11 @@ import { Combobox } from '@renderer/components/ui/combobox';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { getFullResetState } from '@renderer/store/utils/stateResetHelpers';
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
+import {
+  getContextScopedTeamResetState,
+  getFullResetState,
+} from '@renderer/store/utils/stateResetHelpers';
 import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { AGENT_LANGUAGE_OPTIONS, resolveLanguageName } from '@shared/utils/agentLanguage';
 import { Check, Copy, FolderOpen, Laptop, Loader2, RotateCcw } from 'lucide-react';
@@ -113,6 +117,7 @@ export const GeneralSection = ({
 
   // Claude Root handlers
   const resetWorkspaceForRootChange = useCallback((): void => {
+    invalidateContextScopedRequestEpoch();
     useStore.setState({
       projects: [],
       repositoryGroups: [],
@@ -132,6 +137,7 @@ export const GeneralSection = ({
         focusedPaneId: 'pane-default',
       },
       ...getFullResetState(),
+      ...getContextScopedTeamResetState(),
     });
   }, []);
 

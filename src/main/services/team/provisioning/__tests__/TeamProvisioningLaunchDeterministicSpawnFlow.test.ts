@@ -1,7 +1,9 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+vi.mock('electron', () => ({
+  app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false },
+}));
 
 const flowMocks = vi.hoisted(() => ({
   materializeDeterministicLaunchBootstrapFiles: vi.fn(),
@@ -285,6 +287,38 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       launchIdentity,
       createdAt: 123,
     });
+  });
+
+  // Catches a sparse relaunch clearing saved lead instructions or resetting draft identity metadata.
+  it('preserves saved lead instructions and original metadata identity on sparse relaunch', async () => {
+    const writeMeta = vi.fn(async () => undefined);
+    await persistDeterministicLaunchMetadata(
+      {
+        request: { ...request, prompt: undefined },
+        syntheticRequest,
+        launchIdentity,
+        allEffectiveMemberSpecs: syntheticRequest.members,
+        configuredMemberSpecs: syntheticRequest.members,
+      },
+      {
+        teamMetaStore: {
+          writeMeta,
+          getMeta: async () => ({
+            version: 1,
+            cwd: '/repo',
+            runtimeSelectionVersion: 1,
+            prompt: 'Saved management instructions',
+            createdAt: 77,
+          }),
+        },
+        membersMetaStore: { getMembers: async () => [], writeMembers: async () => undefined },
+        nowMs: () => 123,
+      }
+    );
+    expect(writeMeta).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({ prompt: 'Saved management instructions', createdAt: 77 })
+    );
   });
 
   it('persists normalized synthetic metadata and tombstones when the relaunch request is sparse', async () => {

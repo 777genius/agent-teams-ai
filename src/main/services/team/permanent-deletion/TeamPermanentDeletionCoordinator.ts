@@ -257,7 +257,7 @@ export class TeamPermanentDeletionCoordinator {
 
   async withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
     assertSafeTeamName(teamName);
-    return this.lock.withLock(`team:${teamName}`, async () => {
+    return this.lock.withLock(`team:${teamName.trim().toLowerCase()}`, async () => {
       await this.store.reloadPermanentDeletionIntent(teamName);
       return operation();
     });

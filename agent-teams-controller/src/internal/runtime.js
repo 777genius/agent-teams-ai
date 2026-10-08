@@ -514,9 +514,45 @@ async function getConnectionInfo(context) {
 
 async function getTeam(context, flags = {}) {
   const baseUrls = resolveControlBaseUrls(context, flags);
-  return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}`, {
-    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
-  });
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}${flags.configuration === true ? '?configuration=1' : ''}`,
+    {
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function updateTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/update`,
+    {
+      method: 'POST',
+      body: compactBody(flags, [
+        'expectedContext',
+        'expectedRevision',
+        'metadata',
+        'leadInstructions',
+        'members',
+      ]),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function trashTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/trash`,
+    {
+      method: 'POST',
+      body: compactBody(flags, ['expectedContext', 'expectedRevision']),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
 }
 
 async function createTeam(context, flags = {}) {
@@ -669,6 +705,8 @@ module.exports = {
   getConnectionInfo,
   getTeam,
   createTeam,
+  updateTeam,
+  trashTeam,
   launchTeam,
   stopTeam,
   getRuntimeState,

@@ -3195,6 +3195,23 @@
     "copied": "Copied",
     "copiedDescription": "Prompt copied. This does not mean the external agent has connected or completed your request.",
     "copyFailed": "Clipboard write failed. Select and copy the final prompt manually.",
-    "responsibilitiesFor": "Responsibilities for {{name}}"
+    "responsibilitiesFor": "Responsibilities for {{name}}",
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
+    }
   }
 }

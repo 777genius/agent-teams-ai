@@ -4,7 +4,6 @@
  * Registers all domain-specific route handlers on a Fastify instance.
  * Each route file mirrors the corresponding IPC handler.
  */
-
 import {
   type OrganizationsFeatureFacade,
   registerOrganizationsHttp,
@@ -48,6 +47,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:routes');
@@ -63,11 +63,14 @@ export interface HttpServices {
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
   workspaceTrust?: WorkspaceTrustStatusFeatureFacade;
-  externalAgentConnection?: DesktopExternalAgentConnection;
+  externalAgentConnection?: DesktopExternalAgentConnection & {
+    teamPromptManagement?: TeamPromptManagement;
+  };
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
+  teamPromptManagement?: TeamPromptManagement;
 }
 
 export function registerHttpRoutes(

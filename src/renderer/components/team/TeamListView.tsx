@@ -34,6 +34,7 @@ import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
 } from '@renderer/store/slices/teamSlice';
+import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
 import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
@@ -71,6 +72,7 @@ import { buildCopiedTeamMembers } from './teamCopyData';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { TeamManagementNotice } from './TeamManagementNotice';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
@@ -86,6 +88,7 @@ import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
   ResolvedTeamMember,
@@ -260,6 +263,7 @@ function renderTeamRecentPaths(
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
 
 interface ActiveTeamCardProps {
+  managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
   status: TeamStatus;
   teamColorSet: TeamColorSet;
@@ -284,6 +288,7 @@ interface ActiveTeamCardProps {
 }
 
 const ActiveTeamCard = ({
+  managementChange,
   team,
   status,
   teamColorSet,
@@ -330,6 +335,7 @@ const ActiveTeamCard = ({
         }
       }}
     >
+      <TeamManagementNotice change={managementChange} />
       <div className="flex flex-1 flex-col">
         <div className="space-y-2">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -491,6 +497,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const {
     teams,
     teamsLoading,
+    teamManagementNoticeByTeam,
     teamsError,
     fetchTeams,
     openTab,
@@ -511,6 +518,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   } = useStore(
     useShallow((s) => ({
       teams: s.teams,
+      teamManagementNoticeByTeam: s.teamManagementNoticeByTeam,
       teamsLoading: s.teamsLoading,
       teamsError: s.teamsError,
       fetchTeams: s.fetchTeams,
@@ -1200,6 +1208,23 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           </Button>
         </div>
       </div>
+      {selectRecentManagedTeams(teams, teams, teamManagementNoticeByTeam).some(
+        (team) => !filteredTeams.includes(team)
+      ) ? (
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          {t('managementChanges.hidden')}{' '}
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => {
+              setSearchQuery('');
+              setFilter(EMPTY_TEAM_FILTER);
+            }}
+          >
+            {t('list.filter.clearAll')}
+          </Button>
+        </p>
+      ) : null}
       {!canCreate ? (
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('list.localOnly')}</p>
       ) : null}
@@ -1281,7 +1306,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       );
     }
 
-    const activeFiltered = filteredTeams.filter((t) => !t.deletedAt);
+    const recentTeams = selectRecentManagedTeams(filteredTeams, teams, teamManagementNoticeByTeam);
+    const recentNames = new Set(recentTeams.map((team) => team.teamName));
+    const activeFiltered = filteredTeams.filter(
+      (t) => !t.deletedAt && !recentNames.has(t.teamName)
+    );
     const deletedFiltered = filteredTeams.filter((t) => t.deletedAt);
     const shouldPageTeamSections = !searchQuery.trim() && !hasActiveFilters;
     const selectedProjectSectionKey = currentProjectPath
@@ -1290,32 +1319,40 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     const otherTeamsSectionKey = currentProjectPath
       ? `other:${normalizePath(currentProjectPath)}`
       : 'other';
-    const activeSections = currentProjectPath
-      ? [
-          {
-            key: selectedProjectSectionKey,
-            title: t('list.sections.projectTeams', {
-              project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
-            }),
-            teams: activeFiltered.filter((team) =>
-              teamMatchesProjectSelection(team, currentProjectPath)
-            ),
-          },
-          {
-            key: otherTeamsSectionKey,
-            title: t('list.sections.otherTeams'),
-            teams: activeFiltered.filter(
-              (team) => !teamMatchesProjectSelection(team, currentProjectPath)
-            ),
-          },
-        ].filter((section) => section.teams.length > 0)
-      : [
-          {
-            key: 'all',
-            title: null,
-            teams: activeFiltered,
-          },
-        ];
+    const activeSections: { key: string; title: string | null; teams: TeamSummary[] }[] =
+      currentProjectPath
+        ? [
+            {
+              key: selectedProjectSectionKey,
+              title: t('list.sections.projectTeams', {
+                project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
+              }),
+              teams: activeFiltered.filter((team) =>
+                teamMatchesProjectSelection(team, currentProjectPath)
+              ),
+            },
+            {
+              key: otherTeamsSectionKey,
+              title: t('list.sections.otherTeams'),
+              teams: activeFiltered.filter(
+                (team) => !teamMatchesProjectSelection(team, currentProjectPath)
+              ),
+            },
+          ].filter((section) => section.teams.length > 0)
+        : [
+            {
+              key: 'all',
+              title: null,
+              teams: activeFiltered,
+            },
+          ];
+
+    if (recentTeams.length)
+      activeSections.unshift({
+        key: 'recent-management',
+        title: t('managementChanges.title'),
+        teams: recentTeams,
+      });
 
     return (
       <>
@@ -1364,6 +1401,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                         <ActiveTeamCard
                           key={team.teamName}
                           team={team}
+                          managementChange={teamManagementNoticeByTeam[team.teamName]}
                           status={status}
                           teamColorSet={teamColorSet}
                           isLight={isLight}

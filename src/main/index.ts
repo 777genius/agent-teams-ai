@@ -2056,6 +2056,7 @@ async function initializeServices(): Promise<void> {
   // Bind desktop authority before exposing any runtime bridge consumer.
   externalAgentConnection = composeExternalAgentConnection({
     appInstanceId: openCodeManagedHostInstanceId,
+    teamManagement: [teamDataService, teamProvisioningService, forwardTeamChangeToRendererAndHttp],
     hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
     cdp: nativeRendererCdp,
     getMainContents: () => mainWindow?.webContents ?? null,
@@ -2162,7 +2163,7 @@ async function initializeServices(): Promise<void> {
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
-  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService));
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();

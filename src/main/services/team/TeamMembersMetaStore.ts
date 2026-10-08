@@ -2,13 +2,20 @@ import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRea
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
+import {
+  normalizeTeamMemberMcpPolicy,
+  normalizeTeamMemberMcpScopes,
+  normalizeTeamMemberMcpServerNames,
+  TEAM_MEMBER_MCP_SCOPES,
+} from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
+import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
 import type { TeamMember } from '@shared/types';
 
@@ -17,8 +24,6 @@ export interface TeamMembersMetaFile {
   providerBackendId?: string;
   members: TeamMember[];
 }
-
-const MAX_META_FILE_BYTES = 256 * 1024;
 
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -33,7 +38,7 @@ function normalizeFastMode(value: unknown): TeamMember['fastMode'] {
 }
 
 function normalizeMember(member: TeamMember): TeamMember | null {
-  const trimmedName = member.name?.trim();
+  const trimmedName = typeof member.name === 'string' ? member.name.trim() : undefined;
   if (!trimmedName) {
     return null;
   }
@@ -62,6 +67,44 @@ function normalizeMember(member: TeamMember): TeamMember | null {
   };
 }
 
+/** Strict replacement reads reject malformed known values, while retaining canonical defaults. */
+function hasCompleteMcpPolicy(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  if (input.mode !== 'inheritLead' && !normalizeTeamMemberMcpPolicy({ mode: input.mode }))
+    return false;
+  if (input.scopes != null) {
+    if (typeof input.scopes !== 'object' || Array.isArray(input.scopes)) return false;
+    const scopes = input.scopes as Record<string, unknown>;
+    const normalized = normalizeTeamMemberMcpScopes(scopes);
+    if (
+      TEAM_MEMBER_MCP_SCOPES.some(
+        (scope) => scopes[scope] != null && scopes[scope] !== normalized?.[scope]
+      )
+    )
+      return false;
+  }
+  if (input.serverNames != null) {
+    if (!Array.isArray(input.serverNames)) return false;
+    const names = new Set<string>();
+    for (const name of input.serverNames) {
+      if (typeof name !== 'string' || name.trim().length > 128) return false;
+      if (name.trim()) names.add(name.trim().toLowerCase());
+    }
+    if (names.size !== (normalizeTeamMemberMcpServerNames(input.serverNames)?.length ?? 0))
+      return false;
+  }
+  return true;
+}
+
+function hasCompleteKnownMemberFields(member: TeamMember, normalized: TeamMember): boolean {
+  return (
+    hasCompleteKnownMetadata({ ...member, mcpPolicy: undefined }, normalized) &&
+    hasCompleteMcpPolicy(member.mcpPolicy)
+  );
+}
+
 function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: string) => boolean {
   const activeNames = Array.from(membersByName.values())
     .filter((member) => !member.removedAt)
@@ -74,14 +117,18 @@ export class TeamMembersMetaStore {
     return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
   }
 
-  async getMeta(teamName: string): Promise<TeamMembersMetaFile | null> {
+  /** Management replacement requires every recognized member value to survive canonical read. */
+  async getMeta(
+    teamName: string,
+    options?: { requireCompleteMembers?: boolean }
+  ): Promise<TeamMembersMetaFile | null> {
     const metaPath = this.getMetaPath(teamName);
     try {
       const stat = await fs.promises.stat(metaPath);
       if (!stat.isFile()) {
         return null;
       }
-      if (stat.isFile() && stat.size > MAX_META_FILE_BYTES) {
+      if (stat.isFile() && stat.size > MAX_TEAM_METADATA_BYTES) {
         return null;
       }
     } catch {
@@ -114,16 +161,30 @@ export class TeamMembersMetaStore {
     if (!Array.isArray(file.members)) {
       return null;
     }
+    if (
+      options?.requireCompleteMembers &&
+      ((file.version != null && file.version !== 1) ||
+        (file.providerBackendId != null && typeof file.providerBackendId !== 'string'))
+    )
+      return null;
 
     const deduped = new Map<string, TeamMember>();
+    const identities = options?.requireCompleteMembers ? new Set<string>() : undefined;
     for (const item of file.members) {
       if (!item || typeof item !== 'object') {
+        if (options?.requireCompleteMembers) return null;
         continue;
       }
       const normalized = normalizeMember(item);
       if (!normalized) {
+        if (options?.requireCompleteMembers) return null;
         continue;
       }
+      if (options?.requireCompleteMembers && !hasCompleteKnownMemberFields(item, normalized))
+        return null;
+      const identity = normalized.name.toLowerCase();
+      if (identities?.has(identity)) return null;
+      identities?.add(identity);
       deduped.set(normalized.name, normalized);
     }
 
@@ -134,6 +195,7 @@ export class TeamMembersMetaStore {
     const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
+        if (options?.requireCompleteMembers) return null;
         deduped.delete(name);
       }
     }
@@ -154,6 +216,13 @@ export class TeamMembersMetaStore {
     members: TeamMember[],
     options?: { providerBackendId?: string; teamsBasePath?: string }
   ): Promise<void> {
+    await atomicWriteAsync(
+      path.join(options?.teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json'),
+      this.serializeMembers(members, options)
+    );
+  }
+
+  serializeMembers(members: TeamMember[], options?: { providerBackendId?: string }): string {
     const deduped = new Map<string, TeamMember>();
     for (const member of members) {
       const normalized = normalizeMember(member);
@@ -174,15 +243,10 @@ export class TeamMembersMetaStore {
       }
     }
 
-    const payload: TeamMembersMetaFile = {
+    return serializeTeamMetadata({
       version: 1,
       providerBackendId: normalizeOptionalBackendId(options?.providerBackendId),
       members: Array.from(deduped.values()).sort((a, b) => a.name.localeCompare(b.name)),
-    };
-
-    await atomicWriteAsync(
-      path.join(options?.teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json'),
-      JSON.stringify(payload, null, 2)
-    );
+    } satisfies TeamMembersMetaFile);
   }
 }

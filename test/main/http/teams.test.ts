@@ -69,9 +69,11 @@ describe('HTTP team runtime routes', () => {
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
-    const renameDraftTeam = vi.fn<(oldTeamName: string, newTeamName: string) => Promise<void>>(() =>
-      Promise.resolve()
-    );
+    const renameDraftTeam = vi.fn<
+      (oldTeamName: string, newTeamName: string, afterRename?: () => Promise<void>) => Promise<void>
+    >(async (_oldTeamName, _newTeamName, afterRename) => {
+      await afterRename?.();
+    });
     const resumeTeam = vi.fn<(teamName: string) => void>();
     const getMemberSpawnStatuses =
       vi.fn<(teamName: string) => Promise<MemberSpawnStatusesSnapshot>>();
@@ -732,7 +734,11 @@ describe('HTTP team runtime routes', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ runId: 'run-renamed' });
-      expect(renameDraftTeam).toHaveBeenCalledWith('signal-ops', 'fixteam-test');
+      expect(renameDraftTeam).toHaveBeenCalledWith(
+        'signal-ops',
+        'fixteam-test',
+        expect.any(Function)
+      );
       expect(createTeam).toHaveBeenCalledWith(
         expect.objectContaining({ teamName: 'fixteam-test', cwd: '/Users/test/project' }),
         expect.any(Function)

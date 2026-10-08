@@ -5,6 +5,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["scripts/e2e/external-agent-connection-desktop.ts", "src/types/**/*.d.ts"],
+  "include": ["scripts/e2e/external-agent-connection-desktop.ts", "scripts/e2e/team-prompt-management-desktop.ts", "src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "dist-electron"]
 }

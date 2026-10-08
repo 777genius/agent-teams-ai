@@ -168,14 +168,19 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       model: 'claude-opus-4-6',
       createdAt: Date.now(),
     });
-    await new TeamMembersMetaStore().writeMembers(
+    // Keep persisted metadata below its existing reader limit while retaining extreme launch input.
+    // Peer role labels are bounded to 48 characters; 8k saved roles preserve the same context stress.
+    const membersStore = new TeamMembersMetaStore();
+    await membersStore.writeMembers(
       'large-native-team',
       Array.from({ length: 30 }, (_, index) => ({
         name: `member-${index}`,
         providerId: 'anthropic' as const,
-        role: hugeRole,
+        role: hugeRole.slice(0, 8_000),
       }))
     );
+
+    expect(await membersStore.getMembers('large-native-team')).toHaveLength(30);
 
     const result = await buildNativeAppManagedBootstrapSpecsWithDiagnostics({
       teamName: 'large-native-team',

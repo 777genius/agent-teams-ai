@@ -144,6 +144,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     input: BuildTeamRuntimeLaunchArgsPlanInput
   ): Promise<TeamRuntimeLaunchArgsPlan>;
   teamMetaStore: {
+    getMeta?(teamName: string): Promise<TeamMetaFile | null>;
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
   membersMetaStore: {
@@ -229,16 +230,24 @@ export async function persistDeterministicLaunchMetadata<
     'teamMetaStore' | 'membersMetaStore' | 'nowMs'
   >
 ): Promise<void> {
-  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs } = input;
-  await ports.teamMetaStore.writeMeta(
-    request.teamName,
-    buildLaunchTeamMetaPayload({
+  const {
+    request,
+    syntheticRequest,
+    launchIdentity,
+    allEffectiveMemberSpecs,
+    configuredMemberSpecs,
+  } = input;
+  const savedMeta = await ports.teamMetaStore.getMeta?.(request.teamName);
+  await ports.teamMetaStore.writeMeta(request.teamName, {
+    ...savedMeta,
+    ...buildLaunchTeamMetaPayload({
       request,
       syntheticRequest,
       launchIdentity,
-      nowMs: ports.nowMs(),
-    })
-  );
+      nowMs: savedMeta?.createdAt ?? ports.nowMs(),
+    }),
+    prompt: request.prompt ?? savedMeta?.prompt,
+  });
   const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
   // Runtime materialization supplies workspaces, but never configured model authority.
   const configuredByName = new Map(
