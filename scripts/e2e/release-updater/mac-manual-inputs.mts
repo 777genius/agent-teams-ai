@@ -317,7 +317,9 @@ export async function retrieveManualInputs(
   const transfer = await downloadGithubFile(
     'gh',
     `${prefix}/artifacts/${expected.artifactId}/zip`,
-    archive
+    archive,
+    // Original combined ARM/Intel ZIP is about 1.9 GiB; allow a bounded 20-minute transfer.
+    { timeoutMs: 1_200_000 }
   );
   checkManualTransfer(transfer);
   authority.archiveSha256 = (await fileProof(archive, 'inputs.zip')).sha256;

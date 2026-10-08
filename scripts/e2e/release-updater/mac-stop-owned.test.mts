@@ -16,7 +16,7 @@ const owner = {
 };
 const helper = `${app}/Contents/Frameworks/Agent Teams AI Helper.app/Contents/MacOS/Agent Teams AI Helper`;
 const row = (entry: typeof owner) =>
-  `${entry.pid} ${entry.uid} ${entry.group} ${entry.start} ${entry.command}`;
+  `${entry.pid} ${entry.uid} ${entry.group} 1 S ${entry.start} ${entry.command}`;
 const main = row(owner);
 const helperRow = (command: string) => row({ ...owner, pid: 7908, command });
 
@@ -32,7 +32,7 @@ function fixture(context: TestContext, read: (signals: string[]) => string[]) {
     override run(label: string, binary: string, args: string[]) {
       assert.equal(label, 'process-identities');
       assert.equal(binary, '/bin/ps');
-      assert.deepEqual(args, ['-axww', '-o', 'pid=,uid=,pgid=,lstart=,comm=']);
+      assert.deepEqual(args, ['-axww', '-o', 'pid=,uid=,pgid=,ppid=,stat=,lstart=,comm=']);
       const rows = read(signals);
       const harness = row({
         ...owner,

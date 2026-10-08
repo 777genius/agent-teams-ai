@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { isReviewedWindowsTargetVersion, isWindowsOtaMode } from './windowsReleaseScenario.js';
+import { isReviewedWindowsTargetVersion, isWindowsOtaMode } from './windowsReleaseScenario.ts';
 
 interface Bytes {
   size: number;

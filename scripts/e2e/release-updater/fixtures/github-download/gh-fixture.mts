@@ -3,7 +3,8 @@
 const [operation, endpoint, headerFlag, accept, ...extra] = process.argv.slice(2);
 const actions =
   endpoint === 'repos/TEST/transport/actions/artifacts/101/zip' ||
-  endpoint === 'repos/TEST/transport/actions/artifacts/102/zip';
+  endpoint === 'repos/TEST/transport/actions/artifacts/102/zip' ||
+  endpoint === 'repos/TEST/transport/actions/artifacts/103/zip';
 const release = endpoint === 'repos/TEST/transport/releases/assets/201';
 if (operation !== 'api' || headerFlag !== '-H' || extra.length !== 0 || (!actions && !release)) {
   process.stderr.write('Unexpected protocol request\n');
@@ -13,6 +14,8 @@ if (accept !== (actions ? 'Accept: application/json' : 'Accept: application/octe
   process.stderr.write('HTTP 415: unsupported Accept header\n');
   process.exit(1);
 }
+if (endpoint === 'repos/TEST/transport/actions/artifacts/103/zip')
+  await new Promise((resolve) => setTimeout(resolve, 200));
 process.stdout.write(
   Buffer.from(
     actions

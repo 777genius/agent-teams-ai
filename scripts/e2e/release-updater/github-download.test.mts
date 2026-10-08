@@ -100,3 +100,39 @@ for (const endpoint of [
     }
   });
 }
+
+// Red if caller timeout is ignored, a timed-out transfer is accepted, or longer transfer corrupts bytes.
+void test('explicit bounded timeout kills a stalled transfer and permits a longer verified transfer', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-github-download-'));
+  try {
+    const endpoint = 'repos/TEST/transport/actions/artifacts/103/zip';
+    const short = await downloadGithubFile(executable, endpoint, path.join(root, 'short'), {
+      timeoutMs: 25,
+    });
+    assert.notEqual(short.exitCode, 0);
+    const longPath = path.join(root, 'long');
+    const long = await downloadGithubFile(executable, endpoint, longPath, {
+      timeoutMs: 3000,
+    });
+    assert.equal(long.exitCode, 0, long.stderr);
+    assert.equal(long.error, '');
+    const expected = cases[0];
+    assert(expected);
+    assert.equal(
+      createHash('sha256')
+        .update(await readFile(longPath))
+        .digest('hex'),
+      expected.sha256
+    );
+    for (const timeoutMs of [0, NaN, Infinity, 1_200_001])
+      await assert.rejects(
+        downloadGithubFile('/does-not-exist', endpoint, path.join(root, 'invalid'), { timeoutMs }),
+        /Invalid bounded GitHub download timeout/
+      );
+    await assert.rejects(readFile(path.join(root, 'invalid')), {
+      code: 'ENOENT',
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

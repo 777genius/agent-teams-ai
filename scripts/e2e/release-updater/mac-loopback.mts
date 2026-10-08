@@ -411,33 +411,72 @@ interface MacProcess {
   command: string;
 }
 class MacProcessReadError extends Error {}
-export async function macProcesses(commands: MacCommands): Promise<MacProcess[]> {
-  const raw = await commands.run(
-    'process-identities',
-    '/bin/ps',
-    ['-axww', '-o', 'pid=,uid=,pgid=,lstart=,comm='],
-    1000
-  );
-  if (raw.exitCode !== 0)
-    throw new MacProcessReadError(`process-identities failed; see ${raw.logFile}`);
-  const processes = raw.stdout
+export interface MacProcessSnapshot extends MacProcess {
+  parentPid: number;
+  state: string;
+}
+export function activeMacProcess(process: MacProcessSnapshot): boolean {
+  return !/^[ZX]/.test(process.state);
+}
+export function parseMacProcessSnapshot(stdout: string): MacProcessSnapshot[] {
+  return stdout
     .trim()
     .split('\n')
     .map((line) => {
       const parts = line.trim().split(/\s+/);
+      const state = parts[4];
+      assert(
+        parts.length >= 11 && typeof state === 'string' && /^[A-Z][A-Za-z+<>-]*$/.test(state),
+        'Invalid native process state'
+      );
+      const pid = Number(parts[0]);
+      const uid = Number(parts[1]);
+      const group = Number(parts[2]);
+      const parentPid = Number(parts[3]);
+      assert(
+        [pid, uid, group, parentPid].every((value) => Number.isSafeInteger(value) && value >= 0),
+        'Invalid native process identity'
+      );
       return {
-        pid: Number(parts[0]),
-        uid: Number(parts[1]),
-        group: Number(parts[2]),
-        start: parts.slice(3, 8).join(' '),
-        command: parts.slice(8).join(' '),
+        pid,
+        uid,
+        group,
+        parentPid,
+        state,
+        start: parts.slice(5, 10).join(' '),
+        command: parts.slice(10).join(' '),
       };
     });
+}
+export async function macProcessSnapshot(commands: MacCommands): Promise<MacProcessSnapshot[]> {
+  const raw = await commands.run(
+    'process-identities',
+    '/bin/ps',
+    ['-axww', '-o', 'pid=,uid=,pgid=,ppid=,stat=,lstart=,comm='],
+    1000
+  );
+  if (raw.exitCode !== 0)
+    throw new MacProcessReadError(`process-identities failed; see ${raw.logFile}`);
+  const processes = parseMacProcessSnapshot(raw.stdout);
   assert(
     processes.some((entry) => entry.pid === process.pid && entry.uid === process.getuid?.()),
     'Native process enumeration must include the current harness'
   );
   return processes;
+}
+// State and parent changes are evidence, not immutable launch identity.
+function processIdentity(process: MacProcessSnapshot): MacProcess {
+  return {
+    pid: process.pid,
+    uid: process.uid,
+    group: process.group,
+    start: process.start,
+    command: process.command,
+  };
+}
+
+export async function macProcesses(commands: MacCommands): Promise<MacProcess[]> {
+  return (await macProcessSnapshot(commands)).map(processIdentity);
 }
 export async function macOwner(commands: MacCommands, pid: number, executable: string) {
   const owner = (await macProcesses(commands)).find((process) => process.pid === pid);
@@ -472,7 +511,9 @@ export async function macLaunchOwner(
 }
 export async function stopMacOwned(commands: MacCommands, owner: MacProcess, app: string) {
   const members = async () => {
-    const processes = await macProcesses(commands);
+    const processes = (await macProcessSnapshot(commands))
+      .filter(activeMacProcess)
+      .map(processIdentity);
     const current = processes.find((process) => process.pid === owner.pid);
     if (current) assert.deepEqual(current, owner, 'Owned main PID identity changed');
     const group = processes.filter((process) => process.group === owner.group);
@@ -486,9 +527,10 @@ export async function stopMacOwned(commands: MacCommands, owner: MacProcess, app
   };
   // Post-signal presentation changes remain blocking; only members() authorizes signals.
   const remaining = async () =>
-    (await macProcesses(commands)).filter(
-      (process) => process.pid === owner.pid || process.group === owner.group
-    );
+    (await macProcessSnapshot(commands))
+      .filter(activeMacProcess)
+      .map(processIdentity)
+      .filter((process) => process.pid === owner.pid || process.group === owner.group);
   const before = await members();
   if (before.length) process.kill(-owner.group, 'SIGTERM');
   try {

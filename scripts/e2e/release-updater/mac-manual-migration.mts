@@ -15,7 +15,8 @@ import {
   captureMacWindow,
   macLaunchOwner,
   macOwner,
-  macProcesses,
+  activeMacProcess,
+  macProcessSnapshot,
   prepareMacWindow,
   stopMacOwned,
 } from './mac-loopback.mts';
@@ -133,8 +134,9 @@ async function persist() {
 }
 async function noAppProcesses() {
   assert.equal(
-    (await macProcesses(commands)).filter((item) => item.command.startsWith(`${app}/Contents/`))
-      .length,
+    (await macProcessSnapshot(commands)).filter(
+      (item) => activeMacProcess(item) && item.command.startsWith(`${app}/Contents/`)
+    ).length,
     0,
     'Owned bundle processes remain'
   );

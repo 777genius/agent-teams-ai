@@ -27,9 +27,14 @@ async function fixture(context: TestContext) {
     start: 'Wed Oct 7 08:30:29 2026',
     command: `${app}/Contents/MacOS/Agent Teams AI`,
   };
-  const harness = { ...owner, pid: process.pid, group: process.pid, command: process.execPath };
+  const harness = {
+    ...owner,
+    pid: process.pid,
+    group: process.pid,
+    command: process.execPath,
+  };
   const row = (entry: MacProcess) =>
-    `${entry.pid} ${entry.uid} ${entry.group} ${entry.start} ${entry.command}`;
+    `${entry.pid} ${entry.uid} ${entry.group} 1 S ${entry.start} ${entry.command}`;
   let snapshots: Snapshot[] = [];
   const calls: string[] = [];
   class Commands extends MacCommands {
@@ -38,7 +43,7 @@ async function fixture(context: TestContext) {
       let script: string;
       if (label === 'process-identities') {
         assert.equal(binary, '/bin/ps');
-        assert.deepEqual(args, ['-axww', '-o', 'pid=,uid=,pgid=,lstart=,comm=']);
+        assert.deepEqual(args, ['-axww', '-o', 'pid=,uid=,pgid=,ppid=,stat=,lstart=,comm=']);
         assert.equal(timeout, 1000);
         const snapshot = snapshots.shift();
         assert(snapshot, 'unexpected additional process read');
