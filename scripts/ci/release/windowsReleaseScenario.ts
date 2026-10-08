@@ -1,5 +1,5 @@
 export function isReviewedWindowsTargetVersion(version: string) {
-  return version === '2.17.6' || version === '2.17.9';
+  return version === '2.17.6' || version === '2.17.10';
 }
 
 export function isWindowsOtaMode(mode: string) {
