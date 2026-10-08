@@ -2,11 +2,11 @@
 
 ## Tested source
 
-- Source: `12fcf8eebca55a56554a8ede6048f9d68231bbff`.
+- Source: `fe7cf534507be036de0d5f818d65c61606c3933f`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-dJwhm7/evidence.json`.
-- Evidence SHA256: `825f974d18f48af3ac1187b2b94c73e18f6f82cced48dddf3d203c4f1de17dac`.
-- Later commits change only test fixtures and documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,340 production files, with teams HTTP at 799/800 and no baseline increase.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-EWVSyt/evidence.json`.
+- Evidence SHA256: `92edbb4551a535daf11daa5447d8e1acd7f1d642e9a7b65945965cc58c3992ad`.
+- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source. Source-size guard passed 3,344 production files, with teams HTTP at 799/800 and no baseline increase.
 
 ## Actual desktop and native MCP proof
 
@@ -42,6 +42,8 @@ Passed:
 - Ordinary HTTP/MCP reads retain the existing tolerant snapshot path; explicit `configuration=1` / MCP `configuration=true` requests the admitted coherent configuration revision. Malformed, empty or non-object config rejects with typed `TEAM_CONFIGURATION_UNREADABLE` before writes. Independent review accepted `4596d618c287638a5912bcb00f65e27cfb366dff`; a subsequent test-only assertion permits the canonical lead alongside the unchanged builder. Final nearest HTTP suites passed 66 tests; all 67 MCP and 391 controller tests, project/MCP typechecks, focused lint and controller/MCP builds passed. Actual native desktop proof above uses the opt-in path.
 
 - A final review identified partial canonical roster normalization discarding identities/tombstones. Management opts into `requireCompleteMembers` on the existing reader: skipped entries, case-insensitive identity collisions, suffix pruning and invalid lifecycle markers reject before writes; tolerant ordinary reads and legitimate trim/backend migrations remain. Four regression cases failed on the previous reader; all 72 nearest HTTP/reader tests then passed with exact byte/event assertions. Full project typecheck, focused lint and source-size guard passed. Independent review accepted exact `12fcf8eebca55a56554a8ede6048f9d68231bbff`, followed by the fresh native desktop proof above. This protects canonical identities/markers, not arbitrary unknown metadata fields.
+
+- Canonical config and management now share a minimum readable-payload predicate, rejecting missing/blank names and unsafe roster shapes before GET/update/trash writes. All 80 nearest HTTP/reader tests, pinned project typecheck, full focused lint and source-size guard passed. Independent review accepted `05a0fecd34176de286b159440ed4fefdc5d6de16`. A fresh desktop attempt stopped before MCP calls on a missed disclosure click; the harness now waits for stable rendered geometry before real CDP mouse input, preserving the exact responsibility assertion. Independent harness review accepted that bounded fix; the complete fresh native run above then passed.
 
 ## Limits
 
