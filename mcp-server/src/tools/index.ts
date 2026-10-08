@@ -2,8 +2,11 @@ import type { FastMCP } from 'fastmcp';
 
 import agentTeamsControllerModule from 'agent-teams-controller';
 
-const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } =
-  agentTeamsControllerModule;
+const {
+  AGENT_TEAMS_MANAGEMENT_TOOL_NAMES,
+  AGENT_TEAMS_MCP_TOOL_GROUPS,
+  AGENT_TEAMS_REGISTERED_TOOL_NAMES,
+} = agentTeamsControllerModule;
 
 import { registerCrossTeamTools } from './crossTeamTools';
 import { registerKanbanTools } from './kanbanTools';
@@ -36,7 +39,19 @@ export const AGENT_TEAMS_MCP_REGISTRATION_GROUPS = AGENT_TEAMS_MCP_TOOL_GROUPS.m
 
 export { AGENT_TEAMS_REGISTERED_TOOL_NAMES };
 
-export function registerTools(server: FastMCP) {
+export type McpToolProfile = 'full' | 'management';
+
+export function registerTools(server: Pick<FastMCP, 'addTool'>, profile: McpToolProfile = 'full') {
+  if (profile === 'management') {
+    // A fixed boundary, independent of client permission flags or future tool groups.
+    const allowed = new Set(AGENT_TEAMS_MANAGEMENT_TOOL_NAMES);
+    registerTeamTools({
+      addTool(tool) {
+        if (allowed.has(tool.name)) server.addTool(tool);
+      },
+    });
+    return;
+  }
   for (const group of AGENT_TEAMS_MCP_REGISTRATION_GROUPS) {
     group.register(server);
   }

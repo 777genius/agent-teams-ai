@@ -263,6 +263,7 @@ declare module 'agent-teams-controller' {
     toolNames: readonly string[];
   }
 
+  export const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

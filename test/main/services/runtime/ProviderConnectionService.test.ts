@@ -1915,8 +1915,7 @@ describe('ProviderConnectionService', () => {
   });
 
   it('uses a newly selected Codex binary after refreshing its account snapshot', async () => {
-    const { CodexBinaryResolver } =
-      await import('@main/services/infrastructure/codexAppServer');
+    const { CodexBinaryResolver } = await import('@main/services/infrastructure/codexAppServer');
     vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/new/bin/codex');
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
@@ -1959,8 +1958,7 @@ describe('ProviderConnectionService', () => {
   });
 
   it('does not launch a different verified Codex binary using another binary account snapshot', async () => {
-    const { CodexBinaryResolver } =
-      await import('@main/services/infrastructure/codexAppServer');
+    const { CodexBinaryResolver } = await import('@main/services/infrastructure/codexAppServer');
     vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/older/bin/codex');
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
@@ -2032,8 +2030,7 @@ describe('ProviderConnectionService', () => {
   });
 
   it('keeps only a working incoming Codex path when the account snapshot has no binary', async () => {
-    const { CodexBinaryResolver } =
-      await import('@main/services/infrastructure/codexAppServer');
+    const { CodexBinaryResolver } = await import('@main/services/infrastructure/codexAppServer');
     vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
       candidate === '/working/bin/codex' ? candidate : null
     );
@@ -2067,10 +2064,7 @@ describe('ProviderConnectionService', () => {
     );
     expect(augmentedEnv.CODEX_CLI_PATH).toBeUndefined();
 
-    await service.getConfiguredConnectionIssue(
-      { CODEX_CLI_PATH: '/working/bin/codex' },
-      'codex'
-    );
+    await service.getConfiguredConnectionIssue({ CODEX_CLI_PATH: '/working/bin/codex' }, 'codex');
     expect(loginStatusChecker).toHaveBeenLastCalledWith({
       binaryPath: '/working/bin/codex',
       env: expect.objectContaining({ CODEX_CLI_PATH: '/working/bin/codex' }),
@@ -2219,8 +2213,7 @@ describe('ProviderConnectionService', () => {
   });
 
   it('reconciles a requested Codex CLI path after refreshing a runtime-missing snapshot', async () => {
-    const { CodexBinaryResolver } =
-      await import('@main/services/infrastructure/codexAppServer');
+    const { CodexBinaryResolver } = await import('@main/services/infrastructure/codexAppServer');
     vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
       candidate === '/older/bin/codex' ? candidate : null
     );
@@ -2694,72 +2687,76 @@ describe('ProviderConnectionService', () => {
     expect(loginStatusChecker).not.toHaveBeenCalled();
   });
 
-  it('verifies degraded Codex cmd shim login status through the shared CLI launcher', async () => {
-    const { ProviderConnectionService } =
-      await import('@main/services/runtime/ProviderConnectionService');
+  it.each(['/opt/codex/bin/codex.cmd', '/sandbox/bin/renamed-provider'])(
+    'verifies degraded native Codex login status for %s through the shared CLI launcher',
+    async (binaryPath) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
 
-    const service = new ProviderConnectionService(
-      {
-        lookupPreferred: vi.fn().mockResolvedValue(null),
-      } as never,
-      {
-        getConfig: () => createConfig('auto'),
-      } as never
-    );
+      const service = new ProviderConnectionService(
+        {
+          lookupPreferred: vi.fn().mockResolvedValue(null),
+        } as never,
+        {
+          getConfig: () => createConfig('auto'),
+        } as never
+      );
 
-    service.setCodexAccountFeature({
-      getSnapshot: vi.fn().mockResolvedValue({
-        preferredAuthMode: 'chatgpt',
-        effectiveAuthMode: 'chatgpt',
-        launchAllowed: true,
-        launchIssueMessage: null,
-        launchReadinessState: 'warning_degraded_but_launchable',
-        appServerState: 'degraded',
-        appServerStatusMessage: 'Using cached ChatGPT account after transient app-server failure.',
-        managedAccount: {
-          type: 'chatgpt',
-          email: 'user@example.com',
-          planType: 'pro',
-        },
-        apiKey: {
-          available: false,
-          source: null,
-          sourceLabel: null,
-        },
-        requiresOpenaiAuth: true,
-        localAccountArtifactsPresent: true,
-        localActiveChatgptAccountPresent: true,
-        runtimeContext: {
-          binaryPath: '/opt/codex/bin/codex.cmd',
-          codexHome: '/Users/tester/.codex-custom',
-        },
-        login: {
-          status: 'idle',
-          error: null,
-          startedAt: null,
-        },
-        rateLimits: null,
-        updatedAt: '2026-04-20T00:00:00.000Z',
-      }),
-    } as never);
-
-    await expect(service.getConfiguredConnectionIssue({}, 'codex')).resolves.toBeNull();
-
-    expect(execCliMock).toHaveBeenCalledWith(
-      '/opt/codex/bin/codex.cmd',
-      ['-c', 'forced_login_method="chatgpt"', '-c', 'service_tier="fast"', 'login', 'status'],
-      expect.objectContaining({
-        timeout: 5_000,
-        windowsHide: true,
-        maxBuffer: 128 * 1024,
-        env: expect.objectContaining({
-          CODEX_CLI_PATH: '/opt/codex/bin/codex.cmd',
-          CODEX_HOME: '/Users/tester/.codex-custom',
-          CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+      service.setCodexAccountFeature({
+        getSnapshot: vi.fn().mockResolvedValue({
+          preferredAuthMode: 'chatgpt',
+          effectiveAuthMode: 'chatgpt',
+          launchAllowed: true,
+          launchIssueMessage: null,
+          launchReadinessState: 'warning_degraded_but_launchable',
+          appServerState: 'degraded',
+          appServerStatusMessage:
+            'Using cached ChatGPT account after transient app-server failure.',
+          managedAccount: {
+            type: 'chatgpt',
+            email: 'user@example.com',
+            planType: 'pro',
+          },
+          apiKey: {
+            available: false,
+            source: null,
+            sourceLabel: null,
+          },
+          requiresOpenaiAuth: true,
+          localAccountArtifactsPresent: true,
+          localActiveChatgptAccountPresent: true,
+          runtimeContext: {
+            binaryPath,
+            codexHome: '/Users/tester/.codex-custom',
+          },
+          login: {
+            status: 'idle',
+            error: null,
+            startedAt: null,
+          },
+          rateLimits: null,
+          updatedAt: '2026-04-20T00:00:00.000Z',
         }),
-      })
-    );
-  });
+      } as never);
+
+      await expect(service.getConfiguredConnectionIssue({}, 'codex')).resolves.toBeNull();
+
+      expect(execCliMock).toHaveBeenCalledWith(
+        binaryPath,
+        ['-c', 'forced_login_method="chatgpt"', '-c', 'service_tier="fast"', 'login', 'status'],
+        expect.objectContaining({
+          timeout: 5_000,
+          windowsHide: true,
+          maxBuffer: 128 * 1024,
+          env: expect.objectContaining({
+            CODEX_CLI_PATH: binaryPath,
+            CODEX_HOME: '/Users/tester/.codex-custom',
+            CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+          }),
+        })
+      );
+    }
+  );
 
   it('blocks launch when managed ChatGPT is selected but degraded exact runtime login is logged out', async () => {
     const { ProviderConnectionService } =
@@ -2836,10 +2833,7 @@ describe('ProviderConnectionService', () => {
     expect(loginStatusChecker.mock.calls[0]?.[0].env.OPENAI_API_KEY).toBeUndefined();
     expect(loginStatusChecker.mock.calls[0]?.[0].env.CODEX_API_KEY).toBeUndefined();
 
-    await service.getConfiguredConnectionIssue(
-      { CODEX_CLI_PATH: '/new/bin/codex' },
-      'codex'
-    );
+    await service.getConfiguredConnectionIssue({ CODEX_CLI_PATH: '/new/bin/codex' }, 'codex');
     expect(loginStatusChecker).toHaveBeenLastCalledWith({
       binaryPath: '/opt/codex/bin/codex',
       env: expect.objectContaining({ CODEX_CLI_PATH: '/opt/codex/bin/codex' }),
@@ -2977,6 +2971,14 @@ describe('ProviderConnectionService', () => {
         },
       }),
     ]);
+    const renamedArgs = await service.getConfiguredConnectionLaunchArgs(
+      { OPENAI_API_KEY: undefined, CODEX_API_KEY: undefined },
+      'codex',
+      undefined,
+      '/sandbox/bin/renamed-provider',
+      'native'
+    );
+    expect(renamedArgs).toEqual(['-c', 'forced_login_method="chatgpt"']);
   });
 
   it('returns an api forced_login_method override for Codex API-key launches', async () => {
@@ -3042,6 +3044,14 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(args).toEqual(['-c', 'forced_login_method="api"']);
+    const renamedArgs = await service.getConfiguredConnectionLaunchArgs(
+      { OPENAI_API_KEY: 'stored-key', CODEX_API_KEY: 'stored-key' },
+      'codex',
+      undefined,
+      '/sandbox/bin/renamed-provider',
+      'native'
+    );
+    expect(renamedArgs).toEqual(['-c', 'forced_login_method="api"']);
   });
 
   it('adds custom provider settings for managed Codex API-key launches', async () => {
@@ -3153,6 +3163,14 @@ describe('ProviderConnectionService', () => {
       '-c',
       'model_providers.agent_teams_custom.env_key="CODEX_API_KEY"',
     ]);
+    const renamedArgs = await service.getConfiguredConnectionLaunchArgs(
+      { OPENAI_API_KEY: 'stored-key', CODEX_API_KEY: 'stored-key' },
+      'codex',
+      undefined,
+      '/sandbox/bin/custom-native-symlink',
+      'native'
+    );
+    expect(renamedArgs).toEqual(args);
   });
 
   it('does not pass custom provider settings when Codex resolves to ChatGPT mode', async () => {

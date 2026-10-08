@@ -238,6 +238,7 @@ declare module 'agent-teams-controller' {
   }
 
   export type AgentTeamsMcpToolGroupId =
+    | 'team'
     | 'task'
     | 'lead'
     | 'kanban'
@@ -260,6 +261,7 @@ declare module 'agent-teams-controller' {
   export const protocols: ProtocolsApi;
 
   export const taskTextSignals: TaskTextSignalsApi;
+  export const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

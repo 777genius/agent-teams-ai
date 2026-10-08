@@ -1,11 +1,15 @@
 import {
   createDesktopExternalAgentConnection,
+  ExternalAgentRunService,
   type NativeRendererCdp,
+  prepareNativeAgentRun,
 } from '@features/external-agent-connection/main';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '@features/member-work-sync/main';
+import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
@@ -19,7 +23,9 @@ import {
   type TeamPromptManagementLifecycle,
 } from './startTeamPromptManagement';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
 import type { TeamChangeEvent } from '@shared/types';
 
 const configManager = ConfigManager.getInstance();
@@ -27,6 +33,10 @@ const configManager = ConfigManager.getInstance();
 /** App-shell dependencies stay at the composition boundary, outside connection policy. */
 export function composeExternalAgentConnection(options: {
   appInstanceId: string;
+  nativeRun: [
+    status: Pick<CliInstallerService, 'getProviderStatus'>,
+    account: () => Promise<CodexAccountSnapshotDto> | undefined,
+  ];
   cdp: NativeRendererCdp;
   getMainContents(): WebContents | null;
   isLocalContext(): boolean;
@@ -60,9 +70,55 @@ export function composeExternalAgentConnection(options: {
     const [data, lifecycle, emit] = options.teamManagement;
     teamPromptManagement = composeTeamPromptManagement(data, lifecycle, connection, emit);
   }
+  const directRun = new ExternalAgentRunService({
+    async getAvailability() {
+      const [codex, anthropic] = await Promise.all([
+        CodexBinaryResolver.resolve().catch(() => null),
+        ClaudeBinaryResolver.resolveNative().catch(() => null),
+      ]);
+      return { codex: Boolean(codex), anthropic: Boolean(anthropic) };
+    },
+    getConnectionInfo: connection.getConnectionInfo,
+    withExpectedContext: connection.withExpectedContext,
+    async getProviderStatus(providerId) {
+      const status = await options.nativeRun[0].getProviderStatus(providerId);
+      if (providerId === 'codex' && (await options.nativeRun[1]())?.launchAllowed !== true)
+        return null;
+      return status;
+    },
+    prepare: (provider, connectionInfo) =>
+      prepareNativeAgentRun(provider, connectionInfo, {
+        controlUrl: options.getControlUrl(),
+        claudeDir: getClaudeBasePath(),
+      }),
+  });
   return {
     ...connection,
+    directRun,
     teamPromptManagement,
+    async updateRoot(applyConfig: () => void) {
+      await directRun.stopCurrent();
+      return connection.updateRoot(applyConfig);
+    },
+    async changeContext(operation: () => Promise<void> | void) {
+      await directRun.stopCurrent();
+      return connection.changeContext(operation);
+    },
+    async closeAdmission() {
+      const drain = connection.closeAdmission();
+      try {
+        await directRun.shutdown();
+      } finally {
+        await drain;
+      }
+    },
+    async shutdown() {
+      try {
+        await directRun.shutdown();
+      } finally {
+        await connection.shutdown();
+      }
+    },
     async start(): Promise<void> {
       if (!isOpenCodeMcpHttpBridgeEnabled() && configManager.getConfig().httpServer?.enabled) {
         await options.startControl().catch(() => undefined);

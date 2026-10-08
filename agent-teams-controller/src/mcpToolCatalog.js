@@ -1,4 +1,5 @@
-const AGENT_TEAMS_TEAM_TOOL_NAMES = [
+// Fixed native prompt scope. Future team-group tools must not widen this boundary.
+const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES = [
   'app_get_connection_info',
   'team_list',
   'team_get',
@@ -6,6 +7,8 @@ const AGENT_TEAMS_TEAM_TOOL_NAMES = [
   'team_update',
   'team_trash',
 ];
+
+const AGENT_TEAMS_TEAM_TOOL_NAMES = [...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES];
 
 const AGENT_TEAMS_TASK_TOOL_NAMES = [
   'member_briefing',
@@ -146,6 +149,7 @@ const AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES = AGENT_TEAMS_LEAD_BOOTST
 );
 
 module.exports = {
+  AGENT_TEAMS_MANAGEMENT_TOOL_NAMES,
   AGENT_TEAMS_TEAM_TOOL_NAMES,
   AGENT_TEAMS_TASK_TOOL_NAMES,
   AGENT_TEAMS_LEAD_TOOL_NAMES,

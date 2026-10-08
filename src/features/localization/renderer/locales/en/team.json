@@ -3178,9 +3178,27 @@
     }
   },
   "externalPrompt": {
+    "runCodex": "Run in Codex",
+    "runClaude": "Run in Claude Code",
+    "runCancel": "Cancel run",
+    "runCodexNotReady": "Codex needs authenticated one-shot readiness and an available account.",
+    "runClaudeNotReady": "Claude Code needs authenticated native one-shot readiness.",
+    "runCodexMissing": "Codex is unavailable. Install or reconnect it in provider settings.",
+    "runClaudeMissing": "Claude Code is unavailable. Install or reconnect it in provider settings.",
+    "runTask": "Running request: {{task}}",
+    "runCompletedHelp": "The agent process finished successfully. Check its output for the result of each requested change.",
+    "runRequestFailed": "Cannot update the run. Refresh the connection and provider status, then retry.",
+    "runStatuses": {
+      "preparing": "Preparing",
+      "running": "Running",
+      "completed": "Process completed",
+      "failed": "Run failed",
+      "cancelled": "Cancelled"
+    },
     "title": "Manage teams with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
+    "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
     "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
     "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
     "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",

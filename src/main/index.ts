@@ -2053,9 +2053,9 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   projectFolderFeature.registerProjectFolderFeature(ipcMain);
-  // Bind desktop authority before exposing any runtime bridge consumer.
   externalAgentConnection = composeExternalAgentConnection({
     appInstanceId: openCodeManagedHostInstanceId,
+    nativeRun: [cliInstallerService, () => codexAccountFeature?.getSnapshot()],
     teamManagement: [teamDataService, teamProvisioningService, forwardTeamChangeToRendererAndHttp],
     hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
     cdp: nativeRendererCdp,

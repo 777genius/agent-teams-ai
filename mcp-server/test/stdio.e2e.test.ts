@@ -165,9 +165,10 @@ class McpStdIoClient {
   private readonly child: ChildProcessWithoutNullStreams;
   private stdoutBuffer = '';
 
-  constructor(serverPath: string, cwd: string) {
-    this.child = spawn('node', [serverPath], {
+  constructor(serverPath: string, cwd: string, args: string[] = [], env?: NodeJS.ProcessEnv) {
+    this.child = spawn('node', [serverPath, ...args], {
       cwd,
+      ...(env ? { env: { ...process.env, ...env } } : {}),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -197,11 +198,24 @@ class McpStdIoClient {
   }
 
   async close() {
+    if (this.child.exitCode !== null || this.child.signalCode !== null) return;
     this.child.kill('SIGTERM');
     await new Promise<void>((resolve) => {
       this.child.once('exit', () => resolve());
       setTimeout(() => resolve(), 1000).unref();
     });
+  }
+
+  async endInput(): Promise<number | null> {
+    const exited = new Promise<number | null>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('MCP did not exit after stdin EOF')), 2_000);
+      this.child.once('exit', (code) => {
+        clearTimeout(timer);
+        resolve(code);
+      });
+    });
+    this.child.stdin.end();
+    return exited;
   }
 
   private notify(method: string, params?: Record<string, unknown>) {
@@ -251,6 +265,50 @@ describe('agent-teams-mcp stdio e2e', () => {
 
   afterEach(async () => {
     await rm(claudeDir, { recursive: true, force: true });
+  });
+
+  // Fails if client permissions can discover or invoke lifecycle tools in a native run.
+  it('lists exactly six management tools and rejects direct lifecycle calls over bound stdio', async () => {
+    const context = {
+      appInstanceId: 'sandbox-management',
+      dataRootFingerprint: 'sandbox-root',
+      connectionGeneration: 1,
+    };
+    const requests: string[] = [];
+    const control = await startControlServer(({ url }) => {
+      requests.push(url ?? '');
+      return { body: { schemaVersion: 1, context } };
+    });
+    const client = new McpStdIoClient(serverPath, workspaceRoot,
+      ['--transport', 'stdio', '--tool-profile', 'management'], {
+        AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+        // The CLI transport must win over an inherited desktop HTTP transport.
+        AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
+      });
+    try {
+      await client.initialize();
+      const listed = await client.listTools() as { result: { tools: Array<{ name: string }> } };
+      expect(listed.result.tools.map((tool) => tool.name).sort()).toEqual([
+        'app_get_connection_info', 'team_create', 'team_get', 'team_list', 'team_trash', 'team_update',
+      ]);
+      const discovered = await client.callTool('app_get_connection_info', {}, 3);
+      expect(parseJsonToolResult((discovered as { result: unknown }).result).context).toEqual(context);
+      expect(requests).toEqual(['/api/app/connection']);
+      let id = 4;
+      for (const tool of [
+        'team_launch', 'team_stop', 'process_stop', 'task_create', 'task_start', 'message_send',
+      ]) {
+        const denied = await client.callTool(tool, { teamName: 'sandbox-team' }, id++);
+        expect(denied).toMatchObject({ error: { code: -32601, message: expect.stringContaining(`Unknown tool: ${tool}`) } });
+      }
+      expect(requests).toEqual(['/api/app/connection']);
+      expect(await client.endInput()).toBe(0);
+    } finally {
+      await client.close();
+      await control.close();
+    }
   });
 
   it.each(['task_complete', 'task_set_status'])(

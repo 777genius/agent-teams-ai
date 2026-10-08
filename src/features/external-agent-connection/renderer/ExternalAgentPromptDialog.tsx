@@ -9,15 +9,23 @@ import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
 
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+
+import { ExternalAgentRunActions } from './ExternalAgentRunActions';
 import { TeamTemplateReferences } from './TeamTemplateReferences';
 
-import type { ConnectionInfoV1, ExternalAgentConnectionApi } from '../contracts';
+import type {
+  ConnectionInfoV1,
+  ExternalAgentConnectionApi,
+  ExternalAgentRunApi,
+} from '../contracts';
 
 interface Props {
   api: ExternalAgentConnectionApi;
   connection: ConnectionInfoV1;
   isLight: boolean;
   onSettings(): void;
+  runApi?: ExternalAgentRunApi;
 }
 
 function createPrompt(task: string, connection: ConnectionInfoV1): string {
@@ -46,6 +54,7 @@ export const ExternalAgentPromptDialog = ({
   connection,
   isLight,
   onSettings,
+  runApi,
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: settingsT } = useAppTranslation('settings');
@@ -82,6 +91,7 @@ export const ExternalAgentPromptDialog = ({
     currentConnection.control.status === 'ready' &&
     currentConnection.capabilities.draftCreation;
   const taskPresent = Boolean(request.value.trim());
+  const taskTooLong = Boolean(runApi) && request.value.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH;
   const copied = receipt?.task === request.value && receipt.signature === signature;
   const preview = useMemo(() => {
     if (previewBlocked || !ready || !taskPresent) return '';
@@ -156,8 +166,22 @@ export const ExternalAgentPromptDialog = ({
           }}
           placeholder={t('externalPrompt.taskPlaceholder')}
           className="min-h-24 text-sm"
-          aria-describedby="external-agent-task-help"
+          aria-invalid={taskTooLong}
+          aria-describedby={
+            taskTooLong
+              ? 'external-agent-task-help external-agent-task-error'
+              : 'external-agent-task-help'
+          }
         />
+        {taskTooLong && (
+          <p
+            id="external-agent-task-error"
+            className="text-xs text-[var(--warning-text)]"
+            role="alert"
+          >
+            {t('externalPrompt.taskTooLong', { limit: EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH })}
+          </p>
+        )}
         <p id="external-agent-task-help" className="text-xs text-[var(--color-text-muted)]">
           {t('externalPrompt.requestHelp')}{' '}
           {currentConnection.capabilities.configurationEdit
@@ -248,6 +272,14 @@ export const ExternalAgentPromptDialog = ({
           </p>
         )}
       </div>
+      {runApi && (
+        <ExternalAgentRunActions
+          api={runApi}
+          task={request.value}
+          context={currentConnection.context}
+          ready={ready}
+        />
+      )}
       <TeamTemplateReferences isLight={isLight} />
     </div>
   );

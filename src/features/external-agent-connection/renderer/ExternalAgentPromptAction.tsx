@@ -53,6 +53,7 @@ export function ExternalAgentPromptAction({
           <ExternalAgentPromptDialog
             key={`${info.profileFingerprint}:${info.context.dataRootFingerprint}:${info.context.appInstanceId}`}
             api={api}
+            runApi={api.directRun}
             connection={info}
             isLight={isLight}
             onSettings={() => {
