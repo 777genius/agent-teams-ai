@@ -383,7 +383,7 @@ jobs:
         run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
 
   full-qualification:
-    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && 'Metadata CI result' || 'Full qualification' }}
+    name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows]
     if: always()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
@@ -394,9 +394,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-      - name: Preserve existing current-code checks after metadata edits
+      - name: Verify completed current-code qualification after metadata edits
         if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
-        run: echo 'Title/body edit only; existing current-code qualification remains required'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/ci-feedback.mts metadata-gate
       - name: Require complete current-code qualification
         if: needs.plan.result != 'success' || needs.plan.outputs.metadata != 'true' || needs.plan.outputs.full != 'false' || needs.plan.outputs.reuse != 'false'
         env:

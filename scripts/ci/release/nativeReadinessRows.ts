@@ -28,7 +28,7 @@ function windowsScenario(
     job: fresh ? 'fresh-windows' : 'windows-ota',
     jobName: fresh
       ? `fresh-windows (${runner}, ${architecture})`
-      : `windows-ota (${runner}, ${mode}, ${architecture})`,
+      : `windows-ota (${runner}, ${mode})`,
     artifact: fresh
       ? `TEST-windows-fresh-${architecture}-${suffix}`
       : `TEST-windows-ota-${architecture}-${mode}-${suffix}`,
