@@ -2,10 +2,10 @@
 
 ## Tested source
 
-- Source: `d61faf9d72615ee74179081e56971568e8bd5b12`.
+- Source: `c2d039cabd33a447118e7a1bdb7b3aea1d4eaa05`.
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
-- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-okV4er/evidence.json`.
-- Evidence SHA256: `e60089b69c4027647ee66d595cae069b3801cf5abd6fb5eec318e4c13fa938f9`.
+- Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-2A5LFk/evidence.json`.
+- Evidence SHA256: `a5b0979b624b54d44530c6d6cf8c6cac6d9ff9db77545be230b9bb3ecd00a6f0`.
 - Later commits change only documentation; application, MCP, controller and desktop harness match the tested source.
 
 ## Actual desktop and native MCP proof
@@ -22,7 +22,7 @@ Passed:
 - Read-only shared template roster, 14 identities across four references, no member editing controls.
 - Real clipboard copy contains the request, templates, MCP and independent CDP endpoints.
 - Dark 320px and light 1280px popup screenshots; manual visual inspection passed.
-- Normal application quit: `mainExitedNormally=true`, no fallback kills and no remaining owned processes.
+- Normal main-process quit: `mainExitedNormally=true`. Six remaining owned launcher/child leases required the harness fallback; no owned processes remain.
 
 ## Focused validation and review
 
@@ -38,6 +38,8 @@ Passed:
 - Final review found config-only stopped rosters could lose saved policies on replacement. Such roster edits now reject before writes; GET exposes the original members and trash preserves them. New saved drafts without config remain writable. Fingerprint reads enforce existing 10 MiB config/256 KiB metadata limits before allocation and cap actual reads if files grow. Independent review accepted both fixes; project typecheck and focused lint passed. The nearest HTTP suite checks exact saved bytes, original policies, no events on rejection and oversized-file refusal. Its initial 10 MiB deep-comparison assertion exceeded the timeout; direct Buffer.equals preserves exact equality without that overhead.
 
 - Final integration with main passed the full pinned project typecheck. The latest HTTP suites passed 61 tests, including real persisted task-interval repair before managed snapshots; the nearest renderer suite passed 61 tests, including nonselected split panes, context changes, pending-trash cancellation and restore. Focused lint and source-size guards passed (legacy store 2,594 lines against the unchanged 2,595 ceiling). Independent backend review accepted the repair at `c2d0a8ee07d16b804d5231083f1dc47d924cc10c`; independent UI review accepted `b7b00c37c19e975e073a61df00104ad646196d82`. Their application/MCP/controller/harness code is unchanged by the subsequent main integration.
+
+- Ordinary HTTP/MCP reads retain the existing tolerant snapshot path; explicit `configuration=1` / MCP `configuration=true` requests the admitted coherent configuration revision. Malformed, empty or non-object config rejects with typed `TEAM_CONFIGURATION_UNREADABLE` before writes. Independent review accepted `4596d618c287638a5912bcb00f65e27cfb366dff`; a subsequent test-only assertion permits the canonical lead alongside the unchanged builder. Final nearest HTTP suites passed 66 tests; all 67 MCP and 391 controller tests, project/MCP typechecks, focused lint and controller/MCP builds passed. Actual native desktop proof above uses the opt-in path.
 
 ## Limits
 
