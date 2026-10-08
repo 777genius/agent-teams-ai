@@ -1,23 +1,12 @@
-import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 
-import type { GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
-import type { TeamMemberSnapshot, TeamViewSnapshot } from '@shared/types';
-
-export const GRAPH_STABLE_SLOT_LAYOUT_VERSION = 'stable-slots-v1' as const;
-export const DISABLE_PERSISTED_TEAM_GRAPH_SLOT_ASSIGNMENTS = true;
-
-export type TeamGraphSlotAssignments = Record<string, GraphOwnerSlotAssignment>;
-export type TeamGraphMemberSeedInput = Pick<TeamMemberSnapshot, 'name' | 'agentId' | 'removedAt'>;
-export type TeamGraphConfigMemberSeedInput = Pick<
-  NonNullable<TeamViewSnapshot['config']['members']>[number],
-  'name' | 'agentId' | 'removedAt'
->;
-
-export interface TeamGraphLayoutSessionState {
-  mode: 'default' | 'manual';
-  signature: string | null;
-}
+import { buildTeamGraphDefaultLayoutSeed } from './teamGraphDefaultLayout';
+import {
+  DISABLE_PERSISTED_TEAM_GRAPH_SLOT_ASSIGNMENTS,
+  type TeamGraphConfigMemberSeedInput,
+  type TeamGraphMemberSeedInput,
+  type TeamGraphSlotAssignments,
+} from './teamGraphLayoutState';
 
 export function migrateStableSlotAssignmentsForMembers(
   assignments: TeamGraphSlotAssignments | undefined,

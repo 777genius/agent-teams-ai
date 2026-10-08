@@ -1,4 +1,4 @@
-import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
+import { buildTeamGraphDefaultLayoutSeed } from '@features/agent-graph';
 import { describe, expect, it } from 'vitest';
 
 describe('team graph default layout', () => {

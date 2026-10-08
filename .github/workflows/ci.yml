@@ -12,6 +12,7 @@ on:
       # through PR #252's merge CI).
       - refactor/team-provisioning-round2-reapply
       - refactor/hosted-web-feature-boundaries
+      - refactor/pr252-main-extractions
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
   merge_group:
