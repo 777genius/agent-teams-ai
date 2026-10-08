@@ -6,7 +6,7 @@
 - Host machine ID: `d856d40da5ad4e23b4f67773e5942842`.
 - Evidence: `/srv/workers/tpm-70134d0c/team-prompt-management-TEST-2A5LFk/evidence.json`.
 - Evidence SHA256: `a5b0979b624b54d44530c6d6cf8c6cac6d9ff9db77545be230b9bb3ecd00a6f0`.
-- Later commits change only documentation; application, MCP, controller and desktop harness match the tested source.
+- Later commits extract the identical configuration query check into the existing HTTP parser, rename one local variable and update documentation. MCP, controller and desktop harness match the tested source; the extracted HTTP path passed the same 66 tests, full typecheck and focused lint. Source-size guard passed 3,340 production files, with teams HTTP at 799/800 and no baseline increase. Independent review accepted semantic parity.
 
 ## Actual desktop and native MCP proof
 

@@ -20,6 +20,7 @@ import {
   parseCreateTeamRequest,
   parseDraftLaunchCreateRequest,
   parseLaunchRequest,
+  parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
 
@@ -335,26 +336,18 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
-        if (
-          request.query.configuration !== undefined &&
-          request.query.configuration !== '1' &&
-          request.query.configuration !== '0'
-        )
-          throw new HttpBadRequestError('configuration must be 1 or 0');
+        const configuration = parseTeamConfigurationReadQuery(request.query);
         const teamName = validatedTeamName.value!;
-        const configuration = request.query.configuration === '1';
         if (configuration && !managementFeature)
           throw new HttpFeatureUnavailableError(
             'Team configuration snapshots are not available in this mode'
           );
-        const draftSavedRequest = configuration
-          ? null
-          : await getDraftSavedRequest(services, teamName);
-        if (draftSavedRequest) {
+        const savedDraft = configuration ? null : await getDraftSavedRequest(services, teamName);
+        if (savedDraft) {
           return reply.send({
             teamName,
             pendingCreate: true,
-            savedRequest: draftSavedRequest,
+            savedRequest: savedDraft,
           });
         }
 
