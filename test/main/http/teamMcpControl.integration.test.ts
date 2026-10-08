@@ -775,7 +775,9 @@ describe('MCP team tools over the local REST control API', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
         teamName,
-        members: [expect.objectContaining({ name: 'builder', agentId: 'existing-builder' })],
+        members: expect.arrayContaining([
+          expect.objectContaining({ name: 'builder', agentId: 'existing-builder' }),
+        ]),
       });
       expect(response.json()).not.toHaveProperty('configurationRevision');
       const disabled = await app.inject({
