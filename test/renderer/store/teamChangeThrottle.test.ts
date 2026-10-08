@@ -1245,6 +1245,10 @@ describe('team change throttling', () => {
 
     hoisted.onTeamChangeCb?.({}, { type: 'task', teamName: 'my-team' });
     hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team' });
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'config', teamName: 'my-team', management: committedChange('created') }
+    );
 
     await vi.advanceTimersByTimeAsync(500);
 
@@ -1254,7 +1258,7 @@ describe('team change throttling', () => {
       'my-team'
     ) as TeamRefreshFanoutSnapshot | null;
     expect(snapshot?.counts['team-change-listener:event:task:fetchAllTasks:scheduled']).toBe(1);
-    expect(snapshot?.counts['team-change-listener:event:config:fetchAllTasks:coalesced']).toBe(1);
+    expect(snapshot?.counts['team-change-listener:event:config:fetchAllTasks:coalesced']).toBe(2);
     expect(snapshot?.counts['team-change-listener:event:task:fetchAllTasks:executed']).toBe(1);
     expect(snapshot?.counts['team-change-listener:event:config:fetchAllTasks:executed']).toBe(1);
   });
@@ -2097,16 +2101,140 @@ describe('team change throttling', () => {
   // RED if duplicate/older signals overwrite committed facts or repeat refreshes.
   it('deduplicates committed operations and rejects older notices', async () => {
     const state = useStore.getState();
+    vi.mocked(state.fetchTeams).mockClear();
     const change = committedChange('edited');
-    await state.receiveTeamManagementChange('my-team', change);
-    await state.receiveTeamManagementChange('my-team', change);
-    await state.receiveTeamManagementChange('my-team', {
-      ...change,
-      operationId: 'old-op',
-      committedAt: '2026-10-07T12:00:00.000Z',
-    });
+    for (const management of [
+      change,
+      change,
+      { ...change, operationId: 'old-op', committedAt: '2026-10-07T12:00:00.000Z' },
+    ])
+      hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team', management });
+    await vi.advanceTimersByTimeAsync(2000);
     expect(useStore.getState().teamManagementNoticeByTeam['my-team']?.operationId).toBe('op-1');
-    expect(state.fetchTeams).toHaveBeenCalledTimes(2); // startup + one committed refresh
+    expect(state.fetchTeams).toHaveBeenCalledTimes(1);
+  });
+
+  // RED when an accepted management edit leaves a nonfocused split pane stale, or refreshes the selected team twice.
+  it.each(['other-team', 'my-team'])(
+    'refreshes a managed team visible in a split pane once while selected=%s',
+    async (selectedTeamName) => {
+      useStore.setState({
+        selectedTeamName,
+        fetchAllTasks: vi.fn(async () => undefined),
+        paneLayout: {
+          focusedPaneId: 'p1',
+          panes: [
+            {
+              id: 'p1',
+              selectedTabIds: [],
+              widthFraction: 0.5,
+              tabs: [
+                { id: 'other', type: 'team', teamName: 'other-team', label: 'Other', createdAt: 0 },
+              ],
+              activeTabId: 'other',
+            },
+            {
+              id: 'p2',
+              selectedTabIds: [],
+              widthFraction: 0.5,
+              tabs: [
+                { id: 'target', type: 'graph', teamName: 'my-team', label: 'Target', createdAt: 0 },
+              ],
+              activeTabId: 'target',
+            },
+          ],
+        },
+      });
+      const state = useStore.getState();
+      vi.mocked(state.refreshTeamData).mockClear();
+      vi.mocked(state.fetchAllTasks).mockClear();
+      vi.mocked(state.fetchTeams).mockClear();
+      hoisted.onTeamChangeCb?.(
+        {},
+        { type: 'config', teamName: 'my-team', management: committedChange('edited') }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(state.refreshTeamData).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(800);
+      expect(state.refreshTeamData).toHaveBeenCalledExactlyOnceWith('my-team', { withDedup: true });
+      expect(state.fetchAllTasks).toHaveBeenCalledTimes(1);
+      expect(useStore.getState().selectedTeamName).toBe(selectedTeamName);
+      await vi.advanceTimersByTimeAsync(1200);
+      expect(state.fetchTeams).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  // RED if a scoped management detail timer reads a new root after the event's root was reset.
+  it('drops a management detail refresh queued before context reset', async () => {
+    const state = useStore.getState();
+    vi.mocked(state.refreshTeamData).mockClear();
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'config', teamName: 'my-team', management: committedChange('edited') }
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    invalidateContextScopedRequestEpoch();
+    useStore.setState(getContextScopedTeamResetState());
+    await vi.advanceTimersByTimeAsync(800);
+    expect(state.refreshTeamData).not.toHaveBeenCalled();
+  });
+
+  // RED if pending config repopulates trashed caches, or its stale timer swallows a valid post-restore refresh.
+  it('replaces a pre-trash detail timer with a fresh restored-team refresh while the trash read is pending', async () => {
+    const state = useStore.getState();
+    vi.mocked(state.refreshTeamData).mockClear();
+    hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team' });
+    let release!: () => void;
+    useStore.setState({
+      fetchTeams: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          })
+      ),
+    });
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'config', teamName: 'my-team', management: committedChange('trashed') }
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useStore.getState().teamManagementNoticeByTeam['my-team']?.kind).toBe('trashed');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(state.refreshTeamData).not.toHaveBeenCalled();
+    hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team' });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(state.refreshTeamData).not.toHaveBeenCalled();
+    release();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(state.refreshTeamData).toHaveBeenCalledExactlyOnceWith('my-team', { withDedup: true });
+  });
+
+  // RED if an older create resumes structural refresh after a newer trash already invalidated its team-local scope.
+  it('does not fan out a created result whose list read finishes after trash', async () => {
+    const state = useStore.getState();
+    vi.mocked(state.refreshTeamData).mockClear();
+    let release!: () => void;
+    const listRead = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    useStore.setState({ fetchTeams: vi.fn(() => listRead) });
+    hoisted.onTeamChangeCb?.(
+      {},
+      {
+        type: 'config',
+        teamName: 'my-team',
+        management: committedChange('created', 'create-before-trash'),
+      }
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'config', teamName: 'my-team', management: committedChange('trashed', 'later-trash') }
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    release();
+    await vi.advanceTimersByTimeAsync(800);
+    expect(state.refreshTeamData).not.toHaveBeenCalled();
   });
 
   // RED if root reset leaves details or accepts discovery responses begun before reset.

@@ -1480,7 +1480,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   receiveTeamManagementChange: (
     teamName: string,
     change: TeamManagementCommittedChange
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   clearDeletedTeamLocalState: (teamName: string) => void;
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
@@ -2044,7 +2044,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   receiveTeamManagementChange: async (teamName, change) => {
     const scope = captureContextRequestScope(get);
-    if (get().connectionMode !== 'local') return;
+    if (get().connectionMode !== 'local') return false;
     try {
       const live = await api.externalAgentConnection.getConnectionInfo();
       if (
@@ -2052,22 +2052,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         live.context.appInstanceId !== change.context.appInstanceId ||
         live.context.dataRootFingerprint !== change.context.dataRootFingerprint
       )
-        return;
+        return false;
       const current = get().teamManagementNoticeByTeam;
       const next = retainTeamManagementNotice(current, teamName, change);
-      if (next === current) return;
+      if (next === current) return false;
       set({ teamManagementNoticeByTeam: next });
       if (change.kind === 'trashed') {
         get().clearDeletedTeamLocalState(teamName);
         void get().fetchAllTasks();
       }
-      await get().fetchTeams();
-      if (!isContextRequestScopeCurrent(get, scope)) return;
-      if (get().selectedTeamName === teamName)
-        void get().refreshTeamData(teamName, { withDedup: true });
+      if (change.kind !== 'edited') await get().fetchTeams();
+      if (!isContextRequestScopeCurrent(get, scope)) return false;
+      return true;
     } catch (error) {
       logger.warn('Management notice refresh failed', error);
       if (isContextRequestScopeCurrent(get, scope)) void get().fetchTeams();
+      return false;
     }
   },
 

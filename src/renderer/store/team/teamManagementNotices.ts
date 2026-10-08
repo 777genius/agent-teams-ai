@@ -1,7 +1,47 @@
+import { captureTeamLocalStateEpoch, isTeamLocalStateEpochCurrent } from './teamLocalStateEpoch';
+import {
+  captureContextScopedRequestEpoch,
+  isContextScopedRequestEpochCurrent,
+} from '../utils/contextScopedRequestEpoch';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
-import type { TeamSummary } from '@shared/types';
+import type { TeamChangeEvent, TeamSummary } from '@shared/types';
 
 type Notices = Record<string, TeamManagementCommittedChange>;
+
+/** Cancel before the trash list read; a later restore can schedule fresh details. */
+export function cancelNewlyTrashedTeamRefreshes(
+  state: { teamManagementNoticeByTeam: Notices },
+  previousState: { teamManagementNoticeByTeam: Notices },
+  timers: Map<string, ReturnType<typeof setTimeout>>
+): void {
+  const current = state.teamManagementNoticeByTeam;
+  const previous = previousState.teamManagementNoticeByTeam;
+  if (current === previous) return;
+  for (const [teamName, notice] of Object.entries(current)) {
+    if (notice.kind !== 'trashed' || notice === previous[teamName]) continue;
+    const timer = timers.get(teamName);
+    if (timer) clearTimeout(timer);
+    timers.delete(teamName);
+  }
+}
+
+/** Only accepted, still-current non-trash changes continue the ordinary config fanout. */
+export async function continueAcceptedTeamManagementChange(
+  getState: () => {
+    activeContextId: string;
+    receiveTeamManagementChange: (
+      teamName: string,
+      change: TeamManagementCommittedChange
+    ) => Promise<boolean>;
+  },
+  event: TeamChangeEvent,
+  onAccepted: () => void
+): Promise<void> {
+  if (!event.management) return;
+  const isCurrent = captureTeamManagementRefreshScope(getState, event.teamName);
+  const accepted = await getState().receiveTeamManagementChange(event.teamName, event.management);
+  if (accepted && isCurrent() && event.management.kind !== 'trashed') onAccepted();
+}
 
 /** Latest committed facts only; trashed entries serve as bounded late-event tombstones. */
 export function retainTeamManagementNotice(
@@ -59,4 +99,18 @@ export function selectRecentManagedTeams(
         Date.parse(notices[b.teamName].committedAt) - Date.parse(notices[a.teamName].committedAt) ||
         a.teamName.localeCompare(b.teamName)
     );
+}
+
+/** Fence async fanout and its deferred read against root/remote-context resets. */
+export function captureTeamManagementRefreshScope(
+  getState: () => { activeContextId: string },
+  teamName?: string
+): () => boolean {
+  const contextId = getState().activeContextId;
+  const epoch = captureContextScopedRequestEpoch();
+  const teamEpoch = teamName ? captureTeamLocalStateEpoch(teamName) : 0;
+  return () =>
+    getState().activeContextId === contextId &&
+    isContextScopedRequestEpochCurrent(epoch) &&
+    (!teamName || isTeamLocalStateEpochCurrent(teamName, teamEpoch));
 }
