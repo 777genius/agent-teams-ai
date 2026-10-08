@@ -643,6 +643,14 @@ export default defineConfig([
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 
+  // Keep this feature-renderer accessibility rule aligned with fast lint.
+  {
+    name: 'feature-renderer-keyboard-accessibility',
+    files: ['src/features/**/renderer/**/*.{ts,tsx}'],
+    plugins: { 'jsx-a11y': jsxA11y },
+    rules: { 'jsx-a11y/no-noninteractive-element-interactions': 'error' },
+  },
+
   // Renderer process (React + A11y + Tailwind)
   {
     name: 'renderer-react',
