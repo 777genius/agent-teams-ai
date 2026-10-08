@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { selectedWindowsPowerShell, windowsShellTestEnvironment } from './windows-powershell.mts';
 
+import { lastSelectedStartupProbes, runStartupProbeAttempts } from './windows-startup-retry.mts';
+import type { StartupProbeAttempt, StartupProbeResult } from './windows-startup-retry.mts';
 import type { ExecFileException } from 'node:child_process';
 
 // Compare explicit shell startup only. Never launch the app, an installer,
@@ -107,21 +109,7 @@ for (const [name, source] of Object.entries(scripts)) {
   await writeFile(path.join(evidence, `selected-${name}.ps1`), selectedSource);
 }
 
-interface Result {
-  variant: string;
-  probe: string;
-  pid: number | null;
-  elapsedMs: number;
-  code: number | string | null;
-  signal: string | null;
-  killed: boolean;
-  stdout: string;
-  stderr: string;
-  error: string | null;
-  phases: string[];
-  startupHealthy: boolean;
-}
-const results: Result[] = [];
+const results: StartupProbeAttempt[] = [];
 const prefix = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass'];
 for (const [variant, env, selectedExecutable] of [
   ['current-minimal', minimal, executable],
@@ -129,73 +117,96 @@ for (const [variant, env, selectedExecutable] of [
   ['selected-ps7', selectedEnvironment, selectedShell.executable],
 ] as const) {
   for (const probe of ['command-entry', 'dotnet-file', 'cmdlet-discovery'] as const) {
-    const marker = path.join(root, `${variant}-${probe}.progress.txt`);
-    await writeFile(marker, '');
-    const args =
-      probe === 'command-entry'
-        ? [
-            ...prefix,
-            '-Command',
-            "[Console]::Out.WriteLine('STARTUP_COMMAND_ENTRY'); [Environment]::Exit(0)",
-          ]
-        : [
-            ...prefix,
-            '-File',
-            path.join(root, `${variant === 'selected-ps7' ? 'selected-' : ''}${probe}.ps1`),
-            '-Marker',
-            marker,
-            '-InputFile',
-            input,
-          ];
-    const startedAt = Date.now();
-    let pid: number | null = null;
-    const result = await new Promise<Result>((resolve) => {
-      const child = execFile(
-        selectedExecutable,
-        args,
-        { env, timeout: 20_000, maxBuffer: 2_097_152 },
-        (error: ExecFileException | null, stdout, stderr) =>
-          resolve({
-            variant,
-            probe,
-            pid,
-            elapsedMs: Date.now() - startedAt,
-            code: error ? (error.code ?? null) : 0,
-            signal: error?.signal ?? null,
-            killed: error?.killed ?? false,
-            stdout,
-            stderr,
-            error: error?.message ?? null,
-            phases: [],
-            startupHealthy: false,
-          })
-      );
-      pid = child.pid ?? null;
-      // Exactly the existing EOF fix, not a different stdin transport.
-      child.stdin?.end();
-    });
-    result.phases = (await readFile(marker, 'utf8')).split(/\r?\n/u).filter(Boolean);
-    const expected =
-      probe === 'command-entry' ? 'STARTUP_COMMAND_ENTRY' : '{"scope":"startup-only","value":17}';
-    result.startupHealthy =
-      result.code === 0 &&
-      result.signal === null &&
-      !result.killed &&
-      result.stdout.trim() === expected &&
-      result.stderr.trim() === '' &&
-      (probe === 'command-entry' || result.phases.at(-1) === 'complete');
-    results.push(result);
-    await writeFile(
-      path.join(evidence, `${variant}-${probe}.json`),
-      JSON.stringify(result, null, 2)
+    await runStartupProbeAttempts(
+      async (attempt) => {
+        const marker = path.join(root, `${variant}-${probe}-attempt-${attempt}.progress.txt`);
+        await writeFile(marker, '');
+        const args =
+          probe === 'command-entry'
+            ? [
+                ...prefix,
+                '-Command',
+                "[Console]::Out.WriteLine('STARTUP_COMMAND_ENTRY'); [Environment]::Exit(0)",
+              ]
+            : [
+                ...prefix,
+                '-File',
+                path.join(root, `${variant === 'selected-ps7' ? 'selected-' : ''}${probe}.ps1`),
+                '-Marker',
+                marker,
+                '-InputFile',
+                input,
+              ];
+        const startedAt = Date.now();
+        let pid: number | null = null;
+        let processClosed = false;
+        const result = await new Promise<StartupProbeResult>((resolve) => {
+          const child = execFile(
+            selectedExecutable,
+            args,
+            { env, timeout: 20_000, maxBuffer: 2_097_152 },
+            (error: ExecFileException | null, stdout, stderr) =>
+              resolve({
+                variant,
+                probe,
+                pid,
+                elapsedMs: Date.now() - startedAt,
+                code: error ? (error.code ?? null) : 0,
+                signal: error?.signal ?? null,
+                killed: error?.killed ?? false,
+                stdout,
+                stderr,
+                error: error?.message ?? null,
+                phases: [],
+                startupHealthy: false,
+                processClosed: false,
+              })
+          );
+          pid = child.pid ?? null;
+          child.once('close', () => {
+            processClosed = true;
+          });
+          // Exactly the existing EOF fix, not a different stdin transport.
+          child.stdin?.end();
+        });
+        result.processClosed = processClosed;
+        result.phases = (await readFile(marker, 'utf8')).split(/\r?\n/u).filter(Boolean);
+        const expected =
+          probe === 'command-entry'
+            ? 'STARTUP_COMMAND_ENTRY'
+            : '{"scope":"startup-only","value":17}';
+        result.startupHealthy =
+          result.processClosed &&
+          result.code === 0 &&
+          result.signal === null &&
+          !result.killed &&
+          result.stdout.trim() === expected &&
+          result.stderr.trim() === '' &&
+          (probe === 'command-entry' || result.phases.at(-1) === 'complete');
+        return result;
+      },
+      async (result) => {
+        results.push(result);
+        const base = `${variant}-${probe}`;
+        const marker = path.join(root, `${base}-attempt-${result.attempt}.progress.txt`);
+        const progress = await readFile(marker, 'utf8');
+        await writeFile(
+          path.join(evidence, `${base}-attempt-${result.attempt}.json`),
+          JSON.stringify(result, null, 2)
+        );
+        await writeFile(
+          path.join(evidence, `${base}-attempt-${result.attempt}.progress.txt`),
+          progress
+        );
+        // Existing canonical paths describe the final attempt; failed attempts remain above and in summary.
+        await writeFile(path.join(evidence, `${base}.json`), JSON.stringify(result, null, 2));
+        await writeFile(path.join(evidence, `${base}.progress.txt`), progress);
+        console.log(JSON.stringify(result));
+      }
     );
-    await writeFile(
-      path.join(evidence, `${variant}-${probe}.progress.txt`),
-      await readFile(marker, 'utf8')
-    );
-    console.log(JSON.stringify(result));
   }
 }
+const selectedResults = lastSelectedStartupProbes(results);
 await writeFile(
   path.join(evidence, 'summary.json'),
   JSON.stringify(
@@ -205,12 +216,13 @@ await writeFile(
       appE2EProved: false,
       executable,
       selectedShell,
-      selectedPs7Healthy: results
-        .filter((result) => result.variant === 'selected-ps7')
-        .every((result) => result.startupHealthy),
+      selectedPs7Healthy:
+        selectedResults.length === 3 && selectedResults.every((result) => result.startupHealthy),
       root,
       architecture: process.arch,
       timeoutMsPerChild: 20_000,
+      maxAttemptsPerProbe: 2,
+      timeoutMsPerRetriedProbe: 40_000,
       environmentKeys: {
         minimal: Object.keys(minimal),
         testProfile: Object.keys(profile),
@@ -224,7 +236,6 @@ await writeFile(
 );
 // Retain PS5.1 failures as evidence. The explicitly selected PS7 must succeed
 // before the independent native app gate; neither a fallback nor a skipped gate.
-const selectedResults = results.filter((result) => result.variant === 'selected-ps7');
 assert.equal(selectedResults.length, 3);
 assert(
   selectedResults.every((result) => result.startupHealthy),
