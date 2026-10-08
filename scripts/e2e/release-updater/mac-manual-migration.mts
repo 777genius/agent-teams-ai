@@ -166,8 +166,8 @@ async function assertUnmounted() {
   }
 }
 async function stop() {
-  let workerFailure: unknown;
-  try { await workerInspector?.stop(); } catch (error) { workerFailure = error; }
+  let workerFailure: Error | undefined;
+  try { await workerInspector?.stop(); } catch (error) { workerFailure = error instanceof Error ? error : new Error(String(error)); }
   workerInspector = undefined;
   renderer?.close();
   main?.close();

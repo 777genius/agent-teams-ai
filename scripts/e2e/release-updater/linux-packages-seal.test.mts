@@ -152,20 +152,23 @@ await test('automatic transport is awaited between ownership checks before resum
   const steps: string[] = [];
   let configured = false;
   await resumeConfiguredPackage(
-    async () => {
+    () => {
       steps.push('verify');
+      return Promise.resolve();
     },
     async () => {
       await Promise.resolve();
       configured = true;
       steps.push('configure');
     },
-    async () => {
+    () => {
       assert(configured);
       steps.push('resume');
+      return Promise.resolve();
     },
-    async () => {
+    () => {
       steps.push('observe');
+      return Promise.resolve();
     }
   );
   assert.deepEqual(steps, ['verify', 'configure', 'verify', 'resume', 'observe', 'verify']);
@@ -177,17 +180,22 @@ await test('configuration or changed ownership prevents automatic resume and obs
       observed = false;
     await assert.rejects(
       resumeConfiguredPackage(
-        async () => {
-          if (++checks === 2 && failure === 'recheck') throw new Error('PID reused');
+        () => {
+          if (++checks === 2 && failure === 'recheck')
+            return Promise.reject(new Error('PID reused'));
+          return Promise.resolve();
         },
-        async () => {
-          if (failure === 'configure') throw new Error('Mirror failed');
+        () => {
+          if (failure === 'configure') return Promise.reject(new Error('Mirror failed'));
+          return Promise.resolve();
         },
-        async () => {
+        () => {
           resumed = true;
+          return Promise.resolve();
         },
-        async () => {
+        () => {
           observed = true;
+          return Promise.resolve();
         }
       )
     );

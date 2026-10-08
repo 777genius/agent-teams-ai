@@ -46,7 +46,7 @@ async function observeWorker(release: boolean) {
   });
   let client: Cdp | undefined;
   let control: Awaited<ReturnType<typeof attachMacWorkerInspector>> | undefined;
-  const records: unknown[] = [];
+  const records: Parameters<Parameters<typeof attachMacWorkerInspector>[2]>[0][] = [];
   try {
     const url = await waitFor(
       () =>
@@ -77,8 +77,9 @@ async function observeWorker(release: boolean) {
       control = await attachMacWorkerInspector(
         client,
         path.join(root, "app.asar"),
-        async (receipts) => {
+        (receipts) => {
           records.push(structuredClone(receipts));
+          return Promise.resolve();
         },
       );
     await client.send("Debugger.resume");
@@ -103,7 +104,7 @@ async function observeWorker(release: boolean) {
         () =>
           Promise.resolve(
             records.some(
-              (value) => Array.isArray(value) && value[0]?.released === true,
+              (value) => value[0]?.released === true,
             )
               ? true
               : null,
@@ -188,7 +189,7 @@ function protocolPeer(error = false, omitReply = false) {
         listener = undefined;
       };
     },
-    async send<T>(method: string, params: Record<string, unknown> = {}) {
+    send<T>(method: string, params: Record<string, unknown> = {}) {
       commands.push(method);
       if (method === "NodeWorker.sendMessageToWorker") {
         assert.equal(params.sessionId, attachment.sessionId);
@@ -209,7 +210,7 @@ function protocolPeer(error = false, omitReply = false) {
             },
           });
       }
-      return {} as T;
+      return Promise.resolve({} as T);
     },
   };
   return {
@@ -235,7 +236,7 @@ for (const [name, url] of [
     const control = await attachMacWorkerInspector(
       peer.client,
       asar,
-      async () => undefined,
+      () => Promise.resolve(),
     );
     peer.emit("NodeWorker.attachedToWorker", {
       ...attachment,
@@ -252,7 +253,7 @@ void test("worker protocol refusal is fatal and removes the subscription during 
   const control = await attachMacWorkerInspector(
     peer.client,
     asar,
-    async () => undefined,
+    () => Promise.resolve(),
   );
   peer.emit("NodeWorker.attachedToWorker", attachment);
   await assert.rejects(
@@ -267,7 +268,7 @@ void test("stopping an unacknowledged release drains pending work and cannot rep
   const control = await attachMacWorkerInspector(
     peer.client,
     asar,
-    async () => undefined,
+    () => Promise.resolve(),
   );
   peer.emit("NodeWorker.attachedToWorker", attachment);
   await waitFor(
@@ -286,9 +287,7 @@ void test("durable receipt failure prevents the worker release and fails the pro
   const control = await attachMacWorkerInspector(
     peer.client,
     asar,
-    async () => {
-      throw new Error("owned receipt failed");
-    },
+    () => Promise.reject(new Error("owned receipt failed")),
   );
   peer.emit("NodeWorker.attachedToWorker", attachment);
   await assert.rejects(

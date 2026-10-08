@@ -23,7 +23,7 @@ export class Cdp {
     this.socket = socket;
     socket.addEventListener('message', event => {
       const message = JSON.parse(String(event.data)) as Message;
-      if (message.id === undefined) { this.events.push(message); for (const listener of this.listeners) listener(message); return; }
+      if (message.id === undefined) { this.events.push(message); for (const listener of this.listeners) { listener(message); } return; }
       const pending = this.pending.get(message.id);
       if (!pending) return;
       clearTimeout(pending.timer);
