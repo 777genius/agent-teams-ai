@@ -68,6 +68,20 @@ void test('a documented ref-suffixed workflow path retains exact producer author
   value.run.path = `${expected.workflowPath}@main`;
   assert.doesNotThrow(() => checkMacArtifactAuthority(value, expected));
 });
+// Red if actual executor input artifacts are confused with original plan tooling.
+void test('same-run input preparation authenticates the executor without relabeling plan tooling', () => {
+  const value = fixture();
+  const executionSha = 'c'.repeat(40);
+  const actual = { ...expected, executionSha };
+  value.run.head_sha = executionSha;
+  value.artifact.workflow_run.head_sha = executionSha;
+  assert.doesNotThrow(() => checkMacArtifactAuthority(value, actual));
+  value.artifact.workflow_run.head_sha = expected.toolingSha;
+  assert.throws(() => checkMacArtifactAuthority(value, actual));
+  value.artifact.workflow_run.head_sha = executionSha;
+  value.run.head_sha = expected.toolingSha;
+  assert.throws(() => checkMacArtifactAuthority(value, actual));
+});
 const invalid: { name: string; mutate: (value: MacArtifactAuthority) => void }[] = [
   {
     name: 'foreign artifact ID',

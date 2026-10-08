@@ -6,11 +6,8 @@ import { parseArgs } from 'node:util';
 import { loadPlan } from '../../ci/release/assembly.ts';
 import { canonical, digest } from '../../ci/release/contract.ts';
 import { prepareMacInputs } from './mac-inputs.mts';
-import {
-  macInputCommand,
-  macInputWorkflows,
-  retrieveMacInputArtifact,
-} from './mac-input-artifact.mts';
+import { authenticateExecutor } from './execution-provenance.mts';
+import { macInputWorkflows, retrieveMacInputArtifact } from './mac-input-artifact.mts';
 
 import type { MacInputBundle } from './mac-input-artifact.mts';
 
@@ -22,6 +19,7 @@ const { values } = parseArgs({
       'plan-sha256',
       'input-digest',
       'tooling-sha',
+      'execution-sha',
       'feed-mode',
       'output',
       'artifact-id',
@@ -44,8 +42,7 @@ const workflowPath =
 assert(macInputWorkflows.includes(workflowPath));
 const toolingSha = required('tooling-sha');
 assert(/^[a-f0-9]{40}$/.test(toolingSha));
-assert.equal(process.env.GITHUB_SHA, toolingSha);
-assert.equal((await macInputCommand(['rev-parse', 'HEAD'], 'git')).trim(), toolingSha);
+const execution = authenticateExecutor(toolingSha, values['execution-sha'] ?? toolingSha);
 const runId = Number(process.env.GITHUB_RUN_ID);
 const attempt = Number(process.env.GITHUB_RUN_ATTEMPT);
 assert(Number.isSafeInteger(runId) && runId > 0 && Number.isSafeInteger(attempt) && attempt > 0);
@@ -57,6 +54,7 @@ if (operation === 'retrieve') {
   await retrieveMacInputArtifact(
     {
       toolingSha,
+      executionSha: execution.executionSha,
       runId,
       attempt,
       workflowPath,
@@ -122,6 +120,7 @@ if (operation === 'retrieve') {
     repository: '777genius/agent-teams-ai',
     mode,
     toolingSha,
+    executionSha: execution.executionSha,
     planSha256,
     inputDigest,
     runId,

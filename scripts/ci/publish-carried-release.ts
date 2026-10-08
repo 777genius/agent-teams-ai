@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 
@@ -6,6 +7,7 @@ import { canonical, requireThat } from './release/contract.js';
 import { GitHubReleasePort } from './release/github.js';
 import type { NativeReadinessReceipt } from './release/nativeReadiness.js';
 import { GitHubNativeReadinessPort } from './release/nativeReadinessGithub.js';
+import { checkPublisherExecution } from './release/publisherExecution.js';
 import { publishCarriedRelease, verifyCarryReadiness } from './release/publication.js';
 
 async function main(): Promise<void> {
@@ -13,6 +15,7 @@ async function main(): Promise<void> {
     options: {
       plan: { type: 'string' },
       'plan-digest': { type: 'string' },
+      'execution-sha': { type: 'string' },
       'native-receipt': { type: 'string' },
       output: { type: 'string' },
       publish: { type: 'boolean', default: false },
@@ -23,9 +26,15 @@ async function main(): Promise<void> {
     '--plan, --plan-digest and --output are required'
   );
   const plan = await loadPlan(values.plan, values['plan-digest']);
-  requireThat(
-    process.env.GITHUB_SHA === plan.input.toolingSha,
-    'Publication workflow must execute at immutable reviewed tooling SHA'
+  checkPublisherExecution(
+    plan.input.toolingSha,
+    values['execution-sha'] ?? plan.input.toolingSha,
+    process.env.GITHUB_SHA,
+    execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    }).trim(),
+    values['plan-digest']
   );
   const bytes = values['native-receipt']
     ? await readFile(values['native-receipt'], 'utf8')
@@ -37,6 +46,7 @@ async function main(): Promise<void> {
   const result = values.publish
     ? await publishCarriedRelease(port, nativePort, plan, values['plan-digest'], receipt)
     : await verifyCarryReadiness(port, nativePort, plan, values['plan-digest'], receipt);
+  Object.assign(result, { executionSha: values['execution-sha'] ?? plan.input.toolingSha });
   await writeFile(values.output, `${canonical(result)}\n`, { flag: 'wx' });
   process.stdout.write(`${canonical(result)}\n`);
 }

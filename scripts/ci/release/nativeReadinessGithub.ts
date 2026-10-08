@@ -7,6 +7,9 @@ import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 
 import { fileProof, requireThat } from './contract.js';
+import { executablePath } from './github.js';
+import { RELEASE216_TOOLING } from './nativeReadinessAuthority.js';
+import type { ExecutionProof, ExecutionTree } from './nativeReadinessAuthority.js';
 import type {
   NativeArtifact,
   NativeJob,
@@ -35,9 +38,13 @@ function id(value: number) {
 }
 async function download(endpoint: string, destination: string): Promise<void> {
   // Actions archive requests use JSON Accept. Octet-stream Accept is for release assets.
-  const child = spawn('gh', ['api', endpoint, '-H', 'Accept: application/vnd.github+json'], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const child = spawn(
+    await executablePath('gh'),
+    ['api', endpoint, '-H', 'Accept: application/vnd.github+json'],
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
   let stderr = '';
   child.stderr.setEncoding('utf8');
   child.stderr.on('data', (value: string) => {
@@ -67,6 +74,23 @@ async function download(endpoint: string, destination: string): Promise<void> {
 }
 /** Read-only GitHub adapter; credentials are handled entirely by installed gh. */
 export class GitHubNativeReadinessPort implements NativeReadinessPort {
+  async executionProof(repo: string, executionSha: string): Promise<ExecutionProof> {
+    requireThat(/^[a-f0-9]{40}$/.test(executionSha), 'Invalid execution commit');
+    const root = repository(repo);
+    const [commit, comparison] = await Promise.all([
+      api<ExecutionProof['commit']>(`${root}/git/commits/${executionSha}`),
+      api<ExecutionProof['comparison']>(`${root}/compare/${RELEASE216_TOOLING}...${executionSha}`),
+    ]);
+    requireThat(
+      commit.sha === executionSha && /^[a-f0-9]{40}$/.test(commit.tree.sha),
+      'Wrong execution commit'
+    );
+    const [baseTree, executionTree] = await Promise.all([
+      api<ExecutionTree>(`${root}/git/trees/cb7c434ebe9aae6a631f64292746af75e48a753d?recursive=1`),
+      api<ExecutionTree>(`${root}/git/trees/${commit.tree.sha}?recursive=1`),
+    ]);
+    return { repository: repo, commit, comparison, baseTree, executionTree };
+  }
   run(repo: string, runId: number): Promise<NativeRun> {
     return api(`${repository(repo)}/actions/runs/${id(runId)}`);
   }
