@@ -100,9 +100,26 @@ const METADATA_SKIPPED_NAMES = [
   SKIPPED_FEEDBACK_NAME,
 ] as const;
 
+function isMetadataGate(job: JsonObject): boolean {
+  return (
+    job.name === 'Metadata CI result' ||
+    (job.name === 'Full qualification' &&
+      array(job.steps)
+        .map(object)
+        .some(
+          (step) =>
+            step.name === 'Verify completed current-code qualification after metadata edits' &&
+            step.status === 'completed' &&
+            step.conclusion === 'success'
+        ))
+  );
+}
 function proveMetadataJobs(jobs: JsonObject[], run: JsonObject, now: number, shards: 2 | 4): void {
   const skippedNames = METADATA_SKIPPED_NAMES.map((name) => name.replace('/2)', `/${shards})`));
-  const expected = ['Metadata CI plan', 'Metadata CI result', ...skippedNames];
+  const result = jobs.find(isMetadataGate);
+  requireProof(result, 'Missing authenticated metadata gate');
+  const decisionStep = result.name === 'Metadata CI result' ? 'Preserve existing current-code checks after metadata edits' : 'Verify completed current-code qualification after metadata edits';
+  const expected = ['Metadata CI plan', String(result.name), ...skippedNames];
   requireProof(jobs.length === expected.length, 'Unexpected metadata job set');
   for (const name of expected) {
     const matching = jobs.filter((job) => job.name === name);
@@ -127,7 +144,7 @@ function proveMetadataJobs(jobs: JsonObject[], run: JsonObject, now: number, sha
     const required = planning
       ? ['Plan feedback and verify reusable evidence']
       : [
-          'Preserve existing current-code checks after metadata edits',
+          decisionStep,
           'Require complete current-code qualification',
         ];
     for (const stepName of required) {
@@ -319,7 +336,7 @@ export async function provePostmergeReuse(
       );
       // The plan name is assigned before strict event classification. Only the
       // result names a metadata decision, and its complete job proof must pass.
-      if (candidateJobs.some((job) => job.name === 'Metadata CI result')) {
+      if (candidateJobs.some(isMetadataGate)) {
         proveMetadataJobs(candidateJobs, candidateRun, context.now, shardCount);
         const metadataBase = readSourceBase(
           candidateJobs, candidateRun, prNumber, headSha, repoId, 'Metadata CI plan'

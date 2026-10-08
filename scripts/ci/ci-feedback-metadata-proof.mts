@@ -116,13 +116,15 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
   requireProof(jobs.every((job) => job.run_id === run.id && job.run_attempt === run.run_attempt &&
     job.head_sha === run.head_sha && job.status === 'completed'), 'Job attempt mismatch');
   const plan = sourceProof(jobs, run, pr);
-  const metadata = jobs.find((job) => job.name === 'Metadata CI result');
+  const metadata = jobs.find((job) => job.name === 'Metadata CI result' ||
+    (job.name === 'Full qualification' && successfulStep(job, 'Verify completed current-code qualification after metadata edits')));
   if (metadata) {
     requireProof(action === 'edited' || action === undefined, 'Lifecycle producer claimed metadata');
-    exactJobs(jobs, ['Metadata CI plan', 'Metadata CI result', ...skippedHeavy, feedbackSkip]);
+    const metadataStep = metadata.name === 'Metadata CI result' ? 'Preserve existing current-code checks after metadata edits' : 'Verify completed current-code qualification after metadata edits';
+    exactJobs(jobs, ['Metadata CI plan', String(metadata.name), ...skippedHeavy, feedbackSkip]);
     skipped(jobs, [...skippedHeavy, feedbackSkip]);
     requireProof(run.conclusion === 'success' && metadata.conclusion === 'success' &&
-      successfulStep(metadata, 'Preserve existing current-code checks after metadata edits') &&
+      successfulStep(metadata, metadataStep) &&
       array(metadata.steps).filter((step) => step.name === 'Require complete current-code qualification' &&
         step.status === 'completed' && step.conclusion === 'skipped').length === 1,
       'Metadata decision failed');
@@ -132,7 +134,7 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
       const allowed = job === plan
         ? [...infrastructure, 'Plan feedback and verify reusable evidence',
             `CI source proof: PR=${pr.number} | base=${object(pr.base).sha} | head=${object(pr.head).sha}`]
-        : [...infrastructure, 'Preserve existing current-code checks after metadata edits',
+        : [...infrastructure, metadataStep,
             'Require complete current-code qualification'];
       const steps = array(job.steps);
       requireProof(new Set(steps.map((step) => step.name)).size === steps.length &&
@@ -158,7 +160,7 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
       array(gate.steps).every((step) => step.status === 'completed' &&
         (step.conclusion === 'success' ||
           (step.name === 'Require complete current-code qualification' && step.conclusion === 'failure') ||
-          (step.name === 'Preserve existing current-code checks after metadata edits' && step.conclusion === 'skipped') ||
+          (['Preserve existing current-code checks after metadata edits', 'Verify completed current-code qualification after metadata edits'].includes(String(step.name)) && step.conclusion === 'skipped') ||
           skippedDraftNodeCleanup(gate, step))),
       'Draft producer failed outside its deliberate qualification gate');
     return true;
@@ -177,7 +179,7 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
 
 /** Preserve only an authenticated canonical producer for this exact PR head/base. */
 export async function proveMetadataProducer(
-  env: Record<string, string | undefined>, event: unknown, read: GitHubRead
+  env: Record<string, string | undefined>, event: unknown, read: GitHubRead, requireCompletedFull = false
 ): Promise<boolean> {
   try {
     const shards = rootTestShards(env.CI_ROOT_TEST_SHARDS);
@@ -185,6 +187,7 @@ export async function proveMetadataProducer(
     const payload = object(event);
     const pr = object(payload.pull_request);
     const number = positive(pr.number);
+    requireProof(!requireCompletedFull || pr.draft === false, 'A draft cannot qualify completed full CI');
     const head = sha(object(pr.head).sha);
     const runId = Number(env.GITHUB_RUN_ID);
     positive(runId);
@@ -275,6 +278,7 @@ export async function proveMetadataProducer(
         requireProof(['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(String(run.status)) &&
           run.conclusion === null && action, 'Pending producer lacks immutable attestation');
         // Edited runs can carry continuity only; they never replace full/draft CI.
+        requireProof(!requireCompletedFull || action === 'edited', 'Canonical full producer is not complete');
         canonical = action !== 'edited';
       }
       if (canonical) break;

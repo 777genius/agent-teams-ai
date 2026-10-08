@@ -36,6 +36,21 @@ import { finalWindowsReleaseProved } from '../../scripts/ci/release/windowsRelea
 
 import type { PublicationPort } from '../../scripts/ci/release/publication.js';
 
+// Independent labels from the official W11 run 37704738528 jobs response.
+it('matches official Windows matrix job names without treating included architecture as an OTA axis', () => {
+  const rows = nativeScenarioRows(37704738528, 1).filter((row) => row.kind === 'windows');
+  expect(rows.map((row) => [row.scenario, row.jobName])).toEqual([
+    ['windows-x64-fresh', 'fresh-windows (windows-2025, x64)'],
+    ['windows-x64-full', 'windows-ota (windows-2025, full)'],
+    ['windows-x64-cold', 'windows-ota (windows-2025, cold)'],
+    ['windows-x64-warm', 'windows-ota (windows-2025, warm)'],
+    ['windows-arm64-fresh', 'fresh-windows (windows-11-arm, arm64)'],
+    ['windows-arm64-full', 'windows-ota (windows-11-arm, full)'],
+    ['windows-arm64-cold', 'windows-ota (windows-11-arm, cold)'],
+    ['windows-arm64-warm', 'windows-ota (windows-11-arm, warm)'],
+  ]);
+});
+
 // Receipt policy only: these synthetic claims never qualify a native run.
 it('requires honest byte-bound repaired ARM211 receipts for216/217 predecessor cases', () => {
   const bytes = {

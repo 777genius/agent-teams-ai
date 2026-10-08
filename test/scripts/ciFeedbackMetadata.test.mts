@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { planFeedback, qualifyFull } from '../../scripts/ci/ci-feedback.mts';
+import { planFeedback, qualifyFull, qualifyMetadata } from '../../scripts/ci/ci-feedback.mts';
 import { REPOSITORY, WORKFLOW } from '../../scripts/ci/ci-feedback-reuse.mts';
 import type { JsonObject } from '../../scripts/ci/ci-feedback-reuse.mts';
 
@@ -56,7 +56,7 @@ function compactLink(side: unknown): JsonObject {
   return { ...value, repo: { id: repo?.id, name: fullName.split('/')[1],
     url: `https://api.github.com/repos/${fullName}` } };
 }
-function fixture(input: JsonObject = event(), status = 'queued', shards: 2 | 4 = 2): Map<string, unknown> {
+function fixture(input: JsonObject = event(), status = (input.pull_request as JsonObject).draft ? 'queued' : 'completed', shards: 2 | 4 = 2): Map<string, unknown> {
   const pr = input.pull_request as JsonObject;
   const run = (id: number, action: string): JsonObject => ({
     id, workflow_id: 789, path: WORKFLOW, event: 'pull_request', head_sha: headSha,
@@ -330,10 +330,10 @@ function draftFixture(shards: 2 | 4 = 2): Map<string, unknown> {
   return data;
 }
 
-test('same-base queued empty-job and running producers avoid duplicate heavy work; green preserves it and legacy requires full', async () => {
+test('ready metadata requires completed full evidence; pending and legacy producers require full CI', async () => {
   for (const status of ['queued', 'in_progress', 'completed']) {
     const data = fixture(event(), status);
-    assert.equal((await plan(event(), {}, data)).metadata, true, status);
+    assert.equal((await plan(event(), {}, data)).metadata, status === 'completed', status);
     if (status === 'completed') {
       source(data).display_title = 'A legacy workflow title';
       assert.equal((await plan(event(), {}, data)).full, true, 'legacy plan proof cannot bind actual synthetic merge');
@@ -429,13 +429,15 @@ test('draft lifecycle continuity preserves fast feedback without allowing failed
 test('pending metadata continuity reaches a canonical producer and never treats itself as qualification', async () => {
   const data = fixture();
   const producer = source(data);
-  const intermediate = { ...producer, id: 150, display_title: runTitle(event(), 'edited') };
+  const intermediate = { ...producer, id: 150, status: 'in_progress', conclusion: null, display_title: runTitle(event(), 'edited') };
   const listing = data.get(listEndpoint) as JsonObject;
   (listing.workflow_runs as JsonObject[]).splice(1, 0, intermediate);
   listing.total_count = 3;
   data.set(`${prefix}/actions/runs/150`, intermediate);
   assert.equal((await plan(event(), {}, data)).metadata, true);
   producer.display_title = runTitle(event(), 'edited');
+  producer.status = 'in_progress';
+  producer.conclusion = null;
   assert.equal((await plan(event(), {}, data)).full, true);
 });
 
@@ -496,7 +498,7 @@ test('canonical producer search stays within eight earlier same-head runs', asyn
     const listing = data.get(listEndpoint) as JsonObject;
     const runs = listing.workflow_runs as JsonObject[];
     for (let index = 0; index < count; index++) {
-      const intermediate = { ...source(data), id: 120 + index,
+      const intermediate = { ...source(data), id: 120 + index, status: 'in_progress', conclusion: null,
         display_title: runTitle(event(), 'edited') };
       runs.push(intermediate);
       data.set(`${prefix}/actions/runs/${intermediate.id}`, intermediate);
@@ -522,7 +524,7 @@ test('real GitHub compact PR-link repositories authenticate without full_name', 
       link.head = { ...(link.head as JsonObject), repo: { ...capturedRunLinkRepo } };
       link.base = { ...(link.base as JsonObject), repo: { ...capturedRunLinkRepo } };
     }
-    assert.equal((await plan(event(), {}, data)).metadata, true, status);
+    assert.equal((await plan(event(), {}, data)).metadata, status === 'completed', status);
   }
 });
 
@@ -571,12 +573,12 @@ test('already listed newer failed or unknown producers never fall back to older 
   }
 });
 
-test('newest attested same-base queued or running producer preserves checks despite an older failure', async () => {
+test('pending full producer never hides an older failure behind metadata qualification', async () => {
   for (const status of ['queued', 'in_progress']) {
     const data = fixture(event(), 'completed');
     source(data).conclusion = 'failure';
     addNewerProducer(data, status, null);
-    assert.equal((await plan(event(), {}, data)).metadata, true, status);
+    assert.equal((await plan(event(), {}, data)).metadata, status === 'completed', status);
   }
 });
 
@@ -653,7 +655,7 @@ test('four-shard metadata preservation authenticates the exact configured full a
   assert.equal((await plan(event(undefined, true), { CI_ROOT_TEST_SHARDS: '2' }, draft)).full, true);
 });
 
-function forkFixture(status = 'queued'): { input: JsonObject; data: Map<string, unknown> } {
+function forkFixture(status = 'completed'): { input: JsonObject; data: Map<string, unknown> } {
   const input = event();
   ((input.pull_request as JsonObject).head as JsonObject).repo = {
     id: 1213526556, full_name: 'sardorb3k/claude_agent_teams_ui',
@@ -663,10 +665,10 @@ function forkFixture(status = 'queued'): { input: JsonObject; data: Map<string, 
   return { input, data };
 }
 
-test('authenticated true-fork runs preserve queued, running and completed producers with observed empty PR linkage', async () => {
+test('authenticated true-fork linkage still requires completed full producer for ready metadata', async () => {
   for (const status of ['queued', 'in_progress', 'completed']) {
     const { input, data } = forkFixture(status);
-    assert.equal((await plan(input, {}, data)).metadata, true, status);
+    assert.equal((await plan(input, {}, data)).metadata, status === 'completed', status);
   }
 });
 
@@ -716,7 +718,7 @@ test('same attested actual merge preserves checks even when the PR API base rema
     const merge = data.get(`${prefix}/git/commits/${env.GITHUB_SHA}`) as JsonObject;
     merge.parents = [{ sha: 'd'.repeat(40) }, { sha: headSha }];
     (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'd'.repeat(40) };
-    assert.equal((await plan(event(), {}, data)).metadata, true, status);
+    assert.equal((await plan(event(), {}, data)).metadata, status === 'completed', status);
   }
 });
 
@@ -835,7 +837,7 @@ test('stale PR anchors preserve ready and deliberate draft producers only when a
         { sha: actualBase }, { sha: headSha },
       ];
       (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: actualBase };
-      assert.equal((await plan(input, {}, data)).metadata, true, `${draft}/${status}`);
+      assert.equal((await plan(input, {}, data)).metadata, draft || status === 'completed', `${draft}/${status}`);
       (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'f'.repeat(40) };
       assert.equal((await plan(input, {}, data)).full, true, `${draft}/${status}/advanced`);
     }
@@ -858,4 +860,93 @@ test('slash-containing target refs use an encoded API path and exact unencoded r
   assert.equal(endpoints.includes(`${prefix}/git/ref/heads/integration/ci-target`), false);
   (data.get(endpoint) as JsonObject).ref = 'refs/heads/integration%2Fci-target';
   assert.equal((await plan(input, {}, data)).full, true);
+});
+
+
+void test('ready metadata never replaces an unfinished full producer with a successful required gate', async () => {
+  for (const status of ['queued', 'in_progress']) {
+    const input = event();
+    assert.equal((await plan(input, {}, fixture(input, status))).full, true, status);
+  }
+});
+
+void test('completed real metadata qualification preserves continuity to its completed full producer', async () => {
+  const input = event();
+  const data = fixture(input, 'completed');
+  const prior = { ...source(data), id: 150, display_title: runTitle(input, 'edited') };
+  const base = { run_id: 150, run_attempt: 1, head_sha: headSha, status: 'completed' };
+  const previousJobs = [
+    {
+      ...base,
+      id: 1,
+      name: 'Metadata CI plan',
+      conclusion: 'success',
+      steps: [
+        completedStep(`CI source proof: PR=12 | base=${baseSha} | head=${headSha}`),
+        completedStep('Plan feedback and verify reusable evidence'),
+      ],
+    },
+    {
+      ...base,
+      id: 2,
+      name: 'Full qualification',
+      conclusion: 'success',
+      steps: [
+        completedStep('Verify completed current-code qualification after metadata edits'),
+        completedStep('Require complete current-code qualification', 'skipped'),
+      ],
+    },
+    ...[
+      ...heavySkips,
+      "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'",
+    ].map((name, index) => ({ ...base, id: index + 3, name, conclusion: 'skipped', steps: [] })),
+  ];
+  data.set(`${prefix}/actions/runs/150`, prior);
+  data.set(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`, {
+    total_count: 7,
+    jobs: previousJobs,
+  });
+  const listing = data.get(listEndpoint) as JsonObject;
+  listing.total_count = 3;
+  (listing.workflow_runs as JsonObject[]).splice(1, 0, prior);
+  assert.equal((await plan(input, {}, data)).metadata, true);
+  source(data).conclusion = 'failure';
+  assert.equal((await plan(input, {}, data)).full, true);
+});
+
+void test('metadata gate reauthenticates completed full evidence and rejects pending, missing-attempt and changed-source claims', async () => {
+  const input = event();
+  const data = fixture(input, 'completed');
+  const read = (endpoint: string) => Promise.resolve(structuredClone(data.get(endpoint)));
+  assert.equal(await qualifyMetadata(env, input, read), true);
+  for (const status of ['queued', 'in_progress']) {
+    const pending = fixture(input, status);
+    assert.equal(
+      await qualifyMetadata(env, input, (endpoint) => Promise.resolve(structuredClone(pending.get(endpoint)))),
+      false
+    );
+  }
+  source(data).run_attempt = 2;
+  const retained = jobs(data).filter((item) => item.name === 'Full qualification');
+  data.set(`${prefix}/actions/runs/100/attempts/2/jobs?per_page=100`, {
+    total_count: 1,
+    jobs: retained,
+  });
+  assert.equal(
+    await qualifyMetadata(env, input, read),
+    false,
+    'A gate-only rerun cannot invent missing producer jobs'
+  );
+  source(data).run_attempt = 1;
+  job(data, 'test (1/2)').conclusion = 'failure';
+  assert.equal(await qualifyMetadata(env, input, read), false);
+  job(data, 'test (1/2)').conclusion = 'success';
+  (data.get(`${prefix}/contents/${WORKFLOW}?ref=${headSha}`) as JsonObject).sha = 'f'.repeat(40);
+  assert.equal(await qualifyMetadata(env, input, read), false);
+  assert.equal(
+    await qualifyMetadata({ ...env, GITHUB_REPOSITORY: 'foreign/repository' }, input, read),
+    false
+  );
+  assert.equal(await qualifyMetadata(env, event({ base: { from: 'other' } }), read), false);
+  assert.equal(await qualifyMetadata(env, event(undefined, true), read), false);
 });
