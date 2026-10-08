@@ -93,7 +93,7 @@ it('uses shared producer acquisition limits and does not retire the owner after 
   const first = readOwnedUtf8(path, { timeoutMs: 5000, maxBytes: 100 }, owner);
   const overflow = readOwnedUtf8(path, { timeoutMs: 5000, maxBytes: 100 }, owner);
   await expect(overflow.result).rejects.toThrow('acquisition capacity');
-  expect(await overflow.physical).toMatchObject({ kind: 'unknown' });
+  expect(await overflow.physical).toEqual({ kind: 'closed' });
   expect(await first.result).toBe('shared owner');
   expect(await first.physical).toEqual({ kind: 'closed' });
   const next = readOwnedUtf8(path, { timeoutMs: 5000, maxBytes: 100 }, owner);

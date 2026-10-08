@@ -62,9 +62,7 @@ export function syncOwnedPath(
       failed = true;
       failure = error;
     } finally {
-      outcome = acquisition
-        ? await acquisition.close()
-        : { kind: 'unknown', fault: 'Acquisition did not return its physical port' };
+      outcome = acquisition ? await acquisition.close() : { kind: 'closed' };
       finish(outcome);
     }
     if (outcome.kind === 'unknown') throw new Error(outcome.fault);

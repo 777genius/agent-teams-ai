@@ -64,9 +64,7 @@ export function writeOwnedBytes(
       failure = error;
     } finally {
       payload = undefined;
-      const outcome = acquisition
-        ? await acquisition.close()
-        : { kind: 'unknown' as const, fault: 'Acquisition did not return its physical port' };
+      const outcome = acquisition ? await acquisition.close() : { kind: 'closed' as const };
       if (failed) rejectResult(failure);
       else if (outcome.kind === 'unknown') rejectResult(new Error(outcome.fault));
       else resolveResult();

@@ -74,9 +74,7 @@ export function readOwnedUtf8(
       failure = error;
       failed = true;
     } finally {
-      const outcome = acquisition
-        ? await acquisition.close()
-        : { kind: 'unknown' as const, fault: 'Acquisition did not return its physical port' };
+      const outcome = acquisition ? await acquisition.close() : { kind: 'closed' as const };
       clearTimeout(timer);
       // No new scheduling or payload publication after the timer's early result.
       if (!timedOut) {

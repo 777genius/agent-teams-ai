@@ -163,7 +163,7 @@ it('refuses descriptor capacity before accessing or copying the complete input p
     );
     await expect(task.result).rejects.toThrow('acquisition capacity');
     expect(capture).not.toHaveBeenCalled();
-    expect(await task.physical).toMatchObject({ kind: 'unknown' });
+    expect(await task.physical).toEqual({ kind: 'closed' });
     expect(fs.readFileSync(path, 'utf8')).toBe('existing');
   } finally {
     capture.mockRestore();
