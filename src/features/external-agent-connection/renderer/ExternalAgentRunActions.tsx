@@ -21,7 +21,13 @@ export function ExternalAgentRunActions({
   const { t } = useAppTranslation('team');
   const run = useExternalAgentRun(api, task, context);
   const blocked =
-    !ready || !task.trim() || run.loading || run.submitting || run.active || run.snapshotUnknown;
+    !ready ||
+    !task.trim() ||
+    run.loading ||
+    run.submitting ||
+    run.active ||
+    run.snapshotUnknown ||
+    !run.availabilityKnown;
   return (
     <div
       className="min-w-0 space-y-2 rounded-md border border-[var(--color-border)] p-3"

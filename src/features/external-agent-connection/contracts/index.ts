@@ -47,6 +47,7 @@ export interface ExternalAgentConnectionApi {
 }
 
 export type ExternalAgentRunProvider = 'anthropic' | 'codex';
+export type ExternalAgentRunAvailability = Record<ExternalAgentRunProvider, boolean>;
 export type ExternalAgentRunStatus = 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
 export interface ExternalAgentRunRequest {
   providerId: ExternalAgentRunProvider;
@@ -65,11 +66,13 @@ export interface ExternalAgentRunSnapshot {
   error: string | null;
 }
 export interface ExternalAgentRunApi {
+  getAvailability(): Promise<ExternalAgentRunAvailability>;
   start(request: ExternalAgentRunRequest): Promise<ExternalAgentRunSnapshot>;
   getSnapshot(): Promise<ExternalAgentRunSnapshot | null>;
   cancel(request: { runId: string }): Promise<ExternalAgentRunSnapshot | null>;
 }
 export const EXTERNAL_AGENT_RUN_CHANNELS = {
+  availability: 'external-agent-connection:run:availability',
   start: 'external-agent-connection:run:start',
   snapshot: 'external-agent-connection:run:snapshot',
   cancel: 'external-agent-connection:run:cancel',

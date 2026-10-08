@@ -1,6 +1,18 @@
 import { hasAuthoritativeProviderStatusEvidence } from '@shared/utils/providerStatusAuthority';
 
+import type { AppConnectionContext } from '../../contracts';
 import type { CliProviderStatus } from '@shared/types';
+
+export function sameExternalAgentRunContext(
+  left: AppConnectionContext,
+  right: AppConnectionContext
+): boolean {
+  return (
+    left.appInstanceId === right.appInstanceId &&
+    left.dataRootFingerprint === right.dataRootFingerprint &&
+    left.connectionGeneration === right.connectionGeneration
+  );
+}
 
 /** One-shot authority is independent of team launch and its model catalog. */
 export function canRunExternalAgent(provider: CliProviderStatus | null | undefined): boolean {

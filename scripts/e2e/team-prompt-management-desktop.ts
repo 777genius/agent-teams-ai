@@ -834,6 +834,18 @@ try {
   };
   await captureOwnedProcesses();
   const info = await attach();
+  const nativeAvailability = await evaluate(async () => {
+    const api = (window as unknown as { electronAPI: ElectronAPI }).electronAPI
+      .externalAgentConnection?.directRun;
+    if (!api) throw new Error('Native run IPC must be wired in the desktop app');
+    const availability = await api.getAvailability();
+    if (await api.getSnapshot())
+      throw new Error('A fresh sandbox must have no previous native run');
+    return availability;
+  });
+  assert.equal(typeof nativeAvailability.codex, 'boolean');
+  assert.equal(typeof nativeAvailability.anthropic, 'boolean');
+  evidence.nativeAvailability = nativeAvailability;
   await openTeams();
   await popup(info, 'dark', true);
   assert(client);

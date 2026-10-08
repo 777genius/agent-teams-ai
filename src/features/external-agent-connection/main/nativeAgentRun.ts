@@ -71,6 +71,7 @@ export async function prepareNativeAgentRun(
   return {
     stop,
     async dispose() {
+      // Retain owned scratch and tracking until process termination has been verified.
       await stop();
       untrackCliProcess(child);
       await rm(cwd, { recursive: true, force: true });

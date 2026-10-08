@@ -78,6 +78,7 @@ function setup() {
     dispose: vi.fn(async () => {}),
   };
   const deps = {
+    getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
     getConnectionInfo: vi.fn(async () => ({ ...connection, context: context.snapshot() })),
     withExpectedContext: async <T>(
       expected: ExternalAgentRunRequest['expectedContext'],
@@ -108,7 +109,7 @@ describe('native prompt run lifecycle', () => {
     await s.context.closeAdmission();
     s.context.rebind('/sandbox/new-root');
     await s.service.start(s.request);
-    await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('failed'));
+    expect(await s.service.getSnapshot()).toBeNull();
     expect(s.deps.prepare).not.toHaveBeenCalled();
     expect(s.runtime.launch).not.toHaveBeenCalled();
   });
@@ -180,6 +181,13 @@ describe('native prompt run lifecycle', () => {
     expect((await s.service.getSnapshot())?.runId).toBe(newer.runId);
     expect(s.runtime.stop).not.toHaveBeenCalled();
     await s.service.shutdown();
+    const sameRoot = await s.service.getSnapshot();
+    expect(sameRoot?.runId).toBe(newer.runId);
+    // An unsuccessful switch that leaves authority unchanged must not purge history.
+    expect((await s.service.getSnapshot())?.runId).toBe(sameRoot?.runId);
+    await s.context.closeAdmission();
+    s.context.rebind('/sandbox/other-native-run-root');
+    expect(await s.service.getSnapshot()).toBeNull();
   });
 
   it('cancels a hung readiness request without preventing shutdown', async () => {
@@ -190,5 +198,18 @@ describe('native prompt run lifecycle', () => {
     await s.service.shutdown();
     expect((await s.service.getSnapshot())?.status).toBe('cancelled');
     expect(s.runtime.launch).not.toHaveBeenCalled();
+  });
+
+  it('stops an owned run before hiding it when transport generation invalidates snapshot recovery', async () => {
+    const s = setup();
+    await s.service.start(s.request);
+    await vi.waitFor(() => expect(s.runtime.launch).toHaveBeenCalledOnce());
+    s.context.transportReplaced();
+    expect(await s.service.getSnapshot()).toBeNull();
+    expect(s.runtime.stop).toHaveBeenCalledOnce();
+    expect(s.runtime.dispose).toHaveBeenCalledOnce();
+    s.request.expectedContext = s.context.snapshot();
+    await expect(s.service.start(s.request)).resolves.toMatchObject({ status: 'preparing' });
+    await s.service.shutdown();
   });
 });

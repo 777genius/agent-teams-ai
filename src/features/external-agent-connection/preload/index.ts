@@ -3,6 +3,7 @@ import { EXTERNAL_AGENT_CONNECTION_CHANNELS, EXTERNAL_AGENT_RUN_CHANNELS } from 
 import type {
   ConnectionInfoV1,
   ExternalAgentConnectionApi,
+  ExternalAgentRunAvailability,
   ExternalAgentRunSnapshot,
 } from '../contracts';
 import type { IpcRenderer } from 'electron';
@@ -16,6 +17,10 @@ export function createExternalAgentConnectionBridge(
     retryConnection: () =>
       ipcRenderer.invoke(EXTERNAL_AGENT_CONNECTION_CHANNELS.retry) as Promise<ConnectionInfoV1>,
     directRun: {
+      getAvailability: () =>
+        ipcRenderer.invoke(
+          EXTERNAL_AGENT_RUN_CHANNELS.availability
+        ) as Promise<ExternalAgentRunAvailability>,
       start: (request) =>
         ipcRenderer.invoke(
           EXTERNAL_AGENT_RUN_CHANNELS.start,

@@ -105,13 +105,13 @@ describe('external prompt freshness and clipboard fallback', () => {
       host.querySelector<HTMLButtonElement>('[data-testid="external-agent-prompt-copy"]')!.click()
     );
   };
-  const render = async (api: ExternalAgentConnectionApi) => {
+  const render = async (api: ExternalAgentConnectionApi, connection = snapshot()) => {
     await act(async () =>
       root.render(
         createElement(ExternalAgentPromptDialog, {
           api,
           runApi: api.directRun,
-          connection: snapshot(),
+          connection,
           isLight: false,
           onSettings: vi.fn(),
         })
@@ -134,6 +134,7 @@ describe('external prompt freshness and clipboard fallback', () => {
     };
     let current = running;
     const runApi = {
+      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
       start: vi.fn(),
       getSnapshot: vi.fn(async () => current),
       cancel: vi.fn(async () => {
@@ -180,6 +181,49 @@ describe('external prompt freshness and clipboard fallback', () => {
     expect(runApi.start).not.toHaveBeenCalled();
     expect(actions().textContent).toContain('Cancelled');
     expect(actions().querySelector('.animate-spin')).toBeNull();
+    const otherRoot = snapshot();
+    otherRoot.context = {
+      ...otherRoot.context,
+      dataRootFingerprint: 'another-sandbox-root',
+      connectionGeneration: 2,
+    };
+    await render(api, otherRoot);
+    expect(actions().textContent).not.toContain('Original sandbox management request');
+    expect(actions().textContent).not.toContain('Cancelled');
+  });
+
+  // RED when authenticated SDK readiness enables Run despite a missing standalone native CLI.
+  it('keeps Run disabled until native availability is known and reports missing Claude despite authenticated dashboard authority', async () => {
+    let finishAvailability!: (value: { codex: boolean; anthropic: boolean }) => void;
+    const availability = new Promise<{ codex: boolean; anthropic: boolean }>((resolve) => {
+      finishAvailability = resolve;
+    });
+    const runApi = {
+      getAvailability: vi.fn(() => availability),
+      getSnapshot: vi.fn(async () => null),
+      start: vi.fn(),
+      cancel: vi.fn(),
+    };
+    await render({
+      getConnectionInfo: vi.fn(async () => snapshot()),
+      retryConnection: vi.fn(),
+      directRun: runApi,
+    });
+    const codex = host.querySelector<HTMLButtonElement>(
+      '[data-testid="external-agent-run-codex"]'
+    )!;
+    const claude = host.querySelector<HTMLButtonElement>(
+      '[data-testid="external-agent-run-claude"]'
+    )!;
+    expect(codex.disabled).toBe(true);
+    expect(claude.disabled).toBe(true);
+    await act(async () => finishAvailability({ codex: true, anthropic: false }));
+    expect(codex.disabled).toBe(false);
+    expect(claude.disabled).toBe(true);
+    expect(host.textContent).toContain('Claude Code is unavailable.');
+    await act(async () => claude.click());
+    expect(runApi.start).not.toHaveBeenCalled();
+    expect(runApi.getAvailability).toHaveBeenCalledOnce();
   });
 
   // RED when the final prompt requires reveal, follows the templates, or has a detached copy action.

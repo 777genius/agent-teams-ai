@@ -5,9 +5,11 @@ import {
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '@features/member-work-sync/main';
+import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
@@ -69,6 +71,13 @@ export function composeExternalAgentConnection(options: {
     teamPromptManagement = composeTeamPromptManagement(data, lifecycle, connection, emit);
   }
   const directRun = new ExternalAgentRunService({
+    async getAvailability() {
+      const [codex, anthropic] = await Promise.all([
+        CodexBinaryResolver.resolve().catch(() => null),
+        ClaudeBinaryResolver.resolveNative().catch(() => null),
+      ]);
+      return { codex: Boolean(codex), anthropic: Boolean(anthropic) };
+    },
     getConnectionInfo: connection.getConnectionInfo,
     withExpectedContext: connection.withExpectedContext,
     async getProviderStatus(providerId) {

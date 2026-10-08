@@ -10,6 +10,7 @@ import type {
   AppConnectionContext,
   ConnectionInfoV1,
   ExternalAgentRunApi,
+  ExternalAgentRunAvailability,
   ExternalAgentRunRequest,
   ExternalAgentRunSnapshot,
   ExternalAgentRunStatus,
@@ -22,6 +23,7 @@ export interface PreparedExternalAgentRun {
   dispose(): Promise<void>;
 }
 export interface ExternalAgentRunDependencies {
+  getAvailability(): Promise<ExternalAgentRunAvailability>;
   getConnectionInfo(): Promise<ConnectionInfoV1>;
   withExpectedContext<T>(context: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   getProviderStatus(
@@ -80,8 +82,24 @@ export class ExternalAgentRunService implements ExternalAgentRunApi {
 
   constructor(private readonly deps: ExternalAgentRunDependencies) {}
 
+  getAvailability(): Promise<ExternalAgentRunAvailability> {
+    return this.deps.getAvailability();
+  }
+
   async getSnapshot(): Promise<ExternalAgentRunSnapshot | null> {
-    return this.latest ? { ...this.latest, context: { ...this.latest.context } } : null;
+    const latest = this.latest;
+    if (!latest) return null;
+    try {
+      return await this.deps.withExpectedContext(latest.context, async () => ({
+        ...latest,
+        context: { ...latest.context },
+      }));
+    } catch {
+      // Transport replacement can invalidate generation without a root switch. Do not hide
+      // a still-owned process and strand Cancel while duplicate-start admission remains closed.
+      if (this.active?.snapshot.runId === latest.runId) await this.stopCurrent();
+      return null;
+    }
   }
 
   async start(input: ExternalAgentRunRequest): Promise<ExternalAgentRunSnapshot> {

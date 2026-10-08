@@ -3,26 +3,26 @@ import agentTeamsController from 'agent-teams-controller';
 import type { ConnectionInfoV1, ExternalAgentRunProvider } from '../contracts';
 
 const SERVER_NAME = 'agent-teams';
-const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } = agentTeamsController;
-const MANAGEMENT_TOOLS = (
-  AGENT_TEAMS_MCP_TOOL_GROUPS.find((group) => group.id === 'team')?.toolNames ?? []
-).filter((tool) =>
-  [
-    'app_get_connection_info',
-    'team_list',
-    'team_get',
-    'team_create',
-    'team_update',
-    'team_trash',
-  ].includes(tool)
-);
 
 /** Per-run config only. The registered team group contains no launch/stop/delete/restore tools. */
 export function nativeAgentRunArgs(
   provider: ExternalAgentRunProvider,
   connection: ConnectionInfoV1
 ): string[] {
-  const tools = MANAGEMENT_TOOLS.filter(
+  const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } = agentTeamsController;
+  const managementTools = (
+    AGENT_TEAMS_MCP_TOOL_GROUPS.find((group) => group.id === 'team')?.toolNames ?? []
+  ).filter((tool) =>
+    [
+      'app_get_connection_info',
+      'team_list',
+      'team_get',
+      'team_create',
+      'team_update',
+      'team_trash',
+    ].includes(tool)
+  );
+  const tools = managementTools.filter(
     (tool) =>
       (tool !== 'team_update' || connection.capabilities.configurationEdit) &&
       (tool !== 'team_trash' || connection.capabilities.reversibleTrash)

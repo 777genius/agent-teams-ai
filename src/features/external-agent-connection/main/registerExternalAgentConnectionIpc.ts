@@ -11,6 +11,7 @@ export function registerExternalAgentConnectionIpc(
   ipcMain.handle(EXTERNAL_AGENT_CONNECTION_CHANNELS.retry, () => connection.retryConnection());
   if (connection.directRun) {
     const run = connection.directRun;
+    ipcMain.handle(EXTERNAL_AGENT_RUN_CHANNELS.availability, () => run.getAvailability());
     ipcMain.handle(EXTERNAL_AGENT_RUN_CHANNELS.start, (_event, input) => run.start(input));
     ipcMain.handle(EXTERNAL_AGENT_RUN_CHANNELS.snapshot, () => run.getSnapshot());
     ipcMain.handle(EXTERNAL_AGENT_RUN_CHANNELS.cancel, (_event, input) => run.cancel(input));

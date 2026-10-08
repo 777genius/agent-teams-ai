@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useStore } from '@renderer/store';
 
-import { canRunExternalAgent } from '../core/domain/runReadiness';
+import { canRunExternalAgent, sameExternalAgentRunContext } from '../core/domain/runReadiness';
 
 import type {
   AppConnectionContext,
   ExternalAgentRunApi,
+  ExternalAgentRunAvailability,
   ExternalAgentRunProvider,
   ExternalAgentRunSnapshot,
 } from '../contracts';
@@ -17,7 +18,12 @@ export function useExternalAgentRun(
   task: string,
   context: AppConnectionContext
 ) {
-  const [snapshot, setSnapshot] = useState<ExternalAgentRunSnapshot | null>(null);
+  const [receivedSnapshot, setSnapshot] = useState<ExternalAgentRunSnapshot | null>(null);
+  const [nativeAvailability, setNativeAvailability] = useState<{
+    api: ExternalAgentRunApi;
+    scope: string;
+    values: ExternalAgentRunAvailability;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -30,8 +36,43 @@ export function useExternalAgentRun(
   const codex = useEffectiveCliProviderStatus('codex');
   const claude = useEffectiveCliProviderStatus('anthropic');
   const fetchStatus = useStore((state) => state.fetchCliProviderStatus);
+  const boundContext = useMemo(
+    () => ({
+      appInstanceId: context.appInstanceId,
+      dataRootFingerprint: context.dataRootFingerprint,
+      connectionGeneration: context.connectionGeneration,
+    }),
+    [context.appInstanceId, context.dataRootFingerprint, context.connectionGeneration]
+  );
+  // Derive before effects: an old context must never render for even one paint.
+  const snapshot =
+    receivedSnapshot && sameExternalAgentRunContext(receivedSnapshot.context, boundContext)
+      ? receivedSnapshot
+      : null;
   const active = snapshot?.status === 'preparing' || snapshot?.status === 'running';
   const snapshotUnknown = error === 'snapshot';
+  const codexAuthority = !codex.codexSnapshotPending && canRunExternalAgent(codex.providerStatus);
+  const claudeAuthority = canRunExternalAgent(claude.providerStatus);
+  const availabilityScope = JSON.stringify([boundContext, codexAuthority, claudeAuthority]);
+  const availability =
+    nativeAvailability?.api === api && nativeAvailability.scope === availabilityScope
+      ? nativeAvailability.values
+      : null;
+
+  useEffect(() => {
+    let obsolete = false;
+    setNativeAvailability(null);
+    void api
+      .getAvailability()
+      .then((next) => {
+        if (!obsolete) setNativeAvailability({ api, scope: availabilityScope, values: next });
+      })
+      .catch(() => undefined);
+    return () => {
+      obsolete = true;
+    };
+    // Binary discovery is separate from run polling, and only follows mount/authority changes.
+  }, [api, availabilityScope]);
 
   useEffect(() => {
     void fetchStatus('codex');
@@ -45,7 +86,7 @@ export function useExternalAgentRun(
     try {
       const next = await api.getSnapshot();
       if (mounted.current && version === revision.current) {
-        setSnapshot(next);
+        setSnapshot(next && sameExternalAgentRunContext(next.context, boundContext) ? next : null);
         setError(null);
       }
     } catch {
@@ -54,10 +95,14 @@ export function useExternalAgentRun(
       pending.current = false;
       if (mounted.current && version === revision.current) setLoading(false);
     }
-  }, [api]);
+  }, [api, boundContext]);
 
   useEffect(() => {
     mounted.current = true;
+    setSnapshot(null);
+    setError(null);
+    setSubmitting(false);
+    setCancelling(false);
     setLoading(true);
     void read();
     return () => {
@@ -75,15 +120,23 @@ export function useExternalAgentRun(
   }, [active, loading, read, snapshotUnknown]);
 
   const start = async (providerId: ExternalAgentRunProvider) => {
-    if (actionPending.current || active || loading || snapshotUnknown) return;
+    if (
+      actionPending.current ||
+      active ||
+      loading ||
+      snapshotUnknown ||
+      !availability?.[providerId] ||
+      !(providerId === 'codex' ? codexAuthority : claudeAuthority)
+    )
+      return;
     actionPending.current = true;
     const version = ++revision.current;
     setSubmitting(true);
     setError(null);
     try {
-      const next = await api.start({ providerId, task, expectedContext: context });
+      const next = await api.start({ providerId, task, expectedContext: boundContext });
       if (mounted.current && version === revision.current) {
-        setSnapshot(next);
+        setSnapshot(sameExternalAgentRunContext(next.context, boundContext) ? next : null);
         setNow(Date.now());
       }
     } catch {
@@ -104,7 +157,8 @@ export function useExternalAgentRun(
     setCancelling(true);
     try {
       const next = await api.cancel({ runId });
-      if (mounted.current && version === revision.current) setSnapshot(next);
+      if (mounted.current && version === revision.current)
+        setSnapshot(next && sameExternalAgentRunContext(next.context, boundContext) ? next : null);
     } catch {
       if (mounted.current && version === revision.current) setError('cancel');
     } finally {
@@ -123,6 +177,7 @@ export function useExternalAgentRun(
     cancelling,
     active,
     snapshotUnknown,
+    availabilityKnown: availability !== null,
     start,
     cancel,
     elapsed: snapshot
@@ -135,9 +190,11 @@ export function useExternalAgentRun(
           )
         )
       : 0,
-    codexReady: !codex.codexSnapshotPending && canRunExternalAgent(codex.providerStatus),
-    claudeReady: canRunExternalAgent(claude.providerStatus),
-    codexDetected: codex.providerStatus?.supported === true,
-    claudeDetected: claude.providerStatus?.supported === true,
+    codexReady: availability?.codex === true && codexAuthority,
+    claudeReady: availability?.anthropic === true && claudeAuthority,
+    codexDetected: availability ? availability.codex : codex.providerStatus?.supported === true,
+    claudeDetected: availability
+      ? availability.anthropic
+      : claude.providerStatus?.supported === true,
   };
 }
