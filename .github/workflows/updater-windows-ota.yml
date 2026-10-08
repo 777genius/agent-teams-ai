@@ -19,7 +19,7 @@ on:
     inputs:
       input_mode:
         type: choice
-        options: [plan, legacy-2172, serializer]
+        options: [plan, legacy-2172, serializer, installer-diagnostic]
         default: plan
         required: true
       native_run_id: { type: string, required: false }
@@ -111,7 +111,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts scripts/e2e/release-updater/windows-installer-diagnostic.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
@@ -135,7 +135,7 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Verify native helper imports do not intercept controller cleanup
-        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
+        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
       - name: Verify immutable native producer and extract exact plan-bound inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -363,17 +363,10 @@ jobs:
 
   windows-ota:
     needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
-    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && (inputs.input_mode == 'installer-diagnostic' || (!inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success'))) }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [windows-2025, windows-11-arm]
-        mode: [full, cold, warm]
-        include:
-          - os: windows-2025
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
+      matrix: ${{ inputs.input_mode == 'installer-diagnostic' && fromJSON('{"include":[{"os":"windows-11-arm","arch":"arm64","mode":"warm"}]}') || fromJSON('{"os":["windows-2025","windows-11-arm"],"mode":["full","cold","warm"],"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -392,11 +385,18 @@ jobs:
           architecture: ${{ matrix.arch }}
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Reuse authenticated W11 inputs for nonqualifying diagnostic
+        if: inputs.input_mode == 'installer-diagnostic'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/e2e/release-updater/windows-diagnostic-inputs.mts
       - uses: actions/download-artifact@v8
+        if: inputs.input_mode != 'installer-diagnostic'
         with:
           name: TEST-windows-ota-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-inputs/
       - uses: actions/download-artifact@v8
+        if: inputs.input_mode != 'installer-diagnostic'
         with:
           name: TEST-windows-fresh-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-reference/
@@ -423,7 +423,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Native runner architecture mismatch' }
-          node scripts/e2e/release-updater/windows-ota.mts --mode '${{ matrix.mode }}' ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-ota --fresh-reference .artifacts/TEST-windows-reference/fresh-reference.json 2>&1 | Tee-Object .artifacts/TEST-windows-ota/probe.log
+          node scripts/e2e/release-updater/windows-ota.mts --mode '${{ matrix.mode }}' ${{ inputs.input_mode == 'installer-diagnostic' && '--installer-diagnostic' || '' }} ${{ inputs.input_mode == 'legacy-2172' && '--legacy-2172' || '--plan .artifacts/TEST-windows-inputs/plan.json' }} --inputs .artifacts/TEST-windows-inputs --evidence .artifacts/TEST-windows-ota --fresh-reference .artifacts/TEST-windows-reference/fresh-reference.json 2>&1 | Tee-Object .artifacts/TEST-windows-ota/probe.log
           if ($LASTEXITCODE -ne 0) { throw 'Native Windows OTA transport/install/restart proof failed' }
       - name: Clean exact owned native processes and physical profile links
         if: always()
@@ -437,7 +437,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: TEST-windows-ota-${{ matrix.arch }}-${{ matrix.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ inputs.input_mode == 'installer-diagnostic' && 'TEST-windows-installer-diagnostic' || 'TEST-windows-ota' }}-${{ matrix.arch }}-${{ matrix.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/TEST-windows-ota/
           if-no-files-found: error
           retention-days: 14

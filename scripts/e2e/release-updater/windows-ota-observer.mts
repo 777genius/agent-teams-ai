@@ -1,3 +1,8 @@
+import {
+  installerDiagnosticScript,
+  installerCommandRules,
+  type InstallerDiagnosticSnapshot,
+} from './windows-installer-diagnostic.mts';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
@@ -656,7 +661,9 @@ function Read-Owned([string]$file) {
     }
   })
 }
+${installerDiagnosticScript}
 switch ($data.operation) {
+  'installer-diagnostic' { $result=Read-InstallerDiagnostic }
   'compile' { $result=[TestOtaObserver]::Compile() }
   'processes' { $result=@(Read-Owned $data.file) }
   'watch-installer' {
@@ -777,6 +784,12 @@ export async function windowsOtaObserver(root: string, evidence: string) {
   await call('compile');
   return {
     watchReadyFile: path.join(root, 'ota-installer-observer.ready'),
+    installerDiagnostic: (file: string, owner: WindowsProcess) =>
+      call<InstallerDiagnosticSnapshot>('installer-diagnostic', {
+        file,
+        owner,
+        commands: installerCommandRules(root),
+      }),
     processes: (file: string) => call<WindowsProcess[]>('processes', { file }),
     watchInstaller: (file: string) => call<WindowsProcess[]>('watch-installer', { file }),
     addPendingFirewall: (group: string, name: string, file: string, canonical: string) =>

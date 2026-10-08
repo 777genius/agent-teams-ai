@@ -1,3 +1,8 @@
+import {
+  diagnosticRequested,
+  assertDiagnosticInput,
+  captureInstallerDiagnostic,
+} from './windows-installer-diagnostic.mts';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -210,6 +215,7 @@ async function run() {
     return;
   }
   const mode = checkedMode(option('--mode'));
+  const installerDiagnostic = diagnosticRequested(args, process.env, process.arch, mode);
   assert.equal(process.platform, 'win32');
   assert.equal(
     process.env.GITHUB_ACTIONS,
@@ -616,15 +622,20 @@ async function run() {
     pending: string;
   }) {
     assert(mirror);
-    const reference = JSON.parse(
-      await readFile(path.resolve(option('--fresh-reference')), 'utf8')
-    ) as FreshReference;
-    assert.equal(reference.passed, true);
-    assert.equal(reference.arch, process.arch);
-    assert.equal(reference.inputDigest, inputs.inputDigest);
-    assert.equal(reference.installerSha256, target.sha256);
-    assert.equal(reference.installed.packageVersion, targetVersion);
-    evidence.freshReference = reference;
+    const reference = installerDiagnostic
+      ? undefined
+      : (JSON.parse(
+          await readFile(path.resolve(option('--fresh-reference')), 'utf8')
+        ) as FreshReference);
+    if (!installerDiagnostic) {
+      assert(reference);
+      assert.equal(reference.passed, true);
+      assert.equal(reference.arch, process.arch);
+      assert.equal(reference.inputDigest, inputs.inputDigest);
+      assert.equal(reference.installerSha256, target.sha256);
+      assert.equal(reference.installed.packageVersion, targetVersion);
+      evidence.freshReference = reference;
+    }
     await waitFor(async () => {
       const current = await state();
       return current.updater?.provider === 'GitHubProvider' &&
@@ -810,6 +821,27 @@ async function run() {
     renderer?.close();
     main = undefined;
     renderer = undefined;
+    if (installerDiagnostic) {
+      evidence.installerDiagnostic = await captureInstallerDiagnostic({
+        root,
+        environment: env,
+        parent: initial.owner,
+        owner: () => installerSamples.at(-1),
+        snapshot: (owner) => observer.installerDiagnostic(pending, owner),
+        save: (receipt) =>
+          writeFile(
+            path.join(output, 'target-installer-diagnostic.json'),
+            JSON.stringify(receipt, null, 2)
+          ),
+      });
+      samplerStop = true;
+      await sampling;
+      evidence.installerProcesses = installerSamples;
+      if (samplerError) throw samplerError;
+      evidence.diagnosticComplete = true;
+      return;
+    }
+    assert(reference);
     const successor = await waitFor(
       async () =>
         (await native.processes(executable)).find(
@@ -918,6 +950,7 @@ async function run() {
     const inputs = await windowsInputs(input, readWindowsInputMode());
     evidence.inputs = inputs.verified;
     evidence.inputDigest = inputs.inputDigest;
+    assertDiagnosticInput(installerDiagnostic, inputs.inputDigest);
     targetVersion = inputs.targetVersion;
     evidence.targetBinding = {
       targetVersion,
@@ -1068,9 +1101,10 @@ async function run() {
     evidence.initialLaunch = initial;
     await proveScenario({ inputs, target, prior, initial, session, pending });
     assert(!logError);
-    evidence.passed = true;
+    evidence.passed = !installerDiagnostic;
     evidence.finalPromotionFeed = Boolean(inputs.stagedMetadata);
     evidence.finalReleaseProved =
+      !installerDiagnostic &&
       inputs.legacyFixture === false &&
       targetVersion === '2.17.6' &&
       Boolean(inputs.stagedMetadata);
