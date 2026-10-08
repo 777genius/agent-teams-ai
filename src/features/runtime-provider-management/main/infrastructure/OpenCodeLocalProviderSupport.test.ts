@@ -14,7 +14,9 @@ import {
   writeProviderApiKeyReference,
 } from './OpenCodeLocalProviderSupport';
 
-type ProviderConfig = { provider: Record<string, { options: { apiKey: string } }> };
+interface ProviderConfig {
+  provider: Record<string, { options: { apiKey: string } }>;
+}
 
 const CREDENTIAL_REFERENCE_PREFIX = '{file:~/.config/opencode/agent-teams-credentials/';
 
