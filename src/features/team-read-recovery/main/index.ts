@@ -32,3 +32,21 @@ export function teamReadFailureResult<T>(error: unknown): IpcResult<T> {
     ...(error instanceof TeamReadFailureError ? { failure: error.failure } : {}),
   };
 }
+
+export type {
+  PhysicalOutcome,
+  RawReadTask,
+  ReadContinuation,
+} from '../core/application/PhysicalReadScope';
+export { PhysicalReadScope } from '../core/application/PhysicalReadScope';
+export type {
+  DescriptorAcquisition,
+  DescriptorCallbacks,
+  DescriptorLimits,
+} from './infrastructure/OwnedReadDescriptors';
+export { OwnedReadDescriptors } from './infrastructure/OwnedReadDescriptors';
+export type { OwnedUtf8ReadOptions } from './infrastructure/readOwnedUtf8';
+export { readOwnedUtf8 } from './infrastructure/readOwnedUtf8';
+export type { OwnedSyncOptions, OwnedSyncReport } from './infrastructure/syncOwnedPath';
+export { syncOwnedPath } from './infrastructure/syncOwnedPath';
+export { type OwnedWriteOptions, writeOwnedBytes } from './infrastructure/writeOwnedBytes';
