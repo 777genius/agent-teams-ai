@@ -243,7 +243,14 @@ export async function commitProviderConfigWithCredential(input: {
     throw error;
   }
   if (input.previousApiKeyReference && input.previousApiKeyReference !== absoluteReference) {
-    if (!committedTree || containsStringReference(committedTree, input.previousApiKeyReference)) {
+    if (
+      !committedTree ||
+      containsStringReference(
+        committedTree,
+        input.previousApiKeyReference,
+        staged.credentialDirectory
+      )
+    ) {
       return;
     }
     await removeManagedProviderCredential(
@@ -257,10 +264,20 @@ export async function commitProviderConfigWithCredential(input: {
   }
 }
 
-function containsStringReference(node: JsoncNode, reference: string): boolean {
+function containsStringReference(
+  node: JsoncNode,
+  reference: string,
+  credentialDirectory: string
+): boolean {
+  const value = readStringNode(node);
+  const filename = parseManagedProviderCredentialFilename(credentialDirectory, reference);
   return (
-    readStringNode(node) === reference ||
-    (node.children?.some((child) => containsStringReference(child, reference)) ?? false)
+    value === reference ||
+    (filename !== null &&
+      typeof value === 'string' &&
+      parseManagedProviderCredentialFilename(credentialDirectory, value) === filename) ||
+    (node.children?.some((child) => containsStringReference(child, reference, credentialDirectory)) ??
+      false)
   );
 }
 
@@ -291,6 +308,17 @@ async function removeManagedProviderCredential(
     readonly providerId: string;
   }
 ): Promise<void> {
+  const filename = parseManagedProviderCredentialFilename(credentialDirectory, reference);
+  if (!filename || !isOwnedProviderApiKeyFilename(filename, owner)) return;
+  const credentialPath = path.join(credentialDirectory, filename);
+  const stat = await fs.lstat(credentialPath);
+  if (!stat.isSymbolicLink() && stat.isFile()) await fs.unlink(credentialPath);
+}
+
+function parseManagedProviderCredentialFilename(
+  credentialDirectory: string,
+  reference: string
+): string | null {
   const legacyFilename = parseProviderApiKeyFilename(reference);
   const absolutePath =
     reference.startsWith('{file:') && reference.endsWith('}')
@@ -302,11 +330,7 @@ async function removeManagedProviderCredential(
     path.resolve(path.dirname(absolutePath)) === path.resolve(credentialDirectory)
       ? path.basename(absolutePath)
       : null;
-  const filename = legacyFilename ?? absoluteFilename;
-  if (!filename || !isOwnedProviderApiKeyFilename(filename, owner)) return;
-  const credentialPath = path.join(credentialDirectory, filename);
-  const stat = await fs.lstat(credentialPath);
-  if (!stat.isSymbolicLink() && stat.isFile()) await fs.unlink(credentialPath);
+  return legacyFilename ?? absoluteFilename;
 }
 
 function isOwnedProviderApiKeyFilename(

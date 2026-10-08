@@ -172,6 +172,44 @@ describe('OpenCodeLocalProviderSupport', () => {
     expect(await fs.readFile(credentialPath, 'utf8')).toBe('owned-secret');
   });
 
+  it.each(['absolute', 'legacy'] as const)(
+    'preserves a credential shared through the alternate alias when rotating a %s reference',
+    async (previousAlias) => {
+      const legacyReference = createProviderApiKeyReference({
+        configPath,
+        providerId: 'owned-provider',
+      });
+      await stageCredential(legacyReference, 'shared-secret');
+      const credentialPath = await fs.realpath(resolveCredentialPath(legacyReference));
+      const absoluteReference = `{file:${credentialPath}}`;
+      const previousReference = previousAlias === 'absolute' ? absoluteReference : legacyReference;
+      const sharedReference = previousAlias === 'absolute' ? legacyReference : absoluteReference;
+      const nextReference = createProviderApiKeyReference({
+        configPath,
+        providerId: 'owned-provider',
+      });
+      await commitProviderConfigWithCredential({
+        homePath: tempDir,
+        configPath,
+        providerId: 'owned-provider',
+        apiKey: 'next-secret',
+        apiKeyReference: nextReference,
+        previousApiKeyReference: previousReference,
+        contents: JSON.stringify({
+          provider: {
+            'owned-provider': { options: { apiKey: nextReference } },
+            'shared-provider': { options: { apiKey: sharedReference } },
+          },
+        }),
+        mode: 0o600,
+      });
+
+      expect(await fs.readFile(credentialPath, 'utf8')).toBe('shared-secret');
+      const committed = parse(await fs.readFile(configPath, 'utf8')) as ProviderConfig;
+      expect(committed.provider['shared-provider'].options.apiKey).toBe(sharedReference);
+    }
+  );
+
   it('preserves a shared absolute reference encoded with JSON escapes', async () => {
     const reference = createProviderApiKeyReference({
       configPath,
