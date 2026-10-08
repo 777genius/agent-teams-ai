@@ -434,6 +434,22 @@ describe('MCP team tools over the local REST control API', () => {
         })
       ) as { change: { kind: string; context: unknown } };
       expect(created.change).toMatchObject({ kind: 'created', context: expectedContext });
+      const metaPath = path.join(root, 'teams', teamName, 'team.meta.json');
+      const rawMeta = JSON.parse(await readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      await writeFile(
+        metaPath,
+        JSON.stringify({
+          ...rawMeta,
+          launchIdentity: {
+            providerId: 'codex',
+            providerBackendId: ' api ',
+            selectedModelKind: 'explicit',
+            selectedModel: ' test-model ',
+            catalogSource: 'app-server',
+            billingMode: null,
+          },
+        })
+      );
       const initial = await get();
       expect(initial.savedRequest).toMatchObject({
         runtimeSelectionVersion: 1,
@@ -448,6 +464,12 @@ describe('MCP team tools over the local REST control API', () => {
       ) as { configurationRevision: string; change: { changedFields: string[] } };
       expect(edited.change.changedFields).toEqual(['displayName', 'description']);
       expect(edited.configurationRevision).not.toBe(initial.configurationRevision);
+      expect((await new TeamMetaStore().getMeta(teamName))?.launchIdentity).toMatchObject({
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        selectedModel: 'test-model',
+        catalogSource: 'app-server',
+      });
       const stale = await app.inject({
         method: 'POST',
         url: `/api/teams/${teamName}/update`,
@@ -470,9 +492,11 @@ describe('MCP team tools over the local REST control API', () => {
       expect(noOp.changed).toBe(false);
       expect(events).toHaveLength(2);
       const savedMember = (await new TeamMembersMetaStore().getMembers(teamName))[0];
-      await new TeamMembersMetaStore().writeMembers(teamName, [
-        { ...savedMember, agentId: 'old-builder-id', cwd: '/sandbox/worktree' },
-      ]);
+      await new TeamMembersMetaStore().writeMembers(
+        teamName,
+        [{ ...savedMember, agentId: 'old-builder-id', cwd: '/sandbox/worktree' }],
+        { providerBackendId: 'api' }
+      );
       let snapshot = await get();
       await getTool('team_update').execute({
         ...base,
@@ -488,6 +512,8 @@ describe('MCP team tools over the local REST control API', () => {
         mcpPolicy: { mode: 'appOnly' },
         role: 'Reviewer',
       });
+      // File-level backend is a saved launch fallback, independent of per-member backend migration.
+      expect((await new TeamMembersMetaStore().getMeta(teamName))?.providerBackendId).toBe('api');
       snapshot = await get();
       await getTool('team_update').execute({
         ...base,
@@ -621,6 +647,17 @@ describe('MCP team tools over the local REST control API', () => {
         ['invalid-tombstone', { name: 'removed-builder', agentId: 'historical', removedAt: '1' }],
         ['duplicate-identity', { name: 'Builder', agentId: 'historical', removedAt: 1 }],
         ['suppressed-alias', { name: 'builder-2', agentId: 'historical-alias', removedAt: 1 }],
+        ['invalid-role', { name: 'other', role: 123 }],
+        ['invalid-provider', { name: 'other', providerId: 'future' }],
+        ['invalid-mode', { name: 'other', fastMode: 'turbo' }],
+        [
+          'invalid-mcp-scope',
+          { name: 'other', mcpPolicy: { mode: 'strictAllowlist', scopes: { project: 'false' } } },
+        ],
+        [
+          'invalid-mcp-server',
+          { name: 'other', mcpPolicy: { mode: 'strictAllowlist', serverNames: ['valid', 123] } },
+        ],
       ] as const
     ).map(([label, damaged]): [string, string] => [
       label,
@@ -638,6 +675,11 @@ describe('MCP team tools over the local REST control API', () => {
         ],
       }),
     ]),
+    [
+      'invalid-wrapper-backend',
+      JSON.stringify({ version: 1, providerBackendId: 123, members: [] }),
+    ],
+    ['invalid-wrapper-version', JSON.stringify({ version: 2, members: [] })],
   ])('rejects %s member metadata without rewriting saved files', async (_label, unreadable) => {
     const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-unreadable-'));
     setClaudeBasePathOverride(root);
@@ -657,7 +699,7 @@ describe('MCP team tools over the local REST control API', () => {
       const ordinary = await app.inject({ method: 'GET', url: `/api/teams/${teamName}` });
       expect(ordinary.statusCode).toBe(200);
       expect(ordinary.json()).not.toHaveProperty('configurationRevision');
-      if (_label !== 'malformed' && _label !== 'oversized')
+      if (!_label.startsWith('invalid-wrapper') && _label !== 'malformed' && _label !== 'oversized')
         expect(ordinary.json().savedRequest.members).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
@@ -863,6 +905,97 @@ describe('MCP team tools over the local REST control API', () => {
       if (timeout) clearTimeout(timeout);
       release?.();
       await operation;
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Catches canonical normalization silently discarding known launch fields before a narrow edit
+  // rewrites team metadata; includes nested identity defaults and typed normalization failures.
+  it.each([
+    { createdAt: 'yesterday' },
+    { createdAt: null },
+    { skipPermissions: 'false' },
+    { providerId: 'future-provider' },
+    { runtimeSelectionVersion: 2 },
+    {
+      launchIdentity: {
+        providerId: 'codex',
+        selectedModelKind: 'explicit',
+        resolvedFastMode: 'false',
+      },
+    },
+    {
+      launchIdentity: {
+        providerId: 'codex',
+        selectedModelKind: 'explicit',
+        catalogSource: 'future-source',
+      },
+    },
+  ])('rejects malformed known team metadata %j without narrow edits or trash', async (damaged) => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-meta-fidelity-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'malformed-team-metadata';
+    const directory = path.join(root, 'teams', teamName);
+    const metaPath = path.join(directory, 'team.meta.json');
+    const membersPath = path.join(directory, 'members.meta.json');
+    try {
+      await teamDataService.createTeamConfig({
+        teamName,
+        cwd: root,
+        members: [{ name: 'builder', role: 'Engineer' }],
+        runtimeSelectionVersion: 1,
+        providerId: 'codex',
+        prompt: 'Saved lead instructions',
+      });
+      const initial = await services.teamPromptManagement!.get(teamName);
+      const meta = JSON.parse(await readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      const persisted = JSON.stringify({ ...meta, ...damaged });
+      const membersBytes = await readFile(membersPath);
+      await writeFile(metaPath, persisted);
+      const get = await app.inject({
+        method: 'GET',
+        url: `/api/teams/${teamName}?configuration=1`,
+      });
+      expect(get.statusCode).toBe(409);
+      expect(get.json<{ error: string }>().error).toContain('TEAM_CONFIGURATION_UNREADABLE');
+      const target = {
+        expectedContext: context.snapshot(),
+        expectedRevision: initial.configurationRevision,
+      };
+      for (const edit of [
+        { metadata: { description: 'Must not write' } },
+        { leadInstructions: 'Must not write' },
+      ]) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: { ...target, ...edit },
+        });
+        expect(response.statusCode).toBe(409);
+        expect(response.json<{ code: string }>().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
+      }
+      const trash = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/trash`,
+        payload: target,
+      });
+      expect(trash.statusCode).toBe(409);
+      expect(trash.json<{ code: string }>().code).toBe('TEAM_CONFIGURATION_UNREADABLE');
+      expect(await readFile(metaPath, 'utf8')).toBe(persisted);
+      expect(await readFile(membersPath)).toEqual(membersBytes);
+      await expect(readFile(path.join(directory, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+      expect(events).toHaveLength(0);
+    } finally {
       await app.close();
       setAppDataBasePath(null);
       setClaudeBasePathOverride(null);

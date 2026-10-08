@@ -2,13 +2,19 @@ import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRea
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
+import {
+  normalizeTeamMemberMcpPolicy,
+  normalizeTeamMemberMcpScopes,
+  normalizeTeamMemberMcpServerNames,
+  TEAM_MEMBER_MCP_SCOPES,
+} from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
 import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
 import type { TeamMember } from '@shared/types';
@@ -61,6 +67,44 @@ function normalizeMember(member: TeamMember): TeamMember | null {
   };
 }
 
+/** Strict replacement reads reject malformed known values, while retaining canonical defaults. */
+function hasCompleteMcpPolicy(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  if (input.mode !== 'inheritLead' && !normalizeTeamMemberMcpPolicy({ mode: input.mode }))
+    return false;
+  if (input.scopes != null) {
+    if (typeof input.scopes !== 'object' || Array.isArray(input.scopes)) return false;
+    const scopes = input.scopes as Record<string, unknown>;
+    const normalized = normalizeTeamMemberMcpScopes(scopes);
+    if (
+      TEAM_MEMBER_MCP_SCOPES.some(
+        (scope) => scopes[scope] != null && scopes[scope] !== normalized?.[scope]
+      )
+    )
+      return false;
+  }
+  if (input.serverNames != null) {
+    if (!Array.isArray(input.serverNames)) return false;
+    const names = new Set<string>();
+    for (const name of input.serverNames) {
+      if (typeof name !== 'string' || name.trim().length > 128) return false;
+      if (name.trim()) names.add(name.trim().toLowerCase());
+    }
+    if (names.size !== (normalizeTeamMemberMcpServerNames(input.serverNames)?.length ?? 0))
+      return false;
+  }
+  return true;
+}
+
+function hasCompleteKnownMemberFields(member: TeamMember, normalized: TeamMember): boolean {
+  return (
+    hasCompleteKnownMetadata({ ...member, mcpPolicy: undefined }, normalized) &&
+    hasCompleteMcpPolicy(member.mcpPolicy)
+  );
+}
+
 function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: string) => boolean {
   const activeNames = Array.from(membersByName.values())
     .filter((member) => !member.removedAt)
@@ -73,7 +117,7 @@ export class TeamMembersMetaStore {
     return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
   }
 
-  /** Management may require every persisted member identity and lifecycle marker to survive read. */
+  /** Management replacement requires every recognized member value to survive canonical read. */
   async getMeta(
     teamName: string,
     options?: { requireCompleteMembers?: boolean }
@@ -117,6 +161,12 @@ export class TeamMembersMetaStore {
     if (!Array.isArray(file.members)) {
       return null;
     }
+    if (
+      options?.requireCompleteMembers &&
+      ((file.version != null && file.version !== 1) ||
+        (file.providerBackendId != null && typeof file.providerBackendId !== 'string'))
+    )
+      return null;
 
     const deduped = new Map<string, TeamMember>();
     const identities = options?.requireCompleteMembers ? new Set<string>() : undefined;
@@ -125,18 +175,13 @@ export class TeamMembersMetaStore {
         if (options?.requireCompleteMembers) return null;
         continue;
       }
-      if (
-        options?.requireCompleteMembers &&
-        [item.removedAt, item.joinedAt].some(
-          (value) => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))
-        )
-      )
-        return null;
       const normalized = normalizeMember(item);
       if (!normalized) {
         if (options?.requireCompleteMembers) return null;
         continue;
       }
+      if (options?.requireCompleteMembers && !hasCompleteKnownMemberFields(item, normalized))
+        return null;
       const identity = normalized.name.toLowerCase();
       if (identities?.has(identity)) return null;
       identities?.add(identity);

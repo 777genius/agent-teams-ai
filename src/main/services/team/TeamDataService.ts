@@ -2003,7 +2003,8 @@ export class TeamDataService {
     teamName: string,
     request: ReplaceMembersRequest
   ): Promise<void> {
-    const existing = await this.membersMetaStore.getMembers(teamName);
+    const existingMeta = await this.membersMetaStore.getMeta(teamName);
+    const existing = existingMeta?.members ?? [];
     const existingLead = existing.find(isLeadMember) ?? null;
     const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
     const joinedAt = Date.now();
@@ -2085,7 +2086,9 @@ export class TeamDataService {
         out.unshift({ ...existingLead, removedAt: undefined });
       }
     }
-    await this.membersMetaStore.writeMembers(teamName, out);
+    await this.membersMetaStore.writeMembers(teamName, out, {
+      providerBackendId: existingMeta?.providerBackendId,
+    });
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {

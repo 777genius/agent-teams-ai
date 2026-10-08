@@ -81,6 +81,7 @@ export class TeamPromptManagement {
     revision: string;
     config: Record<string, unknown> | null;
     membersMetadataPresent: boolean;
+    teamMetadataPresent: boolean;
   }> {
     const directory = join(getTeamsBasePath(), teamName);
     let identity;
@@ -123,7 +124,12 @@ export class TeamPromptManagement {
       if (content !== null) hash.update(content);
     }
     const revision = hash.digest('hex');
-    return { revision, config, membersMetadataPresent: contents[2] !== null };
+    return {
+      revision,
+      config,
+      membersMetadataPresent: contents[2] !== null,
+      teamMetadataPresent: contents[1] !== null,
+    };
   }
 
   /** A single handle bounds both initial size and bytes read if the file grows after stat. */
@@ -169,11 +175,15 @@ export class TeamPromptManagement {
 
   private async read(teamName: string): Promise<ConfigurationSnapshot> {
     const before = await this.fingerprint(teamName);
-    const [meta, membersMeta, savedRequest] = await Promise.all([
-      this.metaStore.getMeta(teamName),
+    const [meta, membersMeta] = await Promise.all([
+      this.metaStore.getMeta(teamName, undefined, { requireCompleteFields: true }),
       this.membersStore.getMeta(teamName, { requireCompleteMembers: true }),
-      this.ports.getSavedRequest(teamName),
     ]);
+    if (before.teamMetadataPresent && !meta)
+      throw new TeamManagementError(
+        'TEAM_CONFIGURATION_UNREADABLE',
+        'Saved team metadata is unreadable. Repair it before changing configuration'
+      );
     if (before.membersMetadataPresent && !membersMeta)
       throw new TeamManagementError(
         'TEAM_MEMBERS_METADATA_UNREADABLE',
@@ -181,6 +191,7 @@ export class TeamPromptManagement {
       );
     if (!before.config && !meta)
       throw new TeamManagementError('TEAM_UNSUPPORTED', 'No supported saved team configuration');
+    const savedRequest = await this.ports.getSavedRequest(teamName);
     const after = await this.fingerprint(teamName);
     if (before.revision !== after.revision)
       throw new TeamManagementError(

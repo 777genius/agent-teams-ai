@@ -1452,8 +1452,10 @@ function createDurableTaskStartNotificationHarness(options: {
 describe('TeamDataService', () => {
   it('rejects duplicate member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1486,8 +1488,10 @@ describe('TeamDataService', () => {
 
   it('rejects invalid or reserved member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1523,19 +1527,25 @@ describe('TeamDataService', () => {
 
   it('preserves agentId for existing members during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+        effort: 'medium',
+        agentType: 'general-purpose',
+        agentId: 'alice@runtime-team',
+        joinedAt: 1710000000000,
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Developer',
-          providerId: 'codex',
-          model: 'gpt-5.4-mini',
-          effort: 'medium',
-          agentType: 'general-purpose',
-          agentId: 'alice@runtime-team',
-          joinedAt: 1710000000000,
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: await getMembers(),
+      })),
       writeMembers,
     } as never;
 
@@ -1577,14 +1587,17 @@ describe('TeamDataService', () => {
           effort: 'high',
           agentId: 'alice@runtime-team',
         }),
-      ])
+      ]),
+      { providerBackendId: 'codex-native' }
     );
   });
 
   it('persists teammate worktree isolation in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1621,12 +1634,17 @@ describe('TeamDataService', () => {
       isolation: 'worktree',
     });
     expect(writtenMembers.find((member) => member.name === 'bob')?.isolation).toBeUndefined();
+    expect(writeMembers).toHaveBeenCalledWith('runtime-team', writtenMembers, {
+      providerBackendId: undefined,
+    });
   });
 
   it('persists member-level provider backend and fast mode during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1672,7 +1690,8 @@ describe('TeamDataService', () => {
           effort: 'high',
           fastMode: 'on',
         }),
-      ])
+      ]),
+      { providerBackendId: undefined }
     );
   });
 
@@ -1723,8 +1742,10 @@ describe('TeamDataService', () => {
 
   it('allows multiple OpenCode teammates in replaceMembers drafts before they are persisted', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1756,6 +1777,14 @@ describe('TeamDataService', () => {
     ).resolves.toBeUndefined();
 
     expect(writeMembers).toHaveBeenCalledTimes(1);
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', providerId: 'opencode' }),
+        expect.objectContaining({ name: 'bob', providerId: 'opencode' }),
+      ]),
+      { providerBackendId: undefined }
+    );
   });
 
   it('blocks live addMember on a running mixed team', async () => {
@@ -1820,16 +1849,18 @@ describe('TeamDataService', () => {
 
   it('blocks live replaceMembers on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Reviewer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+        agentType: 'general-purpose',
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Reviewer',
-          providerId: 'opencode',
-          model: 'minimax-m2.5-free',
-          agentType: 'general-purpose',
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1926,20 +1957,22 @@ describe('TeamDataService', () => {
 
   it('does not carry over agentId from a previously removed member with the same name', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+        effort: 'medium',
+        agentType: 'general-purpose',
+        agentId: 'alice@old-runtime-team',
+        joinedAt: 1710000000000,
+        removedAt: 1715000000000,
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Developer',
-          providerId: 'codex',
-          model: 'gpt-5.4-mini',
-          effort: 'medium',
-          agentType: 'general-purpose',
-          agentId: 'alice@old-runtime-team',
-          joinedAt: 1710000000000,
-          removedAt: 1715000000000,
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1982,7 +2015,8 @@ describe('TeamDataService', () => {
           agentId: undefined,
           removedAt: undefined,
         }),
-      ])
+      ]),
+      { providerBackendId: undefined }
     );
   });
 
