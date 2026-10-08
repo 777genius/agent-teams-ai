@@ -14,7 +14,7 @@ on:
       - '.github/workflows/updater-windows.yml'
       - 'scripts/e2e/release-updater/serialized-function*.mts'
       - 'scripts/ci/release/contract.ts'
-      - 'tsconfig.updater-e2e.json'
+      - 'scripts/tsconfig/tsconfig.updater-e2e.json'
       - 'tsconfig.json'
       - 'package.json'
       - 'pnpm-lock.yaml'

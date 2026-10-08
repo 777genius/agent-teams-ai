@@ -276,7 +276,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .eslintcache-${{ matrix.scope }}
-          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
+          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'scripts/tsconfig/*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
 
       - name: Lint source shard
         run: pnpm lint:ci:files ${{ matrix.paths }} --cache-location .eslintcache-${{ matrix.scope }}

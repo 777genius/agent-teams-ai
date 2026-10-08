@@ -9,7 +9,7 @@ on:
       - 'scripts/e2e/release-updater/inputs.mts'
       - 'scripts/ci/release/contract.ts'
       - '.github/workflows/prepare-updater-native-inputs.yml'
-      - 'tsconfig.updater-e2e.json'
+      - 'scripts/tsconfig/tsconfig.updater-e2e.json'
       - 'tsconfig.json'
       - 'package.json'
       - 'pnpm-lock.yaml'

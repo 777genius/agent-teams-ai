@@ -3,7 +3,7 @@
 The Electron packaged CI workflow keeps its five platform jobs and existing native,
 runtime, architecture, SQLite/PTY, MCP, minimum macOS and application smoke checks.
 Its existing path filter remains in place, with the policy scripts and dedicated
-`tsconfig.packaged-ci.json` added for self-validation. This is not a repository-wide
+`scripts/tsconfig/tsconfig.packaged-ci.json` added for self-validation. This is not a repository-wide
 packaging check, and release packaging is unchanged.
 
 Each platform typechecks the policy and its tests with the project's pinned native
@@ -60,7 +60,7 @@ Lightweight policy checks (no app or agent launch):
 node --test scripts/ci/packaged-ci-policy.test.mts
 ELECTRON_BUILDER_DIST_DRY_RUN=1 node scripts/electron-builder/dist.mjs --mac --arm64 --publish never --dir
 ELECTRON_BUILDER_DIST_DRY_RUN=1 node scripts/electron-builder/dist.mjs --mac --x64 --publish never --dir
-node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.packaged-ci.json
+node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
 ```
 
 Any live canary must use a newly created sandbox/test repository or an explicitly

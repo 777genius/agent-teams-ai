@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/workflows/electron-packaged-ci.yml'
       - 'scripts/ci/packaged-ci-*.mts'
-      - 'tsconfig.packaged-ci.json'
+      - 'scripts/tsconfig/tsconfig.packaged-ci.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -115,7 +115,7 @@ jobs:
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Typecheck packaged CI policy with pinned compiler
-        run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.packaged-ci.json
+        run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
         run: node -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"
       - name: Verify native rebuild

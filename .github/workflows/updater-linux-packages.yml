@@ -14,7 +14,7 @@ on:
       - 'scripts/ci/release/contract.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
-      - 'tsconfig.updater-e2e.json'
+      - 'scripts/tsconfig/tsconfig.updater-e2e.json'
   workflow_dispatch:
     inputs:
       mode:

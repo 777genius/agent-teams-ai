@@ -545,7 +545,7 @@ try {
   };
   if (!workerRejectLogs.length) (evidence.limitations as string[]).push('Actual worker rejection was not observed; worker coverage is not claimed by this desktop result.');
   const files = ['scripts/e2e/sentry-inbox-provenance/run.mts', 'scripts/e2e/sentry-inbox-provenance/renderer.mts',
-    'scripts/e2e/sentry-inbox-provenance/fixtures.mts', 'tsconfig.sentry-inbox-e2e.json',
+    'scripts/e2e/sentry-inbox-provenance/fixtures.mts', 'scripts/tsconfig/tsconfig.sentry-e2e.json', 'scripts/tsconfig/e2e-base.json',
     'package.json', 'scripts/e2e/release-updater/cdp.mts', 'scripts/e2e/release-updater/native-window.mts',
     'src/renderer/store/team/teamMessagesProvenance.ts', 'src/renderer/store/team/teamMessagesCache.ts',
     'src/renderer/components/team/messages/useMessagesPanelChats.ts', 'src/renderer/components/team/messages/MessagesPanel.tsx',
