@@ -67,14 +67,14 @@ assert(upload[0]);
 const uploadLog = path.join(output, 'reuse-upload.log');
 await planCommand(
   'gh',
-  ['api', `repos/${repository}/actions/jobs/${upload[0].id}/logs`],
+  ['api', '--allow-escape-sequences', `repos/${repository}/actions/jobs/${upload[0].id}/logs`],
   uploadLog
 );
 validateW11DiagnosticUpload(upload[0], artifact.created_at, await readFile(uploadLog, 'utf8'));
 const zip = path.join(output, 'reuse.zip');
 await planCommand(
   'gh',
-  ['api', `repos/${repository}/actions/artifacts/${artifact.id}/zip`],
+  ['api', '--allow-escape-sequences', `repos/${repository}/actions/artifacts/${artifact.id}/zip`],
   zip,
   900_000
 );
