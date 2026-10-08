@@ -16,13 +16,14 @@ export async function waitFor<T>(read: () => Promise<T | null | false>, label: s
 export class Cdp {
   private id = 0;
   readonly events: Message[] = [];
+  private readonly listeners = new Set<(event: Message) => void>();
   private readonly pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
   private readonly socket: WebSocket;
   private constructor(socket: WebSocket) {
     this.socket = socket;
     socket.addEventListener('message', event => {
       const message = JSON.parse(String(event.data)) as Message;
-      if (message.id === undefined) { this.events.push(message); return; }
+      if (message.id === undefined) { this.events.push(message); for (const listener of this.listeners) listener(message); return; }
       const pending = this.pending.get(message.id);
       if (!pending) return;
       clearTimeout(pending.timer);
@@ -53,6 +54,10 @@ export class Cdp {
       this.pending.set(id, { resolve: value => resolve(value as T), reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
+  }
+  onEvent(listener: (event: Message) => void) {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
   }
   async evaluate<T>(expression: string, callFrameId?: string): Promise<T> {
     const result = await this.send<Evaluation<T>>(callFrameId ? 'Debugger.evaluateOnCallFrame' : 'Runtime.evaluate', {

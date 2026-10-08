@@ -230,7 +230,61 @@ export async function packagePausedEntry(connection: Cdp, pid: number) {
   assert.equal(await connection.evaluate<number>('process.pid', frame.callFrameId), pid);
   return { frame, entry };
 }
-export async function resumeSealedInspector(candidate: Identity, seal: AutomaticLaunchSeal) {
+export async function resumeConfiguredPackage(
+  verify: () => Promise<unknown>,
+  configure: () => Promise<void>,
+  resume: () => Promise<unknown>,
+  observe: () => Promise<void>
+) {
+  await verify();
+  await configure();
+  await verify();
+  await resume();
+  await observe();
+  await verify();
+}
+export interface AutomaticFeedProof {
+  pid: number;
+  start: string;
+  events: { type: string; version?: string; message?: string }[];
+  statuses: { type: string; error?: string }[];
+  installerGets: number;
+}
+export function assertAutomaticNoUpdate(
+  owner: Identity,
+  version: string,
+  proof: AutomaticFeedProof
+) {
+  assert.equal(proof.pid, owner.pid, 'No-update belongs to another process');
+  assert.equal(proof.start, owner.start, 'No-update process generation changed');
+  assert(!proof.events.some((event) => event.type === 'error'), 'Automatic updater reported error');
+  assert(
+    !proof.statuses.some((status) => status.type === 'error' || status.error),
+    'Automatic IPC reported error'
+  );
+  assert(
+    proof.events.some(
+      (event) => event.type === 'update-not-available' && event.version === version
+    ),
+    'Automatic target no-update missing'
+  );
+  assert(
+    proof.statuses.some((status) => status.type === 'not-available'),
+    'Actual automatic IPC no-update missing'
+  );
+  assert.equal(proof.installerGets, 0, 'Automatic target requested an installer');
+}
+export async function resumeSealedInspector(
+  candidate: Identity,
+  seal: AutomaticLaunchSeal,
+  callbacks: {
+    configure: (
+      connection: Cdp,
+      entry: Awaited<ReturnType<typeof packagePausedEntry>>
+    ) => Promise<void>;
+    observe: (connection: Cdp) => Promise<void>;
+  }
+) {
   await sealedKernelProof(candidate, seal);
   const target = await waitFor(async () => {
     const response = await fetch(`http://127.0.0.1:${seal.launch.inspectorPort}/json/list`, {
@@ -252,8 +306,12 @@ export async function resumeSealedInspector(candidate: Identity, seal: Automatic
       entry.entry,
       path.join(path.dirname(executable), 'resources/app.asar/dist-electron/main/index.cjs')
     );
-    await sealedKernelProof(candidate, seal);
-    await connection.send('Debugger.resume');
+    await resumeConfiguredPackage(
+      () => sealedKernelProof(candidate, seal),
+      () => callbacks.configure(connection, entry),
+      () => connection.send('Debugger.resume'),
+      () => callbacks.observe(connection)
+    );
     return entry;
   } finally {
     connection.close();

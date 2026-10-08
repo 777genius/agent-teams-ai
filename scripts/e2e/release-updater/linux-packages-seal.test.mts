@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   assertRuntimeSeal,
+  assertAutomaticNoUpdate,
+  resumeConfiguredPackage,
   decodeProcCommand,
   exactSealedCommand,
   packageLaunchSeal,
@@ -142,4 +144,76 @@ await test('seal snapshots are detached from mutable launch observations', () =>
   raw.execArgv.length = 0;
   assert(exactSealedCommand(command, frozen));
   assertRuntimeSeal({ ...runtime, pid: 567 }, frozen, 567);
+});
+
+// A late transport callback lets the automatic app hit the offline real feed.
+// A diagnostic PID or a terminal no-update cannot erase an earlier error.
+await test('automatic transport is awaited between ownership checks before resume', async () => {
+  const steps: string[] = [];
+  let configured = false;
+  await resumeConfiguredPackage(
+    async () => {
+      steps.push('verify');
+    },
+    async () => {
+      await Promise.resolve();
+      configured = true;
+      steps.push('configure');
+    },
+    async () => {
+      assert(configured);
+      steps.push('resume');
+    },
+    async () => {
+      steps.push('observe');
+    }
+  );
+  assert.deepEqual(steps, ['verify', 'configure', 'verify', 'resume', 'observe', 'verify']);
+});
+await test('configuration or changed ownership prevents automatic resume and observation', async () => {
+  for (const failure of ['configure', 'recheck']) {
+    let checks = 0,
+      resumed = false,
+      observed = false;
+    await assert.rejects(
+      resumeConfiguredPackage(
+        async () => {
+          if (++checks === 2 && failure === 'recheck') throw new Error('PID reused');
+        },
+        async () => {
+          if (failure === 'configure') throw new Error('Mirror failed');
+        },
+        async () => {
+          resumed = true;
+        },
+        async () => {
+          observed = true;
+        }
+      )
+    );
+    assert.equal(resumed, false);
+    assert.equal(observed, false);
+  }
+});
+await test('only same automatic PID generation and error-free real no-update qualifies', () => {
+  const owner = { pid: 410, group: 410, start: '246406', state: 'S' };
+  const proof = {
+    pid: 410,
+    start: '246406',
+    events: [{ type: 'update-not-available', version: '2.17.10' }],
+    statuses: [{ type: 'not-available' }],
+    installerGets: 0,
+  };
+  assertAutomaticNoUpdate(owner, '2.17.10', proof);
+  for (const patch of [
+    { pid: 635 },
+    { start: '247772' },
+    { events: [] },
+    { statuses: [] },
+    { installerGets: 1 },
+    { events: [...proof.events, { type: 'error', message: 'net::ERR_INTERNET_DISCONNECTED' }] },
+    { statuses: [{ type: 'error', error: 'No handler registered' }, ...proof.statuses] },
+    { events: [{ type: 'update-not-available', version: '2.17.1' }] },
+  ])
+    assert.throws(() => assertAutomaticNoUpdate(owner, '2.17.10', { ...proof, ...patch }));
 });

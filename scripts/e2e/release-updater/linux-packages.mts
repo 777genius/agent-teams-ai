@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 
 import { hashFile, stageArguments } from './inputs.mts';
 import { Cdp, waitFor } from './cdp.mts';
+import { waitMacStartupReady } from './mac-startup-readiness.mts';
 import {
   cdpCallFunction,
   cdpSerializedFunction,
@@ -28,6 +29,7 @@ import {
 import { processIdentity, stopOwnedGroup } from './native-window.mts';
 import { transportHook } from './transport.mts';
 import {
+  assertAutomaticNoUpdate,
   automaticLaunchSeal,
   packageLaunchSeal,
   packagePausedEntry as pausedEntry,
@@ -652,7 +654,114 @@ try {
       evidence.automaticProcess = successor;
       // Electron app.relaunch can preserve inspect-brk arguments. Resume only
       // this updater-created PID; never manually spawn it before native proof.
-      evidence.automaticEntry = await resumeSealedInspector(successor, seal);
+      const automaticMirror = mirror;
+      const automaticRequestStart = automaticMirror.requests.length;
+      evidence.automaticEntry = await resumeSealedInspector(successor, seal, {
+        configure: async (connection, entry) => {
+          await cdpCallFunction(
+            connection,
+            `(()=>{const originalRequire=require;const getUpdater=()=>autoUpdater;return (origin,paths)=>{(${cdpSerializedFunction(transportHook)})(originalRequire('electron'),getUpdater,origin,paths);(${cdpSerializedFunction(observePackage)})(originalRequire('electron'),getUpdater);globalThis.__TEST_automaticErrors=[];originalRequire('electron').app.once('ready',()=>getUpdater().on('error',error=>globalThis.__TEST_automaticErrors.push({type:'error',message:error.message,code:error.code??null,capturedAt:new Date().toISOString()})));};})()`,
+            [automaticMirror.origin, automaticMirror.paths],
+            entry.frame.callFrameId
+          );
+        },
+        observe: async (connection) => {
+          const page = await waitFor(
+            async () =>
+              (
+                await targets(
+                  Number(
+                    seal.launch.command
+                      .find((item) => item.startsWith('--remote-debugging-port='))
+                      ?.split('=')[1]
+                  )
+                )
+              )?.find((item) => item.type === 'page' && item.url.startsWith('file:')) ?? null,
+            'automatic successor renderer'
+          );
+          const automaticRenderer = await Cdp.connect(page.webSocketDebuggerUrl);
+          try {
+            await waitFor(
+              () =>
+                automaticRenderer.evaluate<boolean | null>(
+                  'document.readyState==="complete"&&window.electronAPI?.updater?.onStatus?true:null'
+                ),
+              'automatic successor public updater'
+            );
+            await automaticRenderer.evaluate(
+              `(()=>{globalThis.__TEST_automaticStatuses=[];window.electronAPI.updater.onStatus((_event,status)=>globalThis.__TEST_automaticStatuses.push({...status,capturedAt:new Date().toISOString()}));})()`
+            );
+            evidence.automaticStartup = await waitMacStartupReady(automaticRenderer, targetVersion);
+            await automaticRenderer.evaluate(
+              `window.electronAPI.updater.check().catch(error=>globalThis.__TEST_automaticStatuses.push({type:'error',error:String(error),capturedAt:new Date().toISOString()}))`
+            );
+            const terminal = await waitFor(async () => {
+              const observation = await connection.evaluate<{
+                pid: number;
+                events: UpdateEvent[];
+                earlyErrors: {
+                  type: string;
+                  message: string;
+                  code: string | null;
+                  capturedAt: string;
+                }[];
+                transport: TransportState;
+              }>(
+                '({pid:process.pid,events:globalThis.__TEST_packageEvents,earlyErrors:globalThis.__TEST_automaticErrors,transport:globalThis.__TEST_nativeUpdater})'
+              );
+              evidence.automaticObservation = {
+                ...observation,
+                capturedAt: new Date().toISOString(),
+              };
+              assert.equal(observation.transport.error, undefined);
+              assert.equal(observation.transport.roots?.version, targetVersion);
+              assert.deepEqual(observation.transport.bound, ['default', 'electron-updater']);
+              const statuses = await automaticRenderer.evaluate<
+                { type: string; error?: string; capturedAt: string }[]
+              >('globalThis.__TEST_automaticStatuses');
+              const identity = await processIdentity(successor.pid);
+              const proof = {
+                pid: observation.pid,
+                start: identity?.start ?? '',
+                events: [
+                  ...observation.events,
+                  ...observation.earlyErrors,
+                  ...observation.transport.events,
+                ],
+                statuses,
+                installerGets: automaticMirror.requests
+                  .slice(automaticRequestStart)
+                  .filter(
+                    (request) =>
+                      request.method === 'GET' && request.path === automaticMirror.installer
+                  ).length,
+              };
+              evidence.automaticFeed = {
+                ...proof,
+                transport: observation.transport,
+                checkedAt: new Date().toISOString(),
+                check:
+                  'Original public updater.check on same automatic PID after onStatus subscription',
+              };
+              if (
+                proof.events.some((event) => event.type === 'error') ||
+                statuses.some((status) => status.type === 'error')
+              )
+                assertAutomaticNoUpdate(successor, targetVersion, proof);
+              return statuses.some((status) => status.type === 'not-available') ? proof : null;
+            }, 'same automatic successor genuine no-update');
+            assertAutomaticNoUpdate(successor, targetVersion, terminal);
+            transportRoutes(false, automaticRequestStart);
+            const body = await automaticRenderer.evaluate<string>('document.body.innerText');
+            assert(
+              !/\bUpdate failed\b/i.test(body),
+              'Automatic successor UI reports update failure'
+            );
+          } finally {
+            automaticRenderer.close();
+          }
+        },
+      });
       evidence.automaticPackage = await installedProof(
         kind,
         targetVersion,

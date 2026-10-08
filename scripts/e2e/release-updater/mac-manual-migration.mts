@@ -11,6 +11,7 @@ import { readAsar } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import { waitMacStartupReady } from './mac-startup-readiness.mts';
 import { macMigrationState } from './mac-migration-state.mts';
+import { attachMacWorkerInspector } from './mac-worker-inspector.mts';
 import { macInputCommand } from './mac-input-artifact.mts';
 import {
   MacCommands,
@@ -102,6 +103,7 @@ let owner: MacIdentity | undefined;
 let child: ReturnType<typeof spawn> | undefined;
 let main: Cdp | undefined;
 let renderer: Cdp | undefined;
+let workerInspector: Awaited<ReturnType<typeof attachMacWorkerInspector>> | undefined;
 let log: ReturnType<typeof createWriteStream> | undefined;
 let logError: Error | undefined;
 let launchRegistered = false;
@@ -164,6 +166,9 @@ async function assertUnmounted() {
   }
 }
 async function stop() {
+  let workerFailure: unknown;
+  try { await workerInspector?.stop(); } catch (error) { workerFailure = error; }
+  workerInspector = undefined;
   renderer?.close();
   main?.close();
   renderer = undefined;
@@ -184,6 +189,7 @@ async function stop() {
   log = undefined;
   child = undefined;
   launchRegistered = false;
+  if (workerFailure) throw workerFailure;
 }
 async function installed(label: string, version: '2.17.1' | '2.17.10') {
   const resources = path.join(app, 'Contents', 'Resources');
@@ -421,6 +427,11 @@ async function launch(
     },
     { home, userData, nodeHome: home, executable, arch: architecture }
   );
+  workerInspector = await attachMacWorkerInspector(
+    main,
+    path.join(app, 'Contents', 'Resources', 'app.asar'),
+    (receipts) => writeFile(path.join(launchOutput, 'worker-inspector.json'), `${canonical(receipts)}\n`)
+  );
   await main.send('Debugger.resume');
   const page = await waitFor(
     async () =>
@@ -462,7 +473,7 @@ async function launch(
     version,
     packaged: true,
   });
-  const startupReadiness = await waitMacStartupReady(renderer, version);
+  const startupReadiness = await workerInspector.guard(waitMacStartupReady(renderer, version));
   await writeFile(
     path.join(launchOutput, 'startup-readiness.json'),
     `${canonical(startupReadiness)}\n`,
@@ -487,7 +498,7 @@ async function launch(
   const seededTheme = before === 'light' ? 'dark' : 'light';
   const theme = seed ? seededTheme : (expectedTheme ?? before);
   if (seed) {
-    await macMigrationState(renderer, passiveTeam, { theme, projectPath: passiveProject });
+    await workerInspector.guard(macMigrationState(renderer, passiveTeam, { theme, projectPath: passiveProject }));
     await waitFor(
       async () => {
         try {
@@ -513,7 +524,7 @@ async function launch(
   assert.equal(after, theme);
   const retainedState =
     seed || expectedTheme !== undefined
-      ? await macMigrationState(renderer, passiveTeam)
+      ? await workerInspector.guard(macMigrationState(renderer, passiveTeam))
       : undefined;
   if (retainedState) {
     assert.equal(retainedState.theme, theme);
