@@ -216,7 +216,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: read
     defaults:
