@@ -54,7 +54,7 @@ await writeFile(
 );
 await writeFile(
   join(directory, 'renderer.ts'),
-  'globalThis.addEventListener("synthetic", async () => (await import("./dynamic.ts")).syntheticDynamic());\n'
+  'globalThis.addEventListener("synthetic", async () => (await import("./dynamic.ts")).syntheticDynamic()); document.body.dataset.workerUrl = new URL("./pptx.worker.js", import.meta.url).href;\n'
 );
 await writeFile(
   join(directory, 'dynamic.ts'),
@@ -64,6 +64,9 @@ await writeFile(
   join(directory, 'index.html'),
   '<html><head></head><body><script type="module" src="/renderer.ts"></script></body></html>\n'
 );
+const rawWorkerSource =
+  '/*' + 'x'.repeat(5000) + '*/self.onmessage = () => self.postMessage("vendor");\n';
+await writeFile(join(directory, 'pptx.worker.js'), rawWorkerSource);
 // Resolve the installed Electron preset, rather than using Vite's browser compatibility defaults.
 const electronConfigFile = join(directory, 'electron.synthetic.config.ts');
 await writeFile(electronConfigFile, 'export default { renderer: {} };\n');
@@ -249,6 +252,18 @@ for (const target of ['main', 'renderer'] as const) {
         target: target as SentryCoveredTarget,
         covered: true,
         evidenceDirectory,
+        ...(target === 'renderer'
+          ? {
+              documentPreviewWorkers: [
+                {
+                  sourceFile: join(directory, 'pptx.worker.js'),
+                  assetName: 'pptx.worker.js',
+                  sha256: createHash('sha256').update(rawWorkerSource).digest('hex'),
+                  bytes: Buffer.byteLength(rawWorkerSource),
+                },
+              ],
+            }
+          : {}),
       }),
     ],
     build: {
