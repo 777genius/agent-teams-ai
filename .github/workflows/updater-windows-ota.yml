@@ -22,7 +22,7 @@ on:
     inputs:
       input_mode:
         type: choice
-        options: [plan, legacy-2172]
+        options: [plan, legacy-2172, serializer]
         default: plan
         required: true
       native_run_id: { type: string, required: false }
@@ -51,6 +51,54 @@ permissions:
   actions: read
 
 jobs:
+  windows-serializer-contract:
+    if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'serializer'
+    runs-on: windows-2025
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Require the exact reviewed serializer source
+        env:
+          EXECUTION_SHA: ${{ inputs.execution_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:EXECUTION_SHA -notmatch '^[a-f0-9]{40}$' -or $env:GITHUB_SHA -ne $env:EXECUTION_SHA) { throw 'Exact serializer execution SHA required' }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.10.0'
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Pin the already-running installed PowerShell 7 native helper
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $PWD '.artifacts/TEST-windows-serializer'
+          [IO.Directory]::CreateDirectory($directory) | Out-Null
+          $executable = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          $programFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+          $installedRoot = [IO.Path]::GetFullPath((Join-Path $programFiles 'PowerShell')) + [IO.Path]::DirectorySeparatorChar
+          if (-not [IO.Path]::IsPathFullyQualified($executable) -or -not $executable.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($executable) -ne 'pwsh.exe' -or [IO.Path]::GetDirectoryName($executable) -ne $PSHOME) { throw 'Native helper must be the already-running installed ProgramFiles/PowerShell pwsh.exe' }
+          if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer required' }
+          $manifest = Join-Path $directory 'native-shell.json'
+          $identity = @{ executable=$executable; psHome=$PSHOME; version=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition; sha256=(Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant(); programFiles=$programFiles; systemRoot=$env:SystemRoot }
+          [IO.File]::WriteAllText($manifest, (ConvertTo-Json -InputObject $identity -Compress))
+          "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Verify the actual producer without UI or installer execution
+        run: |
+          node --import tsx --test --test-concurrency=1 --test-name-pattern '^selected PS7 observer producer' scripts/e2e/release-updater/windows-native-owners.test.mts 2>&1 | Tee-Object .artifacts/TEST-windows-serializer/contract.log
+          if ($LASTEXITCODE -ne 0) { throw 'Selected PowerShell serializer contract failed' }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: TEST-windows-serializer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/TEST-windows-serializer/
+          if-no-files-found: error
+
   tooling-quality:
     if: github.event_name == 'pull_request'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
@@ -331,6 +379,8 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      TEST_WINDOWS_CLOUD_EXPERIENCE_PREFLIGHT: ${{ inputs.cloud_experience_preflight && matrix.arch == 'arm64' && '1' || '0' }}
     defaults:
       run:
         shell: pwsh

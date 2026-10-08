@@ -81,7 +81,7 @@ async function downloadedJson(
 }
 
 // Readiness authenticates native outcomes and bytes before permitting any write.
-export async function verifyCarryReadiness(
+async function verifyReadiness(
   port: PublicationPort,
   nativePort: NativeReadinessPort,
   plan: StagePlan,
@@ -89,26 +89,29 @@ export async function verifyCarryReadiness(
   nativeReceipt: NativeReadinessReceipt
 ): Promise<PublicationReadiness> {
   checkPlan(plan);
-  requireThat(plan.input.mode === 'carry-mac', 'Carried publisher requires carry-mac plan');
+  const carried = plan.input.mode === 'carry-mac';
+  requireThat(carried || plan.input.mode === 'full', 'Unsupported publication plan');
   requireThat(/^[a-f0-9]{64}$/.test(planSha256), 'Immutable raw plan SHA-256 required');
   await verifyNativeReadiness(nativePort, plan, planSha256, nativeReceipt);
   await verifyDraftBytes(port, plan);
   const target = await validateOrigins(port, plan, true);
   const manifest = manifestFor(plan);
-  const source = plan.input.macSource;
-  requireThat(source, 'Missing signed carried Mac source');
-  const sidecar = (await downloadedJson(port, plan, target, MAC_EVIDENCE)) as NativeEvidence;
-  validateNativeEvidence(sidecar, manifest);
-  const produced = await port.verifyNative(sidecar.reference);
-  requireThat(
-    produced.schemaVersion === 1 &&
-      produced.inputDigest === manifest.inputDigest &&
-      produced.toolingSha === plan.input.toolingSha &&
-      produced.sourceTag === source.release.tag &&
-      produced.sourceApplicationSha === source.release.applicationSha &&
-      canonical(produced.assets) === canonical(sidecar.assets),
-    'Carried Mac signature sidecar differs from authenticated producer'
-  );
+  if (carried) {
+    const source = plan.input.macSource;
+    requireThat(source, 'Missing signed carried Mac source');
+    const sidecar = (await downloadedJson(port, plan, target, MAC_EVIDENCE)) as NativeEvidence;
+    validateNativeEvidence(sidecar, manifest);
+    const produced = await port.verifyNative(sidecar.reference);
+    requireThat(
+      produced.schemaVersion === 1 &&
+        produced.inputDigest === manifest.inputDigest &&
+        produced.toolingSha === plan.input.toolingSha &&
+        produced.sourceTag === source.release.tag &&
+        produced.sourceApplicationSha === source.release.applicationSha &&
+        canonical(produced.assets) === canonical(sidecar.assets),
+      'Carried Mac signature sidecar differs from authenticated producer'
+    );
+  }
   const provenanceName = `build-provenance-${plan.input.build.runId}-${plan.input.build.attempt}.json`;
   const provenance = (await downloadedJson(port, plan, target, provenanceName)) as {
     schemaVersion?: number;
@@ -136,7 +139,7 @@ export async function verifyCarryReadiness(
   const names = [
     ...plan.outputs.map((proof) => proof.name),
     MANIFEST,
-    MAC_EVIDENCE,
+    ...(carried ? [MAC_EVIDENCE] : []),
     provenanceName,
   ];
   requireThat(new Set(names).size === names.length, 'Ambiguous planned release inventory');
@@ -195,14 +198,14 @@ async function retryPublicRead<T>(operation: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function publishCarriedRelease(
+async function publishPreparedRelease(
   port: PublicationPort,
   nativePort: NativeReadinessPort,
   plan: StagePlan,
   planSha256: string,
   nativeReceipt: NativeReadinessReceipt
 ): Promise<{ phase: 'published'; readiness: PublicationReadiness }> {
-  const readiness = await verifyCarryReadiness(port, nativePort, plan, planSha256, nativeReceipt);
+  const readiness = await verifyReadiness(port, nativePort, plan, planSha256, nativeReceipt);
   const before = await port.releaseById(plan.input.repository, plan.input.target.id);
   exactIdentity(before, plan);
   requireThat(
@@ -237,6 +240,7 @@ export async function publishCarriedRelease(
     for (const name of [
       ...platformNames(version(plan.input.target.tag)).windows,
       ...platformNames(versions.linux).linux,
+      ...platformNames(versions.mac).mac,
       ...aliases,
     ]) {
       await retryPublicRead(() =>
@@ -264,4 +268,27 @@ export async function publishCarriedRelease(
     requireThat(contained.draft, 'Publication verification failed and redraft is unconfirmed');
     throw new Error('Publication verification failed; same release returned to draft', { cause });
   }
+}
+
+export async function verifyCarryReadiness(...args: Parameters<typeof verifyReadiness>) {
+  requireThat(args[2].input.mode === 'carry-mac', 'Carried publisher requires carry-mac plan');
+  return verifyReadiness(...args);
+}
+export async function verifyFullReadiness(...args: Parameters<typeof verifyReadiness>) {
+  requireThat(
+    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.7',
+    'Prepared full publisher requires full217'
+  );
+  return verifyReadiness(...args);
+}
+export async function publishCarriedRelease(...args: Parameters<typeof publishPreparedRelease>) {
+  requireThat(args[2].input.mode === 'carry-mac', 'Carried publisher requires carry-mac plan');
+  return publishPreparedRelease(...args);
+}
+export async function publishFullRelease(...args: Parameters<typeof publishPreparedRelease>) {
+  requireThat(
+    args[2].input.mode === 'full' && args[2].input.target.tag === 'v2.17.7',
+    'Prepared full publisher requires full217'
+  );
+  return publishPreparedRelease(...args);
 }

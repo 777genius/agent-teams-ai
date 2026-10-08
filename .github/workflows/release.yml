@@ -18,6 +18,14 @@ on:
         default: false
         type: boolean
 
+      prepared_run_id: { type: string, description: Full217 prepared stage run ID }
+      prepared_run_attempt: { type: string, description: Full217 prepared stage run attempt }
+      prepared_artifact_id: { type: string, description: Full217 prepared stage artifact ID }
+      prepared_artifact_sha256:
+        { type: string, description: Full217 prepared stage whole ZIP SHA256 }
+      plan_digest: { type: string, description: Full217 prepared plan SHA256 }
+      native_receipt_json: { type: string, description: Full217 complete native readiness receipt }
+
 permissions:
   contents: write
 
@@ -1085,7 +1093,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Require prepared full217 publication
+        if: ${{ inputs.release_tag == 'v2.17.7' }}
+        run: |
+          echo 'Full217 must be staged and qualified before publication; use reuse_existing_draft_assets=true' >&2
+          exit 1
+
       - name: Promote validated release assets
+        if: ${{ inputs.release_tag != 'v2.17.7' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_REPOSITORY: ${{ github.repository }}
@@ -1095,6 +1110,9 @@ jobs:
         run: node scripts/ci/promote-existing-draft.mjs
 
   promote-existing-draft:
+    permissions:
+      contents: write
+      actions: read
     needs: verify-public-runtime
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 30
@@ -1119,8 +1137,21 @@ jobs:
           echo "reuse_existing_draft_assets requires publish_release=true" >&2
           exit 1
 
+      - name: Publish byte-preserved prepared full217 after native readiness
+        if: ${{ inputs.publish_release && inputs.release_tag == 'v2.17.7' }}
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_RUN_ATTEMPT: ${{ inputs.prepared_run_attempt }}
+          PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          PREPARED_ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+          NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
+        run: pnpm exec tsx scripts/ci/publish-full-release.ts --plan-digest "$PLAN_DIGEST" --output publication-result.json --publish
+
       - name: Promote existing validated draft
-        if: ${{ inputs.publish_release }}
+        if: ${{ inputs.publish_release && inputs.release_tag != 'v2.17.7' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_REPOSITORY: ${{ github.repository }}

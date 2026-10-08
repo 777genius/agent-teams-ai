@@ -6,13 +6,39 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 
-import { fileProof, requireThat } from './contract.js';
+import { manualCapturePaths } from './macManualReadiness.js';
+import { canonical, fileProof, requireThat } from './contract.js';
+import { executablePath } from './github.js';
+import { RELEASE216_TOOLING } from './nativeReadinessAuthority.js';
+import type { ExecutionProof, ExecutionTree } from './nativeReadinessAuthority.js';
 import type {
   NativeArtifact,
   NativeJob,
   NativeReadinessPort,
   NativeRun,
 } from './nativeReadiness.js';
+
+export function validateNativeArchivePaths(paths: string[]): void {
+  const manual = ['TEST-mac-manual-evidence/native-manual-receipt.json', ...manualCapturePaths];
+  if (paths.some((entry) => manual.includes(entry))) {
+    requireThat(
+      canonical(paths) === canonical(manual),
+      'Exact manual receipt and three native captures required'
+    );
+    return;
+  }
+  requireThat(
+    paths.length > 0 && paths.length <= 2 && new Set(paths).size === paths.length,
+    'Unexpected native outcome entries'
+  );
+  for (const entry of paths)
+    requireThat(
+      /^[A-Za-z0-9._/-]+\.json$/.test(entry) &&
+        !entry.startsWith('/') &&
+        entry.split('/').every((part) => part !== '..' && part !== '.' && part.length > 0),
+      'Unsafe native entry path'
+    );
+}
 
 const execute = promisify(execFile);
 const MAX_ENTRY = 16 * 1024 * 1024;
@@ -35,9 +61,13 @@ function id(value: number) {
 }
 async function download(endpoint: string, destination: string): Promise<void> {
   // Actions archive requests use JSON Accept. Octet-stream Accept is for release assets.
-  const child = spawn('gh', ['api', endpoint, '-H', 'Accept: application/vnd.github+json'], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const child = spawn(
+    await executablePath('gh'),
+    ['api', endpoint, '-H', 'Accept: application/vnd.github+json'],
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
   let stderr = '';
   child.stderr.setEncoding('utf8');
   child.stderr.on('data', (value: string) => {
@@ -67,6 +97,24 @@ async function download(endpoint: string, destination: string): Promise<void> {
 }
 /** Read-only GitHub adapter; credentials are handled entirely by installed gh. */
 export class GitHubNativeReadinessPort implements NativeReadinessPort {
+  async executionProof(repo: string, executionSha: string): Promise<ExecutionProof> {
+    requireThat(/^[a-f0-9]{40}$/.test(executionSha), 'Invalid execution commit');
+    const root = repository(repo);
+    const [commit, comparison] = await Promise.all([
+      api<ExecutionProof['commit']>(`${root}/git/commits/${executionSha}`),
+      api<ExecutionProof['comparison']>(`${root}/compare/${RELEASE216_TOOLING}...${executionSha}`),
+    ]);
+    requireThat(
+      commit.sha === executionSha && /^[a-f0-9]{40}$/.test(commit.tree.sha),
+      'Wrong execution commit'
+    );
+    const [baseTree, executionTree] = await Promise.all([
+      api<ExecutionTree>(`${root}/git/trees/cb7c434ebe9aae6a631f64292746af75e48a753d?recursive=1`),
+      api<ExecutionTree>(`${root}/git/trees/${commit.tree.sha}?recursive=1`),
+    ]);
+    return { repository: repo, commit, comparison, baseTree, executionTree };
+  }
+
   run(repo: string, runId: number): Promise<NativeRun> {
     return api(`${repository(repo)}/actions/runs/${id(runId)}`);
   }
@@ -110,17 +158,7 @@ export class GitHubNativeReadinessPort implements NativeReadinessPort {
     artifactId: number,
     paths: string[]
   ): Promise<{ sha256: string; entries: Record<string, Buffer> }> {
-    requireThat(
-      paths.length > 0 && paths.length <= 2 && new Set(paths).size === paths.length,
-      'Unexpected native outcome entries'
-    );
-    for (const entry of paths)
-      requireThat(
-        /^[A-Za-z0-9._/-]+\.json$/.test(entry) &&
-          !entry.startsWith('/') &&
-          entry.split('/').every((part) => part !== '..' && part !== '.' && part.length > 0),
-        'Unsafe native entry path'
-      );
+    validateNativeArchivePaths(paths);
     const directory = await mkdtemp(path.join(tmpdir(), 'TEST-native-readiness-'));
     try {
       const zip = path.join(directory, 'artifact.zip');
@@ -142,7 +180,7 @@ export class GitHubNativeReadinessPort implements NativeReadinessPort {
           entries.filter((name) => name === entry).length === 1,
           `Missing/duplicate native ZIP entry: ${entry}`
         );
-        // No archive is extracted to disk. Only closed, exact JSON paths are read.
+        // No archive is extracted to disk. Only closed, exact outcome and native capture paths are read.
         const bytes = await execute('unzip', ['-p', zip, entry], {
           encoding: 'buffer',
           timeout: 30_000,

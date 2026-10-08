@@ -38,7 +38,7 @@ class CliError extends ReleaseHttpError {
     );
   }
 }
-async function executablePath(name: 'gh' | 'unzip'): Promise<string> {
+export async function executablePath(name: 'gh' | 'unzip'): Promise<string> {
   for (const directory of (process.env.PATH ?? '')
     .split(path.delimiter)
     .filter((entry) => path.isAbsolute(entry))) {

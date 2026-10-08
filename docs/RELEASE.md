@@ -29,6 +29,51 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.17.7 (Prepared draft)
+
+Source base: `main` at `ea434a28618d6ed89e6f2f003a8e0e491ed1adfa`.
+All five platforms use freshly built `2.17.7` apps. Publish `2.17.6` before preparing this release's GitHub draft.
+Existing runtime locks remain unchanged. Verify the final reviewed source and native installer evidence before publication.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.7 -->
+
+Agent Teams 2.17.7 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
+
+### What's New
+
+- Preview PDF, Word, Excel and PowerPoint documents directly in the project editor.
+- Restore open project editor tabs when returning to a project.
+- Start from ready-made team templates and save drafts before choosing a provider for launch.
+- Copy a team prompt with its roster and connect external agents to the desktop app.
+- On macOS, set monthly token and estimated API cost budgets for teams and projects.
+- On macOS, explore model breakdowns and activity calendars in the Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Downloads
+
+| Platform | Version | Download |
+| --- | --- | --- |
+| Windows x64 | 2.17.7 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/Agent.Teams.AI.Setup.2.17.7.exe) |
+| Windows ARM64 | 2.17.7 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/Agent.Teams.AI.Setup.2.17.7-arm64.exe) |
+| Linux x64 | 2.17.7 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/Agent.Teams.AI-2.17.7.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/agent-teams-ai_2.17.7_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/agent-teams-ai-2.17.7.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/agent-teams-ai-2.17.7.pacman) |
+| macOS Apple Silicon | 2.17.7 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/Agent.Teams.AI-2.17.7-arm64.dmg) |
+| macOS Intel | 2.17.7 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.7/Agent.Teams.AI-2.17.7-x64.dmg) |
+
+### macOS installation
+
+macOS 2.17.7 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.7 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.7 -->
+
 ## v2.17.5 (Draft)
 
 Target branch: `main`.

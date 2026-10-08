@@ -36,7 +36,7 @@ export function cloudPreflightEnabled(
   assert.equal(env.GITHUB_ACTIONS, 'true');
   assert.equal(env.GITHUB_REPOSITORY, '777genius/agent-teams-ai');
   assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch');
-  assert(['fresh-windows', 'windows-predecessor'].includes(env.GITHUB_JOB ?? ''));
+  assert(['fresh-windows', 'windows-predecessor', 'windows-ota'].includes(env.GITHUB_JOB ?? ''));
   assert(path.isAbsolute(root) && path.basename(root).startsWith('TEST-updater-windows-'));
   return true;
 }
