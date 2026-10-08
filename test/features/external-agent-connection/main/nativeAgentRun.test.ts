@@ -6,11 +6,13 @@ import {
   nativeAgentRunArgs,
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main/nativeAgentRun';
-import { killProcessTreeAndWait,spawnCli } from '@main/utils/childProcess';
+import { killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConnectionInfoV1 } from '@features/external-agent-connection/contracts';
 import type { ChildProcess } from 'node:child_process';
+
+const providerLaunch = vi.hoisted(() => ({ args: [] as string[], model: null as string | null }));
 
 vi.mock('@main/services/infrastructure/codexAppServer/CodexBinaryResolver', () => ({
   CodexBinaryResolver: { resolve: async () => '/sandbox/bin/codex' },
@@ -21,9 +23,12 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: async () => ({
     env: { CLAUDECODE: 'nested', ELECTRON_RUN_AS_NODE: '1', TEST_PROVIDER_AUTH: 'retained' },
-    providerArgs: [],
+    providerArgs: providerLaunch.args,
     connectionIssues: {},
   }),
+}));
+vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
+  providerConnectionService: { getConfiguredCodexCustomProviderModel: () => providerLaunch.model },
 }));
 vi.mock('node:fs/promises', () => ({
   mkdtemp: async () => '/sandbox/native-run-temp',
@@ -95,6 +100,8 @@ describe('native one-shot provider transport', () => {
   let child: FakeChild;
   beforeEach(() => {
     vi.clearAllMocks();
+    providerLaunch.args = [];
+    providerLaunch.model = null;
     child = new FakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as unknown as ChildProcess);
     vi.mocked(killProcessTreeAndWait).mockImplementation(async () => {
@@ -139,12 +146,14 @@ describe('native one-shot provider transport', () => {
   });
 
   it('writes prompt through stdin in sandbox cwd, preserves provider auth and fails a Claude error result even with exit zero', async () => {
+    providerLaunch.model = 'custom/not-a-claude-model';
     const runtime = await prepareNativeAgentRun('anthropic', connection);
     const output: string[] = [];
     const result = runtime.launch('Private sandbox request', (text) => output.push(text));
     const [binary, args, options] = vi.mocked(spawnCli).mock.calls[0];
     expect(binary).toBe('/sandbox/bin/claude');
     expect(args).not.toContain('Private sandbox request');
+    expect(args).not.toContain('--model');
     expect(options?.cwd).toBe('/sandbox/native-run-temp');
     expect(options?.env?.TEST_PROVIDER_AUTH).toBe('retained');
     expect(options?.env?.CLAUDECODE).toBeUndefined();
@@ -166,6 +175,27 @@ describe('native one-shot provider transport', () => {
     await runtime.dispose();
   });
 
+  it('forwards the saved API-key custom provider model when user config is excluded', async () => {
+    providerLaunch.model = 'custom/sandbox-review-model';
+    providerLaunch.args = [
+      '-c',
+      'model_provider="agent_teams_custom"',
+      '-c',
+      'model_providers.agent_teams_custom.base_url="https://sandbox-provider.invalid/v1"',
+    ];
+    const runtime = await prepareNativeAgentRun('codex', connection);
+    const result = runtime.launch('Sandbox request', () => {});
+    const args = vi.mocked(spawnCli).mock.calls[0][1];
+    expect(args).toContain('--ignore-user-config');
+    expect(args[args.indexOf('--model') + 1]).toBe('custom/sandbox-review-model');
+    expect(args).toContain('model_provider="agent_teams_custom"');
+    expect(args.at(-1)).toBe('-');
+    child.stdout.write('{"type":"turn.completed"}\n');
+    child.close(0);
+    expect(await result).toEqual({ successful: true });
+    await runtime.dispose();
+  });
+
   it('bounds large tool output without failing an independently confirmed successful process', async () => {
     const runtime = await prepareNativeAgentRun('codex', connection);
     const output: string[] = [];
@@ -184,6 +214,7 @@ describe('native one-shot provider transport', () => {
     const runtime = await prepareNativeAgentRun('codex', connection);
     const output: string[] = [];
     const result = runtime.launch('Sandbox request', (text) => output.push(text));
+    expect(vi.mocked(spawnCli).mock.calls[0][1]).not.toContain('--model');
     const line = Buffer.from(
       '{"type":"item.completed","text":"Привет"}\n{"type":"turn.completed"}\n'
     );

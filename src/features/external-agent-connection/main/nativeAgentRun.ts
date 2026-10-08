@@ -5,6 +5,7 @@ import { StringDecoder } from 'node:string_decoder';
 
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
+import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { killProcessTreeAndWait, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
 
@@ -38,9 +39,12 @@ export async function prepareNativeAgentRun(
   delete env.CLAUDE_CODE_ENTRYPOINT;
   delete env.ELECTRON_RUN_AS_NODE;
   const nativeArgs = nativeAgentRunArgs(provider, connection);
+  const customModel =
+    provider === 'codex' ? providerConnectionService.getConfiguredCodexCustomProviderModel() : null;
   const args = [
     ...(provider === 'codex' ? nativeArgs.slice(0, -1) : nativeArgs),
     ...preparedEnv.providerArgs,
+    ...(customModel ? ['--model', customModel] : []),
     ...(provider === 'codex' ? ['-'] : []),
   ];
   // The provider never starts from a user project and cannot inherit its project settings.
