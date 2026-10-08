@@ -1085,18 +1085,32 @@ async function copyPrompt(
             ),
           'actual clipboard rejection is shown'
         );
+        await evaluate(active, () => {
+          document
+            .querySelector<HTMLElement>('[data-testid="external-agent-prompt-preview"]')
+            ?.focus();
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 2,
+          windowsVirtualKeyCode: 65,
+        });
+        await active.send('Input.dispatchKeyEvent', {
+          type: 'keyUp',
+          key: 'a',
+          code: 'KeyA',
+          modifiers: 0,
+          windowsVirtualKeyCode: 65,
+        });
         const failed = await evaluate(active, () => {
           const dialog = document.querySelector('[data-testid="external-agent-prompt-dialog"]');
           const previewField = document.querySelector(
             '[data-testid="external-agent-prompt-preview"]'
           ) as HTMLElement | null;
           if (!previewField) throw new Error('Clipboard failure must expose preview');
-          previewField.focus();
-          const range = document.createRange();
-          range.selectNodeContents(previewField);
           const selection = window.getSelection();
-          selection?.removeAllRanges();
-          selection?.addRange(range);
           return {
             success: dialog?.textContent?.includes('Prompt copied.') ?? false,
             buttonText: dialog

@@ -203,6 +203,21 @@ export const ExternalAgentPromptDialog = ({
           role="region"
           aria-labelledby="external-agent-prompt-preview-label"
           tabIndex={0}
+          onKeyDown={(event) => {
+            if (
+              !(event.ctrlKey || event.metaKey) ||
+              event.altKey ||
+              event.key.toLowerCase() !== 'a'
+            )
+              return;
+            const selection = event.currentTarget.ownerDocument.defaultView?.getSelection();
+            if (!selection) return;
+            event.preventDefault();
+            const range = event.currentTarget.ownerDocument.createRange();
+            range.selectNodeContents(event.currentTarget);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }}
           className="h-36 max-h-36 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-[var(--color-border)] px-3 py-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
           data-testid="external-agent-prompt-preview"
         >

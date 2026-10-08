@@ -225,6 +225,18 @@ describe('external prompt freshness and clipboard fallback', () => {
     expect(host.textContent).toContain(
       'Clipboard write failed. Select and copy the final prompt manually.'
     );
+    for (const modifier of ['ctrlKey', 'metaKey']) {
+      preview()!.focus();
+      const shortcut = new KeyboardEvent('keydown', {
+        key: 'a',
+        [modifier]: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      preview()!.dispatchEvent(shortcut);
+      expect(shortcut.defaultPrevented).toBe(true);
+      expect(window.getSelection()?.toString()).toBe(freshPrompt);
+    }
     await copy();
     expect(writeText).toHaveBeenLastCalledWith(freshPrompt);
     expect(host.textContent).toContain('Copied');
