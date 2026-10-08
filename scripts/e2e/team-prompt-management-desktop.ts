@@ -177,7 +177,7 @@ async function click(wanted: string, selector = false, cardName: string | null =
   const point = await waitFor(
     () =>
       evaluate(
-        (label: string, css: boolean, team: string | null) => {
+        async (label: string, css: boolean, team: string | null) => {
           const matches = [
             ...document.querySelectorAll(css ? label : 'button,[role="menuitem"]'),
           ].filter(
@@ -196,8 +196,22 @@ async function click(wanted: string, selector = false, cardName: string | null =
           if (visible.length > 1) throw new Error(`Ambiguous control: ${label}`);
           const element = visible[0];
           if (!(element instanceof HTMLElement)) return null;
-          element.scrollIntoView({ block: 'center' });
+          element.scrollIntoView({ block: 'center', behavior: 'instant' });
+          // Scrolling, reflow and dialog transitions must settle before real mouse input.
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          const previous = element.getBoundingClientRect();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
           const rect = element.getBoundingClientRect();
+          if (
+            !element.isConnected ||
+            !rect.width ||
+            !rect.height ||
+            rect.x !== previous.x ||
+            rect.y !== previous.y ||
+            rect.width !== previous.width ||
+            rect.height !== previous.height
+          )
+            return null;
           const point = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
           const hit = document.elementFromPoint(point.x, point.y);
           return hit && (hit === element || element.contains(hit)) ? point : null;
