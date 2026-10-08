@@ -1911,13 +1911,10 @@ async function initializeServices(): Promise<void> {
     ready: false,
     error: null,
   });
-  // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
-  // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
-  // Create local context
   const localContext = new ServiceContext({
     id: 'local',
     type: 'local',
@@ -2055,7 +2052,10 @@ async function initializeServices(): Promise<void> {
   projectFolderFeature.registerProjectFolderFeature(ipcMain);
   externalAgentConnection = composeExternalAgentConnection({
     appInstanceId: openCodeManagedHostInstanceId,
-    nativeRun: [cliInstallerService, () => codexAccountFeature?.getSnapshot()],
+    nativeRun: [
+      cliInstallerService,
+      () => codexAccountFeature?.refreshSnapshot({ bypassCache: true }),
+    ],
     teamManagement: [teamDataService, teamProvisioningService, forwardTeamChangeToRendererAndHttp],
     hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
     cdp: nativeRendererCdp,
