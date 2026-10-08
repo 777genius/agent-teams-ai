@@ -90,6 +90,70 @@ function parse(value: unknown) {
 }
 
 describe('emitted Sentry artifact inventory', () => {
+  it('admits only the pinned raw PPTX worker origin and bytes while preserving application guards', () => {
+    const source = 'self.onmessage = () => self.postMessage("vendor");';
+    const worker: OutputAsset = {
+      type: 'asset',
+      fileName: 'assets/pptx.worker-abc123.js',
+      names: ['pptx.worker.js'],
+      originalFileNames: [
+        'node_modules/.pnpm/pptx/node_modules/@file-viewer/pptx/dist/worker/pptx.worker.js',
+      ],
+      source,
+      name: undefined,
+      originalFileName: null,
+      needsCodeReference: false,
+    };
+    const rendererOptions: SentryInventoryOptions = {
+      ...options,
+      target: 'renderer',
+      assetRoot: '/sandbox',
+      documentPreviewWorkers: [
+        {
+          sourceFile: '/sandbox/' + worker.originalFileNames[0],
+          assetName: 'pptx.worker.js',
+          sha256: createHash('sha256').update(source).digest('hex'),
+          bytes: Buffer.byteLength(source),
+        },
+      ],
+    };
+    const bundle = { ...fixture('assets/index.js'), [worker.fileName]: worker };
+    expect(
+      collectSentryArtifactInventory(bundle, rendererOptions).runtime.artifacts.map(
+        (row) => row.relativeFile
+      )
+    ).toEqual(['out/renderer/assets/index.js']);
+    for (const mutation of [
+      { source: source + '\n/* tampered */' },
+      { source: 'x' + source.slice(1) },
+      { originalFileNames: ['src/renderer/application.js'] },
+      { originalFileNames: [] },
+      { names: ['application.js'] },
+      { fileName: 'assets/application.js' },
+    ]) {
+      expect(() =>
+        collectSentryArtifactInventory(
+          { ...fixture(), [worker.fileName]: { ...worker, ...mutation } },
+          rendererOptions
+        )
+      ).toThrow('JavaScript asset lacks');
+    }
+    expect(() =>
+      collectSentryArtifactInventory(bundle, { ...rendererOptions, target: 'main' })
+    ).toThrow('JavaScript asset lacks');
+    const missingMap = { ...bundle };
+    delete missingMap['assets/index.js.map'];
+    expect(() => collectSentryArtifactInventory(missingMap, rendererOptions)).toThrow(
+      'missing emitted source map'
+    );
+    const missingId = {
+      ...bundle,
+      'assets/index.js': { ...chunk(bundle), code: 'throw Error("app")' },
+    };
+    expect(() => collectSentryArtifactInventory(missingId, rendererOptions)).toThrow(
+      'canonical injected debug ID'
+    );
+  });
   it('includes workers and dynamic chunks deterministically; hashes original bytes and keeps roots/content out of runtime', () => {
     const bundle = { ...fixture('worker.cjs', OTHER_ID), ...fixture('index.cjs') };
     const first = collectSentryArtifactInventory(bundle, options);

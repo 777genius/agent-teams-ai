@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
+import { readFileSync, realpathSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { createRequire } from 'node:module';
+import { basename, join, resolve } from 'node:path';
 import type { Plugin, Rollup } from 'vite';
 import {
   isSentryArtifactFile,
@@ -42,7 +44,66 @@ export type SentryInventoryOptions = SentryBuildIdentity &
     target: SentryCoveredTarget;
     covered: boolean;
     evidenceDirectory: string;
+    assetRoot?: string;
+    documentPreviewWorkers?: readonly Readonly<{
+      sourceFile: string;
+      assetName: string;
+      sha256: string;
+      bytes: number;
+    }>[];
   }>;
+
+/** Resolve through the actual pnpm dependency owners, not an unhoisted root dependency. */
+export function pinDocumentPreviewWorkers(projectRoot: string) {
+  const rootRequire = createRequire(join(projectRoot, 'package.json'));
+  const presetRequire = createRequire(
+    rootRequire.resolve('@file-viewer/preset-office/package.json')
+  );
+  return [
+    {
+      owners: ['renderer-presentation', 'renderer-pptx'],
+      request: '@file-viewer/pptx/worker/pptx.worker.js',
+    },
+    { owners: ['renderer-word'], request: '@file-viewer/doc/worker' },
+    { owners: ['renderer-presentation', 'renderer-ppt'], request: '@file-viewer/ppt/worker.mjs' },
+  ].map(({ owners, request }) => {
+    let ownerRequire = presetRequire;
+    for (const owner of owners)
+      ownerRequire = createRequire(ownerRequire.resolve(`@file-viewer/${owner}/package.json`));
+    const sourceFile = realpathSync(ownerRequire.resolve(request));
+    const bytes = readFileSync(sourceFile);
+    return Object.freeze({
+      sourceFile,
+      assetName: basename(sourceFile),
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      bytes: bytes.length,
+    });
+  });
+}
+
+function isPinnedDocumentPreviewWorker(item: Rollup.OutputAsset, options: SentryInventoryOptions) {
+  if (
+    options.target !== 'renderer' ||
+    !options.assetRoot ||
+    !/^assets\/(?:pptx\.)?worker-[A-Za-z0-9_-]+\.(?:js|mjs)$/.test(item.fileName) ||
+    item.names.length !== 1 ||
+    item.originalFileNames.length !== 1
+  )
+    return false;
+  const sourceFile = resolve(options.assetRoot, item.originalFileNames[0]!);
+  const bytes = typeof item.source === 'string' ? Buffer.from(item.source) : item.source;
+  return (
+    options.documentPreviewWorkers?.some(
+      (pin) =>
+        item.names[0] === pin.assetName &&
+        item.fileName.startsWith(`assets/${pin.assetName.replace(/\.(?:js|mjs)$/, '')}-`) &&
+        item.fileName.endsWith(pin.assetName.endsWith('.mjs') ? '.mjs' : '.js') &&
+        sourceFile === pin.sourceFile &&
+        bytes.length === pin.bytes &&
+        createHash('sha256').update(bytes).digest('hex') === pin.sha256
+    ) ?? false
+  );
+}
 
 function digest(value: string): { sha256: string; bytes: number } {
   return {
@@ -109,7 +170,10 @@ export function collectSentryArtifactInventory(
   if (
     options.covered &&
     Object.values(bundle).some(
-      (item) => item.type === 'asset' && /\.(?:js|cjs|mjs)$/.test(item.fileName)
+      (item) =>
+        item.type === 'asset' &&
+        /\.(?:js|cjs|mjs)$/.test(item.fileName) &&
+        !isPinnedDocumentPreviewWorker(item, options)
     )
   ) {
     throw new Error('Sentry inventory: JavaScript asset lacks a Rollup chunk/map association');
@@ -225,16 +289,20 @@ async function saveEvidence(
 }
 
 export function sentryArtifactInventoryPlugin(options: SentryInventoryOptions): Plugin {
+  let assetRoot: string | undefined;
   return {
     name: 'application-sentry-artifact-inventory',
     apply: 'build',
     enforce: 'post',
+    configResolved(config) {
+      assetRoot = config.root;
+    },
     generateBundle: {
       order: 'post',
       async handler(_outputOptions, bundle) {
         if (bundle[SENTRY_INVENTORY_FILE])
           throw new Error('Sentry inventory: sidecar already exists');
-        const evidence = collectSentryArtifactInventory(bundle, options);
+        const evidence = collectSentryArtifactInventory(bundle, { ...options, assetRoot });
         if (options.target === 'renderer') {
           const html = bundle['index.html'];
           if (!html || html.type !== 'asset')

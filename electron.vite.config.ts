@@ -11,7 +11,7 @@ import {
   resolvePostHogBuildKey,
 } from './src/shared/utils/posthogBuildPolicy'
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
-import { sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
+import { pinDocumentPreviewWorkers, sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
 import { resolveSentryBuildIdentity } from './scripts/build/sentryBuildIdentity'
 
 // Read all production dependencies from package.json
@@ -129,6 +129,9 @@ function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugi
       release: `agent-teams-ai@${pkg.version}`,
       buildId,
       gitSha: buildGitSha,
+      ...(covered && target === 'renderer'
+        ? { documentPreviewWorkers: pinDocumentPreviewWorkers(__dirname) }
+        : {}),
       evidenceDirectory: resolve(
         __dirname,
         '.artifacts/sentry',
