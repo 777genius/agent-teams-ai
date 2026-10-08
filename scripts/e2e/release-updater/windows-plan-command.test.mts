@@ -15,8 +15,16 @@ void test('archive budget validates authenticated sizes and bounds only large ar
   assert.equal(artifactDownloadTimeout(1), 300_000);
   assert.equal(artifactDownloadTimeout(256 * 1_048_576), 300_000);
   assert(artifactDownloadTimeout(256 * 1_048_576 + 1) > 300_000);
-  assert.equal(artifactDownloadTimeout(874_797_415), 900_000);
-  assert.equal(artifactDownloadTimeout(Number.MAX_SAFE_INTEGER), 900_000);
+  assert.equal(artifactDownloadTimeout(874_797_415), 955_000);
+  // Actual ZIP was still advancing at 879067136 bytes when the 900008ms limit expired.
+  assert.equal(artifactDownloadTimeout(1_001_742_940), 1_076_000);
+  assert(artifactDownloadTimeout(1_001_742_940) > (1_001_742_940 / 879_067_136) * 900_008);
+  assert.equal(artifactDownloadTimeout(Number.MAX_SAFE_INTEGER), 1_200_000);
+});
+
+void test('unsupported transfer budgets fail before launching a child', async () => {
+  for (const timeout of [0, -1, 1.5, 1_200_001])
+    await assert.rejects(planCommand('must-not-launch', [], 'unused', timeout), assert.AssertionError);
 });
 
 void test('successful tiny transfer preserves exact bytes and reports bounded phase telemetry', async () => {
@@ -27,7 +35,7 @@ void test('successful tiny transfer preserves exact bytes and reports bounded ph
     const { stderr } = await execute(process.execPath, [
       '--input-type=module',
       '-e',
-      `const {planCommand}=await import(${JSON.stringify(module)}); await planCommand(process.execPath,['-e',"process.stdout.write(Buffer.from([0,255,10,13]));"],${JSON.stringify(output)},5000);`,
+      `const {planCommand}=await import(${JSON.stringify(module)}); await planCommand(process.execPath,['-e',"process.stdout.write(Buffer.from([0,255,10,13]));"],${JSON.stringify(output)},1200000);`,
     ]);
     assert.deepEqual(await readFile(output), Buffer.from([0, 255, 10, 13]));
     const events = stderr
@@ -52,7 +60,7 @@ void test('successful tiny transfer preserves exact bytes and reports bounded ph
     assert.equal(events[0]?.bytes, 0);
     assert.equal(events[1]?.bytes, 4);
     assert.equal(events[1]?.code, 0);
-    assert.equal(events[1]?.timeoutMs, 5000);
+    assert.equal(events[1]?.timeoutMs, 1_200_000);
     assert(Number.isFinite(events[1]?.elapsedMs));
   } finally {
     await rm(root, { recursive: true, force: true });

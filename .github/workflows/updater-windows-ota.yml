@@ -119,7 +119,7 @@ jobs:
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Require the exact reviewed tooling SHA
         env:

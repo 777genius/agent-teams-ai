@@ -7,8 +7,8 @@ import { pipeline } from 'node:stream/promises';
 export function artifactDownloadTimeout(size: number) {
   assert(Number.isSafeInteger(size) && size > 0, 'Authenticated artifact size required');
   if (size <= 256 * 1_048_576) return 300_000;
-  // Large archives get 120 seconds overhead plus one second per MiB, capped at 15 minutes.
-  return Math.min(900_000, 120_000 + Math.ceil(size / 1_048_576) * 1000);
+  // Large archives get 120 seconds overhead plus one second per MiB, capped at 20 minutes.
+  return Math.min(1_200_000, 120_000 + Math.ceil(size / 1_048_576) * 1000);
 }
 
 export async function planCommand(
@@ -17,7 +17,7 @@ export async function planCommand(
   destination: string,
   timeoutMs = 300_000
 ) {
-  assert(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 900_000);
+  assert(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 1_200_000);
   const started = Date.now(),
     phase = `${path.basename(executable)}:${path.basename(destination)}`;
   let bytes = 0,
