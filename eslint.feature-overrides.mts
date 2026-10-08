@@ -10,8 +10,8 @@ export function featureOverrides(
       rules: { 'sonarjs/no-identical-functions': 'off' },
     },
     {
-      name: 'feature-renderer-keyboard-accessibility',
-      files: ['src/features/**/renderer/**/*.{ts,tsx}'],
+      name: 'external-prompt-keyboard-accessibility',
+      files: ['src/features/external-agent-connection/renderer/ExternalAgentPromptDialog.tsx'],
       plugins: { 'jsx-a11y': jsxA11y },
       rules: { 'jsx-a11y/no-noninteractive-element-interactions': 'error' },
     },
