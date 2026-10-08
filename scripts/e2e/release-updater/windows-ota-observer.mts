@@ -548,6 +548,20 @@ public static class TestOtaObserver {
     public string Outcome="failed"; public ForegroundObservation Before,AfterForeground; public HeldOwner Immediate,AfterHeld;
     public int Requested,SendError,InputSent,Message; public bool SendReturned,WindowGone,ProcessExited,Qualifying; public long ElapsedMs; public string Error;
   }
+  // Only certified Cloud closure may observe an empty foreground. Initial
+  // foreground and all app/OTA observations retain PinForeground's strict identity.
+  static ForegroundObservation ObservePostCloudCloseForeground() {
+    IntPtr first=GetForegroundWindow();
+    if(first!=IntPtr.Zero) {
+      PinnedForeground pin=PinForeground(); FinishForeground(pin); return pin.Proof;
+    }
+    ForegroundObservation proof=new ForegroundObservation(); proof.Hwnd="0";
+    proof.Thread=GetWindowThreadProcessId(first,out proof.Pid);
+    IntPtr last=GetForegroundWindow(); proof.AfterHwnd=last.ToInt64().ToString("x");
+    proof.AfterThread=GetWindowThreadProcessId(last,out proof.AfterPid);
+    if(last!=IntPtr.Zero || proof.Pid!=0 || proof.Thread!=0 || proof.AfterPid!=0 || proof.AfterThread!=0 || GetForegroundWindow()!=IntPtr.Zero) throw new Exception("Post-close empty foreground changed during observation");
+    return proof;
+  }
   public static CloudCloseReceipt CloseTestCloudExperience(string image,string sid,int session,Action signature,Action<CloudCloseReceipt> progress) {
     const string package="Microsoft.Windows.CloudExperienceHost_10.0.26100.1_neutral_neutral_cw5n1h2txyewy";
     CloudCloseReceipt proof=new CloudCloseReceipt(); PinnedForeground pin=PinForeground(); proof.Before=pin.Proof; long started=Environment.TickCount64;
@@ -589,8 +603,8 @@ public static class TestOtaObserver {
         if(proof.AfterHeld.BirthFileTime!=owner.BirthFileTime || proof.AfterHeld.Executable!=owner.Executable || proof.AfterHeld.Sid!=owner.Sid || proof.AfterHeld.Session!=owner.Session) throw new Exception("CloudExperienceHost held identity changed after close");
       }
       signature();
-      PinnedForeground after=PinForeground(); FinishForeground(after); proof.AfterForeground=after.Proof;
-      if(after.Proof.Error!=null || (after.Proof.PackageBefore??"").StartsWith("Microsoft.Windows.CloudExperienceHost_",StringComparison.OrdinalIgnoreCase) || String.Equals(System.IO.Path.GetFileName(after.Proof.Before.Executable),"WWAHost.exe",StringComparison.OrdinalIgnoreCase) || after.Proof.Hwnd==pin.Proof.Hwnd) throw new Exception("CloudExperienceHost closure not independently observed");
+      ForegroundObservation after=ObservePostCloudCloseForeground(); proof.AfterForeground=after;
+      if(after.Error!=null || (after.PackageBefore??"").StartsWith("Microsoft.Windows.CloudExperienceHost_",StringComparison.OrdinalIgnoreCase) || (after.Before!=null && String.Equals(System.IO.Path.GetFileName(after.Before.Executable),"WWAHost.exe",StringComparison.OrdinalIgnoreCase)) || after.Hwnd==pin.Proof.Hwnd) throw new Exception("CloudExperienceHost closure not independently observed");
       if(IsWindow(hwnd)) throw new Exception("CloudExperienceHost HWND recycled during closure proof");
       proof.Outcome="closed";
     } catch(Exception error) { proof.Error=error.Message; }

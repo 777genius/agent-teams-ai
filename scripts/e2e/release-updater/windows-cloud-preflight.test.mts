@@ -94,6 +94,65 @@ void test('window closure requires independent proof even when WM_CLOSE transpor
   copy.close.AfterHeld = null;
   assertCloudPreflight(copy, image);
 });
+// The ARM receipt proved one certified WM_CLOSE and WindowGone while both
+// subsequent foreground reads were zero. That absence is post-close evidence;
+// it must never authorize an initial empty foreground or qualify the app UI.
+const emptyForeground = {
+  Hwnd: '0',
+  AfterHwnd: '0',
+  Pid: 0,
+  AfterPid: 0,
+  Thread: 0,
+  AfterThread: 0,
+  Before: null,
+  After: null,
+  PackageBefore: null,
+  PackageAfter: null,
+  PackageBeforeStatus: 0,
+  PackageAfterStatus: 0,
+  Error: null,
+};
+void test('certified Cloud closure permits independently stable empty post-close foreground', () => {
+  const copy = structuredClone(receipt);
+  copy.close.AfterForeground = { ...emptyForeground };
+  assertCloudPreflight(copy, image);
+  copy.close.ProcessExited = true;
+  copy.close.AfterHeld = null;
+  assertCloudPreflight(copy, image);
+});
+void test('empty post-close foreground rejects every partial, unknown or contradictory field', () => {
+  for (const [field, value] of Object.entries({
+    Hwnd: 'ff',
+    AfterHwnd: 'ff',
+    Pid: 1,
+    AfterPid: 1,
+    Thread: 1,
+    AfterThread: 1,
+    Before: held,
+    After: held,
+    PackageBefore: cloudExperiencePackage,
+    PackageAfter: cloudExperiencePackage,
+    PackageBeforeStatus: 5,
+    PackageAfterStatus: 5,
+    Error: 'Foreground identity unavailable',
+  })) {
+    const copy = structuredClone(receipt);
+    copy.close.AfterForeground = { ...emptyForeground, [field]: value };
+    assert.throws(() => assertCloudPreflight(copy, image), field);
+  }
+});
+void test('empty foreground never substitutes for certified closure or initial identity', () => {
+  for (const field of ['WindowGone', 'Requested', 'Immediate', 'AfterHeld', 'Before'] as const) {
+    const copy = structuredClone(receipt);
+    copy.close.AfterForeground = { ...emptyForeground };
+    if (field === 'WindowGone') copy.close.WindowGone = false;
+    if (field === 'Requested') copy.close.Requested = 0;
+    if (field === 'Immediate') copy.close.Immediate = { ...held, BirthFileTime: '1' };
+    if (field === 'AfterHeld') copy.close.AfterHeld = { ...held, BirthFileTime: '1' };
+    if (field === 'Before') copy.close.Before = { ...emptyForeground };
+    assert.throws(() => assertCloudPreflight(copy, image), field);
+  }
+});
 const rejected: Record<string, (copy: ClosedCloudPreflightReceipt) => void> = {
   'transport completed but window remains': (c) => {
     c.close.WindowGone = false;
@@ -274,6 +333,11 @@ const skipped: NoActionCloudPreflightReceipt = {
 };
 void test('known stable non-Cloud foreground records no action without signature or closure claims', () => {
   assertCloudPreflight(skipped, image);
+});
+void test('initial empty foreground never qualifies a no-action Cloud preflight', () => {
+  const copy = structuredClone(skipped);
+  copy.close.Before = { ...emptyForeground };
+  assert.throws(() => assertCloudPreflight(copy, image));
 });
 const invalidSkips: Record<string, (copy: CloudPreflightReceipt) => void> = {
   'unknown owner': (c) => {

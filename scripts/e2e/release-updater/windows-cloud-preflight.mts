@@ -153,16 +153,36 @@ export function assertCloudPreflight(receipt: CloudPreflightReceipt, expectedIma
   assert.equal(typeof proof.ProcessExited, 'boolean');
   if (proof.ProcessExited) assert.equal(proof.AfterHeld, null);
   else assert.deepEqual(proof.AfterHeld, owner);
-  assertForegroundIdentity(proof.AfterForeground);
-  assert(
-    !proof.AfterForeground.PackageBefore?.toLowerCase().startsWith(
-      'microsoft.windows.cloudexperiencehost_'
-    )
-  );
-  assert.notEqual(
-    path.win32.basename(proof.AfterForeground.Before?.Executable ?? '').toLowerCase(),
-    'wwahost.exe'
-  );
+  if (proof.AfterForeground.Hwnd === '0') {
+    // This branch follows certified one-shot closure and held identity checks.
+    // An empty foreground is absence evidence, never app/native qualification.
+    assert.deepEqual(proof.AfterForeground, {
+      Hwnd: '0',
+      AfterHwnd: '0',
+      Pid: 0,
+      AfterPid: 0,
+      Thread: 0,
+      AfterThread: 0,
+      Before: null,
+      After: null,
+      PackageBefore: null,
+      PackageAfter: null,
+      PackageBeforeStatus: 0,
+      PackageAfterStatus: 0,
+      Error: null,
+    });
+  } else {
+    assertForegroundIdentity(proof.AfterForeground);
+    assert(
+      !proof.AfterForeground.PackageBefore?.toLowerCase().startsWith(
+        'microsoft.windows.cloudexperiencehost_'
+      )
+    );
+    assert.notEqual(
+      path.win32.basename(proof.AfterForeground.Before?.Executable ?? '').toLowerCase(),
+      'wwahost.exe'
+    );
+  }
   assert.notEqual(proof.AfterForeground.Hwnd, proof.Before.Hwnd);
   assert.equal(typeof proof.SendReturned, 'boolean');
   assert(Number.isInteger(proof.SendError));

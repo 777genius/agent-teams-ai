@@ -38,15 +38,15 @@ export function validateWindowsProducerUpload(
   const uploadStart = Date.parse(upload.started_at);
   const uploadEnd = Date.parse(upload.completed_at);
   const created = Date.parse(artifactCreatedAt);
-  // GitHub step clocks have second precision. Admit only the final fractional
-  // second after the recorded upload end, as in the release graph contract.
+  // GitHub step clocks have second precision. Admit the inclusive one-second
+  // boundary used by full native readiness; later creation remains rejected.
   assert(
     [jobStart, jobEnd, uploadStart, uploadEnd, created].every(Number.isFinite) &&
       jobStart <= uploadStart &&
       uploadStart <= uploadEnd &&
       uploadEnd <= jobEnd &&
       created >= uploadStart &&
-      created < uploadEnd + 1000,
+      created <= uploadEnd + 1000,
     'Artifact must be created by the selected successful producer upload step'
   );
 }

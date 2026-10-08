@@ -37,16 +37,17 @@ function firstUpload(job: WindowsProducerJob) {
   return upload;
 }
 
-void test('accepts the selected successful upload and its final fractional second', () => {
+void test('accepts selected upload through the inclusive one-second clock boundary', () => {
   const job = fixture();
   check(job, '2026-10-05T10:03:00Z');
   check(job, '2026-10-05T10:04:00.999Z');
+  check(job, '2026-10-05T10:04:01Z');
 });
 
 for (const [name, created] of [
   ['before the selected job', '2026-10-05T10:01:00Z'],
   ['before the selected upload', '2026-10-05T10:02:59.999Z'],
-  ['at the excluded upload precision boundary', '2026-10-05T10:04:01Z'],
+  ['one millisecond beyond the upload precision boundary', '2026-10-05T10:04:01.001Z'],
   ['after the selected job', '2026-10-05T10:07:00Z'],
 ] as const) {
   void test(`rejects artifact creation ${name} even inside the former broad run window`, () => {
