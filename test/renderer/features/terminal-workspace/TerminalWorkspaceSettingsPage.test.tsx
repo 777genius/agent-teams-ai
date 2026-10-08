@@ -76,7 +76,7 @@ describe('extracted settings page with the actual view', () => {
 
     props().onFontScaleChange('compact');
     props().onThemeChange('terminal-platform-default');
-    await act(async () => {
+    await actAndFlush(() => {
       wrap?.click();
       const input = host.querySelector<HTMLInputElement>('#terminal-settings-font-size');
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, '18');
@@ -88,17 +88,17 @@ describe('extracted settings page with the actual view', () => {
     expect(onAppearanceSettingsChange).toHaveBeenCalledWith({ fontSizePx: 18 });
 
     for (const key of ['settingsReconnect', 'settingsSessions', 'settingsStop', 'settingsReload']) {
-      await act(async () => button(key).click());
+      await actAndFlush(() => button(key).click());
     }
     expect(operations.reconnect).toHaveBeenCalledOnce();
     expect(operations.refreshSessions).toHaveBeenCalledOnce();
     expect(operations.stopRuntime).toHaveBeenCalledOnce();
     expect(onReload).toHaveBeenCalledOnce();
-    await act(async () => button('settingsResetAppearance').click());
+    await actAndFlush(() => button('settingsResetAppearance').click());
     expect(onAppearanceSettingsChange).toHaveBeenLastCalledWith(
       DEFAULT_TERMINAL_APPEARANCE_SETTINGS
     );
-    await act(async () =>
+    await actAndFlush(() =>
       host
         .querySelector<HTMLButtonElement>('[aria-label="terminalWorkspace.closeTerminalSettings"]')
         ?.click()
@@ -114,22 +114,29 @@ describe('extracted settings page with the actual view', () => {
       })
     );
     await renderPage();
-    await act(async () => button('settingsReconnect').click());
+    await actAndFlush(() => button('settingsReconnect').click());
     for (const key of ['settingsReconnect', 'settingsSessions', 'settingsStop', 'settingsReload']) {
       expect(button(key).disabled).toBe(true);
     }
-    await act(async () => button('settingsStop').click());
+    await actAndFlush(() => button('settingsStop').click());
     expect(operations.stopRuntime).not.toHaveBeenCalled();
-    await act(async () => reject(new Error('transport unavailable')));
+    await actAndFlush(() => reject(new Error('transport unavailable')));
     for (const key of ['settingsReconnect', 'settingsSessions', 'settingsStop', 'settingsReload']) {
       expect(button(key).disabled).toBe(false);
     }
-    await act(async () => button('settingsStop').click());
+    await actAndFlush(() => button('settingsStop').click());
     expect(operations.stopRuntime).toHaveBeenCalledOnce();
   });
 
+  async function actAndFlush(callback: () => void): Promise<void> {
+    await act(async () => {
+      callback();
+      await Promise.resolve();
+    });
+  }
+
   async function renderPage(): Promise<void> {
-    await act(async () =>
+    await actAndFlush(() =>
       root.render(
         <TerminalWorkspaceSettingsPage
           appearanceSettings={DEFAULT_TERMINAL_APPEARANCE_SETTINGS}
