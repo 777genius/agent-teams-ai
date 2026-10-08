@@ -522,6 +522,10 @@ describe('external prompt operation intent', () => {
     });
     expect(prompt).toContain('Configuration editing is unavailable');
     expect(prompt).toContain('Trash is unavailable');
+    // RED if missing project selection blocks saving a new draft again.
+    expect(prompt).toContain(
+      'If the user has neither requested a particular project nor supplied a project path, create and save the requested new draft with cwd omitted; do not ask for a project path before saving it.'
+    );
     expect(prompt).not.toContain('Use team_update');
     expect(prompt).not.toContain('Use team_trash');
   });
