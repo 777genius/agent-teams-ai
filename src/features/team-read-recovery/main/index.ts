@@ -40,6 +40,12 @@ export type {
 } from '../core/application/PhysicalReadScope';
 export { PhysicalReadScope } from '../core/application/PhysicalReadScope';
 export type {
+  CapturedPathOperation,
+  PathCallbacks,
+  PathOperationResult,
+} from './infrastructure/OwnedPathOperations';
+export { OwnedPathOperations } from './infrastructure/OwnedPathOperations';
+export type {
   DescriptorAcquisition,
   DescriptorCallbacks,
   DescriptorLimits,
