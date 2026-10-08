@@ -238,6 +238,7 @@ declare module 'agent-teams-controller' {
   }
 
   export type AgentTeamsMcpToolGroupId =
+    | 'team'
     | 'task'
     | 'lead'
     | 'kanban'

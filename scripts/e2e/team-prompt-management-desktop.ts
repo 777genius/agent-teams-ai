@@ -26,6 +26,7 @@ import {
   EXTERNAL_AGENT_RENDERER_MARKER,
   type ConnectionInfoV1,
 } from '../../src/features/external-agent-connection/contracts/index.ts';
+import { nativeAgentRunArgs } from '../../src/features/external-agent-connection/main/nativeAgentRunArgs.ts';
 import { TEAM_TEMPLATES } from '../../src/features/team-templates/index.ts';
 import type { ElectronAPI } from '../../src/shared/types/api.ts';
 import { withNativeCodexMcp } from './lib/nativeCodexMcp.ts';
@@ -700,6 +701,31 @@ async function popup(info: ConnectionInfoV1, theme: 'dark' | 'light', narrow: bo
     }),
     'Final prompt is visible immediately after the request, with adjacent copy before templates'
   );
+  await evaluate(() =>
+    document.querySelector<HTMLElement>('[data-testid="external-agent-prompt-preview"]')?.focus()
+  );
+  await getClient().send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 2,
+    windowsVirtualKeyCode: 65,
+  });
+  await getClient().send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 0,
+    windowsVirtualKeyCode: 65,
+  });
+  assert(
+    await evaluate(
+      () =>
+        window.getSelection()?.toString() ===
+        document.querySelector('[data-testid="external-agent-prompt-preview"]')?.textContent
+    ),
+    'Native Select All must select only the final prompt'
+  );
   assert(info.cdp.browserWsUrl);
   const browser = await Cdp.connect(info.cdp.browserWsUrl);
   try {
@@ -824,6 +850,12 @@ try {
       expectedContext: info.context,
       cwd: project,
       workRoot: path.join(root, 'native-codex'),
+      perRunConfig: {
+        serverName: 'agent-teams',
+        args: nativeAgentRunArgs('codex', info).flatMap((arg, index, args) =>
+          arg === '-c' ? [arg, args[index + 1]] : []
+        ),
+      },
       requiredTools: [
         'app_get_connection_info',
         'team_list',
@@ -834,6 +866,18 @@ try {
       ],
     },
     async ({ call: nativeCall, nativeVersion, toolNames }) => {
+      assert.deepEqual(
+        toolNames,
+        [
+          'app_get_connection_info',
+          'team_create',
+          'team_get',
+          'team_list',
+          'team_trash',
+          'team_update',
+        ],
+        'Native per-run Codex config must expose only management tools'
+      );
       const calls = evidence.calls as Record<string, unknown>[];
       const call = async (tool: string, args: Record<string, unknown>) => {
         try {

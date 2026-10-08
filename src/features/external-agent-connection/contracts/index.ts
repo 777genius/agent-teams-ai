@@ -42,7 +42,38 @@ export interface ConnectionInfoV1 {
 export interface ExternalAgentConnectionApi {
   getConnectionInfo(): Promise<ConnectionInfoV1>;
   retryConnection(): Promise<ConnectionInfoV1>;
+  /** Native desktop execution; deliberately unavailable in browser/server mode. */
+  directRun?: ExternalAgentRunApi;
 }
+
+export type ExternalAgentRunProvider = 'anthropic' | 'codex';
+export type ExternalAgentRunStatus = 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
+export interface ExternalAgentRunRequest {
+  providerId: ExternalAgentRunProvider;
+  task: string;
+  expectedContext: AppConnectionContext;
+}
+export interface ExternalAgentRunSnapshot {
+  runId: string;
+  providerId: ExternalAgentRunProvider;
+  context: AppConnectionContext;
+  task: string;
+  status: ExternalAgentRunStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  logs: string;
+  error: string | null;
+}
+export interface ExternalAgentRunApi {
+  start(request: ExternalAgentRunRequest): Promise<ExternalAgentRunSnapshot>;
+  getSnapshot(): Promise<ExternalAgentRunSnapshot | null>;
+  cancel(request: { runId: string }): Promise<ExternalAgentRunSnapshot | null>;
+}
+export const EXTERNAL_AGENT_RUN_CHANNELS = {
+  start: 'external-agent-connection:run:start',
+  snapshot: 'external-agent-connection:run:snapshot',
+  cancel: 'external-agent-connection:run:cancel',
+} as const;
 
 export const EXTERNAL_AGENT_CONNECTION_CHANNELS = {
   getInfo: 'external-agent-connection:getInfo',

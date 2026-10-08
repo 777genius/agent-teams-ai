@@ -9,15 +9,21 @@ import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
 
+import { ExternalAgentRunActions } from './ExternalAgentRunActions';
 import { TeamTemplateReferences } from './TeamTemplateReferences';
 
-import type { ConnectionInfoV1, ExternalAgentConnectionApi } from '../contracts';
+import type {
+  ConnectionInfoV1,
+  ExternalAgentConnectionApi,
+  ExternalAgentRunApi,
+} from '../contracts';
 
 interface Props {
   api: ExternalAgentConnectionApi;
   connection: ConnectionInfoV1;
   isLight: boolean;
   onSettings(): void;
+  runApi?: ExternalAgentRunApi;
 }
 
 function createPrompt(task: string, connection: ConnectionInfoV1): string {
@@ -46,6 +52,7 @@ export const ExternalAgentPromptDialog = ({
   connection,
   isLight,
   onSettings,
+  runApi,
 }: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: settingsT } = useAppTranslation('settings');
@@ -248,6 +255,14 @@ export const ExternalAgentPromptDialog = ({
           </p>
         )}
       </div>
+      {runApi && (
+        <ExternalAgentRunActions
+          api={runApi}
+          task={request.value}
+          context={currentConnection.context}
+          ready={ready}
+        />
+      )}
       <TeamTemplateReferences isLight={isLight} />
     </div>
   );

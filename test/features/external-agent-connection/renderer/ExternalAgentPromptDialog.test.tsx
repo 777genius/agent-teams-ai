@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ConnectionInfoV1,
   ExternalAgentConnectionApi,
+  ExternalAgentRunSnapshot,
 } from '@features/external-agent-connection/contracts';
 
 vi.mock('@renderer/services/draftStorage', () => ({
@@ -19,6 +20,29 @@ vi.mock('@renderer/services/draftStorage', () => ({
     saveDraft: vi.fn(async () => {}),
     deleteDraft: vi.fn(async () => {}),
   },
+}));
+vi.mock('@renderer/hooks/useEffectiveCliProviderStatus', () => ({
+  useEffectiveCliProviderStatus: (providerId: string) => ({
+    codexSnapshotPending: false,
+    providerStatus: {
+      providerId,
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { oneShot: true },
+      connection: { codex: { launchAllowed: true } },
+    },
+  }),
+}));
+const runStore = vi.hoisted(() => ({
+  fetchCliProviderStatus: vi.fn(async () => true),
+  appConfig: { general: { multimodelEnabled: true } },
+}));
+vi.mock('@renderer/store', () => ({
+  useStore: Object.assign((selector: (state: typeof runStore) => unknown) => selector(runStore), {
+    getState: () => runStore,
+  }),
 }));
 
 function snapshot(): ConnectionInfoV1 {
@@ -86,6 +110,7 @@ describe('external prompt freshness and clipboard fallback', () => {
       root.render(
         createElement(ExternalAgentPromptDialog, {
           api,
+          runApi: api.directRun,
           connection: snapshot(),
           isLight: false,
           onSettings: vi.fn(),
@@ -93,6 +118,69 @@ describe('external prompt freshness and clipboard fallback', () => {
       )
     );
   };
+
+  // RED when reopening loses the owned run or textarea edits change what the active run claims to execute.
+  it('recovers the active native run, blocks duplicates and cancels its immutable task after edits and reopening', async () => {
+    const running: ExternalAgentRunSnapshot = {
+      runId: 'sandbox-owned-run',
+      providerId: 'codex',
+      context: snapshot().context,
+      task: 'Original sandbox management request',
+      status: 'running',
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      logs: '',
+      error: null,
+    };
+    let current = running;
+    const runApi = {
+      start: vi.fn(),
+      getSnapshot: vi.fn(async () => current),
+      cancel: vi.fn(async () => {
+        current = { ...running, status: 'cancelled', finishedAt: new Date().toISOString() };
+        return current;
+      }),
+    };
+    const api = {
+      getConnectionInfo: vi.fn(async () => snapshot()),
+      retryConnection: vi.fn(),
+      directRun: runApi,
+    };
+    await render(api);
+    const actions = () =>
+      host.querySelector<HTMLDivElement>('[data-testid="external-agent-run-actions"]')!;
+    expect(actions().textContent).toContain('Original sandbox management request');
+    expect(actions().querySelector('.animate-spin')).not.toBeNull();
+    for (const provider of ['codex', 'claude']) {
+      const button = host.querySelector<HTMLButtonElement>(
+        `[data-testid="external-agent-run-${provider}"]`
+      )!;
+      expect(button.disabled).toBe(true);
+      await act(async () => button.click());
+    }
+    const task = host.querySelector<HTMLTextAreaElement>('#external-agent-task')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        task,
+        'Edited request for a later run'
+      );
+      task.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(actions().textContent).toContain('Original sandbox management request');
+    expect(actions().textContent).not.toContain('Edited request for a later run');
+    await act(async () => root.render(null));
+    await render(api);
+    expect(actions().textContent).toContain('Original sandbox management request');
+    const cancel = Array.from(actions().querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === 'Cancel run'
+    )!;
+    expect(cancel.disabled).toBe(false);
+    await act(async () => cancel.click());
+    expect(runApi.cancel).toHaveBeenCalledWith({ runId: 'sandbox-owned-run' });
+    expect(runApi.start).not.toHaveBeenCalled();
+    expect(actions().textContent).toContain('Cancelled');
+    expect(actions().querySelector('.animate-spin')).toBeNull();
+  });
 
   // RED when the final prompt requires reveal, follows the templates, or has a detached copy action.
   it('shows the selectable final prompt immediately after the request with its copy action before templates', async () => {
