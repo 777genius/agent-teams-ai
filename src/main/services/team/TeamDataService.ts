@@ -59,6 +59,7 @@ import {
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
+import { readConfigForUiSnapshot } from './teamConfigSnapshot';
 import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
 import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
@@ -77,7 +78,10 @@ import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
-import { type TaskChangeLogSourceSnapshot,TeamTaskReadModelService } from './TeamTaskReadModelService';
+import {
+  type TaskChangeLogSourceSnapshot,
+  TeamTaskReadModelService,
+} from './TeamTaskReadModelService';
 import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
 import { TeamTaskWriter } from './TeamTaskWriter';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
@@ -281,18 +285,6 @@ interface FileWatchReconcileDiagnostics {
   lastPressureLogAt: number;
 }
 
-
-function readConfigForUiSnapshot(
-  configReader: TeamConfigReader & {
-    getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
-  },
-  teamName: string
-): Promise<TeamConfig | null> {
-  return typeof configReader.getConfigSnapshot === 'function'
-    ? configReader.getConfigSnapshot(teamName)
-    : configReader.getConfig(teamName);
-}
-
 function createUiSnapshotProjectResolver(
   configReader: TeamConfigReader
 ): TeamTranscriptProjectResolver {
@@ -300,9 +292,6 @@ function createUiSnapshotProjectResolver(
     getConfig: (teamName) => readConfigForUiSnapshot(configReader, teamName),
   });
 }
-
-
-
 
 function toProvisioningMemberShape(
   members: readonly Pick<
@@ -373,7 +362,10 @@ export class TeamDataService {
   private taskCommentNotificationInFlight = new Set<string>();
   private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
   private readonly taskReadModelService: TeamTaskReadModelService;
-  private readonly teamViewSnapshotAssembler: TeamViewSnapshotAssembler<PersistedTaskChangePresenceIndex, TaskChangeLogSourceSnapshot>;
+  private readonly teamViewSnapshotAssembler: TeamViewSnapshotAssembler<
+    PersistedTaskChangePresenceIndex,
+    TaskChangeLogSourceSnapshot
+  >;
   private readonly messageFeedService: TeamMessageFeedService;
   private readonly memberActivityMetaService: MemberActivityMetaService;
   private readonly notificationContextCache = new Map<string, TeamNotificationContextCacheEntry>();
@@ -410,18 +402,15 @@ export class TeamDataService {
       taskReader: this.taskReader,
       configReader: this.configReader,
       kanbanReader: this.kanbanManager,
-      readTask: (teamName, taskId) => this.getTaskBoard(teamName).getTask?.(taskId) as TeamTask | null | undefined,
+      readTask: (teamName, taskId) =>
+        this.getTaskBoard(teamName).getTask?.(taskId) as TeamTask | null | undefined,
       invalidateGlobalTaskProjectionCache: () => this.invalidateGlobalTaskProjectionCache(),
       logDebug: (message) => logger.debug(message),
     });
     this.teamViewSnapshotAssembler = new TeamViewSnapshotAssembler({
       resolveLeadRuntimeSettings: (teamMeta) => resolveSyntheticLeadRuntimeSettings(teamMeta),
-      observeTeamAlive: (teamName) => {
-        this.processHealthTeams.add(teamName);
-      },
-      observeTeamInactive: (teamName) => {
-        this.processHealthTeams.delete(teamName);
-      },
+      observeTeamAlive: (teamName) => void this.processHealthTeams.add(teamName),
+      observeTeamInactive: (teamName) => void this.processHealthTeams.delete(teamName),
       readConfig: (teamName) => this.readSnapshotConfig(teamName),
       readTasks: (teamName) => this.taskReadModelService.readTasksForUiSnapshot(teamName),
       readInboxNames: (teamName) => this.inboxReader.listInboxNames(teamName),
@@ -429,16 +418,29 @@ export class TeamDataService {
       readTeamMeta: (teamName) => this.teamMetaStore.getMeta(teamName),
       readLaunchSnapshot: async (teamName) => {
         const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
-          readBootstrapLaunchSnapshot(teamName), this.launchStateStore.read(teamName),
+          readBootstrapLaunchSnapshot(teamName),
+          this.launchStateStore.read(teamName),
         ]);
         return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
       },
       readKanbanState: (teamName) => this.kanbanManager.getState(teamName),
-      startTaskChangePresenceRead: (teamName) => this.taskReadModelService.startTaskChangePresenceRead(teamName),
-      projectTaskWithKanban: (task, kanbanTaskState) => this.taskReadModelService.attachKanbanCompatibility(task, kanbanTaskState),
-      projectTaskChangePresence: (tasks, presenceIndex, logSourceSnapshot) => this.taskReadModelService.resolveTaskChangePresenceMap(tasks, true, presenceIndex, logSourceSnapshot),
-      resolveMembers: (config, metaMembers, inboxNames, tasks, options) => this.memberResolver.resolveMembers(config, metaMembers, inboxNames, tasks, options),
-      readMemberRuntimeAdvisories: (teamName, members, observedAfterMs) => this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members, { observedAfterMs }),
+      startTaskChangePresenceRead: (teamName) =>
+        this.taskReadModelService.startTaskChangePresenceRead(teamName),
+      projectTaskWithKanban: (task, kanbanTaskState) =>
+        this.taskReadModelService.attachKanbanCompatibility(task, kanbanTaskState),
+      projectTaskChangePresence: (tasks, presenceIndex, logSourceSnapshot) =>
+        this.taskReadModelService.resolveTaskChangePresenceMap(
+          tasks,
+          true,
+          presenceIndex,
+          logSourceSnapshot
+        ),
+      resolveMembers: (config, metaMembers, inboxNames, tasks, options) =>
+        this.memberResolver.resolveMembers(config, metaMembers, inboxNames, tasks, options),
+      readMemberRuntimeAdvisories: (teamName, members, observedAfterMs) =>
+        this.memberRuntimeAdvisoryService.getMemberAdvisories(teamName, members, {
+          observedAfterMs,
+        }),
       resolveGitBranch: (cwd) => gitIdentityResolver.getBranch(path.normalize(cwd)),
       memberBranchConcurrency: process.platform === 'win32' ? 4 : 8,
       readProcesses: (teamName) => this.readProcesses(teamName),
@@ -479,12 +481,9 @@ export class TeamDataService {
     );
   }
 
-
-
   private invalidateGlobalTaskProjectionCache(): void {
     TeamTaskReader.invalidateAllTasksCache();
   }
-
 
   private getController(teamName: string): AgentTeamsController {
     return this.controllerFactory(teamName);
@@ -594,34 +593,24 @@ export class TeamDataService {
     this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName, runStartedAtMs);
   }
 
-
-
-
   private getTaskLabel(task: Pick<TeamTask, 'id' | 'displayId'>): string {
     return formatTaskDisplayLabel(task);
   }
-
-
 
   async getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null> {
     return this.taskReadModelService.getTask(teamName, taskId);
   }
 
-
-  /**
-   * Extract reviewer name from the current review cycle history.
-   * For legacy boards that stored reviewer only in kanban state, preserve that
-   * value as a migration fallback while the task is still actively in review.
-   */
-
-  setTaskChangePresenceServices(repository: TaskChangePresenceRepository, tracker: TeamLogSourceTracker): void {
+  setTaskChangePresenceServices(
+    repository: TaskChangePresenceRepository,
+    tracker: TeamLogSourceTracker
+  ): void {
     this.taskReadModelService.setTaskChangePresenceServices(repository, tracker);
   }
 
   setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
     this.taskReadModelService.setTaskChangePresenceTracking(teamName, enabled);
   }
-
 
   private isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
     if (typeof message.to === 'string' && message.to.trim().length > 0) return false;
