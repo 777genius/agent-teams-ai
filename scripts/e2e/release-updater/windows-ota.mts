@@ -820,7 +820,7 @@ async function run() {
           (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
         ) ?? null,
       'NSIS-created automatic successor before any harness relaunch',
-      process.arch === 'arm64' ? 480_000 : 90_000
+      480_000
     );
     samplerStop = true;
     await sampling;
