@@ -7,6 +7,7 @@ import {
   MAX_CONFIG_READ_BYTES,
   TeamConfigReader,
 } from '@main/services/team/TeamConfigReader';
+import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import {
   MAX_TEAM_METADATA_BYTES,
@@ -14,7 +15,7 @@ import {
 } from '@main/services/team/TeamMetadataSerialization';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadMember } from '@shared/utils/leadDetection';
 
 import { parseTeamManagementRequest, TeamManagementError } from '../core/managementPolicy';
 
@@ -27,6 +28,7 @@ import type { AppConnectionContext } from '@features/external-agent-connection/c
 import type {
   ReplaceMembersRequest,
   TeamChangeEvent,
+  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamMember,
@@ -52,7 +54,7 @@ export interface TeamPromptManagementPorts {
 }
 interface ConfigurationSnapshot {
   configurationRevision: string;
-  config: Record<string, unknown> | null;
+  config: TeamConfig | null;
   meta: Awaited<ReturnType<TeamMetaStore['getMeta']>>;
   members: TeamMember[];
   membersMetadataPresent: boolean;
@@ -75,11 +77,12 @@ function rosterShape(members: { name: string; role?: string; workflow?: string }
 export class TeamPromptManagement {
   private readonly metaStore = new TeamMetaStore();
   private readonly membersStore = new TeamMembersMetaStore();
+  private readonly memberResolver = new TeamMemberResolver();
   constructor(private readonly ports: TeamPromptManagementPorts) {}
 
   private async fingerprint(teamName: string): Promise<{
     revision: string;
-    config: Record<string, unknown> | null;
+    config: TeamConfig | null;
     membersMetadataPresent: boolean;
     teamMetadataPresent: boolean;
   }> {
@@ -98,7 +101,7 @@ export class TeamPromptManagement {
         this.readFingerprintFile(directory, name)
       )
     );
-    let config: Record<string, unknown> | null = null;
+    let config: TeamConfig | null = null;
     if (contents[0] !== null) {
       let parsed: unknown;
       try {
@@ -114,7 +117,7 @@ export class TeamPromptManagement {
           'TEAM_CONFIGURATION_UNREADABLE',
           'config.json does not contain a readable team configuration'
         );
-      config = parsed as Record<string, unknown>;
+      config = parsed as TeamConfig;
     }
     const hash = createHash('sha256').update(
       JSON.stringify({ teamName, directory: [identity.dev, identity.ino, identity.birthtimeMs] })
@@ -420,10 +423,22 @@ export class TeamPromptManagement {
             );
           }
         } else if (target.members) {
-          if (snapshot.config && !snapshot.membersMetadataPresent)
+          const metadataIdentities = new Set(
+            snapshot.members.map((member) => member.name.trim().toLowerCase())
+          );
+          if (
+            snapshot.config &&
+            this.memberResolver
+              .resolveMembers(snapshot.config, snapshot.members, [], [])
+              .some(
+                (member) =>
+                  !isCanonicalSettingsLeadMember(member) &&
+                  !metadataIdentities.has(member.name.trim().toLowerCase())
+              )
+          )
             throw new TeamManagementError(
               'TEAM_ROSTER_METADATA_MISSING',
-              'This stopped team has no authoritative member metadata for safe roster replacement'
+              'This stopped team has configuration members without authoritative metadata for safe roster replacement'
             );
           const previous = activeTeammates(snapshot.members);
           if (!snapshot.meta)

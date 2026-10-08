@@ -34,6 +34,7 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamMember,
   TeamProvisioningProgress,
   TeamRuntimeState,
 } from '@shared/types/team';
@@ -1005,88 +1006,162 @@ describe('MCP team tools over the local REST control API', () => {
   });
 
   // Catches config-only roster policies/identities being silently replaced by narrow management fields.
-  it('refuses stopped roster replacement without member metadata while retaining get and trash', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-config-roster-'));
-    setClaudeBasePathOverride(root);
-    const app = Fastify();
-    const { services, teamDataService } = createServices(root);
-    const { context, events } = enableManagement(services, teamDataService, root);
-    registerTeamRoutes(app, services);
-    const teamName = 'config-only-roster';
-    const directory = path.join(root, 'teams', teamName);
-    const configPath = path.join(directory, 'config.json');
-    const membersPath = path.join(directory, 'members.meta.json');
-    const metaPath = path.join(directory, 'team.meta.json');
-    const members = [
-      {
-        name: 'builder',
-        providerId: 'codex',
-        model: 'saved-model',
-        isolation: 'worktree',
-        mcpPolicy: { mode: 'appOnly' },
-        agentId: 'existing-agent',
-        cwd: root,
-        joinedAt: 1,
-      },
-      { name: 'removed-builder', removedAt: 1, agentId: 'historical-agent' },
-    ];
-    try {
-      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
-      await rm(membersPath);
-      await writeFile(
-        configPath,
-        JSON.stringify({ name: 'Stored roster', projectPath: root, members })
-      );
-      const configBytes = await readFile(configPath);
-      const metaBytes = await readFile(metaPath);
-      const get = await app.inject({
-        method: 'GET',
-        url: `/api/teams/${teamName}?configuration=1`,
-      });
-      expect(get.statusCode).toBe(200);
-      expect(get.json().members).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: 'builder',
-            providerId: 'codex',
-            model: 'saved-model',
-            agentId: 'existing-agent',
-            isolation: 'worktree',
-            mcpPolicy: { mode: 'appOnly' },
-          }),
-        ])
-      );
-      const expectedRevision = get.json().configurationRevision;
-      const target = { expectedContext: context.snapshot(), expectedRevision };
-      const update = await app.inject({
-        method: 'POST',
-        url: `/api/teams/${teamName}/update`,
-        payload: { ...target, members: [{ name: 'builder', role: 'New role' }] },
-      });
-      expect(update.statusCode).toBe(409);
-      expect(update.json().code).toBe('TEAM_ROSTER_METADATA_MISSING');
-      expect(await readFile(configPath)).toEqual(configBytes);
-      expect(await readFile(metaPath)).toEqual(metaBytes);
-      await expect(readFile(membersPath)).rejects.toMatchObject({ code: 'ENOENT' });
-      expect(events).toHaveLength(0);
-      const trash = await app.inject({
-        method: 'POST',
-        url: `/api/teams/${teamName}/trash`,
-        payload: target,
-      });
-      expect(trash.statusCode).toBe(200);
-      expect(JSON.parse(await readFile(configPath, 'utf8'))).toMatchObject({
-        members,
-        deletedAt: expect.any(String),
-      });
-    } finally {
-      await app.close();
-      setAppDataBasePath(null);
-      setClaudeBasePathOverride(null);
-      TeamConfigReader.clearCacheForTests();
-      await rm(root, { recursive: true, force: true });
+  it.each(['missing', 'partial'])(
+    'refuses stopped roster replacement with %s metadata while retaining get and trash',
+    async (coverage) => {
+      const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-config-roster-'));
+      setClaudeBasePathOverride(root);
+      const app = Fastify();
+      const { services, teamDataService } = createServices(root);
+      const { context, events } = enableManagement(services, teamDataService, root);
+      registerTeamRoutes(app, services);
+      const teamName = 'config-only-roster';
+      const directory = path.join(root, 'teams', teamName);
+      const configPath = path.join(directory, 'config.json');
+      const membersPath = path.join(directory, 'members.meta.json');
+      const metaPath = path.join(directory, 'team.meta.json');
+      const members: TeamMember[] = [
+        {
+          name: 'builder',
+          providerId: 'codex',
+          model: 'saved-model',
+          isolation: 'worktree',
+          mcpPolicy: { mode: 'appOnly' },
+          agentId: 'existing-agent',
+          cwd: root,
+          joinedAt: 1,
+        },
+        { name: 'removed-builder', removedAt: 1, agentId: 'historical-agent' },
+      ];
+      let expectedConfigMembers = members;
+      try {
+        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        await rm(membersPath);
+        if (coverage === 'partial')
+          await new TeamMembersMetaStore().writeMembers(teamName, [
+            { name: 'new-builder', providerId: 'gemini', model: 'new-model', agentId: 'new-agent' },
+          ]);
+        await writeFile(
+          configPath,
+          JSON.stringify({ name: 'Stored roster', projectPath: root, members })
+        );
+        const configBytes = await readFile(configPath);
+        const metaBytes = await readFile(metaPath);
+        const membersBytes = coverage === 'partial' ? await readFile(membersPath) : null;
+        const get = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${teamName}?configuration=1`,
+        });
+        expect(get.statusCode).toBe(200);
+        expect(get.json().members).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              name: 'builder',
+              providerId: 'codex',
+              model: 'saved-model',
+              agentId: 'existing-agent',
+              isolation: 'worktree',
+              mcpPolicy: { mode: 'appOnly' },
+            }),
+          ])
+        );
+        const expectedRevision = get.json<{ configurationRevision: string }>()
+          .configurationRevision;
+        const target = { expectedContext: context.snapshot(), expectedRevision };
+        const update = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: {
+            ...target,
+            members: [
+              { name: 'builder', role: 'New role' },
+              ...(coverage === 'partial' ? [{ name: 'new-builder' }] : []),
+            ],
+          },
+        });
+        expect(update.statusCode).toBe(409);
+        expect(update.json().code).toBe('TEAM_ROSTER_METADATA_MISSING');
+        expect(await readFile(configPath)).toEqual(configBytes);
+        expect(await readFile(metaPath)).toEqual(metaBytes);
+        if (membersBytes) expect(await readFile(membersPath)).toEqual(membersBytes);
+        else await expect(readFile(membersPath)).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(events).toHaveLength(0);
+        // Roster coverage is a group-specific constraint; unrelated saved settings remain editable.
+        let revision = expectedRevision;
+        for (const edit of [
+          { metadata: { description: 'Still editable' } },
+          { leadInstructions: 'Still editable' },
+        ]) {
+          const response = await app.inject({
+            method: 'POST',
+            url: `/api/teams/${teamName}/update`,
+            payload: { expectedContext: context.snapshot(), expectedRevision: revision, ...edit },
+          });
+          expect(response.statusCode).toBe(200);
+          revision = response.json<{ configurationRevision: string }>().configurationRevision;
+        }
+        if (coverage === 'partial') {
+          // Covered tombstones and legacy leads are safe; hidden runtime aliases need no metadata row.
+          await new TeamMembersMetaStore().writeMembers(teamName, [
+            { ...members[0], name: 'BUILDER', removedAt: 1 },
+            { name: 'removed-builder', removedAt: 1, agentId: 'historical-agent' },
+            { name: 'new-builder', providerId: 'gemini', model: 'new-model', agentId: 'new-agent' },
+          ]);
+          const config = JSON.parse(await readFile(configPath, 'utf8')) as Record<string, unknown>;
+          expectedConfigMembers = [
+            ...members,
+            { name: 'legacy-captain', role: 'Team lead' },
+            { name: 'user' },
+            { name: 'new-builder-2' },
+            { name: 'builder-provisioner' },
+          ];
+          await writeFile(
+            configPath,
+            JSON.stringify({ ...config, members: expectedConfigMembers })
+          );
+          const covered = await services.teamPromptManagement!.get(teamName);
+          const edit = await app.inject({
+            method: 'POST',
+            url: `/api/teams/${teamName}/update`,
+            payload: {
+              expectedContext: context.snapshot(),
+              expectedRevision: covered.configurationRevision,
+              members: [{ name: 'new-builder', role: 'Updated' }],
+            },
+          });
+          expect(edit.statusCode).toBe(200);
+          expect(await new TeamMembersMetaStore().getMembers(teamName)).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ name: 'BUILDER', agentId: 'existing-agent', removedAt: 1 }),
+              expect.objectContaining({
+                name: 'new-builder',
+                agentId: 'new-agent',
+                model: 'new-model',
+                role: 'Updated',
+              }),
+            ])
+          );
+          revision = edit.json<{ configurationRevision: string }>().configurationRevision;
+        }
+        const trash = await app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/trash`,
+          payload: { ...target, expectedRevision: revision },
+        });
+        expect(trash.statusCode).toBe(200);
+        expect(JSON.parse(await readFile(configPath, 'utf8'))).toMatchObject({
+          members: expectedConfigMembers,
+          deletedAt: expect.any(String),
+        });
+      } finally {
+        await app.close();
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        TeamConfigReader.clearCacheForTests();
+        await rm(root, { recursive: true, force: true });
+      }
     }
-  });
+  );
 
   // Catches fingerprint accepting oversized valid JSON before canonical storage limits can reject it.
   it.each([
