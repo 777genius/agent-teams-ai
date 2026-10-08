@@ -176,7 +176,7 @@ function checkSignatures(phases: Record<string, unknown>[], architecture: string
       proof(signature.asar);
       const locks = list(signature.locks, 'runtime locks');
       equal(locks.length, 2, 'runtime lock count');
-      for (const [index, version] of ['0.0.105', '0.3.3'].entries()) {
+      for (const [index, version] of ['0.0.106', '0.3.3'].entries()) {
         equal(at(locks[index], 'version'), version, 'runtime version');
         proof(at(locks[index], 'lock'));
         proof(at(locks[index], 'signedInstalledBinary'));

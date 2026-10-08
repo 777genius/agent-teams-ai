@@ -211,7 +211,7 @@ async function installed(label: string, version: '2.17.1' | '2.17.10') {
   ]);
   const locks = [];
   for (const [name, directory, version, binary] of [
-    ['runtime', 'runtime', '0.0.105', 'claude-multimodel'],
+    ['runtime', 'runtime', '0.0.106', 'claude-multimodel'],
     ['terminal-platform', 'terminal-platform', '0.3.3', 'terminal-daemon'],
   ]) {
     assert(name && directory && version && binary);

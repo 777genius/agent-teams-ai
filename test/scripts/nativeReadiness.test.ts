@@ -229,10 +229,10 @@ import type {
 // This contract test becomes red if publication accepts a forged, stale, skipped or partial native proof.
 // The closed synthetic matrix is intentionally kept together for scenario mutation tests.
 // eslint-disable-next-line sonarjs/cognitive-complexity
-function fixture(full = false) {
+function fixture(full = false, toolingShaOverride?: string) {
   const targetVersion = full ? '2.17.10' : '2.17.4';
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
-  const toolingSha = full ? 'b'.repeat(40) : 'a'.repeat(40);
+  const toolingSha = toolingShaOverride ?? (full ? 'b'.repeat(40) : 'a'.repeat(40));
   const applicationSha = 'b'.repeat(40);
   const p = 'c'.repeat(64);
   const proof = (name: string) => textProof(name, name);
@@ -918,7 +918,7 @@ function manualValue(
     teamIdentifier: version === '2.17.1' ? '6C84CW694S' : '86399583GS',
     productMinimum: version === '2.17.1' ? '12.0' : '13.0',
     asar: file,
-    locks: ['0.0.105', '0.3.3'].map((version) => ({
+    locks: ['0.0.106', '0.3.3'].map((version) => ({
       version,
       lock: file,
       signedInstalledBinary: file,
@@ -1058,6 +1058,26 @@ function manualValue(
 }
 
 describe('full220 frozen-source native readiness', () => {
+  it('separates application S from tooling T while binding native producer heads to T', async () => {
+    const f = fixture(true, 'd'.repeat(40));
+    expect(f.plan.input.toolingSha).not.toBe(f.plan.input.target.applicationSha);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+
+    const value = f.values.get('mac-arm64-manual')!;
+    const producer = value.producer as { run: { head_sha: string } };
+    producer.run.head_sha = f.plan.input.target.applicationSha;
+    f.reseal('mac-arm64-manual');
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'producer.head_sha'
+    );
+
+    producer.run.head_sha = f.plan.input.toolingSha;
+    f.reseal('mac-arm64-manual');
+    f.runs.get(203)!.head_sha = f.plan.input.target.applicationSha;
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'native tooling SHA'
+    );
+  });
   it('accepts exactly 18 scenarios, 14 artifacts and four complete workflow cohorts', async () => {
     const f = fixture(true);
     expect(f.receipt.artifacts).toHaveLength(14);

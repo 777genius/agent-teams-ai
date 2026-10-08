@@ -564,10 +564,9 @@ export async function verifyNativeReadiness(
     requireThat(
       receipt.schemaVersion === 2 &&
         plan.input.target.tag === 'v2.17.10' &&
-        plan.input.toolingSha === plan.input.target.applicationSha &&
         plan.input.macProductMinimum === '13.0' &&
         !plan.input.macSource,
-      'Full220 requires one frozen source and schema2 native proof'
+      'Full220 requires schema2 native proof, macOS13 floor and full Mac assets'
     );
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const d = digest(canonical(plan.input));
