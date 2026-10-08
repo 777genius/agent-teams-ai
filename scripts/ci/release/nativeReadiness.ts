@@ -747,7 +747,7 @@ export async function verifyNativeReadiness(
     equal(artifact.workflow_run.head_sha, executionSha, 'artifact tooling');
     requireThat(
       time(artifact.created_at) >= time(upload.started_at) &&
-        time(artifact.created_at) < time(upload.completed_at) + 1000,
+        time(artifact.created_at) <= time(upload.completed_at) + 1000,
       'Artifact outside current upload'
     );
     const archive = await port.archive(

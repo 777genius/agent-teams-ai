@@ -527,6 +527,32 @@ describe('native readiness publication boundary', () => {
     const f = fixture();
     await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
   });
+  it.each([
+    { created: '2026-10-07T13:33:28Z', accepted: true },
+    { created: '2026-10-07T13:33:28.001Z', accepted: false },
+  ])(
+    'enforces the inclusive one-second GitHub upload timestamp bound at $created',
+    async ({ created, accepted }) => {
+      const f = fixture();
+      const reference = f.receipt.artifacts.find((item) =>
+        item.entries.some((entry) => entry.scenario === 'mac-arm64-older')
+      );
+      assert(reference);
+      const job = f.jobs.get(reference.runId)?.find((item) => item.id === reference.jobId);
+      assert(job);
+      const upload = job.steps.at(-1);
+      assert(upload);
+      // Actual artifact11486205136/upload-job112816351119 API timestamps.
+      upload.started_at = '2026-10-07T13:33:24Z';
+      upload.completed_at = '2026-10-07T13:33:27Z';
+      job.completed_at = '2026-10-07T13:33:34Z';
+      const artifact = await f.port.artifact(f.receipt.repository, reference.artifactId);
+      artifact.created_at = created;
+      const result = verifyNativeReadiness(f.port, f.plan, f.p, f.receipt);
+      if (accepted) await expect(result).resolves.toBeUndefined();
+      else await expect(result).rejects.toThrow('Artifact outside current upload');
+    }
+  );
   it('rejects a native family assembled from two individually successful current runs', async () => {
     const f = fixture();
     const reference = f.receipt.artifacts.find((item) =>
