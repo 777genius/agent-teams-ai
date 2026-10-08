@@ -118,6 +118,11 @@ export class TeamPromptManagement {
           'config.json does not contain a readable team configuration'
         );
       config = parsed as TeamConfig;
+      if (config.deletedAt !== undefined && typeof config.deletedAt !== 'string')
+        throw new TeamManagementError(
+          'TEAM_CONFIGURATION_UNREADABLE',
+          'config.json deletedAt must be a string when present'
+        );
     }
     const hash = createHash('sha256').update(
       JSON.stringify({ teamName, directory: [identity.dev, identity.ino, identity.birthtimeMs] })
