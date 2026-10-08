@@ -1,11 +1,9 @@
-import {
-  AGENT_TEAMS_MCP_TOOL_GROUPS,
-  AGENT_TEAMS_REGISTERED_TOOL_NAMES,
-} from 'agent-teams-controller';
+import agentTeamsController from 'agent-teams-controller';
 
 import type { ConnectionInfoV1, ExternalAgentRunProvider } from '../contracts';
 
 const SERVER_NAME = 'agent-teams';
+const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } = agentTeamsController;
 const MANAGEMENT_TOOLS = (
   AGENT_TEAMS_MCP_TOOL_GROUPS.find((group) => group.id === 'team')?.toolNames ?? []
 ).filter((tool) =>
