@@ -252,6 +252,16 @@ async function key(key: string, code: string, windowsVirtualKeyCode: number) {
 }
 async function screenshot(label: string) {
   assert(client);
+  await waitFor(
+    () =>
+      evaluate(() =>
+        [...document.querySelectorAll('[data-template-reference] button > svg')].every((icon) =>
+          icon.getAnimations().every((animation) => animation.playState !== 'running')
+        )
+      ),
+    'Template chevrons settle before screenshot',
+    5_000
+  );
   const { data } = await getClient().send<{ data: string }>('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: false,
