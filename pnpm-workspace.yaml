@@ -10,6 +10,8 @@ minimumReleaseAgeExclude:
   - esbuild
   - fast-uri@3.1.7
   - find-my-way@9.7.0
+  # Exact critical security fix; retain release-age protection for other versions.
+  - handlebars@4.7.10
   - tmp@0.2.6
 strictPeerDependencies: true
 peerDependencyRules:
@@ -50,7 +52,7 @@ overrides:
   'flatted': '3.4.2'
   'follow-redirects': '1.16.0'
   'find-my-way': '9.7.0'
-  'handlebars': '4.7.9'
+  'handlebars': '4.7.10'
   'hono': '4.12.30'
   'ip-address': '10.5.0'
   'immutable': '5.1.9'
