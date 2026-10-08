@@ -101,7 +101,7 @@ jobs:
           path: publication-result.json
           if-no-files-found: warn
 
-  verify-prepared-full218:
+  verify-prepared-full219:
     if: ${{ inputs.full_ready }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -110,9 +110,9 @@ jobs:
       contents: write
       actions: read
     env:
-      CHECKOUT_SHA: 3781d144dbf013a2f6d0ef73ea64e472548286c7
+      CHECKOUT_SHA: eec29e87b4a85bc83cdf867895b895a2162ef653
       ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
-      RELEASE_TAG: v2.17.8
+      RELEASE_TAG: v2.17.9
       PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
       PREPARED_RUN_ATTEMPT: '1'
       PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
@@ -122,9 +122,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: 3781d144dbf013a2f6d0ef73ea64e472548286c7
+          ref: eec29e87b4a85bc83cdf867895b895a2162ef653
           persist-credentials: false
-      - name: Bind workflow origin and immutable full218 checkout
+      - name: Bind workflow origin and immutable full219 checkout
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DISPATCH_TAG: ${{ inputs.release_tag }}
@@ -153,11 +153,11 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Validate immutable full218 tooling types
+      - name: Validate immutable full219 tooling types
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-      - name: Verify prepared full218 readiness without publication
+      - name: Verify prepared full219 readiness without publication
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -165,11 +165,11 @@ jobs:
           [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
           # The original CLI authenticates checkout tooling; workflow origin stays in the sidecar.
           GITHUB_SHA="$CHECKOUT_SHA" pnpm exec tsx scripts/ci/publish-full-release.ts --plan-digest "$PLAN_DIGEST" --output publication-result.json
-      - name: Preserve full218 readiness and workflow checkout identity
+      - name: Preserve full219 readiness and workflow checkout identity
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: full218-readiness-${{ github.run_id }}-${{ github.run_attempt }}
+          name: full219-readiness-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             publication-result.json
             execution-identity.json
