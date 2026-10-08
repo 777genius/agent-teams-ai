@@ -69,7 +69,6 @@ import {
   AlertDialogTitle,
 } from '@renderer/components/ui/alert-dialog';
 import { Button } from '@renderer/components/ui/button';
-import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -81,24 +80,10 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@renderer/components/ui/context-menu';
-import { Input } from '@renderer/components/ui/input';
-import { Label } from '@renderer/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { terminalPlatformThemeManifests } from '@terminal-platform/design-tokens';
 import { createWorkspaceWebSocketTransport } from '@terminal-platform/workspace-adapter-websocket';
-import {
-  createWorkspaceKernel,
-  terminalPlatformTerminalFontScales,
-  type WorkspaceKernel,
-} from '@terminal-platform/workspace-core';
+import { createWorkspaceKernel, type WorkspaceKernel } from '@terminal-platform/workspace-core';
 import {
   resolveTerminalTopologyControlState,
   TerminalCommandDock,
@@ -112,7 +97,6 @@ import {
   Folder,
   GitBranch,
   Github,
-  Image,
   Loader2,
   Palette,
   Pencil,
@@ -122,6 +106,24 @@ import {
   Terminal,
   X,
 } from 'lucide-react';
+
+import {
+  persistTerminalAppearanceSettings,
+  persistTerminalPreference,
+  readStoredTerminalAppearanceSettings,
+  readStoredTerminalBooleanPreference,
+  readStoredTerminalPreference,
+} from '../adapters/terminalWorkspacePreferencesStorage';
+import {
+  normalizeTerminalAppearanceSettings,
+  type TerminalAppearanceSettings,
+} from '../model/terminalAppearanceSettings';
+import { createTerminalAppearanceStyle } from '../view-models/terminalAppearanceStyle';
+
+import {
+  type TerminalWorkspaceSettingsOperations,
+  TerminalWorkspaceSettingsPage,
+} from './TerminalWorkspaceSettingsPage';
 
 import type {
   TerminalWorkspaceBootstrap,
@@ -149,7 +151,6 @@ const TERMINAL_LOCAL_AUTOCOMPLETE_THROTTLE_MS = 75;
 const PREWARMED_TERMINAL_TAB_TITLE = '__tp_prewarmed_shell__';
 const TERMINAL_TAB_PREFERENCES_VERSION = 1;
 const TERMINAL_PLATFORM_GITHUB_URL = 'https://github.com/777genius/terminal-platform';
-const TERMINAL_APPEARANCE_SETTINGS_VERSION = 1;
 type TerminalWorkspaceSnapshot = ReturnType<WorkspaceKernel['getSnapshot']>;
 type TerminalMuxCommand = Parameters<WorkspaceKernel['commands']['dispatchMuxCommand']>[1];
 type TerminalScreenElementHandle = ComponentRef<typeof TerminalScreen> & {
@@ -172,41 +173,6 @@ interface TerminalTabColorOption {
   background: string;
   hoverBackground: string;
 }
-
-type TerminalBackgroundMode = 'transparent' | 'solid' | 'image';
-type TerminalBackgroundImageFit = 'cover' | 'contain' | 'stretch' | 'tile' | 'center';
-
-interface TerminalAppearanceSettings {
-  version: number;
-  fontSizePx: number;
-  opacityPercent: number;
-  backgroundMode: TerminalBackgroundMode;
-  backgroundColor: string;
-  backgroundImageUrl: string;
-  backgroundImageFit: TerminalBackgroundImageFit;
-  backdropBlurPx: number;
-  dimBackgroundImage: boolean;
-}
-
-const DEFAULT_TERMINAL_APPEARANCE_SETTINGS: TerminalAppearanceSettings = {
-  version: TERMINAL_APPEARANCE_SETTINGS_VERSION,
-  fontSizePx: 15,
-  opacityPercent: 74,
-  backgroundMode: 'transparent',
-  backgroundColor: '#080c14',
-  backgroundImageUrl: '',
-  backgroundImageFit: 'cover',
-  backdropBlurPx: 20,
-  dimBackgroundImage: true,
-};
-
-const TERMINAL_BACKGROUND_MODE_OPTIONS: Array<{
-  id: TerminalBackgroundMode;
-}> = [{ id: 'transparent' }, { id: 'solid' }, { id: 'image' }];
-
-const TERMINAL_BACKGROUND_IMAGE_FIT_OPTIONS: Array<{
-  id: TerminalBackgroundImageFit;
-}> = [{ id: 'cover' }, { id: 'contain' }, { id: 'stretch' }, { id: 'tile' }, { id: 'center' }];
 
 interface TerminalTabPreferences {
   version: number;
@@ -399,9 +365,9 @@ export const TerminalWorkspacePanel = ({
         controlUrl: bootstrap.controlPlaneUrl,
         streamUrl: bootstrap.sessionStreamUrl,
       }),
-      initialThemeId: readStoredValue(storageKey(teamName, 'theme')),
-      initialTerminalFontScale: readStoredValue(storageKey(teamName, 'font-scale')),
-      initialTerminalLineWrap: readStoredBoolean(storageKey(teamName, 'line-wrap')),
+      initialThemeId: readStoredTerminalPreference(teamName, 'theme'),
+      initialTerminalFontScale: readStoredTerminalPreference(teamName, 'font-scale'),
+      initialTerminalLineWrap: readStoredTerminalBooleanPreference(teamName, 'line-wrap'),
       initialCommandHistoryEntries: readStoredCommandHistory(teamName),
       commandHistoryLimit: COMMAND_HISTORY_LIMIT,
     });
@@ -670,6 +636,18 @@ const TerminalWorkspaceKernelView = ({
       );
     },
     []
+  );
+
+  const settingsOperations = useMemo<TerminalWorkspaceSettingsOperations>(
+    () => ({
+      reconnect: () => kernel.commands.bootstrap(),
+      refreshSessions: () => kernel.commands.refreshSessions(),
+      stopRuntime: () => onStopRuntime(),
+      setFontScale: (fontScale) => kernel.commands.setTerminalFontScale(fontScale),
+      setLineWrap: (lineWrap) => kernel.commands.setTerminalLineWrap(lineWrap),
+      setTheme: (themeId) => kernel.commands.setTheme(themeId),
+    }),
+    [kernel.commands, onStopRuntime]
   );
 
   const scrollTerminalToLatest = useCallback((): void => {
@@ -993,12 +971,12 @@ const TerminalWorkspaceKernelView = ({
   }, [kernel]);
 
   useEffect(() => {
-    persistValue(storageKey(teamName, 'theme'), snapshot.theme.themeId);
+    persistTerminalPreference(teamName, 'theme', snapshot.theme.themeId);
   }, [snapshot.theme.themeId, teamName]);
 
   useEffect(() => {
-    persistValue(storageKey(teamName, 'font-scale'), terminalDisplay.fontScale);
-    persistValue(storageKey(teamName, 'line-wrap'), String(terminalDisplay.lineWrap));
+    persistTerminalPreference(teamName, 'font-scale', terminalDisplay.fontScale);
+    persistTerminalPreference(teamName, 'line-wrap', String(terminalDisplay.lineWrap));
   }, [teamName, terminalDisplay.fontScale, terminalDisplay.lineWrap]);
 
   useEffect(() => {
@@ -1216,12 +1194,15 @@ const TerminalWorkspaceKernelView = ({
       {settingsOpen ? (
         <TerminalWorkspaceSettingsPage
           appearanceSettings={appearanceSettings}
-          kernel={kernel}
+          display={{
+            fontScale: terminalDisplay.fontScale,
+            lineWrap: terminalDisplay.lineWrap,
+            themeId: snapshot.theme.themeId,
+          }}
+          operations={settingsOperations}
           onAppearanceSettingsChange={updateAppearanceSettings}
           onClose={() => onSettingsOpenChange?.(false)}
           onReload={onReload}
-          onStopRuntime={onStopRuntime}
-          snapshot={snapshot}
         />
       ) : (
         <TerminalWorkspace
@@ -2421,484 +2402,6 @@ const TerminalWorkingDirectoryBar = ({
   );
 };
 
-const TerminalWorkspaceSettingsPage = ({
-  appearanceSettings,
-  kernel,
-  onAppearanceSettingsChange,
-  onClose,
-  onReload,
-  onStopRuntime,
-  snapshot,
-}: {
-  appearanceSettings: TerminalAppearanceSettings;
-  kernel: WorkspaceKernel;
-  onAppearanceSettingsChange: (updates: Partial<TerminalAppearanceSettings>) => void;
-  onClose: () => void;
-  onReload: () => void;
-  onStopRuntime: () => Promise<void>;
-  snapshot: TerminalWorkspaceSnapshot;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const display = snapshot.terminalDisplay;
-  const showBackgroundColor = appearanceSettings.backgroundMode !== 'transparent';
-  const showBackgroundImageControls = appearanceSettings.backgroundMode === 'image';
-
-  const runAction = async (actionId: string, action: () => Promise<void> | void): Promise<void> => {
-    setPendingAction(actionId);
-    try {
-      await action();
-    } catch {
-      // Kernel diagnostics already surface command failures in the terminal workspace.
-    } finally {
-      setPendingAction(null);
-    }
-  };
-
-  return (
-    <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-white/10 bg-transparent text-slate-100"
-      data-testid="agent-team-terminal-settings"
-    >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-white/[0.025] px-5 py-4 backdrop-blur-xl">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-100">
-            {t('terminalWorkspace.settingsTitle')}
-          </p>
-          <p className="mt-0.5 text-xs text-slate-400">
-            {t('terminalWorkspace.settingsDescription')}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0 text-slate-400 hover:bg-white/[0.07] hover:text-slate-100"
-          aria-label={t('terminalWorkspace.closeTerminalSettings')}
-          onClick={onClose}
-        >
-          <X size={14} />
-        </Button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-2">
-          <TerminalSettingsSection
-            icon={<Palette size={14} />}
-            title={t('terminalWorkspace.settingsThemeTitle')}
-            description={t('terminalWorkspace.settingsThemeDescription')}
-          >
-            <Select
-              value={snapshot.theme.themeId}
-              onValueChange={(themeId) => kernel.commands.setTheme(themeId)}
-            >
-              <SelectTrigger
-                aria-label={t('terminalWorkspace.settingsThemeAria')}
-                className="border-white/10 bg-white/[0.035]"
-              >
-                <SelectValue placeholder={t('terminalWorkspace.settingsThemePlaceholder')} />
-              </SelectTrigger>
-              <SelectContent className="z-[100]">
-                {terminalPlatformThemeManifests.map((theme) => (
-                  <SelectItem key={theme.id} value={theme.id}>
-                    {formatThemeLabel(t, theme.displayName, theme.id)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </TerminalSettingsSection>
-
-          <TerminalSettingsSection
-            icon={<Terminal size={14} />}
-            title={t('terminalWorkspace.settingsFontTitle')}
-            description={t('terminalWorkspace.settingsFontDescription')}
-          >
-            <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-end gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="terminal-settings-font-preset" className="text-xs text-slate-300">
-                  {t('terminalWorkspace.settingsFontPreset')}
-                </Label>
-                <Select
-                  value={display.fontScale}
-                  onValueChange={(fontScale) => kernel.commands.setTerminalFontScale(fontScale)}
-                >
-                  <SelectTrigger
-                    id="terminal-settings-font-preset"
-                    aria-label={t('terminalWorkspace.settingsFontPresetAria')}
-                    className="border-white/10 bg-white/[0.035]"
-                  >
-                    <SelectValue
-                      placeholder={t('terminalWorkspace.settingsFontPresetPlaceholder')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="z-[100]">
-                    {terminalPlatformTerminalFontScales.map((fontScale) => (
-                      <SelectItem key={fontScale} value={fontScale}>
-                        {formatFontScaleLabel(t, fontScale)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="terminal-settings-font-size" className="text-xs text-slate-300">
-                  {t('terminalWorkspace.settingsFontSize')}
-                </Label>
-                <Input
-                  id="terminal-settings-font-size"
-                  type="number"
-                  inputMode="numeric"
-                  min={11}
-                  max={24}
-                  step={1}
-                  className="border-white/10 bg-white/[0.035] text-right"
-                  value={appearanceSettings.fontSizePx}
-                  onChange={(event) =>
-                    onAppearanceSettingsChange({
-                      fontSizePx: clampNumberInput(event.currentTarget.value, 11, 24),
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </TerminalSettingsSection>
-
-          <TerminalSettingsSection
-            icon={<Image size={14} />}
-            title={t('terminalWorkspace.settingsBackgroundTitle')}
-            description={t('terminalWorkspace.settingsBackgroundDescription')}
-          >
-            <div className="grid gap-3">
-              <div
-                className={cn(
-                  'grid items-end gap-3',
-                  showBackgroundColor ? 'grid-cols-[minmax(0,1fr)_6rem]' : 'grid-cols-1'
-                )}
-              >
-                <div className="grid gap-1.5">
-                  <Label htmlFor="terminal-settings-opacity" className="text-xs text-slate-300">
-                    {t('terminalWorkspace.settingsOpacity')}
-                  </Label>
-                  <input
-                    id="terminal-settings-opacity-range"
-                    type="range"
-                    min={35}
-                    max={100}
-                    step={1}
-                    className="h-9 w-full accent-sky-300"
-                    aria-label={t('terminalWorkspace.settingsOpacityAria')}
-                    value={appearanceSettings.opacityPercent}
-                    onChange={(event) =>
-                      onAppearanceSettingsChange({
-                        opacityPercent: clampNumberInput(event.currentTarget.value, 35, 100),
-                      })
-                    }
-                  />
-                </div>
-                <Input
-                  id="terminal-settings-opacity"
-                  type="number"
-                  inputMode="numeric"
-                  min={35}
-                  max={100}
-                  step={1}
-                  className="border-white/10 bg-white/[0.035] text-right"
-                  value={appearanceSettings.opacityPercent}
-                  onChange={(event) =>
-                    onAppearanceSettingsChange({
-                      opacityPercent: clampNumberInput(event.currentTarget.value, 35, 100),
-                    })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-end gap-3">
-                <div className="grid gap-1.5">
-                  <Label
-                    htmlFor="terminal-settings-background-mode"
-                    className="text-xs text-slate-300"
-                  >
-                    {t('terminalWorkspace.settingsBackgroundMode')}
-                  </Label>
-                  <Select
-                    value={appearanceSettings.backgroundMode}
-                    onValueChange={(backgroundMode) =>
-                      onAppearanceSettingsChange({
-                        backgroundMode: backgroundMode as TerminalBackgroundMode,
-                      })
-                    }
-                  >
-                    <SelectTrigger
-                      id="terminal-settings-background-mode"
-                      aria-label={t('terminalWorkspace.settingsBackgroundModeAria')}
-                      className="border-white/10 bg-white/[0.035]"
-                    >
-                      <SelectValue placeholder={t('terminalWorkspace.settingsBackgroundMode')} />
-                    </SelectTrigger>
-                    <SelectContent className="z-[100]">
-                      {TERMINAL_BACKGROUND_MODE_OPTIONS.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {formatTerminalBackgroundModeLabel(t, option.id)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {showBackgroundColor ? (
-                  <Input
-                    type="color"
-                    aria-label={t('terminalWorkspace.settingsBackgroundColorAria')}
-                    className="h-9 border-white/10 bg-white/[0.035] p-1"
-                    value={appearanceSettings.backgroundColor}
-                    onChange={(event) =>
-                      onAppearanceSettingsChange({
-                        backgroundColor: normalizeColorInput(event.currentTarget.value),
-                      })
-                    }
-                  />
-                ) : null}
-              </div>
-
-              {appearanceSettings.backgroundMode === 'transparent' ? (
-                <div className="grid gap-1.5">
-                  <Label
-                    htmlFor="terminal-settings-backdrop-blur"
-                    className="text-xs text-slate-300"
-                  >
-                    {t('terminalWorkspace.settingsBackdropBlur')}
-                  </Label>
-                  <Input
-                    id="terminal-settings-backdrop-blur"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={40}
-                    step={1}
-                    className="max-w-24 border-white/10 bg-white/[0.035] text-right"
-                    value={appearanceSettings.backdropBlurPx}
-                    onChange={(event) =>
-                      onAppearanceSettingsChange({
-                        backdropBlurPx: clampNumberInput(event.currentTarget.value, 0, 40),
-                      })
-                    }
-                  />
-                </div>
-              ) : null}
-
-              {showBackgroundImageControls ? (
-                <>
-                  <div className="grid gap-1.5">
-                    <Label
-                      htmlFor="terminal-settings-background-image"
-                      className="text-xs text-slate-300"
-                    >
-                      {t('terminalWorkspace.settingsImageUrl')}
-                    </Label>
-                    <Input
-                      id="terminal-settings-background-image"
-                      type="url"
-                      className="border-white/10 bg-white/[0.035]"
-                      placeholder="https://..."
-                      value={appearanceSettings.backgroundImageUrl}
-                      onChange={(event) =>
-                        onAppearanceSettingsChange({
-                          backgroundImageUrl: event.currentTarget.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-end gap-3">
-                    <div className="grid gap-1.5">
-                      <Label
-                        htmlFor="terminal-settings-background-fit"
-                        className="text-xs text-slate-300"
-                      >
-                        {t('terminalWorkspace.settingsImageFit')}
-                      </Label>
-                      <Select
-                        value={appearanceSettings.backgroundImageFit}
-                        onValueChange={(backgroundImageFit) =>
-                          onAppearanceSettingsChange({
-                            backgroundImageFit: backgroundImageFit as TerminalBackgroundImageFit,
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          id="terminal-settings-background-fit"
-                          aria-label={t('terminalWorkspace.settingsImageFitAria')}
-                          className="border-white/10 bg-white/[0.035]"
-                        >
-                          <SelectValue placeholder={t('terminalWorkspace.settingsImageFit')} />
-                        </SelectTrigger>
-                        <SelectContent className="z-[100]">
-                          {TERMINAL_BACKGROUND_IMAGE_FIT_OPTIONS.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {formatTerminalBackgroundImageFitLabel(t, option.id)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="terminal-settings-blur" className="text-xs text-slate-300">
-                        {t('terminalWorkspace.settingsImageBlur')}
-                      </Label>
-                      <Input
-                        id="terminal-settings-blur"
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={40}
-                        step={1}
-                        className="border-white/10 bg-white/[0.035] text-right"
-                        value={appearanceSettings.backdropBlurPx}
-                        onChange={(event) =>
-                          onAppearanceSettingsChange({
-                            backdropBlurPx: clampNumberInput(event.currentTarget.value, 0, 40),
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <label className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.025] px-3 py-2 text-xs text-slate-300">
-                    <Checkbox
-                      checked={appearanceSettings.dimBackgroundImage}
-                      onCheckedChange={(checked) =>
-                        onAppearanceSettingsChange({ dimBackgroundImage: checked === true })
-                      }
-                    />
-                    {t('terminalWorkspace.settingsDimImage')}
-                  </label>
-                </>
-              ) : null}
-            </div>
-          </TerminalSettingsSection>
-
-          <TerminalSettingsSection
-            icon={<Check size={14} />}
-            title={t('terminalWorkspace.settingsBehaviorTitle')}
-            description={t('terminalWorkspace.settingsBehaviorDescription')}
-          >
-            <label className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.025] px-3 py-2 text-xs text-slate-300">
-              <Checkbox
-                checked={display.lineWrap}
-                onCheckedChange={(checked) => kernel.commands.setTerminalLineWrap(checked === true)}
-              />
-              {t('terminalWorkspace.settingsWrapLongOutput')}
-            </label>
-          </TerminalSettingsSection>
-
-          <TerminalSettingsSection
-            icon={<RefreshCw size={14} />}
-            title={t('terminalWorkspace.settingsRuntimeTitle')}
-            description={t('terminalWorkspace.settingsRuntimeDescription')}
-          >
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-white/10 bg-white/[0.025] text-slate-200 hover:bg-white/[0.07]"
-                disabled={pendingAction !== null}
-                onClick={() => void runAction('bootstrap', () => kernel.commands.bootstrap())}
-              >
-                {pendingAction === 'bootstrap' ? (
-                  <Loader2 size={13} className="mr-1.5 animate-spin" />
-                ) : (
-                  <RefreshCw size={13} className="mr-1.5" />
-                )}
-                {t('terminalWorkspace.settingsReconnect')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-white/10 bg-white/[0.025] text-slate-200 hover:bg-white/[0.07]"
-                disabled={pendingAction !== null}
-                onClick={() =>
-                  void runAction('refresh-sessions', () => kernel.commands.refreshSessions())
-                }
-              >
-                {pendingAction === 'refresh-sessions' ? (
-                  <Loader2 size={13} className="mr-1.5 animate-spin" />
-                ) : (
-                  <Terminal size={13} className="mr-1.5" />
-                )}
-                {t('terminalWorkspace.settingsSessions')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-white/10 bg-white/[0.025] text-slate-200 hover:bg-white/[0.07]"
-                disabled={pendingAction !== null}
-                onClick={onReload}
-              >
-                <RefreshCw size={13} className="mr-1.5" />
-                {t('terminalWorkspace.settingsReload')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-red-500/25 bg-red-500/10 text-red-200 hover:bg-red-500/15"
-                disabled={pendingAction !== null}
-                onClick={() => void runAction('stop-runtime', onStopRuntime)}
-              >
-                {pendingAction === 'stop-runtime' ? (
-                  <Loader2 size={13} className="mr-1.5 animate-spin" />
-                ) : (
-                  <Square size={12} className="mr-1.5" />
-                )}
-                {t('terminalWorkspace.settingsStop')}
-              </Button>
-            </div>
-          </TerminalSettingsSection>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full text-slate-400 hover:bg-white/[0.06] hover:text-slate-100 lg:col-span-2"
-            onClick={() => onAppearanceSettingsChange(DEFAULT_TERMINAL_APPEARANCE_SETTINGS)}
-          >
-            {t('terminalWorkspace.settingsResetAppearance')}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TerminalSettingsSection = ({
-  children,
-  description,
-  icon,
-  title,
-}: {
-  children: React.ReactNode;
-  description: string;
-  icon: React.ReactNode;
-  title: string;
-}): React.JSX.Element => {
-  return (
-    <section className="grid gap-3 rounded-md border border-white/10 bg-white/[0.025] p-4">
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-sky-200">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-100">{title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-slate-400">{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-};
-
 const TerminalWorkspaceStatus = ({
   icon,
   title,
@@ -3059,69 +2562,6 @@ function readStoredValue(key: string): string | null {
   }
 }
 
-function readStoredBoolean(key: string): boolean | null {
-  const value = readStoredValue(key);
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return null;
-}
-
-function readStoredTerminalAppearanceSettings(teamName: string): TerminalAppearanceSettings {
-  const raw = readStoredValue(storageKey(teamName, 'appearance-settings'));
-  if (!raw) return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return normalizeTerminalAppearanceSettings(parsed);
-  } catch {
-    return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-  }
-}
-
-function normalizeTerminalAppearanceSettings(value: unknown): TerminalAppearanceSettings {
-  if (!isRecord(value)) {
-    return DEFAULT_TERMINAL_APPEARANCE_SETTINGS;
-  }
-
-  return {
-    version: TERMINAL_APPEARANCE_SETTINGS_VERSION,
-    fontSizePx: clampFiniteNumber(
-      value.fontSizePx,
-      11,
-      24,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.fontSizePx
-    ),
-    opacityPercent: clampFiniteNumber(
-      value.opacityPercent,
-      35,
-      100,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.opacityPercent
-    ),
-    backgroundMode: isTerminalBackgroundMode(value.backgroundMode)
-      ? value.backgroundMode
-      : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundMode,
-    backgroundColor:
-      typeof value.backgroundColor === 'string'
-        ? normalizeColorInput(value.backgroundColor)
-        : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundColor,
-    backgroundImageUrl:
-      typeof value.backgroundImageUrl === 'string' ? value.backgroundImageUrl.slice(0, 2048) : '',
-    backgroundImageFit: isTerminalBackgroundImageFit(value.backgroundImageFit)
-      ? value.backgroundImageFit
-      : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundImageFit,
-    backdropBlurPx: clampFiniteNumber(
-      value.backdropBlurPx,
-      0,
-      40,
-      DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backdropBlurPx
-    ),
-    dimBackgroundImage:
-      typeof value.dimBackgroundImage === 'boolean'
-        ? value.dimBackgroundImage
-        : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.dimBackgroundImage,
-  };
-}
-
 function readStoredTerminalTabPreferences(teamName: string): TerminalTabPreferences {
   const raw = readStoredValue(storageKey(teamName, 'tab-preferences'));
   if (!raw) return createDefaultTerminalTabPreferences();
@@ -3156,100 +2596,6 @@ function readStoredTerminalTabPreferences(teamName: string): TerminalTabPreferen
   } catch {
     return createDefaultTerminalTabPreferences();
   }
-}
-
-function persistValue(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // Best-effort UI preference persistence.
-  }
-}
-
-function persistTerminalAppearanceSettings(
-  teamName: string,
-  settings: TerminalAppearanceSettings
-): void {
-  try {
-    window.localStorage.setItem(
-      storageKey(teamName, 'appearance-settings'),
-      JSON.stringify(normalizeTerminalAppearanceSettings(settings))
-    );
-  } catch {
-    // Best-effort appearance preference persistence.
-  }
-}
-
-function createTerminalAppearanceStyle(settings: TerminalAppearanceSettings): CSSProperties {
-  const normalizedSettings = normalizeTerminalAppearanceSettings(settings);
-  const imageUrl = normalizedSettings.backgroundImageUrl.trim();
-  const hasImage = normalizedSettings.backgroundMode === 'image' && imageUrl.length > 0;
-
-  return {
-    '--agent-terminal-font-size': `${normalizedSettings.fontSizePx}px`,
-    '--agent-terminal-panel-opacity': String(normalizedSettings.opacityPercent / 100),
-    '--agent-terminal-background-color': normalizedSettings.backgroundColor,
-    '--agent-terminal-background-image': hasImage ? createCssUrl(imageUrl) : 'none',
-    '--agent-terminal-background-position': getTerminalBackgroundPosition(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-background-repeat': getTerminalBackgroundRepeat(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-background-size': getTerminalBackgroundSize(
-      normalizedSettings.backgroundImageFit
-    ),
-    '--agent-terminal-backdrop-blur': `${normalizedSettings.backdropBlurPx}px`,
-    '--agent-terminal-background-image-blur': hasImage
-      ? `${normalizedSettings.backdropBlurPx}px`
-      : '0px',
-    '--agent-terminal-image-dim-opacity':
-      hasImage && normalizedSettings.dimBackgroundImage ? '0.42' : '0',
-  } as CSSProperties;
-}
-
-function clampNumberInput(value: string, min: number, max: number): number {
-  return clampFiniteNumber(Number(value), min, max, min);
-}
-
-function clampFiniteNumber(value: unknown, min: number, max: number, fallback: number): number {
-  const numberValue = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numberValue)) {
-    return fallback;
-  }
-  return Math.min(Math.max(Math.round(numberValue), min), max);
-}
-
-function normalizeColorInput(value: string): string {
-  return /^#[\da-f]{6}$/iu.test(value)
-    ? value
-    : DEFAULT_TERMINAL_APPEARANCE_SETTINGS.backgroundColor;
-}
-
-function isTerminalBackgroundMode(value: unknown): value is TerminalBackgroundMode {
-  return TERMINAL_BACKGROUND_MODE_OPTIONS.some((option) => option.id === value);
-}
-
-function isTerminalBackgroundImageFit(value: unknown): value is TerminalBackgroundImageFit {
-  return TERMINAL_BACKGROUND_IMAGE_FIT_OPTIONS.some((option) => option.id === value);
-}
-
-function createCssUrl(value: string): string {
-  return `url("${value.replace(/["\\\n\r]/gu, '')}")`;
-}
-
-function getTerminalBackgroundSize(fit: TerminalBackgroundImageFit): string {
-  if (fit === 'stretch') return '100% 100%';
-  if (fit === 'tile' || fit === 'center') return 'auto';
-  return fit;
-}
-
-function getTerminalBackgroundRepeat(fit: TerminalBackgroundImageFit): string {
-  return fit === 'tile' ? 'repeat' : 'no-repeat';
-}
-
-function getTerminalBackgroundPosition(fit: TerminalBackgroundImageFit): string {
-  return fit === 'tile' ? 'top left' : 'center';
 }
 
 function persistTerminalTabPreferences(
@@ -3447,47 +2793,6 @@ function collectPaneIds(node: TerminalMuxPaneTreeNode): string[] {
   }
 
   return [...collectPaneIds(node.first), ...collectPaneIds(node.second)];
-}
-
-function formatThemeLabel(t: TeamTFunction, displayName: string, themeId: string): string {
-  if (themeId === 'terminal-platform-default') return t('terminalWorkspace.themeDark');
-  if (themeId === 'terminal-platform-light') return t('terminalWorkspace.themeLight');
-  return displayName.replace(/^Terminal Platform\s*/i, '').trim() || displayName;
-}
-
-function formatFontScaleLabel(t: TeamTFunction, fontScale: string): string {
-  if (fontScale === 'compact') return t('terminalWorkspace.fontScaleCompact');
-  if (fontScale === 'large') return t('terminalWorkspace.fontScaleLarge');
-  return t('terminalWorkspace.fontScaleDefault');
-}
-
-function formatTerminalBackgroundModeLabel(t: TeamTFunction, mode: TerminalBackgroundMode): string {
-  switch (mode) {
-    case 'transparent':
-      return t('terminalWorkspace.backgroundModeTransparent');
-    case 'solid':
-      return t('terminalWorkspace.backgroundModeSolid');
-    case 'image':
-      return t('terminalWorkspace.backgroundModeImage');
-  }
-}
-
-function formatTerminalBackgroundImageFitLabel(
-  t: TeamTFunction,
-  fit: TerminalBackgroundImageFit
-): string {
-  switch (fit) {
-    case 'cover':
-      return t('terminalWorkspace.imageFitCover');
-    case 'contain':
-      return t('terminalWorkspace.imageFitContain');
-    case 'stretch':
-      return t('terminalWorkspace.imageFitStretch');
-    case 'tile':
-      return t('terminalWorkspace.imageFitTile');
-    case 'center':
-      return t('terminalWorkspace.imageFitCenter');
-  }
 }
 
 function formatTerminalTabColorLabel(t: TeamTFunction, colorId: TerminalTabColorId): string {
