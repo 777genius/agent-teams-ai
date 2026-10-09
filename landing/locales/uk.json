@@ -160,10 +160,10 @@
     }
   },
   "meta": {
-    "homeTitle": "Agent Teams - Оркестрування AI-агентів для розробників",
-    "homeDescription": "Безплатний десктопний застосунок з відкритим кодом для команд AI-агентів. Почніть із безплатної моделі без автентифікації, а потім підключайте Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, коли потрібно більше моделей.",
+    "homeTitle": "Agent Teams - Ви керуєте, ШІ-агенти працюють командою",
+    "homeDescription": "Керуйте командами ШІ-агентів: вони виконують завдання, спілкуються та перевіряють роботу. 300+ моделей, 200+ LLM-провайдерів і безплатні моделі без авторизації.",
     "downloadTitle": "Завантажте Agent Teams для macOS, Windows та Linux",
-    "downloadDescription": "Завантажте Agent Teams для macOS, Windows та Linux. Безплатний десктопний застосунок з відкритим кодом для команд агентів Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro."
+    "downloadDescription": "Завантажте Agent Teams для macOS, Windows і Linux. Команди ШІ-агентів, 300+ моделей і 200+ LLM-провайдерів. Почніть безплатно без авторизації."
   },
   "error": {
     "notFoundTitle": "Сторінку не знайдено",

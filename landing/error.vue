@@ -8,8 +8,8 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const config = useRuntimeConfig();
-const siteUrl = ((config.public.siteUrl as string) || "https://777genius.github.io/agent-teams-ai").replace(/\/+$/, "");
-const ogImage = `${siteUrl}/og-image-agent-teams-v6.png`;
+const siteUrl = ((config.public.siteUrl as string) || "https://agentteams.live").replace(/\/+$/, "");
+const ogImage = `${siteUrl}/og-image-agent-teams-v7.png`;
 
 const statusCode = computed(() => props.error?.statusCode || 404);
 const isNotFound = computed(() => statusCode.value === 404);
@@ -28,12 +28,12 @@ useSeoMeta({
   ogImageType: "image/png",
   ogImageWidth: "1200",
   ogImageHeight: "630",
-  ogImageAlt: "Agent Teams - AI agent orchestration",
+  ogImageAlt: "A human boss directs AI robot agents working beside a Kanban board",
   twitterCard: "summary_large_image",
   twitterTitle: errorTitle,
   twitterDescription: errorDescription,
   twitterImage: ogImage,
-  twitterImageAlt: "Agent Teams - AI agent orchestration"
+  twitterImageAlt: "A human boss directs AI robot agents working beside a Kanban board"
 });
 
 const handleGoHome = () => clearError({ redirect: "/" });
