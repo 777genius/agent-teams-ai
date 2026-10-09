@@ -606,6 +606,8 @@ export const TerminalMuxTabs = ({
           tab_id: activeVisibleTabId,
         });
         await kernel.commands.attachSession(activeSessionId);
+      } catch {
+        // Restoring the visible tab is best effort; a later topology change can retry.
       } finally {
         if (prewarmInFlightRef.current === restoreKey) {
           prewarmInFlightRef.current = null;

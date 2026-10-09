@@ -373,6 +373,119 @@ describe('terminal workspace panel internals fixture-e2e', () => {
     });
   });
 
+  it.each([
+    { oldStatus: 'succeeded' as const, oldExitCode: 0, nextExitCode: 7, nextStatus: 'failed' },
+    { oldStatus: 'failed' as const, oldExitCode: 7, nextExitCode: 0, nextStatus: 'succeeded' },
+  ])(
+    'preserves a prior $oldStatus run when the repeated command becomes $nextStatus',
+    ({ oldStatus, oldExitCode, nextExitCode, nextStatus }) => {
+      const prior = createRun({
+        command: 'pnpm test',
+        durationMs: 180,
+        exitCode: oldExitCode,
+        status: oldStatus,
+      });
+      const latest = createRun({
+        clientEventId: 'event-2',
+        command: 'pnpm test',
+        startedAtMs: 2000,
+      });
+      const next = settleTerminalCommandRuns(
+        [prior, latest],
+        [
+          { text: 'shell % pnpm test' },
+          {
+            text: '',
+            semantic_marks: [{ kind: 'command_finished', col: 0, exit_code: nextExitCode }],
+          },
+        ],
+        2500,
+        false
+      );
+
+      expect(next[0]).toBe(prior);
+      expect(next[1]).toMatchObject({
+        durationMs: 500,
+        exitCode: nextExitCode,
+        status: nextStatus,
+      });
+    }
+  );
+
+  it('preserves settled normalized repeats on timestamp ties using retained insertion order', () => {
+    const prior = createRun({
+      command: '  pnpm   test  ',
+      durationMs: 100,
+      exitCode: 0,
+      status: 'succeeded',
+    });
+    const latest = createRun({
+      clientEventId: 'event-2',
+      command: 'pnpm test',
+      status: 'unknown',
+      durationMs: 90,
+    });
+    const next = settleTerminalCommandRuns(
+      [prior, latest],
+      ['shell % pnpm test', 'error: test failed', 'shell %'],
+      2500,
+      false
+    );
+
+    expect(next[0]).toBe(prior);
+    expect(next[1]).toMatchObject({ durationMs: 90, status: 'failed' });
+  });
+
+  it('orders repeated runs by start time even when retained history is out of order', () => {
+    const latest = createRun({
+      clientEventId: 'event-2',
+      command: 'pnpm test',
+      startedAtMs: 2000,
+      status: 'unknown',
+      durationMs: 90,
+    });
+    const prior = createRun({
+      command: 'pnpm test',
+      durationMs: 100,
+      exitCode: 0,
+      status: 'succeeded',
+    });
+    const next = settleTerminalCommandRuns(
+      [latest, prior],
+      ['shell % pnpm test', 'error: test failed', 'shell %'],
+      2500,
+      false
+    );
+
+    expect(next[0]).toMatchObject({ durationMs: 90, status: 'failed' });
+    expect(next[1]).toBe(prior);
+  });
+
+  it.each([
+    { paneId: 'pane-2', sessionId: 'session-1', command: 'pnpm test' },
+    { paneId: 'pane-1', sessionId: 'session-2', command: 'pnpm test' },
+    { paneId: 'pane-1', sessionId: 'session-1', command: 'echo other' },
+  ])('retains late authoritative updates across distinct scopes or commands: %j', (otherScope) => {
+    const prior = createRun({
+      command: 'pnpm test',
+      durationMs: 180,
+      status: 'failed',
+    });
+    const other = createRun({ ...otherScope, clientEventId: 'event-2', startedAtMs: 2000 });
+    const next = settleTerminalCommandRuns(
+      [prior, other],
+      [
+        { text: 'shell % pnpm test' },
+        { text: 'error: recovered by fallback' },
+        { text: '', semantic_marks: [{ kind: 'command_finished', col: 0, exit_code: 0 }] },
+      ],
+      2500,
+      false
+    );
+
+    expect(next[0]).toMatchObject({ durationMs: 180, exitCode: 0, status: 'succeeded' });
+  });
+
   it('settles recovered unknown metadata when completed output is still visible', () => {
     const next = settleTerminalCommandRuns(
       [

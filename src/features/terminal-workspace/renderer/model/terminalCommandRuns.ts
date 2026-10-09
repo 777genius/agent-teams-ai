@@ -81,8 +81,24 @@ export function settleTerminalCommandRuns(
   nowMs: number,
   allowEmptyCompletion: boolean
 ): TerminalCommandRunPresentation[] {
+  const scopeKey = (run: TerminalCommandRunPresentation): string =>
+    JSON.stringify([run.sessionId, run.paneId, normalizeCommandForPromptMatch(run.command)]);
+  const latestRuns = new Map<string, TerminalCommandRunPresentation>();
+  for (const run of runs) {
+    const key = scopeKey(run);
+    const latestRun = latestRuns.get(key);
+    if (!latestRun || run.startedAtMs >= latestRun.startedAtMs) {
+      latestRuns.set(key, run);
+    }
+  }
+
   let changed = false;
   const next = runs.map((run) => {
+    // Screen matching selects the latest echo, so it cannot refine an older settled repeat.
+    if (run.status !== 'running' && latestRuns.get(scopeKey(run)) !== run) {
+      return run;
+    }
+
     const applicableScreenLines = getTerminalCommandScreenLinesForRun(screenLines, run.startedAtMs);
     const completion = inferTerminalCommandCompletion(applicableScreenLines, run.command);
     const failureWithoutPrompt = completion.completed
