@@ -11,6 +11,7 @@ import { readAsar } from './archive.mts';
 import { Cdp, waitFor } from './cdp.mts';
 import { waitMacStartupReady } from './mac-startup-readiness.mts';
 import { macMigrationState } from './mac-migration-state.mts';
+import { proveOriginalManualHandoff } from './mac-manual-handoff.mts';
 import { attachMacWorkerInspector } from './mac-worker-inspector.mts';
 import { macInputCommand } from './mac-input-artifact.mts';
 import {
@@ -37,12 +38,13 @@ const { values } = parseArgs({
   strict: true,
 });
 const toolingSha = process.env.TOOLING_SHA ?? '';
-checkManualContext(process.env, toolingSha);
+const executionSha = process.env.EXECUTION_SHA ?? toolingSha;
+checkManualContext(process.env, toolingSha, executionSha);
 assert.equal(process.env.GITHUB_JOB, 'mac-manual');
 assert.equal(process.platform, 'darwin');
 assert(process.arch === 'arm64' || process.arch === 'x64');
 assert.equal(process.arch, process.env.ARCHITECTURE);
-assert.equal((await macInputCommand(['rev-parse', 'HEAD'], 'git')).trim(), toolingSha);
+assert.equal((await macInputCommand(['rev-parse', 'HEAD'], 'git')).trim(), executionSha);
 const runner = await realpath(process.env.RUNNER_TEMP ?? '');
 const output = path.resolve(values.evidence ?? '');
 assert.equal(path.dirname(output), runner);
@@ -61,6 +63,7 @@ const os = (
 assert(Number(os.split('.')[0]) >= 13);
 const expected = {
   toolingSha,
+  executionSha,
   runId: Number(process.env.GITHUB_RUN_ID),
   attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
   artifactId: Number(process.env.INPUT_ARTIFACT_ID),
@@ -88,6 +91,7 @@ const evidence: Record<string, unknown> = {
   schemaVersion: 1,
   repository: plan.input.repository,
   toolingSha,
+  executionSha,
   sourceSha: plan.input.target.applicationSha,
   version: '2.17.10',
   architecture,
@@ -559,6 +563,33 @@ async function launch(
     });
   }
 
+  if (seed) {
+    // Legacy config IPC persists preferences without refreshing the renderer store.
+    // This phase proves durable setup only; the cold launch proves actual paint.
+    assert.deepEqual(await macOwner(commands, owner.pid, executable), owner);
+    phases.push({
+      label,
+      roots: bound,
+      profile,
+      before,
+      theme: after,
+      preferenceAuthority: 'public config IPC and durable config bytes',
+      migrationState: retainedState,
+      configProof: await fileProof(
+        path.join(claude, 'agent-teams-config.json'),
+        'seeded-config.json'
+      ),
+      passiveTeamProof: await fileProof(passiveTeamFile, 'passive-team.json'),
+      passiveProjectProof: await fileProof(
+        path.join(passiveProject, 'TEST-project.txt'),
+        'passive-project.txt'
+      ),
+    });
+    await persist();
+    await stop();
+    return theme;
+  }
+
   if (theme !== 'system')
     await waitFor(
       () =>
@@ -642,7 +673,7 @@ try {
   );
   phases.push({ oldSignature: await installed('old211', '2.17.1') });
   const profile = path.join(root, 'migration-profile');
-  const theme = await launch('original211', profile, '2.17.1', true);
+  const theme = await proveOriginalManualHandoff(launch, profile, noAppProcesses);
   const profileBefore = await fileProof(
     path.join(profile, 'home', '.claude', 'agent-teams-config.json'),
     'seeded-config.json'

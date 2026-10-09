@@ -21,6 +21,7 @@ import {
 } from './mac-manual-inputs.mts';
 import { downloadGithubFile } from './github-download.mts';
 import { nativePredecessor } from './native-release-scenario.mts';
+import { proveOriginalManualHandoff } from './mac-manual-handoff.mts';
 
 import type { Release, StagePlan } from '../../ci/release/contract.ts';
 import type { MacArtifactAuthority } from './mac-input-artifact.mts';
@@ -334,4 +335,76 @@ void test('manual input transfer accepts real offline downloader success and rej
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+void test('explicit executor authenticates actual run head while preserving prepared tooling', () => {
+  const { authority, expected } = artifactFixture();
+  const executionSha = '4'.repeat(40);
+  authority.run.head_sha = executionSha;
+  authority.artifact.workflow_run.head_sha = executionSha;
+  assert.throws(() => checkManualArtifact(authority, expected));
+  checkManualArtifact(authority, { ...expected, executionSha });
+  assert.throws(() => checkManualArtifact(authority, { ...expected, executionSha: '5'.repeat(40) }));
+  const { plan, bundle, expected: planExpected } = fixture();
+  checkManualBundle(bundle, plan, planExpected);
+  assert.equal(bundle.toolingSha, plan.input.toolingSha);
+  assert.equal(bundle.prepared.toolingSha, plan.input.toolingSha);
+});
+
+void test('explicit executor context requires actual GitHub SHA and leaves legacy default strict', () => {
+  const toolingSha = '1'.repeat(40);
+  const executionSha = '4'.repeat(40);
+  const env = {
+    GITHUB_ACTIONS: 'true',
+    GITHUB_REPOSITORY: '777genius/agent-teams-ai',
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
+    GITHUB_WORKFLOW_REF: `777genius/agent-teams-ai/${manualWorkflow}@refs/tags/TEST`,
+    GITHUB_SHA: executionSha,
+    GITHUB_RUN_ID: '10',
+    GITHUB_RUN_ATTEMPT: '1',
+  };
+  checkManualContext(env, toolingSha, executionSha);
+  assert.throws(() => checkManualContext(env, toolingSha));
+  assert.throws(() => checkManualContext({ ...env, GITHUB_SHA: toolingSha }, toolingSha, executionSha));
+  assert.throws(() => checkManualContext(env, toolingSha, 'moving-ref'));
+});
+
+void test('original 211 proof cold-loads durable seed rather than claiming stale renderer paint', async () => {
+  const calls: string[] = [];
+  const profile = '/TEST-owned/migration-profile';
+  let persisted = 'dark';
+  let painted = 'dark';
+  let running = false;
+  const theme = await proveOriginalManualHandoff(async (label, actualProfile, version, seed, expected) => {
+    assert.equal(actualProfile, profile);
+    assert.equal(version, '2.17.1');
+    assert.equal(running, false, 'proof must cold-launch after owned process exit');
+    running = true;
+    painted = persisted; // Original application reads persisted configuration only on startup.
+    calls.push(label);
+    if (seed) {
+      persisted = 'light'; // Public IPC writes do not update the legacy renderer store.
+      assert.notEqual(painted, persisted, 'old seed-and-paint flow would fail');
+      assert.equal(expected, undefined);
+    } else {
+      assert.equal(expected, persisted);
+      assert.equal(painted, expected);
+    }
+    running = false; // launch resolves only after its owned stop/cleanup contract.
+    return persisted;
+  }, profile, async () => {
+    calls.push('no-processes');
+    assert.equal(running, false);
+  });
+  assert.equal(theme, 'light');
+  assert.deepEqual(calls, ['original211-seed', 'no-processes', 'original211']);
+});
+
+void test('original proof never launches if seed handoff cleanup is unproven', async () => {
+  const calls: string[] = [];
+  await assert.rejects(proveOriginalManualHandoff(async (label) => {
+    calls.push(label);
+    return 'light';
+  }, '/TEST-owned/profile', async () => { throw new Error('owned processes remain'); }), /owned processes remain/);
+  assert.deepEqual(calls, ['original211-seed']);
 });
