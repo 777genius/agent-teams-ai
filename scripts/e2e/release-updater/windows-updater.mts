@@ -19,6 +19,7 @@ import {
 import { hashFile } from './inputs.mts';
 import { transportHook } from './transport.mts';
 import { readWindowsInputMode, windowsInputs, windowsMirror } from './windows-mirror.mts';
+import { authenticateWindowsWorkflowExecution } from './windows-execution-provenance.mts';
 import { readPeArchitecture, windowsNative } from './windows-native.mts';
 import {
   appEnvironment,
@@ -176,6 +177,8 @@ try {
   );
   assert.equal(session.desktop.toLowerCase(), 'default', 'Interactive default desktop required');
   const inputs = await windowsInputs(input, readWindowsInputMode());
+  if (inputs.plan)
+    evidence.execution = authenticateWindowsWorkflowExecution(inputs.plan.input.toolingSha);
   evidence.inputs = inputs.verified;
   evidence.inputDigest = inputs.inputDigest;
   const targetVersion = inputs.targetVersion;
