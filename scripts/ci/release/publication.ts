@@ -19,6 +19,10 @@ import {
 } from './contract.js';
 import type { NativeEvidence, Release, ReleasePort, StagePlan } from './contract.js';
 import { ReleaseHttpError } from './github.js';
+import {
+  originalFull220Supplemental,
+  verifyOriginalFull220Supplemental,
+} from './full220Supplemental.js';
 import { verifyNativeReadiness } from './nativeReadiness.js';
 import type { NativeReadinessPort, NativeReadinessReceipt } from './nativeReadiness.js';
 import { validateNativeEvidence, verifyPublished } from './validation.js';
@@ -40,6 +44,7 @@ export interface PublicationReadiness {
   target: StagePlan['input']['target'];
   assetInventoryDigest: string;
   nativeReceiptDigest: string;
+  supplementalProofDigest?: string;
 }
 function inventory(release: Release): string {
   return digest(
@@ -113,34 +118,45 @@ async function verifyReadiness(
     );
   }
   const provenanceName = `build-provenance-${plan.input.build.runId}-${plan.input.build.attempt}.json`;
-  const provenance = (await downloadedJson(port, plan, target, provenanceName)) as {
-    schemaVersion?: number;
-    applicationSha?: string;
-    tag?: string;
-    runId?: number;
-    attempt?: number;
-    jobs?: { id: number; conclusion: string; run_id: number }[];
-  };
-  requireThat(
-    provenance.schemaVersion === 1 &&
-      provenance.applicationSha === plan.input.target.applicationSha &&
-      provenance.tag === plan.input.target.tag &&
-      provenance.runId === plan.input.build.runId &&
-      provenance.attempt === plan.input.build.attempt &&
-      Array.isArray(provenance.jobs) &&
-      provenance.jobs.length === plan.input.build.jobIds.length &&
-      canonical(provenance.jobs.map((job) => job.id).sort((a, b) => a - b)) ===
-        canonical([...plan.input.build.jobIds].sort((a, b) => a - b)) &&
-      provenance.jobs.every(
-        (job) => job.conclusion === 'success' && job.run_id === provenance.runId
-      ),
-    'Draft build provenance does not describe pinned successful producers'
-  );
+  const supplemental = originalFull220Supplemental(plan, planSha256);
+  let supplementalProofDigest: string | undefined;
+  if (supplemental) {
+    supplementalProofDigest = await verifyOriginalFull220Supplemental(
+      port,
+      plan,
+      target,
+      supplemental
+    );
+  } else {
+    const provenance = (await downloadedJson(port, plan, target, provenanceName)) as {
+      schemaVersion?: number;
+      applicationSha?: string;
+      tag?: string;
+      runId?: number;
+      attempt?: number;
+      jobs?: { id: number; conclusion: string; run_id: number }[];
+    };
+    requireThat(
+      provenance.schemaVersion === 1 &&
+        provenance.applicationSha === plan.input.target.applicationSha &&
+        provenance.tag === plan.input.target.tag &&
+        provenance.runId === plan.input.build.runId &&
+        provenance.attempt === plan.input.build.attempt &&
+        Array.isArray(provenance.jobs) &&
+        provenance.jobs.length === plan.input.build.jobIds.length &&
+        canonical(provenance.jobs.map((job) => job.id).sort((a, b) => a - b)) ===
+          canonical([...plan.input.build.jobIds].sort((a, b) => a - b)) &&
+        provenance.jobs.every(
+          (job) => job.conclusion === 'success' && job.run_id === provenance.runId
+        ),
+      'Draft build provenance does not describe pinned successful producers'
+    );
+  }
   const names = [
     ...plan.outputs.map((proof) => proof.name),
     MANIFEST,
     ...(carried ? [MAC_EVIDENCE] : []),
-    provenanceName,
+    ...(supplemental ? supplemental.map((asset) => asset.name) : [provenanceName]),
   ];
   requireThat(new Set(names).size === names.length, 'Ambiguous planned release inventory');
   requireThat(
@@ -168,6 +184,7 @@ async function verifyReadiness(
     target: plan.input.target,
     assetInventoryDigest: inventory(final),
     nativeReceiptDigest: digest(canonical(nativeReceipt)),
+    ...(supplementalProofDigest ? { supplementalProofDigest } : {}),
   };
 }
 

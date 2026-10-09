@@ -23,6 +23,7 @@
     "scripts/ci/publish-full-release.ts",
     "test/scripts/partialReleaseStaging.test.ts",
     "test/scripts/nativeReadiness.test.ts",
+    "test/scripts/full220Supplemental.test.ts",
     "test/scripts/recoverDraftPayloads.test.ts",
     "scripts/electron-builder/**/*.mts"
   ]

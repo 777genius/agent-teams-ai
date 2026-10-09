@@ -34,7 +34,7 @@ function fixture() {
     checkoutSha,
     applicationSha: 'dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3',
     workflowRef:
-      '777genius/agent-teams-ai/.github/workflows/publish-carried-release.yml@refs/tags/release-tooling-v2.17.10-closed-executor-publisher',
+      '777genius/agent-teams-ai/.github/workflows/publish-carried-release.yml@refs/tags/release-tooling-v2.17.10-qualified-publication',
     repository: '777genius/agent-teams-ai',
     tag: 'v2.17.10',
     planSha256: context.planSha256,
@@ -51,7 +51,7 @@ function fixture() {
     id: 123,
     run_attempt: 2,
     head_sha: workflowSha,
-    head_branch: 'release-tooling-v2.17.10-closed-executor-publisher',
+    head_branch: 'release-tooling-v2.17.10-qualified-publication',
     path: '.github/workflows/publish-carried-release.yml',
     event: 'workflow_dispatch',
     status: 'in_progress',
@@ -76,6 +76,15 @@ function fixture() {
 void test('actual immutable U11 origin authenticates G separately from prepared E10', async () => {
   const { context, identity, port } = fixture();
   await authenticateRelease220Publisher(port, identity, context);
+});
+void test('publication intent must match the independently bound workflow sidecar', async () => {
+  const { context, identity, port } = fixture();
+  context.publish = true;
+  await assert.rejects(authenticateRelease220Publisher(port, identity, context), /sidecar/);
+  identity.publicationRequested = true;
+  await authenticateRelease220Publisher(port, identity, context);
+  context.publish = false;
+  await assert.rejects(authenticateRelease220Publisher(port, identity, context), /sidecar/);
 });
 void test('self-declared sidecar cannot replace actual current origin metadata', async () => {
   const changes: Partial<PublisherRun>[] = [
@@ -109,7 +118,7 @@ void test('every sidecar field and extra field must match actual origin and immu
     await assert.rejects(authenticateRelease220Publisher(port, changed, context), /sidecar/);
   }
 });
-void test('closed bridge refuses publish, local plan, other plan, or changed native bytes', async () => {
+void test('closed bridge refuses local plan, other plan, or changed native bytes', async () => {
   const changes: Partial<PublisherContext>[] = [
     { publish: true },
     { planFile: '/TEST-plan.json' },

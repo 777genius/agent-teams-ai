@@ -101,11 +101,11 @@ jobs:
           path: publication-result.json
           if-no-files-found: warn
 
-  verify-prepared-full220:
+  promote-existing-draft:
     if: ${{ inputs.full_ready }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Draft asset reads require push permission; the command omits --publish.
+    # The reviewed original plan and actual native artifacts authorize publication.
     permissions:
       contents: write
       actions: read
@@ -120,6 +120,7 @@ jobs:
       PREPARED_ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
       PLAN_DIGEST: ${{ inputs.plan_digest }}
       NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
+      PUBLISH_RELEASE: ${{ inputs.publish_release }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -140,6 +141,7 @@ jobs:
           [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
           [[ "$PREPARED_ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
           [[ "$(printf '%s' "$NATIVE_RECEIPT_JSON" | wc -c)" -le 100000 ]]
+          [[ "$PUBLISH_RELEASE" == true || "$PUBLISH_RELEASE" == false ]]
           NATIVE_RECEIPT_SHA256=$(printf '%s' "$NATIVE_RECEIPT_JSON" | sha256sum | cut -d ' ' -f 1)
           jq -n --arg workflowSha "$ACTUAL_WORKFLOW_SHA" --arg checkoutSha "$CHECKOUT_SHA" --arg applicationSha "$APPLICATION_SHA" \
             --arg workflowRef "$WORKFLOW_PATH" --arg repository "$GITHUB_REPOSITORY" \
@@ -148,7 +150,8 @@ jobs:
             --arg artifactSha256 "$PREPARED_ARTIFACT_SHA256" \
             --argjson preparedRunId "$PREPARED_RUN_ID" --argjson preparedArtifactId "$PREPARED_ARTIFACT_ID" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,applicationSha:$applicationSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:false}' > execution-identity.json
+            --argjson publicationRequested "$PUBLISH_RELEASE" \
+            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,applicationSha:$applicationSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:$publicationRequested}' > execution-identity.json
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -160,19 +163,30 @@ jobs:
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
       - name: Validate exact G closed executor and publisher authority
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: |
           set -euo pipefail
-          pnpm exec eslint --parser-options '{"projectService":false,"project":["./tsconfig.release-tooling.json","./tsconfig.updater-e2e.json"]}' scripts/ci/publish-full-release.ts scripts/ci/release/release220ExecutionPins.ts scripts/ci/release/release220PublisherAuthority.ts scripts/ci/release/nativeReadinessAuthority.ts scripts/ci/release/nativeReadinessGithub.ts scripts/e2e/release-updater/release220-publisher-authority.test.mts
+          pnpm exec eslint --parser-options '{"projectService":false,"project":["./tsconfig.release-tooling.json","./tsconfig.updater-e2e.json"]}' scripts/ci/publish-full-release.ts scripts/ci/release/publication.ts scripts/ci/release/full220Supplemental.ts scripts/ci/release/release220ExecutionPins.ts scripts/ci/release/release220PublisherAuthority.ts scripts/ci/release/nativeReadinessAuthority.ts scripts/ci/release/nativeReadinessGithub.ts scripts/e2e/release-updater/release220-publisher-authority.test.mts
           pnpm exec eslint --config eslint.fast.config.js scripts/ci/release/nativeReadiness.ts
           pnpm exec tsx --test scripts/e2e/release-updater/release220-publisher-authority.test.mts
-          pnpm exec vitest run --maxWorkers=1 test/scripts/release220ExecutionAuthority.test.ts test/scripts/nativeReadiness.test.ts
-      - name: Verify prepared full220 readiness without publication
+          pnpm exec vitest run --maxWorkers=1 test/scripts/release220ExecutionAuthority.test.ts test/scripts/nativeReadiness.test.ts test/scripts/full220Supplemental.test.ts test/scripts/partialReleaseStaging.test.ts
+      - name: Verify prepared full220 and publish only when requested
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
-          pnpm exec tsx scripts/ci/publish-full-release.ts --execution-identity execution-identity.json --plan-digest "$PLAN_DIGEST" --output publication-result.json
+          args=(--execution-identity execution-identity.json --plan-digest "$PLAN_DIGEST" --output publication-result.json)
+          if [[ "$PUBLISH_RELEASE" == true ]]; then args+=(--publish); fi
+          pnpm exec tsx scripts/ci/publish-full-release.ts "${args[@]}"
+      - name: Verify public latest updater release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: 777genius/agent-teams-ai
+          RELEASE_ID: '406694223'
+        run: bash scripts/ci/verify-published-updater-release.sh
       - name: Preserve full220 readiness and workflow checkout identity
         if: always()
         uses: actions/upload-artifact@v7

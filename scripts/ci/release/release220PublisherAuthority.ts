@@ -6,8 +6,8 @@ import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 
 export const RELEASE220_PUBLISHER = {
   workflow: '.github/workflows/publish-carried-release.yml',
-  tag: 'release-tooling-v2.17.10-closed-executor-publisher',
-  normalizedWorkflowSha256: 'a0916bafe36291f04a470eff642b90168f8646de3e4173acae6a12183fe53213',
+  tag: 'release-tooling-v2.17.10-qualified-publication',
+  normalizedWorkflowSha256: '3fcd6f5917d6a14a287a42d5a5386b5e159797f039b40b04c220192938e1efa8',
   preparedRunId: 37831798849,
   preparedArtifactId: 11573044289,
   preparedArtifactSha256: '3cfb885531d263866c3a40653b7a6995d9f324144c75ab6e0d6777e1e37d3bc7',
@@ -43,7 +43,7 @@ export interface PublisherContext {
   planFile?: string;
 }
 
-/** U11 pins G; only those two literals normalize, avoiding a G/U11 self-hash cycle. */
+/** The publisher pins G; only those two literals normalize, avoiding a hash cycle. */
 export function verifyPublisherWorkflow(source: string, checkoutSha: string): void {
   requireThat(/^[a-f0-9]{40}$/.test(checkoutSha), 'Invalid publisher checkout SHA');
   requireThat(
@@ -52,7 +52,7 @@ export function verifyPublisherWorkflow(source: string, checkoutSha: string): vo
       source.includes(`          ref: ${checkoutSha}\n`) &&
       digest(source.replaceAll(checkoutSha, 'INVALID_G')) ===
         RELEASE220_PUBLISHER.normalizedWorkflowSha256,
-    'Publisher workflow differs from reviewed immutable U11 template/checkout'
+    'Publisher workflow differs from reviewed immutable publication template/checkout'
   );
 }
 
@@ -62,7 +62,7 @@ export async function authenticateRelease220Publisher(
   context: PublisherContext
 ): Promise<void> {
   requireThat(
-    !context.publish &&
+    typeof context.publish === 'boolean' &&
       context.planFile === undefined &&
       context.planSha256 === pins.plan &&
       context.repository === pins.repository &&
@@ -72,7 +72,7 @@ export async function authenticateRelease220Publisher(
       context.runId > 0 &&
       Number.isSafeInteger(context.runAttempt) &&
       context.runAttempt > 0,
-    'Closed full220 publisher bridge requires verify-only original prepared P10'
+    'Closed full220 publisher bridge requires original prepared P10'
   );
   const run = await port.run(context.runId);
   requireThat(
@@ -88,7 +88,7 @@ export async function authenticateRelease220Publisher(
       run.event === 'workflow_dispatch' &&
       run.status === 'in_progress' &&
       run.conclusion === null,
-    'Publisher origin/current run attempt is not the reviewed U11 dispatch'
+    'Publisher origin/current run attempt is not the reviewed publication dispatch'
   );
   requireThat(
     canonical(identity) ===
@@ -108,7 +108,7 @@ export async function authenticateRelease220Publisher(
         preparedArtifactSha256: RELEASE220_PUBLISHER.preparedArtifactSha256,
         runId: run.id,
         runAttempt: run.run_attempt,
-        publicationRequested: false,
+        publicationRequested: context.publish,
       }),
     'Publisher execution sidecar does not match actual origin/checkout/prepared source'
   );
