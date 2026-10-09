@@ -25,10 +25,10 @@ export const useDownloadStore = defineStore("download", {
       return downloadAssets.find((asset) => asset.id === state.selectedId);
     },
     macArch(state): "arm64" | "x64" | "unknown" {
-      return state.macArchSelection;
+      return state.macArchSelection === "unknown" ? "arm64" : state.macArchSelection;
     },
     windowsArch(state): "arm64" | "x64" | "unknown" {
-      return state.windowsArchSelection;
+      return state.windowsArchSelection === "unknown" ? "x64" : state.windowsArchSelection;
     }
   },
   actions: {
