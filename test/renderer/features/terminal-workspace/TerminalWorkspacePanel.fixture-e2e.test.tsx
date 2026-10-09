@@ -563,6 +563,46 @@ describe('terminal workspace panel fixture-e2e', () => {
     });
   });
 
+  it.each(['dispatchMuxCommand', 'attachSession'] as const)(
+    'contains a background restore %s rejection and restores again after focus changes',
+    async (failedCommand) => {
+      const tabs = [
+        createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+        createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+      ];
+      nextSnapshot = createWorkspaceSnapshot({ tabs });
+      await renderPanel();
+      const kernel = currentKernel();
+      kernel.commands.dispatchMuxCommand.mockClear();
+      kernel.commands.attachSession.mockClear();
+      kernel.commands[failedCommand].mockRejectedValueOnce(new Error('restore unavailable'));
+
+      kernel.__snapshot = createWorkspaceSnapshot({ tabs, focusedTabId: 'tab-prewarmed' });
+      await renderPanel();
+      // Let a discarded effect promise reach the runner's unhandled-rejection boundary.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledWith('session-1', {
+        kind: 'focus_tab',
+        tab_id: 'tab-1',
+      });
+      expect(kernel.commands.attachSession).toHaveBeenCalledTimes(
+        failedCommand === 'attachSession' ? 1 : 0
+      );
+      expect(getTabButton('Terminal UI Smoke').getAttribute('aria-selected')).toBe('true');
+
+      kernel.__snapshot = createWorkspaceSnapshot({ tabs });
+      await renderPanel();
+      kernel.__snapshot = createWorkspaceSnapshot({ tabs, focusedTabId: 'tab-prewarmed' });
+      await renderPanel();
+
+      expect(kernel.commands.dispatchMuxCommand).toHaveBeenCalledTimes(2);
+      expect(kernel.commands.attachSession).toHaveBeenCalledTimes(
+        failedCommand === 'attachSession' ? 2 : 1
+      );
+    }
+  );
+
   it('activates the prewarmed shell instantly when users create a new tab', async () => {
     nextSnapshot = createWorkspaceSnapshot({
       tabs: [
