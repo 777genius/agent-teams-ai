@@ -33,6 +33,7 @@ export interface UpdaterFeedInput {
   releaseDate: string;
   feedSources: PromotionLayout['feedSources'];
   macMinimumSystemVersion: string;
+  releaseNotes?: string;
 }
 
 export function getPromotionLayout(version: string): PromotionLayout;

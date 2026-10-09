@@ -257,18 +257,22 @@ export class UpdaterService {
     return false;
   }
 
-  private async isSkippedRelease(version: string): Promise<boolean> {
+  private async fetchReleaseMetadata(version: string): Promise<GithubReleaseMetadata | null> {
     const metadataUrls = getReleaseApiUrls(version);
     for (const metadataUrl of metadataUrls) {
       const release = await fetchJson<GithubReleaseMetadata>(metadataUrl);
-      if (!release) {
+      if (
+        !release ||
+        typeof release.tag_name !== 'string' ||
+        release.tag_name.replace(/^v/i, '') !== version.replace(/^v/i, '')
+      ) {
         continue;
       }
-      return shouldSkipReleaseForUpdater(release);
+      return release;
     }
 
     logger.warn(`GitHub release metadata is not available for ${version}, allowing updater check`);
-    return false;
+    return null;
   }
 
   /**
@@ -289,7 +293,6 @@ export class UpdaterService {
     }
 
     const latestReleaseNote = getUpdaterReleaseNoteForVersion(info.releaseNotes, info.version);
-    const releaseNotes = formatUpdaterReleaseNotes(info.releaseNotes);
 
     if (
       shouldSkipReleaseForUpdater({
@@ -302,10 +305,19 @@ export class UpdaterService {
       return;
     }
 
-    if (await this.isSkippedRelease(info.version)) {
+    const release = await this.fetchReleaseMetadata(info.version);
+    if (release && shouldSkipReleaseForUpdater(release)) {
       logger.warn(`Suppressing updater notification for skipped release ${info.version}`);
       return;
     }
+
+    // GitHub's Atom feed can omit the candidate when tooling tags occupy its
+    // latest entries. Reuse exact-tag metadata from the skip check, preserving
+    // the complete changelog when the candidate already has displayable notes.
+    const providedNotes = formatUpdaterReleaseNotes(info.releaseNotes);
+    const releaseNotes = formatUpdaterReleaseNotes(latestReleaseNote)?.trim()
+      ? providedNotes
+      : (formatUpdaterReleaseNotes(release?.body) ?? providedNotes);
 
     const urls = getExpectedReleaseAssetUrls(info.version, process.platform, process.arch);
     if (urls.length > 0) {

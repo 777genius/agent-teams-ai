@@ -58,6 +58,8 @@ export interface StageInput {
   macSource: { release: Snapshot; productMinimum: string } | null;
   build: BuildProof;
   macProductMinimum: string;
+  // Absent in sealed historical plans, whose exact feed bytes remain authoritative.
+  includeReleaseNotes?: boolean;
 }
 export interface StagePlan {
   schemaVersion: 1;
@@ -313,14 +315,22 @@ export function aliases(target: string, mac: string): Record<string, string> {
     [`Claude.Agent.Teams.UI-${mac}.dmg`]: m.mac[3],
   };
 }
-export function renderFeed(v: string, files: FileProof[], date: string, minimum?: string): string {
+export function renderFeed(
+  v: string,
+  files: FileProof[],
+  date: string,
+  minimum?: string,
+  releaseNotes?: string | null
+): string {
   const first = files[0];
   requireThat(first, 'Empty updater feed');
   const minimumLine = minimum ? `minimumSystemVersion: ${minimum}\n` : '';
   const entries = files
     .map((f) => `  - url: ${f.name}\n    sha512: ${f.sha512}\n    size: ${f.size}`)
     .join('\n');
-  return `version: ${v}\n${minimumLine}files:\n${entries}\npath: ${first.name}\nsha512: ${first.sha512}\nreleaseDate: '${date}'\n`;
+  // A JSON string is also a YAML scalar, safely preserving Markdown and newlines.
+  const notes = releaseNotes?.trim() ? `releaseNotes: ${JSON.stringify(releaseNotes)}\n` : '';
+  return `version: ${v}\n${minimumLine}files:\n${entries}\npath: ${first.name}\nsha512: ${first.sha512}\nreleaseDate: '${date}'\n${notes}`;
 }
 export function macAliases(v: string): Record<string, string> {
   const mac = platformNames(v).mac;
@@ -380,6 +390,10 @@ export function manifestFor(plan: StagePlan): PlatformManifest {
   };
 }
 export function checkInput(input: StageInput): void {
+  requireThat(
+    input.includeReleaseNotes === undefined || typeof input.includeReleaseNotes === 'boolean',
+    'Invalid release notes feed policy'
+  );
   requireThat(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(input.repository), 'Invalid repository');
   requireThat(input.mode === 'full' || input.mode === 'carry-mac', 'Unknown release mode');
   requireThat(
