@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tooling_sha: { type: string, required: true, description: Reviewed immutable tooling SHA }
+      execution_sha: { type: string, required: false, description: Reviewed immutable executor SHA (defaults to tooling SHA) }
       prepared_run_id: { type: string, required: true }
       prepared_run_attempt: { type: string, required: true }
       prepared_artifact_id: { type: string, required: true }
@@ -17,6 +18,7 @@ permissions:
 
 env:
   TOOLING_SHA: ${{ inputs.tooling_sha }}
+  EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
   PLAN_SHA256: ${{ inputs.plan_sha256 }}
   INPUT_DIGEST: ${{ inputs.input_digest }}
 
@@ -33,10 +35,10 @@ jobs:
       artifact_id: ${{ steps.bundle.outputs.artifact-id }}
       artifact_sha256: ${{ steps.bundle.outputs.artifact-digest }}
     steps:
-      - name: Require reviewed immutable tooling
+      - name: Require reviewed immutable tooling and executor
         run: |
           set -euo pipefail
-          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$EXECUTION_SHA" ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -50,7 +52,7 @@ jobs:
       - name: Check typed input custody boundary
         run: |
           node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
-          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-manual-inputs.mts scripts/e2e/release-updater/mac-manual-migration.mts scripts/e2e/release-updater/mac-manual-inputs.test.mts
+          pnpm lint:ci:files -- scripts/e2e/release-updater/mac-manual-handoff.mts scripts/e2e/release-updater/mac-manual-inputs.mts scripts/e2e/release-updater/mac-manual-migration.mts scripts/e2e/release-updater/mac-manual-inputs.test.mts
           ./node_modules/.bin/tsx --test scripts/e2e/release-updater/mac-manual-inputs.test.mts
       - name: Authenticate prepared plan and uploaded original 211 and target 220 bytes
         env:
@@ -90,10 +92,10 @@ jobs:
       INPUT_ARTIFACT_ID: ${{ needs.prepare-mac-manual-inputs.outputs.artifact_id }}
       INPUT_ARTIFACT_SHA256: ${{ needs.prepare-mac-manual-inputs.outputs.artifact_sha256 }}
     steps:
-      - name: Require reviewed immutable tooling
+      - name: Require reviewed immutable tooling and executor
         run: |
           set -euo pipefail
-          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$TOOLING_SHA" ]]
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_SHA" == "$EXECUTION_SHA" ]]
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}

@@ -69,13 +69,18 @@ export function manualNames(architecture: 'arm64' | 'x64') {
   assert(dmg && zip);
   return { dmg, zip, old: `Agent.Teams.AI-2.17.1-${architecture}.dmg` };
 }
-export function checkManualContext(env: NodeJS.ProcessEnv, toolingSha: string) {
+export function checkManualContext(
+  env: NodeJS.ProcessEnv,
+  toolingSha: string,
+  executionSha = toolingSha
+) {
   assert.equal(env.GITHUB_ACTIONS, 'true');
   assert.equal(env.GITHUB_REPOSITORY, repository);
   assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch');
   assert.equal(env.GITHUB_WORKFLOW_REF?.split('@')[0], `${repository}/${manualWorkflow}`);
   assert(/^[a-f0-9]{40}$/.test(toolingSha));
-  assert.equal(env.GITHUB_SHA, toolingSha);
+  assert(/^[a-f0-9]{40}$/.test(executionSha));
+  assert.equal(env.GITHUB_SHA, executionSha);
   for (const name of ['GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'])
     assert(Number.isSafeInteger(Number(env[name])) && Number(env[name]) > 0);
 }
@@ -132,6 +137,7 @@ export function checkManualArtifact(
   authority: MacArtifactAuthority,
   expected: {
     toolingSha: string;
+    executionSha?: string;
     runId: number;
     attempt: number;
     artifactId: number;
@@ -139,12 +145,14 @@ export function checkManualArtifact(
   }
 ) {
   const { run, job, artifact } = authority;
+  const executionSha = expected.executionSha ?? expected.toolingSha;
+  assert(/^[a-f0-9]{40}$/.test(executionSha));
   for (const id of [expected.runId, expected.attempt, expected.artifactId])
     assert(Number.isSafeInteger(id) && id > 0);
   assert(/^[a-f0-9]{64}$/.test(expected.artifactSha256));
   assert.equal(run.id, expected.runId);
   assert.equal(run.run_attempt, expected.attempt);
-  assert.equal(run.head_sha, expected.toolingSha);
+  assert.equal(run.head_sha, executionSha);
   assert.equal(run.path.split('@')[0], manualWorkflow);
   assert.equal(run.event, 'workflow_dispatch');
   assert(['queued', 'in_progress', 'completed'].includes(run.status));
@@ -154,7 +162,7 @@ export function checkManualArtifact(
   assert.equal(artifact.digest, `sha256:${expected.artifactSha256}`);
   assert.equal(authority.archiveSha256, expected.artifactSha256);
   assert.equal(artifact.workflow_run.id, run.id);
-  assert.equal(artifact.workflow_run.head_sha, expected.toolingSha);
+  assert.equal(artifact.workflow_run.head_sha, executionSha);
   assert(authority.attemptJobIds.includes(job.id));
   assert.equal(job.name, manualProducer);
   validateWindowsProducerUpload(job, run.id, manualUpload, artifact.created_at);
@@ -383,8 +391,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     strict: true,
   });
   const toolingSha = process.env.TOOLING_SHA ?? '';
-  checkManualContext(process.env, toolingSha);
-  assert.equal((await macInputCommand(['rev-parse', 'HEAD'], 'git')).trim(), toolingSha);
+  const executionSha = process.env.EXECUTION_SHA ?? toolingSha;
+  checkManualContext(process.env, toolingSha, executionSha);
+  assert.equal((await macInputCommand(['rev-parse', 'HEAD'], 'git')).trim(), executionSha);
   const root = await realpath(process.env.RUNNER_TEMP ?? '');
   const output = path.resolve(values.output ?? '');
   assert.equal(path.dirname(output), root);
@@ -410,6 +419,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     assert.equal(process.env.GITHUB_JOB, 'mac-manual');
     await retrieveManualInputs(output, {
       toolingSha,
+      executionSha,
       runId: Number(process.env.GITHUB_RUN_ID),
       attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
       artifactId: Number(process.env.INPUT_ARTIFACT_ID),
