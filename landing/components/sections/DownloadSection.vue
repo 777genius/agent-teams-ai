@@ -347,7 +347,6 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
             <span>{{ requiresArchitectureSelection(asset) ? asset.archLabel : t('download.title') }}</span>
           </a>
 
-          <!-- Active indicator -->
           <div
             v-if="downloadStore.selectedId === asset.id && downloadStore.selectionSource === 'auto' && downloadStore.os === asset.os && downloadStore.arch !== 'unknown'"
             class="download-section__card-indicator"
