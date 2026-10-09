@@ -37,6 +37,12 @@ on:
           required: false,
           description: Actual immutable executor SHA; defaults to tooling SHA,
         }
+      scenario_filter:
+        type: choice
+        options: [all, ota-only, x64-full]
+        default: all
+        required: true
+        description: ota-only runs both fresh prerequisites and all six OTA modes; x64-full runs fresh x64 then only full OTA
       cloud_experience_preflight:
         type: boolean
         default: false
@@ -49,6 +55,10 @@ on:
 permissions:
   contents: read
   actions: read
+
+env:
+  TOOLING_SHA: ${{ inputs.tooling_sha }}
+  EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha }}
 
 jobs:
   windows-serializer-contract:
@@ -67,6 +77,7 @@ jobs:
           if ($env:EXECUTION_SHA -notmatch '^[a-f0-9]{40}$' -or $env:GITHUB_SHA -ne $env:EXECUTION_SHA) { throw 'Exact serializer execution SHA required' }
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -90,7 +101,7 @@ jobs:
           "TEST_WINDOWS_NATIVE_SHELL_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Verify the actual producer without UI or installer execution
         run: |
-          node --import tsx --test --test-concurrency=1 --test-name-pattern '^selected PS7 observer producer' scripts/e2e/release-updater/windows-native-owners.test.mts 2>&1 | Tee-Object .artifacts/TEST-windows-serializer/contract.log
+          node --import tsx --test --test-concurrency=1 --test-name-pattern '^selected PS7 (observer producer|owner SID)' scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-owned-process.test.mts 2>&1 | Tee-Object .artifacts/TEST-windows-serializer/contract.log
           if ($LASTEXITCODE -ne 0) { throw 'Selected PowerShell serializer contract failed' }
       - uses: actions/upload-artifact@v7
         if: always()
@@ -105,6 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -114,7 +126,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
       - run: pnpm lint:ci:files -- scripts/e2e/release-updater/native-release-scenario.mts scripts/e2e/release-updater/prepared-stage-download*.mts scripts/e2e/release-updater/execution-provenance*.mts scripts/e2e/release-updater/windows-*.mts scripts/e2e/release-updater/serialized-function*.mts
-      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts scripts/e2e/release-updater/execution-provenance.test.mts scripts/e2e/release-updater/windows-cloud-preflight.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts scripts/e2e/release-updater/windows-arm-prior-fixture.test.mts
+      - run: node --import tsx --test scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/prepared-stage-download.test.mts scripts/e2e/release-updater/execution-provenance.test.mts scripts/e2e/release-updater/windows-cloud-preflight.test.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts scripts/e2e/release-updater/windows-arm-prior-fixture.test.mts scripts/e2e/release-updater/windows-owned-process.test.mts scripts/e2e/release-updater/windows-ota-successor.test.mts scripts/e2e/release-updater/windows-execution-provenance.test.mts
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
@@ -138,7 +150,11 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Verify native helper imports do not intercept controller cleanup
-        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts
+        run: node --import tsx --test scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-execution-provenance.test.mts scripts/e2e/release-updater/windows-ota-successor.test.mts
+      - name: Check bounded Windows executor source before native effects
+        run: |
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          pnpm lint:ci:files -- scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-ota.mts scripts/e2e/release-updater/windows-updater.mts scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-owned-process.mts scripts/e2e/release-updater/windows-owned-process.test.mts scripts/e2e/release-updater/windows-ota-successor.mts scripts/e2e/release-updater/windows-ota-successor.test.mts scripts/e2e/release-updater/windows-execution-provenance.mts scripts/e2e/release-updater/windows-execution-provenance.test.mts
       - name: Verify immutable native producer and extract exact plan-bound inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -170,6 +186,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -204,7 +221,7 @@ jobs:
 
   windows-predecessor:
     needs: [verified-windows-inputs, legacy-windows-inputs]
-    if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
+    if: ${{ !cancelled() && inputs.scenario_filter != 'x64-full' && inputs.scenario_filter != 'ota-only' && !inputs.owned_uia_diagnostic && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -225,6 +242,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -290,11 +308,12 @@ jobs:
           retention-days: 14
 
   fresh-windows:
+    name: fresh-windows (${{ matrix.os }}, ${{ matrix.arch }})
     needs: [verified-windows-inputs, legacy-windows-inputs]
     if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.owned_uia_diagnostic && '{"include":[{"os":"windows-11-arm","arch":"arm64"}]}' || '{"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
+      matrix: ${{ fromJSON(inputs.scenario_filter == 'x64-full' && '{"include":[{"os":"windows-2025","arch":"x64"}]}' || inputs.owned_uia_diagnostic && '{"include":[{"os":"windows-11-arm","arch":"arm64"}]}' || '{"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
     env:
       TEST_WINDOWS_OWNED_UIA_DIAGNOSTIC: ${{ inputs.owned_uia_diagnostic && '1' || '0' }}
@@ -306,6 +325,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -342,6 +362,10 @@ jobs:
         run: |
           node scripts/e2e/release-updater/windows-startup-diagnostic.mts --evidence .artifacts/TEST-windows-fresh
           if ($LASTEXITCODE -ne 0) { throw 'Selected native PS7 discovery health failed' }
+      - name: Verify native ownership races with the selected installed PowerShell
+        run: |
+          node --import tsx --test scripts/e2e/release-updater/windows-owned-process.test.mts scripts/e2e/release-updater/windows-ota-successor.test.mts scripts/e2e/release-updater/windows-execution-provenance.test.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows ownership contract failed' }
       - name: Fresh official target installation on a separate native VM
         run: |
           if ((node -p process.arch) -ne '${{ matrix.arch }}') { throw 'Native runner architecture mismatch' }
@@ -365,18 +389,12 @@ jobs:
           retention-days: 14
 
   windows-ota:
+    name: windows-ota (${{ matrix.os }}, ${{ matrix.mode }})
     needs: [verified-windows-inputs, legacy-windows-inputs, fresh-windows]
     if: ${{ !cancelled() && !inputs.owned_uia_diagnostic && needs.fresh-windows.result == 'success' && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [windows-2025, windows-11-arm]
-        mode: [full, cold, warm]
-        include:
-          - os: windows-2025
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
+      matrix: ${{ fromJSON(inputs.scenario_filter == 'x64-full' && '{"include":[{"os":"windows-2025","arch":"x64","mode":"full"}]}' || '{"os":["windows-2025","windows-11-arm"],"mode":["full","cold","warm"],"include":[{"os":"windows-2025","arch":"x64"},{"os":"windows-11-arm","arch":"arm64"}]}') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     env:
@@ -387,6 +405,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6

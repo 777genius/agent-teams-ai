@@ -13,7 +13,7 @@ import {
   platformNames,
   textProof,
 } from '../../ci/release/contract.ts';
-import { authenticateExecutor } from './execution-provenance.mts';
+import { authenticateWindowsExecutor } from './windows-execution-provenance.mts';
 import { hashFile } from './inputs.mts';
 import { checkNativePredecessor, nativeReleaseScenario } from './native-release-scenario.mts';
 import { downloadPreparedStageArtifact } from './prepared-stage-download.mts';
@@ -78,7 +78,7 @@ async function downloadTrustedArtifact(
       /^[a-f\d]{40}$/u.test(toolingSha)
   );
   const executionIndex = args.indexOf('--execution-sha');
-  const execution = authenticateExecutor(
+  const execution = authenticateWindowsExecutor(
     toolingSha,
     executionIndex < 0 ? toolingSha : option('--execution-sha')
   );

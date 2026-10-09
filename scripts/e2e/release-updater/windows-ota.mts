@@ -58,6 +58,8 @@ import {
 } from './windows-ota-profile.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
 import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
+import { windowsOtaSuccessor } from './windows-ota-successor.mts';
+import { authenticateWindowsWorkflowExecution } from './windows-execution-provenance.mts';
 
 import type { App } from 'electron';
 import type { ChildProcess } from 'node:child_process';
@@ -815,7 +817,8 @@ async function run() {
     await screenshot('downloaded');
     evidence.updaterEvents = downloaded;
     evidence.transport = await state();
-    const before = new Set((await native.processes(executable)).map((owner) => owner.pid));
+    const before = await native.processes(executable);
+    evidence.processesBeforeRestart = before;
     assert(await absent(observer.watchReadyFile));
     sampler = (async () => {
       while (!samplerStop) installerSamples.push(...(await observer.watchInstaller(pending)));
@@ -839,9 +842,7 @@ async function run() {
     renderer = undefined;
     const successor = await waitFor(
       async () =>
-        (await native.processes(executable)).find(
-          (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
-        ) ?? null,
+        windowsOtaSuccessor(await native.processes(executable), before, executable),
       'NSIS-created automatic successor before any harness relaunch',
       900_000
     );
@@ -943,6 +944,8 @@ async function run() {
     env = appEnvironment(physical, root, systemRoot);
     evidence.environmentKeys = Object.keys(env);
     const inputs = await windowsInputs(input, readWindowsInputMode());
+    if (inputs.plan)
+      evidence.execution = authenticateWindowsWorkflowExecution(inputs.plan.input.toolingSha);
     evidence.inputs = inputs.verified;
     evidence.inputDigest = inputs.inputDigest;
     targetVersion = inputs.targetVersion;
