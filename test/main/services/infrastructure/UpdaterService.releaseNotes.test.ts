@@ -1,8 +1,10 @@
+import { readFile } from 'node:fs/promises';
 import { setImmediate } from 'node:timers/promises';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UpdaterService } from '../../../../src/main/services/infrastructure/UpdaterService';
+import { stripDownloadsSection } from '../../../../src/shared/utils/releaseNotes';
 
 const fixture = vi.hoisted(() => ({
   handlers: new Map<string, (info: unknown) => void>(),
@@ -105,6 +107,33 @@ describe('UpdaterService release notes', () => {
     );
     await announce();
     expect(availableStatus()).toMatchObject({ releaseNotes: migrationNote });
+  });
+
+  it('retains the actual release migration guidance through REST fallback and dialog filtering', async () => {
+    const releaseGuide = await readFile('docs/RELEASE.md', 'utf8');
+    const body = releaseGuide
+      .split(`<!-- RELEASE_BODY_START v${version} -->`)[1]!
+      .split(`<!-- RELEASE_BODY_END v${version} -->`)[0]!
+      .trim();
+    expect(body.indexOf('### macOS installation')).toBeGreaterThan(body.indexOf('### Downloads'));
+    fixture.fetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ tag_name: `v${version}`, body }),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce();
+    const status = availableStatus() as { releaseNotes: string };
+    // UpdateDialog filters the already formatted IPC notes a second time.
+    const visibleNotes = stripDownloadsSection(status.releaseNotes);
+    expect(visibleNotes).toContain('macOS 2.17.10 requires macOS 13 or later.');
+    expect(visibleNotes).toContain('Automatic updates cannot perform this one-time migration.');
+    expect(visibleNotes).toContain('Your local settings, teams and projects stay in place.');
+    expect(visibleNotes).not.toContain('### Downloads');
+    expect(visibleNotes).not.toContain('| Platform');
+    expect(visibleNotes).not.toContain('/releases/download/');
+    expect(visibleNotes).toBe(status.releaseNotes);
   });
 
   it('still suppresses a release marked to skip updates in its API body', async () => {
