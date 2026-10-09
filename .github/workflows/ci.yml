@@ -305,14 +305,11 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
+          package-manager-cache: false
 
       - name: Read runner image identity
         id: image
@@ -330,6 +327,19 @@ jobs:
           CI_LINUX_IMAGE: ${{ needs.plan.outputs.image }}
           CI_LINUX_ARCH: ${{ needs.plan.outputs.linux_arch }}
         run: node scripts/ci/ci-feedback.mts windows
+
+      # Reused evidence needs Node only. Register cache post-actions only when
+      # dependencies will be installed, so an absent pnpm store cannot fail reuse.
+      - name: Setup pnpm
+        if: steps.windows.outputs.reuse != 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js dependency cache
+        if: steps.windows.outputs.reuse != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.windows.outputs.reuse != 'true'
