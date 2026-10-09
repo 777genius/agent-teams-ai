@@ -34,7 +34,7 @@ function fixture() {
     checkoutSha,
     applicationSha: 'dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3',
     workflowRef:
-      '777genius/agent-teams-ai/.github/workflows/publish-carried-release.yml@refs/tags/release-tooling-v2.17.10-qualified-publication',
+      '777genius/agent-teams-ai/.github/workflows/publish-carried-release.yml@refs/tags/release-tooling-v2.17.10-qualified-publication-v2',
     repository: '777genius/agent-teams-ai',
     tag: 'v2.17.10',
     planSha256: context.planSha256,
@@ -51,7 +51,7 @@ function fixture() {
     id: 123,
     run_attempt: 2,
     head_sha: workflowSha,
-    head_branch: 'release-tooling-v2.17.10-qualified-publication',
+    head_branch: 'release-tooling-v2.17.10-qualified-publication-v2',
     path: '.github/workflows/publish-carried-release.yml',
     event: 'workflow_dispatch',
     status: 'in_progress',

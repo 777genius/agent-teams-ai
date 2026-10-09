@@ -12,10 +12,12 @@ import {
 import {
   verifyRelease220WindowsExecution,
   verifyRelease220WindowsProvenance,
+  verifyRelease220WindowsResumeExecution,
 } from '../../scripts/ci/release/nativeReadinessAuthority.js';
 import { createNativeExecutionResolver } from '../../scripts/ci/release/nativeReadinessExecution.js';
 import { RELEASE220_EXECUTION as original } from '../../scripts/ci/release/release220ExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as pins } from '../../scripts/ci/release/release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as resume } from '../../scripts/ci/release/release220WindowsResumeExecutionPins.js';
 
 import type { StagePlan } from '../../scripts/ci/release/contract.js';
 import type {
@@ -54,42 +56,42 @@ function tree(sha: string): ExecutionTree {
       }),
   };
 }
-function claimedProof(): ExecutionProof {
+function claimedProof(executor: typeof pins | typeof resume = pins): ExecutionProof {
   return {
-    repository: pins.repository,
-    commit: { sha: pins.head, tree: { sha: pins.tree }, parents: [{ sha: pins.base }] },
+    repository: executor.repository,
+    commit: { sha: executor.head, tree: { sha: executor.tree }, parents: [{ sha: executor.base }] },
     comparison: {
       status: 'ahead',
-      base_commit: { sha: pins.base },
-      merge_base_commit: { sha: pins.base },
+      base_commit: { sha: executor.base },
+      merge_base_commit: { sha: executor.base },
     },
-    baseTree: { sha: pins.baseTree, truncated: false, tree: [] },
-    executionTree: { sha: pins.tree, truncated: false, tree: [] },
+    baseTree: { sha: executor.baseTree, truncated: false, tree: [] },
+    executionTree: { sha: executor.tree, truncated: false, tree: [] },
   };
 }
-function completeProof(): ExecutionProof {
-  const [head, executionTree, ...parents] = git('show', '-s', '--format=%H %T %P', pins.head)
+function completeProof(executor: typeof pins | typeof resume = pins): ExecutionProof {
+  const [head, executionTree, ...parents] = git('show', '-s', '--format=%H %T %P', executor.head)
     .trim()
     .split(' ');
   if (!head || !executionTree) throw new Error('Missing reviewed executor object');
   return {
-    ...claimedProof(),
+    ...claimedProof(executor),
     commit: { sha: head, tree: { sha: executionTree }, parents: parents.map((sha) => ({ sha })) },
     comparison: {
       status: 'ahead',
-      base_commit: { sha: pins.base },
-      merge_base_commit: { sha: git('merge-base', pins.base, head).trim() },
+      base_commit: { sha: executor.base },
+      merge_base_commit: { sha: git('merge-base', executor.base, head).trim() },
     },
-    baseTree: tree(git('rev-parse', `${pins.base}^{tree}`).trim()),
+    baseTree: tree(git('rev-parse', `${executor.base}^{tree}`).trim()),
     executionTree: tree(executionTree),
   };
 }
-function routingFixture(actualHead: string) {
+function routingFixture(actualHead: string, scenario = 'windows-x64-fresh') {
   const plan = JSON.parse(
     readFileSync(new URL('../fixtures/release220-original-P10.json', import.meta.url), 'utf8')
   ) as StagePlan;
   const row = fullNativeScenarioRows(37909332806, 1).find(
-    (candidate) => candidate.scenario === 'windows-x64-fresh'
+    (candidate) => candidate.scenario === scenario
   );
   if (!row) throw new Error('Missing Windows scenario contract');
   const receipt: NativeReadinessReceipt = {
@@ -311,5 +313,98 @@ describe.runIf(Boolean(repository))('Windows E13 immutable complete Git proof', 
     await expect(resolve(f.row, pins.head)).resolves.toBe(pins.head);
     await expect(resolve(f.row, pins.head)).resolves.toBe(pins.head);
     expect(proof).toHaveBeenCalledOnce();
+  });
+});
+
+describe('closed E14 additional Windows OTA source', () => {
+  it('requires a complete proof independently of the already reviewed E13 executor', () => {
+    expect(() => verifyRelease220WindowsResumeExecution(claimedProof(resume))).toThrow(
+      'Complete execution tree records changed'
+    );
+    expect(() => verifyRelease220WindowsResumeExecution(claimedProof(pins))).toThrow(
+      'Windows resume executor ancestry'
+    );
+    expect(() => verifyRelease220WindowsExecution(claimedProof(resume))).toThrow(
+      'Windows executor ancestry'
+    );
+  });
+  it('requires the additional no-argument proof capability for an E14 OTA workflow', async () => {
+    const f = routingFixture(resume.head, 'windows-x64-full');
+    await expect(verifyNativeReadiness(f.port, f.plan, original.plan, f.receipt)).rejects.toThrow(
+      'Missing complete Windows resume executor proof'
+    );
+  });
+  it('never authorizes E14 as a fresh installation source', async () => {
+    const f = routingFixture(resume.head);
+    await expect(verifyNativeReadiness(f.port, f.plan, original.plan, f.receipt)).rejects.toThrow(
+      'cannot qualify fresh installation'
+    );
+  });
+  it('binds E14 evidence to the actual selected OTA run and keeps E10 tooling', () => {
+    const execution = {
+      toolingSha: resume.base,
+      executionSha: resume.head,
+      runId: 555,
+      attempt: 1,
+      job: 'windows-ota',
+    };
+    const check = (value: Record<string, unknown>) =>
+      verifyRelease220WindowsProvenance(value, resume.base, resume.head, 555, 1, 'windows-ota');
+    expect(() => check({ execution })).not.toThrow();
+    expect(() => check({ execution: { ...execution, executionSha: pins.head } })).toThrow(
+      'Windows execution provenance'
+    );
+    expect(() => check({ execution: { ...execution, attempt: 2 } })).toThrow(
+      'Windows execution provenance'
+    );
+  });
+});
+
+describe.runIf(Boolean(repository))('E14 independently read immutable Git proof', () => {
+  it('accepts only the reviewed direct E10 child and complete E14 records', () => {
+    expect(() => verifyRelease220WindowsResumeExecution(completeProof(resume))).not.toThrow();
+  });
+  it.each(['baseTree', 'executionTree'] as const)(
+    'rejects altered, truncated or omitted %s',
+    (key) => {
+      const proof = completeProof(resume);
+      proof[key].truncated = true;
+      expect(() => verifyRelease220WindowsResumeExecution(proof)).toThrow(
+        'Incomplete execution tree'
+      );
+      const omitted = completeProof(resume);
+      omitted[key].tree.pop();
+      expect(() => verifyRelease220WindowsResumeExecution(omitted)).toThrow(
+        'Complete execution tree records changed'
+      );
+      const altered = completeProof(resume);
+      const record = altered[key].tree.find((entry) => entry.type === 'tree');
+      if (!record) throw new Error('Missing ancestor tree');
+      record.sha = '0'.repeat(40);
+      expect(() => verifyRelease220WindowsResumeExecution(altered)).toThrow(
+        'Complete execution tree records changed'
+      );
+    }
+  );
+  it('authorizes both E13 fresh and E14 OTA through their distinct complete-proof methods', async () => {
+    const f = routingFixture(resume.head, 'windows-x64-full');
+    const e13 = vi.fn(() => Promise.resolve(completeProof(pins)));
+    const e14 = vi.fn(() => Promise.resolve(completeProof(resume)));
+    f.port.release220WindowsExecutionProof = e13;
+    f.port.release220WindowsResumeExecutionProof = e14;
+    const resolve = createNativeExecutionResolver(
+      f.port,
+      f.receipt,
+      f.plan,
+      original.plan,
+      original.input,
+      true
+    );
+    await expect(resolve(f.row, resume.head)).resolves.toBe(resume.head);
+    const fresh = routingFixture(pins.head).row;
+    await expect(resolve(fresh, pins.head)).resolves.toBe(pins.head);
+    await expect(resolve(f.row, resume.head)).resolves.toBe(resume.head);
+    expect(e13).toHaveBeenCalledOnce();
+    expect(e14).toHaveBeenCalledOnce();
   });
 });

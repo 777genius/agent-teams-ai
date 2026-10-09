@@ -13,6 +13,7 @@ import { RELEASE216_TOOLING } from './nativeReadinessAuthority.js';
 import { RELEASE220_EXECUTION as full220Pins } from './release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as mac220Pins } from './release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windows220Pins } from './release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as resume220Pins } from './release220WindowsResumeExecutionPins.js';
 import type { Release220ExecutionProof } from './nativeReadinessAuthority.js';
 import type { ExecutionProof, ExecutionTree } from './nativeReadinessAuthority.js';
 import type {
@@ -155,9 +156,12 @@ export class GitHubNativeReadinessPort implements NativeReadinessPort {
   async release220WindowsExecutionProof(): Promise<ExecutionProof> {
     return this.closed220ExecutionProof(windows220Pins);
   }
+  async release220WindowsResumeExecutionProof(): Promise<ExecutionProof> {
+    return this.closed220ExecutionProof(resume220Pins);
+  }
 
   private async closed220ExecutionProof(
-    executor: typeof mac220Pins | typeof windows220Pins
+    executor: typeof mac220Pins | typeof windows220Pins | typeof resume220Pins
   ): Promise<ExecutionProof> {
     const root = repository(executor.repository);
     const [commit, comparison, baseTree, executionTree] = await Promise.all([

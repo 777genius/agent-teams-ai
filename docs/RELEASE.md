@@ -2141,7 +2141,7 @@ for the exact same tag with `publish_release=true`:
 
 For the already prepared `v2.17.10` original build, use the reviewed
 `publish-carried-release.yml` workflow at
-`release-tooling-v2.17.10-qualified-publication`, with `full_ready=true` and
+`release-tooling-v2.17.10-qualified-publication-v2`, with `full_ready=true` and
 `publish_release=true`. It authenticates the original immutable P10 plan,
 all native outcomes, all planned bytes and the four original Mac blockmaps,
 then runs the `promote-existing-draft` job and the published updater gate.

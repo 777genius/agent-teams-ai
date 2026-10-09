@@ -35,6 +35,8 @@ import {
 import { publishFullRelease } from '../../scripts/ci/release/publication.js';
 import { RELEASE220_EXECUTION as fullExecutor } from '../../scripts/ci/release/release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macExecutor } from '../../scripts/ci/release/release220MacExecutionPins.js';
+import { RELEASE220_WINDOWS_EXECUTION as windowsExecutor } from '../../scripts/ci/release/release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as windowsResume } from '../../scripts/ci/release/release220WindowsResumeExecutionPins.js';
 import {
   ARM211_FILES,
   ARM211_SHA,
@@ -1790,4 +1792,152 @@ it('authenticates historical native attempts through the real gh adapter endpoin
     else process.env.PATH = previousPath;
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+// Synthetic native outcomes isolate the resume custody policy. Separately tested
+// whole-tree verifiers authenticate each fixed executor in actual publication.
+describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', () => {
+  beforeEach(() => {
+    vi.spyOn(nativeAuthority, 'verifyRelease220Execution').mockImplementation(() => undefined);
+    vi.spyOn(nativeAuthority, 'verifyRelease220WindowsExecution').mockImplementation(
+      () => undefined
+    );
+    vi.spyOn(nativeAuthority, 'verifyRelease220WindowsResumeExecution').mockImplementation(
+      () => undefined
+    );
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  function resumeFixture() {
+    const plan = JSON.parse(
+      readFileSync(new URL('../fixtures/release220-original-P10.json', import.meta.url), 'utf8')
+    ) as StagePlan;
+    const f = fixture(true, undefined, plan);
+    f.receipt.schemaVersion = 3;
+    f.port.runAttempt = (_, id, attempt) => {
+      const run = f.runs.get(id);
+      assert(run && run.run_attempt === attempt);
+      return Promise.resolve(run);
+    };
+    f.port.release220ExecutionProof = () =>
+      Promise.resolve({} as nativeAuthority.Release220ExecutionProof);
+    f.port.release220WindowsExecutionProof = () =>
+      Promise.resolve({} as nativeAuthority.ExecutionProof);
+    f.port.release220WindowsResumeExecutionProof = () =>
+      Promise.resolve({} as nativeAuthority.ExecutionProof);
+    const originalJobs = f.jobs.get(200)!;
+    const originalProducer = originalJobs.find((job) => job.name === 'verified-windows-inputs')!;
+    const originalRun = f.runs.get(200)!;
+    const sampleStep = originalProducer.steps[0]!;
+
+    function move(scenarios: string[], runId: number, head: string, resume: boolean) {
+      const producer = {
+        ...structuredClone(originalProducer),
+        id: 3000 + runId,
+        run_id: runId,
+        run_attempt: 1,
+        head_sha: head,
+      };
+      if (resume) {
+        producer.steps[0]!.conclusion = 'skipped';
+        producer.steps.push(
+          { ...sampleStep, name: windowsResume.preparation },
+          { ...sampleStep, name: windowsResume.custodyUpload }
+        );
+      }
+      f.runs.set(runId, {
+        ...originalRun,
+        id: runId,
+        run_attempt: 1,
+        head_sha: head,
+        conclusion: 'failure',
+      });
+      const currentJobs = [producer];
+      for (const scenario of scenarios) {
+        const ref = f.receipt.artifacts.find(
+          (artifact) => artifact.entries[0]?.scenario === scenario
+        )!;
+        const source = originalJobs.find((job) => job.id === ref.jobId)!;
+        const row = fullNativeScenarioRows(runId, 1).find((item) => item.scenario === scenario)!;
+        const job = {
+          ...structuredClone(source),
+          id: source.id + runId * 100,
+          run_id: runId,
+          run_attempt: 1,
+          head_sha: head,
+        };
+        if (resume) job.steps.unshift({ ...sampleStep, name: windowsResume.retrieval });
+        currentJobs.push(job);
+        Object.assign(ref, { runId, runAttempt: 1, jobId: job.id, artifactName: row.artifact });
+        Object.assign(f.artifacts.get(ref.artifactId)!, {
+          name: row.artifact,
+          workflow_run: { id: runId, head_sha: head },
+        });
+        const value = f.values.get(scenario)!;
+        value.execution = {
+          toolingSha: plan.input.toolingSha,
+          executionSha: head,
+          runId,
+          attempt: 1,
+          job: row.job,
+        };
+        f.reseal(scenario);
+      }
+      f.jobs.set(runId, currentJobs);
+      return { producer, jobs: currentJobs };
+    }
+    const ota = fullNativeScenarioRows(250, 1)
+      .filter((row) => row.kind === 'windows' && row.mode !== 'fresh')
+      .map((row) => row.scenario);
+    const current = move(ota, 250, windowsResume.head, true);
+    move(['windows-x64-fresh'], 251, windowsExecutor.head, false);
+    return { ...f, producer: current.producer, otaJob: current.jobs[1]! };
+  }
+  it('accepts six E14 OTA jobs with successful new custody, E13 x64 fresh and original E10 ARM fresh', async () => {
+    const f = resumeFixture();
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+    expect(f.runs.get(250)!.conclusion).toBe('failure');
+    expect(f.runs.get(251)!.conclusion).toBe('failure');
+    expect(f.runs.get(200)!.head_sha).toBe(fullExecutor.base);
+    expect(f.producer.steps[0]!.conclusion).toBe('skipped');
+  });
+  it.each([windowsResume.preparation, windowsResume.custodyUpload, windowsResume.retrieval])(
+    'rejects a skipped, failed or absent required current %s',
+    async (name) => {
+      for (const conclusion of ['skipped', 'failure', 'missing']) {
+        const f = resumeFixture();
+        const job = name === windowsResume.retrieval ? f.otaJob : f.producer;
+        const found = job.steps.find((item) => item.name === name)!;
+        assert(found);
+        if (conclusion === 'missing') job.steps = job.steps.filter((item) => item !== found);
+        else found.conclusion = conclusion;
+        // The old producer step cannot become an alternative authorization path.
+        f.producer.steps[0]!.conclusion = 'success';
+        await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(name);
+      }
+    }
+  );
+  it('rejects source authentication after native effects and reversed producer custody', async () => {
+    const f = resumeFixture();
+    const retrieval = f.otaJob.steps.find((item) => item.name === windowsResume.retrieval)!;
+    retrieval.completed_at = '2026-10-06T01:00:01Z';
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'before native effects'
+    );
+    const reversed = resumeFixture();
+    reversed.producer.steps.find((item) => item.name === windowsResume.preparation)!.completed_at =
+      '2026-10-06T01:00:01Z';
+    await expect(
+      verifyNativeReadiness(reversed.port, reversed.plan, reversed.p, reversed.receipt)
+    ).rejects.toThrow('custody order');
+  });
+  it('never grants the new preparation exception to E13 fresh evidence', async () => {
+    const f = resumeFixture();
+    const producer = f.jobs.get(251)!.find((job) => job.name === 'verified-windows-inputs')!;
+    producer.steps[0]!.conclusion = 'skipped';
+    producer.steps.push({ ...f.producer.steps[1]! }, { ...f.producer.steps[2]! });
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'Verify immutable native producer'
+    );
+  });
 });

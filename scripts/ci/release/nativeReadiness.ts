@@ -2,6 +2,7 @@ import { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRow
 import type { NativeScenarioRow as Row } from './nativeReadinessRows.js';
 export { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRows.js';
 import { createNativeExecutionResolver } from './nativeReadinessExecution.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as windowsResume } from './release220WindowsResumeExecutionPins.js';
 import { checkMacManual, manualCapturePaths } from './macManualReadiness.js';
 import {
   at,
@@ -88,6 +89,7 @@ export interface NativeReadinessPort {
   release220ExecutionProof?(): Promise<Release220ExecutionProof>;
   release220MacExecutionProof?(): Promise<ExecutionProof>;
   release220WindowsExecutionProof?(): Promise<ExecutionProof>;
+  release220WindowsResumeExecutionProof?(): Promise<ExecutionProof>;
   executionProof?(repository: string, executionSha: string): Promise<ExecutionProof>;
   run(repository: string, runId: number): Promise<NativeRun>;
   runAttempt?(repository: string, runId: number, attempt: number): Promise<NativeRun>;
@@ -162,7 +164,19 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
   equal(job.run_id, run.id, 'input producer run');
   equal(job.run_attempt, run.run_attempt, 'input producer attempt');
   equal(job.head_sha, run.head_sha, 'input producer tooling');
-  step(job, preparation);
+  if (row.kind === 'windows' && run.head_sha === windowsResume.head) {
+    requireThat(row.mode !== 'fresh', 'Windows resume executor cannot qualify fresh installation');
+    const auth = step(job, windowsResume.preparation);
+    const upload = step(job, windowsResume.custodyUpload);
+    requireThat(
+      time(job.started_at) <= time(auth.started_at) &&
+        time(auth.started_at) <= time(auth.completed_at) &&
+        time(auth.completed_at) <= time(upload.started_at) &&
+        time(upload.started_at) <= time(upload.completed_at) &&
+        time(upload.completed_at) <= time(job.completed_at),
+      'Invalid Windows resume preparation custody order'
+    );
+  } else step(job, preparation);
   if (row.kind === 'appimage' || row.kind === 'package') {
     step(job, 'Require explicit prepared artifact identity');
     step(
@@ -661,6 +675,15 @@ export async function verifyNativeReadiness(
     equal(job.name, row.jobName, 'native matrix job');
     const execution = step(job, row.execute);
     const upload = step(job, row.upload);
+    if (row.kind === 'windows' && executionSha === windowsResume.head) {
+      const retrieval = step(job, windowsResume.retrieval);
+      requireThat(
+        time(job.started_at) <= time(retrieval.started_at) &&
+          time(retrieval.started_at) <= time(retrieval.completed_at) &&
+          time(retrieval.completed_at) <= time(execution.started_at),
+        'Windows resume source bytes must authenticate before native effects'
+      );
+    }
     requireThat(
       (!reuse ||
         (time(preparation.started_at) <= time(preparation.completed_at) &&

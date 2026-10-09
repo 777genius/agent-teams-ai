@@ -6,6 +6,7 @@ import { RELEASE216_EXECUTORS } from './release216ExecutionPins.js';
 import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macPins } from './release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windowsPins } from './release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as resumePins } from './release220WindowsResumeExecutionPins.js';
 
 type Json = Record<string, unknown>;
 interface Row {
@@ -141,10 +142,13 @@ export function verifyRelease220MacExecution(proof: ExecutionProof): void {
 export function verifyRelease220WindowsExecution(proof: ExecutionProof): void {
   verifyClosed220Executor(proof, windowsPins, 'Windows');
 }
+export function verifyRelease220WindowsResumeExecution(proof: ExecutionProof): void {
+  verifyClosed220Executor(proof, resumePins, 'Windows resume');
+}
 function verifyClosed220Executor(
   proof: ExecutionProof,
-  executor: typeof macPins | typeof windowsPins,
-  role: 'Mac' | 'Windows'
+  executor: typeof macPins | typeof windowsPins | typeof resumePins,
+  role: 'Mac' | 'Windows' | 'Windows resume'
 ): void {
   requireThat(
     proof.repository === executor.repository,
@@ -173,7 +177,7 @@ function verifyClosed220Executor(
   );
 }
 
-/** E13 emits actual execution custody separately from prepared E10 tooling. */
+/** Reviewed Windows executors retain prepared E10 tooling and actual custody. */
 export function verifyRelease220WindowsProvenance(
   value: Json,
   toolingSha: string,
@@ -182,7 +186,7 @@ export function verifyRelease220WindowsProvenance(
   attempt: number,
   job: string
 ): void {
-  if (executionSha !== windowsPins.head) return;
+  if (executionSha !== windowsPins.head && executionSha !== resumePins.head) return;
   requireThat(
     toolingSha === windowsPins.base &&
       canonical(object(value.execution, 'Windows execution provenance')) ===

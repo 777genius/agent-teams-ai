@@ -7,12 +7,14 @@ import {
   verifyRelease220Execution,
   verifyRelease220MacExecution,
   verifyRelease220WindowsExecution,
+  verifyRelease220WindowsResumeExecution,
 } from './nativeReadinessAuthority.js';
 import type { NativeReadinessPort, NativeReadinessReceipt } from './nativeReadiness.js';
 import type { NativeScenarioRow } from './nativeReadinessRows.js';
 import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macPins } from './release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windowsPins } from './release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_RESUME_EXECUTION as resumePins } from './release220WindowsResumeExecutionPins.js';
 
 /** Resolve only original tooling or one closed, reviewed role-specific executor. */
 export function createNativeExecutionResolver(
@@ -24,16 +26,29 @@ export function createNativeExecutionResolver(
   full: boolean
 ) {
   const verified = new Set<string>();
-  async function verifyReviewedRole(role: 'Mac' | 'Windows', head: string): Promise<void> {
+  async function verifyReviewedRole(
+    role: 'Mac' | 'Windows' | 'Windows resume',
+    head: string
+  ): Promise<void> {
     if (verified.has(head)) return;
-    const prove =
-      role === 'Mac'
-        ? port.release220MacExecutionProof?.bind(port)
-        : port.release220WindowsExecutionProof?.bind(port);
+    const roles = {
+      Mac: {
+        prove: port.release220MacExecutionProof?.bind(port),
+        verify: verifyRelease220MacExecution,
+      },
+      Windows: {
+        prove: port.release220WindowsExecutionProof?.bind(port),
+        verify: verifyRelease220WindowsExecution,
+      },
+      'Windows resume': {
+        prove: port.release220WindowsResumeExecutionProof?.bind(port),
+        verify: verifyRelease220WindowsResumeExecution,
+      },
+    };
+    const { prove, verify } = roles[role];
     requireThat(typeof prove === 'function', `Missing complete ${role} executor proof`);
     const proof = await prove();
-    if (role === 'Mac') verifyRelease220MacExecution(proof);
-    else verifyRelease220WindowsExecution(proof);
+    verify(proof);
     verified.add(head);
   }
   return async (row: NativeScenarioRow, actualHead: string): Promise<string> => {
@@ -52,6 +67,15 @@ export function createNativeExecutionResolver(
       release220Execution(row.kind, plan, planSha256, inputDigest);
       executionSha = windowsPins.head;
       await verifyReviewedRole('Windows', executionSha);
+    }
+    if (full && row.kind === 'windows' && actualHead === resumePins.head) {
+      requireThat(
+        row.mode !== 'fresh',
+        'Windows resume executor cannot qualify fresh installation'
+      );
+      release220Execution(row.kind, plan, planSha256, inputDigest);
+      executionSha = resumePins.head;
+      await verifyReviewedRole('Windows resume', executionSha);
     }
     if (
       receipt.schemaVersion === 2 &&
