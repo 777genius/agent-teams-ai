@@ -184,6 +184,7 @@ export async function buildUpdaterFeeds({
   releaseDate,
   feedSources,
   macMinimumSystemVersion,
+  releaseNotes = '',
 }) {
   const darwinMinimumSystemVersion = getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion);
   const [windowsX64, windowsArm64, linux, macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg] =
@@ -245,10 +246,12 @@ sha512: ${macArm64Zip.sha512}
 releaseDate: '${releaseDate}'
 `;
 
+  // JSON strings are YAML scalars: preserve Markdown/newlines without injecting feed keys.
+  const notes = releaseNotes.trim() ? `releaseNotes: ${JSON.stringify(releaseNotes)}\n` : '';
   return {
-    'latest.yml': latest,
-    'latest-linux.yml': latestLinux,
-    'latest-mac.yml': latestMac,
+    'latest.yml': latest + notes,
+    'latest-linux.yml': latestLinux + notes,
+    'latest-mac.yml': latestMac + notes,
   };
 }
 
@@ -484,6 +487,7 @@ export async function promoteExistingDraft({
       releaseDate: now().toISOString(),
       feedSources: layout.feedSources,
       macMinimumSystemVersion,
+      releaseNotes: release.body || '',
     });
     const feedPaths = [];
     for (const [name, contents] of Object.entries(feeds)) {

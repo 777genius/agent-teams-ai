@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 
 import {
+  checkPlan,
   loadPlan,
   prepareDraft,
   requiredFeed,
@@ -213,6 +214,121 @@ async function prepared(store = new TestReleaseStorage()) {
   });
   return { store, output, ...result };
 }
+
+// These exercise actual captured bytes, plan policy, staging and public audit.
+// They fail if notes can be lost/injected, relabeled onto historical Mac feeds,
+// or if the new policy rejects already sealed manifests without the policy flag.
+describe('immutable release notes feed policy', () => {
+  const notes = '## Migration: macOS\nUse the "DMG" once.\n\n```yaml\nversion: wrong\n```\n';
+
+  async function prepare(mode: Mode) {
+    const store = new TestReleaseStorage();
+    store.releases.get('v2.17.2')!.body = notes;
+    const historical = store.content('v2.17.1', 'latest-mac.yml');
+    const sourceNotes = 'Historical Mac changes only.';
+    const sourceFeed = Buffer.concat([
+      historical,
+      Buffer.from(`releaseNotes: ${JSON.stringify(sourceNotes)}\n`),
+    ]);
+    const sourceAsset = store.releases
+      .get('v2.17.1')!
+      .assets.find((a) => a.name === 'latest-mac.yml')!;
+    store.bytes.set(sourceAsset.id, sourceFeed);
+    sourceAsset.size = sourceFeed.length;
+    sourceAsset.digest = `sha256:${digest(sourceFeed)}`;
+    if (mode === 'full') {
+      store.targetMinimum = '13.0';
+      for (const name of platformNames('2.17.2').mac)
+        store.add('v2.17.2', name, Buffer.from(`new-mac-payload:${name}`));
+    }
+    const output = await mkdtemp(path.join(tmpdir(), 'TEST-release-notes-policy-'));
+    directories.push(output);
+    const result = await prepareDraft(store, {
+      repository,
+      tag: 'v2.17.2',
+      applicationSha: targetSha,
+      toolingSha,
+      mode,
+      ...(mode === 'carry-mac' ? { macSourceTag: 'v2.17.1' } : {}),
+      build: { runId: 10, attempt: 1, jobIds: [11, 12, 13, 14, 15] },
+      output,
+    });
+    return { store, sourceFeed, sourceNotes, output, ...result };
+  }
+
+  it.each(['full', 'carry-mac'] as const)(
+    'stages target notes safely with %s Mac policy',
+    async (mode) => {
+      const { store, sourceFeed, sourceNotes, plan, output } = await prepare(mode);
+      expect(plan.input.includeReleaseNotes).toBe(true);
+      for (const name of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml']) {
+        const feed = parse(await readFile(path.join(output, name), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+        expect(feed.version).toBe(
+          mode === 'carry-mac' && name === 'latest-mac.yml' ? '2.17.1' : '2.17.2'
+        );
+        expect(feed.releaseNotes).toBe(
+          mode === 'carry-mac' && name === 'latest-mac.yml' ? sourceNotes : notes
+        );
+      }
+      await stageDraft(store, plan);
+      for (const name of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml'])
+        expect(store.content('v2.17.2', name).toString()).toBe(plan.feeds[name]);
+      expect(store.content('v2.17.1', 'latest-mac.yml')).toEqual(sourceFeed);
+      if (mode === 'carry-mac')
+        expect(store.content('v2.17.2', 'latest-mac.yml')).toEqual(sourceFeed);
+      else {
+        expect(parse(plan.feeds['latest-mac.yml']!).minimumSystemVersion).toBe('22.0.0');
+        store.releases.get('v2.17.2')!.draft = false;
+        await expect(verifyPublished(store, repository, 'v2.17.2')).resolves.toEqual({
+          mode: 'full',
+          tag: 'v2.17.2',
+        });
+      }
+    }
+  );
+
+  it('continues to audit sealed historical manifests without the new policy flag', async () => {
+    const { store, plan } = await prepare('full');
+    delete plan.input.includeReleaseNotes;
+    for (const [name, raw] of Object.entries(plan.feeds)) {
+      plan.feeds[name] = raw.replace(/^releaseNotes:.*\n/gm, '');
+      const index = plan.outputs.findIndex((proof) => proof.name === name);
+      plan.outputs[index] = textProof(name, plan.feeds[name]!);
+    }
+    expect(() => checkPlan(plan)).not.toThrow();
+    await stageDraft(store, plan);
+    store.releases.get('v2.17.2')!.draft = false;
+    await expect(verifyPublished(store, repository, 'v2.17.2')).resolves.toEqual({
+      mode: 'full',
+      tag: 'v2.17.2',
+    });
+    expect(store.content('v2.17.2', 'latest-mac.yml').toString()).not.toContain('releaseNotes:');
+  });
+
+  it.each(['missing', 'changed'] as const)(
+    'rejects %s notes before any staging upload',
+    async (failure) => {
+      const { store, plan } = await prepare('full');
+      plan.feeds['latest-linux.yml'] = plan.feeds['latest-linux.yml']!.replace(
+        /^releaseNotes:.*\n/gm,
+        failure === 'missing' ? '' : 'releaseNotes: "Wrong release"\n'
+      );
+      await expect(stageDraft(store, plan)).rejects.toThrow(
+        'Linux feed differs from release policy'
+      );
+      expect(store.uploads).toHaveLength(0);
+    }
+  );
+
+  it('rejects a malformed notes policy instead of treating it as enabled', async () => {
+    const { plan } = await prepare('full');
+    Object.assign(plan.input, { includeReleaseNotes: 'true' });
+    expect(() => checkPlan(plan)).toThrow('Invalid release notes feed policy');
+  });
+});
 
 describe('append-only partial release assembly', () => {
   it('preserves all Mac bytes/date/floor absence and emits real two-architecture Windows/four-format Linux feeds', async () => {
@@ -493,7 +609,8 @@ function manifestlessFull(productMinimum: string, darwinMinimum?: string): TestR
           '2.17.2',
           files.map((name) => textProof(name, store.content('v2.17.2', name))),
           '2026-10-01T21:02:41Z',
-          feed === 'latest-mac.yml' ? darwinMinimum : undefined
+          feed === 'latest-mac.yml' ? darwinMinimum : undefined,
+          store.releases.get('v2.17.2')!.body
         )
       )
     );

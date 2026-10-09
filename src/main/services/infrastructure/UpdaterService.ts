@@ -26,11 +26,17 @@ import {
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseAtomUrls,
+  getReleaseHistoryApiUrl,
+  getUpdaterAtomHistory,
+  getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  MAX_UPDATER_ATOM_BYTES,
+  mergeUpdaterReleaseNotes,
   shouldSkipReleaseForUpdater,
 } from './updaterReleaseMetadata';
 
-import type { GithubReleaseMetadata } from './updaterReleaseMetadata';
+import type { GithubReleaseMetadata, UpdaterReleaseNote } from './updaterReleaseMetadata';
 import type { UpdaterStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 
@@ -66,23 +72,47 @@ async function assetExistsInAnyRepo(urls: readonly string[]): Promise<boolean> {
   return false;
 }
 
-async function fetchText(url: string): Promise<string | null> {
+async function fetchText(
+  url: string,
+  signal?: AbortSignal,
+  maximumBytes?: number
+): Promise<string | null> {
   try {
-    const response = await net.fetch(url, { method: 'GET' });
+    const response = await net.fetch(url, { method: 'GET', signal });
     if (!response.ok) {
       return null;
     }
-    return await response.text();
+    if (maximumBytes !== undefined && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      let text = '';
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) return text + decoder.decode();
+        bytes += chunk.value.byteLength;
+        if (bytes > maximumBytes) {
+          void reader.cancel().catch(() => undefined);
+          return null;
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+      }
+    }
+    const text = await response.text();
+    return maximumBytes === undefined || Buffer.byteLength(text, 'utf8') <= maximumBytes
+      ? text
+      : null;
   } catch {
     return null;
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
   try {
     const response = await net.fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/vnd.github+json' },
+      signal,
     });
     if (!response.ok) {
       return null;
@@ -257,18 +287,72 @@ export class UpdaterService {
     return false;
   }
 
-  private async isSkippedRelease(version: string): Promise<boolean> {
+  private async fetchReleaseMetadata(version: string): Promise<{
+    release: GithubReleaseMetadata;
+    apiUrl: string;
+  } | null> {
     const metadataUrls = getReleaseApiUrls(version);
     for (const metadataUrl of metadataUrls) {
       const release = await fetchJson<GithubReleaseMetadata>(metadataUrl);
-      if (!release) {
+      if (
+        !release ||
+        typeof release.tag_name !== 'string' ||
+        release.tag_name.replace(/^v/i, '') !== version.replace(/^v/i, '')
+      ) {
         continue;
       }
-      return shouldSkipReleaseForUpdater(release);
+      return { release, apiUrl: metadataUrl };
     }
 
     logger.warn(`GitHub release metadata is not available for ${version}, allowing updater check`);
-    return false;
+    return null;
+  }
+
+  private async fetchRestReleaseHistory(
+    apiUrl: string,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
+    const releases: unknown[] = [];
+    for (let page = 1; page <= 3; page++) {
+      const batch = await fetchJson<unknown>(getReleaseHistoryApiUrl(apiUrl, page), signal);
+      if (!Array.isArray(batch)) break;
+      const pageReleases: unknown[] = batch;
+      releases.push(...pageReleases);
+      if (batch.length < 100 || signal.aborted) break;
+    }
+    return getUpdaterReleaseHistory(releases, app.getVersion(), candidateVersion);
+  }
+
+  private async fetchAtomReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
+    for (const url of getReleaseAtomUrls(apiUrl)) {
+      if (signal.aborted) break;
+      const raw = await fetchText(url, signal, MAX_UPDATER_ATOM_BYTES);
+      if (!raw) continue;
+      const history = getUpdaterAtomHistory(raw, url, app.getVersion(), candidateVersion);
+      if (history !== null) return history;
+    }
+    return [];
+  }
+
+  private async fetchReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string
+  ): Promise<UpdaterReleaseNote[]> {
+    // Both independent transports share one deadline. Start Atom immediately so
+    // a rate-limited or stalled REST request cannot consume its fallback budget.
+    const signal = AbortSignal.timeout(5_000);
+    const [rest, atom] = await Promise.all([
+      apiUrl ? this.fetchRestReleaseHistory(apiUrl, candidateVersion, signal) : [],
+      this.fetchAtomReleaseHistory(apiUrl, candidateVersion, signal),
+    ]);
+    const history = new Map(atom.map((entry) => [entry.version, entry]));
+    for (const entry of rest) history.set(entry.version, entry);
+    return [...history.values()];
   }
 
   /**
@@ -289,7 +373,6 @@ export class UpdaterService {
     }
 
     const latestReleaseNote = getUpdaterReleaseNoteForVersion(info.releaseNotes, info.version);
-    const releaseNotes = formatUpdaterReleaseNotes(info.releaseNotes);
 
     if (
       shouldSkipReleaseForUpdater({
@@ -302,10 +385,26 @@ export class UpdaterService {
       return;
     }
 
-    if (await this.isSkippedRelease(info.version)) {
+    const metadata = await this.fetchReleaseMetadata(info.version);
+    if (metadata && shouldSkipReleaseForUpdater(metadata.release)) {
       logger.warn(`Suppressing updater notification for skipped release ${info.version}`);
       return;
     }
+
+    // Embedded scalar notes bypass electron-updater's Atom fullChangelog.
+    // Fetch older stable bodies only when the provider lacks a candidate entry.
+    const hasCandidateChangelog =
+      Array.isArray(info.releaseNotes) &&
+      Boolean(formatUpdaterReleaseNotes(latestReleaseNote)?.trim());
+    const releaseNotes = hasCandidateChangelog
+      ? formatUpdaterReleaseNotes(info.releaseNotes)
+      : mergeUpdaterReleaseNotes(
+          info.releaseNotes,
+          app.getVersion(),
+          info.version,
+          metadata?.release.body,
+          await this.fetchReleaseHistory(metadata?.apiUrl, info.version)
+        );
 
     const urls = getExpectedReleaseAssetUrls(info.version, process.platform, process.arch);
     if (urls.length > 0) {
