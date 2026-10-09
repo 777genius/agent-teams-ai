@@ -23,6 +23,8 @@
 </p>
 -->
 
+### Screenshots ([watch on our site](https://agentteams.live/#screenshots)):
+
 <table>
 <tr>
 <td width="50%">
@@ -205,21 +207,21 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 
 ## What is this
 
-An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth)
-- **Assemble your team** — create agent teams with different roles that work autonomously in parallel
+An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi...(300+ models, 200+ LLM providers, free models no auth)
+- **Assemble your team** — create agent teams (using 1 prompt) with different roles that work autonomously in parallel
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
-- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
+- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
 - **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends and forecasts, set monthly token or estimated-cost budgets, and get alerts at 80% and 100%
 - **Organizations and global overview** — group teams into departments, squads, or any nested structure. Track every organization on one live map with team and agent status, task progress, dependencies, delegation, and cross-team communication
-- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
-- **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
+- **Stay in control** — send a direct message to any agent (DM or group chat), drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve supported tool actions one by one (you'll get a notification) — configure the level of control that fits your security needs
 - **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Integrated terminal workspace** — run commands in a visual PTY scoped to each team and project, with local shell tabs, persistent history, autocomplete, and terminal settings
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
-- **Multi-provider orchestration** — start with a free model with no auth, auto-detect available Claude Code, Codex, and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro using the subscriptions or API keys you already have
+- **Multi-provider orchestration** — start with a free model with no auth, auto-detect available Claude Code, Codex, and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more, using the subscriptions or API keys you already have
+- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 
 <details>
 <summary><strong>More features</strong></summary>
