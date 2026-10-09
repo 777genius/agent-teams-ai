@@ -67,6 +67,7 @@ export function checkPlan(plan: StagePlan): void {
   checkInput(plan.input);
   const input = plan.input;
   const targetVersion = version(input.target.tag);
+  const releaseNotes = input.includeReleaseNotes ? input.target.body : undefined;
   const macVersion = version(input.macSource?.release.tag ?? input.target.tag);
   requireThat(
     canonical(plan.aliases) === canonical(aliases(targetVersion, macVersion)),
@@ -90,18 +91,31 @@ export function checkPlan(plan: StagePlan): void {
           targetVersion,
           feedFiles(input, macNames),
           input.target.createdAt,
-          input.macProductMinimum === '12.0' ? '21.0.0' : '22.0.0'
+          input.macProductMinimum === '12.0' ? '21.0.0' : '22.0.0',
+          releaseNotes
         ),
       'Full Mac feed differs from release policy'
     );
   requireThat(
     plan.feeds['latest.yml'] ===
-      renderFeed(targetVersion, feedFiles(input, targetNames.windows), input.target.createdAt),
+      renderFeed(
+        targetVersion,
+        feedFiles(input, targetNames.windows),
+        input.target.createdAt,
+        undefined,
+        releaseNotes
+      ),
     'Windows feed differs from release policy'
   );
   requireThat(
     plan.feeds['latest-linux.yml'] ===
-      renderFeed(targetVersion, feedFiles(input, targetNames.linux), input.target.createdAt),
+      renderFeed(
+        targetVersion,
+        feedFiles(input, targetNames.linux),
+        input.target.createdAt,
+        undefined,
+        releaseNotes
+      ),
     'Linux feed differs from release policy'
   );
   const expected = expectedOutputs(plan);
@@ -227,6 +241,7 @@ export async function prepareDraft(
       : null,
     build: options.build,
     macProductMinimum: minimum,
+    includeReleaseNotes: true,
   };
   checkInput(input);
   if (source)
@@ -240,12 +255,16 @@ export async function prepareDraft(
     'latest.yml': renderFeed(
       version(options.tag),
       feedFiles(input, targetNames.windows),
-      target.created_at
+      target.created_at,
+      undefined,
+      target.body
     ),
     'latest-linux.yml': renderFeed(
       version(options.tag),
       feedFiles(input, targetNames.linux),
-      target.created_at
+      target.created_at,
+      undefined,
+      target.body
     ),
     'latest-mac.yml': source
       ? await readFile(path.join(options.output, 'latest-mac.yml'), 'utf8')
@@ -253,7 +272,8 @@ export async function prepareDraft(
           version(options.tag),
           feedFiles(input, targetNames.mac),
           target.created_at,
-          darwinMinimum
+          darwinMinimum,
+          target.body
         ),
   };
   const mapping = aliases(version(options.tag), version(source?.tag_name ?? options.tag));

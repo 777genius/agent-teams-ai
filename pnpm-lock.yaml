@@ -330,6 +330,9 @@ importers:
       better-sqlite3:
         specifier: ^12.11.1
         version: 12.11.1
+      builder-util-runtime:
+        specifier: 9.7.0
+        version: 9.7.0(supports-color@10.2.2)
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
@@ -10244,10 +10247,6 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  sax@1.6.0:
-    resolution: {integrity: sha512-6R3J5M4AcbtLUdZmRv2SygeVaM7IhrLXu9BmnOGmmACak8fiUtOsYNWUS4uK7upbmHIBbLBeFeI//477BKLBzA==}
-    engines: {node: '>=11.0.0'}
-
   sax@1.6.1:
     resolution: {integrity: sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==}
     engines: {node: '>=11.0.0'}
@@ -17606,7 +17605,7 @@ snapshots:
   builder-util-runtime@9.7.0(supports-color@10.2.2):
     dependencies:
       debug: 4.4.3(supports-color@10.2.2)
-      sax: 1.6.0
+      sax: 1.6.1
     transitivePeerDependencies:
       - supports-color
 
@@ -23201,8 +23200,6 @@ snapshots:
       source-map-js: 1.2.2
     optionalDependencies:
       '@parcel/watcher': 2.5.6
-
-  sax@1.6.0: {}
 
   sax@1.6.1: {}
 
