@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 
 import { atomicCreateAsync, atomicWriteAsync } from '@main/utils/atomicWrite';
-import { findNodeAtLocation, type Node as JsoncNode } from 'jsonc-parser';
+import { findNodeAtLocation, type Node as JsoncNode, parseTree } from 'jsonc-parser';
 
 import {
   isRuntimeLocalProviderLoopbackUrl,
@@ -207,8 +207,8 @@ export async function commitProviderConfigWithCredential(input: {
   readonly contents: string;
   readonly mode: number;
 }): Promise<void> {
-  const commitConfig = (): Promise<void> =>
-    atomicWriteAsync(input.configPath, input.contents, { mode: input.mode });
+  const commitConfig = (contents = input.contents): Promise<void> =>
+    atomicWriteAsync(input.configPath, contents, { mode: input.mode });
   if (!input.apiKey || !input.apiKeyReference) {
     await commitConfig();
     return;
@@ -218,14 +218,41 @@ export async function commitProviderConfigWithCredential(input: {
     apiKeyReference: input.apiKeyReference,
     apiKey: input.apiKey,
   });
+  let committedTree: JsoncNode | undefined;
+  const absoluteReference = `{file:${staged.credentialPath}}`;
   try {
-    await commitConfig();
+    const configTree = parseTree(input.contents);
+    const referenceNode = configTree
+      ? findNodeAtLocation(configTree, ['provider', input.providerId, 'options', 'apiKey'])
+      : undefined;
+    if (!referenceNode || readStringNode(referenceNode) !== input.apiKeyReference) {
+      throw new LocalProviderOperationError(
+        'config-conflict',
+        'The provider credential reference does not match the config being committed.'
+      );
+    }
+    // Replace the JSON string token, preserving JSONC and escaping Windows paths.
+    const contents =
+      input.contents.slice(0, referenceNode.offset) +
+      JSON.stringify(absoluteReference) +
+      input.contents.slice(referenceNode.offset + referenceNode.length);
+    committedTree = parseTree(contents);
+    await commitConfig(contents);
   } catch (error) {
     await fs.unlink(staged.credentialPath).catch(() => undefined);
     throw error;
   }
-  if (input.previousApiKeyReference && input.previousApiKeyReference !== input.apiKeyReference) {
-    if (input.contents.includes(input.previousApiKeyReference)) return;
+  if (input.previousApiKeyReference && input.previousApiKeyReference !== absoluteReference) {
+    if (
+      !committedTree ||
+      containsStringReference(
+        committedTree,
+        input.previousApiKeyReference,
+        staged.credentialDirectory
+      )
+    ) {
+      return;
+    }
     await removeManagedProviderCredential(
       staged.credentialDirectory,
       input.previousApiKeyReference,
@@ -235,6 +262,23 @@ export async function commitProviderConfigWithCredential(input: {
       }
     ).catch(() => undefined);
   }
+}
+
+function containsStringReference(
+  node: JsoncNode,
+  reference: string,
+  credentialDirectory: string
+): boolean {
+  const value = readStringNode(node);
+  const filename = parseManagedProviderCredentialFilename(credentialDirectory, reference);
+  return (
+    value === reference ||
+    (filename !== null &&
+      typeof value === 'string' &&
+      parseManagedProviderCredentialFilename(credentialDirectory, value) === filename) ||
+    (node.children?.some((child) => containsStringReference(child, reference, credentialDirectory)) ??
+      false)
+  );
 }
 
 function buildProviderCredentialScope(input: {
@@ -264,11 +308,29 @@ async function removeManagedProviderCredential(
     readonly providerId: string;
   }
 ): Promise<void> {
-  const filename = parseProviderApiKeyFilename(reference);
+  const filename = parseManagedProviderCredentialFilename(credentialDirectory, reference);
   if (!filename || !isOwnedProviderApiKeyFilename(filename, owner)) return;
   const credentialPath = path.join(credentialDirectory, filename);
   const stat = await fs.lstat(credentialPath);
   if (!stat.isSymbolicLink() && stat.isFile()) await fs.unlink(credentialPath);
+}
+
+function parseManagedProviderCredentialFilename(
+  credentialDirectory: string,
+  reference: string
+): string | null {
+  const legacyFilename = parseProviderApiKeyFilename(reference);
+  const absolutePath =
+    reference.startsWith('{file:') && reference.endsWith('}')
+      ? reference.slice('{file:'.length, -1)
+      : null;
+  const absoluteFilename =
+    absolutePath &&
+    path.isAbsolute(absolutePath) &&
+    path.resolve(path.dirname(absolutePath)) === path.resolve(credentialDirectory)
+      ? path.basename(absolutePath)
+      : null;
+  return legacyFilename ?? absoluteFilename;
 }
 
 function isOwnedProviderApiKeyFilename(

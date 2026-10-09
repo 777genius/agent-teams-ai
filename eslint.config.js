@@ -14,6 +14,7 @@ import boundaries from 'eslint-plugin-boundaries';
 import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
+import { featureOverrides } from './eslint.feature-overrides.mts';
 
 export default defineConfig([
   // Global ignores
@@ -628,13 +629,7 @@ export default defineConfig([
     },
   },
 
-  {
-    name: 'team-transcript-project-resolver-sonar-override',
-    files: ['src/main/services/team/TeamTranscriptProjectResolver.ts'],
-    rules: {
-      'sonarjs/no-identical-functions': 'off',
-    },
-  },
+  ...featureOverrides(jsxA11y),
 
   // Preload script (Electron bridge)
   {

@@ -222,6 +222,7 @@ export const ExternalAgentPromptDialog = ({
         <p className="text-xs text-[var(--color-text-muted)]" aria-live="polite" role="status">
           {error ?? (copied ? t('externalPrompt.copiedDescription') : '')}
         </p>
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- This focusable scrolling region supports Ctrl/Cmd+A text selection. */}
         <div
           id="external-agent-prompt-preview"
           role="region"
