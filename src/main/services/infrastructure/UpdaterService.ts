@@ -26,7 +26,10 @@ import {
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseHistoryApiUrl,
+  getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  mergeUpdaterReleaseNotes,
   shouldSkipReleaseForUpdater,
 } from './updaterReleaseMetadata';
 
@@ -78,11 +81,12 @@ async function fetchText(url: string): Promise<string | null> {
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
   try {
     const response = await net.fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/vnd.github+json' },
+      signal,
     });
     if (!response.ok) {
       return null;
@@ -257,7 +261,10 @@ export class UpdaterService {
     return false;
   }
 
-  private async fetchReleaseMetadata(version: string): Promise<GithubReleaseMetadata | null> {
+  private async fetchReleaseMetadata(version: string): Promise<{
+    release: GithubReleaseMetadata;
+    apiUrl: string;
+  } | null> {
     const metadataUrls = getReleaseApiUrls(version);
     for (const metadataUrl of metadataUrls) {
       const release = await fetchJson<GithubReleaseMetadata>(metadataUrl);
@@ -268,11 +275,25 @@ export class UpdaterService {
       ) {
         continue;
       }
-      return release;
+      return { release, apiUrl: metadataUrl };
     }
 
     logger.warn(`GitHub release metadata is not available for ${version}, allowing updater check`);
     return null;
+  }
+
+  private async fetchReleaseHistory(apiUrl: string, candidateVersion: string) {
+    const releases: unknown[] = [];
+    // GitHub's unauthenticated quota is shared. Bound both volume and total wait,
+    // including when unrelated tooling releases fill recent pages.
+    const signal = AbortSignal.timeout(5_000);
+    for (let page = 1; page <= 3; page++) {
+      const batch = await fetchJson<unknown>(getReleaseHistoryApiUrl(apiUrl, page), signal);
+      if (!Array.isArray(batch)) break;
+      releases.push(...batch);
+      if (batch.length < 100 || signal.aborted) break;
+    }
+    return getUpdaterReleaseHistory(releases, app.getVersion(), candidateVersion);
   }
 
   /**
@@ -305,19 +326,26 @@ export class UpdaterService {
       return;
     }
 
-    const release = await this.fetchReleaseMetadata(info.version);
-    if (release && shouldSkipReleaseForUpdater(release)) {
+    const metadata = await this.fetchReleaseMetadata(info.version);
+    if (metadata && shouldSkipReleaseForUpdater(metadata.release)) {
       logger.warn(`Suppressing updater notification for skipped release ${info.version}`);
       return;
     }
 
-    // GitHub's Atom feed can omit the candidate when tooling tags occupy its
-    // latest entries. Reuse exact-tag metadata from the skip check, preserving
-    // the complete changelog when the candidate already has displayable notes.
-    const providedNotes = formatUpdaterReleaseNotes(info.releaseNotes);
-    const releaseNotes = formatUpdaterReleaseNotes(latestReleaseNote)?.trim()
-      ? providedNotes
-      : (formatUpdaterReleaseNotes(release?.body) ?? providedNotes);
+    // Embedded scalar notes bypass electron-updater's Atom fullChangelog.
+    // Fetch older stable bodies only when the provider lacks a candidate entry.
+    const hasCandidateChangelog =
+      Array.isArray(info.releaseNotes) &&
+      Boolean(formatUpdaterReleaseNotes(latestReleaseNote)?.trim());
+    const releaseNotes = hasCandidateChangelog
+      ? formatUpdaterReleaseNotes(info.releaseNotes)
+      : mergeUpdaterReleaseNotes(
+          info.releaseNotes,
+          app.getVersion(),
+          info.version,
+          metadata?.release.body,
+          metadata ? await this.fetchReleaseHistory(metadata.apiUrl, info.version) : []
+        );
 
     const urls = getExpectedReleaseAssetUrls(info.version, process.platform, process.arch);
     if (urls.length > 0) {

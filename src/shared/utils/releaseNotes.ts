@@ -14,7 +14,7 @@ function readHeading(line: string): { level: number; downloads: boolean } | null
 
   const words = headingText.toLowerCase().match(/[a-z0-9]+/g) ?? [];
   return {
-    level: markdownHeading ? markdownHeading[1]!.length : Number(htmlHeading![1]),
+    level: markdownHeading ? markdownHeading[1].length : Number(htmlHeading![1]),
     downloads:
       words.length > 0 && words.every((word) => word === 'download' || word === 'downloads'),
   };
@@ -31,17 +31,17 @@ export function stripDownloadsSection(markdown: string): string {
     if (fence) {
       if (
         fenceMatch &&
-        fenceMatch[1]![0] === fence.marker &&
-        fenceMatch[1]!.length >= fence.length &&
-        fenceMatch[2]!.trim() === ''
+        fenceMatch[1].startsWith(fence.marker) &&
+        fenceMatch[1].length >= fence.length &&
+        fenceMatch[2].trim() === ''
       ) {
         fence = null;
       }
       if (downloadsLevel === null) retained.push(line);
       continue;
     }
-    if (fenceMatch && (fenceMatch[1]![0] === '~' || !fenceMatch[2]!.includes('`'))) {
-      fence = { marker: fenceMatch[1]![0]!, length: fenceMatch[1]!.length };
+    if (fenceMatch && (fenceMatch[1].startsWith('~') || !fenceMatch[2].includes('`'))) {
+      fence = { marker: fenceMatch[1][0], length: fenceMatch[1].length };
       if (downloadsLevel === null) retained.push(line);
       continue;
     }

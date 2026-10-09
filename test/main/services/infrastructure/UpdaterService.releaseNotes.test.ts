@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { setImmediate } from 'node:timers/promises';
 
+import { parseUpdateInfo } from 'electron-updater/out/providers/Provider';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { renderFeed } from '../../../../scripts/ci/release/contract';
 import { UpdaterService } from '../../../../src/main/services/infrastructure/UpdaterService';
 import { stripDownloadsSection } from '../../../../src/shared/utils/releaseNotes';
 
@@ -72,7 +74,9 @@ describe('UpdaterService release notes', () => {
 
   it('uses the new release warning when the changelog contains only older notes', async () => {
     await announce([{ version: '2.17.6', note: 'Older changes.' }]);
-    expect(availableStatus()).toMatchObject({ releaseNotes: migrationNote });
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\n${migrationNote}\n\n## v2.17.6\n\nOlder changes.`,
+    });
   });
 
   it.each(['   ', '### Downloads\ninstaller links'])(
@@ -91,6 +95,9 @@ describe('UpdaterService release notes', () => {
     expect(availableStatus()).toMatchObject({
       releaseNotes: `## v${version}\n\nNew changes.\n\n## v2.17.6\n\nOlder changes.`,
     });
+    expect(fixture.fetch.mock.calls.some(([url]) => String(url).includes('?per_page='))).toBe(
+      false
+    );
   });
 
   it('keeps the migration warning while removing installer links', async () => {
@@ -160,6 +167,182 @@ describe('UpdaterService release notes', () => {
     );
     await announce();
     expect(availableStatus()).toMatchObject({ releaseNotes: migrationNote });
+  });
+
+  it('restores full history for a scalar feed produced by qualified release assembly', async () => {
+    const scalarNote = 'Install the DMG once. Automatic updates cannot perform this migration.';
+    const rawFeed = renderFeed(
+      version,
+      [
+        {
+          name: `Agent.Teams.AI-${version}-arm64-mac.zip`,
+          size: 1,
+          sha256: 'a'.repeat(64),
+          sha512: 'abc',
+        },
+      ],
+      '2026-10-09T00:00:00Z',
+      '22.0.0',
+      scalarNote
+    );
+    const providerInfo = parseUpdateInfo(
+      rawFeed,
+      'latest-mac.yml',
+      new URL('https://update.invalid/')
+    );
+    expect(typeof providerInfo.releaseNotes).toBe('string');
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            url.includes('?per_page=')
+              ? [
+                  {
+                    tag_name: `v${version}`,
+                    body: 'Racing list candidate must not replace the warning.',
+                  },
+                  { tag_name: 'v2.17.6', body: 'Intervening stable changes.' },
+                  { tag_name: 'v2.17.2', body: 'Earlier stable changes.' },
+                ]
+              : { tag_name: `v${version}`, body: 'Different API candidate body.' }
+          ),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce(providerInfo.releaseNotes);
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\n${scalarNote}\n\n## v2.17.6\n\nIntervening stable changes.\n\n## v2.17.2\n\nEarlier stable changes.`,
+    });
+  });
+
+  it('merges partial provider notes with filtered REST history without replacing them', async () => {
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            url.includes('?per_page=')
+              ? [
+                  { tag_name: 'v2.17.6', body: 'REST duplicate must not replace provider notes.' },
+                  { tag_name: 'v2.17.2', body: 'Missing stable changes.' },
+                  { tag_name: 'v2.17.11', body: 'Future changes.' },
+                  { tag_name: 'v2.17.1', body: 'Installed changes.' },
+                  { tag_name: 'v2.17.0', body: 'Old changes.' },
+                  { tag_name: 'v2.17.5', body: 'Draft changes.', draft: true },
+                  { tag_name: 'v2.17.4', body: 'Prerelease changes.', prerelease: true },
+                  { tag_name: 'v2.17.3', body: '[internal-release]' },
+                  { tag_name: 'website-v2.17.7', body: 'Website changes.' },
+                ]
+              : { tag_name: `v${version}`, body: migrationNote }
+          ),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce([{ version: '2.17.6', note: 'Provided older changes.' }]);
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\n${migrationNote}\n\n## v2.17.6\n\nProvided older changes.\n\n## v2.17.2\n\nMissing stable changes.`,
+    });
+  });
+
+  it('continues past installed versions on a full page and stops after three pages', async () => {
+    const page = (url: string) => Number(new URL(url).searchParams.get('page'));
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            url.includes('?per_page=')
+              ? [
+                  ...(page(url) === 1
+                    ? [{ tag_name: 'v2.17.0', body: 'Republished old release.' }]
+                    : [{ tag_name: 'v2.17.6', body: 'Later page stable changes.' }]),
+                  ...Array.from({ length: 99 }, (_, i) => ({ tag_name: `tool-${page(url)}-${i}` })),
+                ]
+              : { tag_name: `v${version}`, body: migrationNote }
+          ),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce('Candidate warning.');
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\nCandidate warning.\n\n## v2.17.6\n\nLater page stable changes.`,
+    });
+    const historyCalls = fixture.fetch.mock.calls.filter(([url]) =>
+      String(url).includes('?per_page=')
+    );
+    expect(historyCalls).toHaveLength(3);
+    expect(historyCalls.map(([url]) => page(String(url)))).toEqual([1, 2, 3]);
+    expect(historyCalls.every(([, options]) => options.signal instanceof AbortSignal)).toBe(true);
+  });
+
+  it('retains a successful history page when later pagination fails', async () => {
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: !url.includes('page=2'),
+        json: () =>
+          Promise.resolve(
+            url.includes('?per_page=')
+              ? [
+                  { tag_name: 'v2.17.6', body: 'Fetched older changes.' },
+                  ...Array.from({ length: 99 }, (_, i) => ({ tag_name: `tool-${i}` })),
+                ]
+              : { tag_name: `v${version}`, body: migrationNote }
+          ),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce('Candidate warning.');
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\nCandidate warning.\n\n## v2.17.6\n\nFetched older changes.`,
+    });
+    expect(
+      fixture.fetch.mock.calls.filter(([url]) => String(url).includes('?per_page='))
+    ).toHaveLength(2);
+  });
+
+  it('uses the verified legacy repository for history after canonical metadata has the wrong tag', async () => {
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            url.includes('?per_page=')
+              ? [{ tag_name: 'v2.17.6', body: 'Legacy history.' }]
+              : {
+                  tag_name: url.includes('/claude_agent_teams_ui/') ? `v${version}` : 'v2.17.9',
+                  body: migrationNote,
+                }
+          ),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce();
+    expect(availableStatus()).toMatchObject({
+      releaseNotes: `## v${version}\n\n${migrationNote}\n\n## v2.17.6\n\nLegacy history.`,
+    });
+    expect(
+      fixture.fetch.mock.calls
+        .filter(([url]) => String(url).includes('?per_page='))
+        .map(([url]) => url)
+    ).toEqual([
+      'https://api.github.com/repos/777genius/claude_agent_teams_ui/releases?per_page=100&page=1',
+    ]);
+  });
+
+  it('keeps the scalar warning when history API fails and does not retry other repositories', async () => {
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: !url.includes('?per_page='),
+        json: () => Promise.resolve({ tag_name: `v${version}`, body: migrationNote }),
+        text: () => Promise.resolve(macFeed),
+      })
+    );
+    await announce('Provided warning.');
+    expect(availableStatus()).toMatchObject({ releaseNotes: 'Provided warning.' });
+    expect(
+      fixture.fetch.mock.calls.filter(([url]) => String(url).includes('?per_page='))
+    ).toHaveLength(1);
   });
 
   it('preserves provided notes when the release API is unavailable', async () => {

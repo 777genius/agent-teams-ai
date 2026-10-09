@@ -7,7 +7,10 @@ import {
   getLatestMacMetadataUrl,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseHistoryApiUrl,
+  getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  mergeUpdaterReleaseNotes,
   parseReleaseMetadataAssetNames,
   shouldSkipReleaseForUpdater,
 } from '../../../../src/main/services/infrastructure/updaterReleaseMetadata';
@@ -58,6 +61,67 @@ describe('updaterReleaseMetadata', () => {
         body: 'Temporary QA build [test-release]',
       })
     ).toBe(true);
+  });
+
+  it('filters and sorts only intervening public stable app notes', () => {
+    expect(
+      getUpdaterReleaseHistory(
+        [
+          { tag_name: 'v2.17.6', body: 'Newest older notes.' },
+          { tag_name: '2.17.2', body: 'Earlier notes.' },
+          { tag_name: 'v2.17.6', body: 'Duplicate notes.' },
+          { tag_name: 'v2.17.10', body: 'Candidate race.' },
+          { tag_name: 'v2.17.11', body: 'Future notes.' },
+          { tag_name: 'v2.17.1', body: 'Installed notes.' },
+          { tag_name: 'v2.17.0', body: 'Old notes.' },
+          { tag_name: 'v2.17.3', body: 'Draft.', draft: true },
+          { tag_name: 'v2.17.4', body: 'Prerelease.', prerelease: true },
+          { tag_name: 'v2.17.5', body: '[no-autoupdate]' },
+          { tag_name: 'v2.17.8-beta', body: 'Beta.' },
+          { tag_name: 'runtime-v2.17.7', body: 'Tooling.' },
+          { tag_name: 'v02.17.7', body: 'Invalid stable version.' },
+          { tag_name: 'v2.17.9', body: '### Downloads\nlinks' },
+          null,
+        ],
+        '2.17.1',
+        '2.17.10'
+      )
+    ).toEqual([
+      { version: '2.17.6', note: 'Newest older notes.' },
+      { version: '2.17.2', note: 'Earlier notes.' },
+    ]);
+  });
+
+  it('uses semantic version bounds rather than lexical ordering', () => {
+    expect(
+      getUpdaterReleaseHistory(
+        [
+          { tag_name: 'v2.9.0', body: 'Installed.' },
+          { tag_name: 'v2.10.0', body: 'Intermediate.' },
+          { tag_name: 'v2.11.0', body: 'Candidate.' },
+        ],
+        '2.9.0',
+        '2.11.0'
+      )
+    ).toEqual([{ version: '2.10.0', note: 'Intermediate.' }]);
+  });
+
+  it('retains partial provided notes on API failure while adding exact-tag fallback', () => {
+    expect(
+      mergeUpdaterReleaseNotes(
+        [{ version: '2.17.6', note: 'Provider notes.' }],
+        '2.17.1',
+        '2.17.10',
+        'Candidate warning.',
+        []
+      )
+    ).toBe('## v2.17.10\n\nCandidate warning.\n\n## v2.17.6\n\nProvider notes.');
+  });
+
+  it('derives history pages from the exact-tag repository URL', () => {
+    expect(getReleaseHistoryApiUrl(getReleaseApiUrls('2.17.10')[0]!, 2)).toBe(
+      'https://api.github.com/repos/777genius/agent-teams-ai/releases?per_page=100&page=2'
+    );
   });
 
   it('extracts updater asset names from latest-mac.yml text', () => {

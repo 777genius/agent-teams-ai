@@ -1,3 +1,9 @@
+import {
+  formatUpdaterReleaseNotes,
+  getUpdaterReleaseNoteForVersion,
+} from '@shared/utils/releaseNotes';
+import { compareVersions } from '@shared/utils/version';
+
 const REPO_OWNER = '777genius';
 const REPO_NAME = 'agent-teams-ai';
 const LEGACY_REPO_NAME = 'claude_agent_teams_ui';
@@ -15,6 +21,87 @@ export interface GithubReleaseMetadata {
   body?: string | null;
   draft?: boolean;
   prerelease?: boolean;
+}
+
+export interface UpdaterReleaseNote {
+  version: string;
+  note: string;
+}
+
+function stableReleaseVersion(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const match = /^v?((?:0|[1-9]\d{0,9})\.(?:0|[1-9]\d{0,9})\.(?:0|[1-9]\d{0,9}))$/i.exec(raw);
+  return match?.[1] ?? null;
+}
+
+export function getReleaseHistoryApiUrl(releaseApiUrl: string, page: number): string {
+  return `${releaseApiUrl.replace(/\/tags\/[^/]+$/, '')}?per_page=100&page=${page}`;
+}
+
+export function getUpdaterReleaseHistory(
+  releases: readonly unknown[],
+  installedVersion: string,
+  candidateVersion: string
+): UpdaterReleaseNote[] {
+  const installed = stableReleaseVersion(installedVersion);
+  const candidate = stableReleaseVersion(candidateVersion);
+  if (!installed || !candidate) return [];
+  const notes = new Map<string, UpdaterReleaseNote>();
+  for (const value of releases) {
+    if (!value || typeof value !== 'object') continue;
+    const release = value as GithubReleaseMetadata;
+    const version = stableReleaseVersion(release.tag_name);
+    if (
+      !version ||
+      compareVersions(version, installed) <= 0 ||
+      compareVersions(version, candidate) >= 0 ||
+      shouldSkipReleaseForUpdater(release) ||
+      typeof release.body !== 'string' ||
+      !formatUpdaterReleaseNotes(release.body)?.trim()
+    )
+      continue;
+    if (!notes.has(version)) notes.set(version, { version, note: release.body });
+  }
+  return [...notes.values()].sort((a, b) => compareVersions(b.version, a.version));
+}
+
+export function mergeUpdaterReleaseNotes(
+  provided: unknown,
+  installedVersion: string,
+  candidateVersion: string,
+  candidateBody: unknown,
+  history: readonly UpdaterReleaseNote[]
+): string | undefined {
+  const providedCandidate = getUpdaterReleaseNoteForVersion(provided, candidateVersion);
+  const candidateNote = formatUpdaterReleaseNotes(providedCandidate)?.trim()
+    ? providedCandidate
+    : typeof candidateBody === 'string'
+      ? candidateBody
+      : undefined;
+  const previous = getUpdaterReleaseHistory(
+    Array.isArray(provided)
+      ? provided.map((entry: { version?: unknown; note?: unknown } | null) => ({
+          tag_name: entry?.version,
+          body: entry?.note,
+        }))
+      : [],
+    installedVersion,
+    candidateVersion
+  );
+  // Provider notes win over list bodies. The list never chooses the candidate,
+  // whose exact-tag metadata has already passed the skip check.
+  const notes = new Map(history.map((entry) => [entry.version, entry]));
+  for (const entry of previous) notes.set(entry.version, entry);
+  if (notes.size === 0) {
+    return formatUpdaterReleaseNotes(candidateNote) ?? formatUpdaterReleaseNotes(provided);
+  }
+  const older = [...notes.values()].sort((a, b) => compareVersions(b.version, a.version));
+  return formatUpdaterReleaseNotes([
+    ...(formatUpdaterReleaseNotes(candidateNote)?.trim()
+      ? [{ version: candidateVersion, note: candidateNote }]
+      : []),
+    ...older,
+  ]);
 }
 
 export function buildReleaseAssetBase(version: string, repoName = REPO_NAME): string {
