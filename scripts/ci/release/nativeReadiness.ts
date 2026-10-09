@@ -6,6 +6,7 @@ import { RELEASE220_WINDOWS_RESUME_EXECUTION as windowsResume } from './release2
 import { checkMacManual, manualCapturePaths } from './macManualReadiness.js';
 import {
   at,
+  isClosedWindowsResumeHead,
   list,
   object,
   release220Execution,
@@ -89,7 +90,7 @@ export interface NativeReadinessPort {
   release220ExecutionProof?(): Promise<Release220ExecutionProof>;
   release220MacExecutionProof?(): Promise<ExecutionProof>;
   release220WindowsExecutionProof?(): Promise<ExecutionProof>;
-  release220WindowsResumeExecutionProof?(): Promise<ExecutionProof>;
+  release220WindowsResumeExecutionProof?(executionSha?: string): Promise<ExecutionProof>;
   executionProof?(repository: string, executionSha: string): Promise<ExecutionProof>;
   run(repository: string, runId: number): Promise<NativeRun>;
   runAttempt?(repository: string, runId: number, attempt: number): Promise<NativeRun>;
@@ -164,7 +165,7 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
   equal(job.run_id, run.id, 'input producer run');
   equal(job.run_attempt, run.run_attempt, 'input producer attempt');
   equal(job.head_sha, run.head_sha, 'input producer tooling');
-  if (row.kind === 'windows' && run.head_sha === windowsResume.head) {
+  if (row.kind === 'windows' && isClosedWindowsResumeHead(run.head_sha)) {
     requireThat(row.mode !== 'fresh', 'Windows resume executor cannot qualify fresh installation');
     const auth = step(job, windowsResume.preparation);
     const upload = step(job, windowsResume.custodyUpload);
@@ -675,7 +676,7 @@ export async function verifyNativeReadiness(
     equal(job.name, row.jobName, 'native matrix job');
     const execution = step(job, row.execute);
     const upload = step(job, row.upload);
-    if (row.kind === 'windows' && executionSha === windowsResume.head) {
+    if (row.kind === 'windows' && isClosedWindowsResumeHead(executionSha)) {
       const retrieval = step(job, windowsResume.retrieval);
       requireThat(
         time(job.started_at) <= time(retrieval.started_at) &&

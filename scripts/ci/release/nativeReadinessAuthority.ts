@@ -7,6 +7,7 @@ import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macPins } from './release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windowsPins } from './release220WindowsExecutionPins.js';
 import { RELEASE220_WINDOWS_RESUME_EXECUTION as resumePins } from './release220WindowsResumeExecutionPins.js';
+import { RELEASE220_WINDOWS_REMAINING_EXECUTION as remainingPins } from './release220WindowsRemainingExecutionPins.js';
 
 type Json = Record<string, unknown>;
 interface Row {
@@ -142,12 +143,24 @@ export function verifyRelease220MacExecution(proof: ExecutionProof): void {
 export function verifyRelease220WindowsExecution(proof: ExecutionProof): void {
   verifyClosed220Executor(proof, windowsPins, 'Windows');
 }
-export function verifyRelease220WindowsResumeExecution(proof: ExecutionProof): void {
-  verifyClosed220Executor(proof, resumePins, 'Windows resume');
+export function isClosedWindowsResumeHead(head: string): boolean {
+  return head === resumePins.head || head === remainingPins.head;
+}
+export function closedWindowsResumeExecutor(head: string = resumePins.head) {
+  requireThat(isClosedWindowsResumeHead(head), 'Unapproved requested Windows resume executor');
+  return head === remainingPins.head ? remainingPins : resumePins;
+}
+export function verifyRelease220WindowsResumeExecution(
+  proof: ExecutionProof,
+  executionSha: string = resumePins.head
+): void {
+  const executor = closedWindowsResumeExecutor(executionSha);
+  requireThat(proof.commit.sha === executionSha, 'Wrong requested Windows resume executor proof');
+  verifyClosed220Executor(proof, executor, 'Windows resume');
 }
 function verifyClosed220Executor(
   proof: ExecutionProof,
-  executor: typeof macPins | typeof windowsPins | typeof resumePins,
+  executor: typeof macPins | typeof windowsPins | typeof resumePins | typeof remainingPins,
   role: 'Mac' | 'Windows' | 'Windows resume'
 ): void {
   requireThat(
@@ -186,7 +199,7 @@ export function verifyRelease220WindowsProvenance(
   attempt: number,
   job: string
 ): void {
-  if (executionSha !== windowsPins.head && executionSha !== resumePins.head) return;
+  if (executionSha !== windowsPins.head && !isClosedWindowsResumeHead(executionSha)) return;
   requireThat(
     toolingSha === windowsPins.base &&
       canonical(object(value.execution, 'Windows execution provenance')) ===

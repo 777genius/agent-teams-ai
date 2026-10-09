@@ -10,13 +10,16 @@ import {
   verifyNativeReadiness,
 } from '../../scripts/ci/release/nativeReadiness.js';
 import {
+  closedWindowsResumeExecutor,
   verifyRelease220WindowsExecution,
   verifyRelease220WindowsProvenance,
   verifyRelease220WindowsResumeExecution,
 } from '../../scripts/ci/release/nativeReadinessAuthority.js';
 import { createNativeExecutionResolver } from '../../scripts/ci/release/nativeReadinessExecution.js';
+import { GitHubNativeReadinessPort } from '../../scripts/ci/release/nativeReadinessGithub.js';
 import { RELEASE220_EXECUTION as original } from '../../scripts/ci/release/release220ExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as pins } from '../../scripts/ci/release/release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_REMAINING_EXECUTION as remaining } from '../../scripts/ci/release/release220WindowsRemainingExecutionPins.js';
 import { RELEASE220_WINDOWS_RESUME_EXECUTION as resume } from '../../scripts/ci/release/release220WindowsResumeExecutionPins.js';
 
 import type { StagePlan } from '../../scripts/ci/release/contract.js';
@@ -56,7 +59,9 @@ function tree(sha: string): ExecutionTree {
       }),
   };
 }
-function claimedProof(executor: typeof pins | typeof resume = pins): ExecutionProof {
+function claimedProof(
+  executor: typeof pins | typeof resume | typeof remaining = pins
+): ExecutionProof {
   return {
     repository: executor.repository,
     commit: { sha: executor.head, tree: { sha: executor.tree }, parents: [{ sha: executor.base }] },
@@ -69,7 +74,9 @@ function claimedProof(executor: typeof pins | typeof resume = pins): ExecutionPr
     executionTree: { sha: executor.tree, truncated: false, tree: [] },
   };
 }
-function completeProof(executor: typeof pins | typeof resume = pins): ExecutionProof {
+function completeProof(
+  executor: typeof pins | typeof resume | typeof remaining = pins
+): ExecutionProof {
   const [head, executionTree, ...parents] = git('show', '-s', '--format=%H %T %P', executor.head)
     .trim()
     .split(' ');
@@ -322,7 +329,7 @@ describe('closed E14 additional Windows OTA source', () => {
       'Complete execution tree records changed'
     );
     expect(() => verifyRelease220WindowsResumeExecution(claimedProof(pins))).toThrow(
-      'Windows resume executor ancestry'
+      'Wrong requested Windows resume executor proof'
     );
     expect(() => verifyRelease220WindowsExecution(claimedProof(resume))).toThrow(
       'Windows executor ancestry'
@@ -408,3 +415,90 @@ describe.runIf(Boolean(repository))('E14 independently read immutable Git proof'
     expect(e14).toHaveBeenCalledOnce();
   });
 });
+
+describe('requested closed Windows resume source', () => {
+  it('keeps E14 as default and rejects an unknown requested executor before network reads', async () => {
+    expect(closedWindowsResumeExecutor().head).toBe(resume.head);
+    expect(() => closedWindowsResumeExecutor('0'.repeat(40))).toThrow('Unapproved requested');
+    expect(() => closedWindowsResumeExecutor('f616b63005b8b1fd564ba49885468cbe30e7209f')).toThrow(
+      'Unapproved requested'
+    );
+    await expect(
+      new GitHubNativeReadinessPort().release220WindowsResumeExecutionProof('0'.repeat(40))
+    ).rejects.toThrow('Unapproved requested');
+  });
+  it('rejects a proof from the other closed source instead of marking the requested source verified', () => {
+    expect(() =>
+      verifyRelease220WindowsResumeExecution(claimedProof(resume), remaining.head)
+    ).toThrow('Wrong requested Windows resume executor proof');
+    expect(() =>
+      verifyRelease220WindowsResumeExecution(claimedProof(remaining), resume.head)
+    ).toThrow('Wrong requested Windows resume executor proof');
+  });
+});
+
+describe.runIf(Boolean(repository) && /^[a-f0-9]{40}$/.test(remaining.head))(
+  'E15 remaining immutable source',
+  () => {
+    it('accepts only the independently read reviewed complete E15 tree and direct parent', () => {
+      expect(() =>
+        verifyRelease220WindowsResumeExecution(completeProof(remaining), remaining.head)
+      ).not.toThrow();
+      const wrongParent = completeProof(remaining);
+      wrongParent.commit.parents = [{ sha: resume.head }];
+      expect(() => verifyRelease220WindowsResumeExecution(wrongParent, remaining.head)).toThrow(
+        'executor ancestry'
+      );
+      const altered = completeProof(remaining);
+      altered.executionTree.tree.pop();
+      expect(() => verifyRelease220WindowsResumeExecution(altered, remaining.head)).toThrow(
+        'Complete execution tree records changed'
+      );
+    });
+    it('keeps verified E14 separate from requested E15 and never caches a stale returned proof', async () => {
+      const scenario = remaining.scenarios[0];
+      if (!scenario) throw new Error('Missing reviewed E15 scenario');
+      const f = routingFixture(remaining.head, scenario);
+      const prove = vi.fn(() => Promise.resolve(completeProof(resume)));
+      f.port.release220WindowsResumeExecutionProof = prove;
+      const resolve = createNativeExecutionResolver(
+        f.port,
+        f.receipt,
+        f.plan,
+        original.plan,
+        original.input,
+        true
+      );
+      await expect(resolve(f.row, resume.head)).resolves.toBe(resume.head);
+      await expect(resolve(f.row, remaining.head)).rejects.toThrow(
+        'Wrong requested Windows resume executor proof'
+      );
+      prove.mockImplementation(() => Promise.resolve(completeProof(remaining)));
+      await expect(resolve(f.row, remaining.head)).resolves.toBe(remaining.head);
+      await expect(resolve(f.row, remaining.head)).resolves.toBe(remaining.head);
+      expect(prove).toHaveBeenNthCalledWith(1, resume.head);
+      expect(prove).toHaveBeenNthCalledWith(2, remaining.head);
+      expect(prove).toHaveBeenNthCalledWith(3, remaining.head);
+      expect(prove).toHaveBeenCalledTimes(3);
+    });
+    it('rejects missing proof capability and scenarios absent from the fixed E15 remaining matrix', async () => {
+      const scenario = remaining.scenarios[0];
+      if (!scenario) throw new Error('Missing E15 scenario');
+      const f = routingFixture(remaining.head, scenario);
+      await expect(verifyNativeReadiness(f.port, f.plan, original.plan, f.receipt)).rejects.toThrow(
+        'Missing complete Windows resume executor proof'
+      );
+      const excluded = fullNativeScenarioRows(1, 1).find(
+        (row) =>
+          row.kind === 'windows' &&
+          row.mode !== 'fresh' &&
+          !remaining.scenarios.some((name) => name === row.scenario)
+      );
+      if (!excluded) throw new Error('E15 must remain a closed partial matrix');
+      const rejected = routingFixture(remaining.head, excluded.scenario);
+      await expect(
+        verifyNativeReadiness(rejected.port, rejected.plan, original.plan, rejected.receipt)
+      ).rejects.toThrow('Unapproved E15 remaining Windows scenario');
+    });
+  }
+);

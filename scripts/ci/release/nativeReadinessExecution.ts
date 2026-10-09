@@ -3,6 +3,7 @@ import type { StagePlan } from './contract.js';
 import {
   release216Execution,
   release220Execution,
+  isClosedWindowsResumeHead,
   verifyRelease216Execution,
   verifyRelease220Execution,
   verifyRelease220MacExecution,
@@ -14,7 +15,16 @@ import type { NativeScenarioRow } from './nativeReadinessRows.js';
 import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macPins } from './release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windowsPins } from './release220WindowsExecutionPins.js';
-import { RELEASE220_WINDOWS_RESUME_EXECUTION as resumePins } from './release220WindowsResumeExecutionPins.js';
+import { RELEASE220_WINDOWS_REMAINING_EXECUTION as remainingPins } from './release220WindowsRemainingExecutionPins.js';
+import type { ExecutionProof } from './nativeReadinessAuthority.js';
+
+function validateRemainingScenario(row: NativeScenarioRow, head: string): void {
+  if (head !== remainingPins.head) return;
+  requireThat(
+    remainingPins.scenarios.some((scenario) => scenario === row.scenario),
+    'Unapproved E15 remaining Windows scenario'
+  );
+}
 
 /** Resolve only original tooling or one closed, reviewed role-specific executor. */
 export function createNativeExecutionResolver(
@@ -41,8 +51,8 @@ export function createNativeExecutionResolver(
         verify: verifyRelease220WindowsExecution,
       },
       'Windows resume': {
-        prove: port.release220WindowsResumeExecutionProof?.bind(port),
-        verify: verifyRelease220WindowsResumeExecution,
+        prove: port.release220WindowsResumeExecutionProof?.bind(port, head),
+        verify: (proof: ExecutionProof) => verifyRelease220WindowsResumeExecution(proof, head),
       },
     };
     const { prove, verify } = roles[role];
@@ -68,13 +78,14 @@ export function createNativeExecutionResolver(
       executionSha = windowsPins.head;
       await verifyReviewedRole('Windows', executionSha);
     }
-    if (full && row.kind === 'windows' && actualHead === resumePins.head) {
+    if (full && row.kind === 'windows' && isClosedWindowsResumeHead(actualHead)) {
       requireThat(
         row.mode !== 'fresh',
         'Windows resume executor cannot qualify fresh installation'
       );
+      validateRemainingScenario(row, actualHead);
       release220Execution(row.kind, plan, planSha256, inputDigest);
-      executionSha = resumePins.head;
+      executionSha = actualHead;
       await verifyReviewedRole('Windows resume', executionSha);
     }
     if (

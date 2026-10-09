@@ -6,8 +6,8 @@ import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
 
 export const RELEASE220_PUBLISHER = {
   workflow: '.github/workflows/publish-carried-release.yml',
-  tag: 'release-tooling-v2.17.10-qualified-publication-v2',
-  normalizedWorkflowSha256: '0b0e5a9cba8a552e2293ae4a2b157b0cf13c14577b88841e291ca0372c10d70f',
+  tag: 'release-tooling-v2.17.10-qualified-publication-v3',
+  normalizedWorkflowSha256: 'd868afc8baf161ebfa48bc9ba574f3c7eb44382b5cbe33fe79521a48e30dcc02',
   preparedRunId: 37831798849,
   preparedArtifactId: 11573044289,
   preparedArtifactSha256: '3cfb885531d263866c3a40653b7a6995d9f324144c75ab6e0d6777e1e37d3bc7',

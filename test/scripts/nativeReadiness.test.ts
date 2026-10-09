@@ -36,6 +36,7 @@ import { publishFullRelease } from '../../scripts/ci/release/publication.js';
 import { RELEASE220_EXECUTION as fullExecutor } from '../../scripts/ci/release/release220ExecutionPins.js';
 import { RELEASE220_MAC_EXECUTION as macExecutor } from '../../scripts/ci/release/release220MacExecutionPins.js';
 import { RELEASE220_WINDOWS_EXECUTION as windowsExecutor } from '../../scripts/ci/release/release220WindowsExecutionPins.js';
+import { RELEASE220_WINDOWS_REMAINING_EXECUTION as windowsRemaining } from '../../scripts/ci/release/release220WindowsRemainingExecutionPins.js';
 import { RELEASE220_WINDOWS_RESUME_EXECUTION as windowsResume } from '../../scripts/ci/release/release220WindowsResumeExecutionPins.js';
 import {
   ARM211_FILES,
@@ -1808,7 +1809,7 @@ describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', (
   });
   afterEach(() => vi.restoreAllMocks());
 
-  function resumeFixture() {
+  function resumeFixture(withRemaining = false) {
     const plan = JSON.parse(
       readFileSync(new URL('../fixtures/release220-original-P10.json', import.meta.url), 'utf8')
     ) as StagePlan;
@@ -1826,6 +1827,9 @@ describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', (
     f.port.release220WindowsResumeExecutionProof = () =>
       Promise.resolve({} as nativeAuthority.ExecutionProof);
     const originalJobs = f.jobs.get(200)!;
+    const originalReferences = new Map(
+      f.receipt.artifacts.map((ref) => [ref.entries[0]!.scenario, ref.jobId])
+    );
     const originalProducer = originalJobs.find((job) => job.name === 'verified-windows-inputs')!;
     const originalRun = f.runs.get(200)!;
     const sampleStep = originalProducer.steps[0]!;
@@ -1857,7 +1861,7 @@ describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', (
         const ref = f.receipt.artifacts.find(
           (artifact) => artifact.entries[0]?.scenario === scenario
         )!;
-        const source = originalJobs.find((job) => job.id === ref.jobId)!;
+        const source = originalJobs.find((job) => job.id === originalReferences.get(scenario))!;
         const row = fullNativeScenarioRows(runId, 1).find((item) => item.scenario === scenario)!;
         const job = {
           ...structuredClone(source),
@@ -1891,7 +1895,10 @@ describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', (
       .map((row) => row.scenario);
     const current = move(ota, 250, windowsResume.head, true);
     move(['windows-x64-fresh'], 251, windowsExecutor.head, false);
-    return { ...f, producer: current.producer, otaJob: current.jobs[1]! };
+    const remaining = withRemaining
+      ? move([...windowsRemaining.scenarios], 252, windowsRemaining.head, true)
+      : undefined;
+    return { ...f, producer: current.producer, otaJob: current.jobs[1]!, remaining };
   }
   it('accepts six E14 OTA jobs with successful new custody, E13 x64 fresh and original E10 ARM fresh', async () => {
     const f = resumeFixture();
@@ -1940,4 +1947,34 @@ describe('schema3 closed E14 resume with retained E13 and E10 fresh outcomes', (
       'Verify immutable native producer'
     );
   });
+  it.runIf(/^[a-f0-9]{40}$/.test(windowsRemaining.head))(
+    'accepts only the remaining E15 rows alongside passed E14 and both original fresh sources',
+    async () => {
+      const f = resumeFixture(true);
+      await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+      expect(
+        f.receipt.artifacts
+          .filter((ref) => ref.runId === 252)
+          .map((ref) => ref.entries[0]!.scenario)
+          .sort()
+      ).toEqual([...windowsRemaining.scenarios].sort());
+      expect(f.receipt.artifacts.some((ref) => ref.runId === 250)).toBe(true);
+    }
+  );
+  it.runIf(/^[a-f0-9]{40}$/.test(windowsRemaining.head))(
+    'requires successful current E15 preparation custody and byte retrieval',
+    async () => {
+      for (const name of [
+        windowsResume.preparation,
+        windowsResume.custodyUpload,
+        windowsResume.retrieval,
+      ]) {
+        const f = resumeFixture(true);
+        assert(f.remaining);
+        const job = name === windowsResume.retrieval ? f.remaining.jobs[1]! : f.remaining.producer;
+        job.steps.find((step) => step.name === name)!.conclusion = 'skipped';
+        await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(name);
+      }
+    }
+  );
 });
