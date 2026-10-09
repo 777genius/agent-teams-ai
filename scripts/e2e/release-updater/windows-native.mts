@@ -18,6 +18,7 @@ import {
   windowsShellTestEnvironment,
 } from './windows-powershell.mts';
 import { windowsMetadataInventorySource } from './windows-owned-uia-metadata.mts';
+import { windowsReadOwnedSource } from './windows-owned-process.mts';
 import { absent, releasePhysicalProfile } from './windows-ota-profile.mts';
 import { assertNativeRootFocus, windowsUiaSource } from './windows-ota-observer.mts';
 
@@ -334,26 +335,7 @@ function Test-OwnedPath([string]$file) {
   if (-not $full.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside TEST root' }
   return $full
 }
-function Read-Owned([string]$file) {
-  $full = Test-OwnedPath $file
-  $items = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $full })
-  return @($items | ForEach-Object {
-    $item = $_
-    $ownedId = [int]$item.ProcessId
-    try { $owner = Invoke-CimMethod -InputObject $item -MethodName GetOwnerSid -ErrorAction Stop }
-    catch [Microsoft.Management.Infrastructure.CimException] {
-      if ($_.Exception.NativeErrorCode -ne [Microsoft.Management.Infrastructure.NativeErrorCode]::NotFound) { throw }
-      # Only an independently absent exact PID proves the enumerated item exited.
-      # A live/reused PID, query error, or ambiguous result remains a hard failure.
-      $remaining = @(Get-CimInstance Win32_Process -Filter "ProcessId = $ownedId" -ErrorAction Stop)
-      if ($remaining.Count -ne 0) { throw }
-      Write-TestProgress "owner-exited-before-sid-$ownedId"
-      return
-    }
-    if ($owner.ReturnValue -ne 0) { throw 'Cannot verify TEST process owner' }
-    @{ pid=$ownedId; parent=[int]$item.ParentProcessId; executable=$item.ExecutablePath; command=$item.CommandLine; start=$item.CreationDate.ToUniversalTime().ToString('o'); session=[int]$item.SessionId; sid=$owner.Sid }
-  })
-}
+${windowsReadOwnedSource}
 ${windowsMetadataInventorySource}
 if ($data.operation -eq 'prior-fixture-guard') {
   if (@($data.files).Count -lt 1 -or @($data.files).Count -gt 32 -or $data.registry -isnot [bool]) { throw 'Invalid prior fixture guard request' }

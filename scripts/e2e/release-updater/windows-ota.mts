@@ -58,6 +58,8 @@ import {
 } from './windows-ota-profile.mts';
 import { inheritedWindowsEnvironment } from './windows-powershell.mts';
 import { prepareArmPriorFixture } from './windows-arm-prior-fixture.mts';
+import { windowsOtaSuccessor } from './windows-ota-successor.mts';
+import { authenticateWindowsWorkflowExecution } from './windows-execution-provenance.mts';
 
 import type { App } from 'electron';
 import type { ChildProcess } from 'node:child_process';
@@ -202,6 +204,12 @@ async function cleanupOwned(file: string) {
 function checkedMode(value: string): 'fresh' | 'full' | 'cold' | 'warm' {
   assert(value === 'fresh' || value === 'full' || value === 'cold' || value === 'warm');
   return value;
+}
+
+function installerAllowance(mode: ReturnType<typeof checkedMode>, arch: NodeJS.Architecture) {
+  if (arch === 'arm64') return 480_000;
+  if (arch === 'x64' && mode !== 'fresh') return 540_000;
+  return 180_000;
 }
 
 async function run() {
@@ -646,6 +654,16 @@ async function run() {
     const reference = JSON.parse(
       await readFile(path.resolve(option('--fresh-reference')), 'utf8')
     ) as FreshReference;
+    if (['resume-ota', 'resume-remaining'].includes(process.env.SCENARIO_FILTER ?? ''))
+      evidence.referenceAuthority = JSON.parse(
+        await readFile(
+          path.join(
+            path.dirname(path.resolve(option('--fresh-reference'))),
+            'validated-fresh-reference.json'
+          ),
+          'utf8'
+        )
+      ) as unknown;
     assert.equal(reference.passed, true);
     assert.equal(reference.arch, process.arch);
     assert.equal(reference.inputDigest, inputs.inputDigest);
@@ -815,7 +833,8 @@ async function run() {
     await screenshot('downloaded');
     evidence.updaterEvents = downloaded;
     evidence.transport = await state();
-    const before = new Set((await native.processes(executable)).map((owner) => owner.pid));
+    const before = await native.processes(executable);
+    evidence.processesBeforeRestart = before;
     assert(await absent(observer.watchReadyFile));
     sampler = (async () => {
       while (!samplerStop) installerSamples.push(...(await observer.watchInstaller(pending)));
@@ -838,10 +857,7 @@ async function run() {
     main = undefined;
     renderer = undefined;
     const successor = await waitFor(
-      async () =>
-        (await native.processes(executable)).find(
-          (owner) => !before.has(owner.pid) && !/\s--type=/u.test(owner.command)
-        ) ?? null,
+      async () => windowsOtaSuccessor(await native.processes(executable), before, executable),
       'NSIS-created automatic successor before any harness relaunch',
       900_000
     );
@@ -943,6 +959,8 @@ async function run() {
     env = appEnvironment(physical, root, systemRoot);
     evidence.environmentKeys = Object.keys(env);
     const inputs = await windowsInputs(input, readWindowsInputMode());
+    if (inputs.plan)
+      evidence.execution = authenticateWindowsWorkflowExecution(inputs.plan.input.toolingSha);
     evidence.inputs = inputs.verified;
     evidence.inputDigest = inputs.inputDigest;
     targetVersion = inputs.targetVersion;
@@ -987,7 +1005,7 @@ async function run() {
       env,
       windowsVerbatimArguments: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      signal: AbortSignal.timeout(process.arch === 'arm64' ? 480_000 : 180_000),
+      signal: AbortSignal.timeout(installerAllowance(mode, process.arch)),
     });
     spawnedChildren.push({ kind: 'installer', child: setup });
     for (const stream of [setup.stdout, setup.stderr])

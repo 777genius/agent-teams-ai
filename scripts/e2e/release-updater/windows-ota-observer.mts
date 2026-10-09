@@ -625,6 +625,39 @@ $json=ConvertTo-Json -InputObject $result -Depth 12 -Compress -EscapeHandling Es
 if ($json -cmatch '[^\x20-\x7e]') { throw 'Observer JSON encoder emitted a control or non-ASCII character' }
 [Console]::Out.Write($json)
 `;
+export const windowsObserverReadOwnedSource = String.raw`
+function Confirm-ObserverExitedBeforeSid([int]$ownedId,[hashtable]$failure) {
+  [Console]::Error.WriteLine((ConvertTo-Json -InputObject $failure -Compress))
+  # Inspect this exact PID independently of executable/SID filters. Live or
+  # reused PIDs, ambiguous results, and failed queries must remain hard failures.
+  $remaining=@(Get-CimInstance Win32_Process -Filter "ProcessId = $ownedId" -ErrorAction Stop)
+  if ($remaining.Count -ne 0) { throw "Cannot verify TEST process owner for PID $ownedId" }
+  [Console]::Error.WriteLine((ConvertTo-Json -InputObject @{phase='owner-exited-before-sid';pid=$ownedId;count=$remaining.Count} -Compress))
+}
+function Read-Owned([string]$file) {
+  $expected=Test-Canonical $file
+  $items=@(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.ExecutablePath -and [IO.Path]::GetFileName($_.ExecutablePath) -eq [IO.Path]::GetFileName($expected) })
+  return @($items | ForEach-Object {
+    $item=$_
+    $actual=Test-Canonical $item.ExecutablePath
+    if ($actual -eq $expected) {
+      $ownedId=[int]$item.ProcessId
+      try { $owner=Invoke-CimMethod -InputObject $item -MethodName GetOwnerSid -ErrorAction Stop }
+      catch [Microsoft.Management.Infrastructure.CimException] {
+        if ($_.Exception.NativeErrorCode -ne [Microsoft.Management.Infrastructure.NativeErrorCode]::NotFound) { throw }
+        Confirm-ObserverExitedBeforeSid $ownedId @{phase='owner-sid-failed';pid=$ownedId;returnValue=$null;nativeErrorCode=[string]$_.Exception.NativeErrorCode}
+        return
+      }
+      if ($owner.ReturnValue -ne 0) {
+        Confirm-ObserverExitedBeforeSid $ownedId @{phase='owner-sid-failed';pid=$ownedId;returnValue=$owner.ReturnValue;nativeErrorCode=$null}
+        return
+      }
+      if ($owner.Sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $item.SessionId -ne (Get-Process -Id $PID).SessionId) { throw 'TEST process owner/session mismatch' }
+      @{ pid=$ownedId; parent=[int]$item.ParentProcessId; executable=$actual; actualExecutable=$item.ExecutablePath; command=$item.CommandLine; start=$item.CreationDate.ToUniversalTime().ToString('o'); session=[int]$item.SessionId; sid=$owner.Sid }
+    }
+  })
+}
+`;
 const script = String.raw`
 param([string]$InputFile,[string]$TrustedModulePath)
 $ErrorActionPreference='Stop'
@@ -663,18 +696,7 @@ function Test-Canonical([string]$file) {
   if (-not $full.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)) { throw 'File outside owned TEST root' }
   return $full
 }
-function Read-Owned([string]$file) {
-  $expected=Test-Canonical $file
-  $items=@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and [IO.Path]::GetFileName($_.ExecutablePath) -eq [IO.Path]::GetFileName($expected) })
-  return @($items | ForEach-Object {
-    $actual=Test-Canonical $_.ExecutablePath
-    if ($actual -eq $expected) {
-      $owner=Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid
-      if ($owner.ReturnValue -ne 0 -or $owner.Sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or $_.SessionId -ne (Get-Process -Id $PID).SessionId) { throw 'TEST process owner/session mismatch' }
-      @{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; executable=$actual; actualExecutable=$_.ExecutablePath; command=$_.CommandLine; start=$_.CreationDate.ToUniversalTime().ToString('o'); session=[int]$_.SessionId; sid=$owner.Sid }
-    }
-  })
-}
+${windowsObserverReadOwnedSource}
 switch ($data.operation) {
   'compile' { $result=[TestOtaObserver]::Compile() }
   'processes' { $result=@(Read-Owned $data.file) }
