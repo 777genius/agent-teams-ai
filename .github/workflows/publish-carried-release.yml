@@ -110,7 +110,7 @@ jobs:
       contents: write
       actions: read
     env:
-      CHECKOUT_SHA: 598aec3d9aab5bdbf6174b3e65f49b33d2e382a7
+      CHECKOUT_SHA: c5bea396911471bfa50cacc150f1d4cdb2aab106
       APPLICATION_SHA: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
       ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
       RELEASE_TAG: v2.17.10
@@ -124,7 +124,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: 598aec3d9aab5bdbf6174b3e65f49b33d2e382a7
+          ref: c5bea396911471bfa50cacc150f1d4cdb2aab106
           persist-credentials: false
       - name: Bind workflow origin and immutable full220 checkout
         env:
