@@ -26,14 +26,17 @@ import {
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseAtomUrls,
   getReleaseHistoryApiUrl,
+  getUpdaterAtomHistory,
   getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  MAX_UPDATER_ATOM_BYTES,
   mergeUpdaterReleaseNotes,
   shouldSkipReleaseForUpdater,
 } from './updaterReleaseMetadata';
 
-import type { GithubReleaseMetadata } from './updaterReleaseMetadata';
+import type { GithubReleaseMetadata, UpdaterReleaseNote } from './updaterReleaseMetadata';
 import type { UpdaterStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 
@@ -69,13 +72,36 @@ async function assetExistsInAnyRepo(urls: readonly string[]): Promise<boolean> {
   return false;
 }
 
-async function fetchText(url: string): Promise<string | null> {
+async function fetchText(
+  url: string,
+  signal?: AbortSignal,
+  maximumBytes?: number
+): Promise<string | null> {
   try {
-    const response = await net.fetch(url, { method: 'GET' });
+    const response = await net.fetch(url, { method: 'GET', signal });
     if (!response.ok) {
       return null;
     }
-    return await response.text();
+    if (maximumBytes !== undefined && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      let text = '';
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) return text + decoder.decode();
+        bytes += chunk.value.byteLength;
+        if (bytes > maximumBytes) {
+          void reader.cancel().catch(() => undefined);
+          return null;
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+      }
+    }
+    const text = await response.text();
+    return maximumBytes === undefined || Buffer.byteLength(text, 'utf8') <= maximumBytes
+      ? text
+      : null;
   } catch {
     return null;
   }
@@ -282,18 +308,51 @@ export class UpdaterService {
     return null;
   }
 
-  private async fetchReleaseHistory(apiUrl: string, candidateVersion: string) {
+  private async fetchRestReleaseHistory(
+    apiUrl: string,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
     const releases: unknown[] = [];
-    // GitHub's unauthenticated quota is shared. Bound both volume and total wait,
-    // including when unrelated tooling releases fill recent pages.
-    const signal = AbortSignal.timeout(5_000);
     for (let page = 1; page <= 3; page++) {
       const batch = await fetchJson<unknown>(getReleaseHistoryApiUrl(apiUrl, page), signal);
       if (!Array.isArray(batch)) break;
-      releases.push(...batch);
+      const pageReleases: unknown[] = batch;
+      releases.push(...pageReleases);
       if (batch.length < 100 || signal.aborted) break;
     }
     return getUpdaterReleaseHistory(releases, app.getVersion(), candidateVersion);
+  }
+
+  private async fetchAtomReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
+    for (const url of getReleaseAtomUrls(apiUrl)) {
+      if (signal.aborted) break;
+      const raw = await fetchText(url, signal, MAX_UPDATER_ATOM_BYTES);
+      if (!raw) continue;
+      const history = getUpdaterAtomHistory(raw, url, app.getVersion(), candidateVersion);
+      if (history !== null) return history;
+    }
+    return [];
+  }
+
+  private async fetchReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string
+  ): Promise<UpdaterReleaseNote[]> {
+    // Both independent transports share one deadline. Start Atom immediately so
+    // a rate-limited or stalled REST request cannot consume its fallback budget.
+    const signal = AbortSignal.timeout(5_000);
+    const [rest, atom] = await Promise.all([
+      apiUrl ? this.fetchRestReleaseHistory(apiUrl, candidateVersion, signal) : [],
+      this.fetchAtomReleaseHistory(apiUrl, candidateVersion, signal),
+    ]);
+    const history = new Map(atom.map((entry) => [entry.version, entry]));
+    for (const entry of rest) history.set(entry.version, entry);
+    return [...history.values()];
   }
 
   /**
@@ -344,7 +403,7 @@ export class UpdaterService {
           app.getVersion(),
           info.version,
           metadata?.release.body,
-          metadata ? await this.fetchReleaseHistory(metadata.apiUrl, info.version) : []
+          await this.fetchReleaseHistory(metadata?.apiUrl, info.version)
         );
 
     const urls = getExpectedReleaseAssetUrls(info.version, process.platform, process.arch);

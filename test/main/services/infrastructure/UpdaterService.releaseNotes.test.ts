@@ -345,6 +345,49 @@ describe('UpdaterService release notes', () => {
     ).toHaveLength(1);
   });
 
+  it.each(['history', 'metadata'] as const)(
+    'recovers Atom history when REST $failure is rate limited',
+    async (failure) => {
+      const atomUrl = 'https://github.com/777genius/agent-teams-ai/releases.atom';
+      fixture.fetch.mockImplementation((url: string) =>
+        Promise.resolve({
+          ok:
+            !url.includes('api.github.com') ||
+            (failure === 'history' && !url.includes('?per_page=')),
+          json: () => Promise.resolve({ tag_name: `v${version}`, body: migrationNote }),
+          text: () =>
+            Promise.resolve(
+              url === atomUrl
+                ? `<feed><entry><title>Candidate</title><link href="https://github.com/777genius/agent-teams-ai/releases/tag/v${version}"/><content>Stale Atom candidate must not replace the warning.</content></entry><entry><title>Stable</title><link href="https://github.com/777genius/agent-teams-ai/releases/tag/v2.17.6"/><content><![CDATA[Older Atom changes.]]></content></entry></feed>`
+                : macFeed
+            ),
+        })
+      );
+      await announce('Provided candidate migration warning.');
+      expect(availableStatus()).toMatchObject({
+        releaseNotes: `## v${version}\n\nProvided candidate migration warning.\n\n## v2.17.6\n\nOlder Atom changes.`,
+      });
+      const atomCalls = fixture.fetch.mock.calls.filter(([url]) => String(url).endsWith('.atom'));
+      expect(atomCalls).toHaveLength(1);
+      if (failure === 'history') {
+        const rest = fixture.fetch.mock.calls.find(([url]) => String(url).includes('?per_page='))!;
+        expect(atomCalls[0]![1].signal).toBe(rest[1].signal);
+      }
+    }
+  );
+
+  it('keeps the candidate warning when independent Atom XML is invalid', async () => {
+    fixture.fetch.mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: !url.includes('?per_page='),
+        json: () => Promise.resolve({ tag_name: `v${version}`, body: migrationNote }),
+        text: () => Promise.resolve(url.endsWith('.atom') ? '<feed><entry></feed>' : macFeed),
+      })
+    );
+    await announce('Candidate warning.');
+    expect(availableStatus()).toMatchObject({ releaseNotes: 'Candidate warning.' });
+  });
+
   it('preserves provided notes when the release API is unavailable', async () => {
     fixture.fetch.mockImplementation((url: string) =>
       Promise.resolve({

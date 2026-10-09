@@ -7,13 +7,18 @@ import {
   getLatestMacMetadataUrl,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseAtomUrls,
   getReleaseHistoryApiUrl,
+  getUpdaterAtomHistory,
   getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  MAX_UPDATER_ATOM_BYTES,
   mergeUpdaterReleaseNotes,
   parseReleaseMetadataAssetNames,
   shouldSkipReleaseForUpdater,
 } from '../../../../src/main/services/infrastructure/updaterReleaseMetadata';
+
+const version = '2.17.10';
 
 describe('updaterReleaseMetadata', () => {
   it('builds platform-specific asset URLs', () => {
@@ -90,6 +95,52 @@ describe('updaterReleaseMetadata', () => {
       { version: '2.17.6', note: 'Newest older notes.' },
       { version: '2.17.2', note: 'Earlier notes.' },
     ]);
+  });
+
+  it('parses bounded Atom entries with the official XML parser and applies repository/version/marker filters', () => {
+    const url = getReleaseAtomUrls()[0]!;
+    const link = 'https://github.com/777genius/agent-teams-ai/releases/tag/';
+    const atom = `<feed>
+      <entry><title>Stable &amp; reviewed</title><link href="${link}v2.17.6"/><content>&lt;p&gt;Older &amp; useful changes.&lt;/p&gt;</content></entry>
+      <entry><link href="${link}v2.17.2"/><content><![CDATA[Earlier changes.]]></content></entry>
+      <entry><link href="${link}v2.17.10"/><content>Candidate race.</content></entry>
+      <entry><link href="${link}v2.17.1"/><content>Installed.</content></entry>
+      <entry><link href="${link}v2.17.11"/><content>Future.</content></entry>
+      <entry><link href="${link}v2.17.5-beta"/><content>Beta.</content></entry>
+      <entry><link href="${link}tool-v2.17.7"/><content>Service release.</content></entry>
+      <entry><title>[skip-updater]</title><link href="${link}v2.17.4"/><content>Hidden.</content></entry>
+      <entry><link href="https://github.com/other/repository/releases/tag/v2.17.8"/><content>Wrong repo.</content></entry>
+    </feed>`;
+    expect(getUpdaterAtomHistory(atom, url, '2.17.1', version)).toEqual([
+      { version: '2.17.6', note: '<p>Older & useful changes.</p>' },
+      { version: '2.17.2', note: 'Earlier changes.' },
+    ]);
+    expect(getUpdaterAtomHistory('<feed><entry></feed>', url, '2.17.1', version)).toBeNull();
+    expect(
+      getUpdaterAtomHistory(
+        atom,
+        'https://github.com/other/repository/releases.atom',
+        '2.17.1',
+        version
+      )
+    ).toBeNull();
+    expect(getReleaseAtomUrls(getReleaseApiUrls(version)[1])).toEqual([
+      'https://github.com/777genius/claude_agent_teams_ui/releases.atom',
+    ]);
+  });
+
+  it('caps Atom text bytes and inspected entries', () => {
+    const url = getReleaseAtomUrls()[0]!;
+    expect(
+      getUpdaterAtomHistory(
+        `<feed>${'x'.repeat(MAX_UPDATER_ATOM_BYTES)}</feed>`,
+        url,
+        '2.17.1',
+        version
+      )
+    ).toBeNull();
+    const atom = `<feed>${Array.from({ length: 100 }, () => '<entry><title>Tool release.</title></entry>').join('')}<entry><link href="https://github.com/777genius/agent-teams-ai/releases/tag/v2.17.6"/><content>Beyond bound.</content></entry></feed>`;
+    expect(getUpdaterAtomHistory(atom, url, '2.17.1', version)).toEqual([]);
   });
 
   it('uses semantic version bounds rather than lexical ordering', () => {

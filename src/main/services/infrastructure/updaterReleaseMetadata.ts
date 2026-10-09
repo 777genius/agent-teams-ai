@@ -3,6 +3,7 @@ import {
   getUpdaterReleaseNoteForVersion,
 } from '@shared/utils/releaseNotes';
 import { compareVersions } from '@shared/utils/version';
+import { parseXml } from 'builder-util-runtime';
 
 const REPO_OWNER = '777genius';
 const REPO_NAME = 'agent-teams-ai';
@@ -32,6 +33,56 @@ function stableReleaseVersion(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   const match = /^v?((?:0|[1-9]\d{0,9})\.(?:0|[1-9]\d{0,9})\.(?:0|[1-9]\d{0,9}))$/i.exec(raw);
   return match?.[1] ?? null;
+}
+
+export const MAX_UPDATER_ATOM_BYTES = 2 * 1024 * 1024;
+
+export function getReleaseAtomUrls(releaseApiUrl?: string): readonly string[] {
+  const repositories = releaseApiUrl
+    ? [REPO_NAME, LEGACY_REPO_NAME].filter((repo) =>
+        releaseApiUrl.startsWith(
+          `https://api.github.com/repos/${REPO_OWNER}/${repo}/releases/tags/`
+        )
+      )
+    : [REPO_NAME, LEGACY_REPO_NAME];
+  return repositories.map((repo) => `https://github.com/${REPO_OWNER}/${repo}/releases.atom`);
+}
+
+export function getUpdaterAtomHistory(
+  raw: string,
+  feedUrl: string,
+  installedVersion: string,
+  candidateVersion: string
+): UpdaterReleaseNote[] | null {
+  if (
+    Buffer.byteLength(raw, 'utf8') > MAX_UPDATER_ATOM_BYTES ||
+    !raw.trimEnd().endsWith('</feed>') ||
+    !getReleaseAtomUrls().includes(feedUrl)
+  )
+    return null;
+  try {
+    // Use the same strict SAX parser as electron-updater, including escaped HTML
+    // and CDATA content. Atom is independent of GitHub's REST rate limit.
+    const feed = parseXml(raw);
+    if (feed.name !== 'feed') return null;
+    const releasePrefix = feedUrl.replace(/releases\.atom$/, 'releases/tag/');
+    const releases: GithubReleaseMetadata[] = [];
+    for (const entry of feed.getElements('entry').slice(0, 100)) {
+      const link = entry
+        .getElements('link')
+        .find((item) => item.attributes?.href?.startsWith(releasePrefix));
+      const tag = link?.attributes?.href?.slice(releasePrefix.length);
+      const body = entry.elementValueOrEmpty('content');
+      releases.push({
+        tag_name: tag,
+        name: entry.elementValueOrEmpty('title'),
+        body: body === 'No content.' ? '' : body,
+      });
+    }
+    return getUpdaterReleaseHistory(releases, installedVersion, candidateVersion);
+  } catch {
+    return null;
+  }
 }
 
 export function getReleaseHistoryApiUrl(releaseApiUrl: string, page: number): string {
