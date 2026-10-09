@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import {
   getDesktopMcpChildEnvironment,
   isDesktopMcpEnvironmentBound,
-} from '@features/external-agent-connection/main';
+} from '@features/external-agent-connection';
 import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';

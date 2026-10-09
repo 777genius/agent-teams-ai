@@ -5,7 +5,10 @@ supervisor and optional native renderer CDP. It follows the
 [feature architecture standard](../../../docs/FEATURE_ARCHITECTURE_STANDARD.md).
 
 - `contracts/index.ts`: live connection identity, DTO, API fragment and IPC channels.
-- Root `index.ts`: browser-safe prompt policy and connection types.
+- Root `index.ts`: browser-safe prompt policy, connection types and pure process-local
+  MCP environment binding. Node bridge consumers use this entrypoint without
+  loading Electron. Desktop composition binds the same core state through the
+  compatible main entrypoint; renderer bundles have separate process-local state.
 - `main/index.ts`: desktop composition, root admission fence, native CDP discovery
   and IPC registration. Electron-specific behavior stays here.
 - `preload/index.ts`: typed bridge creation.

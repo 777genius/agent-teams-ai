@@ -23,6 +23,7 @@
     "types": ["node", "vitest/globals"]
   },
   "include": [
+    "eslint.feature-overrides.mts",
     "src/**/*",
     "test/**/*",
     "scripts/team-changes-real-data-smoke.ts",
