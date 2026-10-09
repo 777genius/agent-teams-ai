@@ -92,6 +92,7 @@ function setup() {
       }
     },
     getProviderStatus: vi.fn(async (): Promise<CliProviderStatus | null> => provider),
+    getCodexLaunchAllowed: vi.fn(async () => false),
     prepare: vi.fn(async () => runtime),
   };
   const service = new ExternalAgentRunService(deps);
@@ -128,13 +129,24 @@ describe('native prompt run lifecycle', () => {
     expect(s.runtime.launch).not.toHaveBeenCalled();
   });
 
-  it('denies non-authoritative/authenticated readiness even when the provider is detected', async () => {
-    const s = setup();
-    s.provider.statusCheckOutcome = 'pending';
-    await s.service.start(s.request);
-    await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('failed'));
-    expect(s.runtime.launch).not.toHaveBeenCalled();
-  });
+  it.each([
+    ['anthropic', 'pending'],
+    ['codex', 'pending'],
+    ['codex', 'unauthenticated'],
+  ] as const)(
+    'denies %s readiness with %s CLI evidence even when the account allows launch',
+    async (providerId, evidence) => {
+      const s = setup();
+      s.request.providerId = s.provider.providerId = providerId;
+      s.deps.getCodexLaunchAllowed.mockResolvedValue(true);
+      if (evidence === 'pending') s.provider.statusCheckOutcome = 'pending';
+      else s.provider.authenticated = false;
+      await s.service.start(s.request);
+      await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('failed'));
+      expect(s.deps.prepare).not.toHaveBeenCalled();
+      expect(s.runtime.launch).not.toHaveBeenCalled();
+    }
+  );
 
   it('disposes resources when cancellation wins the preparation promise adoption microtask', async () => {
     const s = setup();
@@ -151,15 +163,35 @@ describe('native prompt run lifecycle', () => {
     expect(s.runtime.launch).not.toHaveBeenCalled();
   });
 
-  it('rechecks readiness after preparation and does not borrow teamLaunch/catalog authority', async () => {
+  it.each(['anthropic', 'codex'] as const)(
+    'rechecks %s readiness after preparation and does not borrow teamLaunch/catalog authority',
+    async (providerId) => {
+      const s = setup();
+      s.request.providerId = s.provider.providerId = providerId;
+      s.deps.getCodexLaunchAllowed.mockResolvedValue(true);
+      s.deps.prepare.mockImplementation(async () => {
+        if (providerId === 'codex') s.deps.getCodexLaunchAllowed.mockResolvedValue(false);
+        else s.provider.authenticated = false;
+        return s.runtime;
+      });
+      await s.service.start(s.request);
+      await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('failed'));
+      expect(s.runtime.launch).not.toHaveBeenCalled();
+      expect(s.runtime.dispose).toHaveBeenCalledOnce();
+      expect(s.deps.getCodexLaunchAllowed).toHaveBeenCalledTimes(providerId === 'codex' ? 2 : 0);
+    }
+  );
+
+  it('launches Codex with authoritative CLI evidence and separate account readiness', async () => {
     const s = setup();
-    s.deps.prepare.mockImplementation(async () => {
-      s.provider.authenticated = false;
-      return s.runtime;
-    });
+    s.request.providerId = s.provider.providerId = 'codex';
+    s.deps.getCodexLaunchAllowed.mockResolvedValue(true);
+    expect(s.provider.connection).toBeUndefined();
     await s.service.start(s.request);
-    await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('failed'));
-    expect(s.runtime.launch).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(s.runtime.launch).toHaveBeenCalledOnce());
+    expect(s.deps.getCodexLaunchAllowed).toHaveBeenCalledTimes(2);
+    s.result.resolve({ successful: true });
+    await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('completed'));
     expect(s.runtime.dispose).toHaveBeenCalledOnce();
   });
 
