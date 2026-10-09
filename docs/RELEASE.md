@@ -2149,7 +2149,8 @@ Public release notes must follow this standard every time:
 - Start with a short user-facing summary. Explain what changed and why users should care.
 - Keep the GitHub release title equal to the tag (`v<VERSION>`). Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body.
 - Do not start with a template sentence like `Agent Teams AI <VERSION> is...`; start with the concrete user impact.
-- Use the sections `What's New`, `Improvements`, and `Bug Fixes`; omit a section only if it would be empty.
+- Prefer `What's New` and `Fixes`. Add another section only when it helps users find distinct changes; omit empty sections.
+- Keep three to six verified, concrete user-visible bullets per section, each no more than 20 words. Combine related fixes and omit minor changes.
 - Keep internal-only CI, lint, dependency, and refactor work out of public notes unless it directly explains a user-visible fix.
 - Do not include raw build SHA, target commit, workflow IDs, or other internal release plumbing in public notes.
 - Do not mention the Agent Teams/orchestrator runtime version in public notes. Describe the user-visible runtime change instead, for example "Update bundled runtime" or "Improve native startup validation".
@@ -2325,20 +2326,15 @@ The GitHub digest and bundle version must both match.
 ## Release Notes Template
 
 ```markdown
-<1-2 sentence summary of the release>
+<1-2 sentences describing the main user-visible change, no more than 40 words>
 
 ### What's New
 
-- feat: <feature description>
-- feat: <feature description>
+<!-- Add 3-6 verified, concrete user-visible bullets, each no more than 20 words. Omit an empty section. -->
 
-### Improvements
+### Fixes
 
-- improve: <improvement description>
-
-### Bug Fixes
-
-- fix: <bug fix description>
+<!-- Add 3-6 verified, concrete user-visible fixes, each no more than 20 words. Mention shipped security updates in one short bullet. Omit an empty section. -->
 
 ### Downloads
 
