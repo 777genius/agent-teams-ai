@@ -1,18 +1,16 @@
 import { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRows.js';
 import type { NativeScenarioRow as Row } from './nativeReadinessRows.js';
 export { fullNativeScenarioRows, nativeScenarioRows } from './nativeReadinessRows.js';
+import { createNativeExecutionResolver } from './nativeReadinessExecution.js';
 import { checkMacManual, manualCapturePaths } from './macManualReadiness.js';
 import {
   at,
   list,
   object,
-  release216Execution,
   release220Execution,
   validateWorkflow,
-  verifyRelease216Execution,
-  verifyRelease220Execution,
+  verifyRelease220WindowsProvenance,
 } from './nativeReadinessAuthority.js';
-import { RELEASE220_EXECUTION } from './release220ExecutionPins.js';
 import type { Release220ExecutionProof, ExecutionProof } from './nativeReadinessAuthority.js';
 import { assertArmPriorFixture, usesRepairedArm211 } from './windowsArmPriorFixture.js';
 import type { ArmPriorFixture } from './windowsArmPriorFixture.js';
@@ -45,7 +43,7 @@ export interface NativeArtifactReference {
   entries: NativeEntryReference[];
 }
 export interface NativeReadinessReceipt {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   repository: string;
   toolingSha: string;
   planSha256: string;
@@ -88,8 +86,11 @@ export interface NativeArtifact {
 }
 export interface NativeReadinessPort {
   release220ExecutionProof?(): Promise<Release220ExecutionProof>;
+  release220MacExecutionProof?(): Promise<ExecutionProof>;
+  release220WindowsExecutionProof?(): Promise<ExecutionProof>;
   executionProof?(repository: string, executionSha: string): Promise<ExecutionProof>;
   run(repository: string, runId: number): Promise<NativeRun>;
+  runAttempt?(repository: string, runId: number, attempt: number): Promise<NativeRun>;
   jobs(repository: string, runId: number, attempt: number): Promise<NativeJob[]>;
   artifact(repository: string, artifactId: number): Promise<NativeArtifact>;
   workflow(repository: string, toolingSha: string, workflowPath: string): Promise<string>;
@@ -174,6 +175,7 @@ function validatePreparation(jobs: NativeJob[], row: Row, run: NativeRun) {
   if (row.kind === 'mac-manual') step(job, 'Upload authenticated manual migration inputs');
   if (row.kind === 'mac-current' || row.kind === 'mac-old')
     step(job, 'Upload authenticated immutable Mac inputs');
+  return job;
 }
 function byteLedger(values: unknown[], expected: StagePlan['outputs']) {
   for (const proof of expected) {
@@ -560,22 +562,28 @@ export async function verifyNativeReadiness(
 ): Promise<void> {
   sha(planSha256);
   const full = plan.input.mode === 'full';
+  const reuse = receipt.schemaVersion === 3;
   requireThat(
     full || (plan.input.mode === 'carry-mac' && plan.input.macSource),
     'Unsupported native matrix'
   );
   if (full)
     requireThat(
-      receipt.schemaVersion === 2 &&
+      (receipt.schemaVersion === 2 || reuse) &&
         plan.input.target.tag === 'v2.17.10' &&
         plan.input.macProductMinimum === '13.0' &&
         !plan.input.macSource,
-      'Full220 requires schema2 native proof, macOS13 floor and full Mac assets'
+      'Full220 requires schema2/3 native proof, macOS13 floor and full Mac assets'
     );
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
   const d = digest(canonical(plan.input));
+  if (reuse) {
+    requireThat(full, 'Schema3 requires the original closed full220 plan');
+    release220Execution('windows', plan, planSha256, d);
+    requireThat(typeof port.runAttempt === 'function', 'Missing native attempt run capability');
+  }
   for (const [field, expected] of Object.entries({
-    schemaVersion: receipt.schemaVersion === 2 ? 2 : 1,
+    schemaVersion: reuse ? 3 : receipt.schemaVersion === 2 ? 2 : 1,
     repository: plan.input.repository,
     toolingSha: plan.input.toolingSha,
     planSha256,
@@ -591,46 +599,10 @@ export async function verifyNativeReadiness(
   const seenScenarios = new Set<string>();
   const seenArtifacts = new Set<number>();
   const seenJobs = new Set<number>();
-  const cachedRuns = new Map<number, { run: NativeRun; jobs: NativeJob[] }>();
+  const cachedRuns = new Map<string, { run: NativeRun; jobs: NativeJob[] }>();
   const sources = new Map<string, string>();
-  const verifiedExecutors = new Set<string>();
   const familyRuns = new Map<string, string>();
-  async function executionFor(row: Row) {
-    let executionSha = plan.input.toolingSha;
-    if (receipt.schemaVersion === 2 && !full)
-      executionSha = release216Execution(row.kind, plan, planSha256, d);
-    else if (full && plan.input.toolingSha === RELEASE220_EXECUTION.base)
-      executionSha = release220Execution(row.kind, plan, planSha256, d);
-    if (
-      receipt.schemaVersion === 2 &&
-      !full &&
-      (row.kind === 'windows' || row.kind === 'mac-old') &&
-      !verifiedExecutors.has(executionSha)
-    ) {
-      requireThat(
-        typeof port.executionProof === 'function',
-        'Missing complete executor proof capability'
-      );
-      verifyRelease216Execution(
-        await port.executionProof(receipt.repository, executionSha),
-        row.kind
-      );
-      verifiedExecutors.add(executionSha);
-    }
-    if (
-      full &&
-      executionSha === RELEASE220_EXECUTION.head &&
-      !verifiedExecutors.has(executionSha)
-    ) {
-      requireThat(
-        typeof port.release220ExecutionProof === 'function',
-        'Missing closed full220 executor proof capability'
-      );
-      verifyRelease220Execution(await port.release220ExecutionProof());
-      verifiedExecutors.add(executionSha);
-    }
-    return executionSha;
-  }
+  const executionFor = createNativeExecutionResolver(port, receipt, plan, planSha256, d, full);
   async function verifyArtifact(reference: NativeArtifactReference) {
     for (const id of [reference.runId, reference.runAttempt, reference.jobId, reference.artifactId])
       positive(id);
@@ -649,21 +621,29 @@ export async function verifyNativeReadiness(
       matches.length > 0 && row && reference.entries.length === matches.length,
       'Unknown/partial native artifact'
     );
-    const executionSha = await executionFor(row);
     const cohort = `${reference.runId}:${reference.runAttempt}`;
     const familyRun = familyRuns.get(row.kind);
-    requireThat(!familyRun || familyRun === cohort, 'Mixed native family runs');
+    requireThat(reuse || !familyRun || familyRun === cohort, 'Mixed native family runs');
     familyRuns.set(row.kind, cohort);
-    let state = cachedRuns.get(reference.runId);
+    let state = cachedRuns.get(cohort);
     if (!state) {
       state = {
-        run: await port.run(receipt.repository, reference.runId),
+        run: reuse
+          ? await port.runAttempt!(receipt.repository, reference.runId, reference.runAttempt)
+          : await port.run(receipt.repository, reference.runId),
         jobs: await port.jobs(receipt.repository, reference.runId, reference.runAttempt),
       };
-      cachedRuns.set(reference.runId, state);
+      cachedRuns.set(cohort, state);
     }
     const run = state.run;
-    successful({ ...run, name: 'native run', started_at: '', completed_at: '' });
+    const executionSha = await executionFor(row, run.head_sha);
+    if (reuse)
+      requireThat(
+        run.status === 'completed' &&
+          (run.conclusion === 'success' || run.conclusion === 'failure'),
+        'Native attempt must complete with success or failure'
+      );
+    else successful({ ...run, name: 'native run', started_at: '', completed_at: '' });
     equal(run.id, reference.runId, 'run identity');
     equal(run.repository.full_name, receipt.repository, 'run repository');
     equal(run.run_attempt, reference.runAttempt, 'current run attempt');
@@ -673,7 +653,7 @@ export async function verifyNativeReadiness(
     const jobs = state.jobs.filter((job) => job.id === reference.jobId);
     const job = jobs[0];
     requireThat(jobs.length === 1 && job, 'Native job outside current attempt');
-    validatePreparation(state.jobs, row, run);
+    const preparation = validatePreparation(state.jobs, row, run);
     successful(job);
     equal(job.run_id, reference.runId, 'native job run');
     equal(job.run_attempt, reference.runAttempt, 'native job attempt');
@@ -682,17 +662,21 @@ export async function verifyNativeReadiness(
     const execution = step(job, row.execute);
     const upload = step(job, row.upload);
     requireThat(
-      time(job.started_at) <= time(execution.started_at) &&
+      (!reuse ||
+        (time(preparation.started_at) <= time(preparation.completed_at) &&
+          time(preparation.completed_at) <= time(job.started_at))) &&
+        time(job.started_at) <= time(execution.started_at) &&
         time(execution.started_at) <= time(execution.completed_at) &&
         time(execution.completed_at) <= time(upload.started_at) &&
         time(upload.started_at) <= time(upload.completed_at) &&
         time(upload.completed_at) <= time(job.completed_at),
       'Invalid native execution/upload order'
     );
-    let source = sources.get(row.workflow);
+    const sourceKey = `${executionSha}:${row.workflow}`;
+    let source = sources.get(sourceKey);
     if (!source) {
       source = await port.workflow(receipt.repository, executionSha, row.workflow);
-      sources.set(row.workflow, source);
+      sources.set(sourceKey, source);
     }
     validateWorkflow(source, row);
     const artifact = await port.artifact(receipt.repository, reference.artifactId);
@@ -740,8 +724,17 @@ export async function verifyNativeReadiness(
           time(value.finishedAt) <= time(execution.completed_at) + 1000,
         'Native outcome outside execution interval'
       );
-      if (actualRow.kind === 'windows') checkWindows(value, actualRow, plan, planSha256, d);
-      else if (actualRow.kind === 'appimage' || actualRow.kind === 'package')
+      if (actualRow.kind === 'windows') {
+        verifyRelease220WindowsProvenance(
+          value,
+          plan.input.toolingSha,
+          executionSha,
+          reference.runId,
+          reference.runAttempt,
+          actualRow.job
+        );
+        checkWindows(value, actualRow, plan, planSha256, d);
+      } else if (actualRow.kind === 'appimage' || actualRow.kind === 'package')
         checkLinux(value, actualRow, plan, planSha256, d);
       else if (actualRow.kind === 'mac-manual')
         checkMacManual(
@@ -752,7 +745,8 @@ export async function verifyNativeReadiness(
           d,
           reference.runId,
           reference.runAttempt,
-          archive.entries
+          archive.entries,
+          executionSha
         );
       else checkMac(value, actualRow, plan, planSha256, d);
     }

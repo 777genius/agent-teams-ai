@@ -40,7 +40,8 @@ export function checkMacManual(
   inputDigest: string,
   runId: number,
   attempt: number,
-  entries: Record<string, Buffer>
+  entries: Record<string, Buffer>,
+  executionSha = plan.input.toolingSha
 ) {
   for (const [key, expected] of Object.entries({
     schemaVersion: 1,
@@ -54,6 +55,8 @@ export function checkMacManual(
     minimumOs13ExecutionProven: false,
   }))
     equal(value[key], expected, key);
+  if (executionSha !== plan.input.toolingSha || value.executionSha !== undefined)
+    equal(value.executionSha, executionSha, 'actual executor SHA');
   requireThat(
     typeof value.actualMacOs === 'string' && /^15\.\d+(?:\.\d+)?$/.test(value.actualMacOs),
     'Actual macOS15 runner proof required'
@@ -79,7 +82,7 @@ export function checkMacManual(
   for (const [key, expected] of Object.entries({
     id: runId,
     run_attempt: attempt,
-    head_sha: plan.input.toolingSha,
+    head_sha: executionSha,
     event: 'workflow_dispatch',
   }))
     equal(at(producer, 'run', key), expected, `producer.${key}`);
@@ -91,7 +94,7 @@ export function checkMacManual(
   checkDownloads(input, plan);
   const phases = list(value.phases, 'manual phases').map((item) => object(item, 'phase'));
   checkSignatures(phases, architecture);
-  checkProfiles(value, phases, architecture, entries);
+  checkProfiles(value, phases, architecture, entries, executionSha !== plan.input.toolingSha);
   const commands = list(value.commands, 'native commands').map((item) => object(item, 'command'));
   const osCommands = commands.filter((item) => item.command === '/usr/bin/sw_vers -productVersion');
   requireThat(
@@ -189,11 +192,29 @@ function checkSignatures(phases: Record<string, unknown>[], architecture: string
   }
 }
 
+function checkSeededProfile(
+  phases: Record<string, unknown>[],
+  original: Record<string, unknown>,
+  coldSeed: boolean
+) {
+  const seeded = coldSeed ? phase(phases, '', 'original211-seed') : original;
+  equal(seeded.profile, original.profile, 'same owned seeded profile');
+  equal(seeded.theme, original.theme, 'cold-loaded seeded preference');
+  equal(proof(seeded.configProof), proof(original.configProof), 'cold-loaded seeded config');
+  if (coldSeed) equal(original.before, seeded.theme, 'preference before original cold launch');
+  requireThat(
+    ['dark', 'light'].includes(String(seeded.theme)) &&
+      ['dark', 'light', 'system'].includes(String(seeded.before)) && seeded.before !== seeded.theme,
+    'Nondefault seeded preference required'
+  );
+}
+
 function checkProfiles(
   value: Record<string, unknown>,
   phases: Record<string, unknown>[],
   architecture: string,
-  entries: Record<string, Buffer>
+  entries: Record<string, Buffer>,
+  coldSeed: boolean
 ) {
   const replacement = phase(phases, 'replacementSignature');
   equal(
@@ -204,10 +225,7 @@ function checkProfiles(
   const original = phase(phases, '', 'original211');
   const migrated = phase(phases, '', 'manual220');
   equal(original.profile, migrated.profile, 'same owned migration profile');
-  requireThat(
-    ['dark', 'light'].includes(String(original.theme)) && original.before !== original.theme,
-    'Nondefault seeded preference required'
-  );
+  checkSeededProfile(phases, original, coldSeed);
   equal(migrated.before, original.theme, 'preference before replacement');
   equal(migrated.theme, original.theme, 'retained painted preference');
   equal(proof(original.configProof), proof(replacement.profileBefore), 'seeded config');

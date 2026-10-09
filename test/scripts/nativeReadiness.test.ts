@@ -1,8 +1,11 @@
 // @vitest-environment node
 import assert from 'node:assert/strict';
-import { writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Pinned release TS7 enables noUncheckedIndexedAccess; the renderer lint project does not. */
 import { promoteExistingDraft } from '../../scripts/ci/promote-existing-draft.mjs';
@@ -17,15 +20,21 @@ import {
   renderFeed,
   textProof,
 } from '../../scripts/ci/release/contract.js';
-import { manualCapturePaths } from '../../scripts/ci/release/macManualReadiness.js';
+import { checkMacManual, manualCapturePaths } from '../../scripts/ci/release/macManualReadiness.js';
 import {
   checkWindowsPriorFixture,
   fullNativeScenarioRows,
   nativeScenarioRows,
   verifyNativeReadiness,
 } from '../../scripts/ci/release/nativeReadiness.js';
-import { validateNativeArchivePaths } from '../../scripts/ci/release/nativeReadinessGithub.js';
+import * as nativeAuthority from '../../scripts/ci/release/nativeReadinessAuthority.js';
+import {
+  GitHubNativeReadinessPort,
+  validateNativeArchivePaths,
+} from '../../scripts/ci/release/nativeReadinessGithub.js';
 import { publishFullRelease } from '../../scripts/ci/release/publication.js';
+import { RELEASE220_EXECUTION as fullExecutor } from '../../scripts/ci/release/release220ExecutionPins.js';
+import { RELEASE220_MAC_EXECUTION as macExecutor } from '../../scripts/ci/release/release220MacExecutionPins.js';
 import {
   ARM211_FILES,
   ARM211_SHA,
@@ -229,12 +238,15 @@ import type {
 // This contract test becomes red if publication accepts a forged, stale, skipped or partial native proof.
 // The closed synthetic matrix is intentionally kept together for scenario mutation tests.
 // eslint-disable-next-line sonarjs/cognitive-complexity
-function fixture(full = false, toolingShaOverride?: string) {
+function fixture(full = false, toolingShaOverride?: string, originalPlan?: StagePlan) {
   const targetVersion = full ? '2.17.10' : '2.17.4';
   const scenarioRows = full ? fullNativeScenarioRows : nativeScenarioRows;
-  const toolingSha = toolingShaOverride ?? (full ? 'b'.repeat(40) : 'a'.repeat(40));
-  const applicationSha = 'b'.repeat(40);
-  const p = 'c'.repeat(64);
+  const toolingSha =
+    originalPlan?.input.toolingSha ??
+    toolingShaOverride ??
+    (full ? 'b'.repeat(40) : 'a'.repeat(40));
+  const applicationSha = originalPlan?.input.target.applicationSha ?? 'b'.repeat(40);
+  const p = originalPlan ? fullExecutor.plan : 'c'.repeat(64);
   const proof = (name: string) => textProof(name, name);
   const snapshot = {
     id: 123,
@@ -244,7 +256,7 @@ function fixture(full = false, toolingShaOverride?: string) {
     name: 'Release',
     body: '',
   };
-  const plan: StagePlan = {
+  let plan: StagePlan = {
     schemaVersion: 1,
     input: {
       repository: '777genius/agent-teams-ai',
@@ -306,6 +318,7 @@ function fixture(full = false, toolingShaOverride?: string) {
       ...Object.entries(plan.feeds).map(([name, raw]) => textProof(name, raw)),
     ].sort((a, b) => compareNames(a.name, b.name));
   }
+  if (originalPlan) plan = structuredClone(originalPlan);
   const d = digest(canonical(plan.input));
   const manifest = textProof(MANIFEST, `${canonical(manifestFor(plan))}\n`);
   const start = '2026-10-06T01:00:00Z',
@@ -325,7 +338,7 @@ function fixture(full = false, toolingShaOverride?: string) {
     planSha256: p,
     inputDigest: d,
     applicationSha,
-    targetReleaseId: 123,
+    targetReleaseId: plan.input.target.id,
     artifacts: [],
   };
   const events = (version: string) => [{ type: 'not-available', version }];
@@ -393,13 +406,13 @@ function fixture(full = false, toolingShaOverride?: string) {
         status: 'completed',
         conclusion: 'success',
         started_at: start,
-        completed_at: finish,
+        completed_at: originalPlan ? start : finish,
         steps: stepNames.map((step) => ({
           name: step,
           status: 'completed',
           conclusion: 'success',
           started_at: start,
-          completed_at: finish,
+          completed_at: originalPlan ? start : finish,
         })),
       },
     ]);
@@ -421,7 +434,7 @@ function fixture(full = false, toolingShaOverride?: string) {
         id: jobId,
         run_id: runId,
         run_attempt: 2,
-        head_sha: toolingSha,
+        head_sha: originalPlan && row.kind === 'package' ? fullExecutor.head : toolingSha,
         name: row.jobName,
         completed_at: end,
         steps: [
@@ -429,6 +442,10 @@ function fixture(full = false, toolingShaOverride?: string) {
           { ...success, name: row.upload, started_at: uploadStart, completed_at: end },
         ],
       };
+      if (originalPlan && row.kind === 'package') {
+        runs.get(runId)!.head_sha = fullExecutor.head;
+        for (const producer of jobs.get(runId) ?? []) producer.head_sha = fullExecutor.head;
+      }
       jobs.set(runId, [...(jobs.get(runId) ?? []), job]);
       sourceJobs[row.job] = {
         steps: [
@@ -442,7 +459,7 @@ function fixture(full = false, toolingShaOverride?: string) {
         digest: `sha256:${archiveSha}`,
         expired: false,
         created_at: uploadStart,
-        workflow_run: { id: runId, head_sha: toolingSha },
+        workflow_run: { id: runId, head_sha: job.head_sha },
       });
       const archive = { sha256: archiveSha, entries: {} as Record<string, Buffer> };
       archives.set(artifactId, archive);
@@ -469,7 +486,7 @@ function fixture(full = false, toolingShaOverride?: string) {
               plan: { input: plan.input, sha256: p },
               legacyFixture: false,
               targetVersion: targetVersion,
-              stagedMetadata: { releaseId: 123 },
+              stagedMetadata: { releaseId: plan.input.target.id },
             },
             inputs: plan.outputs,
             cleanup: { passed: true },
@@ -691,7 +708,7 @@ function fixture(full = false, toolingShaOverride?: string) {
     entry.sha256 = digest(bytes);
     entry.sealedSha256 = digest(canonical(value));
   }
-  return { plan, p, port, receipt, jobs, runs, archives, values, reseal };
+  return { plan, p, port, receipt, jobs, runs, artifacts, archives, values, reseal };
 }
 describe('native readiness publication boundary', () => {
   it('accepts exactly 22 actual closed scenarios in 18 authenticated outcomes, with Linux historical flag false and Mac12 unclaimed', async () => {
@@ -1443,3 +1460,334 @@ function fullArmPriorFixture() {
     installedBefore: { packageVersion: '2.17.1', architecture: 'arm64' },
   };
 }
+
+// These synthetic policy inputs do not qualify a native execution or publication.
+describe('full220 reviewed Mac executor routing and receipt custody', () => {
+  function coldManualFixture(architecture: 'arm64' | 'x64') {
+    const f = fixture(true);
+    f.plan.input.toolingSha = macExecutor.base;
+    const entries: Record<string, Buffer> = {};
+    const value: Record<string, unknown> = {
+      ...manualValue(f.plan, f.p, f.receipt.inputDigest, architecture, 203, entries),
+      passed: true,
+      executionSha: macExecutor.head,
+    };
+    const phases = value.phases as Record<string, unknown>[];
+    const original = phases.find((phase) => phase.label === 'original211');
+    assert(original);
+    // The seed launch changes the preference, then the real cold original launch
+    // must read that persisted preference before manual application replacement.
+    phases.push({
+      label: 'original211-seed',
+      profile: original.profile,
+      before: original.before,
+      theme: original.theme,
+      configProof: structuredClone(original.configProof),
+    });
+    original.before = original.theme;
+    const producer = value.producer as { run: { head_sha: string } };
+    producer.run.head_sha = macExecutor.head;
+    const verify = (receipt: Record<string, unknown>) =>
+      checkMacManual(
+        receipt,
+        architecture,
+        f.plan,
+        f.p,
+        f.receipt.inputDigest,
+        203,
+        2,
+        entries,
+        macExecutor.head
+      );
+    return { value, verify };
+  }
+  function closedMacRoutingFixture(actualHead: string) {
+    const f = fixture(true);
+    const plan = JSON.parse(
+      readFileSync(new URL('../fixtures/release220-original-P10.json', import.meta.url), 'utf8')
+    ) as StagePlan;
+    Object.assign(f.receipt, {
+      toolingSha: plan.input.toolingSha,
+      planSha256: fullExecutor.plan,
+      inputDigest: digest(canonical(plan.input)),
+      applicationSha: plan.input.target.applicationSha,
+      targetReleaseId: plan.input.target.id,
+    });
+    const mac = f.receipt.artifacts.find((artifact) =>
+      artifact.entries.some((entry) => entry.scenario === 'mac-arm64-manual')
+    );
+    assert(mac);
+    f.receipt.artifacts = [mac, ...f.receipt.artifacts.filter((artifact) => artifact !== mac)];
+    const run = f.runs.get(mac.runId);
+    assert(run);
+    run.head_sha = actualHead;
+    return { ...f, plan };
+  }
+  it('rejects reviewed Mac execution without the complete-proof capability before accepting producer evidence', async () => {
+    const f = closedMacRoutingFixture(macExecutor.head);
+    await expect(
+      verifyNativeReadiness(f.port, f.plan, fullExecutor.plan, f.receipt)
+    ).rejects.toThrow('Missing complete Mac executor proof');
+  });
+  it('rejects an unknown Mac executor rather than treating its head as original tooling', async () => {
+    const f = closedMacRoutingFixture('0'.repeat(40));
+    await expect(
+      verifyNativeReadiness(f.port, f.plan, fullExecutor.plan, f.receipt)
+    ).rejects.toThrow('native tooling SHA');
+  });
+  it.each([
+    'missing seed',
+    'duplicate seed',
+    'missing seed before',
+    'invalid seed before',
+    'nondefault seed absent',
+    'seed profile mismatch',
+    'seed config mismatch',
+    'seed theme mismatch',
+    'cold before mismatch',
+  ])('rejects %s in actual-executor cold Mac evidence', (failure) => {
+    const { value, verify } = coldManualFixture('arm64');
+    const phases = value.phases as Record<string, unknown>[];
+    const seed = phases.find((phase) => phase.label === 'original211-seed');
+    const original = phases.find((phase) => phase.label === 'original211');
+    assert(seed && original);
+    if (failure === 'missing seed') value.phases = phases.filter((phase) => phase !== seed);
+    if (failure === 'duplicate seed') phases.push(structuredClone(seed));
+    if (failure === 'missing seed before') delete seed.before;
+    if (failure === 'invalid seed before') seed.before = 'garbage';
+    if (failure === 'nondefault seed absent') seed.before = seed.theme;
+    if (failure === 'seed profile mismatch') seed.profile = '/TEST/foreign-profile';
+    if (failure === 'seed config mismatch')
+      seed.configProof = textProof('seeded-config.json', 'changed');
+    if (failure === 'seed theme mismatch') seed.theme = 'dark';
+    if (failure === 'cold before mismatch') original.before = 'system';
+    expect(() => verify(value)).toThrow();
+  });
+  it.each(['arm64', 'x64'] as const)(
+    'binds %s manual evidence to the actual executor while retaining original E10 tooling',
+    (architecture) => {
+      const { value, verify } = coldManualFixture(architecture);
+      expect(() => verify(value)).not.toThrow();
+      for (const mutate of [
+        (v: Record<string, unknown>) => {
+          delete v.executionSha;
+        },
+        (v: Record<string, unknown>) => {
+          v.executionSha = macExecutor.base;
+        },
+        (v: Record<string, unknown>) => {
+          (v.producer as { run: { head_sha: string } }).run.head_sha = macExecutor.base;
+        },
+        (v: Record<string, unknown>) => {
+          v.toolingSha = macExecutor.head;
+        },
+        (v: Record<string, unknown>) => {
+          (v.inputs as Record<string, unknown>).toolingSha = macExecutor.head;
+        },
+        (v: Record<string, unknown>) => {
+          ((v.inputs as Record<string, unknown>).prepared as Record<string, unknown>).toolingSha =
+            macExecutor.head;
+        },
+      ]) {
+        const invalid = structuredClone(value);
+        mutate(invalid);
+        expect(() => verify(invalid)).toThrow();
+      }
+    }
+  );
+});
+
+// Synthetic outcomes test the reuse policy only. The complete executor proof verifier
+// has separate cryptographic tests; this isolated spy never qualifies real release evidence.
+describe('schema3 original P10 authenticated job reuse', () => {
+  beforeEach(() => {
+    vi.spyOn(nativeAuthority, 'verifyRelease220Execution').mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  function reuseFixture() {
+    const plan = JSON.parse(
+      readFileSync(new URL('../fixtures/release220-original-P10.json', import.meta.url), 'utf8')
+    ) as StagePlan;
+    const f = fixture(true, undefined, plan);
+    f.receipt.schemaVersion = 3;
+    const attempts = new Map([...f.runs].map(([id, run]) => [`${id}:2`, structuredClone(run)]));
+    const jobs = new Map([...f.jobs].map(([id, value]) => [`${id}:2`, structuredClone(value)]));
+    f.port.run = () => {
+      throw new Error('Latest run API cannot authenticate historical evidence');
+    };
+    f.port.runAttempt = vi.fn((_, id, attempt) =>
+      Promise.resolve(attempts.get(`${id}:${attempt}`)!)
+    );
+    f.port.jobs = (_, id, attempt) => Promise.resolve(jobs.get(`${id}:${attempt}`)!);
+    f.port.release220ExecutionProof = () =>
+      Promise.resolve({} as nativeAuthority.Release220ExecutionProof);
+
+    function moveWindows(scenario: string, runId: number, attempt: number) {
+      const ref = f.receipt.artifacts.find((a) => a.entries[0]?.scenario === scenario)!;
+      const oldKey = `${ref.runId}:${ref.runAttempt}`;
+      const oldJobs = jobs.get(oldKey)!;
+      const job = oldJobs.find((item) => item.id === ref.jobId)!;
+      const preparation = oldJobs.find((item) => item.name === 'verified-windows-inputs')!;
+      const run = attempts.get(oldKey)!;
+      const row = fullNativeScenarioRows(runId, attempt).find((r) => r.scenario === scenario)!;
+      const key = `${runId}:${attempt}`;
+      const jobId = ref.jobId + 10000;
+      jobs.set(
+        oldKey,
+        oldJobs.filter((item) => item !== job)
+      );
+      attempts.set(key, { ...run, id: runId, run_attempt: attempt, conclusion: 'failure' });
+      jobs.set(key, [
+        {
+          ...structuredClone(preparation),
+          id: preparation.id + 10000,
+          run_id: runId,
+          run_attempt: attempt,
+        },
+        { ...structuredClone(job), id: jobId, run_id: runId, run_attempt: attempt },
+        // An unrelated skipped job must remain honestly failed aggregate evidence.
+        {
+          ...structuredClone(job),
+          id: jobId + 50000,
+          run_id: runId,
+          run_attempt: attempt,
+          conclusion: 'skipped',
+        },
+      ]);
+      Object.assign(ref, { runId, runAttempt: attempt, jobId, artifactName: row.artifact });
+      Object.assign(f.artifacts.get(ref.artifactId)!, {
+        name: row.artifact,
+        workflow_run: { id: runId, head_sha: fullExecutor.base },
+      });
+    }
+    moveWindows('windows-x64-fresh', 200, 1);
+    return { ...f, attempts, attemptJobs: jobs, moveWindows };
+  }
+
+  it('reuses successful jobs from distinct authentic attempts without claiming failed runs passed', async () => {
+    const f = reuseFixture();
+    f.moveWindows('windows-x64-full', 250, 1);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).resolves.toBeUndefined();
+    expect(f.port.runAttempt).toHaveBeenCalledWith(f.receipt.repository, 200, 1);
+    expect(f.port.runAttempt).toHaveBeenCalledWith(f.receipt.repository, 200, 2);
+    expect(f.port.runAttempt).toHaveBeenCalledWith(f.receipt.repository, 250, 1);
+    expect(f.attempts.get('200:1')!.conclusion).toBe('failure');
+    expect(f.receipt.artifacts).toHaveLength(14);
+    expect(f.receipt.artifacts.flatMap((a) => a.entries)).toHaveLength(18);
+  });
+  it.each([
+    'missing attempt capability',
+    'wrong attempt response',
+    'wrong producer attempt',
+    'wrong producer SHA',
+    'failed preparation',
+    'skipped preparation step',
+    'skipped native job',
+    'skipped execution step',
+    'skipped upload step',
+    'artifact head mismatch',
+    'artifact run mismatch',
+    'artifact digest mismatch',
+    'ZIP digest mismatch',
+    'entry seal mismatch',
+    'artifact outside upload',
+    'preparation after native start',
+    'failed cleanup',
+    'missing archive',
+    'unknown executor',
+    'duplicate scenario',
+    'partial matrix',
+  ])('rejects %s even in a completed failed aggregate', async (failure) => {
+    const f = reuseFixture();
+    const ref = f.receipt.artifacts[0]!;
+    const cohort = f.attemptJobs.get('200:1')!;
+    const producer = cohort[0]!;
+    const job = cohort.find((item) => item.id === ref.jobId)!;
+    const artifact = f.artifacts.get(ref.artifactId)!;
+    if (failure === 'missing attempt capability') delete f.port.runAttempt;
+    if (failure === 'wrong attempt response') f.attempts.get('200:1')!.run_attempt = 2;
+    if (failure === 'wrong producer attempt') producer.run_attempt = 2;
+    if (failure === 'wrong producer SHA') producer.head_sha = 'f'.repeat(40);
+    if (failure === 'failed preparation') producer.conclusion = 'failure';
+    if (failure === 'skipped preparation step') producer.steps[0]!.conclusion = 'skipped';
+    if (failure === 'skipped native job') job.conclusion = 'skipped';
+    if (failure === 'skipped execution step') job.steps[0]!.conclusion = 'skipped';
+    if (failure === 'skipped upload step') job.steps[1]!.conclusion = 'skipped';
+    if (failure === 'artifact head mismatch') artifact.workflow_run.head_sha = 'f'.repeat(40);
+    if (failure === 'artifact run mismatch') artifact.workflow_run.id = 999;
+    if (failure === 'artifact digest mismatch') artifact.digest = `sha256:${'f'.repeat(64)}`;
+    if (failure === 'ZIP digest mismatch') f.archives.get(ref.artifactId)!.sha256 = 'f'.repeat(64);
+    if (failure === 'entry seal mismatch') ref.entries[0]!.sealedSha256 = 'f'.repeat(64);
+    if (failure === 'artifact outside upload') artifact.created_at = '2026-10-07T01:00:00Z';
+    if (failure === 'preparation after native start')
+      producer.completed_at = '2026-10-06T01:01:00Z';
+    if (failure === 'failed cleanup') {
+      f.values.get(ref.entries[0]!.scenario)!.cleanupError = 'owned process still live';
+      f.reseal(ref.entries[0]!.scenario);
+    }
+    if (failure === 'missing archive')
+      f.port.archive = () => Promise.reject(new Error('Artifact deleted'));
+    if (failure === 'unknown executor') f.attempts.get('200:1')!.head_sha = 'f'.repeat(40);
+    if (failure === 'duplicate scenario')
+      f.receipt.artifacts[1]!.entries[0]!.scenario = ref.entries[0]!.scenario;
+    if (failure === 'partial matrix') f.receipt.artifacts.pop();
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+  });
+  it.each(['changed plan', 'changed build', 'changed app', 'changed tooling', 'carry mode'])(
+    'rejects schema3 for %s before any native API call',
+    async (change) => {
+      const f = reuseFixture();
+      if (change === 'changed plan') f.p = 'f'.repeat(64);
+      if (change === 'changed build') f.plan.input.build.runId++;
+      if (change === 'changed app') f.plan.input.target.applicationSha = 'f'.repeat(40);
+      if (change === 'changed tooling') f.plan.input.toolingSha = 'f'.repeat(40);
+      if (change === 'carry mode') f.plan.input.mode = 'carry-mac';
+      await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow();
+      expect(f.port.runAttempt).not.toHaveBeenCalled();
+    }
+  );
+  it('retains schema2 strict family and whole-run success requirements', async () => {
+    const f = reuseFixture();
+    f.receipt.schemaVersion = 2;
+    f.port.run = (_, id) => Promise.resolve(f.attempts.get(`${id}:1`)!);
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'native run'
+    );
+    f.attempts.get('200:1')!.conclusion = 'success';
+    await expect(verifyNativeReadiness(f.port, f.plan, f.p, f.receipt)).rejects.toThrow(
+      'Mixed native family runs'
+    );
+  });
+});
+
+it('authenticates historical native attempts through the real gh adapter endpoint', async () => {
+  // A disposable gh stand-in captures argv without using credentials or network.
+  const directory = await mkdtemp(path.join(tmpdir(), 'TEST-native-attempt-api-'));
+  const cli = path.join(directory, 'gh');
+  const previousPath = process.env.PATH;
+  try {
+    await writeFile(
+      cli,
+      `#!${process.execPath}\nprocess.stdout.write(JSON.stringify({id: 1234, run_attempt: 1, path: process.argv[3]}));\n`
+    );
+    await chmod(cli, 0o700);
+    process.env.PATH = `${directory}${path.delimiter}${previousPath ?? ''}`;
+    const port = new GitHubNativeReadinessPort();
+    await expect(port.runAttempt('777genius/agent-teams-ai', 1234, 1)).resolves.toMatchObject({
+      id: 1234,
+      run_attempt: 1,
+      path: 'repos/777genius/agent-teams-ai/actions/runs/1234/attempts/1',
+    });
+    await expect(port.run('777genius/agent-teams-ai', 1234)).resolves.toMatchObject({
+      path: 'repos/777genius/agent-teams-ai/actions/runs/1234',
+    });
+    expect(() => port.runAttempt('777genius/agent-teams-ai', 1234, 0)).toThrow(
+      'Invalid native GitHub identity'
+    );
+  } finally {
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -11,6 +11,8 @@ import { canonical, fileProof, requireThat } from './contract.js';
 import { executablePath } from './github.js';
 import { RELEASE216_TOOLING } from './nativeReadinessAuthority.js';
 import { RELEASE220_EXECUTION as full220Pins } from './release220ExecutionPins.js';
+import { RELEASE220_MAC_EXECUTION as mac220Pins } from './release220MacExecutionPins.js';
+import { RELEASE220_WINDOWS_EXECUTION as windows220Pins } from './release220WindowsExecutionPins.js';
 import type { Release220ExecutionProof } from './nativeReadinessAuthority.js';
 import type { ExecutionProof, ExecutionTree } from './nativeReadinessAuthority.js';
 import type {
@@ -146,8 +148,32 @@ export class GitHubNativeReadinessPort implements NativeReadinessPort {
     };
   }
 
+  async release220MacExecutionProof(): Promise<ExecutionProof> {
+    return this.closed220ExecutionProof(mac220Pins);
+  }
+
+  async release220WindowsExecutionProof(): Promise<ExecutionProof> {
+    return this.closed220ExecutionProof(windows220Pins);
+  }
+
+  private async closed220ExecutionProof(
+    executor: typeof mac220Pins | typeof windows220Pins
+  ): Promise<ExecutionProof> {
+    const root = repository(executor.repository);
+    const [commit, comparison, baseTree, executionTree] = await Promise.all([
+      api<ExecutionProof['commit']>(`${root}/git/commits/${executor.head}`),
+      api<ExecutionProof['comparison']>(`${root}/compare/${executor.base}...${executor.head}`),
+      api<ExecutionTree>(`${root}/git/trees/${executor.baseTree}?recursive=1`),
+      api<ExecutionTree>(`${root}/git/trees/${executor.tree}?recursive=1`),
+    ]);
+    return { repository: executor.repository, commit, comparison, baseTree, executionTree };
+  }
+
   run(repo: string, runId: number): Promise<NativeRun> {
     return api(`${repository(repo)}/actions/runs/${id(runId)}`);
+  }
+  runAttempt(repo: string, runId: number, attempt: number): Promise<NativeRun> {
+    return api(`${repository(repo)}/actions/runs/${id(runId)}/attempts/${id(attempt)}`);
   }
   async jobs(repo: string, runId: number, attempt: number): Promise<NativeJob[]> {
     const pages = JSON.parse(

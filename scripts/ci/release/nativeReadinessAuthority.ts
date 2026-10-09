@@ -4,6 +4,8 @@ import { canonical, compareNames, digest, requireThat } from './contract.js';
 import type { StagePlan } from './contract.js';
 import { RELEASE216_EXECUTORS } from './release216ExecutionPins.js';
 import { RELEASE220_EXECUTION as pins } from './release220ExecutionPins.js';
+import { RELEASE220_MAC_EXECUTION as macPins } from './release220MacExecutionPins.js';
+import { RELEASE220_WINDOWS_EXECUTION as windowsPins } from './release220WindowsExecutionPins.js';
 
 type Json = Record<string, unknown>;
 interface Row {
@@ -131,6 +133,62 @@ export function verifyRelease216Execution(
 }
 export function verifyRelease216MacExecution(proof: ExecutionProof): void {
   verifyRelease216Execution(proof, 'mac-old');
+}
+
+export function verifyRelease220MacExecution(proof: ExecutionProof): void {
+  verifyClosed220Executor(proof, macPins, 'Mac');
+}
+export function verifyRelease220WindowsExecution(proof: ExecutionProof): void {
+  verifyClosed220Executor(proof, windowsPins, 'Windows');
+}
+function verifyClosed220Executor(
+  proof: ExecutionProof,
+  executor: typeof macPins | typeof windowsPins,
+  role: 'Mac' | 'Windows'
+): void {
+  requireThat(
+    proof.repository === executor.repository,
+    `Wrong full220 ${role} executor repository`
+  );
+  requireThat(
+    proof.commit.sha === executor.head &&
+      proof.commit.tree.sha === executor.tree &&
+      proof.executionTree.sha === executor.tree &&
+      proof.baseTree.sha === executor.baseTree &&
+      canonical(proof.commit.parents.map((parent) => parent.sha)) === canonical([executor.base]) &&
+      proof.comparison.status === 'ahead' &&
+      proof.comparison.base_commit.sha === executor.base &&
+      proof.comparison.merge_base_commit.sha === executor.base,
+    `Unapproved full220 ${role} executor ancestry or tree`
+  );
+  const original = treeRecords(proof.baseTree, executor.baseRecords);
+  const actual = treeRecords(proof.executionTree, executor.records);
+  const delta = [...new Set([...original.keys(), ...actual.keys()])]
+    .sort(compareNames)
+    .map((name) => [name, original.get(name) ?? null, actual.get(name) ?? null])
+    .filter((item) => canonical(item[1]) !== canonical(item[2]));
+  requireThat(
+    digest(canonical(delta)) === executor.delta,
+    `Unapproved full220 ${role} complete tree delta`
+  );
+}
+
+/** E13 emits actual execution custody separately from prepared E10 tooling. */
+export function verifyRelease220WindowsProvenance(
+  value: Json,
+  toolingSha: string,
+  executionSha: string,
+  runId: number,
+  attempt: number,
+  job: string
+): void {
+  if (executionSha !== windowsPins.head) return;
+  requireThat(
+    toolingSha === windowsPins.base &&
+      canonical(object(value.execution, 'Windows execution provenance')) ===
+        canonical({ toolingSha, executionSha, runId, attempt, job }),
+    'Native proof mismatch: Windows execution provenance'
+  );
 }
 
 export interface Release220ExecutionProof extends ExecutionProof {
