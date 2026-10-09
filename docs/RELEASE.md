@@ -29,42 +29,36 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.17.10 (Prepared draft)
+## v2.17.10 (Published 2026-10-09)
 
-Source base: `main` at `f934272fd7ef6ab27bbfc83ff47d7d8da6cea542`.
-The unpublished `v2.17.7`, `v2.17.8` and `v2.17.9` tags remain unchanged. All five platforms use freshly built `2.17.10` apps.
-Agent Teams runtime `v0.0.106` includes the historical OpenCode session compatibility fix. Published archive hashes, versions and source commit were verified; the actual CLI reports `2.777.777`. Verify the final reviewed source and native installer evidence before publication.
+Published application source: `dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3`.
+The unpublished `v2.17.7`, `v2.17.8` and `v2.17.9` tags remain unchanged. All five platforms use the original freshly built `2.17.10` apps.
+Agent Teams runtime `v0.0.106` includes the historical OpenCode session compatibility fix. Published archive hashes, versions and source commit were verified; the actual CLI reports `2.777.777`.
+Publication run `37923506249/1` passed the authenticated 14-archive, 18-scenario native gate and public updater/inventory checks. The release has 41 assets and targets the application source above.
+These post-publication notes corrections change metadata only. The original P10 plan, build artifacts and publication receipts remain immutable.
 
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.17.10 -->
 
-Agent Teams 2.17.10 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
+Work with local documents and team templates more easily, with signed Mac builds bringing macOS up to date.
 
 ### What's New
 
 - Preview PDF, Word, Excel and PowerPoint documents directly in the project editor.
 - Restore open project editor tabs when returning to a project.
 - Start from ready-made team templates and save drafts before choosing a provider for launch.
-- Copy a team prompt with its roster and connect external agents to the desktop app.
+- Connect external agents to the desktop app.
 - On macOS, set monthly token and estimated API cost budgets for teams and projects.
 - On macOS, explore model breakdowns and activity calendars in the Usage dashboard.
 
-Cost figures are estimates, not provider invoices.
+The macOS Usage features above catch up with features introduced before this release. Cost figures are estimates, not provider invoices.
 
 ### Fixes
 
 - Fix OpenCode launch failures after upgrading with existing session history.
-
-### Downloads
-
-| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows x64         | 2.17.10 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10.exe)                                                                                                                                                                                                                                                                                                                                                    |
-| Windows ARM64       | 2.17.10 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10-arm64.exe)                                                                                                                                                                                                                                                                                                                                              |
-| Linux x64           | 2.17.10 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai_2.17.10_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.pacman) |
-| macOS Apple Silicon | 2.17.10 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                          |
-| macOS Intel         | 2.17.10 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-x64.dmg)                                                                                                                                                                                                                                                                                                                                                            |
+- Preserve unsaved edits when saving large files or switching editor tabs.
+- Address an OAuth security advisory affecting external-agent connections.
 
 ### macOS installation
 
@@ -72,9 +66,49 @@ macOS 2.17.10 requires macOS 13 or later. macOS 12 users can keep using the exis
 
 If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.10 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
 
-Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+### Downloads
 
-Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai_2.17.10_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
 
 <!-- RELEASE_BODY_END v2.17.10 -->
 
@@ -2136,8 +2170,28 @@ Draft releases must be treated as review artifacts:
 
 ### 5. Publish a reviewed draft
 
-The only supported draft-to-stable transition is rerunning the release workflow
-for the exact same tag with `publish_release=true`:
+The ordinary supported draft-to-stable transition is rerunning the release workflow
+for the exact same tag with `publish_release=true`.
+
+The completed original-build `v2.17.10` publication used the independently reviewed
+`publish-carried-release.yml` workflow at
+`release-tooling-v2.17.10-qualified-publication-v3` (U3
+`eae6c54f0faed4404d5b7c9d14cbd951e3d4986a`), with `full_ready=true` and
+`publish_release=true`. Its exact G3 checkout was
+`452357a6fe64b86c299beaa06aaa4198f69e5bbf`; application source remained
+`dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3`.
+The workflow authenticated the original prepared E10 tooling source
+`a0a8c4d895cfcbe3c790507fe9938b02e4464706` and immutable P10 plan SHA-256
+`b3422f64da6c44b1aeea6ba656a5db3f694c913b8a7a1289a37dc511530e4678`,
+all planned bytes and four original Mac blockmaps, and the authenticated
+14-archive, 18-scenario native receipt SHA-256
+`85dee2738ec89f8600c0ac3cc81e85748923e1b865a98bda10e04a6de9b36847`.
+Run `37923506249/1` completed `promote-existing-draft` and the public updater
+and inventory checks successfully. This bounded exception preserved the original
+application tag and installers; it does not authorize publication of another
+release or bypass any readiness gate.
+
+For the ordinary supported transition:
 
 ```bash
 gh workflow run release.yml \
@@ -2227,7 +2281,7 @@ Do not publish or call a release finished until this is true:
 - The asset names in the notes match the assets uploaded by `release.yml`.
 - For a draft handoff, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
 - For final publication, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is public, has current notes, targets the intended commit, and has the expected installer assets.
-- The successful final `release.yml` run used `publish_release=true`, including a successful `promote-existing-draft` job for draft reuse or `upload-stable-links` job for a full rebuild.
+- The successful final `release.yml` run used `publish_release=true`, including a successful `promote-existing-draft` job for draft reuse or `upload-stable-links` job for a full rebuild. For the completed original-build `v2.17.10` exception documented above, successful `publish-carried-release.yml` run `37923506249/1` instead proves `promote-existing-draft`, authenticated original stable assets, and the public updater/inventory gate.
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 
 If a draft was published before notes were written, immediately edit the public release body with `gh release edit`; do not leave a release with only generated notes.
