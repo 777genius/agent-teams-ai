@@ -3,12 +3,16 @@ name: Publish reviewed carried Mac release
 on:
   workflow_dispatch:
     inputs:
+      tooling_sha: { type: string }
+      execution_sha: { type: string }
       release_tag: { type: string, required: true }
       prepared_run_id: { type: string, required: true }
       prepared_artifact_id: { type: string, required: true }
       plan_digest: { type: string, required: true }
       native_receipt_json: { type: string, required: true }
       publish_release: { type: boolean, default: false }
+      full_ready: { type: boolean, default: false }
+      prepared_artifact_sha256: { type: string }
 
 permissions:
   contents: read
@@ -20,7 +24,8 @@ concurrency:
 
 jobs:
   publish-reviewed-carry:
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    if: ${{ !inputs.full_ready }}
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write
@@ -35,6 +40,14 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate executing release tooling before publication
+        run: |
+          set -euo pipefail
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+          pnpm exec eslint scripts/ci/publish-carried-release.ts scripts/ci/release/publisherExecution.ts scripts/ci/release/nativeReadinessAuthority.ts scripts/ci/release/nativeReadiness.ts scripts/ci/release/linuxSuccessorRuntime.ts scripts/ci/release/nativeReadinessGithub.ts scripts/ci/release/release216ExecutionPins.ts scripts/ci/release/github.ts scripts/e2e/release-updater/execution-provenance.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/windows-plan-download.mts
+          pnpm exec tsx --test scripts/e2e/release-updater/execution-provenance.test.mts scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/release216-execution-proof.test.mts scripts/e2e/release-updater/release216-publisher-authority.test.mts
+          pnpm exec vitest run test/scripts/nativeReadiness.test.ts
       - name: Authenticate immutable prepared plan
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,32 +55,44 @@ jobs:
           PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
           PLAN_DIGEST: ${{ inputs.plan_digest }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          TOOLING_SHA: ${{ inputs.tooling_sha || github.sha }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha || github.sha }}
         run: |
           set -euo pipefail
-          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$TOOLING_SHA" =~ ^[a-f0-9]{40}$ && "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$GITHUB_SHA" == "$EXECUTION_SHA" && "$(git rev-parse HEAD)" == "$EXECUTION_SHA" ]]
           [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > prepared-run.json
-          jq -e --arg sha "$GITHUB_SHA" '.head_sha == $sha and .path == ".github/workflows/stage-existing-partial-draft.yml" and .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success"' prepared-run.json
+          jq -e --arg sha "$TOOLING_SHA" '.head_sha == $sha and .path == ".github/workflows/stage-existing-partial-draft.yml" and .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success"' prepared-run.json
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID" > prepared-artifact.json
-          jq -e --arg sha "$GITHUB_SHA" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .workflow_run.id == $run and .workflow_run.head_sha == $sha and (.digest | test("^sha256:[a-f0-9]{64}$"))' prepared-artifact.json
+          jq -e --arg sha "$TOOLING_SHA" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .workflow_run.id == $run and .workflow_run.head_sha == $sha and (.digest | test("^sha256:[a-f0-9]{64}$"))' prepared-artifact.json
+          if [[ "$EXECUTION_SHA" != "$TOOLING_SHA" ]]; then
+            [[ "$GITHUB_REPOSITORY" == 777genius/agent-teams-ai && "$TOOLING_SHA" == 80ad7936b6d602c89f712e14771911098277ec44 ]]
+            [[ "$PREPARED_RUN_ID" == 37614821129 && "$PREPARED_ARTIFACT_ID" == 11479573483 && "$PLAN_DIGEST" == 87207cedd0bf2a8a7fcee0ea44c876a04acea0873c30553b9da26bafa62f4c91 ]]
+            jq -e '.id == 37614821129 and .run_attempt == 1 and .repository.full_name == "777genius/agent-teams-ai"' prepared-run.json
+            jq -e '.id == 11479573483 and .size_in_bytes == 5248 and .digest == "sha256:b1cb15d21d6946c7fb1cf95c745ec19d410cfa779b403f10754198b0c69b90b1"' prepared-artifact.json
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID/attempts/1/jobs?per_page=100" > prepared-jobs.json
+            jq -e --slurpfile artifact prepared-artifact.json '[.jobs[] | select(.id == 112770514677 and .name == "assemble-draft" and .run_id == 37614821129 and .run_attempt == 1 and .head_sha == "80ad7936b6d602c89f712e14771911098277ec44" and .status == "completed" and .conclusion == "success") | .steps[] | select(.name == "Persist immutable metadata plan" and .status == "completed" and .conclusion == "success" and (.started_at <= $artifact[0].created_at) and ($artifact[0].created_at <= .completed_at))] | length == 1' prepared-jobs.json
+          fi
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID/zip" > plan.zip
           [[ "$(sha256sum plan.zip | cut -d ' ' -f 1)" == "$(jq -r '.digest | sub("^sha256:"; "")' prepared-artifact.json)" ]]
           [[ "$(unzip -Z1 plan.zip | LC_ALL=C sort | tr '\n' ' ')" == "stage-plan.json stage-plan.sha256 " ]]
           [[ "$(unzip -p plan.zip stage-plan.sha256)" == "$PLAN_DIGEST" ]]
           unzip -p plan.zip stage-plan.json > stage-plan.json
           [[ "$(sha256sum stage-plan.json | cut -d ' ' -f 1)" == "$PLAN_DIGEST" ]]
-          jq -e --arg sha "$GITHUB_SHA" --arg tag "$RELEASE_TAG" '.input.toolingSha == $sha and .input.target.tag == $tag and .input.mode == "carry-mac"' stage-plan.json
+          jq -e --arg sha "$TOOLING_SHA" --arg tag "$RELEASE_TAG" '.input.toolingSha == $sha and .input.target.tag == $tag and .input.mode == "carry-mac"' stage-plan.json
       - name: Verify complete native readiness and optionally publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
           PLAN_DIGEST: ${{ inputs.plan_digest }}
           PUBLISH_RELEASE: ${{ inputs.publish_release }}
+          EXECUTION_SHA: ${{ inputs.execution_sha || inputs.tooling_sha || github.sha }}
         run: |
           set -euo pipefail
           flags=()
           if [[ "$PUBLISH_RELEASE" == true ]]; then flags=(--publish); fi
-          pnpm exec tsx scripts/ci/publish-carried-release.ts --plan stage-plan.json --plan-digest "$PLAN_DIGEST" --output publication-result.json "${flags[@]}"
+          pnpm exec tsx scripts/ci/publish-carried-release.ts --plan stage-plan.json --plan-digest "$PLAN_DIGEST" --execution-sha "$EXECUTION_SHA" --output publication-result.json "${flags[@]}"
       - name: Preserve readiness or publication result
         if: always()
         uses: actions/upload-artifact@v7
@@ -75,3 +100,99 @@ jobs:
           name: carried-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: publication-result.json
           if-no-files-found: warn
+
+  promote-existing-draft:
+    if: ${{ inputs.full_ready }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The reviewed original plan and actual native artifacts authorize publication.
+    permissions:
+      contents: write
+      actions: read
+    env:
+      CHECKOUT_SHA: 598aec3d9aab5bdbf6174b3e65f49b33d2e382a7
+      APPLICATION_SHA: dc1ec2d927b8c27c20d18c976ee615b27a2bd6f3
+      ACTUAL_WORKFLOW_SHA: ${{ github.sha }}
+      RELEASE_TAG: v2.17.10
+      PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+      PREPARED_RUN_ATTEMPT: '1'
+      PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+      PREPARED_ARTIFACT_SHA256: ${{ inputs.prepared_artifact_sha256 }}
+      PLAN_DIGEST: ${{ inputs.plan_digest }}
+      NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
+      PUBLISH_RELEASE: ${{ inputs.publish_release }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 598aec3d9aab5bdbf6174b3e65f49b33d2e382a7
+          persist-credentials: false
+      - name: Bind workflow origin and immutable full220 checkout
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_TAG: ${{ inputs.release_tag }}
+          WORKFLOW_PATH: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == 777genius/agent-teams-ai && "$DISPATCH_TAG" == "$RELEASE_TAG" ]]
+          [[ "$GITHUB_SHA" == "$ACTUAL_WORKFLOW_SHA" && "$ACTUAL_WORKFLOW_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$CHECKOUT_SHA" =~ ^[a-f0-9]{40}$ && "$APPLICATION_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha)" == "$APPLICATION_SHA" ]]
+          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$PREPARED_ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$(printf '%s' "$NATIVE_RECEIPT_JSON" | wc -c)" -le 100000 ]]
+          [[ "$PUBLISH_RELEASE" == true || "$PUBLISH_RELEASE" == false ]]
+          NATIVE_RECEIPT_SHA256=$(printf '%s' "$NATIVE_RECEIPT_JSON" | sha256sum | cut -d ' ' -f 1)
+          jq -n --arg workflowSha "$ACTUAL_WORKFLOW_SHA" --arg checkoutSha "$CHECKOUT_SHA" --arg applicationSha "$APPLICATION_SHA" \
+            --arg workflowRef "$WORKFLOW_PATH" --arg repository "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" --arg planSha256 "$PLAN_DIGEST" \
+            --arg nativeReceiptSha256 "$NATIVE_RECEIPT_SHA256" \
+            --arg artifactSha256 "$PREPARED_ARTIFACT_SHA256" \
+            --argjson preparedRunId "$PREPARED_RUN_ID" --argjson preparedArtifactId "$PREPARED_ARTIFACT_ID" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson publicationRequested "$PUBLISH_RELEASE" \
+            '{schemaVersion:1,workflowSha:$workflowSha,checkoutSha:$checkoutSha,applicationSha:$applicationSha,workflowRef:$workflowRef,repository:$repository,tag:$tag,planSha256:$planSha256,nativeReceiptSha256:$nativeReceiptSha256,preparedRunId:$preparedRunId,preparedRunAttempt:1,preparedArtifactId:$preparedArtifactId,preparedArtifactSha256:$artifactSha256,runId:$runId,runAttempt:$runAttempt,publicationRequested:$publicationRequested}' > execution-identity.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate immutable full220 tooling types
+        run: |
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.release-tooling.json
+          node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.updater-e2e.json
+      - name: Validate exact G closed executor and publisher authority
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: |
+          set -euo pipefail
+          pnpm exec eslint --parser-options '{"projectService":false,"project":["./tsconfig.release-tooling.json","./tsconfig.updater-e2e.json"]}' scripts/ci/publish-full-release.ts scripts/ci/release/publication.ts scripts/ci/release/full220Supplemental.ts scripts/ci/release/release220ExecutionPins.ts scripts/ci/release/release220PublisherAuthority.ts scripts/ci/release/nativeReadinessAuthority.ts scripts/ci/release/nativeReadinessExecution.ts scripts/ci/release/nativeReadinessGithub.ts scripts/ci/release/macManualReadiness.ts scripts/ci/release/release220MacExecutionPins.ts scripts/ci/release/release220WindowsExecutionPins.ts scripts/e2e/release-updater/release220-publisher-authority.test.mts
+          pnpm exec eslint --config eslint.fast.config.js scripts/ci/release/nativeReadiness.ts
+          pnpm exec tsx --test scripts/e2e/release-updater/release220-publisher-authority.test.mts
+          pnpm exec vitest run --maxWorkers=1 test/scripts/release220ExecutionAuthority.test.ts test/scripts/release220MacExecutionAuthority.test.ts test/scripts/release220WindowsExecutionAuthority.test.ts test/scripts/nativeReadiness.test.ts test/scripts/full220Supplemental.test.ts test/scripts/partialReleaseStaging.test.ts
+      - name: Verify prepared full220 and publish only when requested
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$CHECKOUT_SHA" ]]
+          args=(--execution-identity execution-identity.json --plan-digest "$PLAN_DIGEST" --output publication-result.json)
+          if [[ "$PUBLISH_RELEASE" == true ]]; then args+=(--publish); fi
+          pnpm exec tsx scripts/ci/publish-full-release.ts "${args[@]}"
+      - name: Verify public latest updater release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: 777genius/agent-teams-ai
+          RELEASE_ID: '406694223'
+        run: bash scripts/ci/verify-published-updater-release.sh
+      - name: Preserve full220 readiness and workflow checkout identity
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full220-readiness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication-result.json
+            execution-identity.json
+          if-no-files-found: error
