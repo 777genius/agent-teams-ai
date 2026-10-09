@@ -98,7 +98,7 @@ describe('updaterReleaseMetadata', () => {
   });
 
   it('parses bounded Atom entries with the official XML parser and applies repository/version/marker filters', () => {
-    const url = getReleaseAtomUrls()[0]!;
+    const url = getReleaseAtomUrls()[0];
     const link = 'https://github.com/777genius/agent-teams-ai/releases/tag/';
     const atom = `<feed>
       <entry><title>Stable &amp; reviewed</title><link href="${link}v2.17.6"/><content>&lt;p&gt;Older &amp; useful changes.&lt;/p&gt;</content></entry>
@@ -129,8 +129,16 @@ describe('updaterReleaseMetadata', () => {
     ]);
   });
 
+  it('accepts canonical entry links when the verified legacy Atom URL redirects after the repository rename', () => {
+    const legacyUrl = getReleaseAtomUrls(getReleaseApiUrls(version)[1])[0];
+    const atom = `<feed><entry><link href="https://github.com/777genius/agent-teams-ai/releases/tag/v2.17.6"/><content>Older canonical changes.</content></entry><entry><link href="https://github.com/other/repository/releases/tag/v2.17.8"/><content>Unrelated changes.</content></entry></feed>`;
+    expect(getUpdaterAtomHistory(atom, legacyUrl, '2.17.1', version)).toEqual([
+      { version: '2.17.6', note: 'Older canonical changes.' },
+    ]);
+  });
+
   it('caps Atom text bytes and inspected entries', () => {
-    const url = getReleaseAtomUrls()[0]!;
+    const url = getReleaseAtomUrls()[0];
     expect(
       getUpdaterAtomHistory(
         `<feed>${'x'.repeat(MAX_UPDATER_ATOM_BYTES)}</feed>`,

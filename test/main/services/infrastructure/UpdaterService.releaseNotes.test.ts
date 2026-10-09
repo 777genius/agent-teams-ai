@@ -371,7 +371,7 @@ describe('UpdaterService release notes', () => {
       expect(atomCalls).toHaveLength(1);
       if (failure === 'history') {
         const rest = fixture.fetch.mock.calls.find(([url]) => String(url).includes('?per_page='))!;
-        expect(atomCalls[0]![1].signal).toBe(rest[1].signal);
+        expect(atomCalls[0][1].signal).toBe(rest[1].signal);
       }
     }
   );

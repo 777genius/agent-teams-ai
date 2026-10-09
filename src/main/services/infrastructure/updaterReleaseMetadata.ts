@@ -65,13 +65,23 @@ export function getUpdaterAtomHistory(
     // and CDATA content. Atom is independent of GitHub's REST rate limit.
     const feed = parseXml(raw);
     if (feed.name !== 'feed') return null;
-    const releasePrefix = feedUrl.replace(/releases\.atom$/, 'releases/tag/');
+    // GitHub redirects the legacy repository's Atom feed to the canonical
+    // repository, whose entries use canonical links after the rename.
+    const ownedFeedUrls = getReleaseAtomUrls();
+    const releasePrefixes = (feedUrl === ownedFeedUrls[1] ? ownedFeedUrls : [feedUrl]).map((url) =>
+      url.replace(/releases\.atom$/, 'releases/tag/')
+    );
     const releases: GithubReleaseMetadata[] = [];
     for (const entry of feed.getElements('entry').slice(0, 100)) {
       const link = entry
         .getElements('link')
-        .find((item) => item.attributes?.href?.startsWith(releasePrefix));
-      const tag = link?.attributes?.href?.slice(releasePrefix.length);
+        .find((item) =>
+          releasePrefixes.some((prefix) => item.attributes?.href?.startsWith(prefix))
+        );
+      const releasePrefix = releasePrefixes.find((prefix) =>
+        link?.attributes?.href?.startsWith(prefix)
+      );
+      const tag = releasePrefix ? link?.attributes?.href?.slice(releasePrefix.length) : undefined;
       const body = entry.elementValueOrEmpty('content');
       releases.push({
         tag_name: tag,
