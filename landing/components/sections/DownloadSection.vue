@@ -349,7 +349,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
 
           <!-- Active indicator -->
           <div
-            v-if="downloadStore.selectedId === asset.id && !requiresArchitectureSelection(asset)"
+            v-if="downloadStore.selectedId === asset.id && downloadStore.selectionSource === 'auto' && downloadStore.os === asset.os && downloadStore.arch !== 'unknown'"
             class="download-section__card-indicator"
           >
             <v-icon size="16" :icon="mdiCheckCircle" />
@@ -760,6 +760,7 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
 }
 
 .download-section__card-arch {
+  display: block;
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
