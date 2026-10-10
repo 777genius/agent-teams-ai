@@ -31,14 +31,7 @@ import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import {
-  CheckCheck,
-  Dock,
-  MessageSquare,
-  MoreHorizontal,
-  PanelBottom,
-  PanelLeft,
-} from 'lucide-react';
+import { CheckCheck, MessageSquare, MoreHorizontal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { type TimelineViewport } from '../activity/ActivityTimeline';
@@ -62,7 +55,7 @@ import {
 } from './MessagesExpandedChrome';
 import { MessagesFloatingComposerModeControls } from './MessagesFloatingComposerModeControls';
 import { MessagesInlineBackButton } from './MessagesInlineBackButton';
-import { MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
+import { MessagesInlineLayoutActions, MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
 import {
   conversationChrome,
   conversationScopeKey,
@@ -401,8 +394,24 @@ export const MessagesPanel = memo(function MessagesPanel({
   });
   const { renderSurface, navigationSurface, scope, openChat, backToList, threadOpenedAt } =
     conversation;
-  const groupConversation = useMessagesGroupConversation(teamName, activeContextId, members, scope);
-  const { groupId, group: activeGroup, history: groupHistory, archiveAction: groupArchiveAction, renderComposer: renderGroupComposer } = groupConversation;
+  const groupConversation = useMessagesGroupConversation(
+    teamName,
+    activeContextId,
+    members,
+    scope,
+    {
+      textareaRef: composerTextareaRef,
+      autoFocusKey: threadOpenedAt,
+      suggestionPlacement: 'above',
+    }
+  );
+  const {
+    groupId,
+    group: activeGroup,
+    history: groupHistory,
+    archiveAction: groupArchiveAction,
+    renderComposer: renderGroupComposer,
+  } = groupConversation;
   const effectiveMessages = groupId ? groupHistory.messages : messages;
   const loadingOlderMessages = groupId ? groupHistory.loading : messagesLoadingOlder;
   const hasMore = groupId ? groupHistory.hasMore : messagesHasMore;
@@ -785,7 +794,13 @@ export const MessagesPanel = memo(function MessagesPanel({
     if (!open) setExpandedItemKey(null);
   }, []);
 
-  const { readSet, markAllRead } = useMessagesReadState(teamName, activeContextId, canonicalMessages, groupHistory.messages, messagesHasMore);
+  const { readSet, markAllRead } = useMessagesReadState(
+    teamName,
+    activeContextId,
+    canonicalMessages,
+    groupHistory.messages,
+    messagesHasMore
+  );
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
   const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
   const visibleReadFlushFrameRef = useRef<number | null>(null);
@@ -1070,14 +1085,23 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const renderCompactComposerSection = (): React.JSX.Element =>
     groupId ? (
-      renderGroupComposer()
+      renderGroupComposer({ layout: 'compact' })
     ) : (
       <ThreadAwareMessageComposer layout="compact" {...sharedComposerProps} />
     );
 
   const renderFloatingComposerSection = (): React.JSX.Element =>
     groupId ? (
-      renderGroupComposer(<>{groupArchiveAction}{renderFloatingComposerModeControls()}</>)
+      renderGroupComposer({
+        layout: 'compact',
+        widthMode: 'floating-adaptive',
+        cornerActionPrefix: (
+          <>
+            {groupArchiveAction}
+            {renderFloatingComposerModeControls()}
+          </>
+        ),
+      })
     ) : (
       <MessagesComposerSection
         {...sharedComposerProps}
@@ -1089,9 +1113,27 @@ export const MessagesPanel = memo(function MessagesPanel({
       />
     );
 
-  const renderStatusSection = (position: 'inline' | 'sidebar', placement?: 'composer'): React.JSX.Element | null => groupId ? null : (
-    <MessagesStatusSection scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE} members={members} tasks={tasks} messages={effectiveMessages} isTeamAlive={isTeamAlive} pendingRepliesByMember={pendingRepliesByMember} teamName={teamName} onQueuedDiscarded={handleQueuedDiscarded} layout="flow" position={position} placement={placement} onMemberClick={onMemberClick} onTaskClick={onTaskClick} />
-  );
+  const renderStatusSection = (
+    position: 'inline' | 'sidebar',
+    placement?: 'composer'
+  ): React.JSX.Element | null =>
+    groupId ? null : (
+      <MessagesStatusSection
+        scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
+        members={members}
+        tasks={tasks}
+        messages={effectiveMessages}
+        isTeamAlive={isTeamAlive}
+        pendingRepliesByMember={pendingRepliesByMember}
+        teamName={teamName}
+        onQueuedDiscarded={handleQueuedDiscarded}
+        layout="flow"
+        position={position}
+        placement={placement}
+        onMemberClick={onMemberClick}
+        onTaskClick={onTaskClick}
+      />
+    );
 
   const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
   const renderTimelineSection = (): React.JSX.Element => (
@@ -1244,10 +1286,18 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const renderChatList = (selected = false): React.JSX.Element => (
-    <MessagesConversationList key={`${activeContextId}:${teamName}`} items={chatListItems}
-      conversation={groupConversation} teamName={teamName} members={members}
-      messages={messages} readSet={readSet} selectedScope={selected ? scope : undefined}
-      isTeamAlive={isTeamAlive} onOpen={handleOpenChat} />
+    <MessagesConversationList
+      key={`${activeContextId}:${teamName}`}
+      items={chatListItems}
+      conversation={groupConversation}
+      teamName={teamName}
+      members={members}
+      messages={messages}
+      readSet={readSet}
+      selectedScope={selected ? scope : undefined}
+      isTeamAlive={isTeamAlive}
+      onOpen={handleOpenChat}
+    />
   );
 
   const renderMessagesContent = (): React.JSX.Element => (
@@ -1506,60 +1556,13 @@ export const MessagesPanel = memo(function MessagesPanel({
         ) : undefined
       }
       headerExtra={
-        <div className="flex items-center gap-1">
+        <MessagesInlineLayoutActions
+          onMoveToBottomSheet={moveToBottomSheet}
+          onMoveToFloatingComposer={moveToFloatingComposer}
+          onMoveToSidebar={moveToSidebar}
+        >
           {groupArchiveAction}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveToBottomSheet();
-                }}
-                aria-label={t('messages.actions.moveMessagesToBottomSheet')}
-              >
-                <PanelBottom size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t('messages.actions.moveToBottomSheet')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveToFloatingComposer();
-                }}
-                aria-label={t('messages.actions.floatMessagesComposer')}
-              >
-                <Dock size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t('messages.actions.floatComposer')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveToSidebar();
-                }}
-                aria-label={t('messages.actions.moveMessagesToSidebar')}
-              >
-                <PanelLeft size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t('messages.actions.moveToSidebar')}</TooltipContent>
-          </Tooltip>
-        </div>
+        </MessagesInlineLayoutActions>
       }
       defaultOpen
       action={
