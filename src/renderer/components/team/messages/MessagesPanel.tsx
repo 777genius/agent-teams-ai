@@ -645,7 +645,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       canonicalTeamMessages(
         [
           ...new Map(
-            [...messages, ...groupHistory.messages].map((message) => [
+            [...messages, ...groupHistory.knownMessages].map((message) => [
               toMessageKey(message),
               message,
             ])
@@ -653,7 +653,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         ],
         leadNames
       ),
-    [messages, groupHistory.messages, leadNames]
+    [messages, groupHistory.knownMessages, leadNames]
   );
 
   const filteredMessages = useMemo(
@@ -1293,7 +1293,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       conversation={groupConversation}
       teamName={teamName}
       members={members}
-      messages={messages}
+      messages={canonicalMessages}
       readSet={readSet}
       selectedScope={selected ? scope : undefined}
       isTeamAlive={isTeamAlive}
