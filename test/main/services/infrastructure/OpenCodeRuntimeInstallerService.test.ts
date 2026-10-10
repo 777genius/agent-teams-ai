@@ -185,6 +185,46 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   it.each([
+    ['2.0.0', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', false],
+    ['2.0.21-beta.1', false],
+    ['2.0.21+build.7', false],
+  ])('discovers only recognized native runtime versions on PATH (%s)', async (version, supported) => {
+    const binDir = path.join(tempRoot!, 'TEST-bin');
+    await mkdir(binDir, { recursive: true });
+    const binaryPath = path.join(binDir, 'opencode');
+    await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+    process.env.PATH = binDir;
+    execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+    expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+      supported ? binaryPath : null
+    );
+  });
+
+  it.each([
+    ['2.0.0', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', false],
+    ['2.0.21-beta.1', false],
+    ['2.0.21+build.7', false],
+  ])('discovers only recognized managed native runtime versions (%s)', async (version, supported) => {
+    const binaryPath = path.join(tempRoot!, 'TEST-managed-opencode');
+    await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+    await mkdir(runtimeRoot, { recursive: true });
+    await writeFile(path.join(runtimeRoot, 'current.json'), JSON.stringify({
+      schemaVersion: 1, version, platformPackage: '@opencode/cli-linux-x64',
+      binaryPath, integrity: 'TEST', installedAt: new Date().toISOString(),
+    }));
+    execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(supported ? binaryPath : null);
+    expect(await new OpenCodeRuntimeInstallerService().getReadinessStatus()).toMatchObject({
+      installed: supported, source: 'app-managed', state: supported ? 'ready' : 'failed',
+    });
+  });
+
+  it.each([
     ['1.18.3', true],
     ['2.0.0', true],
     ['opencode v2.0.21', true],

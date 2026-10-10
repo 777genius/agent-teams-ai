@@ -1,9 +1,9 @@
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import { probeOpenCodeBinaryVersion } from '@features/runtime-provider-management/main';
 import {
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
-import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
 import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from './openCodeBridgeRuntimeEnv';
 import {
@@ -43,7 +43,7 @@ export async function readOpenCodeEffectiveRuntimeStatus(
     : selectedBinary.binaryPath;
   try {
     const result = await probeBinaryVersion(binaryPath);
-    if (result.ok && isAgentTeamsOpenCodeVersionSupported(result.version)) {
+    if (result.ok && isRecognizedOpenCodeRuntimeVersion(result.version)) {
       return {
         installed: true,
         version: result.version ?? undefined,

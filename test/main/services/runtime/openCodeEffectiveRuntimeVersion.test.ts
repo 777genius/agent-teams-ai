@@ -23,6 +23,26 @@ describe('readOpenCodeEffectiveRuntimeStatus', () => {
     return binaryPath;
   }
 
+  it.each([
+    ['2.0.0', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', false],
+    ['2.0.21-beta.1', false],
+    ['2.0.21+build.7', false],
+  ])('reports only recognized effective native runtime overrides (%s)', async (version, supported) => {
+    const binaryPath = await writeBinary('TEST-v2-opencode');
+    const defaultStatus = { installed: true, version: '1.18.35' };
+    const readDefaultStatus = vi.fn(() => Promise.resolve(defaultStatus));
+    const probe = vi.fn(() => Promise.resolve({ ok: true, version }));
+    await expect(readOpenCodeEffectiveRuntimeStatus(
+      { OPENCODE_BIN_PATH: binaryPath }, readDefaultStatus, probe
+    )).resolves.toEqual(supported ? {
+      installed: true, version, binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+    } : defaultStatus);
+    expect(readDefaultStatus).toHaveBeenCalledTimes(supported ? 0 : 1);
+    expect(probe).toHaveBeenCalledWith(binaryPath);
+  });
+
   it('uses the selected managed runtime without an explicit override', async () => {
     const readDefaultStatus = vi.fn(() => Promise.resolve({ installed: true, version: '1.18.32' }));
     const probe = vi.fn();
