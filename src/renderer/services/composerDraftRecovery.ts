@@ -89,6 +89,12 @@ function isContent(value: unknown): value is ComposerDraftContent {
         typeof attachment.data === 'string' &&
         (attachment.filePath === undefined || typeof attachment.filePath === 'string')
     ) &&
+    (value.groupRecipient === undefined ||
+      (isObject(value.groupRecipient) &&
+        (value.groupRecipient.kind === 'all' ||
+          (value.groupRecipient.kind === 'member' &&
+            typeof value.groupRecipient.memberName === 'string' &&
+            value.groupRecipient.memberName.trim().length > 0)))) &&
     (value.restoredOrigin === undefined ||
       (isObject(value.restoredOrigin) &&
         value.restoredOrigin.kind === 'unconfirmed-send' &&

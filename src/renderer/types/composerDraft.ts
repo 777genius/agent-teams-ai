@@ -42,6 +42,10 @@ export interface ComposerDraftContent {
   readonly chips: InlineChip[];
   readonly attachments: AttachmentPayload[];
   readonly actionMode: AgentActionMode;
+  /** Explicit group target; absence on an old pending attempt means All. */
+  readonly groupRecipient?:
+    | { readonly kind: 'all' }
+    | { readonly kind: 'member'; readonly memberName: string };
   readonly restoredOrigin?: ComposerRestoredOrigin;
 }
 

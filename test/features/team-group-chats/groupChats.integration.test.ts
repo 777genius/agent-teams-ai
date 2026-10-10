@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
-import { GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
+import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
 import { registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
 import { createOpenCodeBridgeHandshakeIdentityHash, type OpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
@@ -40,6 +40,8 @@ describe('group chat main authority and durable identity', () => {
   let roster: string[];
   let deliveries: InboxMessage[];
   let available: boolean;
+  let unavailableMembers: Set<string>;
+  let runPrefix: string;
   let deliver: TeamGroupChatsPorts['deliver'];
   const create = () =>
     feature.create({
@@ -64,6 +66,8 @@ describe('group chat main authority and durable identity', () => {
     roster = ['lead', 'alice', 'bob'];
     deliveries = [];
     available = true;
+    unavailableMembers = new Set();
+    runPrefix = 'run';
     deliver = async (_team, message) => {
       deliveries.push(message);
       return 'accepted';
@@ -71,7 +75,8 @@ describe('group chat main authority and durable identity', () => {
     feature = createTeamGroupChatsFeature({
       roster: async () => roster,
       getRun: async (_team, name) =>
-        available ? { runKey: `run:${name}`, protocolVersion: 1, provider: 'native' } : null,
+        available && !unavailableMembers.has(name)
+          ? { runKey: `${runPrefix}:${name}`, protocolVersion: 1, provider: 'native' } : null,
       configurationOperation: (_team, operation) => operation(),
       deliver: (...args) => deliver(...args),
     });
@@ -210,6 +215,93 @@ describe('group chat main authority and durable identity', () => {
     ) as InboxMessage[];
     expect(rows).toHaveLength(1);
     expect(rows[0].groupMessageId).toBe(rows[0].messageId);
+  });
+
+  it('delivers a human target only, freezes its identity across roster/run changes, and keeps All distinct', async () => {
+    const group = await create();
+    unavailableMembers.add('lead');
+    expect((await feature.list({ teamName: 'sandbox' }))[0]).toMatchObject({
+      canSend: false, reason: 'recipient-unavailable: lead', availableRecipientNames: ['alice'],
+    });
+    const request = { teamName: 'sandbox', groupChatId: group.id, messageId: randomUUID(),
+      text: 'Alice only', recipientName: 'alice' };
+    await expect(feature.send({ ...request, messageId: randomUUID(), recipientName: 'lead' }))
+      .rejects.toMatchObject({ code: 'recipient-unavailable' });
+    const saved = await feature.send(request);
+    expect(deliveries.map(row => row.to)).toEqual(['alice']);
+    expect(saved.deliverySummary?.recipients.map(row => row.memberName)).toEqual(['alice']);
+    await expect(feature.send({ ...request, messageId: randomUUID(), recipientName: 'bob' }))
+      .rejects.toMatchObject({ code: 'invalid-recipient' });
+    await expect(feature.send({ ...request, messageId: randomUUID() }, 'alice'))
+      .rejects.toMatchObject({ code: 'invalid-input' });
+    unavailableMembers.clear();
+    const allRequest = { teamName: 'sandbox', groupChatId: group.id, messageId: randomUUID(),
+      text: 'Everyone' };
+    const allSaved = await feature.send(allRequest);
+    expect(deliveries.map(row => row.to)).toEqual(['alice', 'lead', 'alice']);
+    roster = ['lead', 'david'];
+    runPrefix = 'replacement';
+    available = false;
+    expect(await feature.send(request)).toEqual(saved);
+    expect(await feature.send(allRequest)).toEqual(allSaved);
+    await expect(feature.send({ ...request, recipientName: undefined }))
+      .rejects.toMatchObject({ code: 'conflicting-id' });
+    await expect(feature.send({ ...request, recipientName: 'david' }))
+      .rejects.toMatchObject({ code: 'conflicting-id' });
+    await expect(feature.send({ ...allRequest, recipientName: 'lead' }))
+      .rejects.toMatchObject({ code: 'conflicting-id' });
+    const rows = JSON.parse(await readFile(join(state.root, 'sandbox', 'inboxes', 'user.json'), 'utf8')) as InboxMessage[];
+    expect(rows.map(row => row.groupRecipientNames)).toEqual([['alice'], ['lead', 'alice']]);
+    expect(rows[0].groupRecipientRunKeys).toEqual({ alice: 'run:alice' });
+    expect(rows[1].groupRecipientRunKeys).toEqual({ lead: 'run:lead', alice: 'run:alice' });
+    await feature.setArchived({ teamName: 'sandbox', groupChatId: group.id, archived: true });
+    expect((await feature.list({ teamName: 'sandbox' }))[0].availableRecipientNames).toEqual([]);
+    await expect(feature.send({ ...request, messageId: randomUUID(), recipientName: 'lead' }))
+      .rejects.toMatchObject({ code: 'archived' });
+    await feature.setArchived({ teamName: 'sandbox', groupChatId: group.id, archived: false });
+    roster = ['lead'];
+    await expect(feature.send({ ...request, messageId: randomUUID(), recipientName: 'lead' }))
+      .rejects.toMatchObject({ code: 'minimum-members' });
+    expect(deliveries).toHaveLength(3);
+  });
+
+  it('creates the reserved All destination only on human send and protects it from custom collisions/archive', async () => {
+    expect(await feature.list({ teamName: 'sandbox' }, 'alice')).toEqual([]);
+    await expect(feature.send({ teamName: 'sandbox', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      messageId: randomUUID(), text: 'Agent cannot create' }, 'alice'))
+      .rejects.toMatchObject({ code: 'not-found' });
+    await expect(feature.create({ teamName: 'sandbox', id: DEFAULT_TEAM_GROUP_CHAT_ID,
+      name: 'Custom', selectedMemberNames: ['lead', 'alice'], excludedMemberNames: [],
+      autoIncludeNewMembers: false })).rejects.toMatchObject({ code: 'reserved-group' });
+    roster = ['lead'];
+    await expect(feature.send({ teamName: 'sandbox', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      messageId: randomUUID(), text: 'Solo cannot send All' }))
+      .rejects.toMatchObject({ code: 'minimum-members' });
+    expect(await feature.list({ teamName: 'sandbox' })).toEqual([]);
+    roster = ['lead', 'alice'];
+    const request = { teamName: 'sandbox', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      messageId: randomUUID(), text: 'Standard All' };
+    const saved = await feature.send(request);
+    expect(deliveries.map(row => row.to)).toEqual(['lead', 'alice']);
+    expect(await feature.list({ teamName: 'sandbox' }, 'alice')).toEqual([
+      expect.objectContaining({ id: DEFAULT_TEAM_GROUP_CHAT_ID, name: 'All agents',
+        membership: { kind: 'auto', excludedMemberNames: [] }, memberNames: ['lead', 'alice'] }),
+    ]);
+    await expect(feature.setArchived({ teamName: 'sandbox', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      archived: true })).rejects.toMatchObject({ code: 'reserved-group' });
+    roster.push('bob');
+    expect((await feature.list({ teamName: 'sandbox' }))[0].memberNames).toEqual(['lead', 'alice', 'bob']);
+    expect(await feature.send(request)).toEqual(saved);
+    expect(deliveries).toHaveLength(2);
+    await feature.send({ ...request, messageId: randomUUID(), text: 'New member included' });
+    expect(deliveries.slice(2).map(row => row.to)).toEqual(['lead', 'alice', 'bob']);
+    const registry = join(state.root, 'sandbox', 'group-chats.json');
+    const valid = JSON.parse(await readFile(registry, 'utf8'));
+    valid.groups[0].membership = { kind: 'fixed', memberNames: ['lead', 'alice'] };
+    await writeFile(registry, JSON.stringify(valid));
+    await expect(feature.send({ ...request, messageId: randomUUID() }))
+      .rejects.toMatchObject({ code: 'reserved-group' });
+    expect(deliveries).toHaveLength(5);
   });
 
   it('preserves unrelated legacy group keys while rejecting partial current protocol rows', async () => {
@@ -366,6 +458,13 @@ describe('group chat main authority and durable identity', () => {
       const agent = await post('/api/teams/sandbox/group-chats/send', proactive);
       expect(agent.statusCode).toBe(200);
       expect(deliveries.map((row) => [row.from, row.to, row.groupChatId])).toEqual([['alice', 'lead', '10000000-0000-4000-8000-000000000001']]);
+      const selected = await post('/api/team-group-chats/send', { ...proactive, teamName: 'sandbox',
+        messageId: randomUUID(), recipientName: 'alice' });
+      expect(selected.statusCode).toBe(200);
+      expect(deliveries.at(-1)).toMatchObject({ from: 'user', to: 'alice' });
+      const rejectedTarget = await post('/api/teams/sandbox/group-chats/send', { ...proactive,
+        messageId: randomUUID(), recipientName: 'lead' });
+      expect(rejectedTarget.json().error.code).toBe('invalid-input');
       const nonmember = await post('/api/teams/sandbox/group-chats/send', { ...proactive, from: 'bob', messageId: '20000000-0000-4000-8000-000000000004' });
       expect(nonmember.json().error.code).toBe('not-member');
       await feature.setArchived({ teamName: 'sandbox', groupChatId: '10000000-0000-4000-8000-000000000001', archived: true });
@@ -374,10 +473,11 @@ describe('group chat main authority and durable identity', () => {
       expect(archived.json().error.code).toBe('archived');
       const retry = await post('/api/teams/sandbox/group-chats/send', proactive);
       expect(retry.json()).toEqual(agent.json());
-      expect(deliveries).toHaveLength(1);
+      expect(deliveries).toHaveLength(2);
       const rows = JSON.parse(await readFile(join(state.root, 'sandbox', 'inboxes', 'user.json'), 'utf8')) as InboxMessage[];
       expect(rows.map((row) => [row.from, row.to, row.groupChatId])).toEqual([
         ['user', 'user', '10000000-0000-4000-8000-000000000001'], ['alice', 'user', '10000000-0000-4000-8000-000000000001'],
+        ['user', 'user', '10000000-0000-4000-8000-000000000001'],
       ]);
     } finally { await app.close(); }
   });
