@@ -5,6 +5,8 @@ import {
   useGroupChatHistory,
   useTeamGroupChats,
 } from '@features/team-group-chats/renderer';
+import { Button } from '@renderer/components/ui/button';
+import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberAvatarMap, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -27,6 +29,7 @@ export function useMessagesGroupConversation(
   >
 ) {
   const { t } = useAppTranslation('team');
+  const showGroupTasks = useStore((state) => state.showGroupTasks);
   const groupId = scope.kind === 'group' ? scope.groupChatId : undefined;
   const catalog = useTeamGroupChats(teamName, contextId, members.map((m) => m.name).join('\0'));
   const history = useGroupChatHistory(teamName, contextId, groupId);
@@ -43,6 +46,18 @@ export function useMessagesGroupConversation(
   const archiveAction = groupId ? (
     <GroupChatArchiveAction key={groupId} group={group} setArchived={catalog.setArchived} />
   ) : undefined;
+  const boardAction = groupId ? (
+    <div className="flex shrink-0 justify-center px-3 py-2">
+      <Button
+        variant="secondary"
+        size="sm"
+        className="h-7 text-xs"
+        onClick={() => showGroupTasks(teamName, groupId)}
+      >
+        {t('messages.groups.showTasksOnBoard')}
+      </Button>
+    </div>
+  ) : null;
   const structuralBlock = !group || !!group.archivedAt || group.memberNames.length < 2;
   const blocked =
     structuralBlock ||
@@ -55,6 +70,7 @@ export function useMessagesGroupConversation(
     options: Pick<TextMessageComposerProps, 'layout' | 'widthMode' | 'cornerActionPrefix'> = {}
   ) => (
     <div data-testid="group-chat-composer">
+      {options.widthMode === 'floating-adaptive' ? boardAction : null}
       <ThreadAwareMessageComposer
         {...editorOptions}
         {...options}
@@ -128,5 +144,15 @@ export function useMessagesGroupConversation(
           .join('\n')}\n\n${composer.text}`
       );
   };
-  return { groupId, group, catalog, history, composer, archiveAction, renderComposer, quote };
+  return {
+    groupId,
+    group,
+    catalog,
+    history,
+    composer,
+    archiveAction,
+    boardAction,
+    renderComposer,
+    quote,
+  };
 }

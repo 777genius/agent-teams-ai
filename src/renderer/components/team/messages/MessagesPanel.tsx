@@ -1258,6 +1258,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       floatingFooter={expanded}
       onFloatingFooterResize={handleFloatingFooterResize}
       header={variant === 'wide' && position !== 'bottom-sheet' ? wideThreadHeader : undefined}
+      headerFooter={groupConversation.boardAction}
       search={messagesSearchBarVisible ? renderSearchAndFilterControls() : undefined}
       composer={
         variant === 'wide' ? renderCompactComposerSection() : renderDefaultComposerSection()
@@ -1307,6 +1308,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         renderChatList()
       ) : (
         <>
+          {groupConversation.boardAction}
           {renderDefaultComposerSection()}
           {renderStatusSection('inline')}
           {renderTimelineSection()}

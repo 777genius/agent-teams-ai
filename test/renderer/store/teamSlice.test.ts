@@ -473,6 +473,32 @@ function createRuntimeSnapshot(
 }
 
 describe('teamSlice actions', () => {
+  it('addresses group tasks to the existing team tab and consumes only the newest intent', () => {
+    const store = createSliceStore();
+    const existing = createTestTab({
+      id: 'other-pane-team',
+      type: 'team',
+      label: 'Target',
+      teamName: 'target',
+    });
+    store.setState({ kanbanFilterQuery: 'stale search', getAllPaneTabs: vi.fn(() => [existing]) });
+    store.getState().showGroupTasks('target', 'group-a');
+    const first = store.getState().groupTaskNavigation!;
+    expect(first).toMatchObject({ contextId: 'local', teamName: 'target', groupChatId: 'group-a' });
+    expect(store.getState().setActiveTab).toHaveBeenCalledWith(existing.id);
+    expect(store.getState().openTab).not.toHaveBeenCalled();
+    expect(store.getState().kanbanFilterQuery).toBeNull();
+    store.setState({ activeContextId: 'test-root' });
+    store.getState().showGroupTasks('target', 'group-b');
+    const second = store.getState().groupTaskNavigation!;
+    expect(second.token).not.toBe(first.token);
+    expect(second.contextId).toBe('test-root');
+    store.getState().consumeGroupTaskNavigation(first.token);
+    expect(store.getState().groupTaskNavigation).toBe(second);
+    store.getState().consumeGroupTaskNavigation(second.token);
+    expect(store.getState().groupTaskNavigation).toBeNull();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     __resetTeamSliceModuleStateForTests();

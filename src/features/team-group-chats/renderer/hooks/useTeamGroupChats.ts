@@ -7,16 +7,20 @@ import { DEFAULT_TEAM_GROUP_CHAT_ID } from '../../contracts';
 import type { GroupChatCreateRequest, TeamGroupChatDTO } from '../../contracts';
 
 export function useTeamGroupChats(teamName: string, contextId: string, rosterKey: string) {
-  const [groups, setGroups] = useState<TeamGroupChatDTO[]>([]);
+  const [catalog, setCatalog] = useState<{
+    identity: string;
+    groups: TeamGroupChatDTO[];
+    loaded: boolean;
+  }>({ identity: '', groups: [], loaded: false });
   const [error, setError] = useState<string | null>(null);
-  const identity = `${contextId}:${teamName}`;
+  const identity = JSON.stringify([contextId, teamName]);
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
   const refresh = useCallback(async () => {
     try {
       const result = await api.teamGroupChats.list({ teamName });
       if (currentIdentity.current === identity) {
-        setGroups(result);
+        setCatalog({ identity, groups: result, loaded: true });
         setError(null);
       }
     } catch (cause) {
@@ -25,9 +29,10 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
     }
   }, [identity, teamName]);
   useEffect(() => {
-    setGroups([]);
+    setCatalog({ identity, groups: [], loaded: false });
+    setError(null);
     void refresh();
-  }, [refresh]);
+  }, [identity, refresh]);
   useEffect(() => {
     void refresh();
   }, [refresh, rosterKey]);
@@ -48,11 +53,13 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
   const upsert = useCallback(
     (group: TeamGroupChatDTO) => {
       if (currentIdentity.current !== identity) return;
-      setGroups((previous) =>
-        previous.some((item) => item.id === group.id)
-          ? previous.map((item) => (item.id === group.id ? group : item))
-          : [...previous, group]
-      );
+      setCatalog((previous) => ({
+        identity,
+        loaded: true,
+        groups: previous.groups.some((item) => item.id === group.id)
+          ? previous.groups.map((item) => (item.id === group.id ? group : item))
+          : [...previous.groups, group],
+      }));
     },
     [identity]
   );
@@ -71,10 +78,13 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
     },
     [teamName, upsert]
   );
+  const groups = catalog.identity === identity ? catalog.groups : [];
   return {
+    allGroups: groups,
+    loading: catalog.identity !== identity || !catalog.loaded,
     groups: groups.filter((group) => group.id !== DEFAULT_TEAM_GROUP_CHAT_ID),
     defaultGroup: groups.find((group) => group.id === DEFAULT_TEAM_GROUP_CHAT_ID),
-    error,
+    error: catalog.identity === identity ? error : null,
     refresh,
     create,
     setArchived,

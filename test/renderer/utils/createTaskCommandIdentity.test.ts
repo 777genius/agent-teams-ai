@@ -12,8 +12,14 @@ describe('resolveCreateTaskCommand', () => {
       .fn<() => string>()
       .mockReturnValueOnce('11111111-1111-4111-8111-111111111111')
       .mockReturnValueOnce('22222222-2222-4222-8222-222222222222')
-      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333');
-    const request = { subject: 'Stable task', owner: 'alice' };
+      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333')
+      .mockReturnValueOnce('44444444-4444-4444-8444-444444444444')
+      .mockReturnValueOnce('55555555-5555-4555-8555-555555555555');
+    const request = {
+      subject: 'Stable task',
+      owner: 'alice',
+      groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    };
 
     const first = resolveCreateTaskCommand(null, 'team-a', request, createCommandId);
     const retry = resolveCreateTaskCommand(first, 'team-a', request, createCommandId);
@@ -25,16 +31,31 @@ describe('resolveCreateTaskCommand', () => {
     );
     const otherTeam = resolveCreateTaskCommand(changed, 'team-b', request, createCommandId);
 
+    const changedGroup = resolveCreateTaskCommand(
+      otherTeam,
+      'team-b',
+      { ...request, groupChatId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' },
+      createCommandId
+    );
+    const unlinked = resolveCreateTaskCommand(
+      changedGroup,
+      'team-b',
+      { ...request, groupChatId: undefined },
+      createCommandId
+    );
+
     expect(retry).toBe(first);
     expect(changed.identity.commandId).toBe('22222222-2222-4222-8222-222222222222');
     expect(otherTeam.identity.commandId).toBe('33333333-3333-4333-8333-333333333333');
-    expect(createCommandId).toHaveBeenCalledTimes(3);
+    expect(changedGroup.identity.commandId).toBe('44444444-4444-4444-8444-444444444444');
+    expect(unlinked.identity.commandId).toBe('55555555-5555-4555-8555-555555555555');
+    expect(createCommandId).toHaveBeenCalledTimes(5);
   });
 
   it('treats relationship ids as sets when fingerprinting an intent', () => {
-    const createCommandId = vi.fn<() => string>().mockReturnValue(
-      '44444444-4444-4444-8444-444444444444'
-    );
+    const createCommandId = vi
+      .fn<() => string>()
+      .mockReturnValue('44444444-4444-4444-8444-444444444444');
     const first = resolveCreateTaskCommand(
       null,
       'team-a',

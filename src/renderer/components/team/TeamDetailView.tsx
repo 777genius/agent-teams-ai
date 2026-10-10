@@ -107,9 +107,9 @@ import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadi
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { KanbanBoard } from './kanban/KanbanBoard';
-import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TrashDialog } from './kanban/TrashDialog';
+import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
@@ -429,11 +429,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
       (summary.failedCount ?? 0) +
       (summary.skippedCount ?? 0)
   );
-}
-
-interface TimeWindow {
-  start: number;
-  end: number;
 }
 
 function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTaskWithKanban[] {
@@ -1950,74 +1945,17 @@ export const TeamDetailView = memo(function TeamDetailView({
     [membersWithLiveBranches]
   );
 
-  // Filter sessions to team-only using sessionHistory + leadSessionId
-  const teamSessionIds = useMemo(() => {
-    const sessionIds = new Set<string>();
-    if (data?.config.leadSessionId) {
-      sessionIds.add(data.config.leadSessionId);
-    }
-    if (data?.config.sessionHistory) {
-      for (const id of data.config.sessionHistory) {
-        sessionIds.add(id);
-      }
-    }
-    return sessionIds;
-  }, [data?.config.leadSessionId, data?.config.sessionHistory]);
-
-  const teamSessions = useMemo(() => {
-    // If no session IDs known (backward compat), show all sessions
-    if (teamSessionIds.size === 0) return sessions;
-    return sessions.filter((s) => teamSessionIds.has(s.id));
-  }, [sessions, teamSessionIds]);
-
-  // Auto-reset session filter if the selected session is no longer in teamSessions
-  useEffect(() => {
-    if (
-      kanbanFilter.sessionId !== null &&
-      !teamSessions.some((s) => s.id === kanbanFilter.sessionId)
-    ) {
-      setKanbanFilter((prev) => ({ ...prev, sessionId: null }));
-    }
-  }, [kanbanFilter.sessionId, teamSessions]);
-
-  // Compute time-window for session filtering
-  const timeWindow = useMemo<TimeWindow | null>(() => {
-    if (kanbanFilter.sessionId === null) return null;
-
-    const sorted = [...teamSessions].sort((a, b) => a.createdAt - b.createdAt);
-    const idx = sorted.findIndex((s) => s.id === kanbanFilter.sessionId);
-    if (idx === -1) return null;
-
-    const start = sorted[idx].createdAt;
-    const end = idx + 1 < sorted.length ? sorted[idx + 1].createdAt : Infinity;
-    return { start, end };
-  }, [kanbanFilter.sessionId, teamSessions]);
-
-  // Filter tasks by time-window and owner
-  const filteredTasks = useMemo(() => {
-    if (!data) return [];
-    let result = data.tasks;
-
-    // Session time-window filter
-    if (timeWindow) {
-      result = result.filter((t) => {
-        if (!t.createdAt) return true; // legacy tasks always included
-        const ts = new Date(t.createdAt).getTime();
-        return ts >= timeWindow.start && ts < timeWindow.end;
-      });
-    }
-
-    // Owner filter
-    if (kanbanFilter.selectedOwners.size > 0) {
-      result = result.filter((t) =>
-        t.owner
-          ? kanbanFilter.selectedOwners.has(t.owner)
-          : kanbanFilter.selectedOwners.has(UNASSIGNED_OWNER)
-      );
-    }
-
-    return result;
-  }, [data, timeWindow, kanbanFilter.selectedOwners]);
+  const { teamSessions, timeWindow, filteredTasks, taskGroupOptions } = useTeamTaskFilters(
+    teamName,
+    data,
+    sessions,
+    kanbanFilter,
+    setKanbanFilter,
+    setKanbanSearch,
+    isThisTabActive,
+    contentRef,
+    collapseExpandedChat
+  );
 
   const activeMembers = useStableActiveMembers(membersWithLiveBranches);
 
@@ -2155,13 +2093,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     [openCreateTaskDialog]
   );
 
-  const handleReplyToMessage = useCallback((message: { from: string; text: string }, recipientHint?: string) => {
-    setSendDialogRecipient(recipientHint ?? message.from);
-    setSendDialogDefaultText(undefined);
-    setSendDialogDefaultChip(undefined);
-    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-    setSendDialogOpen(true);
-  }, []);
+  const handleReplyToMessage = useCallback(
+    (message: { from: string; text: string }, recipientHint?: string) => {
+      setSendDialogRecipient(recipientHint ?? message.from);
+      setSendDialogDefaultText(undefined);
+      setSendDialogDefaultChip(undefined);
+      setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+      setSendDialogOpen(true);
+    },
+    []
+  );
 
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
     setLaunchDialogState({ open: true, mode });
@@ -3320,6 +3261,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   teamName={teamName}
                   kanbanState={data.kanbanState}
                   filter={kanbanFilter}
+                  taskGroupOptions={taskGroupOptions}
                   sort={kanbanSort}
                   sessions={teamSessions}
                   leadSessionId={data.config.leadSessionId}
@@ -3504,6 +3446,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     defaultSubject={createTaskDialog.defaultSubject}
                     defaultDescription={createTaskDialog.defaultDescription}
                     defaultOwner={createTaskDialog.defaultOwner}
+                    defaultGroupChatId={kanbanFilter.groupChatId ?? null}
                     defaultStartImmediately={createTaskDialog.defaultStartImmediately}
                     defaultChip={createTaskDialog.defaultChip}
                     onClose={closeCreateTaskDialog}

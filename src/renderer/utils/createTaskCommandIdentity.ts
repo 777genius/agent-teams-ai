@@ -38,6 +38,7 @@ export function resolveCreateTaskCommand(
       description: request.description,
       descriptionTaskRefs: request.descriptionTaskRefs,
       owner: request.owner,
+      groupChatId: request.groupChatId,
       blockedBy: normalizeRelationshipIds(request.blockedBy),
       related: normalizeRelationshipIds(request.related),
       prompt: request.prompt,
