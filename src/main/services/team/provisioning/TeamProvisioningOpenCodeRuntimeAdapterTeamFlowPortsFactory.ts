@@ -61,7 +61,7 @@ export function createOpenCodeRuntimeAdapterTeamFlowPortsFromService(
     mkdir:
       deps.mkdir ??
       (async (directoryPath) => {
-        return fs.promises.mkdir(directoryPath, { recursive: true });
+        return fs.promises.mkdir(directoryPath, { recursive: true, mode: 0o700 });
       }),
     nowMs: deps.nowMs ?? (() => Date.now()),
     writeTeamMeta: (teamName, data) => service.teamMetaStore.writeMeta(teamName, data),
