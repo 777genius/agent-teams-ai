@@ -55,12 +55,18 @@ export interface OpenCodeAggregatePrimaryLaneRun {
 export interface PersistOpenCodeRuntimeAdapterLaunchResultPorts {
   createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
   nowIso(): string;
+  isAuthorized?(): boolean;
   /** Durable sink for members whose session evidence could not be committed. */
   logDiagnostic?(message: string): void;
   writeLaunchStateSnapshot(
     teamName: string,
     snapshot: PersistedTeamLaunchSnapshot,
-    options: { requireTrackedRun: true; runId: string }
+    options: {
+      requireTrackedRun: true;
+      runId: string;
+      isAuthorized?: () => boolean;
+      republishesExistingLaunch?: boolean;
+    }
   ): Promise<PersistedTeamLaunchSnapshot>;
 }
 
@@ -116,6 +122,9 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
       cwd: string;
       allowExperimentalLocalModels?: boolean;
       members: TeamRuntimeLaunchResult['members'];
+      launchInput?: TeamRuntimeLaunchInput;
+      launchStopGeneration?: number;
+      launchStopAllGeneration?: number;
     }
   ): void;
   getRuntimeAdapterRunByTeam?(teamName: string):
@@ -185,6 +194,8 @@ export async function launchOpenCodeAggregatePrimaryLane(
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     assertStillCurrentAfterPersistence?: () => void;
+    launchStopGeneration?: number;
+    launchStopAllGeneration?: number;
   },
   ports: LaunchOpenCodeAggregatePrimaryLanePorts
 ): Promise<TeamRuntimeLaunchResult | null> {
@@ -273,7 +284,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
   const retainPrimaryRuntime =
     result.teamLaunchState !== 'partial_failure' || hasRetainableOpenCodeRuntimeMember(result);
   if (retainPrimaryRuntime) {
-    const primaryMembers = result.members;
+    let primaryMembers = result.members;
     const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
     // Publish ownership before any degraded-lane index write can fail. Once
     // launch persistence proves that this candidate is retainable, leaving it
@@ -283,11 +294,22 @@ export async function launchOpenCodeAggregatePrimaryLane(
       runId,
       providerId: 'opencode',
       cwd: launchCwd,
+      // Primary-only refresh must not replace a mixed aggregate snapshot.
+      ...(secondaryLanes.length === 0
+        ? {
+            launchInput,
+            launchStopGeneration: params.launchStopGeneration,
+            launchStopAllGeneration: params.launchStopAllGeneration,
+          }
+        : {}),
       ...(params.run.request.allowExperimentalLocalModels === true
         ? { allowExperimentalLocalModels: true }
         : {}),
       get members() {
         return collectOpenCodeAggregateRuntimeMemberEvidence(primaryMembers, secondaryLanes);
+      },
+      set members(next) {
+        primaryMembers = next;
       },
     });
   }
@@ -462,6 +484,7 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
   snapshot: PersistedTeamLaunchSnapshot;
   result: TeamRuntimeLaunchResult;
 }> {
+  assertOpenCodeRefreshAuthorized(ports);
   const committedResult = await commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
     {
       teamName: input.teamName,
@@ -470,6 +493,7 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
     },
     ports
   );
+  assertOpenCodeRefreshAuthorized(ports);
   const members: Record<string, PersistedTeamLaunchMemberState> = {};
   for (const member of input.expectedMembers) {
     const evidence = committedResult.members[member.name];
@@ -491,9 +515,16 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
     snapshot: await ports.writeLaunchStateSnapshot(input.teamName, snapshot, {
       requireTrackedRun: true,
       runId: input.runId,
+      ...(ports.isAuthorized
+        ? { isAuthorized: ports.isAuthorized, republishesExistingLaunch: true }
+        : {}),
     }),
     result: committedResult,
   };
+}
+
+function assertOpenCodeRefreshAuthorized(ports: { isAuthorized?: () => boolean }): void {
+  if (ports.isAuthorized && !ports.isAuthorized()) throw new Error('opencode_refresh_superseded');
 }
 
 export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
@@ -504,14 +535,17 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
   },
   ports: Pick<
     PersistOpenCodeRuntimeAdapterLaunchResultPorts,
-    'createOpenCodeRuntimeBootstrapEvidencePorts' | 'nowIso' | 'logDiagnostic'
+    'createOpenCodeRuntimeBootstrapEvidencePorts' | 'nowIso' | 'logDiagnostic' | 'isAuthorized'
   >
 ): Promise<TeamRuntimeLaunchResult> {
   let changed = false;
   let promoted = false;
   const uncommittableDiagnostics: string[] = [];
   const members: Record<string, TeamRuntimeMemberLaunchEvidence> = { ...params.result.members };
-  const bootstrapEvidencePorts = ports.createOpenCodeRuntimeBootstrapEvidencePorts();
+  const bootstrapEvidencePorts = {
+    ...ports.createOpenCodeRuntimeBootstrapEvidencePorts(),
+    ...(ports.isAuthorized ? { isAuthorized: ports.isAuthorized } : {}),
+  };
   for (const [memberName, evidence] of Object.entries(params.result.members)) {
     const runtimeSessionId = evidence.sessionId?.trim();
     const confirmed =
@@ -560,6 +594,7 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
     const source: OpenCodeBootstrapEvidenceSource = appManagedCandidateMatches
       ? 'app_managed_bootstrap'
       : (evidence.bootstrapEvidenceSource ?? 'runtime_bootstrap_checkin');
+    assertOpenCodeRefreshAuthorized(ports);
     await commitOpenCodeRuntimeBootstrapSessionEvidence(
       {
         teamName: params.teamName,
@@ -575,6 +610,7 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
       },
       bootstrapEvidencePorts
     );
+    assertOpenCodeRefreshAuthorized(ports);
     const verified = await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
       {
         teamName: params.teamName,
@@ -589,6 +625,7 @@ export async function commitOpenCodeRuntimeAdapterLaunchSessionEvidence(
       },
       bootstrapEvidencePorts
     );
+    assertOpenCodeRefreshAuthorized(ports);
     if (appManagedCandidateMatches && verified && !confirmed) {
       members[memberName] = promoteCommittedOpenCodeAppManagedBootstrapEvidence(evidence);
       changed = true;

@@ -1,3 +1,4 @@
+import { classifyNativeVersion } from '@features/opencode-compatibility';
 import {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
@@ -137,7 +138,7 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
     return false;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version);
+  return version.ok && classifyNativeVersion(version.version ?? '').kind === 'recognized';
 }
 
 function getExecutableName(): string {
