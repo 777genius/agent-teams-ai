@@ -1,5 +1,7 @@
 # Group chat APP contract handoff — 2026-10-10 r4 final review
 
+> Historical r4 review handoff. Its sandbox/tool-access limitations describe that review only. Current implementation checkpoint is app 8bc0d43cbf7dabf48f88835411f449caefec6c35; runtime PR115 is merged and public 0.0.107 archives/pin/bootstrap are verified. Source25 extended native/OpenCode qualification passed, and group/private editors now share MessageComposer. Final public compiled UI proof and exact app CI are pending at this dated checkpoint. See research/custom-group-chats-plan-2026-10-09.md section18 and PR889 for current delivery status.
+
 APP only, hosted workspace. Preserved imported WIP; no reset, commit, credential/session read, local Mac check, provider launch or real project/team smoke. Source work is confined to app/controller/MCP. The runtime sister source is absent from the visible workspace parent, so this document coordinates its required contract; it does not claim that the sister implemented it.
 
 ## One authoritative runtime contract
