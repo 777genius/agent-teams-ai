@@ -222,7 +222,8 @@ describe('ProvisioningProviderStatusList', () => {
     expect(host.textContent).toContain('OpenCode (OpenCode CLI): OpenCode app MCP unreachable');
     expect(host.textContent).not.toContain('Selected model checks');
     expect(host.textContent).not.toContain('model unavailable');
-    expect(host.querySelector('button')).toBeNull();
+    expect(host.querySelector('button')?.textContent).toContain('Copy diagnostics');
+    expect(host.textContent).not.toContain('Open OpenCode settings');
 
     await act(async () => {
       root.unmount();
@@ -353,6 +354,59 @@ describe('ProvisioningProviderStatusList', () => {
         },
       ])
     ).toBe('Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.');
+  });
+
+  it('copies failed runtime-status details without a launch diagnostic pack', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              details: [
+                'Runtime status command failed.\nExit code: 1\nStderr: error: Unexpected\nAPI_KEY=private-value\nAuthorization: Bearer private-bearer\n{"apiKey":"private-json"}\nhttps://name:private-url@example.test/v1?token=private-query\n--- JSONC Input ---\n{ \"notes\": \"private-project-note\" }\n--- Errors ---\nInvalidSymbol at line 1, column 3\nLine 1: private-source-excerpt',
+              ],
+            },
+          ],
+        })
+      );
+    });
+    const button = Array.from(host.querySelectorAll('button')).find((item) =>
+      item.textContent?.includes('Copy diagnostics')
+    );
+    expect(button).toBeDefined();
+    expect(host.textContent).toContain('Stderr: error: Unexpected');
+    await act(async () => {
+      button?.click();
+    });
+    const payload = writeText.mock.calls[0]?.[0];
+    expect(payload).toContain('Exit code: 1\nStderr: error: Unexpected');
+    expect(payload).toContain('Provider: opencode');
+    expect(payload).toContain('InvalidSymbol at line 1, column 3');
+    expect(payload).toContain('[configuration contents hidden]');
+    for (const secret of [
+      'private-value',
+      'private-bearer',
+      'private-json',
+      'private-url',
+      'private-query',
+      'private-project-note',
+      'private-source-excerpt',
+    ]) {
+      expect(payload).not.toContain(secret);
+      expect(host.textContent).not.toContain(secret);
+    }
+    await act(async () => root.unmount());
   });
 
   it('renders Copy diagnostics for OpenCode support diagnostics and copies the prepared payload', async () => {

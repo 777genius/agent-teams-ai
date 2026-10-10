@@ -1393,11 +1393,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       statusCheckOutcome: 'transient_error',
       statusCheckErrorCode: 'timeout',
       statusMessage: 'OpenCode is still loading',
-      detailMessage:
-        'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
+      detailMessage: expect.stringContaining(
+        'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
+      ),
     });
-    expect(provider.detailMessage).not.toContain('/mock/runtime');
-    expect(provider.detailMessage).not.toContain('30000ms');
+    expect(provider.detailMessage).toContain('Executable: /mock/runtime');
+    expect(provider.detailMessage).toContain('30000ms');
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(30_000);
     vi.mocked(console.warn).mockClear();
   });
