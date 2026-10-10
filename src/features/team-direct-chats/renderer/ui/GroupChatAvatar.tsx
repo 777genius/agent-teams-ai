@@ -57,14 +57,14 @@ export const GroupChatAvatar = ({
           src={member.avatarUrl}
           alt=""
           loading="lazy"
-          className="absolute rounded-full border border-[var(--color-surface)] bg-[var(--color-surface-raised)] object-cover"
+          className="absolute object-contain"
           style={position(index)}
         />
       ))}
       {overflow ? (
         <span
           aria-hidden="true"
-          className="absolute flex items-center justify-center rounded-full border border-[var(--color-surface)] bg-[var(--color-surface-raised)] font-medium text-[var(--color-text-secondary)]"
+          className="absolute flex items-center justify-center font-medium text-[var(--color-text-secondary)]"
           style={{
             width: 16,
             height: 16,
