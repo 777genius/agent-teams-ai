@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createOpenCodeBridgeHandshakeIdentityHash,
+  createOpenCodeBridgeIdempotencyKey,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
@@ -1044,6 +1045,195 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       });
       expect(await createService().execute(input)).toEqual(first);
       expect(bridge.calls).toHaveLength(1);
+    }
+  );
+
+  it.each(['completed', 'unknown_after_timeout'] as const)(
+    'recovers a pre-upgrade null-fingerprint Stop ledger entry in status %s',
+    async (status) => {
+      const { input, stopTarget, request, result } = await seedLegacyStop(status);
+      ledger = createOpenCodeBridgeCommandLedgerStore({
+        filePath: path.join(tempDir, 'ledger.json'),
+      });
+      bridge.resultFactory = ({ command, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          runtime: result.runtime,
+          data: {
+            status: 'completed',
+            receipt: {
+              request,
+              binding: [
+                {
+                  memberName: 'alice',
+                  sessionId: 'session-1',
+                  hostKey: 'host-1',
+                  createdAt: 'created-original',
+                },
+              ],
+              runtime: result.runtime,
+              status: 'completed',
+              data: result.data,
+            },
+          },
+        });
+      const recovered = await createService().execute(input);
+      expect(recovered).toMatchObject({
+        ok: true,
+        command: 'opencode.stopTeam',
+        requestId: request.originalRequestId,
+        data: result.data,
+      });
+      expect((await ledger.list())[0]).toMatchObject({
+        status: 'completed',
+        stopTarget,
+        stopRecovery: { target: stopTarget },
+      });
+      expect(bridge.calls.map((call) => call.command)).toEqual(
+        status === 'completed' ? [] : ['opencode.stopOutcome']
+      );
+    }
+  );
+
+  it.each(['completed', 'unknown_after_timeout'] as const)(
+    'refuses a foreign manifest fingerprint for a pre-upgrade Stop in status %s',
+    async (status) => {
+      const { input } = await seedLegacyStop(status);
+      manifestReader.manifest.behaviorFingerprint = 'c'.repeat(64);
+      await expect(createService().execute(input)).rejects.toThrow(/target.*mismatch/);
+      expect(bridge.calls).toHaveLength(0);
+      expect((await ledger.list())[0].status).toBe(status);
+    }
+  );
+
+  async function seedLegacyStop(status: 'completed' | 'unknown_after_timeout') {
+    const input = enableRuntimeStop();
+    const body = {
+      ...(input.body as object),
+      expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+    };
+    const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
+      command: input.command,
+      teamName: input.teamName,
+      laneId: input.laneId,
+      runId: input.runId,
+      body,
+    });
+    // Persist the exact pre-upgrade identity: caller fingerprint is null while
+    // the versioned runtime target already carries the committed fingerprint.
+    const stopTarget = {
+      teamName: input.teamName,
+      laneId: input.laneId!,
+      runId: input.runId,
+      capabilitySnapshotId: input.capabilitySnapshotId,
+      behaviorFingerprint: null,
+      cwd: input.cwd,
+      body,
+      sessionIdentityHash: 'original-sessions',
+      runtimeTarget: {
+        teamId: 'team-a',
+        laneId: 'primary',
+        runId: 'run-1',
+        projectPath: input.cwd,
+        capabilitySnapshotId: input.capabilitySnapshotId!,
+        expectedBehaviorFingerprint: 'b'.repeat(64),
+        members: [{ memberName: 'alice', sessionId: 'session-1' }],
+      },
+    };
+    const request: RuntimeStopRequest = {
+      contractVersion: 1,
+      originalRequestId: 'legacy-request',
+      idempotencyKey,
+      target: stopTarget.runtimeTarget,
+    };
+    const result = bridgeSuccess({
+      command: 'opencode.stopTeam',
+      requestId: request.originalRequestId,
+      runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+      data: runtimeData(true, idempotencyKey),
+    });
+    await ledger.begin({
+      idempotencyKey,
+      requestId: request.originalRequestId,
+      command: input.command,
+      teamName: input.teamName,
+      laneId: input.laneId,
+      runId: input.runId,
+      stopTarget,
+      requestHash: stableHash({
+        command: input.command,
+        teamName: input.teamName,
+        laneId: input.laneId,
+        runId: input.runId,
+        capabilitySnapshotId: input.capabilitySnapshotId,
+        behaviorFingerprint: null,
+        manifestHighWatermark: null,
+        body,
+      }),
+    });
+    if (status === 'completed') {
+      await ledger.markCompleted({
+        idempotencyKey,
+        response: result,
+        stopRecovery: { target: stopTarget, result },
+      });
+    } else {
+      await ledger.markUnknownAfterTimeout({
+        idempotencyKey,
+        error: 'legacy timeout after effect',
+      });
+    }
+    return { input, stopTarget, request, result };
+  }
+
+  it.each(['opencode.sendMessage', 'opencode.reconcileTeam'] as const)(
+    'retains the pre-upgrade null-fingerprint request hash for %s',
+    async (command) => {
+      const input =
+        command === 'opencode.sendMessage'
+          ? buildSendInput('observed')
+          : { ...buildStopInput(), command };
+      manifestReader.manifest.behaviorFingerprint = 'b'.repeat(64);
+      clientIdentity.bridgeProtocol.supportedCommands.push(command);
+      const server = peerIdentity('agent_teams_orchestrator');
+      server.bridgeProtocol.supportedCommands.push(command);
+      handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+        { client: clientIdentity, server },
+        [command]
+      );
+      const body = { ...(input.body as object), expectedCapabilitySnapshotId: 'cap-1' };
+      const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
+        command,
+        teamName: input.teamName,
+        laneId: input.laneId,
+        runId: input.runId,
+        body,
+      });
+      await ledger.begin({
+        idempotencyKey,
+        requestId: 'legacy-request',
+        command,
+        teamName: input.teamName,
+        laneId: input.laneId,
+        runId: input.runId,
+        requestHash: stableHash({
+          command,
+          teamName: input.teamName,
+          laneId: input.laneId,
+          runId: input.runId,
+          capabilitySnapshotId: 'cap-1',
+          behaviorFingerprint: null,
+          manifestHighWatermark: null,
+          body,
+        }),
+      });
+      await ledger.markCompleted({ idempotencyKey, response: {} });
+      await expect(createService().execute(input)).rejects.toThrow(
+        'already completed; recover through commandStatus'
+      );
+      expect(bridge.calls).toHaveLength(0);
+      expect((await ledger.list())[0].status).toBe('completed');
     }
   );
 

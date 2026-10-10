@@ -37,6 +37,7 @@ import type {
   OpenCodeObserveMessageDeliveryCommandBody,
   OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
+  OpenCodeReconcileTeamCommandData,
   OpenCodeRuntimePermissionCommandData,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
@@ -88,7 +89,7 @@ export interface OpenCodeTeamRuntimeBridgePort {
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
-  ): Promise<OpenCodeLaunchTeamCommandData>;
+  ): Promise<OpenCodeReconcileTeamCommandData>;
   stopOpenCodeTeam?(
     input: OpenCodeStopTeamCommandBody
   ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation>;
@@ -623,6 +624,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       );
       return {
         ...mapped,
+        observationUnavailable: data.observationUnavailable,
         snapshot: input.previousLaunchState,
       };
     }

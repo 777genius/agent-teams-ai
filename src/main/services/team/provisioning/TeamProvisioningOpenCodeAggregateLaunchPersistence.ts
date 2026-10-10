@@ -500,6 +500,11 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
     members[member.name] = toOpenCodePersistedLaunchMember(member, evidence, {
       runId: committedResult.runId,
       nowIso: () => ports.nowIso(),
+      // Refreshes pass the latest snapshot; a new run/session starts a new window.
+      ...(input.previousLaunchState?.teamName === input.teamName &&
+      (input.laneId?.trim() || 'primary') === 'primary'
+        ? { previousMember: input.previousLaunchState.members[member.name] }
+        : {}),
     });
   }
   const snapshot = createPersistedLaunchSnapshot({

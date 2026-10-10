@@ -99,6 +99,10 @@ export interface OpenCodeLaunchTeamCommandData {
   durableCheckpoints?: { name: string; memberName?: string | null; observedAt: string }[];
   expectedBehaviorFingerprint?: string;
 }
+export interface OpenCodeReconcileTeamCommandData extends OpenCodeLaunchTeamCommandData {
+  observationUnavailable?: true;
+}
+
 export interface OpenCodeReconcileTeamCommandBody {
   runId: string;
   laneId: string;

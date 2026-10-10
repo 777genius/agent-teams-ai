@@ -130,9 +130,33 @@ export function selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
 export function toOpenCodePersistedLaunchMember(
   member: TeamRuntimeLaunchInput['expectedMembers'][number],
   evidence: TeamRuntimeMemberLaunchEvidence | undefined,
-  options: { runId?: string; nowIso: () => string }
+  options: {
+    runId?: string;
+    nowIso: () => string;
+    previousMember?: PersistedTeamLaunchMemberState;
+  }
 ): PersistedTeamLaunchMemberState {
   const now = options.nowIso();
+  const previous = options.previousMember;
+  const sameRuntimeIncarnation =
+    previous?.name === member.name &&
+    previous.providerId === 'opencode' &&
+    previous.laneId === 'primary' &&
+    previous.laneKind === 'primary' &&
+    evidence?.memberName === member.name &&
+    evidence.providerId === 'opencode' &&
+    Boolean(evidence.sessionId) &&
+    previous.runtimeSessionId === evidence.sessionId &&
+    Boolean(options.runId) &&
+    previous.runtimeRunId === options.runId &&
+    (evidence.appManagedBootstrapCandidate?.runId ?? options.runId) === options.runId;
+  // Human permission waits must not consume the subsequent bootstrap grace.
+  const firstSpawnAcceptedAt =
+    sameRuntimeIncarnation &&
+    previous?.launchState !== 'runtime_pending_permission' &&
+    !previous?.pendingPermissionRequestIds?.length
+      ? (normalizeIsoTimestamp(previous?.firstSpawnAcceptedAt) ?? now)
+      : now;
   const launchState = evidence?.launchState ?? 'failed_to_start';
   const hardFailure = evidence?.hardFailure === true || launchState === 'failed_to_start';
   return {
@@ -175,7 +199,7 @@ export function toOpenCodePersistedLaunchMember(
         ? { runtimeDiagnosticSeverity: 'info' as const }
         : {}),
     ...(evidence?.runtimeAlive ? { runtimeLastSeenAt: now } : {}),
-    firstSpawnAcceptedAt: evidence?.agentToolAccepted ? now : undefined,
+    firstSpawnAcceptedAt: evidence?.agentToolAccepted ? firstSpawnAcceptedAt : undefined,
     lastHeartbeatAt: evidence?.bootstrapConfirmed ? now : undefined,
     lastRuntimeAliveAt: evidence?.runtimeAlive ? now : undefined,
     lastEvaluatedAt: now,

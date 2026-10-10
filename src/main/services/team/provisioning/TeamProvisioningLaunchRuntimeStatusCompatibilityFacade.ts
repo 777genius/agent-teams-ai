@@ -113,6 +113,11 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
     createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts;
   };
 
+  private readonly openCodePrimaryStatusRefreshByOwner = new WeakMap<
+    object,
+    { nextAttemptAt: number; inFlight?: Promise<void> }
+  >();
+
   async getMemberSpawnStatuses(teamName: string) {
     const owner = this.runtimeAdapterRunByTeam.get(teamName);
     const launchInput = owner?.launchInput;
@@ -123,58 +128,87 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
       adapter &&
       launchInput.runId === owner.runId &&
       launchInput.teamName === teamName &&
-      Object.values(owner.members ?? {}).some((member) => !member.bootstrapConfirmed)
+      Object.values(owner.members ?? {}).some(
+        (member) => !member.bootstrapConfirmed && !member.hardFailure
+      )
     ) {
-      const stopAllGeneration = owner.launchStopAllGeneration;
-      const stopTeamGeneration = owner.launchStopGeneration;
-      const isAuthorized = (): boolean =>
-        this.runtimeAdapterRunByTeam.get(teamName) === owner &&
-        this.runTracking.getTrackedRunId(teamName) === owner.runId &&
-        this.stopAllTeamsGeneration === stopAllGeneration &&
-        this.getStopTeamGeneration(teamName) === stopTeamGeneration;
-      try {
-        if (!isAuthorized()) return super.getMemberSpawnStatuses(teamName);
-        const previousLaunchState = (await super.reconcilePersistedLaunchState(teamName)).snapshot;
-        if (!isAuthorized()) return super.getMemberSpawnStatuses(teamName);
-        const result = await adapter.reconcile({
-          runId: owner.runId,
-          teamName,
-          laneId: 'primary',
-          providerId: 'opencode',
-          expectedMembers: launchInput.expectedMembers,
-          previousLaunchState,
-          reason: 'launch_progress',
-        });
-        if (!isAuthorized()) return super.getMemberSpawnStatuses(teamName);
-        if (
-          result.runId !== owner.runId ||
-          result.teamName !== teamName ||
-          Object.keys(result.members).length !== launchInput.expectedMembers.length ||
-          launchInput.expectedMembers.some((member) => {
-            const next = result.members[member.name];
-            const previous = owner.members?.[member.name];
-            return (
-              !next ||
-              next.memberName !== member.name ||
-              next.providerId !== 'opencode' ||
-              (previous?.sessionId && next.sessionId !== previous.sessionId)
+      const existing = this.openCodePrimaryStatusRefreshByOwner.get(owner);
+      if (existing?.inFlight) {
+        await existing.inFlight;
+      } else if (!existing || Date.now() >= existing.nextAttemptAt) {
+        const entry: { nextAttemptAt: number; inFlight?: Promise<void> } = { nextAttemptAt: 0 };
+        this.openCodePrimaryStatusRefreshByOwner.set(owner, entry);
+        const runId = owner.runId;
+        const refresh = (async () => {
+          const stopAllGeneration = owner.launchStopAllGeneration;
+          const stopTeamGeneration = owner.launchStopGeneration;
+          const isAuthorized = (): boolean =>
+            this.runtimeAdapterRunByTeam.get(teamName) === owner &&
+            owner.runId === runId &&
+            owner.launchInput === launchInput &&
+            this.runTracking.getTrackedRunId(teamName) === runId &&
+            this.runtimeAdapterProgressByRunId.get(owner.runId)?.state !== 'disconnected' &&
+            this.stopAllTeamsGeneration === stopAllGeneration &&
+            this.getStopTeamGeneration(teamName) === stopTeamGeneration;
+          try {
+            if (!isAuthorized()) return;
+            const previousLaunchState = (await super.reconcilePersistedLaunchState(teamName))
+              .snapshot;
+            if (!isAuthorized()) return;
+            const result = await adapter.reconcile({
+              runId: owner.runId,
+              teamName,
+              laneId: 'primary',
+              providerId: 'opencode',
+              expectedMembers: launchInput.expectedMembers,
+              previousLaunchState,
+              reason: 'launch_progress',
+            });
+            if (!isAuthorized() || result.observationUnavailable) return;
+            if (
+              result.runId !== owner.runId ||
+              result.teamName !== teamName ||
+              Object.keys(result.members).length !== launchInput.expectedMembers.length ||
+              launchInput.expectedMembers.some((member) => {
+                const next = result.members[member.name];
+                const previous = owner.members?.[member.name];
+                return (
+                  !next ||
+                  next.memberName !== member.name ||
+                  next.providerId !== 'opencode' ||
+                  ((next.bootstrapConfirmed ||
+                    next.launchState === 'confirmed_alive' ||
+                    next.livenessKind === 'confirmed_bootstrap') &&
+                    !next.sessionId?.trim()) ||
+                  (previous?.sessionId && next.sessionId !== previous.sessionId)
+                );
+              })
+            )
+              throw new Error('opencode_refresh_identity_mismatch');
+            const persisted = await persistOpenCodeRuntimeAdapterLaunchResult(
+              result,
+              { ...launchInput, previousLaunchState },
+              { ...this.createOpenCodeLaunchPersistencePorts(), isAuthorized }
             );
-          })
-        )
-          throw new Error('opencode_refresh_identity_mismatch');
-        const persisted = await persistOpenCodeRuntimeAdapterLaunchResult(
-          result,
-          { ...launchInput, previousLaunchState },
-          { ...this.createOpenCodeLaunchPersistencePorts(), isAuthorized }
-        );
-        if (isAuthorized()) {
-          owner.members = persisted.result.members;
-          this.invalidateRuntimeSnapshotCaches(teamName);
+            if (isAuthorized()) {
+              owner.members = persisted.result.members;
+              this.invalidateRuntimeSnapshotCaches(teamName);
+            }
+          } catch {
+            logger.diagnostic(
+              'OpenCode primary status refresh unavailable; retaining existing launch evidence.'
+            );
+          }
+        })();
+        entry.inFlight = refresh;
+        try {
+          await refresh;
+        } finally {
+          if (entry.inFlight === refresh) {
+            entry.nextAttemptAt = Date.now() + 5_000;
+            entry.inFlight = undefined;
+          }
         }
-      } catch {
-        logger.diagnostic(
-          'OpenCode primary status refresh unavailable; retaining existing launch evidence.'
-        );
       }
     }
     return super.getMemberSpawnStatuses(teamName);

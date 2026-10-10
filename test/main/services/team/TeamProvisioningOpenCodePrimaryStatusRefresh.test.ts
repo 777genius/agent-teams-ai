@@ -1,18 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import {
   launchOpenCodeAggregatePrimaryLane,
   persistOpenCodeRuntimeAdapterLaunchResult,
   type PersistOpenCodeRuntimeAdapterLaunchResultPorts,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { answerOpenCodeRuntimeToolApproval } from '@main/services/team/provisioning/TeamProvisioningRuntimeToolApprovalAnswer';
-import type { TeamLaunchRuntimeAdapter } from '@main/services/team/runtime';
-import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { snapshotToMemberSpawnStatuses } from '@main/services/team/TeamLaunchStateEvaluator';
-import type { TeamRuntimeLaunchInput, TeamRuntimeLaunchResult } from '@main/services/team/runtime';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { describe, expect, it, vi } from 'vitest';
+
 import type {
   MemberSpawnStatusesSnapshotPorts,
   MemberSpawnStatusRun,
 } from '@main/services/team/provisioning/TeamProvisioningMemberSpawnSnapshots';
+import type { TeamLaunchRuntimeAdapter } from '@main/services/team/runtime';
+import type {
+  TeamRuntimeLaunchInput,
+  TeamRuntimeLaunchResult,
+  TeamRuntimeReconcileInput,
+} from '@main/services/team/runtime';
 import type { MemberSpawnStatusesSnapshot, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const commit = vi.hoisted(() => vi.fn(async () => undefined));
@@ -86,6 +93,7 @@ function fixture() {
     members: evidence(false).members,
   };
   const owners = new Map([[teamName, owner]]);
+  const runtimeProgress = new Map<string, { state: string }>();
   let trackedRun = runId;
   let stopGeneration = 0;
   let generation = 0;
@@ -107,7 +115,7 @@ function fixture() {
             },
           ])
         );
-  const reconcile = vi.fn(async () => evidence(true));
+  const reconcile = vi.fn(async (_input: TeamRuntimeReconcileInput) => evidence(true));
   const write = vi.fn(
     async (
       _team: string,
@@ -157,6 +165,8 @@ function fixture() {
   } as unknown as MemberSpawnStatusesSnapshotPorts<MemberSpawnStatusRun>;
   Object.assign(service, {
     runtimeAdapterRunByTeam: owners,
+    runtimeAdapterProgressByRunId: runtimeProgress,
+    openCodePrimaryStatusRefreshByOwner: new WeakMap(),
     stopAllTeamsGeneration: 0,
     getStopTeamGeneration: () => stopGeneration,
     runTracking: { getTrackedRunId: () => trackedRun },
@@ -240,6 +250,7 @@ function fixture() {
     persistencePorts,
     owner,
     owners,
+    runtimeProgress,
     reconcile,
     write,
     evidence,
@@ -411,6 +422,86 @@ describe('primary OpenCode writable status refresh', () => {
       expect(result.statuses.worker?.bootstrapConfirmed).toBe(false);
     }
   );
+
+  it('shares one native reconciliation between overlapping reads', async () => {
+    const f = fixture();
+    const delayed = deferred<TeamRuntimeLaunchResult>();
+    f.reconcile.mockImplementation(() => delayed.promise);
+    const first = f.service.getMemberSpawnStatuses(f.teamName);
+    const second = f.service.getMemberSpawnStatuses(f.teamName);
+    await vi.waitFor(() => expect(f.reconcile).toHaveBeenCalled());
+    delayed.resolve(f.evidence(true));
+    const results = await Promise.all([first, second]);
+    expect(f.reconcile).toHaveBeenCalledTimes(1);
+    expect(f.write).toHaveBeenCalledTimes(1);
+    for (const result of results) expect(result.statuses.worker?.bootstrapConfirmed).toBe(true);
+  });
+
+  it('retains pending evidence after a real non-throwing bridge timeout with no prior sessions', async () => {
+    const f = fixture();
+    for (const member of Object.values(f.owner.members)) delete member.sessionId;
+    const bridge = new OpenCodeReadinessBridge({
+      execute: async () => ({
+        ok: false,
+        schemaVersion: 1,
+        requestId: 'TEST-timeout',
+        command: 'opencode.reconcileTeam',
+        completedAt: '2026-10-10T00:00:00.000Z',
+        durationMs: 30_000,
+        error: { kind: 'timeout', message: 'TEST transient timeout', retryable: true },
+        diagnostics: [],
+      }),
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+    f.reconcile.mockImplementation((input) => adapter.reconcile(input));
+    const result = await f.service.getMemberSpawnStatuses(f.teamName);
+    expect(result.statuses.worker?.bootstrapConfirmed).toBe(false);
+    expect(f.owner.members.worker?.hardFailure).toBe(false);
+    expect(f.write).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('refuses newly claimed confirmation without a session that can be committed', async () => {
+    const f = fixture();
+    for (const member of Object.values(f.owner.members)) delete member.sessionId;
+    const ready = f.evidence(true);
+    for (const member of Object.values(ready.members)) delete member.sessionId;
+    f.reconcile.mockResolvedValueOnce(ready);
+    const result = await f.service.getMemberSpawnStatuses(f.teamName);
+    expect(result.statuses.worker?.bootstrapConfirmed).toBe(false);
+    expect(f.owner.members.worker?.bootstrapConfirmed).toBe(false);
+    expect(f.write).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('fences an owner-preserving stop before committing refreshed sessions', async () => {
+    const f = fixture();
+    const delayed = deferred<TeamRuntimeLaunchResult>();
+    f.reconcile.mockImplementationOnce(() => delayed.promise);
+    const read = f.service.getMemberSpawnStatuses(f.teamName);
+    await vi.waitFor(() => expect(f.reconcile).toHaveBeenCalledTimes(1));
+    f.runtimeProgress.set(f.launchInput.runId, { state: 'disconnected' });
+    delayed.resolve(f.evidence(true));
+    await read;
+    expect(f.write).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('bounds repeated pending refreshes with a five-second owner cooldown', async () => {
+    const f = fixture();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    try {
+      f.reconcile.mockResolvedValue(f.evidence(false));
+      await f.service.getMemberSpawnStatuses(f.teamName);
+      await f.service.getMemberSpawnStatuses(f.teamName);
+      expect(f.reconcile).toHaveBeenCalledTimes(1);
+      clock.mockReturnValue(15_000);
+      await f.service.getMemberSpawnStatuses(f.teamName);
+      expect(f.reconcile).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
 
   it('does not refresh an old owner when stop already began before the read', async () => {
     const f = fixture();
