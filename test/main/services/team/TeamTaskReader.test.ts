@@ -118,12 +118,18 @@ describe('TeamTaskReader', () => {
       status: 'pending',
       createdAt: '2026-05-02T12:00:00.000Z',
       blockedBy: ['old-blocker'],
+      groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     });
 
     const tasks = await new TeamTaskReader().getAllTasksProjectionSnapshot();
 
     expect(tasks).toMatchObject([
-      { id: 'blocked-task', teamName: 'atlas-hq', blockedBy: ['old-blocker'] },
+      {
+        id: 'blocked-task',
+        teamName: 'atlas-hq',
+        blockedBy: ['old-blocker'],
+        groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      },
     ]);
   });
 

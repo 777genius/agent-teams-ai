@@ -376,6 +376,7 @@ import type {
   TaskChangeRequestOptions,
   TaskChangeSetV2,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -1061,11 +1062,7 @@ const electronAPI: ElectronAPI = {
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },
-    updateTaskFields: async (
-      teamName: string,
-      taskId: string,
-      fields: { subject?: string; description?: string }
-    ) => {
+    updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_FIELDS, teamName, taskId, fields);
     },
     startTask: async (teamName: string, taskId: string) => {

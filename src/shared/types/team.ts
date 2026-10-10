@@ -299,6 +299,8 @@ export interface TeamTask {
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];
+  /** Optional same-team group context; does not change task assignment or delivery. */
+  groupChatId?: string;
   activeForm?: string;
   prompt?: string;
   promptTaskRefs?: TaskRef[];
@@ -919,9 +921,17 @@ export interface ApplicationCommandRequestIdentity {
   idempotencyKey: string;
 }
 
+/** Omitted fields preserve existing values; null explicitly removes the group association. */
+export interface TaskFieldUpdates {
+  subject?: string;
+  description?: string;
+  groupChatId?: string | null;
+}
+
 export interface CreateTaskRequest {
   /** Stable for one user intent so transport retries cannot create a second task. */
   command?: ApplicationCommandRequestIdentity;
+  groupChatId?: string;
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];

@@ -277,6 +277,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
@@ -3315,6 +3316,9 @@ async function handleCreateTask(
   if (!validatedDescriptionTaskRefs.valid) {
     return { success: false, error: validatedDescriptionTaskRefs.error };
   }
+  if (payload.groupChatId !== undefined && typeof payload.groupChatId !== 'string') {
+    return { success: false, error: 'groupChatId must be a UUID string' };
+  }
   if (payload.owner !== undefined) {
     const validatedOwner = validateMemberName(payload.owner);
     if (!validatedOwner.valid) {
@@ -3361,6 +3365,7 @@ async function handleCreateTask(
       ...(command ? { command } : {}),
       subject: payload.subject!.trim(),
       description: payload.description?.trim(),
+      groupChatId: payload.groupChatId,
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
       related: payload.related,
@@ -4814,7 +4819,11 @@ async function handleUpdateTaskFields(
   if (!fields || typeof fields !== 'object') {
     return { success: false, error: 'fields must be an object' };
   }
-  const { subject, description } = fields as { subject?: unknown; description?: unknown };
+  const { subject, description, groupChatId } = fields as {
+    subject?: unknown;
+    description?: unknown;
+    groupChatId?: unknown;
+  };
   if (subject !== undefined) {
     if (typeof subject !== 'string') return { success: false, error: 'subject must be a string' };
     if (subject.trim().length === 0) return { success: false, error: 'subject cannot be empty' };
@@ -4825,9 +4834,14 @@ async function handleUpdateTaskFields(
     return { success: false, error: 'description must be a string' };
   }
 
-  const validFields: { subject?: string; description?: string } = {};
+  if (groupChatId !== undefined && groupChatId !== null && typeof groupChatId !== 'string') {
+    return { success: false, error: 'groupChatId must be a UUID string or null' };
+  }
+  const validFields: TaskFieldUpdates = {};
   if (typeof subject === 'string') validFields.subject = subject.trim();
   if (typeof description === 'string') validFields.description = description;
+  if (groupChatId === null || typeof groupChatId === 'string')
+    validFields.groupChatId = groupChatId;
 
   if (Object.keys(validFields).length === 0) {
     return { success: false, error: 'At least one field must be provided' };
@@ -4842,6 +4856,7 @@ async function handleUpdateTaskFields(
       const changedParts: string[] = [];
       if (validFields.subject) changedParts.push('title');
       if (validFields.description !== undefined) changedParts.push('description');
+      if (validFields.groupChatId !== undefined) changedParts.push('group chat');
       const message =
         `Task #${tid} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
         `New title: "${validFields.subject ?? '(unchanged)'}".`;

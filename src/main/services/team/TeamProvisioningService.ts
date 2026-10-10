@@ -236,3 +236,22 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     });
   }
 }
+
+/** Keep group callbacks lazy while using the desktop service's normal dependency defaults. */
+export function createDefaultTeamProvisioningService(
+  getGroupChats: () => ProvisioningGroupChatCallbacks
+) {
+  return new TeamProvisioningService(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    { send: (input, from) => getGroupChats().send(input, from) }
+  );
+}

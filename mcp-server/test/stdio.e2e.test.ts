@@ -307,20 +307,43 @@ describe('agent-teams-mcp stdio e2e', () => {
 
   it('boots over stdio, lists task tools, and executes task lifecycle calls', async () => {
     await writeTeamConfig(claudeDir, 'e2e-team');
-    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const groupChatId = '11111111-1111-4111-8111-111111111111';
+    const context = {
+      appInstanceId: 'sandbox-task-group-package',
+      dataRootFingerprint: 'sandbox-task-group-root',
+      connectionGeneration: 1,
+    };
+    const catalogRequests: unknown[] = [];
+    // Controlled catalog HTTP fixture: this exercises the bundle, not a live desktop or team.
+    const control = await startControlServer(({ method, url, body }) => {
+      expect(method).toBe('POST');
+      expect(url).toBe('/api/teams/e2e-team/group-chats/list');
+      catalogRequests.push(body);
+      return { body: [{ id: groupChatId, archivedAt: null }] };
+    });
+    const client = new McpStdIoClient(serverPath, workspaceRoot, [], {
+      AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+      AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+    });
 
     try {
       const init = await client.initialize();
       expect(init).toHaveProperty('result');
 
       const tools = (await client.listTools()) as {
-        result?: { tools?: Array<{ name: string; description?: string }> };
+        result?: { tools?: Array<{ name: string; description?: string; inputSchema?: unknown }> };
       };
       const registeredTools = tools.result?.tools ?? [];
       const toolNames = registeredTools.map((tool) => tool.name);
       const taskListTool = registeredTools.find((tool) => tool.name === 'task_list');
 
       expect(toolNames).toContain('task_create');
+      for (const name of ['task_create', 'task_create_from_message']) {
+        expect(registeredTools.find((tool) => tool.name === name)?.inputSchema).toMatchObject({
+          properties: { groupChatId: { type: 'string', format: 'uuid' } },
+        });
+      }
       expect(toolNames).toContain('task_start');
       expect(toolNames).toContain('task_briefing');
       expect(toolNames).toContain('member_briefing');
@@ -337,6 +360,8 @@ describe('agent-teams-mcp stdio e2e', () => {
           claudeDir,
           teamName: 'e2e-team',
           subject: 'Smoke task',
+          groupChatId,
+          createdBy: 'team-lead',
           owner: 'alice',
           description: 'Smoke task description',
         },
@@ -347,6 +372,17 @@ describe('agent-teams-mcp stdio e2e', () => {
       expect(createdTask.subject).toBe('Smoke task');
       expect(createdTask.owner).toBe('alice');
       expect(typeof createdTask.id).toBe('string');
+      expect(createdTask.groupChatId).toBe(groupChatId);
+      expect(catalogRequests[0]).toEqual({ from: 'team-lead' });
+      const associatedGet = await client.callTool(
+        'task_get',
+        { claudeDir, teamName: 'e2e-team', taskId: createdTask.id },
+        16
+      );
+      expect(parseJsonToolResult((associatedGet as { result: unknown }).result)).toMatchObject({
+        id: createdTask.id,
+        groupChatId,
+      });
 
       const startResult = await client.callTool(
         'task_start',
@@ -537,6 +573,10 @@ describe('agent-teams-mcp stdio e2e', () => {
         14
       );
       const inventoryRows = parseJsonToolResult((inventoryResult as { result: unknown }).result);
+      expect(inventoryRows.find((row: { id: string }) => row.id === createdTask.id)).toMatchObject({
+        id: createdTask.id,
+        groupChatId,
+      });
       const reviewInventoryRow = inventoryRows.find(
         (row: { id: string }) => row.id === reviewTask.id
       ) as Record<string, unknown> | undefined;
@@ -582,6 +622,7 @@ describe('agent-teams-mcp stdio e2e', () => {
       });
     } finally {
       await client.close();
+      await control.close();
     }
   });
 

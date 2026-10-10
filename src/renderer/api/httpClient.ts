@@ -126,6 +126,7 @@ import type {
   SshConnectionStatus,
   SshLastConnection,
   SubagentDetail,
+  TaskFieldUpdates,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
@@ -225,7 +226,9 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
-  get teamGroupChats() { return createHttpTeamGroupChatsAPI(this.baseUrl); }
+  get teamGroupChats() {
+    return createHttpTeamGroupChatsAPI(this.baseUrl);
+  }
   externalAgentConnection: ExternalAgentConnectionApi = {
     getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
     retryConnection: () => this.post<ConnectionInfoV1>('/api/app/connection/retry'),
@@ -1171,7 +1174,7 @@ export class HttpAPIClient implements ElectronAPI {
     updateTaskFields: async (
       _teamName: string,
       _taskId: string,
-      _fields: { subject?: string; description?: string }
+      _fields: TaskFieldUpdates
     ): Promise<void> => {
       throw new Error('Team task fields update is not available in browser mode');
     },
@@ -1722,7 +1725,9 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   editor: EditorAPI = {
-    readDocumentPreview: async () => { throw new Error('Editor not available in browser mode'); },
+    readDocumentPreview: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
     open: async () => {
       throw new Error('Editor not available in browser mode');
     },

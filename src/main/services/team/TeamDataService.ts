@@ -58,6 +58,10 @@ import {
   isControllerTaskNotFoundError,
 } from './taskCreationIdempotency';
 import {
+  assertTaskGroupChatAssociation,
+  type TaskGroupChatCatalog,
+} from './taskGroupChatAssociation';
+import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
@@ -105,6 +109,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TaskRef,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -437,6 +442,7 @@ export class TeamDataService {
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -649,6 +655,10 @@ export class TeamDataService {
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
+  }
+
+  setTaskGroupChatCatalog(catalog: TaskGroupChatCatalog): void {
+    this.taskGroupChatCatalog = catalog;
   }
 
   setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
@@ -2137,6 +2147,7 @@ export class TeamDataService {
     const shouldStart = Boolean(request.owner && request.startImmediately === true);
     const commandPayload: Record<string, unknown> = {
       subject: request.subject,
+      ...(request.groupChatId !== undefined ? { groupChatId: request.groupChatId } : {}),
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
         ? { descriptionTaskRefs: request.descriptionTaskRefs }
@@ -2181,6 +2192,12 @@ export class TeamDataService {
               idempotencyKey
             ),
           create: async (input) => {
+            await assertTaskGroupChatAssociation(
+              teamName,
+              input.groupChatId,
+              undefined,
+              this.taskGroupChatCatalog
+            );
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({
               ...input,
@@ -2193,6 +2210,12 @@ export class TeamDataService {
       task = commandResult.task;
       createdInAttempt = commandResult.createdInAttempt;
     } else {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        request.groupChatId,
+        undefined,
+        this.taskGroupChatCatalog
+      );
       const projectPath = await this.readTaskCreateProjectPath(teamName);
       task = taskBoard.createTask({
         ...commandPayload,
@@ -2454,9 +2477,18 @@ export class TeamDataService {
   async updateTaskFields(
     teamName: string,
     taskId: string,
-    fields: { subject?: string; description?: string }
+    fields: TaskFieldUpdates
   ): Promise<void> {
-    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
+    const taskBoard = this.getTaskBoard(teamName);
+    if (fields.groupChatId !== undefined && fields.groupChatId !== null) {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        fields.groupChatId,
+        (taskBoard.getTask(taskId) as TeamTask).groupChatId,
+        this.taskGroupChatCatalog
+      );
+    }
+    taskBoard.updateTaskFields(taskId, fields);
     this.invalidateGlobalTaskProjectionCache();
   }
 

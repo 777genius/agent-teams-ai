@@ -87,6 +87,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -493,11 +494,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   ) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
+  updateTaskFields: (teamName: string, taskId: string, fields: TaskFieldUpdates) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
