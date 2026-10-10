@@ -20,6 +20,14 @@ export function isAddressedToUser(message: InboxMessage): boolean {
   return normalizeConversationParticipant(message.to) === 'user';
 }
 
+/** Group copies are stored to user; only an explicit @user token requests attention. */
+export function isUserAttentionMessage(message: InboxMessage): boolean {
+  if (isOutboundUserMessage(message)) return false;
+  return message.groupChatId
+    ? /(?<![\p{L}\p{N}_@./-])@user(?![\p{L}\p{N}_@/-]|\.(?=\S))/iu.test(message.text)
+    : isAddressedToUser(message);
+}
+
 export function isUserUnreadMessage(
   message: InboxMessage,
   readSet: ReadonlySet<string>,
@@ -45,5 +53,5 @@ export function isAttentionUnread(
   readSet: ReadonlySet<string>,
   toKey: ConversationMessageKeyFn
 ): boolean {
-  return isUserUnreadMessage(message, readSet, toKey) && isAddressedToUser(message);
+  return isUserUnreadMessage(message, readSet, toKey) && isUserAttentionMessage(message);
 }

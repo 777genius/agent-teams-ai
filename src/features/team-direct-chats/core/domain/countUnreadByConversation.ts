@@ -2,7 +2,7 @@ import { belongsToConversation } from './belongsToConversation';
 import { type ConversationScope, conversationScopeKey, TEAM_FEED_SCOPE } from './conversationScope';
 import {
   type ConversationMessageKeyFn,
-  isAddressedToUser,
+  isUserAttentionMessage,
   isUserUnreadMessage,
 } from './isUserUnreadMessage';
 
@@ -30,7 +30,7 @@ export function countUniqueUnread(
     }
     const key = toKey(message);
     unreadKeys.add(key);
-    if (isAddressedToUser(message)) {
+    if (isUserAttentionMessage(message)) {
       attentionKeys.add(key);
     }
   }
@@ -64,7 +64,7 @@ export function countUnreadByConversation(
     if (!isUserUnreadMessage(message, readSet, toKey)) {
       continue;
     }
-    const addressed = isAddressedToUser(message);
+    const addressed = isUserAttentionMessage(message);
     const messageKey = toKey(message);
     for (const scope of scopedList) {
       const key = conversationScopeKey(scope);

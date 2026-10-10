@@ -5057,6 +5057,7 @@ export default interface Resources {
           "unknown": "unknown"
         },
         "description": "Choose at least two agents. You are included automatically.",
+        "mentions": "{{count}} mentions of you",
         "message": "Message this group",
         "minimum": "Select at least two agents.",
         "name": "Chat name",

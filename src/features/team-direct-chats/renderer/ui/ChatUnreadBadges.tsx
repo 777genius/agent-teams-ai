@@ -7,11 +7,13 @@ import type { JSX } from 'react';
 interface ChatUnreadBadgesProps {
   unreadCount: number;
   attentionCount: number;
+  attentionLabel?: string;
 }
 
 export const ChatUnreadBadges = ({
   unreadCount,
   attentionCount,
+  attentionLabel,
 }: ChatUnreadBadgesProps): JSX.Element | null => {
   const { t } = useAppTranslation('team');
   if (unreadCount <= 0) {
@@ -20,7 +22,9 @@ export const ChatUnreadBadges = ({
 
   const tooltip = [
     t('messages.chats.activityUnread', { count: unreadCount }),
-    attentionCount > 0 ? t('messages.chats.attentionUnread', { count: attentionCount }) : null,
+    attentionCount > 0
+      ? (attentionLabel ?? t('messages.chats.attentionUnread', { count: attentionCount }))
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -30,10 +34,14 @@ export const ChatUnreadBadges = ({
       <TooltipTrigger asChild>
         <span
           className="relative inline-flex overflow-visible pr-1.5 pt-1"
-          aria-label={t('messages.chats.rowAriaCounts', {
-            unread: unreadCount,
-            attention: attentionCount,
-          })}
+          aria-label={
+            attentionLabel
+              ? `${t('messages.chats.activityUnread', { count: unreadCount })} · ${attentionLabel}`
+              : t('messages.chats.rowAriaCounts', {
+                  unread: unreadCount,
+                  attention: attentionCount,
+                })
+          }
         >
           <Badge
             variant="secondary"

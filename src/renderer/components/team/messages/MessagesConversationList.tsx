@@ -9,7 +9,14 @@ import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /** Owns creation-dialog lifetime independently of the existing DM navigation. */
 const MessagesGroupNavigation = ({
-  conversation, teamName, members, messages, readSet, selectedScope, isTeamAlive, onOpen,
+  conversation,
+  teamName,
+  members,
+  messages,
+  readSet,
+  selectedScope,
+  isTeamAlive,
+  onOpen,
 }: Readonly<{
   conversation: ReturnType<typeof useMessagesGroupConversation>;
   teamName: string;
@@ -24,25 +31,66 @@ const MessagesGroupNavigation = ({
   const dialogGeneration = useRef(0);
   const generation = dialogGeneration.current;
   const active = useRef(true);
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   return (
     <>
-      <GroupChatList groups={conversation.catalog.groups} messages={messages} readSet={readSet}
-        selectedScope={selectedScope} onOpen={onOpen} onCreate={() => { dialogGeneration.current++; setCreating(true); }}
-        error={conversation.catalog.error} />
-      {creating ? <CreateGroupChatDialog teamName={teamName} members={members.filter((m) => !m.removedAt)}
-        isTeamAlive={isTeamAlive} create={conversation.catalog.create} onClose={() => { if (generation === dialogGeneration.current) { dialogGeneration.current++; setCreating(false); } }}
-        onCreated={(group) => { if (active.current && generation === dialogGeneration.current) onOpen({ kind: 'group', groupChatId: group.id }); }} /> : null}
+      <GroupChatList
+        groups={conversation.catalog.groups}
+        members={members}
+        messages={messages}
+        readSet={readSet}
+        selectedScope={selectedScope}
+        onOpen={onOpen}
+        onCreate={() => {
+          dialogGeneration.current++;
+          setCreating(true);
+        }}
+        error={conversation.catalog.error}
+      />
+      {creating ? (
+        <CreateGroupChatDialog
+          teamName={teamName}
+          members={members.filter((m) => !m.removedAt)}
+          isTeamAlive={isTeamAlive}
+          create={conversation.catalog.create}
+          onClose={() => {
+            if (generation === dialogGeneration.current) {
+              dialogGeneration.current++;
+              setCreating(false);
+            }
+          }}
+          onCreated={(group) => {
+            if (active.current && generation === dialogGeneration.current)
+              onOpen({ kind: 'group', groupChatId: group.id });
+          }}
+        />
+      ) : null}
     </>
   );
-}
+};
 
-export const MessagesConversationList = ({ items, ...props }:
-  Readonly<React.ComponentProps<typeof MessagesGroupNavigation> & {
+export const MessagesConversationList = ({
+  items,
+  ...props
+}: Readonly<
+  React.ComponentProps<typeof MessagesGroupNavigation> & {
     items: React.ComponentProps<typeof ChatList>['items'];
-  }>) => {
-  return <>
-    <ChatList items={items} teamName={props.teamName} selectedScope={props.selectedScope} onOpen={props.onOpen} />
-    <MessagesGroupNavigation {...props} />
-  </>;
-}
+  }
+>) => {
+  return (
+    <>
+      <ChatList
+        items={items}
+        teamName={props.teamName}
+        selectedScope={props.selectedScope}
+        onOpen={props.onOpen}
+      />
+      <MessagesGroupNavigation {...props} />
+    </>
+  );
+};

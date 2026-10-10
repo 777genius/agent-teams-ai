@@ -26,6 +26,7 @@ export {
   isAddressedToUser,
   isAttentionUnread,
   isOutboundUserMessage,
+  isUserAttentionMessage,
   isUserUnreadMessage,
 } from '../core/domain/isUserUnreadMessage';
 export { pickPreviewMessage } from '../core/domain/pickPreviewMessage';
