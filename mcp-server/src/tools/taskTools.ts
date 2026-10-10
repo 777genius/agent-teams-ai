@@ -2,7 +2,13 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
-import { assertConfiguredTaskActor, assertConfiguredTeam } from '../utils/teamConfig';
+import { assertConfiguredTeam } from '../utils/teamConfig';
+import {
+  buildCreateTaskPayload,
+  resolveTaskCreationActor,
+  resolveSourceGroupChatId,
+  assertTaskGroupAssociation,
+} from '../utils/taskCreationPayload';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
 import {
@@ -43,66 +49,8 @@ function normalizeTaskListLimit(limit: number | undefined): number {
   return Math.min(Math.max(1, Math.floor(limit)), MAX_TASK_LIST_LIMIT);
 }
 
-function resolveTaskCreationActor(params: {
-  teamName: string;
-  claudeDir?: string;
-  createdBy?: string;
-  from?: string;
-}): { createdBy?: string; from?: string } {
-  const explicitActor = params.createdBy?.trim();
-  const fallbackActor = params.from?.trim();
-  const actor = explicitActor || fallbackActor;
-  if (!actor) {
-    return {};
-  }
-
-  const validatedActor = assertConfiguredTaskActor(params.teamName, actor, params.claudeDir);
-  return explicitActor ? { createdBy: validatedActor } : { from: validatedActor };
-}
-
 /** Allowed message source types for task_create_from_message provenance. Fail closed — only explicit user-originated sources. */
 const USER_ORIGINATED_SOURCES = new Set(['user_sent']);
-
-/**
- * Shared payload builder for task_create and task_create_from_message.
- *
- * Both tools MUST stay semantically aligned — any new field added to task_create
- * that also applies to message-derived tasks must be added here, not duplicated.
- * Do not turn this into a repo-wide abstraction; keep it local to MCP tools.
- */
-function buildCreateTaskPayload(params: {
-  subject: string;
-  description?: string;
-  owner?: string;
-  createdBy?: string;
-  from?: string;
-  blockedBy?: string[];
-  related?: string[];
-  prompt?: string;
-  descriptionTaskRefs?: z.infer<typeof taskRefSchema>[];
-  promptTaskRefs?: z.infer<typeof taskRefSchema>[];
-  startImmediately?: boolean;
-  sourceMessageId?: string;
-  sourceMessage?: Record<string, unknown>;
-}): Record<string, unknown> {
-  return {
-    subject: params.subject,
-    ...(params.description ? { description: params.description } : {}),
-    ...(params.owner ? { owner: params.owner } : {}),
-    ...(params.createdBy ? { createdBy: params.createdBy } : {}),
-    ...(!params.createdBy && params.from ? { from: params.from } : {}),
-    ...(params.blockedBy?.length ? { 'blocked-by': params.blockedBy.join(',') } : {}),
-    ...(params.related?.length ? { related: params.related.join(',') } : {}),
-    ...(params.prompt ? { prompt: params.prompt } : {}),
-    ...(params.descriptionTaskRefs?.length
-      ? { descriptionTaskRefs: params.descriptionTaskRefs }
-      : {}),
-    ...(params.promptTaskRefs?.length ? { promptTaskRefs: params.promptTaskRefs } : {}),
-    ...(params.startImmediately !== undefined ? { startImmediately: params.startImmediately } : {}),
-    ...(params.sourceMessageId ? { sourceMessageId: params.sourceMessageId } : {}),
-    ...(params.sourceMessage ? { sourceMessage: params.sourceMessage } : {}),
-  };
-}
 
 export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
@@ -112,6 +60,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     parameters: z.object({
       ...toolContextSchema,
       subject: z.string().min(1),
+      groupChatId: z
+        .uuid()
+        .optional()
+        .describe(
+          'Optional same-team active group context. For a new associated task provide your configured non-user createdBy/from actor; association does not grant membership.'
+        ),
       description: z.string().optional(),
       owner: z
         .string()
@@ -155,6 +109,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       teamName,
       claudeDir,
       subject,
+      groupChatId,
       description,
       owner,
       createdBy,
@@ -174,6 +129,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy, from });
       const payload = buildCreateTaskPayload({
         subject,
+        groupChatId,
         description,
         owner,
         ...taskActor,
@@ -191,12 +147,24 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       });
       return await Promise.resolve(
         jsonTextContent(
-          createTaskWithOptionalIdempotency({
+          await createTaskWithOptionalIdempotency({
             taskBoard,
             teamName,
             operation: 'task.create',
             payload,
             commandId: resolvedCommandId,
+            ...(groupChatId !== undefined
+              ? {
+                  admitCreate: () =>
+                    assertTaskGroupAssociation({
+                      teamName,
+                      claudeDir,
+                      groupChatId,
+                      taskActor,
+                      controller,
+                    }),
+                }
+              : {}),
           })
         )
       );
@@ -214,11 +182,17 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create_from_message',
     description:
-      'Create a task from a persisted user message. Always provide a stable requestKey for this exact task intent and reuse the same messageId + requestKey only on retry. Use a different requestKey to create another legitimate task from the same message.',
+      'Create a task from a persisted user message. Always provide a stable requestKey for this exact task intent and reuse the same messageId + requestKey only on retry. Use a different requestKey to create another legitimate task from the same message. Original canonical user group messages infer groupChatId; new associated tasks require your configured non-user createdBy actor.',
     parameters: z.object({
       ...toolContextSchema,
       messageId: z.string().min(1),
       subject: z.string().min(1),
+      groupChatId: z
+        .uuid()
+        .optional()
+        .describe(
+          'Optional same-team active group context. For a new associated task provide your configured non-user createdBy actor; association does not grant membership.'
+        ),
       description: z.string().optional(),
       owner: z.string().optional(),
       createdBy: z.string().optional(),
@@ -243,6 +217,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       claudeDir,
       messageId,
       subject,
+      groupChatId,
       description,
       owner,
       createdBy,
@@ -279,15 +254,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         );
       }
 
-      // 3. Physical group deliveries are relay copies, never user originals.
-      if (
-        (message.groupChatId && message.messageId !== message.groupMessageId) ||
-        (typeof message.relayOfMessageId === 'string' && message.relayOfMessageId.trim())
-      ) {
-        throw new Error(
-          'Cannot create task from a relay copy. Use the original user_sent message and its explicit User MessageId from the relay prompt instead.'
-        );
-      }
+      const associatedGroupChatId = resolveSourceGroupChatId(message, groupChatId);
 
       // 4. Build sanitized source snapshot
       const rawText = typeof message.text === 'string' ? message.text : '';
@@ -323,6 +290,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy });
       const payload = buildCreateTaskPayload({
         subject,
+        groupChatId: associatedGroupChatId,
         description,
         owner,
         ...taskActor,
@@ -338,12 +306,24 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       const commandId = resolveMessageTaskCommandId({ teamName, messageId, requestKey });
       return await Promise.resolve(
         jsonTextContent(
-          createTaskWithOptionalIdempotency({
+          await createTaskWithOptionalIdempotency({
             taskBoard,
             teamName,
             operation: 'task.create_from_message',
             payload,
             commandId,
+            ...(associatedGroupChatId !== undefined
+              ? {
+                  admitCreate: () =>
+                    assertTaskGroupAssociation({
+                      teamName,
+                      claudeDir,
+                      groupChatId: associatedGroupChatId,
+                      taskActor,
+                      controller,
+                    }),
+                }
+              : {}),
           })
         )
       );
@@ -354,6 +334,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     name: 'task_get',
     description:
       'Get a task by id. Response includes:\n' +
+      '- groupChatId: optional group context; fetch group_chat_list before proactive sends; association does not grant membership\n' +
       '- sourceMessage.attachments: from original user message (filePath = absolute path to file on disk, use Read tool to view)\n' +
       '- attachments: files attached to the task (filePath = absolute path, use Read tool to view)\n' +
       '- comments[].attachments: files on comments (filePath = absolute path, use Read tool to view)',

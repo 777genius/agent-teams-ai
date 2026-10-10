@@ -97,6 +97,28 @@ describe('taskStore validated scan snapshots', () => {
     counts.parse = 0;
   }
 
+  it('persists an optional group UUID, preserves omitted edits, and deletes it on explicit unlink', () => {
+    const paths = makePaths();
+    const id = makeTaskId(20);
+    const groupChatId = '00000000-0000-4000-8000-000000000001';
+    taskStore.createTask(paths, { id, subject: 'Group context', groupChatId });
+    expect(taskStore.readTask(paths, id).groupChatId).toBe(groupChatId);
+    taskStore.updateTaskFields(paths, id, { description: 'Updated independently' });
+    expect(taskStore.readTask(paths, id).groupChatId).toBe(groupChatId);
+    const file = path.join(paths.tasksDir, `${id}.json`);
+    const before = fs.readFileSync(file, 'utf8');
+    expect(() => taskStore.updateTaskFields(paths, id, { subject: 'Must not persist', groupChatId: 'invalid' }))
+      .toThrow('Invalid task groupChatId');
+    expect(fs.readFileSync(file, 'utf8')).toBe(before);
+    taskStore.updateTaskFields(paths, id, { groupChatId: null });
+    expect(JSON.parse(fs.readFileSync(file, 'utf8'))).not.toHaveProperty('groupChatId');
+    expect(taskStore.readTask(paths, id).description).toBe('Updated independently');
+    const legacy = taskStore.createTask(paths, { id: makeTaskId(21), subject: 'Legacy task' });
+    expect(taskStore.readTask(paths, legacy.id)).not.toHaveProperty('groupChatId');
+    expect(() => taskStore.createTask(paths, { id: makeTaskId(22), subject: 'Invalid', groupChatId: null }))
+      .toThrow('Invalid task groupChatId');
+  });
+
   it('shares one validated full scan across nested reads in an outer board lock', () => {
     const paths = makePaths();
     const firstId = makeTaskId(1);

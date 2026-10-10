@@ -214,6 +214,7 @@ import type {
   SendMessageResult,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamGetDataOptions,
@@ -1558,11 +1559,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
+  updateTaskFields: (teamName: string, taskId: string, fields: TaskFieldUpdates) => Promise<void>;
   addingComment: boolean;
   addCommentError: string | null;
   addTaskComment: (
@@ -3706,11 +3703,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await get().refreshTeamData(teamName);
   },
 
-  updateTaskFields: async (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => {
+  updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
     await unwrapIpc('team:updateTaskFields', () =>
       api.teams.updateTaskFields(teamName, taskId, fields)
     );

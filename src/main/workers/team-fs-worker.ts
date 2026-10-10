@@ -15,6 +15,7 @@ import {
 import { compactTeamTaskForSnapshot } from '@main/services/team/teamTaskSnapshotCompaction';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
 import type { TeamTask } from '@shared/types';
@@ -47,15 +48,6 @@ type WorkerRequest =
 type WorkerResponse =
   | { id: string; ok: true; result: unknown; diag?: unknown }
   | { id: string; ok: false; error: string };
-
-const UUID_TASK_ID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function deriveTaskDisplayId(taskId: string): string {
-  const normalized = taskId.trim();
-  if (!normalized) return normalized;
-  return UUID_TASK_ID_PATTERN.test(normalized) ? normalized.slice(0, 8).toLowerCase() : normalized;
-}
 
 /**
  * Normalise escaped newline sequences (`\\n`) that some MCP/CLI sources
@@ -241,6 +233,7 @@ interface ParsedTask {
   title?: unknown;
   description?: unknown;
   descriptionTaskRefs?: unknown;
+  groupChatId?: unknown;
   activeForm?: unknown;
   prompt?: unknown;
   promptTaskRefs?: unknown;
@@ -832,6 +825,7 @@ function restorePersistentTaskProjectionShape(
         : deriveTaskDisplayId(id),
     subject,
     description: typeof task.description === 'string' ? task.description : undefined,
+    groupChatId: typeof task.groupChatId === 'string' ? task.groupChatId : undefined,
     descriptionTaskRefs: Array.isArray(task.descriptionTaskRefs)
       ? task.descriptionTaskRefs
       : undefined,
@@ -1931,6 +1925,7 @@ async function readTasksDirForTeam(
           typeof parsed.description === 'string'
             ? unescapeLiteralNewlines(parsed.description)
             : undefined,
+        groupChatId: typeof parsed.groupChatId === 'string' ? parsed.groupChatId : undefined,
         descriptionTaskRefs: Array.isArray(parsed.descriptionTaskRefs)
           ? (parsed.descriptionTaskRefs as unknown[])
           : undefined,

@@ -619,8 +619,10 @@ describe('team-fs-worker integration', () => {
       const firstTasks = Array.isArray(first.result) ? first.result : [];
       expect(firstTasks.length).toBe(taskCount);
       expect(
-        ((firstTasks[0] as { comments?: { text?: string }[] } | undefined)?.comments?.[0]?.text ??
-          '').length
+        (
+          (firstTasks[0] as { comments?: { text?: string }[] } | undefined)?.comments?.[0]?.text ??
+          ''
+        ).length
       ).toBe(120);
       expect((first.diag as Record<string, unknown> | undefined)?.cacheMisses).toBe(taskCount);
 
@@ -653,6 +655,7 @@ describe('team-fs-worker integration', () => {
         status: 'pending',
         createdAt: '2026-05-02T12:00:00.000Z',
         blockedBy: ['old-blocker'],
+        groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         workIntervals: [{ startedAt: '2026-05-02T12:00:00.000Z' }],
         reviewIntervals: [{ reviewer: 'alice', startedAt: '2026-05-02T12:30:00.000Z' }],
         comments: [
@@ -676,6 +679,7 @@ describe('team-fs-worker integration', () => {
         teamName,
         subject: 'Persisted subject',
         blockedBy: ['old-blocker'],
+        groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       });
       firstTasks = first.tasks;
       firstTaskKeys = Object.keys(first.tasks[0] as Record<string, unknown>);
@@ -688,10 +692,12 @@ describe('team-fs-worker integration', () => {
     const secondWorker = createWorker(workerPath);
     try {
       const second = await callGetAllTasks(secondWorker, tasksBase, projectionCacheBase);
-      expect(second.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
-      expect(Object.keys(second.tasks[0] as Record<string, unknown>)).toEqual(
-        firstTaskKeys
-      );
+      expect(second.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Persisted subject',
+        groupChatId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      });
+      expect(Object.keys(second.tasks[0] as Record<string, unknown>)).toEqual(firstTaskKeys);
       expect(second.tasks).toEqual(firstTasks);
       expect(second.diag?.cacheHits).toBe(0);
       expect(second.diag?.cacheMisses).toBe(0);

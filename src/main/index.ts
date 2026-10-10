@@ -370,7 +370,7 @@ import {
   TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamMembersMetaStore,
-  TeamProvisioningService,
+  createDefaultTeamProvisioningService,
   TeamRuntimeAdapterRegistry,
   TeamTaskReader,
   TeamTaskStallJournal,
@@ -683,8 +683,14 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   configureCursorAgentAtomicReapBridge(bridgeClient);
   const desktopBridge = composeOpenCodeDesktopBridge({
-    bridge: bridgeClient, controlDirectory: bridgeControlDir, teamsBasePath: getTeamsBasePath(),
-    identity: { appVersion: app.getVersion(), gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null, buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null },
+    bridge: bridgeClient,
+    controlDirectory: bridgeControlDir,
+    teamsBasePath: getTeamsBasePath(),
+    identity: {
+      appVersion: app.getVersion(),
+      gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
+      buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
+    },
     readOpenCodeRuntimeStatus,
     runtimeSnapshots: teamProvisioningService,
   });
@@ -1008,7 +1014,7 @@ let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
-let teamProvisioningService: TeamProvisioningService;
+let teamProvisioningService: ReturnType<typeof createDefaultTeamProvisioningService>;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
@@ -2008,16 +2014,12 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService(
-    undefined, undefined, undefined, undefined, undefined,
-    undefined, undefined, undefined, undefined, undefined, {
-      send: (input, from) => teamGroupChatsFeature.send(input, from),
-    }
-  );
+  teamProvisioningService = createDefaultTeamProvisioningService(() => teamGroupChatsFeature);
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
-    openCodeRun: (teamName, memberName) => readOpenCodeGroupRun?.(teamName, memberName) ?? Promise.resolve(null),
-    configurationOperation: (teamName, operation) => teamDataService.runConfigurationOperation(teamName, operation),
+    openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
+    configurationOperation: (teamName, operation) =>
+      teamDataService.runConfigurationOperation(teamName, operation),
     inboxWriter: teamInboxWriter,
     changed: (teamName) => {
       const event: TeamChangeEvent = { teamName, type: 'inbox' };
@@ -2025,6 +2027,7 @@ async function initializeServices(): Promise<void> {
       forwardTeamChangeToRendererAndHttp(event);
     },
   });
+  teamDataService.setTaskGroupChatCatalog((teamName) => teamGroupChatsFeature.list({ teamName }));
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;

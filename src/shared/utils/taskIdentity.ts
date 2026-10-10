@@ -1,4 +1,4 @@
-import type { TeamTask } from '@shared/types';
+import type { TaskRef, TeamTask } from '@shared/types';
 
 const UUID_TASK_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -29,4 +29,19 @@ export function taskMatchesRef(
   const normalized = ref.trim();
   if (!normalized) return false;
   return task.id === normalized || getTaskDisplayId(task) === normalized;
+}
+
+export function normalizeTaskRefs(value: unknown): TaskRef[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const taskRefs = (value as unknown[])
+    .filter(
+      (entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object'
+    )
+    .map((entry) => ({
+      taskId: typeof entry.taskId === 'string' ? entry.taskId : '',
+      displayId: typeof entry.displayId === 'string' ? entry.displayId : '',
+      teamName: typeof entry.teamName === 'string' ? entry.teamName : '',
+    }))
+    .filter((entry) => entry.taskId && entry.displayId && entry.teamName);
+  return taskRefs.length > 0 ? taskRefs : undefined;
 }

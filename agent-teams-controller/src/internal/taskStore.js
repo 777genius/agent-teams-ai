@@ -6,6 +6,7 @@ const { writeJsonFileSync } = require('./atomicFile.js');
 const { getTeamBoardLockContext } = require('./boardLock.js');
 const reviewStateHelpers = require('./reviewState.js');
 const { normalizeCreationCommand } = require('./taskCreationCommand.js');
+const { normalizeTaskGroupChatId, applyTaskGroupChatUpdate } = require('./taskGroupAssociation.js');
 
 const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed', 'deleted']);
 const UUID_TASK_ID_PATTERN =
@@ -654,6 +655,7 @@ function createTask(paths, input = {}) {
         ? input.description
         : String(input.subject || '').trim(),
     descriptionTaskRefs: normalizeTaskRefs(input.descriptionTaskRefs),
+    groupChatId: normalizeTaskGroupChatId(input.groupChatId),
     activeForm:
       typeof input.activeForm === 'string'
         ? input.activeForm
@@ -931,6 +933,7 @@ function setTaskOwner(paths, taskRef, owner, actor) {
 
 function updateTaskFields(paths, taskRef, fields) {
   return updateTask(paths, taskRef, (task) => {
+    applyTaskGroupChatUpdate(task, fields.groupChatId);
     if (fields.subject !== undefined) {
       task.subject = fields.subject;
     }
