@@ -54,6 +54,7 @@ import {
   SIDEBAR_LOGS_MAX_HEIGHT,
   SIDEBAR_LOGS_MIN_HEIGHT,
 } from '@renderer/store/team/sidebarLogsHeight';
+import { getInboxMessageQuoteText } from '@renderer/utils/agentMessageFormatting';
 import {
   buildChangeReviewLifecycleSessionId,
   requestChangeReviewLifecycleReservation,
@@ -77,7 +78,6 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -106,6 +106,7 @@ import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TrashDialog } from './kanban/TrashDialog';
@@ -121,6 +122,7 @@ import { useTeamStopControl } from './useTeamStopControl';
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
 
 const sumInjectionTokens = tokenMath[
@@ -360,15 +362,6 @@ interface TeamReviewDialogState {
   taskId?: string;
   initialFilePath?: string;
   taskChangeRequestOptions?: TaskChangeRequestOptions;
-}
-
-interface CreateTaskDialogState {
-  open: boolean;
-  defaultSubject: string;
-  defaultDescription: string;
-  defaultOwner: string;
-  defaultStartImmediately?: boolean;
-  defaultChip?: InlineChip;
 }
 
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
@@ -1302,12 +1295,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     initialTab?: MemberDetailTab;
     initialActivityFilter?: MemberActivityFilter;
   } | null>(null);
-  const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
-    open: false,
-    defaultSubject: '',
-    defaultDescription: '',
-    defaultOwner: '',
-  });
+  const {
+    createTaskDialog,
+    setCreateTaskDialog,
+    openCreateTaskDialog,
+    closeCreateTaskDialog,
+    handleCreateTaskFromMessage,
+    isCreateTaskOriginCurrent,
+    assertCreateTaskOriginCurrent,
+    defaultMessageGroupChatId,
+  } = useTeamCreateTaskDialog(teamName);
   const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
@@ -2063,46 +2060,13 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
 
-  const openCreateTaskDialog = useCallback(
-    (subject = '', description = '', owner = '', startImmediately?: boolean): void => {
-      setCreateTaskDialog({
-        open: true,
-        defaultSubject: subject,
-        defaultDescription: description,
-        defaultOwner: owner,
-        defaultStartImmediately: startImmediately,
-      });
-    },
-    []
-  );
-
-  const closeCreateTaskDialog = useCallback((): void => {
-    setCreateTaskDialog({
-      open: false,
-      defaultSubject: '',
-      defaultDescription: '',
-      defaultOwner: '',
-      defaultStartImmediately: undefined,
-    });
+  const handleReplyToMessage = useCallback((message: InboxMessage, recipientHint?: string) => {
+    setSendDialogRecipient(recipientHint ?? message.from);
+    setSendDialogDefaultText(undefined);
+    setSendDialogDefaultChip(undefined);
+    setReplyQuote({ from: message.from, text: getInboxMessageQuoteText(message) });
+    setSendDialogOpen(true);
   }, []);
-
-  const handleCreateTaskFromMessage = useCallback(
-    (subject: string, description: string) => {
-      openCreateTaskDialog(subject, description);
-    },
-    [openCreateTaskDialog]
-  );
-
-  const handleReplyToMessage = useCallback(
-    (message: { from: string; text: string }, recipientHint?: string) => {
-      setSendDialogRecipient(recipientHint ?? message.from);
-      setSendDialogDefaultText(undefined);
-      setSendDialogDefaultChip(undefined);
-      setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-      setSendDialogOpen(true);
-    },
-    []
-  );
 
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
     setLaunchDialogState({ open: true, mode });
@@ -2669,6 +2633,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
   const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
+    assertCreateTaskOriginCurrent();
     const { owner, prompt, startImmediately, subject } = request;
     setCreatingTask(true);
     try {
@@ -2684,8 +2649,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
 
       closeCreateTaskDialog();
-    } catch {
-      // error shown via store
     } finally {
       setCreatingTask(false);
     }
@@ -3435,7 +3398,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 }}
               />
 
-              {createTaskDialog.open && (
+              {createTaskDialog.open && isCreateTaskOriginCurrent && (
                 <Suspense fallback={null}>
                   <CreateTaskDialog
                     open={createTaskDialog.open}
@@ -3446,7 +3409,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     defaultSubject={createTaskDialog.defaultSubject}
                     defaultDescription={createTaskDialog.defaultDescription}
                     defaultOwner={createTaskDialog.defaultOwner}
-                    defaultGroupChatId={kanbanFilter.groupChatId ?? null}
+                    defaultGroupChatId={defaultMessageGroupChatId(kanbanFilter.groupChatId)}
                     defaultStartImmediately={createTaskDialog.defaultStartImmediately}
                     defaultChip={createTaskDialog.defaultChip}
                     onClose={closeCreateTaskDialog}

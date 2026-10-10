@@ -33,7 +33,7 @@ export interface ChatListDraftPreview {
   editorKind: 'plain' | 'revision';
 }
 
-function previewCopy(
+export function getChatMessagePreview(
   message: InboxMessage | null,
   emptyPreview: string
 ): Pick<ChatListViewItem, 'previewText' | 'previewFrom'> {
@@ -54,6 +54,22 @@ function previewCopy(
   };
 }
 
+export function projectChatPreview(
+  message: Pick<ChatListViewItem, 'previewText' | 'previewFrom' | 'previewTimestamp'>,
+  draft: ChatListDraftPreview | undefined
+): Pick<ChatListViewItem, 'previewText' | 'previewFrom' | 'previewTimestamp'> & {
+  isDraft: boolean;
+} {
+  if (!draft) return { ...message, isDraft: false };
+  const date = typeof draft.updatedAt === 'number' ? new Date(draft.updatedAt) : null;
+  return {
+    previewText: truncateChatPreview(draft.preview.replace(/\s+/g, ' ').trim()),
+    previewFrom: null,
+    previewTimestamp: date && Number.isFinite(date.getTime()) ? date.toISOString() : null,
+    isDraft: true,
+  };
+}
+
 export function toChatListViewItems(
   items: readonly ChatListItem[],
   emptyPreview: string,
@@ -68,7 +84,7 @@ export function toChatListViewItems(
       unreadCount: item.unreadCount,
       attentionCount: item.attentionCount,
       previewTimestamp: item.latestActivityTimestamp,
-      ...previewCopy(item.previewMessage, emptyPreview),
+      ...getChatMessagePreview(item.previewMessage, emptyPreview),
       ...(draft ? { draft } : {}),
     };
   });

@@ -39,7 +39,9 @@ import {
   areStringArraysEqual,
   areStringMapsEqual,
 } from '@renderer/utils/messageRenderEquality';
+import { buildMessageTaskSeed } from '@renderer/utils/messageTaskSeed';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
   CROSS_TEAM_SOURCE,
@@ -104,6 +106,7 @@ import { TimelineHeaderAccent } from './TimelineHeaderAccent';
 import { requiresWideChatContent } from './wideChatMessageSizing';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
+import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
 import type { InboxMessage } from '@shared/types';
 
 export {
@@ -213,7 +216,7 @@ interface ActivityItemProps {
   /** Opens a team tab from cross-team badges or team:// links. */
   onTeamClick?: (teamName: string) => void;
   onMemberNameClick?: (memberName: string) => void;
-  onCreateTask?: (subject: string, description: string) => void;
+  onCreateTask?: (seed: MessageTaskSeed) => void;
   onReply?: (message: InboxMessage) => void;
   canRevise?: boolean;
   onRevise?: (message: InboxMessage) => void;
@@ -821,7 +824,7 @@ export const ActivityItem = memo(
       if (!oneLine) return '';
       return oneLine;
     }, [isCrossTeamAny, strippedText]);
-    const rawSummary = useMemo(() => {
+    const summarySource = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
         return idleSemantic.peerSummary;
       }
@@ -842,7 +845,7 @@ export const ActivityItem = memo(
         '';
       if (s) return s;
       // Fallback: use the beginning of message text as preview for plain-text messages
-      const plain = getSanitizedInboxMessageText(message).trim();
+      const plain = strippedText?.trim() ?? '';
       if (!plain) return '';
       return plain.replace(/\n+/g, ' ');
     }, [
@@ -853,10 +856,12 @@ export const ActivityItem = memo(
       message,
       idleSemantic,
       slashCommandMeta,
+      strippedText,
       structured,
     ]);
+    const rawSummary = stripAgentBlocks(summarySource);
     const summaryText = extractMarkdownPlainTextCached(rawSummary);
-    const compactPreviewMarkdown = useMemo(() => {
+    const compactPreviewSource = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
         return idleSemantic.peerSummary;
       }
@@ -890,6 +895,7 @@ export const ActivityItem = memo(
       slashCommandMeta,
       summaryText,
     ]);
+    const compactPreviewMarkdown = stripAgentBlocks(compactPreviewSource);
     const compactPreviewTooltipText = useMemo(() => {
       const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown)
         .replace(/\n+/g, ' ')
@@ -1006,13 +1012,8 @@ export const ActivityItem = memo(
     const autoSummary = structured ? getStructuredMessageSummary(structured) : null;
 
     const handleCreateTask = useCallback((): void => {
-      const subject = message.summary || autoSummary || `Task from ${message.from}`;
-      const plainText = structured
-        ? JSON.stringify(structured, null, 2)
-        : getSanitizedInboxMessageText(message);
-      const description = `From: ${message.from}\nAt: ${timestamp}\n\n${plainText}`.slice(0, 2000);
-      onCreateTask?.(subject, description);
-    }, [autoSummary, message.from, message.summary, message, onCreateTask, structured, timestamp]);
+      onCreateTask?.(buildMessageTaskSeed(message, teamName, timestamp, autoSummary, structured));
+    }, [autoSummary, message, onCreateTask, structured, teamName, timestamp]);
 
     const isHeaderClickable = isManaged && canToggleCollapse;
     const showChevron = isHeaderClickable && !compactHeader;

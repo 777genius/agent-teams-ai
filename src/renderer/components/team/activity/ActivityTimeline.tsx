@@ -45,6 +45,7 @@ import {
 } from './timelineRows';
 import {
   type ConversationViewportHandle,
+  type TimelineViewport,
   useConversationViewport,
 } from './useConversationViewport';
 import { useConversationWindow } from './useConversationWindow';
@@ -60,19 +61,10 @@ import {
 import type { ChatAppearance } from './activityMessagePresentation';
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
+import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
-/** Scroll and observation contract for the conversation timeline. */
-export interface TimelineViewport {
-  /** The element that actually scrolls. */
-  scrollElementRef: RefObject<HTMLElement | null>;
-  scrollElement?: HTMLElement | null;
-  /** Usually the scroll element; defaults to scrollElementRef. */
-  observerRoot?: RefObject<HTMLElement | null>;
-  scrollMargin?: number;
-  virtualizationEnabled?: boolean;
-  virtualizationRowThreshold?: number;
-}
+export type { TimelineViewport } from './useConversationViewport';
 
 interface ActivityTimelineProps {
   messages: InboxMessage[];
@@ -83,7 +75,7 @@ interface ActivityTimelineProps {
    * When omitted, unread is derived from message.read.
    */
   readState?: { readSet: Set<string>; getMessageKey: (message: InboxMessage) => string };
-  onCreateTaskFromMessage?: (subject: string, description: string) => void;
+  onCreateTaskFromMessage?: (seed: MessageTaskSeed) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;

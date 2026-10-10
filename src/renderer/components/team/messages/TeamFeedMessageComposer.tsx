@@ -8,6 +8,7 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberAvatarMap, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
 
+import { getGroupComposerPresentation } from './groupComposerPresentation';
 import { TextMessageComposer } from './TextMessageComposer';
 
 import type { MemberMessageComposerProps } from './MessageComposer';
@@ -38,14 +39,31 @@ export const TeamFeedMessageComposer = ({
   const identity = `${contextId}:${props.teamName}`;
   const hasLead = props.members.some(isLeadMember);
   useEffect(() => {
-    if (!composer.ready || mode?.identity === identity) return;
+    if (!composer.hasCurrentSnapshot || mode?.identity === identity) return;
     // A recovered broadcast keeps its group address and UUID, including an unknown outcome.
     setMode({
       identity,
-      all: !!composer.text || !!composer.attemptId || !hasLead,
+      all: !composer.ready || !!composer.text || !!composer.attemptId || !hasLead,
     });
-  }, [composer.attemptId, composer.ready, composer.text, identity, mode?.identity, hasLead]);
-  if (!composer.ready || mode?.identity !== identity)
+  }, [
+    composer.attemptId,
+    composer.hasCurrentSnapshot,
+    composer.ready,
+    composer.text,
+    identity,
+    mode?.identity,
+    hasLead,
+  ]);
+  const labels = {
+    label: t('messageComposer.recipient.all'),
+    ariaLabel: t('messages.groups.message'),
+    sendLabels: {
+      send: t('messages.groups.send'),
+      sending: t('messages.groups.sending'),
+      retry: t('messages.groups.retrySend'),
+    },
+  };
+  if (!composer.hasCurrentSnapshot || mode?.identity !== identity)
     return (
       <TextMessageComposer
         teamName={props.teamName}
@@ -54,27 +72,17 @@ export const TeamFeedMessageComposer = ({
         textareaRef={props.textareaRef}
         autoFocusKey={props.autoFocusKey}
         cornerActionPrefix={props.cornerActionPrefix}
-        textInput={{
-          label: t('messageComposer.recipient.all'),
-          ariaLabel: t('messages.groups.message'),
-          value: '',
+        {...getGroupComposerPresentation({
+          ...labels,
+          snapshot: composer,
+          freshSendAllowed: false,
           readOnly: true,
-          disabled: true,
-          canSend: false,
-          sendLabel: t('messages.groups.send'),
-          onChange: () => {},
-          onSend: () => {},
-        }}
-        notice={
-          composer.error ? (
-            <p role="alert" className="text-xs text-red-400">
-              {composer.error}
-            </p>
-          ) : undefined
-        }
+          onChange: composer.change,
+          onSend: () => void composer.send(),
+        })}
       />
     );
-  if (!mode.all)
+  if (!mode.all && composer.ready && !composer.pending && !composer.attemptId)
     return renderMember({
       ...props,
       initialRecipient: mode.recipient,
@@ -84,7 +92,11 @@ export const TeamFeedMessageComposer = ({
   const colors = buildMemberColorMap(props.members);
   const avatars = buildMemberAvatarMap(props.members);
   const group = props.groupBroadcast?.group;
-  const blocked = members.length < 2 || !props.isTeamAlive || (group ? !group.canSend : false);
+  const blocked =
+    members.length < 2 ||
+    !props.isTeamAlive ||
+    !!group?.archivedAt ||
+    (group ? !group.canSend : false);
   return (
     <div data-testid="group-chat-composer">
       <TextMessageComposer
@@ -95,61 +107,45 @@ export const TeamFeedMessageComposer = ({
         autoFocusKey={props.autoFocusKey}
         suggestionPlacement={props.suggestionPlacement}
         cornerActionPrefix={props.cornerActionPrefix}
-        recipientSelector={{
-          members: members.map((member) => ({
-            name: member.name,
-            color: colors.get(member.name),
-            avatarUrl: avatars.get(member.name),
-            role: formatAgentRole(member.role) ?? formatAgentRole(member.agentType) ?? undefined,
-            isLead: isLeadMember(member),
-          })),
-          selectedName: null,
-          allLabel: t('messageComposer.recipient.all'),
-          disabled: !composer.ready || composer.pending || !!composer.attemptId,
-          onSelect: (name) => {
-            if (name !== null) {
-              setMode({ identity, all: false, recipient: name });
-            }
+        {...getGroupComposerPresentation({
+          ...labels,
+          snapshot: composer,
+          freshSendAllowed: !blocked,
+          readOnly: !!group?.archivedAt,
+          recipientSelector: {
+            members: members.map((member) => ({
+              name: member.name,
+              color: colors.get(member.name),
+              avatarUrl: avatars.get(member.name),
+              role: formatAgentRole(member.role) ?? formatAgentRole(member.agentType) ?? undefined,
+              isLead: isLeadMember(member),
+            })),
+            selectedName: null,
+            allLabel: t('messageComposer.recipient.all'),
+            disabled: !!group?.archivedAt,
+            onSelect: (name) => {
+              if (name !== null) setMode({ identity, all: false, recipient: name });
+            },
           },
-        }}
-        textInput={{
-          label: t('messageComposer.recipient.all'),
-          ariaLabel: t('messages.groups.message'),
-          value: composer.text,
-          readOnly: composer.pending || !!composer.attemptId,
-          disabled: !composer.ready,
-          canSend:
-            (!!composer.attemptId || !blocked) &&
-            composer.ready &&
-            !composer.pending &&
-            !!composer.text.trim(),
-          sendLabel: composer.pending
-            ? t('messages.groups.sending')
-            : composer.attemptId
-              ? t('messages.groups.retrySend')
-              : t('messages.groups.send'),
           onChange: composer.change,
           onSend: () => void composer.send(),
-        }}
-        notice={
-          <>
-            <p role="status" className="text-xs text-[var(--color-text-muted)]">
-              {members.length < 2
-                ? t('messages.groups.minimum')
-                : t('messageComposer.recipient.broadcastTextOnly')}
-            </p>
-            {blocked && members.length >= 2 ? (
+          notice: (
+            <>
               <p role="status" className="text-xs text-[var(--color-text-muted)]">
-                {t('messages.groups.restartHint')}
+                {members.length < 2
+                  ? t('messages.groups.minimum')
+                  : t('messageComposer.recipient.broadcastTextOnly')}
               </p>
-            ) : null}
-            {composer.error ? (
-              <p role="alert" className="text-xs text-red-400">
-                {composer.error}
-              </p>
-            ) : null}
-          </>
-        }
+              {blocked && members.length >= 2 ? (
+                <p role="status" className="text-xs text-[var(--color-text-muted)]">
+                  {group?.archivedAt
+                    ? t('messages.groups.archivedHint')
+                    : t('messages.groups.restartHint')}
+                </p>
+              ) : null}
+            </>
+          ),
+        })}
       />
     </div>
   );

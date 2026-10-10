@@ -195,7 +195,7 @@ describe('group composer canonical send outcome', () => {
       Object.assign(new Error('Member was removed'), { code: 'invalid-recipient' })
     );
     let composer: ReturnType<typeof useGroupChatComposer> | undefined;
-    const renders: { context: string; ready: boolean }[] = [];
+    const renders: { context: string; ready: boolean; hasCurrentSnapshot: boolean }[] = [];
     function Probe({ lead = 'lead', context = 'root-a' }: { lead?: string; context?: string }) {
       composer = useGroupChatComposer(
         'team-a',
@@ -205,7 +205,11 @@ describe('group composer canonical send outcome', () => {
         'Discussion',
         lead
       );
-      renders.push({ context, ready: composer.ready });
+      renders.push({
+        context,
+        ready: composer.ready,
+        hasCurrentSnapshot: composer.hasCurrentSnapshot,
+      });
       return null;
     }
     const view = createRoot(document.createElement('div'));
@@ -247,7 +251,9 @@ describe('group composer canonical send outcome', () => {
         view.render(<Probe context="root-b" />);
       });
       expect(renders.find((render) => render.context === 'root-b')?.ready).toBe(false);
+      expect(renders.find((render) => render.context === 'root-b')?.hasCurrentSnapshot).toBe(false);
       expect(composer!.ready).toBe(true);
+      expect(composer!.hasCurrentSnapshot).toBe(true);
       expect(composer!.text).toBe('');
     } finally {
       act(() => view.unmount());

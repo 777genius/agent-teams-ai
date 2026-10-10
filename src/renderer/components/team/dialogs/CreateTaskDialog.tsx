@@ -88,6 +88,7 @@ export const CreateTaskDialog = ({
   );
   const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const [subject, setSubject] = useState(defaultSubject);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const descriptionDraft = useDraftPersistence({
     key: `createTask:${teamName}:description`,
     initialValue: defaultDescription || undefined,
@@ -116,6 +117,7 @@ export const CreateTaskDialog = ({
       resetCreateTaskSubmit(submitGateRef.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setSubject(defaultSubject);
+      setSubmitError(null);
       if (defaultChip) {
         const token = chipToken(defaultChip);
         descriptionDraft.setValue(token + '\n');
@@ -184,12 +186,14 @@ export const CreateTaskDialog = ({
   );
 
   const toggleBlockedBy = (taskId: string): void => {
+    setSubmitError(null);
     setBlockedBy((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
     );
   };
 
   const toggleRelated = (taskId: string): void => {
+    setSubmitError(null);
     setRelated((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
     );
@@ -221,9 +225,14 @@ export const CreateTaskDialog = ({
       teamName,
       request
     );
-    void onSubmit({ ...request, command: pendingCommandRef.current.identity }).finally(() => {
-      resetCreateTaskSubmit(submitGateRef.current);
-    });
+    setSubmitError(null);
+    void onSubmit({ ...request, command: pendingCommandRef.current.identity })
+      .catch((error: unknown) => {
+        setSubmitError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        resetCreateTaskSubmit(submitGateRef.current);
+      });
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -240,7 +249,10 @@ export const CreateTaskDialog = ({
       <MemberSelect
         members={members}
         value={owner || null}
-        onChange={(v) => setOwner(v ?? '')}
+        onChange={(v) => {
+          setSubmitError(null);
+          setOwner(v ?? '');
+        }}
         placeholder={
           requiresOwner
             ? t('tasks.createTask.selectMember')
@@ -277,7 +289,7 @@ export const CreateTaskDialog = ({
           </div>
         ) : null}
 
-        <div className="grid gap-4 py-2">
+        <div className="grid gap-4 py-2" onChangeCapture={() => setSubmitError(null)}>
           <div className="grid gap-2">
             <Label htmlFor="task-subject">{t('tasks.createTask.subject')}</Label>
             <Input
@@ -296,7 +308,10 @@ export const CreateTaskDialog = ({
           <TaskGroupChatField
             teamName={teamName}
             value={groupChatId}
-            onChange={setGroupChatId}
+            onChange={(value) => {
+              setSubmitError(null);
+              setGroupChatId(value);
+            }}
             disabled={submitting}
           />
 
@@ -327,7 +342,10 @@ export const CreateTaskDialog = ({
                   </Label>
                   <TiptapEditor
                     content={descriptionDraft.value}
-                    onChange={descriptionDraft.setValue}
+                    onChange={(value) => {
+                      setSubmitError(null);
+                      descriptionDraft.setValue(value);
+                    }}
                     placeholder={t('tasks.createTask.detailsPlaceholder')}
                     minHeight="100px"
                     maxHeight="200px"
@@ -343,7 +361,10 @@ export const CreateTaskDialog = ({
                     id="task-prompt"
                     placeholder={t('tasks.createTask.promptPlaceholder')}
                     value={promptDraft.value}
-                    onValueChange={promptDraft.setValue}
+                    onValueChange={(value) => {
+                      setSubmitError(null);
+                      promptDraft.setValue(value);
+                    }}
                     suggestions={mentionSuggestions}
                     taskSuggestions={taskSuggestions}
                     projectPath={projectPath}
@@ -516,7 +537,10 @@ export const CreateTaskDialog = ({
                 <Checkbox
                   id="task-start-immediately"
                   checked={isTeamAlive ? startImmediately : false}
-                  onCheckedChange={(v) => setStartImmediately(v === true)}
+                  onCheckedChange={(v) => {
+                    setSubmitError(null);
+                    setStartImmediately(v === true);
+                  }}
                   disabled={!isTeamAlive}
                 />
                 <Label
@@ -535,6 +559,11 @@ export const CreateTaskDialog = ({
           ) : null}
         </div>
 
+        {submitError ? (
+          <p role="alert" className="text-sm text-red-400">
+            {submitError}
+          </p>
+        ) : null}
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
             {t('tasks.createTask.cancel')}
