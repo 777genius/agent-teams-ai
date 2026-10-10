@@ -4301,9 +4301,11 @@ export default interface Resources {
         "todo": "TODO"
       },
       "filter": {
+        "allGroups": "All groups",
         "allSessions": "All sessions",
         "clearAll": "Clear all",
         "column": "Column",
+        "group": "Group chat",
         "session": "Session",
         "teammate": "Teammate",
         "title": "Filter tasks",
@@ -5071,6 +5073,7 @@ export default interface Resources {
         "retrySend": "Retry the same message",
         "send": "Send",
         "sending": "Sending…",
+        "showTasksOnBoard": "Show tasks on board",
         "unavailable": "Chat unavailable",
         "unknownDelivery": "Saved. Delivery status is unknown."
       },
@@ -6513,6 +6516,14 @@ export default interface Resources {
         "confirmLabel": "Delete",
         "message": "Move task #{{taskId}} to trash?",
         "title": "Delete task"
+      },
+      "groupChat": {
+        "archived": " (archived)",
+        "catalogError": "Group chats could not be loaded. You can still remove the current link.",
+        "label": "Group chat",
+        "loading": "Group ({{id}})",
+        "none": "None",
+        "unavailable": "Unavailable group ({{id}})"
       },
       "list": {
         "columns": {

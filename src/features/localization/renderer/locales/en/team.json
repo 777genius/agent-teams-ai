@@ -763,7 +763,8 @@
         "skipped": "skipped"
       },
       "recipient": "To {{name}}",
-      "recipientRestartHint": "{{name}} must be running a compatible runtime before sending."
+      "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
+      "showTasksOnBoard": "Show tasks on board"
     },
     "actions": {
       "toLatest": "To latest",
@@ -1319,6 +1320,14 @@
       "message": "Move task #{{taskId}} to trash?",
       "confirmLabel": "Delete",
       "cancelLabel": "Cancel"
+    },
+    "groupChat": {
+      "label": "Group chat",
+      "none": "None",
+      "archived": " (archived)",
+      "unavailable": "Unavailable group ({{id}})",
+      "loading": "Group ({{id}})",
+      "catalogError": "Group chats could not be loaded. You can still remove the current link."
     }
   },
   "editor": {
@@ -2523,7 +2532,9 @@
       "teammate": "Teammate",
       "unassigned": "(unassigned)",
       "column": "Column",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "group": "Group chat",
+      "allGroups": "All groups"
     },
     "board": {
       "addTask": "Add task",

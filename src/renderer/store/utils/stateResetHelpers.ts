@@ -114,6 +114,7 @@ export function getContextScopedTeamResetState(): Partial<AppState> {
     crossTeamTargets: [],
     crossTeamTargetsLoading: false,
     kanbanFilterQuery: null,
+    groupTaskNavigation: null,
     addingComment: false,
     addCommentError: null,
     deletedTasks: [],

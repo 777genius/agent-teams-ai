@@ -106,6 +106,7 @@ import { TaskCommentAwaitingReply } from './TaskCommentAwaitingReply';
 import { TaskCommentInput } from './TaskCommentInput';
 import { TaskCommentsSection } from './TaskCommentsSection';
 import { TaskDetailLoadingDialog } from './TaskDetailLoadingDialog';
+import { TaskGroupChatField } from './TaskGroupChatField';
 
 import type {
   FileChangeSummary,
@@ -891,6 +892,12 @@ export const TaskDetailDialog = ({
             ) : null}
           </DialogHeader>
 
+          <TaskGroupChatField
+            key={currentTask.id}
+            teamName={teamName}
+            value={currentTask.groupChatId ?? null}
+            onChange={(groupChatId) => updateTaskFields(teamName, currentTask.id, { groupChatId })}
+          />
           {/* Metadata */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             <div className="flex min-w-0 items-center gap-2">

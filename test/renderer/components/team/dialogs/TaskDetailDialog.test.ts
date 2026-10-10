@@ -14,6 +14,12 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@renderer/api', () => ({
   api: {
+    teams: {
+      onTeamChange: vi.fn(() => vi.fn()),
+    },
+    teamGroupChats: {
+      list: vi.fn().mockResolvedValue([]),
+    },
     review: {
       getTaskChanges: hoisted.getTaskChanges,
     },

@@ -4,11 +4,19 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
 import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
 import { Crown, Filter } from 'lucide-react';
 
+import type { TaskGroupOption } from './teamTaskProjection';
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, ResolvedTeamMember } from '@shared/types';
 
@@ -16,6 +24,7 @@ export const UNASSIGNED_OWNER = '__unassigned__';
 
 export interface KanbanFilterState {
   sessionId: string | null;
+  groupChatId?: string | null;
   selectedOwners: Set<string>;
   /** When non-empty, only these columns are visible on the kanban board. Empty = all columns. */
   columns: Set<KanbanColumnId>;
@@ -33,6 +42,7 @@ export const KANBAN_COLUMNS = [
 interface KanbanFilterPopoverProps {
   filter: KanbanFilterState;
   sessions: Session[];
+  taskGroupOptions?: TaskGroupOption[];
   leadSessionId?: string;
   members: ResolvedTeamMember[];
   onFilterChange: (filter: KanbanFilterState) => void;
@@ -41,6 +51,7 @@ interface KanbanFilterPopoverProps {
 export const KanbanFilterPopover = ({
   filter,
   sessions,
+  taskGroupOptions = [],
   leadSessionId,
   members,
   onFilterChange,
@@ -52,8 +63,9 @@ export const KanbanFilterPopover = ({
     if (filter.sessionId !== null) count += 1;
     if (filter.selectedOwners.size > 0) count += 1;
     if (filter.columns.size > 0) count += 1;
+    if (filter.groupChatId) count += 1;
     return count;
-  }, [filter.sessionId, filter.selectedOwners, filter.columns]);
+  }, [filter.sessionId, filter.selectedOwners, filter.columns, filter.groupChatId]);
 
   const handleSessionSelect = (sessionId: string | null): void => {
     onFilterChange({ ...filter, sessionId });
@@ -80,7 +92,12 @@ export const KanbanFilterPopover = ({
   };
 
   const handleClearAll = (): void => {
-    onFilterChange({ sessionId: null, selectedOwners: new Set(), columns: new Set() });
+    onFilterChange({
+      sessionId: null,
+      selectedOwners: new Set(),
+      columns: new Set(),
+      groupChatId: null,
+    });
   };
 
   return (
@@ -107,6 +124,33 @@ export const KanbanFilterPopover = ({
       </Tooltip>
       {open ? (
         <PopoverContent align="end" className="w-72 p-0">
+          <div className="space-y-2 border-b border-[var(--color-border)] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+              {t('kanban.filter.group')}
+            </p>
+            <Select
+              value={filter.groupChatId ?? '__all__'}
+              onValueChange={(value) =>
+                onFilterChange({ ...filter, groupChatId: value === '__all__' ? null : value })
+              }
+            >
+              <SelectTrigger aria-label={t('kanban.filter.group')} className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t('kanban.filter.allGroups')}</SelectItem>
+                {taskGroupOptions.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.name ??
+                      (group.unavailable
+                        ? t('tasks.groupChat.unavailable', { id: group.id.slice(0, 8) })
+                        : t('tasks.groupChat.loading', { id: group.id.slice(0, 8) }))}
+                    {group.archived ? t('tasks.groupChat.archived') : ''} ({group.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {/* Session section */}
           <div className="border-b border-[var(--color-border)] p-3">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
