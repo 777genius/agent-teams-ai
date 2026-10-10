@@ -13,17 +13,13 @@ import { Combobox } from '@renderer/components/ui/combobox';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
-import {
-  getContextScopedTeamResetState,
-  getFullResetState,
-} from '@renderer/store/utils/stateResetHelpers';
 import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { AGENT_LANGUAGE_OPTIONS, resolveLanguageName } from '@shared/utils/agentLanguage';
 import { Check, Copy, FolderOpen, Laptop, Loader2, RotateCcw } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
+import { resetWorkspaceForRootChange } from '../resetWorkspaceForRootChange';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { ClaudeRootInfo, WslClaudeRootCandidate } from '@shared/types';
@@ -116,30 +112,6 @@ export const GeneralSection = ({
   }, [serverUrl]);
 
   // Claude Root handlers
-  const resetWorkspaceForRootChange = useCallback((): void => {
-    invalidateContextScopedRequestEpoch();
-    useStore.setState({
-      projects: [],
-      repositoryGroups: [],
-      openTabs: [],
-      activeTabId: null,
-      selectedTabIds: [],
-      paneLayout: {
-        panes: [
-          {
-            id: 'pane-default',
-            tabs: [],
-            activeTabId: null,
-            selectedTabIds: [],
-            widthFraction: 1,
-          },
-        ],
-        focusedPaneId: 'pane-default',
-      },
-      ...getFullResetState(),
-      ...getContextScopedTeamResetState(),
-    });
-  }, []);
 
   const applyClaudeRootPath = useCallback(
     async (claudeRootPath: string | null): Promise<void> => {
@@ -165,14 +137,7 @@ export const GeneralSection = ({
         setUpdatingClaudeRoot(false);
       }
     },
-    [
-      connectionMode,
-      fetchProjects,
-      fetchRepositoryGroups,
-      loadClaudeRootInfo,
-      resetWorkspaceForRootChange,
-      t,
-    ]
+    [connectionMode, fetchProjects, fetchRepositoryGroups, loadClaudeRootInfo, t]
   );
 
   const handleSelectClaudeRootFolder = useCallback(async (): Promise<void> => {

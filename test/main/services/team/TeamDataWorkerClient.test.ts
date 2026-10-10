@@ -1,4 +1,9 @@
+import { resolve } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const rootA = resolve('/TEST/claude-root-a');
+const rootB = resolve('/TEST/claude-root-b');
 
 const hoisted = vi.hoisted(() => {
   const skipResponsesForOps = new Set<string>();
@@ -68,13 +73,95 @@ vi.mock('node:worker_threads', () => ({
 }));
 
 describe('TeamDataWorkerClient', () => {
-  afterEach(() => {
+  afterEach(async () => {
+    const { setClaudeBasePathOverride } = await import('../../../../src/main/utils/pathDecoder');
+    setClaudeBasePathOverride(null);
     vi.resetModules();
     vi.clearAllMocks();
     vi.useRealTimers();
     hoisted.workers.length = 0;
     hoisted.skipResponsesForOps.clear();
     hoisted.throwPostMessageForOps.clear();
+  });
+
+  it('binds each worker to the configured root and retires old reads on a root switch', async () => {
+    const { setClaudeBasePathOverride } = await import('../../../../src/main/utils/pathDecoder');
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    setClaudeBasePathOverride(rootA);
+    hoisted.skipResponsesForOps.add('getTeamData');
+    hoisted.skipResponsesForOps.add('getMessagesPage');
+    const client = new TeamDataWorkerClient();
+    const active = client.getTeamData('TEST-team').catch((error: unknown) => error);
+    const queued = client
+      .getMessagesPage('TEST-team', { limit: 50 })
+      .catch((error: unknown) => error);
+    const retiredWorker = hoisted.workers[0];
+    expect(retiredWorker.messages).toHaveLength(1);
+
+    setClaudeBasePathOverride(rootB);
+    client.dispose();
+    expect(retiredWorker.terminate).toHaveBeenCalledOnce();
+    expect(hoisted.workers).toHaveLength(1);
+    const replacement = client.getTeamData('TEST-team');
+    const replacementWorker = hoisted.workers[1];
+    const current = replacementWorker.messages[0] as { id: string };
+    expect(await active).toMatchObject({ failure: { kind: 'disposed' } });
+    expect(await queued).toMatchObject({ failure: { kind: 'disposed' } });
+    let settled = false;
+    void replacement.then(() => {
+      settled = true;
+    });
+    retiredWorker.handlers.get('message')?.({
+      id: current.id,
+      ok: true,
+      result: { teamName: 'TEST-old-root' },
+    });
+    retiredWorker.handlers.get('error')?.(new Error('Worker call timeout after 30000ms'));
+    retiredWorker.handlers.get('exit')?.(1);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    replacementWorker.handlers.get('message')?.({
+      id: current.id,
+      ok: true,
+      result: { teamName: 'TEST-new-root' },
+    });
+    await expect(replacement).resolves.toMatchObject({ teamName: 'TEST-new-root' });
+    hoisted.skipResponsesForOps.delete('getMessagesPage');
+    await expect(client.getMessagesPage('TEST-team', { limit: 50 })).resolves.toMatchObject({
+      messages: [],
+      hasMore: false,
+    });
+    expect(retiredWorker.messages).toHaveLength(1);
+    expect(replacementWorker.messages).toHaveLength(2);
+    client.dispose();
+    expect(hoisted.createMockWorker).toHaveBeenNthCalledWith(1, expect.any(String), {
+      workerData: rootA,
+    });
+    expect(hoisted.createMockWorker).toHaveBeenNthCalledWith(2, expect.any(String), {
+      workerData: rootB,
+    });
+  });
+
+  it('discards the previous root fatal recovery episode when disposed for a root switch', async () => {
+    const { setClaudeBasePathOverride } = await import('../../../../src/main/utils/pathDecoder');
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    setClaudeBasePathOverride(rootA);
+    hoisted.skipResponsesForOps.add('getTeamData');
+    const client = new TeamDataWorkerClient();
+    const failed = client.getTeamData('TEST-team').catch((error: unknown) => error);
+    hoisted.workers[0].handlers.get('error')?.(new Error('Worker call timeout after 30000ms'));
+    expect(await failed).toMatchObject({ failure: { kind: 'recovering' } });
+
+    setClaudeBasePathOverride(rootB);
+    client.dispose();
+    hoisted.skipResponsesForOps.delete('getTeamData');
+    await expect(client.getTeamData('TEST-team')).resolves.toMatchObject({ teamName: 'TEST-team' });
+    expect(hoisted.createMockWorker).toHaveBeenNthCalledWith(2, expect.any(String), {
+      workerData: rootB,
+    });
+    client.dispose();
   });
 
   it('deduplicates concurrent getTeamData calls for the same team', async () => {
