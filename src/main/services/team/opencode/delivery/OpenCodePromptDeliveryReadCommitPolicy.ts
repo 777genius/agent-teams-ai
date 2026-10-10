@@ -170,6 +170,23 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
 }): Promise<boolean> {
   if (input.ledgerRecord && isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) return false;
   if (input.ledgerRecord?.groupChatId) {
+    const record = input.ledgerRecord;
+    const sender = record.replyRecipient.trim().toLowerCase();
+    const promptId = record.lastRuntimePromptMessageId ?? record.runtimePromptMessageId;
+    // Group peers may finish silently. The runtime's explicit completed-child
+    // proof is required; a human group request still needs its canonical reply.
+    if (
+      sender && sender !== 'user' && sender !== 'system' &&
+      input.responseState === 'empty_assistant_turn' &&
+      record.responseState === 'empty_assistant_turn' &&
+      record.lastReason === 'assistant_child_completed_without_visible_or_meaningful_response' &&
+      record.acceptedAt && !record.acceptanceUnknown &&
+      promptId && record.deliveredUserMessageId === promptId &&
+      record.observedAssistantMessageId?.trim() &&
+      !record.observedAssistantPreview?.trim() && record.observedToolCallNames.length === 0
+    ) {
+      return true;
+    }
     const message = input.visibleReply?.message;
     return Boolean(
       message &&
