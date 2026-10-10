@@ -2447,7 +2447,7 @@ export const CreateTeamDialog = ({
             ) : null}
           </div>
 
-          <div className="md:col-span-2">
+          <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
               onApply={(draft) => {
                 setRuntimeSelection(1);

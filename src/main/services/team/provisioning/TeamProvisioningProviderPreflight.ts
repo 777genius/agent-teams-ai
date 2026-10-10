@@ -472,6 +472,11 @@ export function buildRuntimeProviderReadinessWarning(
   if (!providerStatus) {
     return `${providerLabel} provider is not configured for runtime use. Runtime status did not include this provider.`;
   }
+  if (providerStatus.statusCheckOutcome === 'transient_error') {
+    return `${providerLabel} runtime status could not be checked. Authentication and launch readiness are unconfirmed.${
+      detail ? ` ${detail}` : ''
+    }`;
+  }
   if (providerStatus.supported === false) {
     return `${providerLabel} provider is not configured for runtime use.${
       detail ? ` ${detail}` : ''
