@@ -8,7 +8,7 @@ import type {
 
 export type ComposerDraftTarget =
   | { readonly kind: 'team-feed' }
-  | { readonly kind: 'group'; readonly groupChatId: string }
+  | { readonly kind: 'group'; readonly groupChatId: string; readonly groupChatName?: string }
   | { readonly kind: 'direct'; readonly participant: string }
   | {
       readonly kind: 'cross-team';

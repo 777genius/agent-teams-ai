@@ -10,7 +10,8 @@ export function useGroupChatComposer(
   teamName: string,
   contextId: string,
   groupChatId: string,
-  refresh: () => Promise<void>
+  refresh: () => Promise<void>,
+  groupChatName?: string
 ) {
   const address = useMemo<ComposerDraftAddress>(
     () => ({ teamName, contextId, target: { kind: 'group', groupChatId } }),
@@ -31,8 +32,11 @@ export function useGroupChatComposer(
   const persist = useCallback(
     (content: ComposerDraftContent | null) => {
       const operation = session.queue.then(async () => {
+        const draftAddress: ComposerDraftAddress = groupChatName
+          ? { ...address, target: { kind: 'group', groupChatId, groupChatName } }
+          : address;
         const saved = await composerDraftRepository.saveWorking(
-          address,
+          draftAddress,
           session.revision,
           crypto.randomUUID(),
           content,
@@ -52,7 +56,7 @@ export function useGroupChatComposer(
       });
       return operation;
     },
-    [address, session]
+    [address, groupChatId, groupChatName, session]
   );
   useEffect(() => {
     let active = true;
@@ -98,12 +102,28 @@ export function useGroupChatComposer(
     try {
       await persist(content(text, id));
       const sent = await api.teamGroupChats.send({ teamName, groupChatId, messageId: id, text });
-      await persist(null);
       if (current.current === address) {
         setResult(sent);
         setText('');
         setAttemptId(null);
-        await refresh();
+      }
+      try {
+        await persist(null);
+      } catch (cause) {
+        if (current.current === address)
+          setError(
+            `Message saved, but the draft could not be cleared: ${cause instanceof Error ? cause.message : String(cause)}`
+          );
+      }
+      if (current.current === address) {
+        try {
+          await refresh();
+        } catch (cause) {
+          if (current.current === address)
+            setError(
+              `Message saved, but history could not be refreshed: ${cause instanceof Error ? cause.message : String(cause)}`
+            );
+        }
       }
     } catch (cause) {
       if (current.current === address) {

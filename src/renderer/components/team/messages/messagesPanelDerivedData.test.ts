@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@renderer/store', () => ({ useStore: vi.fn() }));
 vi.mock('./messagesPanelConversations', () => ({
   conversationScopeKey: vi.fn(),
-  filterScopedMessages: vi.fn(),
+  filterScopedMessages: vi.fn((messages) => messages),
 }));
 vi.mock('../activity/LeadThoughtsGroup', () => ({
   getThoughtGroupKey: vi.fn(),

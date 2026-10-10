@@ -131,6 +131,7 @@ export async function materializeOpenCodeGroupReply(input: {
 export function buildGroupPlainTextVisibleReplyMessageId(
   record: OpenCodePromptDeliveryLedgerRecord
 ): string {
+  // eslint-disable-next-line sonarjs/hashing -- UUIDv5 requires SHA-1 for stable non-security IDs.
   const bytes = createHash('sha1')
     .update(Buffer.from('6ba7b8109dad11d180b400c04fd430c8', 'hex'))
     .update(

@@ -1,7 +1,7 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
+import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main';
 import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
-import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';

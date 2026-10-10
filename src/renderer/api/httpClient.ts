@@ -31,7 +31,7 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
-import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats/renderer';
+import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,

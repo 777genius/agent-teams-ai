@@ -128,9 +128,6 @@ export function createTeamProvisioningLeadInboxRelayFlowPorts<TRun extends LeadI
   >
 ): LeadInboxRelayFlowPorts<TRun> {
   return {
-    claimGroupLeadInboxHandoffs: deps.claimGroupLeadInboxHandoffs,
-    readGroupCatalogPrompt: deps.readGroupCatalogPrompt,
-    sendGroupReply: deps.sendGroupReply,
     getAliveRunId: (teamName) => deps.getAliveRunId(teamName),
     getProvisioningRunId: (teamName) => deps.getProvisioningRunId(teamName),
     getRun: (runId) => deps.getRun(runId),

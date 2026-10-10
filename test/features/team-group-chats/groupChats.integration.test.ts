@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
@@ -105,37 +106,74 @@ describe('group chat main authority and durable identity', () => {
     await expect(send()).rejects.toMatchObject({ code: 'recipient-unavailable' });
   });
 
-  it('allows concurrent catalog reads while a runtime projection is pending', async () => {
+  it('allows concurrent catalog reads while list/create/restore runtime projections are pending', async () => {
     await create();
-    let release!: () => void;
-    let entered!: () => void;
-    const pending = new Promise<void>((resolve) => { release = resolve; });
-    const projecting = new Promise<void>((resolve) => { entered = resolve; });
-    const slowFeature = createTeamGroupChatsFeature({
-      roster: async () => roster,
-      getRun: async (_team, name) => {
-        entered();
-        await pending;
-        return { runKey: 'run:' + name, protocolVersion: 1, provider: 'native' };
-      },
-      configurationOperation: (_team, operation) => operation(),
-      deliver: (...args) => deliver(...args),
-    });
-    const slowList = slowFeature.list({ teamName: 'sandbox' });
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    try {
-      await projecting;
-      const concurrent = await Promise.race([
-        feature.list({ teamName: 'sandbox' }),
-        new Promise<never>((_resolve, reject) => {
-          timeout = setTimeout(() => reject(new Error('Catalog blocked by runtime projection')), 1000);
-        }),
-      ]);
-      expect(concurrent).toMatchObject([{ name: 'Release', memberNames: ['lead', 'alice'], canSend: true }]);
-    } finally {
-      clearTimeout(timeout);
-      release();
-      await slowList;
+    for (const operation of ['list', 'create', 'create-retry', 'restore']) {
+      if (operation === 'restore')
+        await feature.setArchived({
+          teamName: 'sandbox',
+          groupChatId: '10000000-0000-4000-8000-000000000001',
+          archived: true,
+        });
+      let release!: () => void;
+      let entered!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const projecting = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const slowFeature = createTeamGroupChatsFeature({
+        roster: async () => roster,
+        getRun: async (_team, name) => {
+          entered();
+          await pending;
+          return { runKey: 'run:' + name, protocolVersion: 1, provider: 'native' };
+        },
+        configurationOperation: (_team, run) => run(),
+        deliver: (...args) => deliver(...args),
+      });
+      const slowResult =
+        operation === 'list'
+          ? slowFeature.list({ teamName: 'sandbox' })
+          : operation === 'restore'
+            ? slowFeature.setArchived({
+                teamName: 'sandbox',
+                groupChatId: '10000000-0000-4000-8000-000000000001',
+                archived: false,
+              })
+            : slowFeature.create({
+                teamName: 'sandbox',
+                id: operation === 'create' ? randomUUID() : '10000000-0000-4000-8000-000000000001',
+                name: 'Another',
+                selectedMemberNames: ['lead', 'alice'],
+                excludedMemberNames: [],
+                autoIncludeNewMembers: false,
+              });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await projecting;
+        const concurrent = await Promise.race([
+          feature.list({ teamName: 'sandbox' }),
+          new Promise<never>((_resolve, reject) => {
+            timeout = setTimeout(
+              () => reject(new Error('Catalog blocked by ' + operation + ' projection')),
+              1000
+            );
+          }),
+        ]);
+        expect(
+          concurrent.find((group) => group.id === '10000000-0000-4000-8000-000000000001')
+        ).toMatchObject({
+          name: 'Release',
+          memberNames: ['lead', 'alice'],
+          canSend: true,
+        });
+      } finally {
+        clearTimeout(timeout);
+        release();
+        await slowResult;
+      }
     }
   });
 
@@ -170,6 +208,43 @@ describe('group chat main authority and durable identity', () => {
     ) as InboxMessage[];
     expect(rows).toHaveLength(1);
     expect(rows[0].groupMessageId).toBe(rows[0].messageId);
+  });
+
+  it('preserves unrelated legacy group keys while rejecting partial current protocol rows', async () => {
+    await create();
+    const file = join(state.root, 'sandbox', 'inboxes', 'user.json');
+    const legacy = {
+      from: 'alice',
+      to: 'user',
+      text: 'Legacy DM',
+      timestamp: new Date().toISOString(),
+      read: false,
+      groupId: 'old-custom-field',
+    };
+    await writeFile(file, JSON.stringify([legacy]));
+    await send();
+    const rows = JSON.parse(await readFile(file, 'utf8'));
+    expect(rows[0]).toEqual(legacy);
+    const controllerEnvelope = createRequire(import.meta.url)(
+      '../../../agent-teams-controller/src/internal/groupEnvelope.js'
+    ) as {
+      assertValidGroupInboxRows(rows: unknown): void;
+    };
+    expect(() => controllerEnvelope.assertValidGroupInboxRows(rows)).not.toThrow();
+    const corrupt = JSON.stringify([legacy, { groupRunKey: 'partial-current-protocol' }]);
+    await writeFile(file, corrupt);
+    await expect(
+      feature.send({
+        teamName: 'sandbox',
+        groupChatId: '10000000-0000-4000-8000-000000000001',
+        messageId: randomUUID(),
+        text: 'Blocked',
+      })
+    ).rejects.toThrow('malformed group envelope');
+    expect(() => controllerEnvelope.assertValidGroupInboxRows(JSON.parse(corrupt))).toThrow(
+      'malformed group envelope'
+    );
+    expect(await readFile(file, 'utf8')).toBe(corrupt);
   });
 
   it('preserves corrupted storage bytes and prevents any dispatch', async () => {
@@ -382,7 +457,7 @@ describe('group chat main authority and durable identity', () => {
     }
   });
 
-  it('atomically grants a physical lead handoff once and validates group reply correlation', async () => {
+  it('validates group reply correlation', async () => {
     await create();
     const physical: InboxMessage = {
       from: 'user',
@@ -400,11 +475,6 @@ describe('group chat main authority and durable identity', () => {
       join(state.root, 'sandbox', 'inboxes', 'lead.json'),
       JSON.stringify([physical])
     );
-    const winners = await Promise.all([
-      feature.claimGroupLeadInboxHandoffs('sandbox', 'lead', [physical]),
-      feature.claimGroupLeadInboxHandoffs('sandbox', 'lead', [physical]),
-    ]);
-    expect(winners.flat()).toHaveLength(1);
     await expect(
       feature.send(
         {

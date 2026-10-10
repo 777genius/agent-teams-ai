@@ -112,6 +112,13 @@ const sidebarUiState = {
   conversationScope: { kind: 'team-feed' } as ConversationScope,
 };
 
+vi.mock('@renderer/api', () => ({
+  api: {
+    teamGroupChats: { list: vi.fn().mockResolvedValue([]) },
+    teams: { onTeamChange: vi.fn(() => () => undefined) },
+  },
+}));
+
 vi.mock('@renderer/store', () => {
   const useStore = (selector: (state: typeof storeState) => unknown): unknown =>
     selector(storeState);

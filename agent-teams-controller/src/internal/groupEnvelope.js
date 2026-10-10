@@ -1,3 +1,15 @@
+const GROUP_PROTOCOL_FIELDS = [
+  'groupChatId',
+  'groupChatName',
+  'groupMessageId',
+  'groupChatProtocolVersion',
+  'groupRunKey',
+  'groupRecipientNames',
+  'groupRecipientRunKeys',
+  'groupDeliverySummary',
+  'groupHandoffStartedAt',
+];
+
 // CJS protocol boundary mirrors the public team-group-chats envelope guard.
 function assertValidGroupInboxRows(rows) {
   if (!Array.isArray(rows)) throw new Error('Inbox storage unavailable: expected array');
@@ -5,7 +17,8 @@ function assertValidGroupInboxRows(rows) {
   for (const item of rows) {
     if (!item || typeof item !== 'object') continue;
     const row = item;
-    if (!Object.keys(row).some((key) => key.startsWith('group'))) continue;
+    if (!GROUP_PROTOCOL_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(row, key)))
+      continue;
     if (
       typeof row.groupChatId !== 'string' ||
       !row.groupChatId ||

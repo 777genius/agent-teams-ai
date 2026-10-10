@@ -1,3 +1,10 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { hasGroupChatEnvelopeMarker } from '@features/team-group-chats/contracts';
+import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
+import * as pathDecoder from '@main/utils/pathDecoder';
 import { describe, expect, it, type Mock, vi } from 'vitest';
 
 import {
@@ -637,58 +644,91 @@ describe('lead inbox relay flow', () => {
     expect(rows[1]).toContain('REDELIVERY: this exact message was already delivered to you');
     expect(rows[2]).not.toContain('REDELIVERY:');
   });
-  it('claims group rows once and routes only the winning batch without private echo', async () => {
+  it('keeps native group ownership through the real reader while ordinary DM and permission rows flow', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'group-relay-owner-'));
+    const basePath = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue(root);
     const run = createRun();
     const group = createMessage({
-      groupChatId: 'group-1',
-      messageId: 'physical-group',
-      text: 'GROUP ONLY',
+      messageId: 'group-physical',
+      groupChatId: 'group-a',
+      groupMessageId: 'canonical-group',
+      groupChatProtocolVersion: 1,
+      groupRunKey: 'run-1:123',
+      text: permissionText('group-not-permission'),
     });
-    const dm = createMessage({ messageId: 'dm', text: 'DM ONLY' });
-    const ports = createPorts(run, [group, dm]);
-    ports.claimGroupLeadInboxHandoffs = vi.fn().mockResolvedValue([group]);
-    ports.sendGroupReply = vi.fn().mockResolvedValue({ saved: true });
-    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
-    expect(ports.sentMessages[0]).toContain('GROUP ONLY');
-    expect(ports.sentMessages[0]).not.toContain('DM ONLY');
-    expect(ports.markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'team-lead', [group]);
-    expect(ports.sendGroupReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        groupChatId: 'group-1',
-        relayOfMessageId: 'physical-group',
-        from: 'team-lead',
-      })
-    );
-    expect(ports.persistedMessages).toEqual([]);
-  });
+    const dm = Object.assign(createMessage({ messageId: 'dm', text: 'PRIVATE ONLY' }), {
+      groupId: 'legacy-unknown-field',
+    });
+    const permission = createMessage({ messageId: 'private-permission', text: permissionText() });
+    const file = join(root, 'alpha', 'inboxes', 'team-lead.json');
+    try {
+      await mkdir(join(root, 'alpha', 'inboxes'), { recursive: true });
+      await writeFile(file, JSON.stringify([group, dm, permission]));
+      const reader = new TeamInboxReader();
+      const normalized = await reader.getMessagesFor('alpha', 'team-lead');
+      expect(hasGroupChatEnvelopeMarker(normalized.find((row) => row.messageId === 'dm'))).toBe(
+        false
+      );
+      expect(
+        hasGroupChatEnvelopeMarker(normalized.find((row) => row.messageId === 'private-permission'))
+      ).toBe(false);
+      expect(
+        hasGroupChatEnvelopeMarker(normalized.find((row) => row.messageId === 'group-physical'))
+      ).toBe(true);
+      const ports = createPorts(run, []);
+      vi.mocked(ports.readLeadInboxMessages).mockImplementation((team, lead) =>
+        reader.getMessagesFor(team, lead)
+      );
 
-  it('does not replay a claimed group row with fresh DM or schedule an unknown-only retry', async () => {
-    const run = createRun();
-    const group = createMessage({ groupChatId: 'group-1' });
-    const ports = createPorts(run, [group]);
-    const timers = createTimerHarness(ports);
-    ports.claimGroupLeadInboxHandoffs = vi.fn(async (_team, _lead, batch) => {
-      group.groupHandoffStartedAt = '2026-01-01T00:02:00.000Z';
-      return batch;
-    });
-    ports.sendMessageToRun.mockImplementation(async () => {
-      timers
-        .pending()
-        .find(({ ms }) => ms === 120_000)
-        ?.callback();
-    });
-    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
-    expect(ports.scheduleLeadInboxFollowUpRelay).not.toHaveBeenCalled();
-    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
-    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
-    vi.mocked(ports.readLeadInboxMessages).mockResolvedValue([
-      group,
-      createMessage({ messageId: 'fresh-dm' }),
-    ]);
-    ports.sendMessageToRun.mockImplementation(async (_run, prompt) => {
-      expect(prompt).not.toContain('group-1');
-      run.leadRelayCapture?.resolveOnce('DM reply');
-    });
-    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+      await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+      expect(ports.sentMessages).toHaveLength(1);
+      expect(ports.sentMessages[0]).toContain('PRIVATE ONLY');
+      expect(ports.sentMessages[0]).not.toContain('permission_request');
+      expect(ports.handleTeammatePermissionRequest).toHaveBeenCalledTimes(1);
+      expect(ports.confirmSameTeamNativeMatches).toHaveBeenCalledWith('alpha', 'team-lead', [
+        expect.objectContaining({ messageId: 'dm' }),
+        expect.objectContaining({ messageId: 'private-permission' }),
+      ]);
+      expect(
+        vi
+          .mocked(ports.markInboxMessagesRead)
+          .mock.calls.flatMap((call) => call[2].map((row) => row.messageId))
+      ).toEqual(['private-permission', 'dm']);
+      expect(JSON.parse(await readFile(file, 'utf8'))[0]).toEqual(group);
+
+      const partialBytes = JSON.stringify([dm, { groupRunKey: 'partial-protocol' }]);
+      await writeFile(file, partialBytes);
+      await expect(reader.getMessagesFor('alpha', 'team-lead')).rejects.toMatchObject({
+        reason: 'invalid_message',
+      });
+      await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+      expect(await readFile(file, 'utf8')).toBe(partialBytes);
+
+      // In-memory partial rows also stay reserved, before permission/noise/read processing.
+      vi.mocked(ports.readLeadInboxMessages).mockResolvedValue(
+        [
+          'groupChatId',
+          'groupChatName',
+          'groupMessageId',
+          'groupChatProtocolVersion',
+          'groupRunKey',
+          'groupRecipientNames',
+          'groupRecipientRunKeys',
+          'groupDeliverySummary',
+          'groupHandoffStartedAt',
+        ].map((field, index) =>
+          Object.assign(createMessage({ messageId: `group-${index}`, text: permissionText() }), {
+            [field]: undefined,
+          })
+        )
+      );
+      await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+      expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+      expect(ports.markInboxMessagesRead).toHaveBeenCalledTimes(2);
+      expect(ports.handleTeammatePermissionRequest).toHaveBeenCalledTimes(1);
+    } finally {
+      basePath.mockRestore();
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

@@ -778,7 +778,7 @@ export function createTeamProvisioningServiceComposition(
   assignCompositionPart(host.installTarget, 'bootstrapEvidenceFacade', bootstrapEvidenceFacade);
   const leadInboxRelayFacade = createTeamProvisioningLeadInboxRelayCompatibilityFacadeFromService(
     host.leadInboxRelay,
-    withLeadInboxRelayClock({ ...groupMessaging.leadRelay, logger, getErrorMessage, nowIso })
+    withLeadInboxRelayClock({ logger, getErrorMessage, nowIso })
   );
   assignCompositionPart(host.installTarget, 'leadInboxRelayFacade', leadInboxRelayFacade);
   const cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(

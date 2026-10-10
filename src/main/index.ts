@@ -2012,8 +2012,6 @@ async function initializeServices(): Promise<void> {
     undefined, undefined, undefined, undefined, undefined,
     undefined, undefined, undefined, undefined, undefined, {
       send: (input, from) => teamGroupChatsFeature.send(input, from),
-      claimGroupLeadInboxHandoffs: (teamName, memberName, batch) => teamGroupChatsFeature.claimGroupLeadInboxHandoffs(teamName, memberName, batch),
-      readGroupCatalogPrompt: (teamName, memberName) => teamGroupChatsFeature.readGroupCatalogPrompt(teamName, memberName),
     }
   );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
@@ -2022,8 +2020,9 @@ async function initializeServices(): Promise<void> {
     configurationOperation: (teamName, operation) => teamDataService.runConfigurationOperation(teamName, operation),
     inboxWriter: teamInboxWriter,
     changed: (teamName) => {
-      teamDataService.invalidateMessageFeed(teamName);
-      safeSendToRenderer(mainWindow, TEAM_CHANGE, { teamName, type: 'inbox' });
+      const event: TeamChangeEvent = { teamName, type: 'inbox' };
+      invalidateTeamChangeMessageFeed(event);
+      forwardTeamChangeToRendererAndHttp(event);
     },
   });
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);

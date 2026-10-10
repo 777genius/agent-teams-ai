@@ -20,6 +20,36 @@ export const GROUP_CHAT_CHANNELS = {
   send: 'team-group-chats:send',
 } as const;
 
+const GROUP_PROTOCOL_FIELDS = [
+  'groupChatId',
+  'groupChatName',
+  'groupMessageId',
+  'groupChatProtocolVersion',
+  'groupRunKey',
+  'groupRecipientNames',
+  'groupRecipientRunKeys',
+  'groupDeliverySummary',
+  'groupHandoffStartedAt',
+] as const;
+
+/** Known group fields reserve the row for the group consumer, including partial envelopes. */
+export function hasGroupChatEnvelopeMarker(value: unknown): boolean {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    GROUP_PROTOCOL_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(value, key))
+  );
+}
+
+/** Preserve marker presence through normalization without inventing fields on ordinary DMs. */
+export function copyGroupChatEnvelope(row: GroupChatEnvelope): GroupChatEnvelope {
+  return Object.fromEntries(
+    GROUP_PROTOCOL_FIELDS.filter((key) => Object.prototype.hasOwnProperty.call(row, key)).map(
+      (key) => [key, row[key]]
+    )
+  ) as GroupChatEnvelope;
+}
+
 /** Check raw rows before any normalizer can discard malformed group messages. */
 export function assertValidGroupInboxRows(rows: unknown): asserts rows is unknown[] {
   if (!Array.isArray(rows)) throw new Error('Inbox storage unavailable: expected array');
@@ -27,7 +57,7 @@ export function assertValidGroupInboxRows(rows: unknown): asserts rows is unknow
   for (const item of rows) {
     if (!item || typeof item !== 'object') continue;
     const row = item as Record<string, unknown>;
-    if (!Object.keys(row).some((key) => key.startsWith('group'))) continue;
+    if (!hasGroupChatEnvelopeMarker(row)) continue;
     if (
       typeof row.groupChatId !== 'string' ||
       !row.groupChatId ||

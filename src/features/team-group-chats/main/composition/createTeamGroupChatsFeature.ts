@@ -38,12 +38,6 @@ export interface TeamGroupChatsPorts {
 export interface TeamGroupChatsFeature extends TeamGroupChatsAPI {
   list(request: { teamName: string }, from?: string): Promise<TeamGroupChatDTO[]>;
   send(request: GroupChatSendRequest, from?: string): Promise<GroupChatSendResult>;
-  claimGroupLeadInboxHandoffs<T extends InboxMessage>(
-    teamName: string,
-    memberName: string,
-    batch: T[]
-  ): Promise<T[]>;
-  readGroupCatalogPrompt(teamName: string, memberName: string): Promise<string>;
 }
 
 function validText(value: unknown, label: string, max = 100_000): asserts value is string {
@@ -153,11 +147,11 @@ export function createTeamGroupChatsFeature(
         request.selectedMemberNames.some((name) => request.excludedMemberNames.includes(name))
       )
         throw new GroupChatError('invalid-input', 'Member selection overlaps');
-      return ports.configurationOperation(request.teamName, () =>
+      const savedGroup = await ports.configurationOperation(request.teamName, () =>
         storage.withRegistry(request.teamName, async (groups, save) => {
           const roster = await ports.roster(request.teamName);
           const existing = groups.find((group) => group.id === request.id);
-          if (existing) return project(request.teamName, existing, roster);
+          if (existing) return structuredClone(existing);
           if (
             request.selectedMemberNames.length < 2 ||
             request.selectedMemberNames.some((name) => !roster.includes(name))
@@ -175,24 +169,26 @@ export function createTeamGroupChatsFeature(
           groups.push(group);
           await save();
           ports.changed?.(request.teamName);
-          return project(request.teamName, group, roster);
+          return structuredClone(group);
         })
       );
+      return project(request.teamName, savedGroup, await ports.roster(request.teamName));
     },
     async setArchived({ teamName, groupChatId, archived }) {
       validText(teamName, 'team name', 200);
       validateId(groupChatId);
       if (typeof archived !== 'boolean')
         throw new GroupChatError('invalid-input', 'Archive state must be boolean');
-      return storage.withRegistry(teamName, async (groups, save) => {
+      const savedGroup = await storage.withRegistry(teamName, async (groups, save) => {
         const group = findGroup(groups, groupChatId);
         if (!!group.archivedAt !== archived) {
           group.archivedAt = archived ? new Date().toISOString() : null;
           await save();
           ports.changed?.(teamName);
         }
-        return project(teamName, group, await ports.roster(teamName));
+        return structuredClone(group);
       });
+      return project(teamName, savedGroup, await ports.roster(teamName));
     },
     async send(request, from = 'user') {
       validText(request.teamName, 'team name', 200);
@@ -364,37 +360,6 @@ export function createTeamGroupChatsFeature(
         ports.changed?.(request.teamName);
         return { ...result(canonical), statusPersisted };
       });
-    },
-    async claimGroupLeadInboxHandoffs(teamName, memberName, batch) {
-      return storage.withInbox(teamName, memberName, async (rows, save) => {
-        const winning: typeof batch = [];
-        let changed = false;
-        for (const candidate of batch) {
-          if (!candidate.groupChatId) {
-            winning.push(candidate);
-            continue;
-          }
-          const row = rows.find((item) => item?.messageId === candidate.messageId);
-          if (
-            !row ||
-            row.groupHandoffStartedAt ||
-            row.read ||
-            row.groupMessageId === row.messageId ||
-            row.to !== memberName
-          )
-            continue;
-          if ((await ports.getRun(teamName, memberName))?.runKey !== row.groupRunKey) continue;
-          row.groupHandoffStartedAt = new Date().toISOString();
-          changed = true;
-          winning.push({ ...candidate, groupHandoffStartedAt: row.groupHandoffStartedAt });
-        }
-        if (changed) await save();
-        return winning;
-      });
-    },
-    async readGroupCatalogPrompt(teamName, memberName) {
-      const catalog = await feature.list({ teamName }, memberName);
-      return `Group chats (refresh with group_chat_list before proactive posting):\n${catalog.map((group) => `${JSON.stringify(group.name)} id=${group.id}; members=${group.memberNames.join(',')}; archived=${!!group.archivedAt}; canSend=${group.canSend}${group.reason ? `; reason=${group.reason}` : ''}`).join('\n')}\nUse group_chat_send with explicit groupChatId; for a reply set relayOfMessageId to the physical inbound messageId. Never route a group reply to a private chat.`;
     },
   };
   return feature;

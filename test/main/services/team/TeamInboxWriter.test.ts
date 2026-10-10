@@ -15,7 +15,7 @@ const hoisted = vi.hoisted(() => {
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
-  const readFile = vi.fn(async (filePath: string) => {
+  const readFile = vi.fn(async (filePath: string, encoding?: BufferEncoding) => {
     if (pendingReadFailures > 0) {
       pendingReadFailures -= 1;
       const error = new Error('EIO') as NodeJS.ErrnoException;
@@ -28,7 +28,7 @@ const hoisted = vi.hoisted(() => {
       error.code = 'ENOENT';
       throw error;
     }
-    return data;
+    return encoding ? data : Buffer.from(data);
   });
 
   const atomicWrite = vi.fn(

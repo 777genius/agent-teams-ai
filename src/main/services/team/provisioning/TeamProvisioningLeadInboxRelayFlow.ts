@@ -1,3 +1,4 @@
+import { hasGroupChatEnvelopeMarker } from '@features/team-group-chats/contracts';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
 import { parsePermissionRequest } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -88,20 +89,6 @@ export interface LeadInboxRelayFlowPorts<TRun extends LeadInboxRelayFlowRun> {
   isCurrentTrackedRun(run: TRun): boolean;
   readConfigForObservation(teamName: string): Promise<LeadInboxRelayConfig | null>;
   readLeadInboxMessages(teamName: string, leadName: string): Promise<InboxMessage[]>;
-  claimGroupLeadInboxHandoffs?(
-    teamName: string,
-    leadName: string,
-    batch: RelayInboxMessage[]
-  ): Promise<RelayInboxMessage[]>;
-  readGroupCatalogPrompt?(teamName: string, memberName: string): Promise<string>;
-  sendGroupReply?(input: {
-    teamName: string;
-    from: string;
-    groupChatId: string;
-    messageId: string;
-    text: string;
-    relayOfMessageId: string;
-  }): Promise<unknown>;
   markInboxMessagesRead(
     teamName: string,
     leadName: string,
@@ -255,6 +242,16 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
   const isStaleRelayRun = (): boolean =>
     !ports.isCurrentTrackedRun(run) || !run.child || run.processKilled || run.cancelRequested;
 
+  // Native runtime owns group consumption and acknowledgement. Keep even stale/partial
+  // protocol rows out of the ordinary stdin and permission paths.
+  const readOrdinaryLeadInboxMessages = async (
+    team: string,
+    lead: string
+  ): Promise<InboxMessage[]> =>
+    (await ports.readLeadInboxMessages(team, lead)).filter(
+      (message) => !hasGroupChatEnvelopeMarker(message)
+    );
+
   let config: LeadInboxRelayConfig | null = null;
   try {
     config = await ports.readConfigForObservation(teamName);
@@ -267,7 +264,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     const permissionScanResult = await scanLeadInboxPermissionRequests(
       { teamName, leadName, run, isStaleRelayRun },
       {
-        readLeadInboxMessages: ports.readLeadInboxMessages,
+        readLeadInboxMessages: readOrdinaryLeadInboxMessages,
         handleTeammatePermissionRequest: ports.handleTeammatePermissionRequest,
         markInboxMessagesRead: ports.markInboxMessagesRead,
       }
@@ -292,7 +289,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
   const leadName = getLeadName(config);
   let leadInboxMessages: InboxMessage[] = [];
   try {
-    leadInboxMessages = await ports.readLeadInboxMessages(teamName, leadName);
+    leadInboxMessages = await readOrdinaryLeadInboxMessages(teamName, leadName);
   } catch {
     return 0;
   }
@@ -303,7 +300,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
 
   const unread = leadInboxMessages
     .filter((m): m is RelayInboxMessage => {
-      if (m.read || (m.groupChatId && m.groupHandoffStartedAt)) return false;
+      if (m.read) return false;
       if (typeof m.text !== 'string' || m.text.trim().length === 0) return false;
       if (!hasStableInboxMessageId(m)) return false;
       return !relayedIds.has(m.messageId);
@@ -444,27 +441,8 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     readOnlyIgnoredIds,
     maxRelay: DEFAULT_INBOX_RELAY_BATCH_SIZE,
   });
-  let batch = selection.batch;
-  if (batch.some((row) => row.groupChatId)) {
-    // The strict writer owns the claim; every consumer below sees only its winning batch.
-    if (!ports.claimGroupLeadInboxHandoffs) return 0;
-    try {
-      batch = await ports.claimGroupLeadInboxHandoffs(teamName, leadName, batch);
-    } catch {
-      ports.logger.debug(`[${teamName}] group lead handoff claim failed; no stdin delivery`);
-      return 0;
-    }
-    if (batch.length === 0 || isStaleRelayRun()) return 0;
-  }
-  const { replyVisibility } = selectLeadInboxRelayBatch({
-    actionableUnread: batch,
-    unread: batch,
-    readOnlyIgnoredIds: new Set<string>(),
-    maxRelay: DEFAULT_INBOX_RELAY_BATCH_SIZE,
-  });
-  const hasPendingFollowUpRelay = scopedActionableUnread.some(
-    (row) => !selection.batch.includes(row)
-  );
+  const { batch, replyVisibility } = selection;
+  const hasPendingFollowUpRelay = scopedActionableUnread.some((row) => !batch.includes(row));
   const recoveryMessageId = batch.find(
     (message) => String(message.messageKind) === 'runtime_recovery_nudge'
   )?.messageId;
@@ -488,7 +466,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     teamName,
     batch
   );
-  let message = buildLeadInboxRelayPrompt({
+  const message = buildLeadInboxRelayPrompt({
     teamName,
     leadName,
     batch,
@@ -497,22 +475,6 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     workSyncControlUrl,
     redeliveredMessageIds,
   });
-  if (batch.some((row) => row.groupChatId)) {
-    message +=
-      '\n' +
-      batch
-        .filter((row) => row.groupChatId)
-        .map(
-          (row) =>
-            `Group chat ${row.groupChatId}: physical message ${row.messageId}, sender ${row.from}. ` +
-            `Reply using group_chat_send with groupChatId=${row.groupChatId}, ` +
-            `relayOfMessageId=${row.messageId}, and a fresh messageId. Never reply privately to user.`
-        )
-        .join('\n');
-    if (ports.readGroupCatalogPrompt) {
-      message += '\n' + (await ports.readGroupCatalogPrompt(teamName, leadName));
-    }
-  }
   if (isStaleRelayRun()) return 0;
 
   const capturePromise = startLeadRelayCapture(
@@ -562,9 +524,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     ports.logger.debug(
       `[${teamName}] lead relay did not receive delivery proof; leaving ${batch.length} message(s) unread for retry`
     );
-    if (batch.some((row) => !row.groupChatId)) {
-      ports.scheduleLeadInboxFollowUpRelay(teamName, LEAD_RELAY_NO_PROOF_RETRY_DELAY_MS);
-    }
+    ports.scheduleLeadInboxFollowUpRelay(teamName, LEAD_RELAY_NO_PROOF_RETRY_DELAY_MS);
     return 0;
   }
   if (recoveryMessageId && captureResult.terminalResultSucceeded) {
@@ -615,17 +575,8 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     runId,
     nowIso: ports.nowIso(),
     nowMs: ports.nowMs(),
-    originatingBatch: batch,
   });
-  if (replyProjection.kind === 'group_message') {
-    if (ports.sendGroupReply) {
-      try {
-        await ports.sendGroupReply({ teamName, from: leadName, ...replyProjection.message });
-      } catch {
-        ports.logger.debug(`[${teamName}] group reply rejected; no private fallback`);
-      }
-    }
-  } else if (replyProjection.kind === 'suppressed') {
+  if (replyProjection.kind === 'suppressed') {
     if (replyProjection.reason === 'internal_control') {
       ports.logger.debug(`[${teamName}] Suppressed internal lead relay echo`);
     } else if (replyProjection.reason === 'visible_duplicate') {

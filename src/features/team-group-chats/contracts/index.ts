@@ -10,4 +10,9 @@ export type {
   TeamGroupChatsAPI,
 } from './api';
 export type { GroupChatEnvelope } from './envelope';
-export { assertValidGroupInboxRows,GROUP_CHAT_CHANNELS } from './envelope';
+export {
+  assertValidGroupInboxRows,
+  copyGroupChatEnvelope,
+  GROUP_CHAT_CHANNELS,
+  hasGroupChatEnvelopeMarker,
+} from './envelope';

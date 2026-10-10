@@ -70,22 +70,4 @@ describe('lead relay reply projection', () => {
       },
     });
   });
-  it('suppresses ambiguous group/plaintext fallback even if one group shares a DM batch', () => {
-    const origin = {
-      from: 'user',
-      text: 'hi',
-      timestamp: 'now',
-      read: false,
-      groupChatId: 'g',
-      messageId: 'p',
-    };
-    expect(
-      projectLeadRelayReply({
-        ...baseInput,
-        replyVisibility: 'user',
-        replyText: 'hello',
-        originatingBatch: [origin, { ...origin, groupChatId: undefined, messageId: 'dm' }],
-      })
-    ).toEqual({ kind: 'suppressed', reason: 'ambiguous_group_scope' });
-  });
 });

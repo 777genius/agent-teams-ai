@@ -484,6 +484,7 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     };
     if (input.groupChatId && !this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
+      restoreConsumedLane();
       return { delivered: false, reason: 'group_delivery_observer_unavailable' };
     }
     if (!this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {

@@ -1,4 +1,3 @@
-import { annotateSlashCommandResponses } from './teamMessageSlashResults';
 import {
   isMessageAfterCursor,
   parseHistoryCursor,
@@ -13,6 +12,7 @@ import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternal
 
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import { linkPassiveUserReplySummaries } from './linkPassiveUserReplySummaries';
+import { annotateSlashCommandResponses } from './teamMessageSlashResults';
 
 import type { InboxMessageCursor, InboxMessagesWindow } from './TeamInboxReader';
 import type { InboxMessage, MessagesPage, TeamConfig } from '@shared/types';

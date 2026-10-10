@@ -1,4 +1,4 @@
-import { assertValidGroupInboxRows } from '@features/team-group-chats/contracts';
+import { assertValidGroupInboxRows, copyGroupChatEnvelope } from '@features/team-group-chats/contracts';
 import {
   readInboxWindow,
   TeamHistoryError,
@@ -116,15 +116,7 @@ function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
     summary: typeof row.summary === 'string' ? row.summary : undefined,
     color: typeof row.color === 'string' ? row.color : undefined,
     messageId,
-    groupChatId: row.groupChatId,
-    groupChatName: row.groupChatName,
-    groupMessageId: row.groupMessageId,
-    groupChatProtocolVersion: row.groupChatProtocolVersion,
-    groupRunKey: row.groupRunKey,
-    groupRecipientNames: row.groupRecipientNames,
-    groupRecipientRunKeys: row.groupRecipientRunKeys,
-    groupDeliverySummary: row.groupDeliverySummary,
-    groupHandoffStartedAt: row.groupHandoffStartedAt,
+    ...copyGroupChatEnvelope(row),
     relayOfMessageId: typeof row.relayOfMessageId === 'string' ? row.relayOfMessageId : undefined,
     source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,
     leadSessionId: typeof row.leadSessionId === 'string' ? row.leadSessionId : undefined,

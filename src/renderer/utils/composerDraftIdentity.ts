@@ -142,7 +142,10 @@ export function sameComposerDraftAddress(
 export function describeComposerDraftTarget(target: ComposerDraftTarget): string {
   if (target.kind === 'team-feed') return 'Group';
   if (target.kind === 'direct') return target.participant;
-  if (target.kind === 'group') return `Group ${target.groupChatId}`;
+  if (target.kind === 'group')
+    return typeof target.groupChatName === 'string' && target.groupChatName.trim()
+      ? target.groupChatName.trim()
+      : 'Group chat';
   return target.toMember ? `${target.toTeam}/${target.toMember}` : target.toTeam;
 }
 

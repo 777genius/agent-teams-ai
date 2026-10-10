@@ -287,7 +287,8 @@ describe('shutdown MCP transport authority', () => {
       });
       expect(JSON.parse(spawnedEnvironments[0].AGENT_TEAMS_BOUND_CONTEXT_JSON!)).toMatchObject({
         appInstanceId: 'review-host',
-        connectionGeneration: 2,
+        // Preparing the bridge now binds the listener before its first MCP spawn.
+        connectionGeneration: 1,
       });
     } finally {
       await connection?.shutdown();

@@ -42,7 +42,7 @@ export function createMessagesPageHandler(ports: MessagesPageHandlerPorts) {
     }
     const opts = (options && typeof options === 'object' ? options : {}) as {
       cursor?: string | null;
-      limit?: number;
+      limit?: unknown;
       groupChatId?: string;
     };
     if (
@@ -53,7 +53,10 @@ export function createMessagesPageHandler(ports: MessagesPageHandlerPorts) {
     )
       return { success: false, error: 'Invalid groupChatId' };
     const groupChatId = opts.groupChatId;
-    const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
+    const limit =
+      typeof opts.limit === 'number' && Number.isFinite(opts.limit)
+        ? Math.min(Math.max(1, Math.trunc(opts.limit)), 200)
+        : 50;
     const cursor =
       typeof opts.cursor === 'string' ? opts.cursor : opts.cursor === null ? null : undefined;
 
