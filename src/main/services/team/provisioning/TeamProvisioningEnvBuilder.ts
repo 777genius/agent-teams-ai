@@ -1,3 +1,4 @@
+import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
@@ -367,6 +368,7 @@ export async function buildProvisioningEnv({
   if (resolvedProviderId === 'opencode') {
     applyAgentTeamsMcpAppContext(providerEnv, resolvedClaudeBasePath, controlApiBaseUrl);
   }
+  Object.assign(providerEnv, getDesktopMcpChildEnvironment());
 
   // SHELL is a Unix concept - only set it on non-Windows platforms.
   if (!isWindows) {

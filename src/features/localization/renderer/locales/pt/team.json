@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Criar chat em grupo",
+      "description": "Escolha pelo menos dois agentes. Você é incluído automaticamente.",
+      "name": "Nome do chat",
+      "autoInclude": "Adicionar novos membros automaticamente",
+      "minimum": "Selecione pelo menos dois agentes.",
+      "creating": "Criando…",
+      "retryCreate": "Tentar criar novamente",
+      "unavailable": "Chat indisponível",
+      "message": "Mensagem para este grupo",
+      "archivedHint": "Este chat está arquivado. Restaure-o para enviar mensagens.",
+      "restartHint": "Todos os participantes precisam estar com um ambiente de execução compatível ativo para enviar mensagens.",
+      "unknownDelivery": "Salvo. Status de entrega desconhecido.",
+      "sending": "Enviando…",
+      "retrySend": "Reenviar a mesma mensagem",
+      "send": "Enviar",
+      "archived": "Chats arquivados",
+      "restore": "Restaurar chat",
+      "archive": "Arquivar chat",
+      "delivery": {
+        "queued": "na fila",
+        "accepted": "aceito",
+        "failed": "falhou",
+        "unknown": "desconhecido",
+        "skipped": "ignorado"
+      }
+    },
     "actions": {
       "toLatest": "Ir para as últimas",
       "bottomSheetActions": "Acções da folha inferior da mensagem",

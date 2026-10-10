@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { openCodeRuntimeMessagePayload } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeMessagePayload';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
   createOpenCodeCanonicalProjectPathFingerprint,
@@ -2127,6 +2128,21 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       },
       snapshot,
     });
+  });
+
+  it('carries the full physical group envelope through payload and actual bridge send', async () => {
+    const sendOpenCodeTeamMessage = vi.fn(async () => ({ accepted: true,
+      sessionId: 'oc-session-bob', memberName: 'bob', runtimePid: 456, diagnostics: [] }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridgePort(
+      readiness({ state: 'ready', launchAllowed: true }), { sendOpenCodeTeamMessage }));
+    const envelope = { groupChatId: 'group-1', groupChatName: 'Review', groupRunKey: 'lane-run-1',
+      groupMessageId: 'canonical-1', groupChatProtocolVersion: 1 as const,
+      messageId: 'physical-1', from: 'user', timestamp: '2026-10-10T00:00:00.000Z' };
+    await adapter.sendMessageToMember(openCodeRuntimeMessagePayload({ ...envelope,
+      memberName: 'bob', text: 'group text', inboxTimestamp: envelope.timestamp }, {
+      teamName: 'team-a', laneId: 'secondary:opencode:bob', runId: 'lane-run-1',
+      memberName: 'bob', cwd: '/repo', text: 'group text' }));
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining(envelope));
   });
 
   it('sends direct teammate messages through the OpenCode message bridge', async () => {

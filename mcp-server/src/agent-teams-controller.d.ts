@@ -210,6 +210,10 @@ declare module 'agent-teams-controller' {
     review: ControllerReviewApi;
     taskBoard: ControllerTaskBoardApi;
     messages: ControllerMessageApi;
+    groupChats: {
+      listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
+      sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+    };
     processes: ControllerProcessApi;
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;

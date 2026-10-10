@@ -12,7 +12,6 @@ import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
-  ChatList,
   ChatUnreadBadges,
   ConversationHeader,
   TEAM_FEED_SCOPE,
@@ -28,7 +27,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useComposerWorkingSummaries } from '@renderer/hooks/useComposerWorkingSummaries';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
-import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
@@ -56,6 +54,7 @@ import {
 
 import { MessageComposer } from './MessageComposer';
 import { MessageHistoryNotice } from './MessageHistoryNotice';
+import { MessagesConversationList } from './MessagesConversationList';
 import {
   FullScreenControl,
   LatestMessageControl,
@@ -103,6 +102,7 @@ import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomS
 import { useComposerOutboxItems } from './useComposerOutboxItems';
 import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
+import { useMessagesGroupConversation } from './useMessagesGroupConversation';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
@@ -110,6 +110,7 @@ import {
   useThreadUnreadSnapshot,
 } from './useMessagesPanelChats';
 import { useMessagesPanelSend } from './useMessagesPanelSend';
+import { useMessagesReadState } from './useMessagesReadState';
 
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ComposerDraftDestination } from './composerDraftDestination';
@@ -206,7 +207,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   expandedChatHost,
 }: MessagesPanelProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
-  const messagesError = useStore((s) => s.teamMessagesByName[teamName]?.messagesError);
+  const globalMessagesError = useStore((s) => s.teamMessagesByName[teamName]?.messagesError);
   const {
     sendTeamMessage,
     sendCrossTeamMessage,
@@ -290,12 +291,6 @@ export const MessagesPanel = memo(function MessagesPanel({
     [onPendingReplyChange, refreshTeamMessagesHead, teamName]
   );
 
-  const loadingOlderMessages = messagesLoadingOlder;
-  const hasMore = messagesHasMore;
-  const effectiveMessages = messages;
-  const loadingInitialMessages =
-    effectiveMessages.length === 0 && (!messagesEntryPresent || messagesLoadingHead);
-
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const floatingComposerMeasureRef = useRef<HTMLDivElement | null>(null);
   const threadScrollRef = useRef<HTMLDivElement | null>(null);
@@ -343,7 +338,10 @@ export const MessagesPanel = memo(function MessagesPanel({
     // no-op: user is reading expanded content, not composing
   }, []);
 
-  const initialSidebarStateRef = useRef(getTeamMessagesSidebarUiState(teamName));
+  const sidebarStateKey = JSON.stringify([activeContextId, teamName]);
+  const currentSidebarKey = useRef(sidebarStateKey);
+  currentSidebarKey.current = sidebarStateKey;
+  const initialSidebarStateRef = useRef(getTeamMessagesSidebarUiState(sidebarStateKey));
   const [messagesSearchQuery, setMessagesSearchQuery] = useState(
     initialSidebarStateRef.current.messagesSearchQuery
   );
@@ -368,7 +366,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [listScrollTop, setListScrollTop] = useState(initialSidebarStateRef.current.listScrollTop);
   const messagesScrollTopRef = useRef(initialSidebarStateRef.current.messagesScrollTop);
   const messagesScrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messagesScrollPersistTeamRef = useRef(teamName);
+  const messagesScrollPersistTeamRef = useRef(sidebarStateKey);
   const conversationHandleRef = useRef<ConversationViewportHandle | null>(null);
   const [latestAvailable, setLatestAvailable] = useState(false);
   const [unreadBelowCount, setUnreadBelowCount] = useState(0);
@@ -396,12 +394,24 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
   const conversation = useTeamConversationSurface({
     teamName,
+    contextId: activeContextId,
     members,
     position,
     onScopeChange: () => setMessagesSearchQuery(''),
   });
   const { renderSurface, navigationSurface, scope, openChat, backToList, threadOpenedAt } =
     conversation;
+  const groupConversation = useMessagesGroupConversation(teamName, activeContextId, members, scope);
+  const { groupId, group: activeGroup, history: groupHistory, archiveAction: groupArchiveAction, renderComposer: renderGroupComposer } = groupConversation;
+  const effectiveMessages = groupId ? groupHistory.messages : messages;
+  const loadingOlderMessages = groupId ? groupHistory.loading : messagesLoadingOlder;
+  const hasMore = groupId ? groupHistory.hasMore : messagesHasMore;
+  const messagesError = groupId ? (groupHistory.error ?? undefined) : globalMessagesError;
+  const loadingInitialMessages =
+    effectiveMessages.length === 0 &&
+    (groupId ? groupHistory.loading : !messagesEntryPresent || messagesLoadingHead);
+  const loadConversationOlder = groupId ? groupHistory.loadOlder : loadOlderMessages;
+
   const {
     footerHeight: bottomSheetStickyTopHeight,
     footerRef: bottomSheetStickyTopRef,
@@ -463,7 +473,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, [expanded, expandedChatHost, navigationSurface]);
 
   useEffect(() => {
-    initialSidebarStateRef.current = getTeamMessagesSidebarUiState(teamName);
+    initialSidebarStateRef.current = getTeamMessagesSidebarUiState(sidebarStateKey);
     setMessagesSearchQuery(initialSidebarStateRef.current.messagesSearchQuery);
     setMessagesFilter(initialSidebarStateRef.current.messagesFilter);
     setMessagesFilterOpen(initialSidebarStateRef.current.messagesFilterOpen);
@@ -471,15 +481,15 @@ export const MessagesPanel = memo(function MessagesPanel({
     setMessagesSearchBarVisible(initialSidebarStateRef.current.messagesSearchBarVisible);
     setExpandedItemKey(initialSidebarStateRef.current.expandedItemKey);
     messagesScrollTopRef.current = initialSidebarStateRef.current.messagesScrollTop;
-    messagesScrollPersistTeamRef.current = teamName;
+    messagesScrollPersistTeamRef.current = sidebarStateKey;
     setMessagesScrollTop(initialSidebarStateRef.current.messagesScrollTop);
     setListScrollTop(initialSidebarStateRef.current.listScrollTop);
     setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
     setSortChatsByActivity(initialSidebarStateRef.current.sortChatsByActivity === true);
-  }, [teamName]);
+  }, [sidebarStateKey]);
 
   useEffect(() => {
-    const persistTeamName = teamName;
+    const persistTeamName = sidebarStateKey;
     return () => {
       if (!messagesScrollPersistTimerRef.current) {
         return;
@@ -495,7 +505,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         });
       }
     };
-  }, [teamName]);
+  }, [sidebarStateKey]);
 
   const persistMessagesScrollTop = useCallback((nextScrollTop: number): void => {
     messagesScrollTopRef.current = nextScrollTop;
@@ -528,7 +538,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, []);
 
   useEffect(() => {
-    setTeamMessagesSidebarUiState(teamName, {
+    setTeamMessagesSidebarUiState(sidebarStateKey, {
       messagesSearchQuery,
       messagesFilter,
       messagesFilterOpen,
@@ -543,7 +553,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       sortChatsByActivity,
     });
   }, [
-    teamName,
+    sidebarStateKey,
     messagesSearchQuery,
     messagesFilter,
     messagesFilterOpen,
@@ -570,7 +580,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, [messagesFilter.from, messagesFilter.to, messagesSearchBarVisible, messagesSearchQuery]);
 
   useEffect(() => {
-    if (!teamName) {
+    if (!teamName || groupId) {
       return;
     }
     if (effectiveMessages.length > 0) {
@@ -587,6 +597,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     void refreshTeamMessagesHead(teamName).catch(() => undefined);
   }, [
     effectiveMessages.length,
+    groupId,
     messagesLoadingHead,
     messagesLoadingOlder,
     refreshTeamMessagesHead,
@@ -621,8 +632,19 @@ export const MessagesPanel = memo(function MessagesPanel({
     [members, onReplyToMessage, scope, teamName]
   );
   const canonicalMessages = useMemo(
-    () => canonicalTeamMessages(effectiveMessages, leadNames),
-    [effectiveMessages, leadNames]
+    () =>
+      canonicalTeamMessages(
+        [
+          ...new Map(
+            [...messages, ...groupHistory.messages].map((message) => [
+              toMessageKey(message),
+              message,
+            ])
+          ).values(),
+        ],
+        leadNames
+      ),
+    [messages, groupHistory.messages, leadNames]
   );
 
   const filteredMessages = useMemo(
@@ -763,7 +785,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     if (!open) setExpandedItemKey(null);
   }, []);
 
-  const { readSet, markAllRead } = useTeamMessagesRead(teamName, canonicalMessages, !hasMore);
+  const { readSet, markAllRead } = useMessagesReadState(teamName, activeContextId, canonicalMessages, groupHistory.messages, messagesHasMore);
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
   const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
   const visibleReadFlushFrameRef = useRef<number | null>(null);
@@ -813,7 +835,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       }
       pendingVisibleReadKeys.clear();
     };
-  }, [teamName]);
+  }, [activeContextId, teamName]);
 
   const readState = useMemo(() => ({ readSet, getMessageKey: toMessageKey }), [readSet]);
 
@@ -843,7 +865,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     historyReloadRequired,
     hasMore,
     loadingOlder: loadingOlderMessages,
-    loadOlder: loadOlderMessages,
+    loadOlder: loadConversationOlder,
   });
   const { snapshot: unreadSnapshot, dismissUnreadKeys } = useThreadUnreadSnapshot({
     renderSurface,
@@ -852,10 +874,18 @@ export const MessagesPanel = memo(function MessagesPanel({
     messages: threadCanonicalMessages,
     readSet,
   });
-  const { lockedRecipient, conversationTitle } = conversationChrome(renderSurface, scope, members, {
-    list: t('messages.title'),
-    teamFeed: t('messages.chats.teamFeed'),
-  });
+  const { lockedRecipient, conversationTitle: defaultConversationTitle } = conversationChrome(
+    renderSurface,
+    scope,
+    members,
+    {
+      list: t('messages.title'),
+      teamFeed: t('messages.chats.teamFeed'),
+    }
+  );
+  const conversationTitle = groupId
+    ? (activeGroup?.name ?? t('messages.groups.unavailable'))
+    : defaultConversationTitle;
 
   const handleMarkAllRead = useCallback(() => {
     const keys = scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey);
@@ -1023,9 +1053,8 @@ export const MessagesPanel = memo(function MessagesPanel({
     onRevisionComplete: handleRevisionComplete,
   };
 
-  const renderDefaultComposerSection = (): React.JSX.Element => (
-    <ThreadAwareMessageComposer {...sharedComposerProps} />
-  );
+  const renderDefaultComposerSection = (): React.JSX.Element =>
+    groupId ? renderGroupComposer() : <ThreadAwareMessageComposer {...sharedComposerProps} />;
 
   const renderFloatingComposerModeControls = (): React.JSX.Element => (
     <MessagesFloatingComposerModeControls
@@ -1039,70 +1068,29 @@ export const MessagesPanel = memo(function MessagesPanel({
     />
   );
 
-  const renderCompactComposerSection = (): React.JSX.Element => (
-    <ThreadAwareMessageComposer layout="compact" {...sharedComposerProps} />
-  );
+  const renderCompactComposerSection = (): React.JSX.Element =>
+    groupId ? (
+      renderGroupComposer()
+    ) : (
+      <ThreadAwareMessageComposer layout="compact" {...sharedComposerProps} />
+    );
 
-  const renderFloatingComposerSection = (): React.JSX.Element => (
-    <MessagesComposerSection
-      {...sharedComposerProps}
-      layout="compact"
-      widthMode="floating-adaptive"
-      cornerActionPrefix={
-        <div className="flex items-center gap-1">{renderFloatingComposerModeControls()}</div>
-      }
-    />
-  );
+  const renderFloatingComposerSection = (): React.JSX.Element =>
+    groupId ? (
+      renderGroupComposer(<>{groupArchiveAction}{renderFloatingComposerModeControls()}</>)
+    ) : (
+      <MessagesComposerSection
+        {...sharedComposerProps}
+        layout="compact"
+        widthMode="floating-adaptive"
+        cornerActionPrefix={
+          <div className="flex items-center gap-1">{renderFloatingComposerModeControls()}</div>
+        }
+      />
+    );
 
-  const renderInlineStatusSection = (): React.JSX.Element => (
-    <MessagesStatusSection
-      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
-      members={members}
-      tasks={tasks}
-      messages={effectiveMessages}
-      isTeamAlive={isTeamAlive}
-      pendingRepliesByMember={pendingRepliesByMember}
-      teamName={teamName}
-      onQueuedDiscarded={handleQueuedDiscarded}
-      layout="flow"
-      position="inline"
-      onMemberClick={onMemberClick}
-      onTaskClick={onTaskClick}
-    />
-  );
-
-  const renderSidebarStatusSection = (): React.JSX.Element => (
-    <MessagesStatusSection
-      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
-      members={members}
-      tasks={tasks}
-      messages={effectiveMessages}
-      isTeamAlive={isTeamAlive}
-      pendingRepliesByMember={pendingRepliesByMember}
-      teamName={teamName}
-      onQueuedDiscarded={handleQueuedDiscarded}
-      layout="flow"
-      position="sidebar"
-      onMemberClick={onMemberClick}
-      onTaskClick={onTaskClick}
-    />
-  );
-
-  const renderComposerStatusSection = (): React.JSX.Element => (
-    <MessagesStatusSection
-      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
-      members={members}
-      tasks={tasks}
-      messages={effectiveMessages}
-      isTeamAlive={isTeamAlive}
-      pendingRepliesByMember={pendingRepliesByMember}
-      teamName={teamName}
-      onQueuedDiscarded={handleQueuedDiscarded}
-      placement="composer"
-      position="sidebar"
-      onMemberClick={onMemberClick}
-      onTaskClick={onTaskClick}
-    />
+  const renderStatusSection = (position: 'inline' | 'sidebar', placement?: 'composer'): React.JSX.Element | null => groupId ? null : (
+    <MessagesStatusSection scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE} members={members} tasks={tasks} messages={effectiveMessages} isTeamAlive={isTeamAlive} pendingRepliesByMember={pendingRepliesByMember} teamName={teamName} onQueuedDiscarded={handleQueuedDiscarded} layout="flow" position={position} placement={placement} onMemberClick={onMemberClick} onTaskClick={onTaskClick} />
   );
 
   const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
@@ -1131,10 +1119,10 @@ export const MessagesPanel = memo(function MessagesPanel({
         teamColorByName={teamColorByName}
         onTeamClick={openTeamTab}
         onMemberClick={onMemberClick}
-        onCreateTaskFromMessage={onCreateTaskFromMessage}
-        onReplyToMessage={handleReplyToTimelineMessage}
+        onCreateTaskFromMessage={groupId ? undefined : onCreateTaskFromMessage}
+        onReplyToMessage={groupId ? groupConversation.quote : handleReplyToTimelineMessage}
         revisionMessageId={revisionMessageId}
-        onReviseMessage={handleReviseMessage}
+        onReviseMessage={groupId ? undefined : handleReviseMessage}
         onMessageVisible={handleMessageVisible}
         presentation={isConversation ? 'conversation' : 'activity'}
         appearance={useWideChat ? 'wide-chat' : 'compact'}
@@ -1157,7 +1145,9 @@ export const MessagesPanel = memo(function MessagesPanel({
         onComposerOutboxDiscard={composerOutbox.discard}
         hasMore={hasMore}
         loadingOlderMessages={loadingOlderMessages}
-        onLoadOlderMessages={handleLoadOlderMessagesClick}
+        onLoadOlderMessages={
+          groupId ? () => void groupHistory.loadOlder() : handleLoadOlderMessagesClick
+        }
         expandedItem={expandedItem}
         expandedItemKey={expandedItemKey}
         onExpandDialogChange={handleExpandDialogChange}
@@ -1205,6 +1195,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const wideThreadHeader = (
     <WideThreadHeader
       title={lockedRecipient ?? conversationTitle}
+      actions={groupArchiveAction}
       participant={scope.kind === 'direct' ? scope.participant : undefined}
       unreadCount={threadUnread.unreadCount}
       attentionCount={threadUnread.attentionCount}
@@ -1232,10 +1223,10 @@ export const MessagesPanel = memo(function MessagesPanel({
         expanded
           ? null
           : variant === 'wide'
-            ? renderInlineStatusSection()
-            : renderSidebarStatusSection()
+            ? renderStatusSection('inline')
+            : renderStatusSection('sidebar')
       }
-      composerStatus={expanded ? renderComposerStatusSection() : undefined}
+      composerStatus={expanded ? renderStatusSection('sidebar', 'composer') : undefined}
       timeline={renderTimelineSection()}
       scrollRef={position === 'bottom-sheet' ? setBottomSheetScrollNode : setThreadScrollNode}
       composerRef={position === 'bottom-sheet' ? bottomSheetStickyTopRef : undefined}
@@ -1252,14 +1243,21 @@ export const MessagesPanel = memo(function MessagesPanel({
     />
   );
 
+  const renderChatList = (selected = false): React.JSX.Element => (
+    <MessagesConversationList key={`${activeContextId}:${teamName}`} items={chatListItems}
+      conversation={groupConversation} teamName={teamName} members={members}
+      messages={messages} readSet={readSet} selectedScope={selected ? scope : undefined}
+      isTeamAlive={isTeamAlive} onOpen={handleOpenChat} />
+  );
+
   const renderMessagesContent = (): React.JSX.Element => (
     <div className="pb-14">
       {renderSurface === 'list' ? (
-        <ChatList items={chatListItems} teamName={teamName} onOpen={handleOpenChat} />
+        renderChatList()
       ) : (
         <>
           {renderDefaultComposerSection()}
-          {renderInlineStatusSection()}
+          {renderStatusSection('inline')}
           {renderTimelineSection()}
         </>
       )}
@@ -1272,6 +1270,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       <MessagesSidebarSurface
         conversationHeader={
           <ConversationHeader
+            actions={groupArchiveAction}
+            group={!!groupId}
             title={showChatList ? t('messages.title') : (lockedRecipient ?? conversationTitle)}
             unreadCount={messagesUnreadCount}
             attentionCount={messagesAttentionCount}
@@ -1305,14 +1305,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         showChatList={showChatList}
         listScrollRef={listScrollRef}
         onListScroll={handleListScroll}
-        chatList={
-          <ChatList
-            items={chatListItems}
-            teamName={teamName}
-            selectedScope={expanded ? scope : undefined}
-            onOpen={handleOpenChat}
-          />
-        }
+        chatList={renderChatList(expanded)}
         threadSlotRef={setSidebarThreadTarget}
         thread={
           renderSurface === 'thread' ? (
@@ -1385,6 +1378,8 @@ export const MessagesPanel = memo(function MessagesPanel({
               </div>
               <div className="flex h-full items-center gap-1.5">
                 <ConversationHeader
+                  actions={groupArchiveAction}
+                  group={!!groupId}
                   title={lockedRecipient ?? conversationTitle}
                   unreadCount={messagesUnreadCount}
                   attentionCount={messagesAttentionCount}
@@ -1458,9 +1453,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               disableScroll
             >
               {renderSurface === 'list' ? (
-                <div className="h-full overflow-y-auto pt-2">
-                  <ChatList items={chatListItems} teamName={teamName} onOpen={handleOpenChat} />
-                </div>
+                <div className="h-full overflow-y-auto pt-2">{renderChatList()}</div>
               ) : (
                 renderSharedThreadView('wide')
               )}
@@ -1514,6 +1507,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       }
       headerExtra={
         <div className="flex items-center gap-1">
+          {groupArchiveAction}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

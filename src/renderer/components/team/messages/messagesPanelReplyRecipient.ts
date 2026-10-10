@@ -26,6 +26,8 @@ export function resolveReplyRecipient({
   teamName,
   members,
 }: ReplyRecipientInput): string {
+  if (scope.kind === 'group' || message.groupChatId) return '';
+
   const memberByNormalizedName = new Map(
     members.map((member) => [normalizeConversationParticipant(member.name), member.name])
   );

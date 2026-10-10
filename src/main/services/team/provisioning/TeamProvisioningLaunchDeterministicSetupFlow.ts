@@ -289,6 +289,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     );
     anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
     const { env: shellEnv, providerArgs = [], warning: envWarning } = provisioningEnv;
+    shellEnv.CLAUDE_CODE_BOOTSTRAP_RUN_ID = runId;
     if (envWarning) {
       throw new Error(envWarning);
     }

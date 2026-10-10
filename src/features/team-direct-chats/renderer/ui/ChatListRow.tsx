@@ -84,7 +84,7 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
         }}
       >
         <span className="mt-0.5 shrink-0">
-          {item.scope.kind === 'team-feed' ? (
+          {item.scope.kind !== 'direct' ? (
             <GroupChatAvatar />
           ) : (
             <MemberIdentityAvatar

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   isTeamInternalControlMessageText,
@@ -11,13 +13,22 @@ import type { InboxMessage } from '@shared/types/team';
 export type LeadRelayReplyProjection =
   | {
       kind: 'suppressed';
-      reason: 'empty' | 'internal_control' | 'visible_duplicate' | 'unverified_state';
+      reason:
+        | 'empty'
+        | 'internal_control'
+        | 'visible_duplicate'
+        | 'unverified_state'
+        | 'ambiguous_group_scope';
     }
   | {
       kind: 'live_activity';
       text: string;
       messageId: string;
       timestamp: string;
+    }
+  | {
+      kind: 'group_message';
+      message: { groupChatId: string; relayOfMessageId: string; messageId: string; text: string };
     }
   | {
       kind: 'user_message';
@@ -34,6 +45,7 @@ export function projectLeadRelayReply(input: {
   runId: string;
   nowIso: string;
   nowMs: number;
+  originatingBatch?: readonly InboxMessage[];
 }): LeadRelayReplyProjection {
   const cleanReply = input.replyText
     ? stripExactInternalControlEchoPrefix(
@@ -58,6 +70,23 @@ export function projectLeadRelayReply(input: {
     shouldSuppressUnverifiedLeadRelayStateLine(cleanReply)
   ) {
     return { kind: 'suppressed', reason: 'unverified_state' };
+  }
+  const groupRows = input.originatingBatch?.filter((row) => row.groupChatId) ?? [];
+  if (groupRows.length > 0) {
+    // A plain response has no per-message routing proof. Permit only one unambiguous inbound.
+    const origin = groupRows[0];
+    if (input.originatingBatch?.length !== 1 || !origin.groupChatId || !origin.messageId) {
+      return { kind: 'suppressed', reason: 'ambiguous_group_scope' };
+    }
+    return {
+      kind: 'group_message',
+      message: {
+        groupChatId: origin.groupChatId,
+        relayOfMessageId: origin.messageId,
+        messageId: randomUUID(),
+        text: cleanReply,
+      },
+    };
   }
   if (input.replyVisibility === 'internal_activity') {
     return {

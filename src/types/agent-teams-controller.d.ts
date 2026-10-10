@@ -223,6 +223,15 @@ declare module 'agent-teams-controller' {
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
+    groupChats: {
+      listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
+      sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+    };
+    processes: ControllerProcessApi;
+    maintenance: ControllerMaintenanceApi;
+    crossTeam: ControllerCrossTeamApi;
+    runtime: ControllerRuntimeApi;
+    workSync: ControllerWorkSyncApi;
   }
 
   /** Context-free protocol text builders, shared across lead and member prompts. */

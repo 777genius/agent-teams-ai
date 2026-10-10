@@ -637,4 +637,58 @@ describe('lead inbox relay flow', () => {
     expect(rows[1]).toContain('REDELIVERY: this exact message was already delivered to you');
     expect(rows[2]).not.toContain('REDELIVERY:');
   });
+  it('claims group rows once and routes only the winning batch without private echo', async () => {
+    const run = createRun();
+    const group = createMessage({
+      groupChatId: 'group-1',
+      messageId: 'physical-group',
+      text: 'GROUP ONLY',
+    });
+    const dm = createMessage({ messageId: 'dm', text: 'DM ONLY' });
+    const ports = createPorts(run, [group, dm]);
+    ports.claimGroupLeadInboxHandoffs = vi.fn().mockResolvedValue([group]);
+    ports.sendGroupReply = vi.fn().mockResolvedValue({ saved: true });
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+    expect(ports.sentMessages[0]).toContain('GROUP ONLY');
+    expect(ports.sentMessages[0]).not.toContain('DM ONLY');
+    expect(ports.markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'team-lead', [group]);
+    expect(ports.sendGroupReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupChatId: 'group-1',
+        relayOfMessageId: 'physical-group',
+        from: 'team-lead',
+      })
+    );
+    expect(ports.persistedMessages).toEqual([]);
+  });
+
+  it('does not replay a claimed group row with fresh DM or schedule an unknown-only retry', async () => {
+    const run = createRun();
+    const group = createMessage({ groupChatId: 'group-1' });
+    const ports = createPorts(run, [group]);
+    const timers = createTimerHarness(ports);
+    ports.claimGroupLeadInboxHandoffs = vi.fn(async (_team, _lead, batch) => {
+      group.groupHandoffStartedAt = '2026-01-01T00:02:00.000Z';
+      return batch;
+    });
+    ports.sendMessageToRun.mockImplementation(async () => {
+      timers
+        .pending()
+        .find(({ ms }) => ms === 120_000)
+        ?.callback();
+    });
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+    expect(ports.scheduleLeadInboxFollowUpRelay).not.toHaveBeenCalled();
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+    vi.mocked(ports.readLeadInboxMessages).mockResolvedValue([
+      group,
+      createMessage({ messageId: 'fresh-dm' }),
+    ]);
+    ports.sendMessageToRun.mockImplementation(async (_run, prompt) => {
+      expect(prompt).not.toContain('group-1');
+      run.leadRelayCapture?.resolveOnce('DM reply');
+    });
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+  });
 });

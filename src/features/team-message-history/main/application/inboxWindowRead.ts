@@ -1,3 +1,4 @@
+import { assertValidGroupInboxRows } from '@features/team-group-chats/contracts';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 
 import { sourceSemanticEntry } from '../../core/domain/messageSemantics';
@@ -31,7 +32,7 @@ export interface InboxWindowReadPorts {
 
 export async function readInboxWindow(
   ports: InboxWindowReadPorts,
-  options: { cursor?: InboxMessageCursor | null; limit: number }
+  options: { cursor?: InboxMessageCursor | null; limit: number; groupChatId?: string }
 ): Promise<InboxWindowOutcome> {
   const limit = Math.max(1, Math.floor(options.limit));
   const cursor = options.cursor ?? null;
@@ -53,6 +54,11 @@ export async function readInboxWindow(
     for (const member of members) {
       const data = await ports.readMember(member);
       const entries: SourceSemanticEntry[] = [];
+      try {
+        assertValidGroupInboxRows(JSON.parse(data.raw));
+      } catch {
+        return { kind: 'unavailable', reason: 'invalid_json' };
+      }
       let invalidPosition = false;
       const consume = (message: InboxMessage): void => {
         ports.assignRecipient(message, member);
@@ -63,6 +69,9 @@ export async function readInboxWindow(
         sourceMessageCount += 1;
         if (!isTeamInternalControlMessageEnvelope(message))
           entries.push(sourceSemanticEntry(message));
+        // Preserve raw revision accounting, but hide fanout before bounding top-K.
+        if (message.groupChatId && message.groupMessageId !== message.messageId) return;
+        if (options.groupChatId && message.groupChatId !== options.groupChatId) return;
         if (!isMessageAfterCursor(message, cursor)) return;
         messages.push(message);
         if (messages.length > limit) {

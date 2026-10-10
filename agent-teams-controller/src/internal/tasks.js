@@ -817,7 +817,9 @@ async function taskBriefing(context, memberName) {
 }
 
 async function leadBriefing(context) {
-    return agenda.formatLeadBriefing(context.paths, context.teamName);
+    const briefing = agenda.formatLeadBriefing(context.paths, context.teamName);
+    const catalog = await require('./groupChats.js').buildGroupChatBriefing(context, runtimeHelpers.inferLeadName(context.paths));
+    return `${briefing}\n\n${catalog}`;
 }
 
 function listTaskInventory(context, filters = {}) {
@@ -1101,6 +1103,7 @@ async function memberBriefing(context, memberName, options = {}) {
         }
     }
 
+    lines.push('', await require('./groupChats.js').buildGroupChatBriefing(context, requestedMemberName));
     lines.push('', taskQueue);
     return lines.join('\n');
 }

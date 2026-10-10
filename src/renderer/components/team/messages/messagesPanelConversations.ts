@@ -43,11 +43,14 @@ export function resolveConversationParticipantName(
 export function conversationDisplayTitle(
   renderSurface: ConversationSurface,
   scope: ConversationScope,
-  labels: { list: string; teamFeed: string },
+  labels: { list: string; teamFeed: string; groupName?: string },
   members: readonly ResolvedTeamMember[] = []
 ): string {
   if (renderSurface !== 'thread') {
     return labels.list;
+  }
+  if (scope.kind === 'group') {
+    return labels.groupName ?? scope.groupChatId;
   }
   if (scope.kind !== 'direct') {
     return labels.teamFeed;
@@ -61,7 +64,7 @@ export function conversationChrome(
   renderSurface: ConversationSurface,
   scope: ConversationScope,
   members: readonly ResolvedTeamMember[],
-  labels: { list: string; teamFeed: string }
+  labels: { list: string; teamFeed: string; groupName?: string }
 ): { lockedRecipient: string | undefined; conversationTitle: string } {
   const lockedRecipient =
     renderSurface === 'thread' && scope.kind === 'direct'
@@ -78,9 +81,6 @@ export function filterScopedMessages(
   scope: ConversationScope,
   leadNames: Iterable<string>
 ): InboxMessage[] {
-  if (scope.kind === 'team-feed') {
-    return [...messages];
-  }
   return messages.filter((message) => belongsToConversation(message, scope, leadNames));
 }
 
@@ -101,9 +101,6 @@ export function scopedUnreadCounts(
   toKey: ConversationMessageKeyFn,
   leadNames: Iterable<string>
 ): { unreadCount: number; attentionCount: number } {
-  if (scope.kind === 'team-feed') {
-    return countUniqueUnread(messages, readSet, toKey);
-  }
   const scoped = filterScopedMessages(messages, scope, leadNames);
   return countUniqueUnread(scoped, readSet, toKey);
 }
@@ -116,9 +113,7 @@ export function collectThreadUnreadSnapshotKeys(args: {
   openedAt: number;
   existing?: ReadonlySet<string>;
 }): Set<string> {
-  const next = new Set(
-    [...(args.existing ?? [])].filter((key) => !args.readSetNow?.has(key))
-  );
+  const next = new Set([...(args.existing ?? [])].filter((key) => !args.readSetNow?.has(key)));
   for (const message of args.messages) {
     const timestamp = Date.parse(message.timestamp);
     if (args.openedAt > 0 && Number.isFinite(timestamp) && timestamp > args.openedAt) {

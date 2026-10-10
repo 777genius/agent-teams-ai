@@ -2,7 +2,7 @@
 import { request as httpRequest } from 'node:http';
 
 import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
-import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import { getDesktopMcpChildEnvironment, isDesktopMcpControlAvailable } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -194,6 +194,12 @@ describe('desktop connection bound HTTP lifecycle', () => {
       expect(crash.recovery).toContain('Retry');
       const resumed = await connection.retryConnection();
       expect(resumed.mcp.status).toBe('ready');
+      const firstChild = getDesktopMcpChildEnvironment();
+      const secondChild = getDesktopMcpChildEnvironment();
+      expect(JSON.parse(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON)).toEqual(resumed.context);
+      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON);
+      expect((await connection.getConnectionInfo()).context).toEqual(resumed.context);
+      expect(isDesktopMcpControlAvailable()).toBe(true);
       const rootOrderOffset = order.length;
       const headers = { 'x-agent-teams-app-context': JSON.stringify(resumed.context) };
       const socket = new AbortController();
@@ -209,6 +215,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
         expect((await connection.getConnectionInfo()).control.status).toBe('starting');
       });
       expect((await request('/api/draft', headers)).status).toBe(409);
+      expect(isDesktopMcpControlAvailable()).toBe(false);
       expect(root).toBe('/sandbox/connection-old');
       expect(order).toHaveLength(rootOrderOffset);
       finishWrite.resolve();
@@ -295,6 +302,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
         expect((await connection.getConnectionInfo()).control.status).toBe('starting')
       );
       await connection.shutdown();
+      expect(isDesktopMcpControlAvailable()).toBe(false);
       expect(handle).toBeNull();
       expect(root).toBe('/sandbox/connection-new');
       finishShutdownWrite.resolve();

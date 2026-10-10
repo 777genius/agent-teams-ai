@@ -172,6 +172,38 @@ function makeDeps(
 }
 
 describe('OpenCodeMemberMessageDeliveryService', () => {
+  it('keeps a durable group prebridge marker unknown and never dispatches it again', async () => {
+    const record = makeLedgerRecord({ groupChatId: 'group-a', status: 'accepted',
+      acceptanceUnknown: true, lastReason: 'group_handoff_started_acceptance_unknown' });
+    const send = vi.fn();
+    const observe = vi.fn();
+    const ledger = { getActiveForMember: vi.fn(async () => record),
+      ensurePending: vi.fn(async () => record), getByInboxMessage: vi.fn(async () => record) };
+    const deps = makeDeps({
+      getOpenCodeRuntimeMessageAdapter: () => ({ ...makeAdapter(send), observeMessageDelivery: observe }),
+      createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
+      openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
+      openCodeVisibleReplyProofService: {
+        applyDestinationProof: vi.fn(async () => ({ ledgerRecord: record, visibleReply: null })),
+        materializePlainTextReplyIfNeeded: vi.fn(async () => ({ ledgerRecord: record, visibleReply: null })),
+        findByRelayOfMessageId: vi.fn(async () => null),
+      },
+      isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+    });
+    const service = new OpenCodeMemberMessageDeliveryService(deps);
+    const input = { memberName: 'alice', messageId: 'msg-1', text: 'hello group',
+      groupChatId: 'group-a', groupMessageId: 'canonical-a', groupChatProtocolVersion: 1 as const,
+      groupRunKey: 'run-1' };
+    for (let retry = 0; retry < 2; retry++)
+      expect(await service.deliver('team-a', input)).toMatchObject({
+        delivered: false, accepted: false, acceptanceUnknown: true,
+        reason: 'group_handoff_acceptance_unknown',
+      });
+    expect(send).not.toHaveBeenCalled();
+    expect(observe).not.toHaveBeenCalled();
+    expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
+  });
+
   it('returns bridge unavailable before reading member directory when runtime adapter is missing', async () => {
     const readOpenCodeMemberDirectory = vi.fn(async () =>
       unexpected('readOpenCodeMemberDirectory')

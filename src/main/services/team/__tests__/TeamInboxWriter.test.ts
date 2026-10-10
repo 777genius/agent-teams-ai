@@ -50,6 +50,43 @@ describe('TeamInboxWriter runtime delivery dedup', () => {
     };
   }
 
+  it.each(['malformed-group', 'invalid-utf8'])('refuses a legacy DM append without changing damaged source bytes (%s)', async (kind) => {
+    const dir = path.join(hoisted.teamsBase, 'team-a', 'inboxes');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'alice.json');
+    const raw = kind === 'malformed-group'
+      ? Buffer.from('[ { "groupChatId": "broken", "text": "preserve me", "custom": 42 } ]')
+      : Buffer.concat([Buffer.from('[{"messageId":"damaged","messageKind":"member_work_sync_nudge","workSyncControlRevision":1,"text":"'), Buffer.from([0xff]), Buffer.from('"}]')]);
+    fs.writeFileSync(file, raw);
+    await expect(writer.sendMessage('team-a', { member: 'alice', text: 'ordinary DM' }))
+      .rejects.toThrow(kind === 'malformed-group' ? 'malformed group envelope' : /utf-8/i);
+    expect(fs.readFileSync(file)).toEqual(raw);
+    await expect(writer.updateMessageText('team-a', { member: 'alice', messageId: 'damaged', text: 'Updated' })).rejects.toThrow();
+    expect(fs.readFileSync(file)).toEqual(raw);
+    await expect(writer.invalidateMemberWorkSyncNudges('team-a', 'alice', { beforeControlRevision: 2 })).rejects.toThrow();
+    expect(fs.readFileSync(file)).toEqual(raw);
+  });
+
+  it('preserves group metadata and unrelated raw fields through a legacy DM append', async () => {
+    const dir = path.join(hoisted.teamsBase, 'team-a', 'inboxes');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'user.json');
+    const group = { from: 'user', to: 'user', text: 'group', read: false,
+      timestamp: '2026-10-09T12:00:00.000Z', messageId: 'canonical', groupMessageId: 'canonical',
+      groupChatId: 'group-a', groupChatProtocolVersion: 1,
+      groupRecipientNames: ['alice', 'bob'], groupRecipientRunKeys: { alice: 'run-a', bob: 'run-b' },
+      groupDeliverySummary: { recordedAt: '2026-10-09T12:00:01.000Z', recipients: [
+        { memberName: 'alice', physicalMessageId: 'physical-a', status: 'unknown' } ] },
+      extraProducerMetadata: { preserve: true } };
+    fs.writeFileSync(file, JSON.stringify([null, { legacyUnknown: true }, group]));
+    await writer.sendMessage('team-a', { member: 'user', text: 'ordinary DM', from: 'bob' });
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).slice(0, 3)).toEqual([null, { legacyUnknown: true }, group]);
+    const request = { member: 'user', text: 'explicit DM', from: 'bob', messageId: 'explicit' };
+    await writer.sendMessage('team-a', request);
+    expect((await writer.sendMessage('team-a', request)).deduplicated).toBe(true);
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).slice(0, 3)).toEqual([null, { legacyUnknown: true }, group]);
+  });
+
   it('drops paraphrased replays with the same relayOfMessageId, from, and to', async () => {
     const first = await writer.sendMessage('team', runtimeDeliveryRequest());
     expect(first.deduplicated).toBeUndefined();

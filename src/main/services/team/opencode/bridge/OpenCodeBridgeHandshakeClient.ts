@@ -45,6 +45,8 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     selectedModel?: string | null;
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
+    teamName?: string;
+    memberName?: string;
     laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
     const result = await this.bridge.execute<
@@ -58,6 +60,8 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         selectedModel?: string | null;
         toolApprovalMode?: 'auto' | 'manual';
         teamId?: string;
+        teamName?: string;
+        memberName?: string;
         laneId?: string | null;
       },
       OpenCodeBridgeHandshake
@@ -75,6 +79,8 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
           ? {}
           : { toolApprovalMode: input.toolApprovalMode }),
         ...(input.teamId === undefined ? {} : { teamId: input.teamId }),
+        ...(input.teamName === undefined ? {} : { teamName: input.teamName }),
+        ...(input.memberName === undefined ? {} : { memberName: input.memberName }),
         ...(input.laneId === undefined ? {} : { laneId: input.laneId }),
       },
       {
@@ -109,6 +115,8 @@ export function createOpenCodeBridgeClientIdentity(input: {
       currentVersion: 1,
       supportedCommands: [
         'opencode.handshake',
+        'opencode.sendMessage',
+        'opencode.observeMessageDelivery',
         'opencode.commandStatus',
         'opencode.readiness',
         'opencode.cleanupHosts',
@@ -130,6 +138,7 @@ export function createOpenCodeBridgeClientIdentity(input: {
       opencodeFilePartsContractVersion: OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
       expectedBehaviorFingerprintSchemaVersion:
         OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
+      groupChatProtocolVersion: 1,
     },
     runtime: {
       providerId: 'opencode',

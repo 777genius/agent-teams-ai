@@ -17,45 +17,47 @@ const EMPTY_MESSAGES: readonly InboxMessage[] = [];
 export function useTeamMessagesRead(
   teamName: string,
   messages: readonly InboxMessage[] = EMPTY_MESSAGES,
-  hydrationComplete = false
+  hydrationComplete = false,
+  storageScope?: string
 ): {
   readSet: Set<string>;
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
 } {
+  const storageTeam = storageScope === undefined ? teamName : JSON.stringify(['group', storageScope, teamName]);
   const subscribe = useCallback((onStoreChange: () => void) => {
     return subscribeTeamMessageReadStore(onStoreChange);
   }, []);
   const getSnapshot = useCallback(
-    () => (teamName ? getReadSetSnapshot(teamName) : EMPTY_READ_SET),
-    [teamName]
+    () => (teamName ? getReadSetSnapshot(storageTeam) : EMPTY_READ_SET),
+    [storageTeam, teamName]
   );
   const readSet = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   useEffect(() => {
     if (!teamName || messages.length === 0) return;
     seedPersistedReadKeysOnce(
-      teamName,
+      storageTeam,
       messages.filter((message) => message.read === true).map(toMessageKey),
       { finalize: hydrationComplete }
     );
-  }, [hydrationComplete, messages, teamName]);
+  }, [hydrationComplete, messages, storageTeam, teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {
       if (!teamName) return;
-      const existing = new Set(getReadSetSnapshot(teamName));
+      const existing = new Set(getReadSetSnapshot(storageTeam));
       if (existing.has(messageKey)) return;
       existing.add(messageKey);
-      markReadStorage(teamName, messageKey, existing);
+      markReadStorage(storageTeam, messageKey, existing);
     },
-    [teamName]
+    [storageTeam, teamName]
   );
 
   const markAllRead = useCallback(
     (messageKeys: string[]) => {
       if (!teamName || messageKeys.length === 0) return;
-      const existing = new Set(getReadSetSnapshot(teamName));
+      const existing = new Set(getReadSetSnapshot(storageTeam));
       let changed = false;
       for (const key of messageKeys) {
         if (!existing.has(key)) {
@@ -64,9 +66,9 @@ export function useTeamMessagesRead(
         }
       }
       if (!changed) return;
-      markBulkReadStorage(teamName, existing);
+      markBulkReadStorage(storageTeam, existing);
     },
-    [teamName]
+    [storageTeam, teamName]
   );
 
   return useMemo(

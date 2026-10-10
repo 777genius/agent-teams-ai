@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "그룹 채팅 만들기",
+      "description": "에이전트를 두 명 이상 선택하세요. 사용자는 자동으로 포함됩니다.",
+      "name": "채팅 이름",
+      "autoInclude": "새 멤버 자동 추가",
+      "minimum": "에이전트를 두 명 이상 선택하세요.",
+      "creating": "만드는 중…",
+      "retryCreate": "만들기 재시도",
+      "unavailable": "채팅을 사용할 수 없음",
+      "message": "이 그룹에 메시지 보내기",
+      "archivedHint": "보관된 채팅입니다. 메시지를 보내려면 복원하세요.",
+      "restartHint": "메시지를 보내려면 모든 참여자가 호환되는 런타임을 실행 중이어야 합니다.",
+      "unknownDelivery": "저장되었습니다. 전달 상태를 알 수 없습니다.",
+      "sending": "보내는 중…",
+      "retrySend": "같은 메시지 다시 보내기",
+      "send": "보내기",
+      "archived": "보관된 채팅",
+      "restore": "채팅 복원",
+      "archive": "채팅 보관",
+      "delivery": {
+        "queued": "대기 중",
+        "accepted": "접수됨",
+        "failed": "실패",
+        "unknown": "알 수 없음",
+        "skipped": "건너뜀"
+      }
+    },
     "actions": {
       "toLatest": "최신으로",
       "bottomSheetActions": "메시지 하단 시트 작업",

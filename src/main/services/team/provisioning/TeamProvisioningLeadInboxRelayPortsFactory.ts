@@ -9,6 +9,17 @@ import {
   relayLeadInboxMessagesForTeam,
 } from './TeamProvisioningLeadInboxRelayFlow';
 
+import type { TeamProvisioningLeadInboxRelayCompatibilityOptions } from './TeamProvisioningLeadInboxRelayCompatibilityFacade';
+
+/** Production clock belongs to the relay adapter, outside service composition. */
+export function withLeadInboxRelayClock(
+  ports: Omit<TeamProvisioningLeadInboxRelayCompatibilityOptions, 'nowMs' | 'setTimeout' | 'clearTimeout'>
+): TeamProvisioningLeadInboxRelayCompatibilityOptions {
+  return { ...ports, nowMs: () => Date.now(),
+    setTimeout: (callback, ms) => setTimeout(callback, ms),
+    clearTimeout: (handle) => clearTimeout(handle) };
+}
+
 export interface TeamProvisioningLeadInboxRelayPortsFactoryLogger {
   debug(message: string): void;
   warn(message: string): void;
@@ -117,6 +128,9 @@ export function createTeamProvisioningLeadInboxRelayFlowPorts<TRun extends LeadI
   >
 ): LeadInboxRelayFlowPorts<TRun> {
   return {
+    claimGroupLeadInboxHandoffs: deps.claimGroupLeadInboxHandoffs,
+    readGroupCatalogPrompt: deps.readGroupCatalogPrompt,
+    sendGroupReply: deps.sendGroupReply,
     getAliveRunId: (teamName) => deps.getAliveRunId(teamName),
     getProvisioningRunId: (teamName) => deps.getProvisioningRunId(teamName),
     getRun: (runId) => deps.getRun(runId),

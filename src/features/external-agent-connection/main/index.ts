@@ -6,6 +6,7 @@ export {
 export {
   configureDesktopMcpEnvironment,
   getDesktopMcpChildEnvironment,
+  isDesktopMcpControlAvailable,
   isDesktopMcpEnvironmentBound,
 } from './desktopMcpEnvironment';
 export { ExternalAgentConnection } from './ExternalAgentConnection';

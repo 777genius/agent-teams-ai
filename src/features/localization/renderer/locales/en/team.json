@@ -735,6 +735,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Create group chat",
+      "description": "Choose at least two agents. You are included automatically.",
+      "name": "Chat name",
+      "autoInclude": "Automatically add new members",
+      "minimum": "Select at least two agents.",
+      "creating": "Creating…",
+      "retryCreate": "Retry creation",
+      "unavailable": "Chat unavailable",
+      "message": "Message this group",
+      "archivedHint": "This chat is archived. Restore it to send messages.",
+      "restartHint": "All participants must be running a compatible runtime before sending.",
+      "unknownDelivery": "Saved. Delivery status is unknown.",
+      "sending": "Sending…",
+      "retrySend": "Retry the same message",
+      "send": "Send",
+      "archived": "Archived chats",
+      "restore": "Restore chat",
+      "archive": "Archive chat",
+      "delivery": {
+        "queued": "queued",
+        "accepted": "accepted",
+        "failed": "failed",
+        "unknown": "unknown",
+        "skipped": "skipped"
+      }
+    },
     "actions": {
       "toLatest": "To latest",
       "bottomSheetActions": "Message bottom sheet actions",

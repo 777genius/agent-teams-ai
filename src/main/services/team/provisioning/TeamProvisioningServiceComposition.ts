@@ -66,6 +66,7 @@ import {
   type TeamProvisioningCreateDeterministicSpawnFlowBoundary,
   type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
+import { createProvisioningGroupChatPorts } from './TeamProvisioningGroupChatPorts';
 import {
   createTeamProvisioningIdlePromptInjectionBoundaryFromService,
   type TeamProvisioningIdlePromptInjectionBoundary,
@@ -94,6 +95,7 @@ import {
   type TeamProvisioningLeadInboxRelayCompatibilityFacade,
   type TeamProvisioningLeadInboxRelayCompatibilityServiceHost,
 } from './TeamProvisioningLeadInboxRelayCompatibilityFacade';
+import { withLeadInboxRelayClock } from './TeamProvisioningLeadInboxRelayPortsFactory';
 import {
   createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService,
   TeamProvisioningMemberMcpLaunchConfigProvisioner,
@@ -410,8 +412,10 @@ function assignCompositionPart<K extends keyof TeamProvisioningServiceCompositio
 }
 
 export function createTeamProvisioningServiceComposition(
-  service: object
+  service: object,
+  groupChats?: Parameters<typeof createProvisioningGroupChatPorts>[0]
 ): TeamProvisioningServiceComposition {
+  const groupMessaging = createProvisioningGroupChatPorts(groupChats);
   const host = createTeamProvisioningServiceCompositionHostAdapters(service);
   const servicePorts = host.ports;
   const deps = host.deps;
@@ -676,6 +680,7 @@ export function createTeamProvisioningServiceComposition(
   const openCodeVisibleReplyProofService = createOpenCodeVisibleReplyProofServiceFromHost(
     host.visibleReplyProof,
     {
+      sendGroupChatReply: groupMessaging.sendReply,
       warn: (message) => logger.warn(message),
       getErrorMessage,
       nowIso,
@@ -773,14 +778,7 @@ export function createTeamProvisioningServiceComposition(
   assignCompositionPart(host.installTarget, 'bootstrapEvidenceFacade', bootstrapEvidenceFacade);
   const leadInboxRelayFacade = createTeamProvisioningLeadInboxRelayCompatibilityFacadeFromService(
     host.leadInboxRelay,
-    {
-      logger,
-      getErrorMessage,
-      nowIso,
-      nowMs: () => Date.now(),
-      setTimeout: (callback, ms) => setTimeout(callback, ms),
-      clearTimeout: (handle) => clearTimeout(handle),
-    }
+    withLeadInboxRelayClock({ ...groupMessaging.leadRelay, logger, getErrorMessage, nowIso })
   );
   assignCompositionPart(host.installTarget, 'leadInboxRelayFacade', leadInboxRelayFacade);
   const cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(

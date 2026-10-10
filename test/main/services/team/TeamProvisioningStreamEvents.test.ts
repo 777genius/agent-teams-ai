@@ -249,6 +249,19 @@ describe('TeamProvisioningStreamEvents', () => {
     expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
   });
 
+  it('suppresses private echoes after explicit group sends including rejected attempts', () => {
+    const content = [
+      {
+        type: 'tool_use',
+        name: 'mcp__agent_teams__group_chat_send',
+        input: { teamName: 'atlas-hq', groupChatId: 'g', text: 'group reply' },
+      },
+    ];
+    expect(hasCapturedVisibleSendMessage(content, 'atlas-hq')).toBe(true);
+    expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
+    expect(hasCapturedUserVisibleSendMessage(content, 'other-team')).toBe(false);
+  });
+
   it('builds stable lead thought ids from stream metadata', () => {
     expect(getStableLeadThoughtMessageId({ uuid: 'entry-1' })).toBe('lead-thought-entry-1');
     expect(getStableLeadThoughtMessageId({ message: { id: 'msg-1' } })).toBe(
@@ -622,9 +635,9 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
     expect(extractProvisioningStreamError({ type: 'result', errors: [usageLimit] })).toBe(
       usageLimit
     );
-    expect(extractProvisioningStreamError({ type: 'result', subtype: 'error_during_execution' })).toBe(
-      'unknown'
-    );
+    expect(
+      extractProvisioningStreamError({ type: 'result', subtype: 'error_during_execution' })
+    ).toBe('unknown');
     expect(
       extractProvisioningStreamError({
         type: 'result',

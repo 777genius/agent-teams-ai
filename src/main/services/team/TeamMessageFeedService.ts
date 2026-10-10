@@ -1,3 +1,4 @@
+import { annotateSlashCommandResponses } from './teamMessageSlashResults';
 import {
   isMessageAfterCursor,
   parseHistoryCursor,
@@ -8,7 +9,6 @@ import {
 } from '@features/team-message-history/main';
 import { resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
@@ -126,12 +126,6 @@ function cloneMessagePageSourcePayload(
   };
 }
 
-function isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
-  if (typeof message.to === 'string' && message.to.trim().length > 0) return false;
-  if (message.from === 'system') return false;
-  return message.source === 'lead_session' || message.source === 'lead_process';
-}
-
 function resolveLeadName(config: TeamConfig): string {
   return resolveRuntimeLeadName(config.members);
 }
@@ -209,41 +203,6 @@ function buildSyntheticBootstrapMessages(
 
 function isVisibleTeamMessage(message: InboxMessage): boolean {
   return !isTeamInternalControlMessageEnvelope(message);
-}
-
-function annotateSlashCommandResponses(messages: InboxMessage[]): void {
-  let pendingSlash = null as InboxMessage['slashCommand'] | null;
-
-  for (const message of messages) {
-    const slashCommand =
-      message.source === 'user_sent'
-        ? (message.slashCommand ?? buildStandaloneSlashCommandMeta(message.text))
-        : null;
-
-    if (slashCommand) {
-      pendingSlash = slashCommand;
-      continue;
-    }
-
-    if (!pendingSlash) {
-      continue;
-    }
-
-    if (message.messageKind === 'slash_command_result') {
-      continue;
-    }
-
-    if (isLeadThoughtCandidateForSlashResult(message)) {
-      message.messageKind = 'slash_command_result';
-      message.commandOutput = {
-        stream: 'stdout',
-        commandLabel: pendingSlash.command,
-      };
-      continue;
-    }
-
-    pendingSlash = null;
-  }
 }
 
 function dedupeLeadProcessCopies(
@@ -807,7 +766,10 @@ export class TeamMessageFeedService {
 
     const sourceStartedAt = Date.now();
     const [inboxMessages, leadTexts, sentMessages] = await Promise.all([
-      this.deps.getInboxMessages(teamName).catch(() => [] as InboxMessage[]),
+      this.deps.getInboxMessages(teamName).catch((error: unknown) => {
+        if (error instanceof TeamHistoryError) throw error;
+        return [] as InboxMessage[];
+      }),
       this.deps.getLeadSessionMessages(teamName, config).catch(() => [] as InboxMessage[]),
       this.deps.getSentMessages(teamName).catch(() => [] as InboxMessage[]),
     ]);

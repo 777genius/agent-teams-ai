@@ -17,6 +17,7 @@ import {
 } from './TeamProvisioningCrossTeamRelayHelpers';
 import { type NativeSameTeamFingerprint } from './TeamProvisioningInboxRelayPolicy';
 import {
+  type LeadInboxRelayFlowPorts,
   type LeadInboxRelayFlowRun,
   type LeadInboxRelayOptions,
 } from './TeamProvisioningLeadInboxRelayFlow';
@@ -73,6 +74,9 @@ export interface TeamProvisioningLeadInboxRelayCompatibilityLogger {
 }
 
 export interface TeamProvisioningLeadInboxRelayCompatibilityOptions {
+  claimGroupLeadInboxHandoffs?: LeadInboxRelayFlowPorts<LeadInboxRelayFlowRun>['claimGroupLeadInboxHandoffs'];
+  readGroupCatalogPrompt?: LeadInboxRelayFlowPorts<LeadInboxRelayFlowRun>['readGroupCatalogPrompt'];
+  sendGroupReply?: LeadInboxRelayFlowPorts<LeadInboxRelayFlowRun>['sendGroupReply'];
   logger: TeamProvisioningLeadInboxRelayCompatibilityLogger;
   getErrorMessage(error: unknown): string;
   nowIso(): string;
@@ -269,6 +273,9 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
     private readonly options: TeamProvisioningLeadInboxRelayCompatibilityOptions
   ) {
     this.leadInboxRelayBoundary = createTeamProvisioningLeadInboxRelayPortsBoundary<TRun>({
+      claimGroupLeadInboxHandoffs: options.claimGroupLeadInboxHandoffs,
+      readGroupCatalogPrompt: options.readGroupCatalogPrompt,
+      sendGroupReply: options.sendGroupReply,
       leadInboxRelayInFlight: this.leadInboxRelayInFlight,
       getAliveRunId: (teamName) => this.host.getAliveRunId(teamName),
       getProvisioningRunId: (teamName) => this.host.getProvisioningRunId(teamName),

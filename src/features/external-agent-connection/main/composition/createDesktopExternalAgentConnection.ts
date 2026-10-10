@@ -84,7 +84,6 @@ export function createDesktopExternalAgentConnection(
       throw new Error('Desktop MCP control context is unavailable');
     }
     // This factory is invoked only for a new owned child, never for discovery reads.
-    context.transportReplaced();
     boundControlUrl = controlUrl;
     return Object.freeze({
       [BOUND_CONTROL_URL_ENV]: controlUrl,
@@ -97,7 +96,7 @@ export function createDesktopExternalAgentConnection(
         deps.getRoot()
       ),
     });
-  });
+  }, () => !stopping && context.isOpen && deps.isLocalContext() && !!deps.getControlUrl());
   const connection = new ExternalAgentConnection({
     ...deps,
     context,

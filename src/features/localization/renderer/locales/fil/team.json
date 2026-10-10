@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Gumawa ng group chat",
+      "description": "Pumili ng hindi bababa sa dalawang agent. Awtomatiko kang kasama.",
+      "name": "Pangalan ng chat",
+      "autoInclude": "Awtomatikong magdagdag ng mga bagong miyembro",
+      "minimum": "Pumili ng hindi bababa sa dalawang agent.",
+      "creating": "Ginagawa…",
+      "retryCreate": "Subukang gumawa muli",
+      "unavailable": "Hindi available ang chat",
+      "message": "Magpadala ng mensahe sa grupong ito",
+      "archivedHint": "Naka-archive ang chat na ito. Ibalik ito para makapagpadala ng mga mensahe.",
+      "restartHint": "Dapat may tumatakbong compatible na runtime ang lahat ng kalahok bago magpadala.",
+      "unknownDelivery": "Na-save. Hindi alam ang katayuan ng paghahatid.",
+      "sending": "Ipinapadala…",
+      "retrySend": "Ipadala muli ang parehong mensahe",
+      "send": "Ipadala",
+      "archived": "Mga naka-archive na chat",
+      "restore": "Ibalik ang chat",
+      "archive": "I-archive ang chat",
+      "delivery": {
+        "queued": "nakapila",
+        "accepted": "tinanggap",
+        "failed": "nabigo",
+        "unknown": "hindi alam",
+        "skipped": "nilaktawan"
+      }
+    },
     "actions": {
       "toLatest": "Sa pinakabago",
       "bottomSheetActions": "Mga aksyon ng message bottom sheet",

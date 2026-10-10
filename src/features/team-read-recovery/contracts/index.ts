@@ -15,7 +15,7 @@ export interface TeamReadLegacyApi {
   getData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot>;
   getMessagesPage(
     teamName: string,
-    options?: { cursor?: string | null; limit?: number }
+    options?: { cursor?: string | null; limit?: number; groupChatId?: string }
   ): Promise<MessagesPage>;
   getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta>;
   getLogsForTask(

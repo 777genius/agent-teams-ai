@@ -1,6 +1,7 @@
 {
   "extends": "./e2e-base.json",
   "include": [
+    "../../scripts/e2e/group-chats-desktop.ts",
     "../../scripts/e2e/external-agent-connection-desktop.ts",
     "../../scripts/e2e/team-prompt-management-desktop.ts",
     "../../src/types/**/*.d.ts",

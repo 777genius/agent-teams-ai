@@ -99,6 +99,20 @@ export function belongsToConversation(
   scope: ConversationScope,
   leadNames: Iterable<string>
 ): boolean {
+  if (scope.kind === 'group') {
+    return (
+      message.groupChatId === scope.groupChatId &&
+      Boolean(message.groupMessageId) &&
+      message.messageId === message.groupMessageId
+    );
+  }
+  if (message.groupChatId) {
+    return (
+      scope.kind === 'team-feed' &&
+      Boolean(message.groupMessageId) &&
+      message.messageId === message.groupMessageId
+    );
+  }
   if (scope.kind === 'team-feed') {
     return true;
   }

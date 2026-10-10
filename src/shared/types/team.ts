@@ -1,6 +1,7 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
+import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
@@ -458,7 +459,7 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface InboxMessage extends GroupChatEnvelope {
   from: string;
   to?: string;
   text: string;
@@ -537,7 +538,7 @@ export interface MessagesPage {
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends GroupChatEnvelope {
   member: string;
   text: string;
   taskRefs?: TaskRef[];

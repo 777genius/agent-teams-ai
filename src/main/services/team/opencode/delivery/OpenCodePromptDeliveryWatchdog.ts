@@ -226,9 +226,10 @@ export function isOpenCodePromptDeliveryRetryAttemptDue(input: {
   ledgerRecord: {
     status: OpenCodePromptDeliveryStatus;
     responseState: OpenCodeDeliveryResponseState;
+    groupChatId?: string;
   };
 }): boolean {
-  if (!input.attemptDue) {
+  if (!input.attemptDue || input.ledgerRecord.groupChatId) {
     return false;
   }
   return (

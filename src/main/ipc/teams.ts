@@ -190,6 +190,7 @@ import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService'
 
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { softDeleteTeamWithBestEffortStop } from './teams/teamSoftDeleteFlow';
@@ -2797,80 +2798,13 @@ function buildMessageDeliveryText(
   return [...hiddenBlocks, baseText].join('\n\n');
 }
 
-async function handleGetMessagesPage(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  options: unknown
-): Promise<IpcResult<MessagesPage>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) {
-    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  }
-  const opts = (options && typeof options === 'object' ? options : {}) as {
-    cursor?: string | null;
-    limit?: number;
-  };
-  const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
-  const cursor =
-    typeof opts.cursor === 'string' ? opts.cursor : opts.cursor === null ? null : undefined;
-
-  return wrapTeamHandler('getMessagesPage', async () => {
-    let page: MessagesPage;
-    const teamName = vTeam.value!;
-    const scanNotifications = (messagesPage: MessagesPage): void => {
-      const notificationContextPromise: Promise<{ displayName: string; projectPath?: string }> =
-        getTeamDataService()
-          .getTeamNotificationContext(teamName)
-          .catch(() => ({ displayName: teamName }));
-      void notificationContextPromise
-        .then((notificationContext) => {
-          teamMessageNotificationScanner.scan(messagesPage.messages, {
-            teamName,
-            teamDisplayName: notificationContext.displayName,
-            projectPath: notificationContext.projectPath,
-          });
-        })
-        .catch((error: unknown) => {
-          logger.debug(
-            `[teams:getMessagesPage] notification scan skipped team=${teamName}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        });
-    };
-    const liveMessages =
-      cursor == null ? getTeamMessagingApi().getLiveLeadProcessMessages(teamName) : [];
-
-    if (liveMessages.length > 0) {
-      page = await getNewestMessagesPageWithLiveOverlay({
-        teamName,
-        limit,
-        liveMessages,
-        includeUndefinedCursorInFallback: true,
-      });
-      scanNotifications(page);
-      return page;
-    }
-
-    const worker = getTeamDataWorkerClient();
-    if (worker.isAvailable()) {
-      try {
-        page = await worker.getMessagesPage(teamName, { cursor, limit });
-        scanNotifications(page);
-        return page;
-      } catch (workerErr) {
-        throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage', workerErr);
-        logger.warn(
-          `[teams:getMessagesPage] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
-        );
-      }
-    }
-    noteHeavyTeamDataWorkerFallback('teams:getMessagesPage');
-    page = await getTeamDataService().getMessagesPage(teamName, { cursor, limit });
-    scanNotifications(page);
-    return page;
-  });
-}
+const handleGetMessagesPage = createMessagesPageHandler({
+  getService: getTeamDataService,
+  getLiveMessages: (teamName) => getTeamMessagingApi().getLiveLeadProcessMessages(teamName),
+  withLiveOverlay: getNewestMessagesPageWithLiveOverlay,
+  wrap: wrapTeamHandler,
+  noteFallback: noteHeavyTeamDataWorkerFallback,
+});
 
 async function handleGetMemberActivityMeta(
   _event: IpcMainInvokeEvent,

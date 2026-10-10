@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
+const { assertValidGroupInboxRows } = require('./groupEnvelope.js');
 const { withFileLockSync } = require('./fileLock.js');
 const { looksLikeIdleAckOnlyText } = require('./idleAckText.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
@@ -24,19 +25,31 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function readJson(filePath, fallbackValue) {
+// This module exclusively stores sentMessages.json and inboxes/*.json arrays.
+// Config/task JSON uses its own stores and does not pass this boundary.
+function readMessageRows(filePath) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const raw = fs.readFileSync(filePath);
+    if (raw.length > 10 * 1024 * 1024)
+      throw new Error('Inbox storage unavailable: size limit exceeded');
+    const rows = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(raw));
+    assertValidGroupInboxRows(rows);
+    return rows;
   } catch (error) {
-    if (error && error.code === 'ENOENT') {
-      return fallbackValue;
-    }
+    if (error?.code === 'ENOENT') return [];
     throw error;
   }
 }
 
-function writeJson(filePath, value) {
-  writeJsonFileSync(filePath, value);
+function writeMessageRows(filePath, rows) {
+  assertValidGroupInboxRows(rows);
+  if (
+    rows.some((row) => row?.groupChatId) &&
+    Buffer.byteLength(JSON.stringify(rows, null, 2), 'utf8') > 10 * 1024 * 1024
+  ) {
+    throw new Error('Inbox storage unavailable: size limit exceeded');
+  }
+  writeJsonFileSync(filePath, rows);
 }
 
 function getInboxPath(paths, memberName) {
@@ -133,9 +146,10 @@ function normalizeCommandOutput(commandOutput) {
   if (!commandOutput || typeof commandOutput !== 'object') {
     return undefined;
   }
-  const stream = commandOutput.stream === 'stdout' || commandOutput.stream === 'stderr'
-    ? commandOutput.stream
-    : undefined;
+  const stream =
+    commandOutput.stream === 'stdout' || commandOutput.stream === 'stderr'
+      ? commandOutput.stream
+      : undefined;
   const commandLabel = String(commandOutput.commandLabel || '').trim();
   if (!stream || !commandLabel) {
     return undefined;
@@ -145,7 +159,9 @@ function normalizeCommandOutput(commandOutput) {
 
 function buildMessage(flags, defaults) {
   const timestamp =
-    typeof flags.timestamp === 'string' && flags.timestamp.trim() ? flags.timestamp.trim() : nowIso();
+    typeof flags.timestamp === 'string' && flags.timestamp.trim()
+      ? flags.timestamp.trim()
+      : nowIso();
   const messageId =
     typeof flags.messageId === 'string' && flags.messageId.trim()
       ? flags.messageId.trim()
@@ -168,6 +184,21 @@ function buildMessage(flags, defaults) {
     timestamp,
     read: defaults.read,
     ...(taskRefs ? { taskRefs } : {}),
+    ...Object.fromEntries(
+      [
+        'groupChatId',
+        'groupChatName',
+        'groupMessageId',
+        'groupChatProtocolVersion',
+        'groupRunKey',
+        'groupRecipientNames',
+        'groupRecipientRunKeys',
+        'groupDeliverySummary',
+        'groupHandoffStartedAt',
+      ]
+        .filter((key) => flags[key] !== undefined)
+        .map((key) => [key, flags[key]])
+    ),
     ...(flags.actionMode === 'do' || flags.actionMode === 'ask' || flags.actionMode === 'delegate'
       ? { actionMode: flags.actionMode }
       : {}),
@@ -180,7 +211,9 @@ function buildMessage(flags, defaults) {
     ...(typeof flags.relayOfMessageId === 'string' && flags.relayOfMessageId.trim()
       ? { relayOfMessageId: flags.relayOfMessageId.trim() }
       : {}),
-    ...(typeof flags.source === 'string' && flags.source.trim() ? { source: flags.source.trim() } : {}),
+    ...(typeof flags.source === 'string' && flags.source.trim()
+      ? { source: flags.source.trim() }
+      : {}),
     ...(typeof flags.leadSessionId === 'string' && flags.leadSessionId.trim()
       ? { leadSessionId: flags.leadSessionId.trim() }
       : {}),
@@ -219,10 +252,10 @@ function buildMessage(flags, defaults) {
 
 function appendRow(filePath, row) {
   return withFileLockSync(filePath, () => {
-    const current = readJson(filePath, []);
+    const current = readMessageRows(filePath);
     const list = Array.isArray(current) ? current : [];
     list.push(row);
-    writeJson(filePath, list);
+    writeMessageRows(filePath, list);
     return row;
   });
 }
@@ -295,14 +328,14 @@ function hasUserMessageSince(paths, sinceMs) {
     if (!entry.endsWith('.json')) continue;
     let rows;
     try {
-      rows = readJson(path.join(inboxDir, entry), []);
+      rows = readMessageRows(path.join(inboxDir, entry));
     } catch {
       continue;
     }
     if (!Array.isArray(rows)) continue;
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       const candidate = rows[index];
-      if (!candidate || !isUserParticipant(candidate.from)) continue;
+      if (!candidate || candidate.groupChatId || !isUserParticipant(candidate.from)) continue;
       const ms = parseRowTimeMs(candidate);
       if (ms !== null && ms > sinceMs) return true;
     }
@@ -311,20 +344,29 @@ function hasUserMessageSince(paths, sinceMs) {
 }
 
 function isReplyToHumanMessage(paths, row) {
+  if (row.groupChatId) return false;
   const relayId = String(row.relayOfMessageId || '').trim();
   if (!relayId) return false;
   try {
     const { message, store } = lookupMessage(paths, relayId);
     const sender = normalizeComparableParticipant(row.from);
     const recipient = normalizeComparableParticipant(message.to);
-    const addressedToSender = store === 'sent'
-      ? recipient === sender
-      : normalizeComparableParticipant(store) === `inbox:${sender}` && (!recipient || recipient === sender);
+    const addressedToSender =
+      store === 'sent'
+        ? recipient === sender
+        : normalizeComparableParticipant(store) === `inbox:${sender}` &&
+          (!recipient || recipient === sender);
     const requestTime = parseRowTimeMs(message);
     const replyTime = parseRowTimeMs(row);
-    return isUserParticipant(message.from) && message.source !== 'system_notification' &&
+    return (
+      !message.groupChatId &&
+      isUserParticipant(message.from) &&
+      message.source !== 'system_notification' &&
       addressedToSender &&
-      requestTime !== null && replyTime !== null && requestTime <= replyTime;
+      requestTime !== null &&
+      replyTime !== null &&
+      requestTime <= replyTime
+    );
   } catch {
     // Unknown or ambiguous relay IDs cannot bypass completed-board deduplication.
     return false;
@@ -340,6 +382,7 @@ function isReplyToHumanMessage(paths, row) {
  * the window expired.
  */
 function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
+  if (row.groupChatId) return null;
   if (typeof resolveBoardCompletion !== 'function') return null;
   if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
   if (!normalizeComparableParticipant(row.from)) return null;
@@ -351,16 +394,26 @@ function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   let finalRow = null;
   for (let index = list.length - 1; index >= 0; index -= 1) {
     const candidate = list[index];
-    if (!candidate || !isUserParticipant(candidate.to) || isUserParticipant(candidate.from)) continue;
-    if (normalizeComparableParticipant(candidate.from) !== normalizeComparableParticipant(row.from)) continue;
+    if (
+      !candidate ||
+      candidate.groupChatId ||
+      !isUserParticipant(candidate.to) ||
+      isUserParticipant(candidate.from)
+    )
+      continue;
+    if (normalizeComparableParticipant(candidate.from) !== normalizeComparableParticipant(row.from))
+      continue;
     const candidateTime = parseRowTimeMs(candidate);
     if (candidateTime === null || candidateTime < board.lastBoardEventMs) continue;
     finalRow = candidate;
     break;
   }
   if (!finalRow) return null;
-  if (String(row.relayOfMessageId || '').trim() !== String(finalRow.relayOfMessageId || '').trim() &&
-      typeof board.isReplyToHumanMessage === 'function' && board.isReplyToHumanMessage(row)) {
+  if (
+    String(row.relayOfMessageId || '').trim() !== String(finalRow.relayOfMessageId || '').trim() &&
+    typeof board.isReplyToHumanMessage === 'function' &&
+    board.isReplyToHumanMessage(row)
+  ) {
     return null;
   }
   const finalMs = parseRowTimeMs(finalRow);
@@ -398,7 +451,7 @@ function getMessageIdDuplicate(list, row) {
 
 function appendInboxRow(filePath, row, options = {}) {
   return withFileLockSync(filePath, () => {
-    const current = readJson(filePath, []);
+    const current = readMessageRows(filePath);
     const list = Array.isArray(current) ? current : [];
     const sameMessageId = getMessageIdDuplicate(list, row);
     if (sameMessageId) {
@@ -412,11 +465,7 @@ function appendInboxRow(filePath, row, options = {}) {
     if (relayScoped) {
       return { row: relayScoped, deduplicated: true, relayScoped: true };
     }
-    const postCompletion = getPostCompletionFinalMessage(
-      list,
-      row,
-      options.resolveBoardCompletion
-    );
+    const postCompletion = getPostCompletionFinalMessage(list, row, options.resolveBoardCompletion);
     if (postCompletion) {
       return { row: postCompletion, deduplicated: true, postCompletion: true };
     }
@@ -426,7 +475,7 @@ function appendInboxRow(filePath, row, options = {}) {
     }
 
     list.push(row);
-    writeJson(filePath, list);
+    writeMessageRows(filePath, list);
     return { row, deduplicated: false };
   });
 }
@@ -517,14 +566,14 @@ function retractUnreadTaskNotifications(paths, flags = {}) {
     const filePath = path.join(inboxDir, file);
     try {
       withFileLockSync(filePath, () => {
-        const current = readJson(filePath, []);
+        const current = readMessageRows(filePath);
         const list = Array.isArray(current) ? current : [];
         const kept = list.filter(
           (row) => !isRetractableTaskNotificationRow(row, taskId, displayToken)
         );
         if (kept.length === list.length) return;
         retractedCount += list.length - kept.length;
-        writeJson(filePath, kept);
+        writeMessageRows(filePath, kept);
       });
     } catch {
       // Retraction is best-effort per inbox file; skip unreadable rows.
@@ -562,7 +611,7 @@ function lookupMessage(paths, messageId) {
   let matchCount = 0;
 
   // 1. Search sentMessages.json
-  const sentRows = readJson(getSentMessagesPath(paths), []);
+  const sentRows = readMessageRows(getSentMessagesPath(paths));
   if (Array.isArray(sentRows)) {
     for (const row of sentRows) {
       if (row && row.messageId === id) {
@@ -587,7 +636,7 @@ function lookupMessage(paths, messageId) {
   for (const file of inboxFiles) {
     let rows;
     try {
-      rows = readJson(path.join(inboxDir, file), []);
+      rows = readMessageRows(path.join(inboxDir, file));
     } catch {
       continue;
     }

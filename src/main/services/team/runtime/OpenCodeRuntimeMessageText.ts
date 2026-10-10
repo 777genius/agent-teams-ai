@@ -38,6 +38,29 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     );
   }
 
+  if (input.groupChatId) {
+    const envelope = {
+      teamName: input.teamName,
+      groupChatId: input.groupChatId,
+      from: input.memberName,
+      relayOfMessageId: input.messageId,
+    };
+    return [
+      wrapAgentBlock(
+        [
+          'This message comes from a group chat. Its immutable origin is:',
+          JSON.stringify(envelope),
+          'Call group_chat_list with teamName and from to discover current groups, membership, and archived state.',
+          'Reply using group_chat_send with the exact origin envelope, a new stable UUID messageId, and text. Never substitute message_send or a private user reply.',
+          'If the group is archived, you are no longer a member, or relay is rejected, report the diagnostic and stop. Do not repair, retry in another destination, or echo privately.',
+          'After a successful group_chat_send, stop. Proactive messages may target another available group you belong to, but do not count as replying to this origin.',
+          'Use only the agent-teams MCP tools for communication. Do not call HTTP endpoints or read team state files.',
+        ].join('\n')
+      ),
+      input.text,
+    ].join('\n\n');
+  }
+
   const requestedReplyRecipient = input.replyRecipient?.trim() ?? '';
   const replyContract = classifyOpenCodeDeliveryReplyContract(requestedReplyRecipient);
   const isInformationalNotice = replyContract === 'informational';

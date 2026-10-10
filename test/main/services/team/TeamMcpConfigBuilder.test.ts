@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 
+import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import * as fs from 'fs';
 import Module from 'module';
 import * as os from 'os';
@@ -1479,6 +1480,23 @@ describe('TeamMcpConfigBuilder', () => {
     expect(readGeneratedServer(configPath)?.env).toMatchObject({
       CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43124',
     });
+  });
+
+  it('injects the resolved desktop binding into the actual generated child config', async () => {
+    const resolved = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: mockHomeDir + '/bound-root',
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43125',
+      AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:43125',
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: 'synthetic-resolved-context',
+    };
+    const revoke = configureDesktopMcpEnvironment(() => resolved);
+    try {
+      const configPath = await new TeamMcpConfigBuilder().writeConfigFile(undefined, {
+        controlApiBaseUrl: 'http://127.0.0.1:43124',
+      });
+      createdPaths.push(configPath);
+      expect(readGeneratedServer(configPath)?.env).toMatchObject(resolved);
+    } finally { revoke(); }
   });
 
   it('ignores malformed user MCP file', async () => {

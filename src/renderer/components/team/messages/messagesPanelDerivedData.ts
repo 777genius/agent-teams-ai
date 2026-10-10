@@ -40,7 +40,11 @@ export function localDraftsByConversationScope(summaries: readonly ComposerWorki
     if (target.kind === 'cross-team') continue;
     drafts.set(
       conversationScopeKey(
-        target.kind === 'team-feed' ? TEAM_FEED_SCOPE : createDirectScope(target.participant)
+        target.kind === 'team-feed'
+          ? TEAM_FEED_SCOPE
+          : target.kind === 'group'
+            ? target
+            : createDirectScope(target.participant)
       ),
       {
         preview: summary.preview,
@@ -80,7 +84,9 @@ export function conversationDraftAddress(
     target:
       scope.kind === 'direct'
         ? { kind: 'direct', participant: scope.participant }
-        : { kind: 'team-feed' },
+        : scope.kind === 'group'
+          ? { kind: 'group', groupChatId: scope.groupChatId }
+          : { kind: 'team-feed' },
   };
 }
 
@@ -151,7 +157,7 @@ export function activityMessages(args: {
   renderSurface: ConversationSurface;
   scope: ConversationScope;
 }): InboxMessage[] {
-  const unscoped = filterTeamMessages(args.messages, {
+  const unscoped = filterTeamMessages(filterScopedMessages(args.messages, TEAM_FEED_SCOPE, args.leadNames), {
     includeAutomationEvents: true,
     leadNames: args.leadNames,
     timeWindow: args.timeWindow,
@@ -167,7 +173,7 @@ export function canonicalTeamMessages(
   messages: InboxMessage[],
   leadNames: readonly string[]
 ): InboxMessage[] {
-  return filterTeamMessages(messages, {
+  return filterTeamMessages(filterScopedMessages(messages, TEAM_FEED_SCOPE, leadNames), {
     leadNames,
     filter: { from: new Set(), to: new Set(), showNoise: false },
     searchQuery: '',
@@ -181,7 +187,7 @@ export function visibleTeamMessages(args: {
   filter: MessagesFilterState;
   searchQuery: string;
 }): InboxMessage[] {
-  return filterTeamMessages(args.messages, {
+  return filterTeamMessages(filterScopedMessages(args.messages, TEAM_FEED_SCOPE, args.leadNames), {
     leadNames: args.leadNames,
     timeWindow: args.timeWindow,
     filter: args.filter,

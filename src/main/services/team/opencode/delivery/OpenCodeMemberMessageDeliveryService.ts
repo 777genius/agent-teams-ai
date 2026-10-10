@@ -19,6 +19,7 @@ import {
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { markOpenCodeGroupHandoff, observedOpenCodeDelivery, unknownGroupHandoffSnapshot } from './OpenCodeDeliverySnapshots';
 import { selectOpenCodeDeliveryTurnActivityLogLevel } from './OpenCodeDeliveryTurnActivityLogGate';
 import { noteOpenCodeHeadOfLineBlockDiagnostic } from './OpenCodeHeadOfLineBlockNotice';
 import { noteOpenCodeLaneTurnActivity } from './OpenCodeLaneTurnActivityRegistry';
@@ -58,6 +59,7 @@ import {
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
 import { prepareOpenCodePromptDispatch } from './OpenCodePromptDispatchPreparation';
+import { openCodeRuntimeMessagePayload } from './OpenCodeRuntimeMessagePayload';
 import {
   logOpenCodeStalePendingResolution,
   readOpenCodeStalePendingTurnUsedTokens,
@@ -251,6 +253,10 @@ export class OpenCodeMemberMessageDeliveryService {
           (await this.deps.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)))
         : (trackedRunId ??
           (await this.deps.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)));
+    if (input.groupChatId && (!input.groupRunKey || input.groupRunKey !== runtimeRunId)) {
+      restoreConsumedLane();
+      return { delivered: false, reason: 'group_runtime_run_changed' };
+    }
     let runtimeActive = Boolean(runtimeRunId);
     if (!runtimeActive) {
       if (
@@ -477,6 +483,9 @@ export class OpenCodeMemberMessageDeliveryService {
         throw new OpenCodePromptDeliveryCancelledError();
       }
     };
+    if (input.groupChatId && !this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
+      return { delivered: false, reason: 'group_delivery_observer_unavailable' };
+    }
     if (!this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
       return await deliverOpenCodeMemberMessageWithoutWatchdog({
         ports: this.deps,
@@ -590,6 +599,7 @@ export class OpenCodeMemberMessageDeliveryService {
           laneId: laneIdentity.laneId,
           runId: runtimeRunId ?? null,
           inboxMessageId: messageId,
+          groupChatId: input.groupChatId,
           inboxTimestamp: input.inboxTimestamp ?? now,
           source: input.source ?? 'manual',
           replyRecipient: input.replyRecipient ?? 'user',
@@ -604,6 +614,11 @@ export class OpenCodeMemberMessageDeliveryService {
             taskRefs: input.taskRefs ?? [],
             attachments: input.attachments,
             source: input.source,
+            groupChatId: input.groupChatId,
+            groupRunKey: input.groupRunKey,
+            groupMessageId: input.groupMessageId,
+            groupChatProtocolVersion: input.groupChatProtocolVersion,
+            relayOfMessageId: input.relayOfMessageId,
           }),
           now,
         })
@@ -661,24 +676,18 @@ export class OpenCodeMemberMessageDeliveryService {
           { visibleReplySemanticallySufficient: true }
         );
         notifyActivity('idle');
-        return {
-          delivered: true,
-          accepted: true,
-          responsePending: false,
-          responseState: ledgerRecord.responseState,
-          ledgerStatus: ledgerRecord.status,
-          ledgerRecordId: ledgerRecord.id,
-          laneId: laneIdentity.laneId,
-          visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
-          visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
-          diagnostics: ledgerRecord.diagnostics,
-        };
+        return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
       }
 
-      ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
-        ledger,
-        ledgerRecord,
-      });
+      const unknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
+      if (unknownHandoff) return unknownHandoff;
+
+      if (!ledgerRecord.groupChatId) {
+        ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
+          ledger,
+          ledgerRecord,
+        });
+      }
       await checkpoint();
 
       if (ledgerRecord.status === 'failed_terminal') {
@@ -701,7 +710,7 @@ export class OpenCodeMemberMessageDeliveryService {
       }
 
       let attemptDue = isOpenCodePromptDeliveryAttemptDue(ledgerRecord);
-      if (isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
+      if (!ledgerRecord.groupChatId && isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
         ledgerRecord = await this.deps.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry({
           ledger,
           ledgerRecord,
@@ -779,19 +788,10 @@ export class OpenCodeMemberMessageDeliveryService {
       ) {
         await checkpoint();
         const observed = await adapter.observeMessageDelivery({
-          ...(runtimeRunId ? { runId: runtimeRunId } : {}),
-          teamName,
-          laneId: laneIdentity.laneId,
-          memberName: canonicalMemberName,
-          cwd,
-          text: input.text,
-          messageId,
-          replyRecipient: input.replyRecipient,
-          actionMode: input.actionMode,
-          messageKind: input.messageKind,
-          workSyncIntent: input.workSyncIntent,
-          workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
-          taskRefs: input.taskRefs,
+          ...openCodeRuntimeMessagePayload(input, {
+            runId: runtimeRunId, teamName, laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName, cwd, text: input.text,
+          }),
           prePromptCursor: ledgerRecord.prePromptCursor,
           sessionId: ledgerRecord.runtimeSessionId ?? undefined,
           runtimePromptMessageId:
@@ -1142,6 +1142,8 @@ export class OpenCodeMemberMessageDeliveryService {
     });
     const { controlUrl, deliveryText } = dispatch;
     forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
+    if (ledgerRecord?.groupChatId && ledger)
+      ledgerRecord = await markOpenCodeGroupHandoff(ledger, ledgerRecord, now);
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
       const admitted = await sendOpenCodeWorkSyncAdmittedMessage({
@@ -1158,22 +1160,12 @@ export class OpenCodeMemberMessageDeliveryService {
           }),
         sendMessage: () =>
           adapter.sendMessageToMember({
-            ...(runtimeRunId ? { runId: runtimeRunId } : {}),
-            teamName,
-            laneId: laneIdentity.laneId,
-            memberName: canonicalMemberName,
-            cwd,
-            text: deliveryText,
-            messageId: input.messageId,
-            deliveryAttemptId,
-            fileParts: openCodeFileParts,
-            replyRecipient: input.replyRecipient,
-            actionMode: input.actionMode,
-            messageKind: input.messageKind,
-            workSyncIntent: input.workSyncIntent,
-            workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+            ...openCodeRuntimeMessagePayload(input, {
+              runId: runtimeRunId, teamName, laneId: laneIdentity.laneId,
+              memberName: canonicalMemberName, cwd, text: deliveryText,
+            }),
+            deliveryAttemptId, fileParts: openCodeFileParts,
             controlUrl: controlUrl ?? undefined,
-            taskRefs: input.taskRefs,
             forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
           }),
       });
@@ -1407,6 +1399,7 @@ export class OpenCodeMemberMessageDeliveryService {
           replyRecipient: input.replyRecipient ?? ledgerRecord.replyRecipient,
           from: canonicalMemberName,
           relayOfMessageId: ledgerRecord.inboxMessageId,
+          groupChatId: ledgerRecord.groupChatId,
           expectedMessageId:
             ledgerRecord.visibleReplyCorrelation === 'relayOfMessageId'
               ? ledgerRecord.visibleReplyMessageId

@@ -1,3 +1,9 @@
+import {
+  createDesktopTeamGroupChats,
+  registerTeamGroupChatsIpc,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 /**
  * Main process entry point for Agent Teams AI.
  *
@@ -271,14 +277,6 @@ import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { OpenCodeBridgeDiagnosticsStore } from './services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
-import {
-  createOpenCodeBridgeCommandLeaseStore,
-  createOpenCodeBridgeCommandLedgerStore,
-} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import {
-  createOpenCodeBridgeClientIdentity,
-  OpenCodeBridgeCommandHandshakePort,
-} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
   buildOpenCodeProcessOwnershipMarkers,
@@ -294,9 +292,6 @@ import {
   stopAdmittingOpenCodeStartupCleanup,
 } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
-import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -401,6 +396,7 @@ let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
+let readOpenCodeGroupRun: ReturnType<typeof composeOpenCodeDesktopBridge>['groupRun'] | null = null;
 const nativeRendererCdp = prepareNativeRendererCdp(
   configManager.getConfig().general.externalAgentCdpEnabled === true
 );
@@ -515,6 +511,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    readOpenCodeGroupRun = null;
     configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
@@ -685,33 +682,14 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   });
   configureCursorAgentAtomicReapBridge(bridgeClient);
-  const clientIdentity = createOpenCodeBridgeClientIdentity({
-    appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
-    gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
-    buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
-  });
-  const manifestOptions = { teamsBasePath: getTeamsBasePath() };
-  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
-    expectedClientIdentity: clientIdentity,
-    handshakePort: new OpenCodeBridgeCommandHandshakePort({
-      bridge: bridgeClient,
-      clientIdentity,
-    }),
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({
-      filePath: join(bridgeControlDir, 'command-leases.json'),
-    }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({
-      filePath: join(bridgeControlDir, 'command-ledger.json'),
-    }),
-    bridge: bridgeClient,
-    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
-    manifestReader: new OpenCodeRuntimeManifestEvidenceReader(manifestOptions),
-  });
-  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
-    stateChangingCommands,
-    appVersion: clientIdentity.appVersion,
+  const desktopBridge = composeOpenCodeDesktopBridge({
+    bridge: bridgeClient, controlDirectory: bridgeControlDir, teamsBasePath: getTeamsBasePath(),
+    identity: { appVersion: app.getVersion(), gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null, buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null },
     readOpenCodeRuntimeStatus,
+    snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
   });
+  const readinessBridge = desktopBridge.readiness;
+  readOpenCodeGroupRun = desktopBridge.groupRun;
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([
     new OpenCodeTeamRuntimeAdapter(readinessBridge, {
@@ -1021,6 +999,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
+let teamGroupChatsFeature: TeamGroupChatsFeature;
 let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
@@ -2029,7 +2008,24 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
+  teamProvisioningService = new TeamProvisioningService(
+    undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, {
+      send: (input, from) => teamGroupChatsFeature.send(input, from),
+      claimGroupLeadInboxHandoffs: (teamName, memberName, batch) => teamGroupChatsFeature.claimGroupLeadInboxHandoffs(teamName, memberName, batch),
+      readGroupCatalogPrompt: (teamName, memberName) => teamGroupChatsFeature.readGroupCatalogPrompt(teamName, memberName),
+    }
+  );
+  teamGroupChatsFeature = createDesktopTeamGroupChats({
+    snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
+    openCodeRun: (teamName, memberName) => readOpenCodeGroupRun?.(teamName, memberName) ?? Promise.resolve(null),
+    configurationOperation: (teamName, operation) => teamDataService.runConfigurationOperation(teamName, operation),
+    inboxWriter: teamInboxWriter,
+    changed: (teamName) => {
+      teamDataService.invalidateMessageFeed(teamName);
+      safeSendToRenderer(mainWindow, TEAM_CHANGE, { teamName, type: 'inbox' });
+    },
+  });
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
@@ -2949,6 +2945,7 @@ async function initializeServices(): Promise<void> {
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
@@ -3025,6 +3022,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        teamGroupChatsFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,

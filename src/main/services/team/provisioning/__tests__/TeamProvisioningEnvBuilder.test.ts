@@ -1,6 +1,7 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
 import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
+import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -62,6 +63,22 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it('passes the resolved desktop binding to the runtime process instead of inherited values', async () => {
+    const bound = {
+      AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:4588',
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: 'synthetic-resolved-context',
+    };
+    const revoke = configureDesktopMcpEnvironment(() => bound);
+    try {
+      const ports = createPorts({
+        buildProviderAwareCliEnv: vi.fn(async () => ({
+          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' }, connectionIssues: {}, providerArgs: [],
+        })),
+      });
+      const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
+      expect(result.env).toMatchObject(bound);
+    } finally { revoke(); }
+  });
   it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
     const ports = createPorts({
       getClaudeBasePath: () => '/sandbox/private-claude',

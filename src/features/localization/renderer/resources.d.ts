@@ -5042,6 +5042,33 @@ export default interface Resources {
         "label": "Full Screen",
         "teamOnly": "Full Screen is available on the team screen"
       },
+      "groups": {
+        "archive": "Archive chat",
+        "archived": "Archived chats",
+        "archivedHint": "This chat is archived. Restore it to send messages.",
+        "autoInclude": "Automatically add new members",
+        "create": "Create group chat",
+        "creating": "Creating…",
+        "delivery": {
+          "accepted": "accepted",
+          "failed": "failed",
+          "queued": "queued",
+          "skipped": "skipped",
+          "unknown": "unknown"
+        },
+        "description": "Choose at least two agents. You are included automatically.",
+        "message": "Message this group",
+        "minimum": "Select at least two agents.",
+        "name": "Chat name",
+        "restartHint": "All participants must be running a compatible runtime before sending.",
+        "restore": "Restore chat",
+        "retryCreate": "Retry creation",
+        "retrySend": "Retry the same message",
+        "send": "Send",
+        "sending": "Sending…",
+        "unavailable": "Chat unavailable",
+        "unknownDelivery": "Saved. Delivery status is unknown."
+      },
       "outbox": {
         "actions": {
           "cancel": "Cancel",

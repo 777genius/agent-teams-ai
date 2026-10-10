@@ -1280,6 +1280,40 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(rebuilt.lastReason).toBe('opencode_prompt_delivery_ledger_rebuilt_from_unread_inbox');
   });
 
+  it('retains group terminal evidence until the inbox read is committed', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'lane',
+      inboxMessageId: 'group-physical',
+      groupChatId: 'g',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:group',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const marker = await store.markNextAttemptScheduled({ id: record.id, status: 'accepted',
+      nextAttemptAt: '2026-04-25T10:00:00.000Z', scheduledAt: '2026-04-25T10:00:00.000Z',
+      reason: 'group_handoff_started_acceptance_unknown' });
+    expect(marker.acceptanceUnknown).toBe(true);
+    expect(marker.runtimePromptMessageId).toBeNull();
+    await store.markFailedTerminal({
+      id: record.id,
+      reason: 'uncertain',
+      failedAt: '2026-04-25T10:00:01.000Z',
+    });
+    expect(await store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })).toEqual(
+      { pruned: 0, remaining: 1 }
+    );
+    expect((await store.list())[0].groupChatId).toBe('g');
+    await store.markInboxReadCommitted({ id: record.id, committedAt: '2026-04-25T10:00:02.000Z' });
+    expect(await store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })).toEqual(
+      { pruned: 1, remaining: 0 }
+    );
+  });
+
   it('prunes only terminal records after their retention windows', async () => {
     const store = createStore();
     const responded = await store.ensurePending({

@@ -12,6 +12,10 @@ import {
   type RecentProjectsFeatureFacade,
   registerRecentProjectsHttp,
 } from '@features/recent-projects/main';
+import {
+  registerTeamGroupChatsHttp,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
 import {
   registerWorkspaceTrustHttp,
@@ -59,6 +63,7 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  teamGroupChatsFeature?: TeamGroupChatsFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
@@ -79,6 +84,8 @@ export function registerHttpRoutes(
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
   services.externalAgentConnection?.registerHttp(app);
+  if (services.teamGroupChatsFeature)
+    registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
