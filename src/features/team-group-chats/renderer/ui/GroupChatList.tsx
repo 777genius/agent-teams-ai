@@ -5,14 +5,20 @@ import {
   countUniqueUnread,
   GroupChatAvatar,
 } from '@features/team-direct-chats/renderer';
+import {
+  buildMemberAvatarMap,
+  displayMemberName,
+  resolveMemberAvatarUrl,
+} from '@renderer/utils/memberHelpers';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { Archive, Plus } from 'lucide-react';
 
 import type { TeamGroupChatDTO } from '../../contracts';
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 export const GroupChatList = ({
   groups,
+  members,
   messages,
   readSet,
   selectedScope,
@@ -21,6 +27,7 @@ export const GroupChatList = ({
   error,
 }: {
   groups: readonly TeamGroupChatDTO[];
+  members: readonly ResolvedTeamMember[];
   messages: readonly InboxMessage[];
   readSet: ReadonlySet<string>;
   selectedScope?: ConversationScope;
@@ -29,6 +36,7 @@ export const GroupChatList = ({
   error: string | null;
 }) => {
   const { t } = useAppTranslation('team');
+  const avatarMap = buildMemberAvatarMap(members);
   const active = groups.filter((group) => !group.archivedAt);
   const archived = groups.filter((group) => group.archivedAt);
   const row = (group: TeamGroupChatDTO) => {
@@ -46,7 +54,15 @@ export const GroupChatList = ({
         className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left hover:bg-[var(--color-surface-raised)] ${group.archivedAt ? 'opacity-50' : ''}`}
         onClick={() => onOpen({ kind: 'group', groupChatId: group.id })}
       >
-        <GroupChatAvatar />
+        <GroupChatAvatar
+          members={members
+            .filter((member) => !member.removedAt && group.memberNames.includes(member.name))
+            .map((member) => ({
+              name: member.name,
+              displayName: displayMemberName(member.name),
+              avatarUrl: resolveMemberAvatarUrl(member, avatarMap),
+            }))}
+        />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-sm font-medium">{group.name}</span>
