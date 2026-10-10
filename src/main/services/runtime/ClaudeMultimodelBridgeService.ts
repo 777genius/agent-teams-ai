@@ -31,6 +31,11 @@ import {
   type RuntimeExtensionCapabilitiesResponse,
   sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
+import {
+  extractRuntimeStatusJsonObject as extractJsonObject,
+  readRuntimeStatusCommand,
+  RuntimeStatusCommandError,
+} from './runtimeStatusCommandDiagnostics';
 
 import type {
   CliProviderId,
@@ -360,20 +365,6 @@ export interface OpenCodeRuntimeTranscriptLogMessage {
 
 const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
 const DEFAULT_PROVIDER_STATUS_IDS: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
-
-function extractJsonObject<T>(raw: string): T {
-  const trimmed = raw.trim();
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch {
-    const start = trimmed.indexOf('{');
-    const end = trimmed.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return JSON.parse(trimmed.slice(start, end + 1)) as T;
-    }
-    throw new Error('No JSON object found in CLI output');
-  }
-}
 
 function extractModelIds(
   models: (string | { id?: string; label?: string; description?: string })[] | undefined
@@ -817,6 +808,9 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private isRuntimeStatusTimeoutError(error: unknown): boolean {
+    if (error instanceof RuntimeStatusCommandError) {
+      return this.isRuntimeStatusTimeoutError(error.cause);
+    }
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
     return lower.includes('timed out') || lower.includes('timeout');
@@ -1206,13 +1200,17 @@ export class ClaudeMultimodelBridgeService {
       args.push('--summary');
     }
     const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
-    const { stdout } = await execCli(binaryPath, args, {
-      timeout,
-      maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
-      env,
-      cwd: getProviderStatusCommandCwd(options.projectPath),
-    });
-    const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
+    const parsed = await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      {
+        timeout,
+        maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
+        env,
+        cwd: getProviderStatusCommandCwd(options.projectPath),
+      },
+      extractJsonObject<UnifiedRuntimeStatusResponse>
+    );
     const mappedProvider = this.applyConnectionIssue(
       this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
       connectionIssues
