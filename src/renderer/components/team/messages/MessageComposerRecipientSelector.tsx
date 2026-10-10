@@ -27,7 +27,7 @@ export interface MessageComposerRecipientSelectorProps {
 }
 
 /** Shared recipient presentation; the conversation owns routing and draft selection. */
-export function MessageComposerRecipientSelector({
+export const MessageComposerRecipientSelector = ({
   members,
   selectedName,
   allLabel,
@@ -36,7 +36,7 @@ export function MessageComposerRecipientSelector({
   disabled,
   crossTeam,
   onSelect,
-}: MessageComposerRecipientSelectorProps): React.JSX.Element {
+}: Readonly<MessageComposerRecipientSelectorProps>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -187,4 +187,4 @@ export function MessageComposerRecipientSelector({
       </PopoverContent>
     </Popover>
   );
-}
+};

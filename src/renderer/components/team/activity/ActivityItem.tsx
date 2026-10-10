@@ -91,7 +91,7 @@ import {
   stringMapCacheSignature,
   taskRefsCacheSignature,
 } from './activityRenderCache';
-import { ActivitySenderBadge } from './ActivitySenderBadge';
+import { ActivitySenderBadge, renderGroupRecipientBadge } from './ActivitySenderBadge';
 import { formatActivityTimestamp } from './activityTimestamp';
 import { BootstrapAcknowledgementRow, BootstrapSystemRow } from './BootstrapActivityRows';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
@@ -1044,7 +1044,6 @@ export const ActivityItem = memo(
 
     const senderBadgeForHeader = (
       <ActivitySenderBadge
-        groupMessage={message}
         name={senderName}
         color={senderColor}
         teamName={teamName}
@@ -1121,7 +1120,8 @@ export const ActivityItem = memo(
       crossTeamTarget == null &&
       recipientMemberName?.trim().toLowerCase() === parsedReply.agentName.trim().toLowerCase();
     const recipientBadge =
-      commentTaskRef && commentTaskDisplayId ? (
+      renderGroupRecipientBadge(message, t) ??
+      (commentTaskRef && commentTaskDisplayId ? (
         <>
           <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
           <TaskRecipientBadge
@@ -1152,7 +1152,7 @@ export const ActivityItem = memo(
             />
           ) : null}
         </>
-      );
+      ));
 
     const summaryContent =
       isSlashCommandResult && message.commandOutput ? (

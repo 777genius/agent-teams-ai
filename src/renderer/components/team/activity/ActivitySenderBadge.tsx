@@ -1,11 +1,10 @@
-import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 
+import type { useAppTranslation } from '@features/localization/renderer';
 import type { InboxMessage } from '@shared/types';
 
 interface ActivitySenderBadgeProps {
   name: string;
-  groupMessage?: Pick<InboxMessage, 'from' | 'groupChatId' | 'groupRecipientNames'>;
   color?: string;
   teamName: string;
   isLight: boolean;
@@ -20,7 +19,6 @@ interface ActivitySenderBadgeProps {
 
 export const ActivitySenderBadge = ({
   name,
-  groupMessage,
   color,
   teamName,
   isLight,
@@ -32,11 +30,6 @@ export const ActivitySenderBadge = ({
   disableHoverCard,
   onMemberNameClick,
 }: Readonly<ActivitySenderBadgeProps>): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const targets =
-    groupMessage?.from === 'user' && groupMessage.groupChatId
-      ? groupMessage.groupRecipientNames
-      : undefined;
   const badge = isSlashCommandResult ? (
     <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-300">
       {resultLabel}
@@ -62,16 +55,20 @@ export const ActivitySenderBadge = ({
   ) : (
     badge
   );
-  return (
-    <>
-      {sender}
-      {targets?.length ? (
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          {t('messages.groups.recipient', {
-            name: targets.length === 1 ? targets[0] : t('messageComposer.recipient.all'),
-          })}
-        </span>
-      ) : null}
-    </>
-  );
+  return sender;
+};
+
+export const renderGroupRecipientBadge = (
+  message: Pick<InboxMessage, 'from' | 'groupChatId' | 'groupRecipientNames'>,
+  t: ReturnType<typeof useAppTranslation>['t']
+): React.JSX.Element | null => {
+  const targets =
+    message.from === 'user' && message.groupChatId ? message.groupRecipientNames : undefined;
+  return targets?.length ? (
+    <span className="text-[10px] text-[var(--color-text-muted)]">
+      {t('messages.groups.recipient', {
+        name: targets.length === 1 ? targets[0] : t('messageComposer.recipient.all'),
+      })}
+    </span>
+  ) : null;
 };

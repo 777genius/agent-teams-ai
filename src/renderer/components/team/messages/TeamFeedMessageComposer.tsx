@@ -13,12 +13,14 @@ import { TextMessageComposer } from './TextMessageComposer';
 import type { MemberMessageComposerProps } from './MessageComposer';
 
 /** Keep the standard feed's All route separate from private/member draft hooks. */
-export function TeamFeedMessageComposer({
+export const TeamFeedMessageComposer = ({
   renderMember,
   ...props
-}: MemberMessageComposerProps & {
-  renderMember: (props: MemberMessageComposerProps) => React.JSX.Element;
-}): React.JSX.Element {
+}: Readonly<
+  MemberMessageComposerProps & {
+    renderMember: (props: MemberMessageComposerProps) => React.JSX.Element;
+  }
+>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const contextId = useStore((state) => state.activeContextId);
   const refresh = useStore((state) => state.refreshTeamData);
@@ -151,4 +153,4 @@ export function TeamFeedMessageComposer({
       />
     </div>
   );
-}
+};
