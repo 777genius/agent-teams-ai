@@ -191,6 +191,7 @@ export interface TeamRuntimeReconcileInput {
 }
 
 export interface TeamRuntimeReconcileResult {
+  observationUnavailable?: true;
   runId: string;
   teamName: string;
   launchPhase: PersistedTeamLaunchPhase;

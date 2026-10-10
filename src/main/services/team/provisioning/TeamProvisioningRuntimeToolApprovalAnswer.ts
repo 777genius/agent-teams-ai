@@ -20,6 +20,9 @@ export interface RuntimeAdapterRunEntry {
   cwd?: string;
   allowExperimentalLocalModels?: boolean;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
+  launchInput?: TeamRuntimeLaunchInput;
+  launchStopGeneration?: number;
+  launchStopAllGeneration?: number;
 }
 
 export interface OpenCodeRuntimeToolApprovalSyncInput {
@@ -170,15 +173,25 @@ export async function answerOpenCodeRuntimeToolApproval<
         ports
       );
     } else {
-      ports.setRuntimeAdapterRunByTeam(expectedIdentity.teamName, {
-        runId: expectedIdentity.runtimeRunId,
-        providerId: 'opencode',
-        cwd: expectedIdentity.cwd,
-        ...(expectedIdentity.runtimeOwner.allowExperimentalLocalModels === true
-          ? { allowExperimentalLocalModels: true }
-          : {}),
-        members: committed.members,
-      });
+      const owner = ports.getRuntimeAdapterRunByTeam?.(expectedIdentity.teamName);
+      if (!owner) throw new Error('OpenCode runtime owner disappeared during permission answer');
+      if (owner.launchInput) {
+        // Preserve launch authority while replacing identity to fence an in-flight refresh.
+        ports.setRuntimeAdapterRunByTeam(expectedIdentity.teamName, {
+          ...owner,
+          members: committed.members,
+        });
+      } else {
+        ports.setRuntimeAdapterRunByTeam(expectedIdentity.teamName, {
+          runId: expectedIdentity.runtimeRunId,
+          providerId: 'opencode',
+          cwd: expectedIdentity.cwd,
+          ...(expectedIdentity.runtimeOwner.allowExperimentalLocalModels === true
+            ? { allowExperimentalLocalModels: true }
+            : {}),
+          members: committed.members,
+        });
+      }
       ports.setAliveRunId(expectedIdentity.teamName, expectedIdentity.runtimeRunId);
     }
     ports.syncOpenCodeRuntimeToolApprovals({

@@ -42,6 +42,7 @@ import {
   clearOpenCodeRuntimeBinaryResolverCache,
   extractOpenCodeRuntimeBinaryFromTarball,
   getOpenCodeRuntimePlatformCandidates,
+  isSupportedOpenCodeRuntimeBinaryPath,
   OpenCodeRuntimeInstallerService,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
@@ -49,6 +50,7 @@ import {
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
@@ -180,6 +182,50 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
     }
+  });
+
+  it.each([
+    ['1.18.3', true],
+    ['2.0.0', true],
+    ['opencode v2.0.21', true],
+    ['1.15.9', false],
+    ['2.0.22', false],
+    ['2.0.21-beta.1', false],
+    ['2.0.21+unqualified', false],
+    ['3.0.0', false],
+    ['unknown', false],
+  ])('preserves only recognized native binary overrides (%s)', async (version, supported) => {
+    const binaryPath = path.join(tempRoot!, 'selected-opencode');
+    await writeFile(binaryPath, 'TEST selected native binary', { mode: 0o755 });
+    execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+    const targetEnv: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binaryPath,
+      OPENCODE_BIN_PATH: binaryPath,
+    };
+    const bridgeEnv = { ...targetEnv };
+    const resolveVerifiedBinary = vi.fn(async () => null);
+    const onOverrideRejected = vi.fn();
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolveVerifiedBinary,
+      isSupportedOpenCodeRuntimeBinaryPath,
+      onOverrideRejected,
+    });
+
+    for (const env of [targetEnv, bridgeEnv]) {
+      expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(supported ? binaryPath : undefined);
+      expect(env.OPENCODE_BIN_PATH).toBe(supported ? binaryPath : undefined);
+    }
+    expect(onOverrideRejected).toHaveBeenCalledTimes(supported ? 0 : 1);
+    expect(resolveVerifiedBinary).toHaveBeenCalledTimes(supported ? 0 : 1);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.anything()
+    );
   });
 
   it('returns the current app-managed OpenCode binary path only when manifest and binary exist', async () => {

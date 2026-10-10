@@ -2281,7 +2281,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       apiKey: 'sk-input-secret-value-123456',
     });
 
-    await vi.advanceTimersByTimeAsync(90_000);
+    await vi.advanceTimersByTimeAsync(180_000);
     const response = await responsePromise;
     vi.useRealTimers();
 
@@ -2325,7 +2325,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         apiKey: 'sk-input-secret-value-123456',
       });
 
-      await vi.advanceTimersByTimeAsync(90_000);
+      await vi.advanceTimersByTimeAsync(180_000);
       const response = await responsePromise;
 
       expect(response.error?.message).toContain('...[truncated runtime provider command output]');

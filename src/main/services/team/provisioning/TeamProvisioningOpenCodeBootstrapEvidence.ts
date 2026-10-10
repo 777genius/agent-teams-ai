@@ -40,6 +40,7 @@ export type OpenCodeRuntimeSessionStoreRecord = Record<string, unknown>;
 
 export interface OpenCodeRuntimeBootstrapEvidencePorts {
   teamsBasePath: string;
+  isAuthorized?(): boolean;
   readFileUtf8(filePath: string): Promise<string>;
   mkdirRecursive(directoryPath: string): Promise<void>;
   readCommittedBootstrapSessionEvidence(params: {
@@ -282,6 +283,7 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
   await withOpenCodeRuntimeLaneLifecycleLock({ teamsBasePath: ports.teamsBasePath, ...input }, () =>
     commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(input, ports)
   );
+  assertBootstrapRefreshAuthorized(ports);
   // Both app-managed bootstrap and runtime check-in reach this verified commit.
   // Publish outside the lane lock; inbox delivery must not block launch/check-in.
   try {
@@ -291,10 +293,15 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
   }
 }
 
+function assertBootstrapRefreshAuthorized(ports: OpenCodeRuntimeBootstrapEvidencePorts): void {
+  if (ports.isAuthorized && !ports.isAuthorized()) throw new Error('opencode_refresh_superseded');
+}
+
 async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(
   input: CommitOpenCodeRuntimeBootstrapSessionEvidenceInput,
   ports: OpenCodeRuntimeBootstrapEvidencePorts
 ): Promise<void> {
+  assertBootstrapRefreshAuthorized(ports);
   const paths = getOpenCodeRuntimeSessionStorePaths({
     teamsBasePath: ports.teamsBasePath,
     teamName: input.teamName,
@@ -305,7 +312,9 @@ async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(
   }
 
   await ports.mkdirRecursive(paths.runtimeDirectory);
+  assertBootstrapRefreshAuthorized(ports);
   const existingSessions = await readOpenCodeRuntimeSessionStore(paths.sessionStorePath, ports);
+  assertBootstrapRefreshAuthorized(ports);
   const source = input.source ?? 'runtime_bootstrap_checkin';
   const appMcpTransportEvidence =
     source === 'app_managed_bootstrap'
@@ -343,6 +352,7 @@ async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(
   const writer = new RuntimeStoreBatchWriter(paths.runtimeDirectory, manifestStore, receiptStore);
 
   try {
+    assertBootstrapRefreshAuthorized(ports);
     await writer.writeBatch({
       teamName: input.teamName,
       runId: input.runId,
@@ -366,6 +376,7 @@ async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(
     }
     throw error;
   }
+  assertBootstrapRefreshAuthorized(ports);
   if (!(await hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(input, ports))) {
     throw new Error(
       `OpenCode bootstrap session evidence write did not verify for ${input.memberName}`

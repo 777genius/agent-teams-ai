@@ -194,7 +194,7 @@ import {
   type TeamProvisioningVerificationProbeServiceHost,
 } from './TeamProvisioningVerificationProbePortsFactory';
 
-import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { TeamRuntimeLaunchInput, TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
 import type { TeamProviderId } from '@shared/types';
 
@@ -208,6 +208,9 @@ export interface RuntimeAdapterRunByTeamEntry {
   cwd?: string;
   allowExperimentalLocalModels?: boolean;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
+  launchInput?: TeamRuntimeLaunchInput;
+  launchStopGeneration?: number;
+  launchStopAllGeneration?: number;
 }
 
 interface ServiceCompositionPorts extends TeamProvisioningOpenCodeDeliveryCompositionPorts {

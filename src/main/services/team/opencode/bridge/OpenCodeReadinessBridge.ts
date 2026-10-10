@@ -51,6 +51,7 @@ import type {
   OpenCodeObserveMessageDeliveryCommandBody,
   OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
+  OpenCodeReconcileTeamCommandData,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
   OpenCodeStopTeamCommandBody,
@@ -264,7 +265,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
 
   async reconcileOpenCodeTeam(
     input: OpenCodeReconcileTeamCommandBody
-  ): Promise<OpenCodeLaunchTeamCommandData> {
+  ): Promise<OpenCodeReconcileTeamCommandData> {
     const cwd = input.projectPath ?? process.cwd();
     const result = await this.executeStateChangingCommand<
       OpenCodeReconcileTeamCommandBody,
@@ -277,7 +278,9 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       cwd,
       timeoutMs: this.options.reconcileTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.reconcile,
     });
-    return result.ok ? result.data : blockedLaunchData(input.runId, result);
+    return result.ok
+      ? result.data
+      : { ...blockedLaunchData(input.runId, result), observationUnavailable: true };
   }
 
   async stopOpenCodeTeam(

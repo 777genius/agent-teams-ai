@@ -157,6 +157,14 @@ export class OpenCodeStateChangingBridgeCommandService {
       input.command === 'opencode.stopTeam'
     );
     const { capabilitySnapshotId, body: commandBody } = bindLifecycleManifest(input, manifest);
+    // Preserve caller identity in the ledger; committed behavior fences runtime effects.
+    const behaviorFingerprint =
+      input.behaviorFingerprint ??
+      (input.command === 'opencode.reconcileTeam' ||
+      input.command === 'opencode.stopTeam' ||
+      input.command === 'opencode.sendMessage'
+        ? (manifest.behaviorFingerprint ?? null)
+        : null);
     const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
       input.command
     );
@@ -314,7 +322,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           expectedRunId: input.runId,
           expectedCapabilitySnapshotId: capabilitySnapshotId,
           expectedBehaviorFingerprint:
-            stopRequest?.target.expectedBehaviorFingerprint ?? input.behaviorFingerprint,
+            stopRequest?.target.expectedBehaviorFingerprint ?? behaviorFingerprint,
           expectedManifestHighWatermark,
           commandLeaseId: lease.leaseId,
           idempotencyKey,
