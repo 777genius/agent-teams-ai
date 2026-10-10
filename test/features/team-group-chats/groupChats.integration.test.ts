@@ -402,7 +402,7 @@ describe('group chat main authority and durable identity', () => {
     const writer = new TeamInboxWriter();
     feature = createTeamGroupChatsFeature({ roster: async () => roster,
       getRun: async (_team, member) => ({ runKey: `synthetic:${member}`, protocolVersion: 1,
-        provider: member === 'alice' ? 'opencode' : 'native' }),
+        provider: member === 'alice' ? 'opencode' : 'native', isCurrent: async () => true }),
       configurationOperation: (_team, operation) => operation(),
       deliver: async (team, message, _run, shouldStillWrite) => {
         deliveries.push(message);
@@ -574,36 +574,89 @@ it('admits native groups only against a bound listener and an exact current live
 
 // Synthetic process fixture exercises the actual handshake validator.
 describe('OpenCode group current-run admission', () => {
-  it('requires a validated protocol handshake and exact live member session/PID, then fences replacement', async () => {
-    const clientIdentity = createOpenCodeBridgeClientIdentity({ appVersion: 'test' });
-    let changed = false;
-    let protocol: 1 | undefined = 1;
-    const proof = { teamName: 'sandbox', memberName: 'alice', runId: 'run-1', runKey: 'run-1',
-      laneId: 'primary', runtimeSessionId: 'session-1', runtimePid: process.pid, processorReady: true };
-    const getter = createOpenCodeGroupChatRunGetter({
-      clientIdentity,
-      snapshot: async () => ({ teamName: 'sandbox', runId: 'run-1', updatedAt: new Date().toISOString(),
-        members: { alice: { memberName: 'alice', alive: true, restartable: true, providerId: 'opencode', cwd: '/synthetic',
-          laneId: 'primary', pid: process.pid, runtimePid: process.pid,
-          runtimeSessionId: changed ? 'replacement-session' : 'session-1', updatedAt: new Date().toISOString() } } }),
-      manifest: { read: async () => ({ activeRunId: 'run-1', capabilitySnapshotId: 'cap-1', highWatermark: 0 }) },
-      handshake: { handshake: async () => {
-        const handshake: OpenCodeBridgeHandshake = { schemaVersion: 1, requestId: 'test-handshake',
-          client: clientIdentity, server: { ...clientIdentity, peer: 'agent_teams_orchestrator',
-            bridgeProtocol: { ...clientIdentity.bridgeProtocol, groupChatProtocolVersion: protocol },
-            runtime: { ...clientIdentity.runtime, activeRunId: 'run-1', capabilitySnapshotId: 'cap-1',
-              runtimeStoreManifestHighWatermark: 0, groupChatRunProof: proof } },
-          agreedProtocolVersion: 1, acceptedCommands: ['opencode.sendMessage'],
-          serverTime: new Date().toISOString(), identityHash: '' };
-        handshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(handshake);
-        return handshake;
-      } },
-    });
-    expect(await getter('sandbox', 'alice')).toEqual({ runKey: 'run-1', protocolVersion: 1, provider: 'opencode' });
-    protocol = undefined;
-    expect(await getter('sandbox', 'alice')).toBeNull();
-    protocol = 1;
-    changed = true;
-    expect(await getter('sandbox', 'alice')).toBeNull();
+  it('requires a live handshake, then commits with local owner fences without probing under the inbox lock', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-group-proof-'));
+    const previousRoot = state.root;
+    state.root = root;
+    let available = true;
+    const revoke = configureDesktopMcpEnvironment(() => ({}), () => available);
+    try {
+      await mkdir(join(root, 'sandbox', 'inboxes'), { recursive: true });
+      const clientIdentity = createOpenCodeBridgeClientIdentity({ appVersion: 'test' });
+      let sessionId = 'session-1';
+      let runtimePid = process.pid;
+      let highWatermark = 0;
+      let handshakes = 0;
+      let writes = 0;
+      let protocol: 1 | undefined = 1;
+      const proof = { teamName: 'sandbox', memberName: 'alice', runId: 'run-1', runKey: 'run-1',
+        laneId: 'primary', runtimeSessionId: 'session-1', runtimePid: process.pid, processorReady: true };
+      const getter = createOpenCodeGroupChatRunGetter({
+        clientIdentity,
+        snapshot: async () => ({ teamName: 'sandbox', runId: 'run-1', updatedAt: new Date().toISOString(),
+          members: { alice: { memberName: 'alice', alive: true, restartable: true, providerId: 'opencode', cwd: '/synthetic',
+            laneId: 'primary', pid: runtimePid, runtimePid,
+            runtimeSessionId: sessionId, updatedAt: new Date().toISOString() } } }),
+        manifest: { read: async () => ({ activeRunId: 'run-1', capabilitySnapshotId: 'cap-1', highWatermark }) },
+        handshake: { handshake: async () => {
+          expect(writes, 'full handshake must stay outside the physical inbox write').toBe(0);
+          handshakes++;
+          const handshake: OpenCodeBridgeHandshake = { schemaVersion: 1, requestId: 'test-handshake',
+            client: clientIdentity, server: { ...clientIdentity, peer: 'agent_teams_orchestrator',
+              bridgeProtocol: { ...clientIdentity.bridgeProtocol, groupChatProtocolVersion: protocol },
+              runtime: { ...clientIdentity.runtime, activeRunId: 'run-1', capabilitySnapshotId: 'cap-1',
+                runtimeStoreManifestHighWatermark: 0, groupChatRunProof: proof } },
+            agreedProtocolVersion: 1, acceptedCommands: ['opencode.sendMessage'],
+            serverTime: new Date().toISOString(), identityHash: '' };
+          handshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(handshake);
+          return handshake;
+        } },
+      });
+      const admitted = await getter('sandbox', 'alice');
+      expect(admitted).toMatchObject({ runKey: 'run-1', protocolVersion: 1, provider: 'opencode' });
+      const writer = new TeamInboxWriter();
+      const feature = createTeamGroupChatsFeature({
+        roster: async () => ['alice', 'bob'],
+        getRun: async (team, name) => name === 'alice' ? getter(team, name)
+          : { runKey: 'native:bob', protocolVersion: 1, provider: 'native' },
+        configurationOperation: (_team, operation) => operation(),
+        deliver: async (team, message, _run, shouldStillWrite) => {
+          writes++;
+          try {
+            const sent = await writer.sendMessage(team, { ...message, attachments: undefined, member: message.to }, { shouldStillWrite });
+            return sent.deliveredToInbox ? 'queued' : 'skipped';
+          } finally { writes--; }
+        },
+      });
+      const group = await feature.create({ teamName: 'sandbox', id: randomUUID(), name: 'Proof',
+        selectedMemberNames: ['alice', 'bob'], excludedMemberNames: [], autoIncludeNewMembers: false });
+      const beforeSend = handshakes;
+      const sent = await feature.send({ teamName: 'sandbox', groupChatId: group.id, messageId: randomUUID(), text: 'Current owner only' });
+      expect(sent.deliverySummary!.recipients.every(recipient => recipient.status === 'queued')).toBe(true);
+      expect(handshakes).toBe(beforeSend + 1); // One fresh admission, no per-write probes.
+      expect(JSON.parse(await readFile(join(root, 'sandbox', 'inboxes', 'alice.json'), 'utf8'))).toHaveLength(1);
+
+      const beforeFences = handshakes;
+      expect(await admitted!.isCurrent!()).toBe(true);
+      sessionId = 'replacement-session';
+      expect(await admitted!.isCurrent!()).toBe(false);
+      sessionId = 'session-1';
+      runtimePid++;
+      expect(await admitted!.isCurrent!()).toBe(false);
+      runtimePid = process.pid;
+      highWatermark++;
+      expect(await admitted!.isCurrent!()).toBe(false);
+      highWatermark = 0;
+      available = false;
+      expect(await admitted!.isCurrent!()).toBe(false);
+      available = true;
+      expect(handshakes).toBe(beforeFences);
+      sessionId = '';
+      expect(await getter('sandbox', 'alice')).toBeNull();
+      expect(handshakes).toBe(beforeFences); // Missing bound session cannot probe bootstrap.
+      sessionId = 'session-1';
+      protocol = undefined;
+      expect(await getter('sandbox', 'alice')).toBeNull();
+    } finally { revoke(); state.root = previousRoot; await rm(root, { recursive: true, force: true }); }
   });
 });

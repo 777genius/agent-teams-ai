@@ -1,3 +1,4 @@
+import { isDesktopMcpControlAvailable } from '@features/external-agent-connection/main';
 import { validateOpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 
 import type { GroupChatRun } from '../composition/createTeamGroupChatsFeature';
@@ -16,7 +17,9 @@ export function createOpenCodeGroupChatRunGetter(deps: {
     try {
       const snapshot = await deps.snapshot(teamName);
       const member = snapshot.members[memberName];
-      if (!member?.alive || member.providerId !== 'opencode' || !member.cwd) return null;
+      const runtimePid = member?.runtimePid ?? member?.pid;
+      if (!member?.alive || member.providerId !== 'opencode' || !member.cwd ||
+        !member.runtimeSessionId || !Number.isSafeInteger(runtimePid) || (runtimePid ?? 0) <= 0) return null;
       const manifest = await deps.manifest.read(teamName, member.laneId ?? null);
       if (!manifest.activeRunId || !manifest.capabilitySnapshotId) return null;
       const handshake = await deps.handshake.handshake({
@@ -41,18 +44,26 @@ export function createOpenCodeGroupChatRunGetter(deps: {
         !member.runtimeSessionId || proof.runtimeSessionId !== member.runtimeSessionId ||
         !Number.isSafeInteger(proof.runtimePid) || proof.runtimePid <= 0 ||
         proof.runtimePid !== (member.runtimePid ?? member.pid)) return null;
-      process.kill(proof.runtimePid, 0);
-      // Re-read liveness after the asynchronous handshake, fencing replacement/stop.
-      const current = (await deps.snapshot(teamName)).members[memberName];
-      if (!current?.alive || current.runtimeSessionId !== member.runtimeSessionId ||
-        current.providerId !== 'opencode' || current.cwd !== member.cwd ||
-        current.laneId !== member.laneId ||
-        (current.runtimePid ?? current.pid) !== proof.runtimePid) return null;
-      const currentManifest = await deps.manifest.read(teamName, member.laneId ?? null);
-      if (currentManifest.activeRunId !== manifest.activeRunId ||
-        currentManifest.capabilitySnapshotId !== manifest.capabilitySnapshotId ||
-        currentManifest.highWatermark !== manifest.highWatermark) return null;
-      return { runKey: proof.runKey, protocolVersion: 1, provider: 'opencode' };
+      // The admitted proof stays request-scoped. Commit checks read current local
+      // authority; a bridge/MCP probe must never run while an inbox lock is held.
+      const isCurrent = async (): Promise<boolean> => {
+        try {
+          if (!isDesktopMcpControlAvailable()) return false;
+          const current = (await deps.snapshot(teamName)).members[memberName];
+          if (!current?.alive || current.runtimeSessionId !== member.runtimeSessionId ||
+            current.providerId !== 'opencode' || current.cwd !== member.cwd ||
+            current.laneId !== member.laneId ||
+            (current.runtimePid ?? current.pid) !== proof.runtimePid) return false;
+          const currentManifest = await deps.manifest.read(teamName, member.laneId ?? null);
+          if (currentManifest.activeRunId !== manifest.activeRunId ||
+            currentManifest.capabilitySnapshotId !== manifest.capabilitySnapshotId ||
+            currentManifest.highWatermark !== manifest.highWatermark) return false;
+          process.kill(proof.runtimePid, 0);
+          return isDesktopMcpControlAvailable();
+        } catch { return false; }
+      };
+      if (!(await isCurrent())) return null;
+      return { runKey: proof.runKey, protocolVersion: 1, provider: 'opencode', isCurrent };
     } catch { return null; }
   };
 }

@@ -20,6 +20,8 @@ export interface GroupChatRun {
   runKey: string;
   protocolVersion: 1;
   provider: 'native' | 'lead' | 'opencode';
+  /** Request-scoped currency check for an admitted live bridge owner. */
+  isCurrent?: () => Promise<boolean>;
 }
 
 export interface TeamGroupChatsPorts {
@@ -304,7 +306,9 @@ export function createTeamGroupChatsFeature(
             const run = runs.get(memberName)!;
             const shouldStillWrite = async () =>
               (await ports.roster(request.teamName)).includes(memberName) &&
-              (await ports.getRun(request.teamName, memberName))?.runKey === run.runKey;
+              (run.provider === 'opencode'
+                ? (await run.isCurrent?.()) === true
+                : (await ports.getRun(request.teamName, memberName))?.runKey === run.runKey);
             try {
               if (!(await shouldStillWrite()))
                 return {

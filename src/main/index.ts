@@ -686,7 +686,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
     bridge: bridgeClient, controlDirectory: bridgeControlDir, teamsBasePath: getTeamsBasePath(),
     identity: { appVersion: app.getVersion(), gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null, buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null },
     readOpenCodeRuntimeStatus,
-    snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
+    snapshot: async (teamName) => {
+      const memberSpawnStatuses =
+        await teamProvisioningService.getMemberSpawnStatusesReadOnly(teamName);
+      return teamProvisioningService.getTeamAgentRuntimeSnapshotReadOnly(teamName, {
+        memberSpawnStatuses,
+      });
+    },
   });
   const readinessBridge = desktopBridge.readiness;
   readOpenCodeGroupRun = desktopBridge.groupRun;
