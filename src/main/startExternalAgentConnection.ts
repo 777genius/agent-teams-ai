@@ -1,6 +1,7 @@
 import {
   createDesktopExternalAgentConnection,
   ExternalAgentRunService,
+  getDesktopMcpChildEnvironment,
   type NativeRendererCdp,
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main';
@@ -11,6 +12,7 @@ import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsM
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
+  applyOpenCodeBoundControlEnvironment,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -146,4 +148,5 @@ export async function refreshDesktopBridgeEnvironment(env: NodeJS.ProcessEnv): P
     });
   }
   applyAgentTeamsMcpAppContext(env, root);
+  applyOpenCodeBoundControlEnvironment(env, getDesktopMcpChildEnvironment());
 }

@@ -74,7 +74,7 @@ export function buildOpenCodeAppScopedMcpUrl(
 
 export function mergeOpenCodeLocalMcpChildEnvironment(
   env: OpenCodeMcpBridgeEnv,
-  additions: Readonly<Record<string, string>>
+  additions: Readonly<Record<string, string | undefined>>
 ): void {
   const rawEnvironment = env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON?.trim();
   let currentEnvironment: Record<string, string> = {};
@@ -97,6 +97,25 @@ export function mergeOpenCodeLocalMcpChildEnvironment(
     ...currentEnvironment,
     ...additions,
   });
+}
+
+/** Project the current binding into an owned bridge child and its local MCP fallback. */
+export function applyOpenCodeBoundControlEnvironment(
+  env: OpenCodeMcpBridgeEnv,
+  desktopEnvironment: Readonly<Record<string, string>>
+): void {
+  const binding: OpenCodeMcpBridgeEnv = {};
+  for (const key of ['AGENT_TEAMS_BOUND_CONTROL_URL', 'AGENT_TEAMS_BOUND_CONTEXT_JSON'] as const) {
+    const value = desktopEnvironment[key];
+    if (value === undefined) {
+      delete env[key];
+    } else {
+      env[key] = value;
+    }
+    // JSON serialization removes an old child binding when the current one is absent.
+    binding[key] = value;
+  }
+  mergeOpenCodeLocalMcpChildEnvironment(env, binding);
 }
 
 export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = process.env): boolean {
