@@ -51,6 +51,13 @@ export interface OpenCodeMemberMessageDeliveryInput {
   memberName: string;
   text: string;
   messageId?: string;
+  groupChatId?: string;
+  groupChatName?: string;
+  groupRunKey?: string;
+  from?: string;
+  groupMessageId?: string;
+  groupChatProtocolVersion?: 1;
+  relayOfMessageId?: string;
   replyRecipient?: string;
   actionMode?: AgentActionMode;
   messageKind?: InboxMessage['messageKind'];

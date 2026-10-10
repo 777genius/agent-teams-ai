@@ -75,6 +75,8 @@ import {
   TeamInboxReader,
 } from '../../../../src/main/services/team/TeamInboxReader';
 
+import { readGroupHistoryPage } from '../../../../src/features/team-message-history/main';
+
 describe('TeamInboxReader', () => {
   let reader: TeamInboxReader;
   const inboxDir = '/mock/teams/my-team/inboxes';
@@ -204,6 +206,74 @@ describe('TeamInboxReader', () => {
 
     expect(thought?.to).toBeUndefined();
     expect(thought?.source).toBe('lead_session');
+  });
+
+  it('hides fanout before top-K, retains transport rows and advances canonical-only group pages', async () => {
+    hoisted.dirs.set(inboxDir, ['alice.json', 'user.json']);
+    const canonical = (id: string, day: number) => ({
+      from: 'user',
+      to: 'user',
+      text: id,
+      timestamp: `2026-01-0${day}T00:00:00.000Z`,
+      read: false,
+      messageId: id,
+      groupChatId: 'group-a',
+      groupMessageId: id,
+      groupChatProtocolVersion: 1,
+      groupRecipientNames: ['alice', 'bob'],
+      groupRecipientRunKeys: { alice: 'run-1', bob: 'run-2' },
+    });
+    const physical = Array.from({ length: 12 }, (_, i) => ({
+      ...canonical(`delivery-${i}`, 8),
+      to: 'alice',
+      groupMessageId: 'logical-new',
+      groupRunKey: 'run-1',
+    }));
+    hoisted.files.set(`${inboxDir}/alice.json`, JSON.stringify(physical));
+    hoisted.files.set(
+      `${inboxDir}/user.json`,
+      JSON.stringify([canonical('logical-old', 1), canonical('logical-new', 2)])
+    );
+    const aggregate = await reader.getMessagesWindow('my-team', { limit: 1 });
+    expect(aggregate.messages.map((row) => row.messageId)).toEqual(['logical-new']);
+    expect(aggregate.sourceMessageCount).toBe(14);
+    expect(await reader.getMessagesFor('my-team', 'alice')).toHaveLength(12);
+    // A broken physical source must not block the canonical group read.
+    hoisted.sizes.set(`${inboxDir}/alice.json`, MAX_INBOX_FILE_BYTES + 1);
+    const read = (options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
+      reader.getMessagesWindow('my-team', options);
+    const first = await readGroupHistoryPage(read, { groupChatId: 'group-a', limit: 1, sourceIdentity: inboxDir });
+    expect(first.messages[0].messageId).toBe('logical-new');
+    expect(first.hasMore).toBe(true);
+    const second = await readGroupHistoryPage(read, {
+      groupChatId: 'group-a',
+      sourceIdentity: inboxDir,
+      limit: 1,
+      cursor: first.nextCursor,
+    });
+    expect(second.messages[0].messageId).toBe('logical-old');
+    expect(second.hasMore).toBe(false);
+    await expect(readGroupHistoryPage(read, {
+      groupChatId: 'group-a', sourceIdentity: '/other-root/teams/my-team/inboxes/user.json',
+      limit: 1, cursor: first.nextCursor,
+    })).rejects.toThrow('invalid_cursor');
+    await expect(
+      readGroupHistoryPage(read, { groupChatId: 'other-group', sourceIdentity: inboxDir, limit: 1, cursor: first.nextCursor })
+    ).rejects.toThrow('invalid_cursor');
+  });
+
+  it('reports malformed identifiable group storage instead of silently normalizing it away', async () => {
+    hoisted.dirs.set(inboxDir, ['user.json']);
+    hoisted.files.set(
+      `${inboxDir}/user.json`,
+      JSON.stringify([{ groupChatId: 'broken', text: 'must not vanish' }])
+    );
+    await expect(reader.getMessagesWindow('my-team', { limit: 1 })).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE'
+    );
+    await expect(reader.getMessagesFor('my-team', 'user')).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE'
+    );
   });
 
   it('getMessagesWindow keeps a bounded newest window while revision tracks older source changes', async () => {

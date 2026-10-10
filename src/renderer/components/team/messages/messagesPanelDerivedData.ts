@@ -5,6 +5,7 @@ import {
   normalizeConversationParticipant,
   TEAM_FEED_SCOPE,
 } from '@features/team-direct-chats/renderer';
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
@@ -38,18 +39,22 @@ export function localDraftsByConversationScope(summaries: readonly ComposerWorki
   for (const summary of summaries) {
     const target = summary.address.target;
     if (target.kind === 'cross-team') continue;
-    drafts.set(
-      conversationScopeKey(
-        target.kind === 'team-feed' ? TEAM_FEED_SCOPE : createDirectScope(target.participant)
-      ),
-      {
-        preview: summary.preview,
-        updatedAt: summary.updatedAt,
-        attachmentCount: summary.attachmentCount,
-        chipCount: summary.chipCount,
-        editorKind: summary.editorKind,
-      }
+    const key = conversationScopeKey(
+      target.kind === 'team-feed' ||
+        (target.kind === 'group' && target.groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID)
+        ? TEAM_FEED_SCOPE
+        : target.kind === 'group'
+          ? target
+          : createDirectScope(target.participant)
     );
+    if ((drafts.get(key)?.updatedAt ?? -Infinity) > summary.updatedAt) continue;
+    drafts.set(key, {
+      preview: summary.preview,
+      updatedAt: summary.updatedAt,
+      attachmentCount: summary.attachmentCount,
+      chipCount: summary.chipCount,
+      editorKind: summary.editorKind,
+    });
   }
   return drafts;
 }
@@ -80,7 +85,9 @@ export function conversationDraftAddress(
     target:
       scope.kind === 'direct'
         ? { kind: 'direct', participant: scope.participant }
-        : { kind: 'team-feed' },
+        : scope.kind === 'group'
+          ? { kind: 'group', groupChatId: scope.groupChatId }
+          : { kind: 'team-feed' },
   };
 }
 
@@ -151,13 +158,16 @@ export function activityMessages(args: {
   renderSurface: ConversationSurface;
   scope: ConversationScope;
 }): InboxMessage[] {
-  const unscoped = filterTeamMessages(args.messages, {
-    includeAutomationEvents: true,
-    leadNames: args.leadNames,
-    timeWindow: args.timeWindow,
-    filter: args.filter,
-    searchQuery: args.searchQuery,
-  });
+  const unscoped = filterTeamMessages(
+    filterScopedMessages(args.messages, TEAM_FEED_SCOPE, args.leadNames),
+    {
+      includeAutomationEvents: true,
+      leadNames: args.leadNames,
+      timeWindow: args.timeWindow,
+      filter: args.filter,
+      searchQuery: args.searchQuery,
+    }
+  );
   return args.renderSurface === 'thread'
     ? filterScopedMessages(unscoped, args.scope, args.leadNames)
     : unscoped;
@@ -167,7 +177,7 @@ export function canonicalTeamMessages(
   messages: InboxMessage[],
   leadNames: readonly string[]
 ): InboxMessage[] {
-  return filterTeamMessages(messages, {
+  return filterTeamMessages(filterScopedMessages(messages, TEAM_FEED_SCOPE, leadNames), {
     leadNames,
     filter: { from: new Set(), to: new Set(), showNoise: false },
     searchQuery: '',
@@ -181,7 +191,7 @@ export function visibleTeamMessages(args: {
   filter: MessagesFilterState;
   searchQuery: string;
 }): InboxMessage[] {
-  return filterTeamMessages(args.messages, {
+  return filterTeamMessages(filterScopedMessages(args.messages, TEAM_FEED_SCOPE, args.leadNames), {
     leadNames: args.leadNames,
     timeWindow: args.timeWindow,
     filter: args.filter,

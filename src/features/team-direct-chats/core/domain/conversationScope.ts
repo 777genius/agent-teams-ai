@@ -1,5 +1,6 @@
 export type ConversationScope =
   | { readonly kind: 'team-feed' }
+  | { readonly kind: 'group'; readonly groupChatId: string }
   | { readonly kind: 'direct'; readonly participant: string };
 
 export type ConversationSurface = 'list' | 'thread';
@@ -11,6 +12,9 @@ export function normalizeConversationParticipant(value: string | undefined): str
 export function conversationScopeKey(scope: ConversationScope): string {
   if (scope.kind === 'team-feed') {
     return 'team-feed';
+  }
+  if (scope.kind === 'group') {
+    return `group:${scope.groupChatId}`;
   }
   return `direct:${normalizeConversationParticipant(scope.participant)}`;
 }

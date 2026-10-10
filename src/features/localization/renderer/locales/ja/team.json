@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "グループチャットを作成",
+      "description": "エージェントを2人以上選択してください。あなたは自動的に参加します。",
+      "name": "チャット名",
+      "autoInclude": "新しいメンバーを自動追加",
+      "minimum": "エージェントを2人以上選択してください。",
+      "creating": "作成中…",
+      "retryCreate": "作成を再試行",
+      "unavailable": "チャットを利用できません",
+      "message": "このグループにメッセージ",
+      "archivedHint": "このチャットはアーカイブ済みです。復元するとメッセージを送信できます。",
+      "restartHint": "送信するには、すべての参加者が互換性のあるランタイムを実行している必要があります。",
+      "unknownDelivery": "保存済み。配信状況は不明です。",
+      "sending": "送信中…",
+      "retrySend": "同じメッセージを再送",
+      "send": "送信",
+      "archived": "アーカイブ済みチャット",
+      "restore": "チャットを復元",
+      "archive": "チャットをアーカイブ",
+      "delivery": {
+        "queued": "待機中",
+        "accepted": "受付済み",
+        "failed": "失敗",
+        "unknown": "不明",
+        "skipped": "スキップ"
+      }
+    },
     "actions": {
       "toLatest": "最新へ",
       "bottomSheetActions": "メッセージの一番下のシートアクション",

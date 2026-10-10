@@ -6,11 +6,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parse } from 'yaml';
 
 import {
   buildUpdaterFeeds,
-  getPromotionLayout,
   getMacUpdaterMinimumSystemVersion,
+  getPromotionLayout,
   parsePromotionConfig,
 } from '../../scripts/ci/promote-existing-draft.mjs';
 
@@ -140,6 +141,27 @@ describe('promote-existing-draft', () => {
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macArm64Zip);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macX64Zip);
     expect(feeds['latest-mac.yml']).toContain('minimumSystemVersion: 22.0.0');
+  });
+
+  it('embeds migration notes as a safe YAML scalar in every platform feed', async () => {
+    const directory = await makeTemporaryDirectory('promote-notes-');
+    const layout = getPromotionLayout('2.17.10');
+    for (const sourceName of layout.sourceAssets) {
+      await writeFile(path.join(directory, sourceName), `fixture:${sourceName}`);
+    }
+    const releaseNotes =
+      '## macOS: manual install\nUse the "DMG" once.\n\n```yaml\nversion: other\n```';
+    const feeds = await buildUpdaterFeeds({
+      directory,
+      version: '2.17.10',
+      releaseDate: '2026-10-09T00:00:00.000Z',
+      feedSources: layout.feedSources,
+      releaseNotes,
+      macMinimumSystemVersion: '13.0',
+    });
+    for (const rawFeed of Object.values(feeds)) {
+      expect(parse(rawFeed)).toMatchObject({ version: '2.17.10', releaseNotes });
+    }
   });
 
   it.each(['', undefined, '13.5', '14.0'])('rejects an unmapped macOS floor: %s', (floor) => {
@@ -287,6 +309,12 @@ process.exit(1);
       expect(await readFile(path.join(output, 'latest-mac.yml'), 'utf8')).toContain(
         `Agent.Teams.AI-${version}-x64-mac.zip`
       );
+
+      for (const feedName of ['latest.yml', 'latest-linux.yml', 'latest-mac.yml']) {
+        expect(parse(await readFile(path.join(output, feedName), 'utf8'))).toMatchObject({
+          releaseNotes: release.body,
+        });
+      }
 
       const calls = (await readFile(logPath, 'utf8'))
         .trim()

@@ -112,6 +112,7 @@ function createHost(publish = writeTeamControlApiState) {
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
     teamHttpHandlerApis: {},
+    teamGroupChatsFeature: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
     recentProjectsFeature: {},

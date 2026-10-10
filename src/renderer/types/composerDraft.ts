@@ -8,6 +8,7 @@ import type {
 
 export type ComposerDraftTarget =
   | { readonly kind: 'team-feed' }
+  | { readonly kind: 'group'; readonly groupChatId: string; readonly groupChatName?: string }
   | { readonly kind: 'direct'; readonly participant: string }
   | {
       readonly kind: 'cross-team';
@@ -41,6 +42,10 @@ export interface ComposerDraftContent {
   readonly chips: InlineChip[];
   readonly attachments: AttachmentPayload[];
   readonly actionMode: AgentActionMode;
+  /** Explicit group target; absence on an old pending attempt means All. */
+  readonly groupRecipient?:
+    | { readonly kind: 'all' }
+    | { readonly kind: 'member'; readonly memberName: string };
   readonly restoredOrigin?: ComposerRestoredOrigin;
 }
 
@@ -122,13 +127,21 @@ export interface PreparedComposerAttempt {
 export type ComposerPersistenceStatus = 'durable' | 'memory-only';
 
 export type SaveWorkingResult =
-  | { readonly kind: 'saved'; readonly workingRevision: string; readonly status: ComposerPersistenceStatus }
+  | {
+      readonly kind: 'saved';
+      readonly workingRevision: string;
+      readonly status: ComposerPersistenceStatus;
+    }
   | {
       readonly kind: 'conflict';
       readonly currentWorkingRevision: string;
       readonly status: ComposerPersistenceStatus;
     }
-  | { readonly kind: 'blocked'; readonly status: ComposerPersistenceStatus; readonly error: string };
+  | {
+      readonly kind: 'blocked';
+      readonly status: ComposerPersistenceStatus;
+      readonly error: string;
+    };
 
 export type BeginAttemptResult =
   | {
@@ -138,18 +151,26 @@ export type BeginAttemptResult =
       readonly status: ComposerPersistenceStatus;
     }
   | { readonly kind: 'already-exists'; readonly status: ComposerPersistenceStatus }
-  | { readonly kind: 'blocked'; readonly status: ComposerPersistenceStatus; readonly error: string };
+  | {
+      readonly kind: 'blocked';
+      readonly status: ComposerPersistenceStatus;
+      readonly error: string;
+    };
 
 export type RestoreRecoveryResult =
-  | { readonly kind: 'restored'; readonly working: ComposerWorkingRecord; readonly status: ComposerPersistenceStatus }
+  | {
+      readonly kind: 'restored';
+      readonly working: ComposerWorkingRecord;
+      readonly status: ComposerPersistenceStatus;
+    }
   | { readonly kind: 'conflict' | 'missing' | 'active'; readonly status: ComposerPersistenceStatus }
-  | { readonly kind: 'blocked'; readonly status: ComposerPersistenceStatus; readonly error: string };
+  | {
+      readonly kind: 'blocked';
+      readonly status: ComposerPersistenceStatus;
+      readonly error: string;
+    };
 
-export type ReconcileRecoveryResult =
-  | 'reconciled'
-  | 'missing'
-  | 'mismatch'
-  | 'blocked';
+export type ReconcileRecoveryResult = 'reconciled' | 'missing' | 'mismatch' | 'blocked';
 
 export interface ComposerDraftRepositoryEvent {
   readonly kind: 'working' | 'recoveries' | 'working-index' | 'attempt-state';
@@ -172,7 +193,10 @@ export interface ComposerDraftRepository {
     content: ComposerDraftContent | null,
     editorContext: ComposerEditorContext
   ): Promise<SaveWorkingResult>;
-  listWorkingSummaries(contextId: string, teamName: string): Promise<{
+  listWorkingSummaries(
+    contextId: string,
+    teamName: string
+  ): Promise<{
     summaries: ComposerWorkingSummary[];
     status: ComposerPersistenceStatus;
     readError?: string;
@@ -187,10 +211,7 @@ export interface ComposerDraftRepository {
     destination: ComposerDraftAddress,
     expectedDestinationRevision: string
   ): Promise<RestoreRecoveryResult>;
-  discardNamespace(
-    contextId: string,
-    teamName: string
-  ): Promise<'discarded' | 'blocked'>;
+  discardNamespace(contextId: string, teamName: string): Promise<'discarded' | 'blocked'>;
   beginAttempt(
     address: ComposerDraftAddress,
     expectedRevision: string,
@@ -212,7 +233,10 @@ export interface ComposerDraftRepository {
     expectedRevision: string,
     id: string
   ): Promise<RestoreRecoveryResult>;
-  listRecoveries(contextId: string, teamName: string): Promise<{
+  listRecoveries(
+    contextId: string,
+    teamName: string
+  ): Promise<{
     recoveries: ComposerRecoverySummary[];
     status: ComposerPersistenceStatus;
     readError?: string;

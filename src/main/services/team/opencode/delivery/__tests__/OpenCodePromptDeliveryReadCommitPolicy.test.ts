@@ -206,6 +206,49 @@ describe('OpenCode prompt delivery read commit policy', () => {
     ).toBe('non_visible_tool_without_task_progress');
   });
 
+  it('settles only an exact completed silent group peer, preserving human and unknown delivery proof', async () => {
+    const peer = record({
+      groupChatId: 'group-1', replyRecipient: 'team-lead',
+      runtimePromptMessageId: 'accepted-peer-prompt',
+      lastRuntimePromptMessageId: 'accepted-peer-prompt',
+      deliveredUserMessageId: 'accepted-peer-prompt',
+      observedAssistantMessageId: 'silent-peer-child',
+      responseState: 'empty_assistant_turn',
+      lastReason: 'assistant_child_completed_without_visible_or_meaningful_response',
+    });
+    const allowed = (ledgerRecord: OpenCodePromptDeliveryLedgerRecord, responseState = ledgerRecord.responseState) =>
+      isOpenCodeDeliveryResponseReadCommitAllowed({
+        ledgerRecord, responseState,
+        hasAcceptedMemberWorkSyncReport: async () => false, taskRefsIncludeAll,
+      });
+    await expect(allowed(peer)).resolves.toBe(true);
+    for (const overrides of [
+      { replyRecipient: 'user' }, { replyRecipient: ' USER ' }, { replyRecipient: '' },
+      { replyRecipient: 'system' }, { groupChatId: undefined },
+      { acceptedAt: null }, { acceptanceUnknown: true },
+      { deliveredUserMessageId: null }, { deliveredUserMessageId: 'other-prompt' },
+      { lastRuntimePromptMessageId: 'newer-prompt' },
+      { observedAssistantMessageId: null }, { observedAssistantPreview: 'text' },
+      { observedToolCallNames: ['group_chat_send'] },
+      { lastReason: 'assistant_child_has_no_visible_or_meaningful_response' },
+      { lastReason: 'no_assistant_child_for_delivered_prompt' },
+      { responseState: 'pending' as const }, { responseState: 'tool_error' as const },
+      { responseState: 'reconcile_failed' as const }, { cancelledAt: ISO },
+    ]) {
+      await expect(allowed({ ...peer, ...overrides })).resolves.toBe(false);
+    }
+    await expect(allowed(peer, 'reconcile_failed')).resolves.toBe(false);
+    const human = { ...peer, replyRecipient: 'user' };
+    await expect(isOpenCodeDeliveryResponseReadCommitAllowed({
+      ledgerRecord: human, responseState: human.responseState,
+      visibleReply: { inboxName: 'user', message: {
+        ...visibleReply().message, groupChatId: 'group-1', relayOfMessageId: human.inboxMessageId,
+        source: 'runtime_delivery',
+      } },
+      hasAcceptedMemberWorkSyncReport: async () => false, taskRefsIncludeAll,
+    })).resolves.toBe(true);
+  });
+
   it('requires work-sync nudges to produce accepted work-sync proof', () => {
     expect(
       getOpenCodeDeliveryPendingReason({

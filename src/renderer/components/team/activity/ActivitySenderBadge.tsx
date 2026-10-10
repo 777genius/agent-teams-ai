@@ -1,5 +1,8 @@
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 
+import type { useAppTranslation } from '@features/localization/renderer';
+import type { InboxMessage } from '@shared/types';
+
 interface ActivitySenderBadgeProps {
   name: string;
   color?: string;
@@ -45,11 +48,27 @@ export const ActivitySenderBadge = ({
     />
   );
 
-  return isWideAgent ? (
+  const sender = isWideAgent ? (
     <span data-chat-sender="true" className="inline-flex items-center">
       {badge}
     </span>
   ) : (
     badge
   );
+  return sender;
+};
+
+export const renderGroupRecipientBadge = (
+  message: Pick<InboxMessage, 'from' | 'groupChatId' | 'groupRecipientNames'>,
+  t: ReturnType<typeof useAppTranslation>['t']
+): React.JSX.Element | null => {
+  const targets =
+    message.from === 'user' && message.groupChatId ? message.groupRecipientNames : undefined;
+  return targets?.length ? (
+    <span className="text-[10px] text-[var(--color-text-muted)]">
+      {t('messages.groups.recipient', {
+        name: targets.length === 1 ? targets[0] : t('messageComposer.recipient.all'),
+      })}
+    </span>
+  ) : null;
 };

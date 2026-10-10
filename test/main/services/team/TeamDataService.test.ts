@@ -3022,7 +3022,7 @@ describe('TeamDataService', () => {
       () =>
         ({
           taskBoard: { createTask: vi.fn(() => task) },
-          messages: { sendMessage },
+          messages: { sendMessageAsync: sendMessage },
         }) as never
     );
 
@@ -3362,8 +3362,12 @@ describe('TeamDataService', () => {
     expect(createTaskMock).toHaveBeenCalledWith(expect.objectContaining({ related: ['1', '2'] }));
   });
 
-  it('routes durable inbox writes through controller message API', async () => {
-    const sendMessageMock = vi.fn(() => ({ deliveredToInbox: true, messageId: 'm-1' }));
+  it('awaits the async controller message API for durable inbox writes', async () => {
+    let settle!: (value: { deliveredToInbox: boolean; messageId: string }) => void;
+    const pendingWrite = new Promise<{ deliveredToInbox: boolean; messageId: string }>(resolve => {
+      settle = resolve;
+    });
+    const sendMessageMock = vi.fn(() => pendingWrite);
 
     const service = new TeamDataService(
       {
@@ -3382,19 +3386,23 @@ describe('TeamDataService', () => {
       () =>
         ({
           messages: {
-            sendMessage: sendMessageMock,
+            sendMessageAsync: sendMessageMock,
           },
         }) as never
     );
 
-    const result = await service.sendMessage('my-team', {
+    let settled = false;
+    const resultPromise = service.sendMessage('my-team', {
       member: 'alice',
       text: 'hello',
       summary: 'ping',
       actionMode: 'ask',
       commentId: 'comment-1',
-    });
-
+    }).then(result => { settled = true; return result; });
+    await vi.waitFor(() => expect(sendMessageMock).toHaveBeenCalledTimes(1));
+    expect(settled).toBe(false);
+    settle({ deliveredToInbox: true, messageId: 'm-1' });
+    const result = await resultPromise;
     expect(result).toEqual({ deliveredToInbox: true, messageId: 'm-1' });
     expect(sendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node", "vitest/globals"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": ["./*.ts", "../../test/native-tool-parity/*.ts"]
+}

@@ -25,7 +25,7 @@ export const usePageSeo = (
   const { t, locale } = useI18n();
   const route = useRoute();
   const config = useRuntimeConfig();
-  const siteUrl = ((config.public.siteUrl as string) || 'https://example.com').replace(/\/+$/, '');
+  const siteUrl = ((config.public.siteUrl as string) || 'https://agentteams.live').replace(/\/+$/, '');
   const siteName = 'Agent Teams';
   const switchLocale = useSwitchLocalePath();
 
@@ -43,11 +43,11 @@ export const usePageSeo = (
   const resolvedImage = computed<PageSeoImage>(() => {
     if (options.image) return options.image;
     return {
-      url: '/og-image-agent-teams-v6.png',
+      url: '/og-image-agent-teams-v7.png',
       width: 1200,
       height: 630,
       type: 'image/png',
-      alt: `${siteName} - AI agent orchestration`,
+      alt: `A human boss directs AI robot agents working beside a Kanban board`,
     };
   });
 

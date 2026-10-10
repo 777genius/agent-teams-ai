@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Groepschat maken",
+      "description": "Kies minstens twee agents. Je neemt automatisch deel.",
+      "name": "Chatnaam",
+      "autoInclude": "Nieuwe leden automatisch toevoegen",
+      "minimum": "Selecteer minstens twee agents.",
+      "creating": "Wordt gemaakt…",
+      "retryCreate": "Opnieuw maken",
+      "unavailable": "Chat niet beschikbaar",
+      "message": "Bericht aan deze groep",
+      "archivedHint": "Deze chat is gearchiveerd. Herstel de chat om berichten te verzenden.",
+      "restartHint": "Alle deelnemers moeten een compatibele runtime hebben draaien om berichten te verzenden.",
+      "unknownDelivery": "Opgeslagen. Bezorgstatus onbekend.",
+      "sending": "Wordt verzonden…",
+      "retrySend": "Hetzelfde bericht opnieuw verzenden",
+      "send": "Verzenden",
+      "archived": "Gearchiveerde chats",
+      "restore": "Chat herstellen",
+      "archive": "Chat archiveren",
+      "delivery": {
+        "queued": "in wachtrij",
+        "accepted": "geaccepteerd",
+        "failed": "mislukt",
+        "unknown": "onbekend",
+        "skipped": "overgeslagen"
+      }
+    },
     "actions": {
       "toLatest": "Naar nieuwste",
       "bottomSheetActions": "Acties berichtenpaneel onderaan",

@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Grup sohbeti oluştur",
+      "description": "En az iki ajan seçin. Siz otomatik olarak dahil edilirsiniz.",
+      "name": "Sohbet adı",
+      "autoInclude": "Yeni üyeleri otomatik ekle",
+      "minimum": "En az iki ajan seçin.",
+      "creating": "Oluşturuluyor…",
+      "retryCreate": "Oluşturmayı yeniden dene",
+      "unavailable": "Sohbet kullanılamıyor",
+      "message": "Bu gruba mesaj yaz",
+      "archivedHint": "Bu sohbet arşivlendi. Mesaj göndermek için geri yükleyin.",
+      "restartHint": "Mesaj göndermek için tüm katılımcılarda uyumlu bir çalışma ortamı çalışıyor olmalıdır.",
+      "unknownDelivery": "Kaydedildi. Teslim durumu bilinmiyor.",
+      "sending": "Gönderiliyor…",
+      "retrySend": "Aynı mesajı yeniden gönder",
+      "send": "Gönder",
+      "archived": "Arşivlenen sohbetler",
+      "restore": "Sohbeti geri yükle",
+      "archive": "Sohbeti arşivle",
+      "delivery": {
+        "queued": "sırada",
+        "accepted": "kabul edildi",
+        "failed": "başarısız",
+        "unknown": "bilinmiyor",
+        "skipped": "atlandı"
+      }
+    },
     "actions": {
       "toLatest": "En son mesajlara",
       "bottomSheetActions": "Mesaj alt sayfa eylemleri",

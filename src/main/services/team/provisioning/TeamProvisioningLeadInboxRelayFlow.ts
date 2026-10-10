@@ -1,3 +1,4 @@
+import { hasGroupChatEnvelopeMarker } from '@features/team-group-chats/contracts';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE } from '@shared/constants/crossTeam';
 import { parsePermissionRequest } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -241,6 +242,16 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
   const isStaleRelayRun = (): boolean =>
     !ports.isCurrentTrackedRun(run) || !run.child || run.processKilled || run.cancelRequested;
 
+  // Native runtime owns group consumption and acknowledgement. Keep even stale/partial
+  // protocol rows out of the ordinary stdin and permission paths.
+  const readOrdinaryLeadInboxMessages = async (
+    team: string,
+    lead: string
+  ): Promise<InboxMessage[]> =>
+    (await ports.readLeadInboxMessages(team, lead)).filter(
+      (message) => !hasGroupChatEnvelopeMarker(message)
+    );
+
   let config: LeadInboxRelayConfig | null = null;
   try {
     config = await ports.readConfigForObservation(teamName);
@@ -253,7 +264,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     const permissionScanResult = await scanLeadInboxPermissionRequests(
       { teamName, leadName, run, isStaleRelayRun },
       {
-        readLeadInboxMessages: ports.readLeadInboxMessages,
+        readLeadInboxMessages: readOrdinaryLeadInboxMessages,
         handleTeammatePermissionRequest: ports.handleTeammatePermissionRequest,
         markInboxMessagesRead: ports.markInboxMessagesRead,
       }
@@ -278,7 +289,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
   const leadName = getLeadName(config);
   let leadInboxMessages: InboxMessage[] = [];
   try {
-    leadInboxMessages = await ports.readLeadInboxMessages(teamName, leadName);
+    leadInboxMessages = await readOrdinaryLeadInboxMessages(teamName, leadName);
   } catch {
     return 0;
   }
@@ -424,12 +435,14 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
       : actionableUnread;
   if (scopedActionableUnread.length === 0) return 0;
 
-  const { batch, replyVisibility, hasPendingFollowUpRelay } = selectLeadInboxRelayBatch({
+  const selection = selectLeadInboxRelayBatch({
     actionableUnread: scopedActionableUnread,
     unread,
     readOnlyIgnoredIds,
     maxRelay: DEFAULT_INBOX_RELAY_BATCH_SIZE,
   });
+  const { batch, replyVisibility } = selection;
+  const hasPendingFollowUpRelay = scopedActionableUnread.some((row) => !batch.includes(row));
   const recoveryMessageId = batch.find(
     (message) => String(message.messageKind) === 'runtime_recovery_nudge'
   )?.messageId;
@@ -462,6 +475,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     workSyncControlUrl,
     redeliveredMessageIds,
   });
+  if (isStaleRelayRun()) return 0;
 
   const capturePromise = startLeadRelayCapture(
     run,

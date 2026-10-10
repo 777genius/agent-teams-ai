@@ -74,6 +74,7 @@ import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningV
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
+import type { ProvisioningGroupChatCallbacks } from './TeamProvisioningGroupChatPorts';
 import type { TeamProvisioningOutputRecoveryFacade } from './TeamProvisioningOutputRecoveryFacade';
 import type { TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
 import type { TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
@@ -386,11 +387,11 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     TeamProvisioningMemberLifecycleController['collectFailedOpenCodeSecondaryRetryCandidatesInternal']
   >;
 
-  protected initializeTeamProvisioningService(): void {
+  protected initializeTeamProvisioningService(groupChats?: ProvisioningGroupChatCallbacks): void {
     const service = this as unknown as { membersMetaStore: TeamMembersMetaStore };
     const membersMetaStore = preserveProvisioningRemovalTombstones(service.membersMetaStore);
     service.membersMetaStore = membersMetaStore;
-    createTeamProvisioningServiceComposition(this);
+    createTeamProvisioningServiceComposition(this, groupChats);
     this.preserveAtomicOpenCodeRuntimePreparation();
     this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }

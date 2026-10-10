@@ -4301,9 +4301,11 @@ export default interface Resources {
         "todo": "TODO"
       },
       "filter": {
+        "allGroups": "All groups",
         "allSessions": "All sessions",
         "clearAll": "Clear all",
         "column": "Column",
+        "group": "Group chat",
         "session": "Session",
         "teammate": "Teammate",
         "title": "Filter tasks",
@@ -4915,6 +4917,8 @@ export default interface Resources {
         "teamLaunchingPlaceholder": "Team is launching... message will be queued for inbox delivery."
       },
       "recipient": {
+        "all": "All",
+        "broadcastTextOnly": "Plain text to all agents. Attachments and action modes are available for a single recipient.",
         "noResults": "No results",
         "searchPlaceholder": "Search...",
         "select": "Select..."
@@ -5041,6 +5045,37 @@ export default interface Resources {
       "fullScreen": {
         "label": "Full Screen",
         "teamOnly": "Full Screen is available on the team screen"
+      },
+      "groups": {
+        "archive": "Archive chat",
+        "archived": "Archived chats",
+        "archivedHint": "This chat is archived. Restore it to send messages.",
+        "autoInclude": "Automatically add new members",
+        "create": "Create group chat",
+        "creating": "Creating…",
+        "delivery": {
+          "accepted": "accepted",
+          "failed": "failed",
+          "queued": "queued",
+          "skipped": "skipped",
+          "unknown": "unknown"
+        },
+        "description": "Choose at least two agents. You are included automatically.",
+        "mentions": "{{count}} mentions of you",
+        "message": "Message this group",
+        "minimum": "Select at least two agents.",
+        "name": "Chat name",
+        "recipient": "To {{name}}",
+        "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
+        "restartHint": "All participants must be running a compatible runtime before sending.",
+        "restore": "Restore chat",
+        "retryCreate": "Retry creation",
+        "retrySend": "Retry the same message",
+        "send": "Send",
+        "sending": "Sending…",
+        "showTasksOnBoard": "Show tasks on board",
+        "unavailable": "Chat unavailable",
+        "unknownDelivery": "Saved. Delivery status is unknown."
       },
       "outbox": {
         "actions": {
@@ -6481,6 +6516,14 @@ export default interface Resources {
         "confirmLabel": "Delete",
         "message": "Move task #{{taskId}} to trash?",
         "title": "Delete task"
+      },
+      "groupChat": {
+        "archived": " (archived)",
+        "catalogError": "Group chats could not be loaded. You can still remove the current link.",
+        "label": "Group chat",
+        "loading": "Group ({{id}})",
+        "none": "None",
+        "unavailable": "Unavailable group ({{id}})"
       },
       "list": {
         "columns": {

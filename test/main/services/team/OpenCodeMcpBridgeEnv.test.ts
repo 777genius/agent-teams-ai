@@ -1,4 +1,10 @@
+import { BoundControlContext } from '@features/external-agent-connection/main/BoundControlContext';
 import {
+  configureDesktopMcpEnvironment,
+  getDesktopMcpChildEnvironment,
+} from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import {
+  applyOpenCodeBoundControlEnvironment,
   buildOpenCodeAppProcessOwnershipMarkers,
   buildOpenCodeAppProfileScope,
   buildOpenCodeAppScopedMcpOwnershipMarker,
@@ -16,6 +22,60 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCodeMcpBridgeEnv', () => {
+  it('projects the same current binding into bridge and MCP children without advancing generation', () => {
+    const context = new BoundControlContext('owned-instance', '/sandbox/root');
+    const snapshot = context.snapshot();
+    const binding = {
+      AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41001',
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(snapshot),
+    };
+    const revoke = configureDesktopMcpEnvironment(() => ({
+      ...binding,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'must-not-overwrite-existing-identity',
+    }));
+    const env: NodeJS.ProcessEnv = {
+      AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"appInstanceId":"stale"}',
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'owned-instance',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify({
+        ELECTRON_RUN_AS_NODE: '1',
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"appInstanceId":"stale"}',
+      }),
+    };
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        applyOpenCodeBoundControlEnvironment(env, getDesktopMcpChildEnvironment());
+        expect(env).toMatchObject({ ...binding, CLAUDE_TEAM_APP_INSTANCE_ID: 'owned-instance' });
+        expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON ?? '{}')).toEqual({
+          ELECTRON_RUN_AS_NODE: '1',
+          ...binding,
+        });
+        expect(context.snapshot()).toEqual(snapshot);
+      }
+    } finally {
+      revoke();
+    }
+  });
+
+  it('removes an old bound pair from both children when no current binding exists', () => {
+    const env: NodeJS.ProcessEnv = {
+      AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+      AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"appInstanceId":"stale"}',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify({
+        ELECTRON_RUN_AS_NODE: '1',
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"appInstanceId":"stale"}',
+      }),
+    };
+    applyOpenCodeBoundControlEnvironment(env, {});
+    expect(env.AGENT_TEAMS_BOUND_CONTROL_URL).toBeUndefined();
+    expect(env.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBeUndefined();
+    expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON ?? '{}')).toEqual({
+      ELECTRON_RUN_AS_NODE: '1',
+    });
+  });
+
   it('reads the current handle after delayed work and fences old revocation', async () => {
     let handle: { url: string; port: number; urlHash: string } | null = null;
     const projection = createOpenCodeMcpAppContext(() => handle);

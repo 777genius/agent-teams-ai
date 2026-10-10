@@ -1,5 +1,6 @@
 const taskStore = require('./taskStore.js');
 const { hasExplicitCreationCommand } = require('./taskCreationCommand.js');
+const { normalizeTaskGroupChatId } = require('./taskGroupAssociation.js');
 
 const TASK_CREATE_DEDUP_WINDOW_MS = 10 * 60 * 1000;
 
@@ -94,6 +95,7 @@ function buildTaskCreationDedupKey(context, taskInput) {
     owner: normalizeDedupText(taskInput && taskInput.owner),
     createdBy,
     description,
+    groupChatId: taskInput?.groupChatId ?? '',
     prompt: normalizeDedupText(taskInput && taskInput.prompt),
     blockedBy: normalizeDedupRelations(
       context,
@@ -113,6 +115,7 @@ function buildTaskCreationDedupKey(context, taskInput) {
 }
 
 function findRecentDuplicateTask(context, taskInput) {
+  normalizeTaskGroupChatId(taskInput?.groupChatId);
   const creationKey = buildTaskCreationDedupKey(context, taskInput);
   const hasExplicitTaskId =
     typeof taskInput?.id === 'string' && taskInput.id.trim().length > 0;

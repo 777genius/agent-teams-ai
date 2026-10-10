@@ -115,6 +115,14 @@ export interface OpenCodeTeamRuntimeMessageInput {
   cwd: string;
   text: string;
   messageId?: string;
+  groupChatId?: string;
+  groupRunKey?: string;
+  from?: string;
+  groupChatName?: string;
+  timestamp?: string;
+  groupMessageId?: string;
+  groupChatProtocolVersion?: 1;
+  relayOfMessageId?: string;
   deliveryAttemptId?: string;
   fileParts?: OpenCodeSendMessageCommandBody['fileParts'];
   replyRecipient?: string;
@@ -691,6 +699,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       text: buildOpenCodeRuntimeMessageText(input),
       messageId: input.messageId,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
+      from: input.from,
+      groupChatName: input.groupChatName,
+      timestamp: input.timestamp,
+      groupMessageId: input.groupMessageId,
+      groupChatProtocolVersion: input.groupChatProtocolVersion,
+      relayOfMessageId: input.relayOfMessageId,
       ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
       ...(input.forceSessionRefreshReason
         ? { forceSessionRefreshReason: input.forceSessionRefreshReason }
@@ -748,6 +764,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       projectPath: input.cwd,
       memberName: input.memberName,
       messageId: input.messageId,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
+      from: input.from,
+      groupChatName: input.groupChatName,
+      timestamp: input.timestamp,
+      groupMessageId: input.groupMessageId,
+      groupChatProtocolVersion: input.groupChatProtocolVersion,
+      relayOfMessageId: input.relayOfMessageId,
       sessionId: input.sessionId,
       runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,

@@ -443,7 +443,10 @@ async function runOpenCodeMemberInboxRelayWork(
         laneId: memberIdentity.laneId,
         inboxMessageId: message.messageId,
       })
-      .catch(() => null);
+      .catch((error: unknown) => {
+        if (message.groupChatId) throw error;
+        return null;
+      });
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
@@ -465,7 +468,7 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
-    if (existingRecord?.status === 'failed_terminal') {
+    if (!message.groupChatId && existingRecord?.status === 'failed_terminal') {
       const requeuedRecord = await ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
         ledger: promptLedger,
         ledgerRecord: existingRecord,
@@ -477,7 +480,7 @@ async function runOpenCodeMemberInboxRelayWork(
         existingRecord = requeuedRecord;
       }
     }
-    if (existingRecord?.status === 'failed_terminal') {
+    if (!message.groupChatId && existingRecord?.status === 'failed_terminal') {
       const requeuedRecord = await ports.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded({
         ledger: promptLedger,
         ledgerRecord: existingRecord,
@@ -685,6 +688,13 @@ async function runOpenCodeMemberInboxRelayWork(
     }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
       memberName,
+      from: message.from,
+      groupRunKey: message.groupRunKey,
+      groupChatId: message.groupChatId,
+      groupChatName: message.groupChatName,
+      groupMessageId: message.groupMessageId,
+      groupChatProtocolVersion: message.groupChatProtocolVersion,
+      relayOfMessageId: message.relayOfMessageId,
       text: message.text,
       ...(coalesced.length
         ? { coalescedNoticeText: buildOpenCodeCoalescedNoticeText(coalesced) }
@@ -945,6 +955,7 @@ export async function handleOpenCodeInboxAttachmentFailure(input: {
         laneId: input.laneId,
         runId: await input.ports.resolveCurrentOpenCodeRuntimeRunId(input.teamName, input.laneId),
         inboxMessageId: input.message.messageId,
+        groupChatId: input.message.groupChatId,
         inboxTimestamp: input.message.timestamp,
         source: input.decision.source,
         replyRecipient: input.decision.replyRecipient,
@@ -954,6 +965,11 @@ export async function handleOpenCodeInboxAttachmentFailure(input: {
         taskRefs: input.decision.taskRefs,
         payloadHash: hashOpenCodePromptDeliveryPayload({
           text: input.message.text,
+          groupChatId: input.message.groupChatId,
+          groupMessageId: input.message.groupMessageId,
+          groupRunKey: input.message.groupRunKey,
+          groupChatProtocolVersion: input.message.groupChatProtocolVersion,
+          relayOfMessageId: input.message.relayOfMessageId,
           replyRecipient: input.decision.replyRecipient,
           actionMode: input.decision.actionMode ?? null,
           taskRefs: input.decision.taskRefs,

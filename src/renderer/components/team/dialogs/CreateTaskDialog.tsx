@@ -42,6 +42,8 @@ import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskI
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 
+import { TaskGroupChatField } from './TaskGroupChatField';
+
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CreateTaskRequest, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -55,6 +57,7 @@ interface CreateTaskDialogProps {
   defaultSubject?: string;
   defaultDescription?: string;
   defaultOwner?: string;
+  defaultGroupChatId?: string | null;
   defaultStartImmediately?: boolean;
   defaultChip?: InlineChip;
   onClose: () => void;
@@ -71,6 +74,7 @@ export const CreateTaskDialog = ({
   defaultSubject = '',
   defaultDescription = '',
   defaultOwner = '',
+  defaultGroupChatId = null,
   defaultStartImmediately,
   defaultChip,
   onClose,
@@ -89,6 +93,10 @@ export const CreateTaskDialog = ({
     initialValue: defaultDescription || undefined,
   });
   const descChipDraft = useChipDraftPersistence(`createTask:${teamName}:descChips`);
+  const contextId = useStore((state) => state.activeContextId);
+  const formIdentity = contextId + ':' + teamName;
+  const previousFormIdentity = useRef(formIdentity);
+  const [groupChatId, setGroupChatId] = useState(defaultGroupChatId);
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [related, setRelated] = useState<string[]>([]);
@@ -103,7 +111,7 @@ export const CreateTaskDialog = ({
 
   // Reset form when dialog opens (avoid setState during render)
   useEffect(() => {
-    if (open && !prevOpenRef.current) {
+    if (open && (!prevOpenRef.current || previousFormIdentity.current !== formIdentity)) {
       pendingCommandRef.current = null;
       resetCreateTaskSubmit(submitGateRef.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
@@ -120,6 +128,7 @@ export const CreateTaskDialog = ({
         descChipDraft.clearChipDraft();
       }
       setOwner(defaultOwner);
+      setGroupChatId(defaultGroupChatId);
       setBlockedBy([]);
       setRelated([]);
       setStartImmediately(defaultStartImmediately ?? isTeamAlive);
@@ -133,11 +142,14 @@ export const CreateTaskDialog = ({
       resetCreateTaskSubmit(submitGateRef.current);
     }
     prevOpenRef.current = open;
+    previousFormIdentity.current = formIdentity;
   }, [
     open,
     defaultSubject,
     defaultDescription,
     defaultOwner,
+    defaultGroupChatId,
+    formIdentity,
     defaultStartImmediately,
     defaultChip,
     isTeamAlive,
@@ -196,6 +208,7 @@ export const CreateTaskDialog = ({
       subject: subject.trim(),
       description: serializedDesc || undefined,
       owner: owner || undefined,
+      groupChatId: groupChatId ?? undefined,
       blockedBy: blockedBy.length > 0 ? blockedBy : undefined,
       related: related.length > 0 ? related : undefined,
       prompt: trimmedPrompt || undefined,
@@ -280,6 +293,12 @@ export const CreateTaskDialog = ({
           </div>
 
           {assigneeField}
+          <TaskGroupChatField
+            teamName={teamName}
+            value={groupChatId}
+            onChange={setGroupChatId}
+            disabled={submitting}
+          />
 
           {/* Toggle button for optional fields */}
           <button

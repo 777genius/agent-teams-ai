@@ -131,6 +131,16 @@ function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
     commentId: message.commentId,
     color: message.color,
     relayOfMessageId: message.relayOfMessageId,
+    groupChatId: message.groupChatId,
+    groupChatName: message.groupChatName,
+    groupMessageId: message.groupMessageId,
+    groupChatProtocolVersion: message.groupChatProtocolVersion,
+    groupRunKey: message.groupRunKey,
+    groupRecipientNames: message.groupRecipientNames,
+    groupRecipientRunKeys: message.groupRecipientRunKeys,
+    groupDeliverySummary: message.groupDeliverySummary,
+    groupHandoffStartedAt: message.groupHandoffStartedAt,
+
     leadSessionId: message.leadSessionId,
     conversationId: message.conversationId,
     replyToConversationId: message.replyToConversationId,
@@ -165,7 +175,8 @@ function normalizeMessagesPageOptions(options: {
   cursor?: string | null;
   limit: number;
   liveMessages?: InboxMessage[];
-}): { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] } {
+  groupChatId?: string;
+}): { cursor?: string | null; limit: number; liveMessages?: InboxMessage[]; groupChatId?: string } {
   if (!options.liveMessages?.length) {
     return options;
   }
@@ -593,13 +604,19 @@ export class TeamDataWorkerClient {
 
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
+    options: {
+      cursor?: string | null;
+      limit: number;
+      liveMessages?: InboxMessage[];
+      groupChatId?: string;
+    }
   ): Promise<MessagesPage> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
     const normalizedOptions = normalizeMessagesPageOptions(options);
     const key = JSON.stringify({
       teamName,
       cursor: normalizedOptions.cursor ?? null,
+      groupChatId: normalizedOptions.groupChatId,
       limit: normalizedOptions.limit,
       liveMessages: getLiveMessagesRequestKey(normalizedOptions.liveMessages),
     });

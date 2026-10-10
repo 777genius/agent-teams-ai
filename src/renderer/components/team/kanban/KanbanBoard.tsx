@@ -34,9 +34,11 @@ import {
 import { KanbanSortPopover } from './KanbanSortPopover';
 import { estimateKanbanAttachmentPreviewHeight } from './kanbanTaskAttachmentLayout';
 import { KanbanTaskCard } from './KanbanTaskCard';
+import { getTaskColumn } from './teamTaskProjection';
 
 import type { KanbanFilterState } from './KanbanFilterPopover';
 import type { KanbanSortField, KanbanSortState } from './KanbanSortPopover';
+import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
@@ -69,6 +71,7 @@ interface KanbanBoardProps {
   teamName: string;
   kanbanState: KanbanState;
   filter: KanbanFilterState;
+  taskGroupOptions?: TaskGroupOption[];
   sort: KanbanSortState;
   sessions: Session[];
   leadSessionId?: string;
@@ -116,27 +119,6 @@ const COLUMNS = [
   { id: 'done', titleKey: 'kanban.columns.done' },
   { id: 'approved', titleKey: 'kanban.columns.approved' },
 ] as const satisfies readonly { id: KanbanColumnId; titleKey: string }[];
-
-function getTaskColumn(task: TeamTask, kanbanState: KanbanState): KanbanColumnId | null {
-  // Kanban state is authoritative for review/approved placement.
-  // When clearKanban removes a task, the entry is deleted — so we must NOT
-  // fall back to task.reviewState, otherwise the task reappears in approved/review.
-  const kanbanEntry = kanbanState.tasks[task.id];
-  if (kanbanEntry?.column) {
-    return kanbanEntry.column;
-  }
-
-  if (task.status === 'pending') {
-    return 'todo';
-  }
-  if (task.status === 'in_progress') {
-    return 'in_progress';
-  }
-  if (task.status === 'completed') {
-    return 'done';
-  }
-  return null;
-}
 
 function columnSupportsAddButton(
   columnId: KanbanColumnId,
@@ -321,6 +303,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   teamName,
   kanbanState,
   filter,
+  taskGroupOptions,
   sort,
   sessions,
   leadSessionId,
@@ -422,7 +405,15 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   useEffect(() => {
     setVisibleTaskLimitsByColumn({});
-  }, [teamName, viewMode, sort.field, filter.sessionId, filterOwnerKey, filterColumnKey]);
+  }, [
+    teamName,
+    viewMode,
+    sort.field,
+    filter.sessionId,
+    filterOwnerKey,
+    filterColumnKey,
+    filter.groupChatId,
+  ]);
 
   const getVisibleTaskLimit = useCallback(
     (columnId: KanbanColumnId) =>
@@ -794,6 +785,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           <div className="inline-flex items-center rounded-md border border-[var(--color-border)]">
             <KanbanFilterPopover
               filter={filter}
+              taskGroupOptions={taskGroupOptions}
               sessions={sessions}
               leadSessionId={leadSessionId}
               members={members}

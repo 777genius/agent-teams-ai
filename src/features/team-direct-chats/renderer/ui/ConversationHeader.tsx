@@ -10,6 +10,7 @@ import type { JSX, ReactNode } from 'react';
 
 interface ConversationHeaderProps {
   title: string;
+  group?: boolean;
   unreadCount: number;
   attentionCount: number;
   onBack?: () => void;
@@ -19,6 +20,7 @@ interface ConversationHeaderProps {
 
 export const ConversationHeader = ({
   title,
+  group = false,
   unreadCount,
   attentionCount,
   onBack,
@@ -27,7 +29,7 @@ export const ConversationHeader = ({
 }: ConversationHeaderProps): JSX.Element => {
   const { t } = useAppTranslation('team');
   const participantName =
-    participant ?? (onBack && title !== t('messages.chats.teamFeed') ? title : undefined);
+    participant ?? (!group && onBack && title !== t('messages.chats.teamFeed') ? title : undefined);
 
   return (
     <div className="flex min-w-0 items-center gap-2">

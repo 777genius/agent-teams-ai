@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Tạo cuộc trò chuyện nhóm",
+      "description": "Chọn ít nhất hai tác nhân. Bạn được tự động thêm vào.",
+      "name": "Tên cuộc trò chuyện",
+      "autoInclude": "Tự động thêm thành viên mới",
+      "minimum": "Chọn ít nhất hai tác nhân.",
+      "creating": "Đang tạo…",
+      "retryCreate": "Thử tạo lại",
+      "unavailable": "Cuộc trò chuyện không khả dụng",
+      "message": "Nhắn tin cho nhóm này",
+      "archivedHint": "Cuộc trò chuyện đã được lưu trữ. Khôi phục để gửi tin nhắn.",
+      "restartHint": "Tất cả người tham gia phải chạy môi trường thực thi tương thích để gửi tin nhắn.",
+      "unknownDelivery": "Đã lưu. Chưa rõ trạng thái gửi.",
+      "sending": "Đang gửi…",
+      "retrySend": "Gửi lại cùng tin nhắn",
+      "send": "Gửi",
+      "archived": "Cuộc trò chuyện đã lưu trữ",
+      "restore": "Khôi phục cuộc trò chuyện",
+      "archive": "Lưu trữ cuộc trò chuyện",
+      "delivery": {
+        "queued": "đang chờ",
+        "accepted": "đã chấp nhận",
+        "failed": "thất bại",
+        "unknown": "chưa rõ",
+        "skipped": "đã bỏ qua"
+      }
+    },
     "actions": {
       "toLatest": "Đến mới nhất",
       "bottomSheetActions": "Thao tác bảng tin nhắn dưới cùng",

@@ -1,6 +1,7 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
+import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
@@ -298,6 +299,8 @@ export interface TeamTask {
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];
+  /** Optional same-team group context; does not change task assignment or delivery. */
+  groupChatId?: string;
   activeForm?: string;
   prompt?: string;
   promptTaskRefs?: TaskRef[];
@@ -458,7 +461,7 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface InboxMessage extends GroupChatEnvelope {
   from: string;
   to?: string;
   text: string;
@@ -537,7 +540,7 @@ export interface MessagesPage {
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends GroupChatEnvelope {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -918,9 +921,17 @@ export interface ApplicationCommandRequestIdentity {
   idempotencyKey: string;
 }
 
+/** Omitted fields preserve existing values; null explicitly removes the group association. */
+export interface TaskFieldUpdates {
+  subject?: string;
+  description?: string;
+  groupChatId?: string | null;
+}
+
 export interface CreateTaskRequest {
   /** Stable for one user intent so transport retries cannot create a second task. */
   command?: ApplicationCommandRequestIdentity;
+  groupChatId?: string;
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];

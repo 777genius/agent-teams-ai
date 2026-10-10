@@ -190,6 +190,7 @@ import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService'
 
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { softDeleteTeamWithBestEffortStop } from './teams/teamSoftDeleteFlow';
@@ -276,6 +277,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
@@ -2797,80 +2799,13 @@ function buildMessageDeliveryText(
   return [...hiddenBlocks, baseText].join('\n\n');
 }
 
-async function handleGetMessagesPage(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  options: unknown
-): Promise<IpcResult<MessagesPage>> {
-  const vTeam = validateTeamName(teamName);
-  if (!vTeam.valid) {
-    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  }
-  const opts = (options && typeof options === 'object' ? options : {}) as {
-    cursor?: string | null;
-    limit?: number;
-  };
-  const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
-  const cursor =
-    typeof opts.cursor === 'string' ? opts.cursor : opts.cursor === null ? null : undefined;
-
-  return wrapTeamHandler('getMessagesPage', async () => {
-    let page: MessagesPage;
-    const teamName = vTeam.value!;
-    const scanNotifications = (messagesPage: MessagesPage): void => {
-      const notificationContextPromise: Promise<{ displayName: string; projectPath?: string }> =
-        getTeamDataService()
-          .getTeamNotificationContext(teamName)
-          .catch(() => ({ displayName: teamName }));
-      void notificationContextPromise
-        .then((notificationContext) => {
-          teamMessageNotificationScanner.scan(messagesPage.messages, {
-            teamName,
-            teamDisplayName: notificationContext.displayName,
-            projectPath: notificationContext.projectPath,
-          });
-        })
-        .catch((error: unknown) => {
-          logger.debug(
-            `[teams:getMessagesPage] notification scan skipped team=${teamName}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        });
-    };
-    const liveMessages =
-      cursor == null ? getTeamMessagingApi().getLiveLeadProcessMessages(teamName) : [];
-
-    if (liveMessages.length > 0) {
-      page = await getNewestMessagesPageWithLiveOverlay({
-        teamName,
-        limit,
-        liveMessages,
-        includeUndefinedCursorInFallback: true,
-      });
-      scanNotifications(page);
-      return page;
-    }
-
-    const worker = getTeamDataWorkerClient();
-    if (worker.isAvailable()) {
-      try {
-        page = await worker.getMessagesPage(teamName, { cursor, limit });
-        scanNotifications(page);
-        return page;
-      } catch (workerErr) {
-        throwIfFatalTeamDataWorkerFailure('teams:getMessagesPage', workerErr);
-        logger.warn(
-          `[teams:getMessagesPage] worker failed, falling back: ${getWorkerErrorMessage(workerErr)}`
-        );
-      }
-    }
-    noteHeavyTeamDataWorkerFallback('teams:getMessagesPage');
-    page = await getTeamDataService().getMessagesPage(teamName, { cursor, limit });
-    scanNotifications(page);
-    return page;
-  });
-}
+const handleGetMessagesPage = createMessagesPageHandler({
+  getService: getTeamDataService,
+  getLiveMessages: (teamName) => getTeamMessagingApi().getLiveLeadProcessMessages(teamName),
+  withLiveOverlay: getNewestMessagesPageWithLiveOverlay,
+  wrap: wrapTeamHandler,
+  noteFallback: noteHeavyTeamDataWorkerFallback,
+});
 
 async function handleGetMemberActivityMeta(
   _event: IpcMainInvokeEvent,
@@ -3381,6 +3316,9 @@ async function handleCreateTask(
   if (!validatedDescriptionTaskRefs.valid) {
     return { success: false, error: validatedDescriptionTaskRefs.error };
   }
+  if (payload.groupChatId !== undefined && typeof payload.groupChatId !== 'string') {
+    return { success: false, error: 'groupChatId must be a UUID string' };
+  }
   if (payload.owner !== undefined) {
     const validatedOwner = validateMemberName(payload.owner);
     if (!validatedOwner.valid) {
@@ -3427,6 +3365,7 @@ async function handleCreateTask(
       ...(command ? { command } : {}),
       subject: payload.subject!.trim(),
       description: payload.description?.trim(),
+      groupChatId: payload.groupChatId,
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
       related: payload.related,
@@ -4880,7 +4819,11 @@ async function handleUpdateTaskFields(
   if (!fields || typeof fields !== 'object') {
     return { success: false, error: 'fields must be an object' };
   }
-  const { subject, description } = fields as { subject?: unknown; description?: unknown };
+  const { subject, description, groupChatId } = fields as {
+    subject?: unknown;
+    description?: unknown;
+    groupChatId?: unknown;
+  };
   if (subject !== undefined) {
     if (typeof subject !== 'string') return { success: false, error: 'subject must be a string' };
     if (subject.trim().length === 0) return { success: false, error: 'subject cannot be empty' };
@@ -4891,9 +4834,14 @@ async function handleUpdateTaskFields(
     return { success: false, error: 'description must be a string' };
   }
 
-  const validFields: { subject?: string; description?: string } = {};
+  if (groupChatId !== undefined && groupChatId !== null && typeof groupChatId !== 'string') {
+    return { success: false, error: 'groupChatId must be a UUID string or null' };
+  }
+  const validFields: TaskFieldUpdates = {};
   if (typeof subject === 'string') validFields.subject = subject.trim();
   if (typeof description === 'string') validFields.description = description;
+  if (groupChatId === null || typeof groupChatId === 'string')
+    validFields.groupChatId = groupChatId;
 
   if (Object.keys(validFields).length === 0) {
     return { success: false, error: 'At least one field must be provided' };
@@ -4908,6 +4856,7 @@ async function handleUpdateTaskFields(
       const changedParts: string[] = [];
       if (validFields.subject) changedParts.push('title');
       if (validFields.description !== undefined) changedParts.push('description');
+      if (validFields.groupChatId !== undefined) changedParts.push('group chat');
       const message =
         `Task #${tid} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
         `New title: "${validFields.subject ?? '(unchanged)'}".`;

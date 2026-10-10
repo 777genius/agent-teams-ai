@@ -47,7 +47,6 @@ import { createDraftTeamConfig } from './createDraftTeamConfig';
 import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
-import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
 import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
@@ -59,12 +58,15 @@ import {
   isControllerTaskNotFoundError,
 } from './taskCreationIdempotency';
 import {
+  assertTaskGroupChatAssociation,
+  type TaskGroupChatCatalog,
+} from './taskGroupChatAssociation';
+import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
 import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
-import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -75,6 +77,7 @@ import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
+import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
@@ -106,6 +109,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TaskRef,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -438,6 +442,7 @@ export class TeamDataService {
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -650,6 +655,10 @@ export class TeamDataService {
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
+  }
+
+  setTaskGroupChatCatalog(catalog: TaskGroupChatCatalog): void {
+    this.taskGroupChatCatalog = catalog;
   }
 
   setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
@@ -1653,36 +1662,18 @@ export class TeamDataService {
    */
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
-  ): Promise<MessagesPage> {
-    const liveMessages = capMessagesPageLiveOverlay(options.liveMessages);
-    const pageOptions =
-      liveMessages.length > 0
-        ? {
-            ...options,
-            liveMessages,
-          }
-        : {
-            cursor: options.cursor,
-            limit: options.limit,
-          };
-    const page = await this.messageFeedService.getPage(teamName, pageOptions);
-    if (options.cursor || liveMessages.length === 0) {
-      return {
-        messages: page.messages,
-        nextCursor: page.nextCursor,
-        hasMore: page.hasMore,
-        feedRevision: page.feedRevision,
-      };
+    options: {
+      cursor?: string | null;
+      limit: number;
+      liveMessages?: InboxMessage[];
+      groupChatId?: string;
     }
-
-    return mergeLiveLeadProcessMessagesPage({
-      durableMessages: page.durableWindowMessages,
-      liveMessages,
-      limit: options.limit,
-      feedRevision: page.feedRevision,
-      durableHasMoreAfterWindow: page.durableHasMoreAfterWindow,
-    });
+  ): Promise<MessagesPage> {
+    return readTeamMessagesPage(
+      { inboxReader: this.inboxReader, messageFeedService: this.messageFeedService },
+      teamName,
+      options
+    );
   }
 
   async getMessageFeed(
@@ -2156,6 +2147,7 @@ export class TeamDataService {
     const shouldStart = Boolean(request.owner && request.startImmediately === true);
     const commandPayload: Record<string, unknown> = {
       subject: request.subject,
+      ...(request.groupChatId !== undefined ? { groupChatId: request.groupChatId } : {}),
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
         ? { descriptionTaskRefs: request.descriptionTaskRefs }
@@ -2200,6 +2192,12 @@ export class TeamDataService {
               idempotencyKey
             ),
           create: async (input) => {
+            await assertTaskGroupChatAssociation(
+              teamName,
+              input.groupChatId,
+              undefined,
+              this.taskGroupChatCatalog
+            );
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({
               ...input,
@@ -2212,6 +2210,12 @@ export class TeamDataService {
       task = commandResult.task;
       createdInAttempt = commandResult.createdInAttempt;
     } else {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        request.groupChatId,
+        undefined,
+        this.taskGroupChatCatalog
+      );
       const projectPath = await this.readTaskCreateProjectPath(teamName);
       task = taskBoard.createTask({
         ...commandPayload,
@@ -2473,9 +2477,18 @@ export class TeamDataService {
   async updateTaskFields(
     teamName: string,
     taskId: string,
-    fields: { subject?: string; description?: string }
+    fields: TaskFieldUpdates
   ): Promise<void> {
-    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
+    const taskBoard = this.getTaskBoard(teamName);
+    if (fields.groupChatId !== undefined && fields.groupChatId !== null) {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        fields.groupChatId,
+        (taskBoard.getTask(taskId) as TeamTask).groupChatId,
+        this.taskGroupChatCatalog
+      );
+    }
+    taskBoard.updateTaskFields(taskId, fields);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2597,7 +2610,7 @@ export class TeamDataService {
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = this.getController(teamName).messages.sendMessage({
+    const result = (await this.getController(teamName).messages.sendMessageAsync({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
@@ -2622,7 +2635,7 @@ export class TeamDataService {
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
-    }) as SendMessageResult;
+    })) as SendMessageResult;
     this.invalidateMessageFeed(teamName);
     return result;
   }

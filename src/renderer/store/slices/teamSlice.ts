@@ -214,6 +214,7 @@ import type {
   SendMessageResult,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamGetDataOptions,
@@ -1474,6 +1475,14 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
   launchParamsByTeam: Record<string, TeamLaunchParams>;
   kanbanFilterQuery: string | null;
+  groupTaskNavigation: {
+    token: string;
+    contextId: string;
+    teamName: string;
+    groupChatId: string;
+  } | null;
+  showGroupTasks: (teamName: string, groupChatId: string) => void;
+  consumeGroupTaskNavigation: (token: string) => void;
   provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
   teamManagementNoticeByTeam: Record<string, TeamManagementCommittedChange>;
@@ -1558,11 +1567,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
+  updateTaskFields: (teamName: string, taskId: string, fields: TaskFieldUpdates) => Promise<void>;
   addingComment: boolean;
   addCommentError: string | null;
   addTaskComment: (
@@ -1949,6 +1954,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
   kanbanFilterQuery: null,
+  groupTaskNavigation: null,
+  showGroupTasks: (teamName, groupChatId) => {
+    if (!teamName.trim() || !groupChatId.trim()) return;
+    set({
+      groupTaskNavigation: {
+        token: crypto.randomUUID(),
+        contextId: get().activeContextId,
+        teamName,
+        groupChatId,
+      },
+      kanbanFilterQuery: null,
+    });
+    get().openTeamTab(teamName);
+  },
+  consumeGroupTaskNavigation: (token) => {
+    if (get().groupTaskNavigation?.token === token) set({ groupTaskNavigation: null });
+  },
   globalTaskDetail: null,
   pendingMemberProfile: null,
   pendingTeamSectionFocus: null,
@@ -3706,11 +3728,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await get().refreshTeamData(teamName);
   },
 
-  updateTaskFields: async (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => {
+  updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
     await unwrapIpc('team:updateTaskFields', () =>
       api.teams.updateTaskFields(teamName, taskId, fields)
     );

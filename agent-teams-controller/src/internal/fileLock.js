@@ -260,4 +260,30 @@ function withFileLockSync(filePath, fn, options = {}) {
   }
 }
 
-module.exports = { withFileLockSync };
+// Yield while acquiring so async writers in this process can complete and release.
+async function withFileLock(filePath, fn, options = {}) {
+  const resolvedOptions = resolveLockOptions(options);
+  const lockPath = `${filePath}.lock`;
+  const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
+  const token = randomUUID();
+
+  while (!tryAcquire(lockPath, token)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`File lock timeout: ${filePath}`);
+    }
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now()))
+      )
+    );
+  }
+
+  try {
+    return await fn();
+  } finally {
+    releaseLock(lockPath, token);
+  }
+}
+
+module.exports = { withFileLock, withFileLockSync };

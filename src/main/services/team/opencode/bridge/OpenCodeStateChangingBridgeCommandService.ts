@@ -61,6 +61,8 @@ export interface OpenCodeBridgeHandshakePort {
     selectedModel?: string | null;
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
+    teamName?: string;
+    memberName?: string;
     laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake>;
 }

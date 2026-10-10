@@ -735,6 +735,37 @@
     }
   },
   "messages": {
+    "groups": {
+      "mentions": "{{count}} mentions of you",
+      "create": "Create group chat",
+      "description": "Choose at least two agents. You are included automatically.",
+      "name": "Chat name",
+      "autoInclude": "Automatically add new members",
+      "minimum": "Select at least two agents.",
+      "creating": "Creating…",
+      "retryCreate": "Retry creation",
+      "unavailable": "Chat unavailable",
+      "message": "Message this group",
+      "archivedHint": "This chat is archived. Restore it to send messages.",
+      "restartHint": "All participants must be running a compatible runtime before sending.",
+      "unknownDelivery": "Saved. Delivery status is unknown.",
+      "sending": "Sending…",
+      "retrySend": "Retry the same message",
+      "send": "Send",
+      "archived": "Archived chats",
+      "restore": "Restore chat",
+      "archive": "Archive chat",
+      "delivery": {
+        "queued": "queued",
+        "accepted": "accepted",
+        "failed": "failed",
+        "unknown": "unknown",
+        "skipped": "skipped"
+      },
+      "recipient": "To {{name}}",
+      "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
+      "showTasksOnBoard": "Show tasks on board"
+    },
     "actions": {
       "toLatest": "To latest",
       "bottomSheetActions": "Message bottom sheet actions",
@@ -1289,6 +1320,14 @@
       "message": "Move task #{{taskId}} to trash?",
       "confirmLabel": "Delete",
       "cancelLabel": "Cancel"
+    },
+    "groupChat": {
+      "label": "Group chat",
+      "none": "None",
+      "archived": " (archived)",
+      "unavailable": "Unavailable group ({{id}})",
+      "loading": "Group ({{id}})",
+      "catalogError": "Group chats could not be loaded. You can still remove the current link."
     }
   },
   "editor": {
@@ -1778,7 +1817,9 @@
     "recipient": {
       "select": "Select...",
       "searchPlaceholder": "Search...",
-      "noResults": "No results"
+      "noResults": "No results",
+      "all": "All",
+      "broadcastTextOnly": "Plain text to all agents. Attachments and action modes are available for a single recipient."
     },
     "actions": {
       "voiceToText": "Voice to text",
@@ -2491,7 +2532,9 @@
       "teammate": "Teammate",
       "unassigned": "(unassigned)",
       "column": "Column",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "group": "Group chat",
+      "allGroups": "All groups"
     },
     "board": {
       "addTask": "Add task",

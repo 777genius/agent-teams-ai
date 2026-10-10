@@ -152,6 +152,7 @@ export async function runDeterministicCreateRunFlow<
     largeTeamWarning,
     anthropicApiKeyHelperLease,
   } = createSetup;
+  shellEnv.CLAUDE_CODE_BOOTSTRAP_RUN_ID = runId;
   const run = ports.createProvisioningRun({
     runId,
     teamName: request.teamName,

@@ -87,6 +87,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -141,6 +142,7 @@ import type { OrganizationsElectronApi } from '@features/organizations/contracts
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
@@ -492,11 +494,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   ) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
+  updateTaskFields: (teamName: string, taskId: string, fields: TaskFieldUpdates) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
@@ -859,6 +857,7 @@ export interface ElectronAPI
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
+  teamGroupChats: TeamGroupChatsAPI;
   announcements: AnnouncementsApi;
   externalAgentConnection: ExternalAgentConnectionApi;
   startup?: AppStartupAPI;

@@ -10,6 +10,7 @@ import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
+import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
@@ -375,6 +376,7 @@ import type {
   TaskChangeRequestOptions,
   TaskChangeSetV2,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -512,6 +514,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
@@ -1022,7 +1025,7 @@ const electronAPI: ElectronAPI = {
     },
     getMessagesPage: async (
       teamName: string,
-      options?: { cursor?: string | null; limit?: number }
+      options?: { cursor?: string | null; limit?: number; groupChatId?: string }
     ) => {
       return invokeIpcWithResult<MessagesPage>(TEAM_GET_MESSAGES_PAGE, teamName, options);
     },
@@ -1059,11 +1062,7 @@ const electronAPI: ElectronAPI = {
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },
-    updateTaskFields: async (
-      teamName: string,
-      taskId: string,
-      fields: { subject?: string; description?: string }
-    ) => {
+    updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_FIELDS, teamName, taskId, fields);
     },
     startTask: async (teamName: string, taskId: string) => {
@@ -1888,7 +1887,8 @@ const electronAPI: ElectronAPI = {
   },
 
   // ===== Editor API =====
-  editor: { ...createDocumentPreviewBridge(),
+  editor: {
+    ...createDocumentPreviewBridge(),
     open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
     close: () => invokeIpcWithResult<void>(EDITOR_CLOSE),
     readDir: (dirPath: string, maxEntries?: number) =>
