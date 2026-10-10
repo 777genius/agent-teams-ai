@@ -12,9 +12,9 @@ import { createOpenCodeBridgeClientIdentity, OpenCodeBridgeCommandHandshakePort 
 import { OpenCodeReadinessBridge } from './OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
+import type { TeamHttpMemberDiagnosticsApi } from '../../contracts/TeamProvisioningApis';
 import type { OpenCodeBridgeCommandClient } from './OpenCodeBridgeCommandClient';
 import type { OpenCodeReadinessBridgeOptions } from './OpenCodeReadinessBridge';
-import type { TeamAgentRuntimeSnapshot } from '@shared/types';
 
 /** One runtime handshake identity owns readiness, commands and group run proof. */
 export function composeOpenCodeDesktopBridge(deps: {
@@ -23,7 +23,7 @@ export function composeOpenCodeDesktopBridge(deps: {
   teamsBasePath: string;
   identity: Parameters<typeof createOpenCodeBridgeClientIdentity>[0];
   readOpenCodeRuntimeStatus: OpenCodeReadinessBridgeOptions['readOpenCodeRuntimeStatus'];
-  snapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
+  runtimeSnapshots: TeamHttpMemberDiagnosticsApi;
 }) {
   const clientIdentity = createOpenCodeBridgeClientIdentity(deps.identity);
   const handshake = new OpenCodeBridgeCommandHandshakePort({ bridge: deps.bridge, clientIdentity });
@@ -44,7 +44,14 @@ export function composeOpenCodeDesktopBridge(deps: {
       readOpenCodeRuntimeStatus: deps.readOpenCodeRuntimeStatus,
     }),
     groupRun: createOpenCodeGroupChatRunGetter({
-      clientIdentity, handshake, manifest, snapshot: deps.snapshot,
+      clientIdentity, handshake, manifest,
+      snapshot: async (teamName) => {
+        const memberSpawnStatuses =
+          await deps.runtimeSnapshots.getMemberSpawnStatusesReadOnly(teamName);
+        return deps.runtimeSnapshots.getTeamAgentRuntimeSnapshotReadOnly(teamName, {
+          memberSpawnStatuses,
+        });
+      },
     }),
   };
 }

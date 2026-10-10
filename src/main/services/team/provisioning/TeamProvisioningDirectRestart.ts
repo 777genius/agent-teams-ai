@@ -20,11 +20,25 @@ import { resolveAnthropicRuntimeBackendFromEnv } from '../../runtime/providerRun
 
 import type { TeamProviderId } from '@shared/types';
 
+export function applyDirectMemberRuntimeEnv(
+  env: NodeJS.ProcessEnv,
+  settingsPath: string | null,
+  runId: string
+): void {
+  env.CLAUDE_CODE_BOOTSTRAP_RUN_ID = runId;
+  if (settingsPath) {
+    env.CLAUDE_TEAM_RUNTIME_SETTINGS_PATH = settingsPath;
+  } else {
+    delete env.CLAUDE_TEAM_RUNTIME_SETTINGS_PATH;
+  }
+}
+
 const DIRECT_TMUX_RESTART_ENV_KEYS = [
   'PATH',
   'CLAUDE_CONFIG_DIR',
   'CLAUDE_TEAM_CONTROL_URL',
   'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH',
+  'CLAUDE_CODE_BOOTSTRAP_RUN_ID',
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
   'CLAUDE_CODE_USE_OPENAI',

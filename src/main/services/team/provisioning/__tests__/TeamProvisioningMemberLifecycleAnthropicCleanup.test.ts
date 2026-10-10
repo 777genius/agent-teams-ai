@@ -167,7 +167,7 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
         TeamProvisioningMemberLifecycleHost['buildPrimaryOwnedMemberSpecForRuntime']
       >[0]) => configuredMember,
       buildProvisioningEnv: vi.fn(async () => ({
-        env: {},
+        env: { CLAUDE_CODE_BOOTSTRAP_RUN_ID: 'stale-run' },
         providerArgs: [],
         anthropicApiKeyHelper: { directory: helperDirectory },
       })),
@@ -273,6 +273,11 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       });
 
       expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+      const command = vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0][1];
+      const scriptPath = command.slice(9, -1).replace(/'\\''/g, "'");
+      const script = fs.readFileSync(scriptPath, 'utf8');
+      expect(script).toContain(`CLAUDE_CODE_BOOTSTRAP_RUN_ID='${input.run.runId}'`);
+      expect(script).not.toContain('stale-run');
       expect(fs.existsSync(helperDirectory)).toBe(true);
     }
   );
@@ -302,47 +307,64 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     expect(fs.existsSync(helperDirectory)).toBe(false);
   });
 
-  it('queues the native bootstrap marker when a direct process restart has app-managed context', async () => {
-    const helperDirectory = createHelperDirectory();
-    const input = createInput();
-    const host = createHost(helperDirectory, input.run);
-    fs.mkdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'), {
-      recursive: true,
-    });
-    const child = Object.assign(new EventEmitter(), {
-      pid: 5678,
-      stdin: Object.assign(new EventEmitter(), { unref: vi.fn() }),
-      stdout: { pipe: vi.fn(), unref: vi.fn() },
-      stderr: { pipe: vi.fn(), unref: vi.fn() },
-      unref: vi.fn(),
-    });
-    vi.mocked(spawnCli).mockReturnValue(child as never);
-    const controller = createController(host);
+  it.each([
+    ['anthropic', 'manual_restart'],
+    ['codex', 'member_added'],
+  ] as const)(
+    'queues the native bootstrap marker with current run identity for %s %s',
+    async (providerId, operation) => {
+      const helperDirectory = createHelperDirectory();
+      const input = createInput();
+      input.configuredMember.providerId = providerId;
+      input.run.request.providerId = providerId;
+      input.operation = operation;
+      const host = createHost(helperDirectory, input.run);
+      fs.mkdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'), {
+        recursive: true,
+      });
+      const child = Object.assign(new EventEmitter(), {
+        pid: 5678,
+        stdin: Object.assign(new EventEmitter(), { unref: vi.fn() }),
+        stdout: { pipe: vi.fn(), unref: vi.fn() },
+        stderr: { pipe: vi.fn(), unref: vi.fn() },
+        unref: vi.fn(),
+      });
+      vi.mocked(spawnCli).mockReturnValue(child as never);
+      const controller = createController(host);
 
-    await controller.launchDirectProcessMemberRestartInternal(input);
+      await controller.launchDirectProcessMemberRestartInternal(input);
 
-    await vi.waitFor(() => {
-      expect(
-        fs.existsSync(
-          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stdout.log')
-        )
-      ).toBe(true);
-      expect(
-        fs.existsSync(
-          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stderr.log')
-        )
-      ).toBe(true);
-    });
-    expect(host.enqueueDirectRestartPrompt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        memberName: 'alice',
-        prompt: [
-          '<agent_teams_native_app_managed_bootstrap_check>',
-          '</agent_teams_native_app_managed_bootstrap_check>',
-        ].join('\n'),
-      })
-    );
-    child.emit('close', 0, null);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-  });
+      expect(spawnCli).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({ CLAUDE_CODE_BOOTSTRAP_RUN_ID: input.run.runId }),
+        })
+      );
+
+      await vi.waitFor(() => {
+        expect(
+          fs.existsSync(
+            path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stdout.log')
+          )
+        ).toBe(true);
+        expect(
+          fs.existsSync(
+            path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stderr.log')
+          )
+        ).toBe(true);
+      });
+      expect(host.enqueueDirectRestartPrompt).toHaveBeenCalledWith(
+        expect.objectContaining({
+          memberName: 'alice',
+          prompt: [
+            '<agent_teams_native_app_managed_bootstrap_check>',
+            '</agent_teams_native_app_managed_bootstrap_check>',
+          ].join('\n'),
+        })
+      );
+      child.emit('close', 0, null);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+  );
 });

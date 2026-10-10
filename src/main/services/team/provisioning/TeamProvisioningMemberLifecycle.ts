@@ -41,6 +41,7 @@ import {
   type OpenCodeSecondaryRetryCandidate,
 } from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
 import {
+  applyDirectMemberRuntimeEnv,
   buildDirectTmuxRestartLauncher,
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
@@ -125,7 +126,6 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
-const CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV = 'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH';
 const TEAMMATE_RUNTIME_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME';
 const TEAMMATE_RUNTIME_EVENTS_ENV = 'CLAUDE_CODE_TEAMMATE_RUNTIME_EVENTS_PATH';
 const TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV = 'CLAUDE_CODE_BOOTSTRAP_PROOF_TOKEN';
@@ -159,17 +159,6 @@ function buildMissingCliError(): Error {
     );
   }
   return new Error('Claude CLI not found; install it or provide a valid path');
-}
-
-function applyAppManagedRuntimeSettingsPathEnv(
-  env: NodeJS.ProcessEnv,
-  settingsPath: string | null
-): void {
-  if (settingsPath) {
-    env[CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV] = settingsPath;
-  } else {
-    delete env[CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV];
-  }
 }
 
 async function ensureCwdExists(cwd: string): Promise<void> {
@@ -708,9 +697,10 @@ export class TeamProvisioningMemberLifecycleController {
         includeAnthropicHelper: providerId === 'anthropic',
         contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
       });
-      applyAppManagedRuntimeSettingsPathEnv(
+      applyDirectMemberRuntimeEnv(
         provisioningEnv.env,
-        runtimeArgsPlan.appManagedSettingsPath
+        runtimeArgsPlan.appManagedSettingsPath,
+        input.run.runId
       );
 
       const runtimeArgs = mergeJsonSettingsArgs([
@@ -939,9 +929,10 @@ export class TeamProvisioningMemberLifecycleController {
         includeAnthropicHelper: providerId === 'anthropic',
         contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
       });
-      applyAppManagedRuntimeSettingsPathEnv(
+      applyDirectMemberRuntimeEnv(
         provisioningEnv.env,
-        runtimeArgsPlan.appManagedSettingsPath
+        runtimeArgsPlan.appManagedSettingsPath,
+        input.run.runId
       );
 
       const runtimeArgs = mergeJsonSettingsArgs([
