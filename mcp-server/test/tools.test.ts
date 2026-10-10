@@ -30,6 +30,28 @@ function parseJsonToolResult(result: unknown) {
 }
 
 describe('agent-teams-mcp tools', () => {
+  it('registers usable group tools with required member and explicit post identity', () => {
+    const catalog = collectTools();
+    expect(
+      catalog.get('group_chat_list')?.parameters?.safeParse({ teamName: 'sandbox', from: 'alice' })
+        .success
+    ).toBe(true);
+    expect(
+      catalog
+        .get('group_chat_send')
+        ?.parameters?.safeParse({ teamName: 'sandbox', from: 'alice', text: 'Hello' }).success
+    ).toBe(false);
+    expect(
+      catalog.get('group_chat_send')?.parameters?.safeParse({
+        teamName: 'sandbox',
+        from: 'alice',
+        text: 'Hello',
+        groupChatId: '4e8e1100-069d-4d95-8553-56b53b0886a3',
+        messageId: '5f23aa08-485e-40d5-85b0-0ed71a7b8dad',
+      }).success
+    ).toBe(true);
+  });
+
   const tools = collectTools();
   const tempDirs: string[] = [];
 

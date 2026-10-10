@@ -212,6 +212,9 @@ jobs:
           set -o pipefail
           node --test test/scripts/nodeForgeSecurity.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
 
+      - name: Build MCP server for root integration tests
+        run: pnpm --filter agent-teams-mcp build
+
       - name: Test root shard
         run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4
 

@@ -47,7 +47,6 @@ import { createDraftTeamConfig } from './createDraftTeamConfig';
 import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
-import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
 import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
@@ -64,7 +63,6 @@ import {
 } from './TeamBootstrapStateReader';
 import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
 import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
-import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -75,6 +73,7 @@ import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
+import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
@@ -1653,36 +1652,18 @@ export class TeamDataService {
    */
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
-  ): Promise<MessagesPage> {
-    const liveMessages = capMessagesPageLiveOverlay(options.liveMessages);
-    const pageOptions =
-      liveMessages.length > 0
-        ? {
-            ...options,
-            liveMessages,
-          }
-        : {
-            cursor: options.cursor,
-            limit: options.limit,
-          };
-    const page = await this.messageFeedService.getPage(teamName, pageOptions);
-    if (options.cursor || liveMessages.length === 0) {
-      return {
-        messages: page.messages,
-        nextCursor: page.nextCursor,
-        hasMore: page.hasMore,
-        feedRevision: page.feedRevision,
-      };
+    options: {
+      cursor?: string | null;
+      limit: number;
+      liveMessages?: InboxMessage[];
+      groupChatId?: string;
     }
-
-    return mergeLiveLeadProcessMessagesPage({
-      durableMessages: page.durableWindowMessages,
-      liveMessages,
-      limit: options.limit,
-      feedRevision: page.feedRevision,
-      durableHasMoreAfterWindow: page.durableHasMoreAfterWindow,
-    });
+  ): Promise<MessagesPage> {
+    return readTeamMessagesPage(
+      { inboxReader: this.inboxReader, messageFeedService: this.messageFeedService },
+      teamName,
+      options
+    );
   }
 
   async getMessageFeed(
@@ -2597,7 +2578,7 @@ export class TeamDataService {
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = this.getController(teamName).messages.sendMessage({
+    const result = (await this.getController(teamName).messages.sendMessageAsync({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
@@ -2622,7 +2603,7 @@ export class TeamDataService {
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
-    }) as SendMessageResult;
+    })) as SendMessageResult;
     this.invalidateMessageFeed(teamName);
     return result;
   }

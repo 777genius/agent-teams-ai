@@ -220,6 +220,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     readonly: true,
     type: 'TeamAttachmentStore',
   },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'groupChats',
+    readonly: false,
+    type: 'ProvisioningGroupChatCallbacks',
+  },
 ] as const;
 
 function countSourceLines(source: string): number {

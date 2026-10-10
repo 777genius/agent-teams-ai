@@ -6,6 +6,7 @@ import {
 } from './OpenCodeBridgeCommandNames';
 
 import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
+import type { OpenCodeGroupChatRunProof, OpenCodeGroupDeliveryEnvelope } from './OpenCodeGroupChatProtocol';
 import type { NativeAgentAttachmentMimeType } from '@features/agent-attachments/contracts';
 import type {
   EffortLevel,
@@ -182,7 +183,8 @@ export interface OpenCodeCleanupHostsCommandData {
   diagnostics: string[];
 }
 
-export interface OpenCodeSendMessageCommandBody {
+
+export interface OpenCodeSendMessageCommandBody extends OpenCodeGroupDeliveryEnvelope {
   runId?: string;
   laneId: string;
   teamId: string;
@@ -305,7 +307,7 @@ export interface OpenCodeCommandStatusCommandData {
   diagnostics: string[];
 }
 
-export interface OpenCodeObserveMessageDeliveryCommandBody {
+export interface OpenCodeObserveMessageDeliveryCommandBody extends OpenCodeGroupDeliveryEnvelope {
   runId?: string;
   laneId: string;
   teamId: string;
@@ -467,6 +469,7 @@ export interface OpenCodeBridgePeerIdentity {
     opencodeDeliveryAcceptanceContractVersion?: number;
     opencodeFilePartsContractVersion?: number;
     expectedBehaviorFingerprintSchemaVersion?: number;
+    groupChatProtocolVersion?: 1;
   };
   runtime: {
     providerId: 'opencode';
@@ -476,6 +479,7 @@ export interface OpenCodeBridgePeerIdentity {
     capabilitySnapshotId: string | null;
     runtimeStoreManifestHighWatermark: number | null;
     activeRunId: string | null;
+    groupChatRunProof?: OpenCodeGroupChatRunProof;
   };
   featureFlags: {
     opencodeTeamLaunch: boolean;

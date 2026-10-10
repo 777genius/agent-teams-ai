@@ -50,6 +50,9 @@ export function isComposerWorkingSummary(value: unknown): value is ComposerWorki
   const targetIsValid =
     target?.kind === 'team-feed' ||
     (target?.kind === 'direct' && typeof target.participant === 'string') ||
+    (target?.kind === 'group' &&
+      typeof target.groupChatId === 'string' &&
+      target.groupChatId.length > 0) ||
     (target?.kind === 'cross-team' &&
       typeof target.toTeam === 'string' &&
       (target.toMember === null || typeof target.toMember === 'string'));

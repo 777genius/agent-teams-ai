@@ -164,6 +164,7 @@ declare module 'agent-teams-controller' {
     appendSentMessage(flags: Record<string, unknown>): unknown;
     lookupMessage(messageId: string): { message: Record<string, unknown>; store: string };
     sendMessage(flags: Record<string, unknown>): unknown;
+    sendMessageAsync(flags: Record<string, unknown>): Promise<unknown>;
   }
 
   export interface ControllerProcessApi {
@@ -223,6 +224,11 @@ declare module 'agent-teams-controller' {
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
+    groupChats: {
+      listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
+      sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+    };
+    workSync: ControllerWorkSyncApi;
   }
 
   /** Context-free protocol text builders, shared across lead and member prompts. */

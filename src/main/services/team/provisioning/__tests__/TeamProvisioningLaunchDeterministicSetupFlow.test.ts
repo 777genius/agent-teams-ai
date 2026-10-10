@@ -229,6 +229,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     expect(result.shellEnv).toMatchObject({
       BASE_ENV: '1',
       CODEX_TURN_SETTLED: '1',
+      CLAUDE_CODE_BOOTSTRAP_RUN_ID: result.runId,
     });
     expect(result.shellEnv.ANTHROPIC_API_KEY).toBeUndefined();
     expect(result.shellEnv.ANTHROPIC_AUTH_TOKEN).toBeUndefined();

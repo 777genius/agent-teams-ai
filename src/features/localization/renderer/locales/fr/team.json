@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Créer une discussion de groupe",
+      "description": "Choisissez au moins deux agents. Vous êtes inclus automatiquement.",
+      "name": "Nom de la discussion",
+      "autoInclude": "Ajouter automatiquement les nouveaux membres",
+      "minimum": "Sélectionnez au moins deux agents.",
+      "creating": "Création…",
+      "retryCreate": "Réessayer la création",
+      "unavailable": "Discussion indisponible",
+      "message": "Écrire à ce groupe",
+      "archivedHint": "Cette discussion est archivée. Restaurez-la pour envoyer des messages.",
+      "restartHint": "Tous les participants doivent avoir un environnement d’exécution compatible actif pour envoyer des messages.",
+      "unknownDelivery": "Enregistré. État de livraison inconnu.",
+      "sending": "Envoi…",
+      "retrySend": "Renvoyer le même message",
+      "send": "Envoyer",
+      "archived": "Discussions archivées",
+      "restore": "Restaurer la discussion",
+      "archive": "Archiver la discussion",
+      "delivery": {
+        "queued": "en attente",
+        "accepted": "accepté",
+        "failed": "échec",
+        "unknown": "inconnu",
+        "skipped": "ignoré"
+      }
+    },
     "actions": {
       "toLatest": "Aller aux plus récents",
       "bottomSheetActions": "Message actions de la feuille de bas",

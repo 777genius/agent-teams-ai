@@ -11,6 +11,7 @@ const COMPOSER_V2_PREFIX = 'composer:v2';
 
 export interface ResolveComposerDraftTargetInput {
   readonly lockedRecipient?: string;
+  readonly groupChatId?: string;
   readonly selectedTeam: string | null;
   readonly crossTeamRecipient: string | null;
   readonly groupChatSelected: boolean;
@@ -19,11 +20,15 @@ export interface ResolveComposerDraftTargetInput {
 
 export function resolveComposerDraftTarget({
   lockedRecipient,
+  groupChatId,
   selectedTeam,
   crossTeamRecipient,
   groupChatSelected,
   localRecipient,
 }: ResolveComposerDraftTargetInput): ComposerDraftTarget {
+  if (groupChatId) {
+    return { kind: 'group', groupChatId };
+  }
   if (lockedRecipient) {
     return {
       kind: 'direct',
@@ -49,6 +54,9 @@ export function resolveComposerDraftTarget({
 export function composerDraftTargetKey(target: ComposerDraftTarget): string {
   if (target.kind === 'team-feed') {
     return conversationScopeKey(TEAM_FEED_SCOPE);
+  }
+  if (target.kind === 'group') {
+    return conversationScopeKey(target);
   }
   if (target.kind === 'direct') {
     return conversationScopeKey(createDirectScope(target.participant));
@@ -115,12 +123,9 @@ export function composerWorkingKeyPrefix(contextId: string, teamName: string): s
 }
 
 export function composerNamespacePrefix(contextId: string, teamName: string): string {
-  return [
-    COMPOSER_V2_PREFIX,
-    encodeURIComponent(contextId),
-    encodeURIComponent(teamName),
-    '',
-  ].join(':');
+  return [COMPOSER_V2_PREFIX, encodeURIComponent(contextId), encodeURIComponent(teamName), ''].join(
+    ':'
+  );
 }
 
 export function composerDraftNamespace(address: ComposerDraftAddress): string {
@@ -137,6 +142,10 @@ export function sameComposerDraftAddress(
 export function describeComposerDraftTarget(target: ComposerDraftTarget): string {
   if (target.kind === 'team-feed') return 'Group';
   if (target.kind === 'direct') return target.participant;
+  if (target.kind === 'group')
+    return typeof target.groupChatName === 'string' && target.groupChatName.trim()
+      ? target.groupChatName.trim()
+      : 'Group chat';
   return target.toMember ? `${target.toTeam}/${target.toMember}` : target.toTeam;
 }
 

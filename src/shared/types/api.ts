@@ -141,6 +141,7 @@ import type { OrganizationsElectronApi } from '@features/organizations/contracts
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
@@ -859,6 +860,7 @@ export interface ElectronAPI
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
+  teamGroupChats: TeamGroupChatsAPI;
   announcements: AnnouncementsApi;
   externalAgentConnection: ExternalAgentConnectionApi;
   startup?: AppStartupAPI;

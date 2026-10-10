@@ -28,10 +28,14 @@ function memberNames(members: readonly { name: string }[]): Set<string> {
 
 function isScopeAvailable(
   scope: ConversationScope,
-  members: readonly { name: string; agentType?: unknown; role?: unknown }[]
+  members: readonly { name: string; agentType?: unknown; role?: unknown }[],
+  groupChatIds?: readonly string[]
 ): boolean {
   if (scope.kind === 'team-feed') {
     return true;
+  }
+  if (scope.kind === 'group') {
+    return groupChatIds === undefined || groupChatIds.includes(scope.groupChatId);
   }
   if (members.length === 0) {
     return true;
@@ -46,11 +50,16 @@ function isScopeAvailable(
 
 export function useTeamConversationSurface(args: {
   teamName: string;
+  contextId?: string;
   members: readonly { name: string; agentType?: unknown; role?: unknown }[];
   position: string;
+  groupChatIds?: readonly string[];
   onScopeChange?: () => void;
 }): TeamConversationSurfaceState {
-  const initial = getTeamMessagesSidebarUiState(args.teamName);
+  const stateKey = args.contextId
+    ? JSON.stringify([args.contextId, args.teamName])
+    : args.teamName;
+  const initial = getTeamMessagesSidebarUiState(stateKey);
   const [surface, setSurface] = useState<ConversationSurface>(
     () => initial.conversationSurface ?? 'list'
   );
@@ -60,25 +69,26 @@ export function useTeamConversationSurface(args: {
   const [threadOpenedAt, setThreadOpenedAt] = useState(() =>
     (initial.conversationSurface ?? 'list') === 'thread' ? Date.now() : 0
   );
-  const lastTeamRef = useRef(args.teamName);
+  const lastTeamRef = useRef(stateKey);
 
   useEffect(() => {
-    if (lastTeamRef.current !== args.teamName) {
-      lastTeamRef.current = args.teamName;
-      const next = getTeamMessagesSidebarUiState(args.teamName);
+    if (lastTeamRef.current !== stateKey) {
+      lastTeamRef.current = stateKey;
+      const next = getTeamMessagesSidebarUiState(stateKey);
       const nextSurface = next.conversationSurface ?? 'list';
       const nextScope = next.conversationScope ?? { kind: 'team-feed' };
-      const available = nextSurface !== 'thread' || isScopeAvailable(nextScope, args.members);
+      const available =
+        nextSurface !== 'thread' || isScopeAvailable(nextScope, args.members, args.groupChatIds);
       setSurface(available ? nextSurface : 'list');
       setScope(available ? nextScope : { kind: 'team-feed' });
       setThreadOpenedAt(available && nextSurface === 'thread' ? Date.now() : 0);
       return;
     }
-    if (surface === 'thread' && !isScopeAvailable(scope, args.members)) {
+    if (surface === 'thread' && !isScopeAvailable(scope, args.members, args.groupChatIds)) {
       setSurface('list');
       setScope({ kind: 'team-feed' });
     }
-  }, [args.members, args.teamName, scope, surface]);
+  }, [args.groupChatIds, args.members, scope, stateKey, surface]);
 
   const onScopeChangeRef = useRef(args.onScopeChange);
   useEffect(() => {
@@ -100,7 +110,10 @@ export function useTeamConversationSurface(args: {
   return {
     renderSurface: args.position === 'floating-composer' ? 'thread' : surface,
     navigationSurface: surface,
-    scope: args.position === 'floating-composer' ? { kind: 'team-feed' } : scope,
+    scope:
+      args.position === 'floating-composer' && scope.kind !== 'group'
+        ? { kind: 'team-feed' }
+        : scope,
     openChat,
     backToList,
     threadOpenedAt,

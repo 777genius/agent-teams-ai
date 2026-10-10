@@ -208,6 +208,7 @@ describe('TeamProvisioningCreateDeterministicRunFlow', () => {
             expect(input.mode).toBe('create');
             expect(input.claudePath).toBe('/bin/claude');
             expect(input.shellEnv).toBe(setup.shellEnv);
+            expect(input.shellEnv.CLAUDE_CODE_BOOTSTRAP_RUN_ID).toBe(input.run.runId);
             expect(input.stopAllGenerationAtStart).toBe(3);
           }),
           emitProvisioningCheckpoint: vi.fn((run, message) => {

@@ -24,6 +24,7 @@ export interface GetMessagesPagePayload {
     cursor?: string | null;
     limit: number;
     liveMessages?: InboxMessage[];
+    groupChatId?: string;
   };
 }
 

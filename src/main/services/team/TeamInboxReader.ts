@@ -1,3 +1,4 @@
+import { assertValidGroupInboxRows, copyGroupChatEnvelope } from '@features/team-group-chats/contracts';
 import {
   readInboxWindow,
   TeamHistoryError,
@@ -115,6 +116,7 @@ function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
     summary: typeof row.summary === 'string' ? row.summary : undefined,
     color: typeof row.color === 'string' ? row.color : undefined,
     messageId,
+    ...copyGroupChatEnvelope(row),
     relayOfMessageId: typeof row.relayOfMessageId === 'string' ? row.relayOfMessageId : undefined,
     source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,
     leadSessionId: typeof row.leadSessionId === 'string' ? row.leadSessionId : undefined,
@@ -510,6 +512,12 @@ export class TeamInboxReader {
       return [];
     }
 
+    try {
+      assertValidGroupInboxRows(parsed);
+    } catch {
+      this.deleteCachedMessages(inboxPath);
+      throw new TeamHistoryError('invalid_message');
+    }
     const messages: InboxMessage[] = [];
     for (const item of parsed) {
       const message = normalizeInboxMessageItem(item);
@@ -540,12 +548,15 @@ export class TeamInboxReader {
           assignImpliedInboxRecipient(msg, member);
         }
         return msgs;
-      } catch {
+      } catch (error) {
+        if (error instanceof TeamHistoryError) throw error;
         return [] as InboxMessage[];
       }
     });
 
-    const merged = chunks.flat();
+    const merged = chunks
+      .flat()
+      .filter((message) => !message.groupChatId || message.groupMessageId === message.messageId);
     merged.sort((a, b) => {
       const bt = Date.parse(b.timestamp);
       const at = Date.parse(a.timestamp);
@@ -559,17 +570,19 @@ export class TeamInboxReader {
 
   async getMessagesWindow(
     teamName: string,
-    options: { cursor?: InboxMessageCursor | null; limit: number }
+    options: { cursor?: InboxMessageCursor | null; limit: number; groupChatId?: string }
   ): Promise<InboxMessagesWindow> {
     const inboxDir = path.join(getTeamsBasePath(), teamName, 'inboxes');
     return unwrapInboxWindow(
       await readInboxWindow(
         {
           listMembers: async () =>
-            (await fs.promises.readdir(inboxDir))
-              .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
-              .map((name) => name.replace(/\.json$/, ''))
-              .filter((name) => name !== '*'),
+            options.groupChatId
+              ? ['user']
+              : (await fs.promises.readdir(inboxDir))
+                  .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
+                  .map((name) => name.replace(/\.json$/, ''))
+                  .filter((name) => name !== '*'),
           readMember: async (member): Promise<InboxMemberData> => {
             const inboxPath = path.join(inboxDir, `${member}.json`);
             try {
@@ -585,6 +598,8 @@ export class TeamInboxReader {
               this.deleteCachedMessages(inboxPath);
               if (error instanceof TeamHistoryError) throw error;
               if (error instanceof FileReadTimeoutError) throw new TeamHistoryError('timeout');
+              if (options.groupChatId && (error as NodeJS.ErrnoException).code === 'ENOENT')
+                return { kind: 'raw', raw: '[]' };
               throw new TeamHistoryError(
                 (error as NodeJS.ErrnoException).code === 'ENOENT'
                   ? 'missing_source'

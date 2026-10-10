@@ -31,6 +31,7 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
+import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
@@ -224,6 +225,7 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  get teamGroupChats() { return createHttpTeamGroupChatsAPI(this.baseUrl); }
   externalAgentConnection: ExternalAgentConnectionApi = {
     getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
     retryConnection: () => this.post<ConnectionInfoV1>('/api/app/connection/retry'),

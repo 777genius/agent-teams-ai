@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Unda gumzo la kikundi",
+      "description": "Chagua angalau mawakala wawili. Unajumuishwa kiotomatiki.",
+      "name": "Jina la gumzo",
+      "autoInclude": "Ongeza wanachama wapya kiotomatiki",
+      "minimum": "Chagua angalau mawakala wawili.",
+      "creating": "Inaunda…",
+      "retryCreate": "Jaribu kuunda tena",
+      "unavailable": "Gumzo halipatikani",
+      "message": "Tuma ujumbe kwa kikundi hiki",
+      "archivedHint": "Gumzo hili limehifadhiwa kwenye kumbukumbu. Lirejeshe ili utume ujumbe.",
+      "restartHint": "Washiriki wote lazima wawe na mazingira yanayooana ya utekelezaji yanayoendelea kabla ya kutuma ujumbe.",
+      "unknownDelivery": "Imehifadhiwa. Hali ya uwasilishaji haijulikani.",
+      "sending": "Inatuma…",
+      "retrySend": "Tuma tena ujumbe uleule",
+      "send": "Tuma",
+      "archived": "Mazungumzo yaliyohifadhiwa",
+      "restore": "Rejesha gumzo",
+      "archive": "Hifadhi gumzo kwenye kumbukumbu",
+      "delivery": {
+        "queued": "kwenye foleni",
+        "accepted": "imekubaliwa",
+        "failed": "imeshindwa",
+        "unknown": "haijulikani",
+        "skipped": "imerukwa"
+      }
+    },
     "actions": {
       "toLatest": "Nenda kwa za karibuni",
       "bottomSheetActions": "Vitendo vya karatasi ya chini ya ujumbe",

@@ -1,3 +1,4 @@
+import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
@@ -642,6 +643,7 @@ export class TeamMcpConfigBuilder {
         ...launchSpec.env,
         [MCP_CLAUDE_DIR_ENV]: getClaudeBasePath(),
         ...(controlApiBaseUrl ? { [MCP_CONTROL_URL_ENV]: controlApiBaseUrl } : {}),
+        ...getDesktopMcpChildEnvironment(),
       },
     });
     if (mcpPolicy?.mode === 'strictAllowlist') {

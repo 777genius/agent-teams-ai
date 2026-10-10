@@ -40,7 +40,7 @@ const AGENT_TEAMS_REVIEW_TOOL_NAMES = [
   'review_start',
 ];
 
-const AGENT_TEAMS_MESSAGE_TOOL_NAMES = ['message_send'];
+const AGENT_TEAMS_MESSAGE_TOOL_NAMES = ['message_send', 'group_chat_list', 'group_chat_send'];
 
 const AGENT_TEAMS_CROSS_TEAM_TOOL_NAMES = [
   'cross_team_get_outbox',

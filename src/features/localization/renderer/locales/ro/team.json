@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Creează chat de grup",
+      "description": "Alege cel puțin doi agenți. Ești inclus automat.",
+      "name": "Numele chatului",
+      "autoInclude": "Adaugă automat membri noi",
+      "minimum": "Selectează cel puțin doi agenți.",
+      "creating": "Se creează…",
+      "retryCreate": "Reîncearcă crearea",
+      "unavailable": "Chat indisponibil",
+      "message": "Mesaj către acest grup",
+      "archivedHint": "Acest chat este arhivat. Restaurează-l pentru a trimite mesaje.",
+      "restartHint": "Toți participanții trebuie să aibă un mediu de execuție compatibil pornit pentru a trimite mesaje.",
+      "unknownDelivery": "Salvat. Starea livrării este necunoscută.",
+      "sending": "Se trimite…",
+      "retrySend": "Retrimite același mesaj",
+      "send": "Trimite",
+      "archived": "Chaturi arhivate",
+      "restore": "Restaurează chatul",
+      "archive": "Arhivează chatul",
+      "delivery": {
+        "queued": "în coadă",
+        "accepted": "acceptat",
+        "failed": "eșuat",
+        "unknown": "necunoscut",
+        "skipped": "omis"
+      }
+    },
     "actions": {
       "toLatest": "La cele mai recente",
       "bottomSheetActions": "Acțiuni panou inferior pentru mesaje",

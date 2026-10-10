@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { materializeOpenCodeGroupReply } from '../OpenCodeGroupVisibleReply';
 import {
   createOpenCodeVisibleReplyProofServiceFromHost,
   OpenCodeVisibleReplyProofService,
@@ -7,6 +8,10 @@ import {
   type OpenCodeVisibleReplyProofServiceHost,
 } from '../OpenCodeVisibleReplyProofService';
 
+import type {
+  OpenCodePromptDeliveryLedgerRecord,
+  OpenCodePromptDeliveryLedgerStore,
+} from '../OpenCodePromptDeliveryLedger';
 import type { InboxMessage } from '@shared/types/team';
 
 const ISO = '2026-04-25T10:00:03.000Z';
@@ -105,6 +110,91 @@ describe('OpenCodeVisibleReplyProofService', () => {
     expect(getMessagesFor).toHaveBeenCalledWith('team-a', 'captain');
     expect(proof?.inboxName).toBe('captain');
     expect(proof?.message.messageId).toBe('reply-captain');
+  });
+
+  it('accepts only the originating group canonical reply and never a private or proactive reply', async () => {
+    const service = makeService({
+      messagesByInbox: {
+        user: [
+          runtimeReply({ messageId: 'private', relayOfMessageId: 'physical' }),
+          runtimeReply({
+            messageId: 'other',
+            groupMessageId: 'other',
+            groupChatId: 'other-group',
+            groupChatProtocolVersion: 1,
+            relayOfMessageId: 'physical',
+          }),
+          runtimeReply({
+            messageId: 'canonical',
+            groupMessageId: 'canonical',
+            groupChatId: 'origin-group',
+            groupChatProtocolVersion: 1,
+            relayOfMessageId: 'physical',
+          }),
+        ],
+      },
+    });
+    const proof = await service.findByRelayOfMessageId({
+      teamName: 'team-a',
+      from: 'bob',
+      relayOfMessageId: 'physical',
+      groupChatId: 'origin-group',
+    });
+    expect(proof?.message.messageId).toBe('canonical');
+    const privateProof = await service.findByRelayOfMessageId({
+      teamName: 'team-a',
+      from: 'bob',
+      relayOfMessageId: 'physical',
+    });
+    expect(privateProof?.message.messageId).toBe('private');
+  });
+
+  it('materializes group plaintext through the facade and settles blocked replies without private fallback', async () => {
+    const record = {
+      id: 'ledger',
+      groupChatId: 'origin',
+      inboxMessageId: 'physical',
+      observedAssistantPreview: 'Concrete reply',
+      responseState: 'responded_plain_text',
+      taskRefs: [],
+    } as unknown as OpenCodePromptDeliveryLedgerRecord;
+    const applyDestinationProof = vi.fn(async () => record);
+    const markFailedTerminal = vi.fn(async () => ({
+      ...record,
+      status: 'failed_terminal' as const,
+    }));
+    const ledger = {
+      applyDestinationProof,
+      markFailedTerminal,
+    } as unknown as OpenCodePromptDeliveryLedgerStore;
+    const send = vi.fn(async () => ({
+      saved: true as const,
+      groupChatId: 'origin',
+      messageId: 'reply',
+      statusPersisted: true,
+    }));
+    const input = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      ledger,
+      ledgerRecord: record,
+      send,
+      checkpoint: async () => {},
+      messageId: 'reply',
+      nowIso: () => ISO,
+    };
+    const success = await materializeOpenCodeGroupReply(input);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ groupChatId: 'origin', relayOfMessageId: 'physical' })
+    );
+    expect(success.visibleReply?.message.groupChatId).toBe('origin');
+    expect(applyDestinationProof).toHaveBeenCalledTimes(1);
+    send.mockRejectedValueOnce(new Error('group_archived'));
+    const blocked = await materializeOpenCodeGroupReply(input);
+    expect(blocked.visibleReply).toBeNull();
+    expect(markFailedTerminal).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'group_reply_blocked', diagnostics: ['group_archived'] })
+    );
   });
 
   describe('findByRelayOfMessageId', () => {

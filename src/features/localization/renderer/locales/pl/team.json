@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Utwórz czat grupowy",
+      "description": "Wybierz co najmniej dwóch agentów. Dołączasz automatycznie.",
+      "name": "Nazwa czatu",
+      "autoInclude": "Automatycznie dodawaj nowych członków",
+      "minimum": "Wybierz co najmniej dwóch agentów.",
+      "creating": "Tworzenie…",
+      "retryCreate": "Ponów tworzenie",
+      "unavailable": "Czat niedostępny",
+      "message": "Wiadomość do grupy",
+      "archivedHint": "Ten czat jest zarchiwizowany. Przywróć go, aby wysyłać wiadomości.",
+      "restartHint": "Wszyscy uczestnicy muszą mieć uruchomione zgodne środowisko wykonawcze, aby wysyłać wiadomości.",
+      "unknownDelivery": "Zapisano. Status dostarczenia nieznany.",
+      "sending": "Wysyłanie…",
+      "retrySend": "Wyślij ponownie tę samą wiadomość",
+      "send": "Wyślij",
+      "archived": "Zarchiwizowane czaty",
+      "restore": "Przywróć czat",
+      "archive": "Archiwizuj czat",
+      "delivery": {
+        "queued": "w kolejce",
+        "accepted": "przyjęto",
+        "failed": "niepowodzenie",
+        "unknown": "nieznany",
+        "skipped": "pominięto"
+      }
+    },
     "actions": {
       "toLatest": "Do najnowszych",
       "bottomSheetActions": "Akcje dolnego arkusza wiadomości",

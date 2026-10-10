@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Cipta sembang kumpulan",
+      "description": "Pilih sekurang-kurangnya dua ejen. Anda disertakan secara automatik.",
+      "name": "Nama sembang",
+      "autoInclude": "Tambah ahli baharu secara automatik",
+      "minimum": "Pilih sekurang-kurangnya dua ejen.",
+      "creating": "Mencipta…",
+      "retryCreate": "Cuba cipta semula",
+      "unavailable": "Sembang tidak tersedia",
+      "message": "Hantar mesej kepada kumpulan ini",
+      "archivedHint": "Sembang ini diarkibkan. Pulihkannya untuk menghantar mesej.",
+      "restartHint": "Semua peserta mesti menjalankan persekitaran pelaksanaan yang serasi sebelum menghantar mesej.",
+      "unknownDelivery": "Disimpan. Status penghantaran tidak diketahui.",
+      "sending": "Menghantar…",
+      "retrySend": "Hantar semula mesej yang sama",
+      "send": "Hantar",
+      "archived": "Sembang yang diarkibkan",
+      "restore": "Pulihkan sembang",
+      "archive": "Arkibkan sembang",
+      "delivery": {
+        "queued": "dalam giliran",
+        "accepted": "diterima",
+        "failed": "gagal",
+        "unknown": "tidak diketahui",
+        "skipped": "dilangkau"
+      }
+    },
     "actions": {
       "toLatest": "Ke mesej terkini",
       "bottomSheetActions": "Tindakan helaian bawah mesej",

@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Buat obrolan grup",
+      "description": "Pilih setidaknya dua agen. Anda otomatis disertakan.",
+      "name": "Nama obrolan",
+      "autoInclude": "Tambahkan anggota baru secara otomatis",
+      "minimum": "Pilih setidaknya dua agen.",
+      "creating": "Membuat…",
+      "retryCreate": "Coba buat lagi",
+      "unavailable": "Obrolan tidak tersedia",
+      "message": "Kirim pesan ke grup ini",
+      "archivedHint": "Obrolan ini diarsipkan. Pulihkan untuk mengirim pesan.",
+      "restartHint": "Semua peserta harus menjalankan runtime yang kompatibel sebelum mengirim pesan.",
+      "unknownDelivery": "Tersimpan. Status pengiriman tidak diketahui.",
+      "sending": "Mengirim…",
+      "retrySend": "Kirim ulang pesan yang sama",
+      "send": "Kirim",
+      "archived": "Obrolan yang diarsipkan",
+      "restore": "Pulihkan obrolan",
+      "archive": "Arsipkan obrolan",
+      "delivery": {
+        "queued": "dalam antrean",
+        "accepted": "diterima",
+        "failed": "gagal",
+        "unknown": "tidak diketahui",
+        "skipped": "dilewati"
+      }
+    },
     "actions": {
       "toLatest": "Ke pesan terbaru",
       "bottomSheetActions": "Aksi lembar bawah pesan",

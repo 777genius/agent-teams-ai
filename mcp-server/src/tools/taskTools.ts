@@ -279,8 +279,11 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         );
       }
 
-      // 3. Reject relay copies explicitly
-      if (typeof message.relayOfMessageId === 'string' && message.relayOfMessageId.trim()) {
+      // 3. Physical group deliveries are relay copies, never user originals.
+      if (
+        (message.groupChatId && message.messageId !== message.groupMessageId) ||
+        (typeof message.relayOfMessageId === 'string' && message.relayOfMessageId.trim())
+      ) {
         throw new Error(
           'Cannot create task from a relay copy. Use the original user_sent message and its explicit User MessageId from the relay prompt instead.'
         );
@@ -479,7 +482,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_start',
-    description: 'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
+    description:
+      'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -502,7 +506,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'task_complete',
-    description: 'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
+    description:
+      'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),

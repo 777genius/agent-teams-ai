@@ -154,6 +154,38 @@ function createRelayPorts(
 }
 
 describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
+  it('keeps a group terminal handoff fenced while still delivering fresh DM', async () => {
+    const terminal = ledgerRecord({
+      status: 'failed_terminal',
+      groupChatId: 'g',
+      inboxMessageId: 'group-physical',
+    });
+    const ports = createRelayPorts({
+      readInboxMessages: vi
+        .fn()
+        .mockResolvedValue([
+          message({ groupChatId: 'g', messageId: 'group-physical' }),
+          message({ messageId: 'fresh-dm' }),
+        ]),
+      createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+        getByInboxMessage: vi.fn(async ({ inboxMessageId }) =>
+          inboxMessageId === 'group-physical' ? terminal : null
+        ),
+      })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+    });
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'group-terminal-test' },
+      ports
+    );
+    expect(ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
+    expect(ports.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded).not.toHaveBeenCalled();
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'fresh-dm' })
+    );
+  });
+
   it('skips old accepted and recoverable terminal rows without starving a fresh message', async () => {
     const old = ledgerRecord({ runId: 'old-run', status: 'accepted' });
     const terminal = ledgerRecord({

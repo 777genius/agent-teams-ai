@@ -323,7 +323,22 @@ describe('bounded protocol2 public contracts', () => {
       'utf8'
     );
     const identity = createOpenCodeBridgeClientIdentity({ appVersion: 'test-app' });
-    expect(JSON.stringify(identity, null, 2) + '\n').toBe(captured);
+    // Group support intentionally adds these capabilities to the existing v1 identity.
+    const { groupChatProtocolVersion, ...legacyProtocol } = identity.bridgeProtocol;
+    expect(groupChatProtocolVersion).toBe(1);
+    expect(legacyProtocol.supportedCommands).toEqual(expect.arrayContaining([
+      'opencode.sendMessage', 'opencode.observeMessageDelivery',
+    ]));
+    const legacyIdentity = {
+      ...identity,
+      bridgeProtocol: {
+        ...legacyProtocol,
+        supportedCommands: legacyProtocol.supportedCommands.filter((command) =>
+          command !== 'opencode.sendMessage' && command !== 'opencode.observeMessageDelivery'
+        ),
+      },
+    };
+    expect(JSON.stringify(legacyIdentity, null, 2) + '\n').toBe(captured);
     expect(identity.bridgeProtocol).toMatchObject({
       minVersion: 1,
       currentVersion: 1,

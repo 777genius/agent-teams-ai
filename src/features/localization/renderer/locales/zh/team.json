@@ -732,6 +732,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "创建群聊",
+      "description": "请至少选择两个智能体。你会自动加入。",
+      "name": "聊天名称",
+      "autoInclude": "自动添加新成员",
+      "minimum": "请至少选择两个智能体。",
+      "creating": "正在创建…",
+      "retryCreate": "重试创建",
+      "unavailable": "聊天不可用",
+      "message": "向此群聊发送消息",
+      "archivedHint": "此聊天已归档。恢复后即可发送消息。",
+      "restartHint": "所有参与者都必须运行兼容的运行时才能发送消息。",
+      "unknownDelivery": "已保存。投递状态未知。",
+      "sending": "正在发送…",
+      "retrySend": "重发同一条消息",
+      "send": "发送",
+      "archived": "已归档的聊天",
+      "restore": "恢复聊天",
+      "archive": "归档聊天",
+      "delivery": {
+        "queued": "排队中",
+        "accepted": "已接受",
+        "failed": "失败",
+        "unknown": "未知",
+        "skipped": "已跳过"
+      }
+    },
     "actions": {
       "toLatest": "跳至最新",
       "bottomSheetActions": "消息底部工作表操作",

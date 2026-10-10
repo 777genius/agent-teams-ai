@@ -10,6 +10,7 @@ import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
+import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
@@ -512,6 +513,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
@@ -1022,7 +1024,7 @@ const electronAPI: ElectronAPI = {
     },
     getMessagesPage: async (
       teamName: string,
-      options?: { cursor?: string | null; limit?: number }
+      options?: { cursor?: string | null; limit?: number; groupChatId?: string }
     ) => {
       return invokeIpcWithResult<MessagesPage>(TEAM_GET_MESSAGES_PAGE, teamName, options);
     },
@@ -1888,7 +1890,8 @@ const electronAPI: ElectronAPI = {
   },
 
   // ===== Editor API =====
-  editor: { ...createDocumentPreviewBridge(),
+  editor: {
+    ...createDocumentPreviewBridge(),
     open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
     close: () => invokeIpcWithResult<void>(EDITOR_CLOSE),
     readDir: (dirPath: string, maxEntries?: number) =>

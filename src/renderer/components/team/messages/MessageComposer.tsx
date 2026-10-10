@@ -5,10 +5,7 @@ import { normalizeConversationParticipant } from '@features/team-direct-chats/re
 import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
-import {
-  ComposerSurface,
-  ComposerTextarea,
-} from '@renderer/components/team/composer/ComposerSurface';
+import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { ComposerLockedRecipient } from '@renderer/components/team/messages/ComposerLockedRecipient';
@@ -16,7 +13,10 @@ import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { getTaskSuggestionsForTeamNow, useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import {
+  getTaskSuggestionsForTeamNow,
+  useTaskSuggestions,
+} from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -48,18 +48,28 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
+import { Check, ChevronDown, Paperclip, Search } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId, isPreparedSendAllowed } from './composerSendUtils';
+import {
+  buildPreparedSendRequest,
+  buildRevisionCorrectionText,
+  createPendingSendId,
+  isPreparedSendAllowed,
+} from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
+import { MessageComposerFooter, MessageComposerInput } from './MessageComposerInput';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
+import { TextMessageComposer, type TextMessageComposerProps } from './TextMessageComposer';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
-import { type ComposerDraftAddressRequest, useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
+import {
+  type ComposerDraftAddressRequest,
+  useComposerDraftAddressRequest,
+} from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
@@ -69,7 +79,12 @@ import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCa
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerPreparedRequest, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type {
+  ComposerDraftAddress,
+  ComposerPreparedRequest,
+  ComposerWorkingSummary,
+  MessageRevisionContext,
+} from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -80,7 +95,7 @@ import type {
   TaskRef,
 } from '@shared/types';
 
-interface MessageComposerProps {
+export interface MemberMessageComposerProps {
   teamName: string;
   members: ResolvedTeamMember[];
   layout?: 'default' | 'compact';
@@ -124,10 +139,11 @@ interface MessageComposerProps {
   onSubmitIntent?: () => void;
   onDraftMutation?: () => void;
   onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
-  onRevisionPreparationChange?: (
-    controller: MessageRevisionTargetController | null
-  ) => void;
-  onRevisionCancel?: (revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => boolean | void | Promise<boolean>;
+  onRevisionPreparationChange?: (controller: MessageRevisionTargetController | null) => void;
+  onRevisionCancel?: (
+    revision?: MessageRevisionContext | null,
+    address?: ComposerDraftAddress
+  ) => boolean | void | Promise<boolean>;
   onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
 }
 
@@ -142,7 +158,13 @@ export interface MessageRevisionRequest {
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
 
-export const MessageComposer = ({
+type MessageComposerProps = MemberMessageComposerProps | TextMessageComposerProps;
+
+/** Select the editor before mounting member-only draft and recipient hooks. */
+export const MessageComposer = (props: MessageComposerProps): React.JSX.Element =>
+  'textInput' in props ? <TextMessageComposer {...props} /> : <MemberMessageComposer {...props} />;
+
+const MemberMessageComposer = ({
   teamName,
   members,
   layout = 'default',
@@ -170,7 +192,7 @@ export const MessageComposer = ({
   onRevisionPreparationChange,
   onRevisionCancel,
   onRevisionComplete,
-}: MessageComposerProps): React.JSX.Element => {
+}: MemberMessageComposerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { textareaRef, internalTextareaRef, focusComposerTextarea } = useComposerTextarea(
     externalTextareaRef,
@@ -247,7 +269,13 @@ export const MessageComposer = ({
     [aliveTeams, crossTeamTargets]
   );
   const hasCrossTeamOptions = sortedCrossTeamTargets.length > 0;
-  useComposerDraftAddressRequest({ request: draftAddressRequest, lockedRecipient, targets: crossTeamTargets, selectTeam: setSelectedTeam, selectMember: setCrossTeamRecipient });
+  useComposerDraftAddressRequest({
+    request: draftAddressRequest,
+    lockedRecipient,
+    targets: crossTeamTargets,
+    selectTeam: setSelectedTeam,
+    selectMember: setCrossTeamRecipient,
+  });
 
   const isCrossTeam = selectedTeam !== null;
   const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
@@ -269,10 +297,7 @@ export const MessageComposer = ({
     [t]
   );
   const crossTeamDrafts = useMemo(
-    () =>
-      workingDraftSummaries.filter(
-        (summary) => summary.address.target.kind === 'cross-team'
-      ),
+    () => workingDraftSummaries.filter((summary) => summary.address.target.kind === 'cross-team'),
     [workingDraftSummaries]
   );
   const draftMetaByTeam = useMemo(
@@ -565,12 +590,19 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
-  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest, editorContext: typeof draft.editorContext) => boolean>(() => false);
+  const currentSendEligibilityRef = useRef<
+    (
+      content: ReturnType<typeof draft.snapshot>,
+      request: ComposerPreparedRequest,
+      editorContext: typeof draft.editorContext
+    ) => boolean
+  >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
     isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
-        (revisableMessageId === undefined || editorContext.originalMessageId === revisableMessageId)));
+        (revisableMessageId === undefined ||
+          editorContext.originalMessageId === revisableMessageId)));
 
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -591,41 +623,52 @@ export const MessageComposer = ({
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
-      attemptId, contextId: capturedContextId,
-      prepare: () => draft.beginAttempt(attemptId, (snapshot) => {
-        const { content, editorContext } = snapshot;
-        const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
-        if (syncedRevision?.requestId !== revisionRequestId) return null;
-        const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
-        if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
-        const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
-        const outboundText = syncedRevision
-          ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
-          : serialized;
-        const request = buildPreparedSendRequest({
-          attemptId,
-          teamName,
-          selectedTeam,
-          lockedRecipient,
-          crossTeamRecipient,
-          localRecipient: effectiveRecipient,
-          text: outboundText,
-          summary: syncedRevision
-            ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
-            : syncedTrimmed,
-          attachments: content.attachments,
-          actionMode: content.actionMode,
-          taskRefs: extractTaskRefsFromText(content.text, content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions),
-        });
-        return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
-      }),
+      attemptId,
+      contextId: capturedContextId,
+      prepare: () =>
+        draft.beginAttempt(attemptId, (snapshot) => {
+          const { content, editorContext } = snapshot;
+          const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
+          if (syncedRevision?.requestId !== revisionRequestId) return null;
+          const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
+          if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
+          const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
+          const outboundText = syncedRevision
+            ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
+            : serialized;
+          const request = buildPreparedSendRequest({
+            attemptId,
+            teamName,
+            selectedTeam,
+            lockedRecipient,
+            crossTeamRecipient,
+            localRecipient: effectiveRecipient,
+            text: outboundText,
+            summary: syncedRevision
+              ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
+              : syncedTrimmed,
+            attachments: content.attachments,
+            actionMode: content.actionMode,
+            taskRefs: extractTaskRefsFromText(
+              content.text,
+              content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions
+            ),
+          });
+          return currentSendEligibilityRef.current(content, request, editorContext)
+            ? request
+            : null;
+        }),
       isContextCurrent: (prepared) => {
         const store = useStore.getState();
         return (
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
           isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
-          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest, prepared.attempt.snapshot.editorContext)
+          currentSendEligibilityRef.current(
+            prepared.attempt.snapshot.content,
+            prepared.attempt.preparedRequest,
+            prepared.attempt.snapshot.editorContext
+          )
         );
       },
       transport: ({ attempt: { preparedRequest } }) =>
@@ -648,14 +691,16 @@ export const MessageComposer = ({
               preparedRequest.request.taskRefs,
               preparedRequest.request.messageId
             ),
-    }).then((result) => {
-      submissionFeedback.record(submissionAddressKey, result);
-      if (result.kind === 'accepted' && revisionRequestId) {
-        onRevisionComplete?.(revisionRequestId, submissionAddress);
-      }
-    }).finally(() => {
-      if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
-    });
+    })
+      .then((result) => {
+        submissionFeedback.record(submissionAddressKey, result);
+        if (result.kind === 'accepted' && revisionRequestId) {
+          onRevisionComplete?.(revisionRequestId, submissionAddress);
+        }
+      })
+      .finally(() => {
+        if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
+      });
     focusComposerTextarea();
   }, [
     canSend,
@@ -800,7 +845,11 @@ export const MessageComposer = ({
   );
   const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
   const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
-  const handleRevisionCancel = useMessageComposerRevisionCancel(draft, onRevisionCancel, focusComposerTextarea);
+  const handleRevisionCancel = useMessageComposerRevisionCancel(
+    draft,
+    onRevisionCancel,
+    focusComposerTextarea
+  );
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
@@ -811,15 +860,16 @@ export const MessageComposer = ({
     attachmentCount: draft.attachments.length,
     textareaRef: internalTextareaRef,
   });
-  const revisionNotice = activeRevision || revisionPreparation ? (
-    <MessageComposerRevisionNotice
-      active={activeRevision !== null}
-      originalValid={revisionOriginalValid}
-      preparation={revisionPreparation}
-      onCancel={handleRevisionCancel}
-      onStash={draft.stashWorking}
-    />
-  ) : null;
+  const revisionNotice =
+    activeRevision || revisionPreparation ? (
+      <MessageComposerRevisionNotice
+        active={activeRevision !== null}
+        originalValid={revisionOriginalValid}
+        preparation={revisionPreparation}
+        onCancel={handleRevisionCancel}
+        onStash={draft.stashWorking}
+      />
+    ) : null;
   const hasStatusNotice = Boolean(
     draft.readError ||
     draft.persistenceStatus === 'memory-only' ||
@@ -841,29 +891,12 @@ export const MessageComposer = ({
       deduplicated={submissionFeedback.deduplicated}
     />
   ) : null;
-  const shouldShowFooterCharCount = remaining < 200;
   const shouldShowSavedIndicator = isTextareaFocused && draft.isSaved;
   const nonCompactFooterRight =
-    compactFooterNotice || shouldShowFooterCharCount || shouldShowSavedIndicator ? (
-      <div className="flex flex-col items-end gap-1">
+    compactFooterNotice || remaining < 200 || shouldShowSavedIndicator ? (
+      <MessageComposerFooter remaining={remaining} showSaved={shouldShowSavedIndicator}>
         {compactFooterNotice}
-        {shouldShowFooterCharCount || shouldShowSavedIndicator ? (
-          <div className="flex items-center gap-2">
-            {shouldShowFooterCharCount ? (
-              <span
-                className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-              >
-                {t('messageComposer.input.charsLeft', { count: remaining })}
-              </span>
-            ) : null}
-            {shouldShowSavedIndicator ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">
-                {t('tasks.createTask.saved')}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      </MessageComposerFooter>
     ) : null;
   const composerFooterRight = isCompactLayout ? compactFooterNotice : nonCompactFooterRight;
 
@@ -1202,9 +1235,9 @@ export const MessageComposer = ({
           rejected={!canAttach}
           rejectionReason={attachmentRestrictionReason}
         />
-        <ComposerTextarea
+        <MessageComposerInput
           suggestionPlacement={suggestionPlacement}
-          ref={textareaRef}
+          textareaRef={textareaRef}
           connectedToHeader
           id={`compose-${teamName}`}
           placeholder={
@@ -1229,7 +1262,6 @@ export const MessageComposer = ({
           onBlur={handleTextareaBlur}
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
-          onModEnter={handleSend}
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
@@ -1238,7 +1270,6 @@ export const MessageComposer = ({
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
           showHint={!isCompactLayout && isTextareaFocused}
-          cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}
@@ -1247,52 +1278,13 @@ export const MessageComposer = ({
               disabled={sending}
             />
           }
-          cornerAction={
-            <div className="flex items-center gap-2">
-              {cornerActionPrefix}
-              {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-secondary)]"
-                    onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
-                  >
-                    <Mic size={16} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('messageComposer.actions.voiceToText')}
-                </TooltipContent>
-              </Tooltip>
-              <span
-                className="message-composer-send-slot"
-                data-visible={trimmed.length > 0 ? 'true' : 'false'}
-              >
-                {trimmed.length > 0 ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <button
-                          type="button"
-                          className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                          disabled={!canSend}
-                          onClick={handleSend}
-                        >
-                          <Send size={14} />
-                          {t('messageComposer.actions.send')}
-                        </button>
-                      </span>
-                    </TooltipTrigger>
-                    {slashCommandRestrictionReason ? (
-                      <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
-                    ) : isLaunchBlocking && !sending ? (
-                      <TooltipContent side="top">{startupCopy.sendingUnavailable}</TooltipContent>
-                    ) : null}
-                  </Tooltip>
-                ) : null}
-              </span>
-            </div>
+          layout={layout}
+          canSend={canSend}
+          onSend={handleSend}
+          cornerActionPrefix={cornerActionPrefix}
+          sendUnavailableReason={
+            slashCommandRestrictionReason ||
+            (isLaunchBlocking && !sending ? startupCopy.sendingUnavailable : undefined)
           }
           footerRight={composerFooterRight}
         />

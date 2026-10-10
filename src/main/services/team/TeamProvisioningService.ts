@@ -19,6 +19,8 @@ import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 
+import type { ProvisioningGroupChatCallbacks } from './provisioning/TeamProvisioningGroupChatPorts';
+
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 export { buildDirectTmuxRestartEnvAssignments } from './provisioning/TeamProvisioningDirectRestart';
 export {
@@ -63,10 +65,11 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     private readonly inboxWriter: TeamInboxWriter = new TeamInboxWriter(),
     private readonly openCodeTaskLogAttributionStore: OpenCodeTaskLogAttributionStore = new OpenCodeTaskLogAttributionStore(),
     private readonly memberWorktreeManager: TeamMemberWorktreeManager = new TeamMemberWorktreeManager(),
-    private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore()
+    private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore(),
+    groupChats?: ProvisioningGroupChatCallbacks
   ) {
     super();
-    this.initializeTeamProvisioningService();
+    this.initializeTeamProvisioningService(groupChats);
   }
 
   private launchAdmissionGuard: (() => void) | null = null;
