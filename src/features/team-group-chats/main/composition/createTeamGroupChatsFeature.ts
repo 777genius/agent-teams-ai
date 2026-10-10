@@ -136,9 +136,11 @@ export function createTeamGroupChatsFeature(
       validText(teamName, 'team name', 200);
       await safeGroupTeamPath(teamName);
       const roster = await ports.roster(teamName);
-      return storage.withRegistry(teamName, (groups) =>
-        Promise.all(groups.map((group) => project(teamName, group, roster, from)))
+      // Runtime projection may await provider handshakes; keep it outside the registry lock.
+      const groups = await storage.withRegistry(teamName, async (snapshot) =>
+        structuredClone(snapshot)
       );
+      return Promise.all(groups.map((group) => project(teamName, group, roster, from)));
     },
     async create(request: GroupChatCreateRequest) {
       validText(request.teamName, 'team name', 200);

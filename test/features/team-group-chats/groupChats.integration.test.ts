@@ -105,6 +105,40 @@ describe('group chat main authority and durable identity', () => {
     await expect(send()).rejects.toMatchObject({ code: 'recipient-unavailable' });
   });
 
+  it('allows concurrent catalog reads while a runtime projection is pending', async () => {
+    await create();
+    let release!: () => void;
+    let entered!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const projecting = new Promise<void>((resolve) => { entered = resolve; });
+    const slowFeature = createTeamGroupChatsFeature({
+      roster: async () => roster,
+      getRun: async (_team, name) => {
+        entered();
+        await pending;
+        return { runKey: 'run:' + name, protocolVersion: 1, provider: 'native' };
+      },
+      configurationOperation: (_team, operation) => operation(),
+      deliver: (...args) => deliver(...args),
+    });
+    const slowList = slowFeature.list({ teamName: 'sandbox' });
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await projecting;
+      const concurrent = await Promise.race([
+        feature.list({ teamName: 'sandbox' }),
+        new Promise<never>((_resolve, reject) => {
+          timeout = setTimeout(() => reject(new Error('Catalog blocked by runtime projection')), 1000);
+        }),
+      ]);
+      expect(concurrent).toMatchObject([{ name: 'Release', memberNames: ['lead', 'alice'], canSend: true }]);
+    } finally {
+      clearTimeout(timeout);
+      release();
+      await slowList;
+    }
+  });
+
   it('saves one canonical row, settles every recipient, and never re-fanouts a retry or ID conflict', async () => {
     await create();
     deliver = async (_team, message) => {
