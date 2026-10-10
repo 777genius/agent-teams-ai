@@ -7,12 +7,15 @@ import { ActivityTimeline } from '../activity/ActivityTimeline';
 import { MessageExpandDialog } from '../activity/MessageExpandDialog';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
+import type { MessageActionOwner } from '@renderer/types/messageTaskSeed';
 
 type MessagesTimelineSectionProps = ComponentProps<typeof ActivityTimeline> & {
   hasMore: boolean;
   loadingOlderMessages: boolean;
   onLoadOlderMessages: () => void;
   expandedItem: TimelineItem | null;
+  actionOwner: MessageActionOwner;
+  expandedOwner: MessageActionOwner | null;
   expandedItemKey: string | null;
   onExpandDialogChange: (open: boolean) => void;
 };
@@ -22,6 +25,8 @@ export const MessagesTimelineSection = memo(function MessagesTimelineSection({
   loadingOlderMessages,
   onLoadOlderMessages,
   expandedItem,
+  actionOwner,
+  expandedOwner,
   expandedItemKey,
   onExpandDialogChange,
   ...timelineProps
@@ -51,6 +56,8 @@ export const MessagesTimelineSection = memo(function MessagesTimelineSection({
       {timelineProps.presentation !== 'conversation' && history()}
       <MessageExpandDialog
         expandedItem={expandedItem}
+        actionOwner={actionOwner}
+        expandedOwner={expandedOwner}
         open={expandedItemKey !== null}
         onOpenChange={onExpandDialogChange}
         teamName={timelineProps.teamName}

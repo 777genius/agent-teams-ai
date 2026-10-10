@@ -66,13 +66,56 @@ describe('messages panel derived data', () => {
       updatedAt: 1,
     };
     const key = JSON.stringify({ kind: 'team-feed' });
-    expect(localDraftsByConversationScope([allDraft, leadDraft]).get(key)?.preview).toBe(
-      'All draft'
-    );
-    expect(localDraftsByConversationScope([leadDraft, allDraft]).get(key)?.preview).toBe(
-      'All draft'
-    );
+    expect(
+      localDraftsByConversationScope([allDraft, leadDraft], 'local', 'team-alpha').get(key)?.preview
+    ).toBe('All draft');
+    expect(
+      localDraftsByConversationScope([leadDraft, allDraft], 'local', 'team-alpha').get(key)?.preview
+    ).toBe('All draft');
     expect(allDraft.address).toBe(allAddress);
+  });
+
+  it('filters root and team before mapping summaries with the same group UUID', () => {
+    const current: ComposerWorkingSummary = {
+      version: 1,
+      workingRevision: 'current',
+      address: {
+        contextId: 'root-a',
+        teamName: 'same-team',
+        target: { kind: 'group', groupChatId: 'same-uuid' },
+      },
+      preview: 'Current group draft',
+      updatedAt: 1,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain',
+    };
+    const otherRoot = {
+      ...current,
+      preview: 'Foreign root draft',
+      updatedAt: 100,
+      address: { ...current.address, contextId: 'root-b' },
+    };
+    const otherTeam = {
+      ...current,
+      preview: 'Foreign team draft',
+      updatedAt: 200,
+      address: { ...current.address, teamName: 'another-team' },
+    };
+    const drafts = localDraftsByConversationScope(
+      [current, otherRoot, otherTeam],
+      'root-a',
+      'same-team'
+    );
+    expect([...drafts.entries()]).toEqual([
+      [
+        JSON.stringify({ kind: 'group', groupChatId: 'same-uuid' }),
+        expect.objectContaining({ preview: 'Current group draft', updatedAt: 1 }),
+      ],
+    ]);
+    expect(localDraftsByConversationScope([otherRoot, otherTeam], 'root-a', 'same-team').size).toBe(
+      0
+    );
   });
 
   it('recognizes a normalized direct address for a mixed-case member', () => {

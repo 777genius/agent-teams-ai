@@ -24,6 +24,8 @@ export function useGroupChatComposer(
   const recipientName = selection === undefined ? (defaultRecipientName ?? null) : selection;
   const [readyAddress, setReadyAddress] = useState<ComposerDraftAddress | null>(null);
   const ready = readyAddress === address;
+  const [loadedAddress, setLoadedAddress] = useState<ComposerDraftAddress | null>(null);
+  const hasCurrentSnapshot = loadedAddress === address;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GroupChatSendResult | null>(null);
@@ -65,6 +67,7 @@ export function useGroupChatComposer(
   useEffect(() => {
     let active = true;
     setReadyAddress(null);
+    setLoadedAddress(null);
     setText('');
     setAttemptId(null);
     setSelection(undefined);
@@ -85,6 +88,7 @@ export function useGroupChatComposer(
             ? null
             : undefined
       );
+      setLoadedAddress(address);
       setReadyAddress(loaded.writeBlocked ? null : address);
       setError(loaded.readError ?? null);
     });
@@ -190,6 +194,7 @@ export function useGroupChatComposer(
     change,
     send,
     ready,
+    hasCurrentSnapshot,
     pending,
     error,
     result,

@@ -1,27 +1,37 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 
+import type { ChatListDraftPreview } from '../view-models/chatListViewModel';
 import type { JSX } from 'react';
 
 interface ChatPreviewLineProps {
   from: string | null;
   text: string;
   avatarUrl?: string;
-  draft?: boolean;
+  draft?: ChatListDraftPreview;
 }
 
 export const ChatPreviewLine = ({
   from,
   text,
   avatarUrl,
-  draft = false,
+  draft,
 }: ChatPreviewLineProps): JSX.Element => {
   const { t } = useAppTranslation('team');
   if (draft) {
+    const preview =
+      text ||
+      [
+        draft.chipCount > 0 ? t('messages.chats.draftReferences', { count: draft.chipCount }) : '',
+        draft.attachmentCount > 0
+          ? t('messages.chats.draftAttachments', { count: draft.attachmentCount })
+          : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
     return (
       <span className="mt-0.5 block truncate text-xs text-[var(--color-text-secondary)]">
-        <span className="font-medium text-blue-400">{t('messages.chats.draft')}:</span>{' '}
-        {text}
+        <span className="font-medium text-blue-400">{t('messages.chats.draft')}:</span> {preview}
       </span>
     );
   }

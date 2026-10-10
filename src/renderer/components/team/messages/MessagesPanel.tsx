@@ -72,7 +72,6 @@ import {
   memberConversationParticipants,
   outboxViewAddress,
   replyCandidates,
-  resolveExpandedTimelineItem,
   visibleTeamMessages,
 } from './messagesPanelDerivedData';
 import {
@@ -81,7 +80,6 @@ import {
   reconcilePendingRepliesByMember,
   trimString,
 } from './messagesPanelLogic';
-import { resolveReplyRecipient } from './messagesPanelReplyRecipient';
 import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
 import { MessagesSidebarSurface } from './MessagesSidebarSurface';
@@ -104,12 +102,14 @@ import {
 } from './useMessagesPanelChats';
 import { useMessagesPanelSend } from './useMessagesPanelSend';
 import { useMessagesReadState } from './useMessagesReadState';
+import { useMessagesTimelineActions } from './useMessagesTimelineActions';
 
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ComposerDraftDestination } from './composerDraftDestination';
 import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
+import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type {
   DiscardQueuedUserMessagesResult,
@@ -153,7 +153,7 @@ interface MessagesPanelProps {
   /** Callback when a task is clicked from timeline or status block. */
   onTaskClick?: (task: TeamTaskWithKanban) => void;
   /** Callback to open create task dialog from a message. */
-  onCreateTaskFromMessage?: (subject: string, description: string) => void;
+  onCreateTaskFromMessage?: (seed: MessageTaskSeed) => void;
   /** Callback to open reply dialog for a message. */
   onReplyToMessage?: (message: InboxMessage, recipientHint?: string) => void;
   /** Callback when "Restart team" is clicked. */
@@ -634,12 +634,6 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
   const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
   const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
-  const handleReplyToTimelineMessage = useCallback(
-    (message: InboxMessage) => {
-      onReplyToMessage?.(message, resolveReplyRecipient({ message, scope, teamName, members }));
-    },
-    [members, onReplyToMessage, scope, teamName]
-  );
   const canonicalMessages = useMemo(
     () =>
       canonicalTeamMessages(
@@ -774,25 +768,23 @@ export const MessagesPanel = memo(function MessagesPanel({
     backToList();
   }, [backToList, handleRevisionCancel]);
 
-  const expandedItem = useMemo(
-    () => resolveExpandedTimelineItem(expandedItemKey, activityTimelineMessages),
-    [expandedItemKey, activityTimelineMessages]
-  );
-
-  // Auto-clear stale expanded key
-  useEffect(() => {
-    if (expandedItemKey && expandedItem === null) {
-      setExpandedItemKey(null);
-    }
-  }, [expandedItemKey, expandedItem]);
-
-  const handleExpandItem = useCallback((key: string) => {
-    setExpandedItemKey(key);
-  }, []);
-
-  const handleExpandDialogChange = useCallback((open: boolean) => {
-    if (!open) setExpandedItemKey(null);
-  }, []);
+  const timelineActions = useMessagesTimelineActions({
+    contextId: activeContextId,
+    teamName,
+    scopeKey,
+    scope,
+    members,
+    messages: activityTimelineMessages,
+    expandedItemKey,
+    setExpandedItemKey,
+    onCreateTask: onCreateTaskFromMessage,
+    onReply: onReplyToMessage,
+    groupId,
+    groupQuote: groupConversation.quote,
+    onRevise: (message) => {
+      void handleReviseMessage(message);
+    },
+  });
 
   const { readSet, markAllRead } = useMessagesReadState(
     teamName,
@@ -857,8 +849,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   const { teamNames, teamColorByName } = teamMentionMeta;
   const workingDrafts = useComposerWorkingSummaries(activeContextId, teamName);
   const localDraftsByScope = useMemo(
-    () => localDraftsByConversationScope(workingDrafts.summaries),
-    [workingDrafts.summaries]
+    () => localDraftsByConversationScope(workingDrafts.summaries, activeContextId, teamName),
+    [workingDrafts.summaries, activeContextId, teamName]
   );
 
   const chatListItems = useTeamChatListItems({
@@ -1162,10 +1154,10 @@ export const MessagesPanel = memo(function MessagesPanel({
         teamColorByName={teamColorByName}
         onTeamClick={openTeamTab}
         onMemberClick={onMemberClick}
-        onCreateTaskFromMessage={groupId ? undefined : onCreateTaskFromMessage}
-        onReplyToMessage={groupId ? groupConversation.quote : handleReplyToTimelineMessage}
+        onCreateTaskFromMessage={timelineActions.createTask}
+        onReplyToMessage={timelineActions.reply}
         revisionMessageId={revisionMessageId}
-        onReviseMessage={groupId ? undefined : handleReviseMessage}
+        onReviseMessage={timelineActions.revise}
         onMessageVisible={handleMessageVisible}
         presentation={isConversation ? 'conversation' : 'activity'}
         appearance={useWideChat ? 'wide-chat' : 'compact'}
@@ -1179,7 +1171,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         emptyLabel={t('messages.chats.emptyThread')}
         onRestartTeam={onRestartTeam}
         onTaskIdClick={onTaskIdClick}
-        onExpandItem={handleExpandItem}
+        onExpandItem={timelineActions.expand}
         onExpandContent={handleExpandContent}
         viewport={activityTimelineViewport}
         composerOutboxItems={composerOutbox.items}
@@ -1191,9 +1183,11 @@ export const MessagesPanel = memo(function MessagesPanel({
         onLoadOlderMessages={
           groupId ? () => void groupHistory.loadOlder() : handleLoadOlderMessagesClick
         }
-        expandedItem={expandedItem}
+        expandedItem={timelineActions.expandedItem}
+        actionOwner={timelineActions.actionOwner}
+        expandedOwner={timelineActions.expandedOwner}
         expandedItemKey={expandedItemKey}
-        onExpandDialogChange={handleExpandDialogChange}
+        onExpandDialogChange={timelineActions.closeExpand}
       />
     </>
   );
@@ -1291,6 +1285,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     <MessagesConversationList
       key={`${activeContextId}:${teamName}`}
       items={chatListItems}
+      draftsByScope={localDraftsByScope}
       conversation={groupConversation}
       teamName={teamName}
       members={members}

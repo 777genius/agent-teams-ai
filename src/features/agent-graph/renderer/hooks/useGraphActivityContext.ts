@@ -10,6 +10,7 @@ import type { TeamGraphData } from '../adapters/TeamGraphAdapter';
 import type { TeamSummary } from '@shared/types/team';
 
 export function useGraphActivityContext(teamName: string): {
+  contextId: string;
   teamData: TeamGraphData | null;
   teams: TeamSummary[];
 } {
@@ -20,6 +21,7 @@ export function useGraphActivityContext(teamName: string): {
       const messages = selectTeamMessages(state, teamName);
 
       return {
+        contextId: state.activeContextId,
         teamData: snapshot
           ? {
               ...snapshot,

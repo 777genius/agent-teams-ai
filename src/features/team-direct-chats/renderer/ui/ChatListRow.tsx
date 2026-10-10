@@ -7,6 +7,7 @@ import { displayMemberName } from '@renderer/utils/memberHelpers';
 import { Pin } from 'lucide-react';
 
 import { useChatMemberIdentity } from '../hooks/useChatMemberIdentity';
+import { projectChatPreview } from '../view-models/chatListViewModel';
 
 import { ChatPreviewLine } from './ChatPreviewLine';
 import { ChatUnreadBadges } from './ChatUnreadBadges';
@@ -28,30 +29,8 @@ interface ChatListRowProps extends Omit<
 export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
   ({ item, teamName, pinned = false, onOpen, className, onClick, ...props }, ref) => {
     const { t } = useAppTranslation('team');
-    const draftPreview = item.draft
-      ? item.draft.preview ||
-        [
-          item.draft.chipCount > 0
-            ? t('messages.chats.draftReferences', { count: item.draft.chipCount })
-            : '',
-          item.draft.attachmentCount > 0
-            ? t('messages.chats.draftAttachments', { count: item.draft.attachmentCount })
-            : '',
-        ]
-          .filter(Boolean)
-          .join(', ')
-      : '';
-    const preview = item.draft
-      ? draftPreview
-      : item.previewText || t('messages.chats.emptyPreview');
-    const draftDate =
-      typeof item.draft?.updatedAt === 'number' ? new Date(item.draft.updatedAt) : null;
-    const timestamp = item.draft
-      ? draftDate && Number.isFinite(draftDate.getTime())
-        ? draftDate.toISOString()
-        : null
-      : item.previewTimestamp;
-    const time = timestamp ? formatActivityTimestamp(timestamp) : '';
+    const preview = projectChatPreview(item, item.draft);
+    const time = preview.previewTimestamp ? formatActivityTimestamp(preview.previewTimestamp) : '';
     const memberName = item.member?.name ?? item.displayName;
     const identity = useChatMemberIdentity(teamName, memberName, item.member?.color);
     const title =
@@ -101,12 +80,12 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
             {title}
           </span>
           <ChatPreviewLine
-            from={item.draft ? null : item.previewFrom}
-            text={preview}
+            from={preview.previewFrom}
+            text={preview.previewText || (!preview.isDraft ? t('messages.chats.emptyPreview') : '')}
             avatarUrl={
               !item.draft && item.previewFrom ? identity.avatarUrlFor(item.previewFrom) : undefined
             }
-            draft={item.draft != null}
+            draft={item.draft}
           />
         </span>
         <span className="mt-0.5 flex shrink-0 flex-col items-end gap-1 overflow-visible">

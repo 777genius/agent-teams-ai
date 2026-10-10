@@ -7,6 +7,7 @@ import { buildMessageContext } from '@renderer/components/team/activity/activity
 import { MessageExpandDialog } from '@renderer/components/team/activity/MessageExpandDialog';
 import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
+import { sameMessageActionOwner } from '@renderer/types/messageTaskSeed';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import {
@@ -24,6 +25,7 @@ import type {
   MemberActivityFilter,
   MemberDetailTab,
 } from '@renderer/components/team/members/memberDetailTypes';
+import type { MessageActionOwner } from '@renderer/types/messageTaskSeed';
 import type { ResolvedTeamMember } from '@shared/types/team';
 
 const ACTIVITY_SHELL_HEIGHT =
@@ -87,10 +89,17 @@ export const GraphActivityHud = ({
   const knownActivityItemIdsByOwnerRef = useRef(new Map<string, Set<string>>());
   const highlightTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const [expandedItem, setExpandedItem] = useState<TimelineItem | null>(null);
+  const [expandedOwner, setExpandedOwner] = useState<MessageActionOwner | null>(null);
   const [highlightedActivityItemIds, setHighlightedActivityItemIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
-  const { teamData, teams } = useGraphActivityContext(teamName);
+  const { contextId, teamData, teams } = useGraphActivityContext(teamName);
+  const actionOwner = useMemo(
+    () => ({ contextId, teamName, scopeKey: 'graph-activity' }),
+    [contextId, teamName]
+  );
+  const currentOwnerRef = useRef(actionOwner);
+  currentOwnerRef.current = actionOwner;
   const teamSnapshot = teamData;
   const members = useMemo(() => teamData?.members ?? [], [teamData?.members]);
   const messages = useMemo(() => teamData?.messageFeed ?? [], [teamData?.messageFeed]);
@@ -124,6 +133,15 @@ export const GraphActivityHud = ({
       ownerNodeIds,
     });
   }, [leadName, leadNodeId, members, messages, ownerNodeIds, teamName, teamSnapshot]);
+  const liveExpandedItem = useMemo(() => {
+    if (expandedItem?.type !== 'message') return null;
+    const key = toMessageKey(expandedItem.message);
+    for (const entries of entryMapByOwnerNodeId.values()) {
+      const entry = entries.find((candidate) => toMessageKey(candidate.message) === key);
+      if (entry) return { type: 'message' as const, message: entry.message };
+    }
+    return null;
+  }, [entryMapByOwnerNodeId, expandedItem]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
   const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
   const { readSet } = useTeamMessagesRead(teamName, messages);
@@ -136,7 +154,7 @@ export const GraphActivityHud = ({
       clearTimeout(timer);
     }
     highlightTimersRef.current.clear();
-  }, [teamName]);
+  }, [contextId, teamName]);
 
   useEffect(() => {
     const timers = highlightTimersRef.current;
@@ -363,9 +381,14 @@ export const GraphActivityHud = ({
     visibleLanes,
   ]);
 
-  const handleMessageClick = useCallback((item: TimelineItem) => {
-    setExpandedItem(item);
-  }, []);
+  const handleMessageClick = useCallback(
+    (item: TimelineItem) => {
+      if (!sameMessageActionOwner(actionOwner, currentOwnerRef.current)) return;
+      setExpandedOwner(actionOwner);
+      setExpandedItem(item);
+    },
+    [actionOwner]
+  );
   const handleMessageKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>, item: TimelineItem): void => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -584,7 +607,9 @@ export const GraphActivityHud = ({
       </div>
 
       <MessageExpandDialog
-        expandedItem={expandedItem}
+        expandedItem={liveExpandedItem}
+        actionOwner={actionOwner}
+        expandedOwner={expandedOwner}
         open={expandedItem !== null}
         onOpenChange={(open) => {
           if (!open) {

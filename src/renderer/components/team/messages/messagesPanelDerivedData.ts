@@ -1,4 +1,5 @@
 import {
+  type ChatListDraftPreview,
   type ConversationScope,
   type ConversationSurface,
   createDirectScope,
@@ -25,18 +26,14 @@ import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
 import type { CrossTeamTarget, InboxMessage } from '@shared/types';
 
-export function localDraftsByConversationScope(summaries: readonly ComposerWorkingSummary[]) {
-  const drafts = new Map<
-    string,
-    {
-      preview: string;
-      updatedAt: number;
-      attachmentCount: number;
-      chipCount: number;
-      editorKind: 'plain' | 'revision';
-    }
-  >();
+export function localDraftsByConversationScope(
+  summaries: readonly ComposerWorkingSummary[],
+  contextId: string,
+  teamName: string
+): Map<string, ChatListDraftPreview> {
+  const drafts = new Map<string, ChatListDraftPreview>();
   for (const summary of summaries) {
+    if (summary.address.contextId !== contextId || summary.address.teamName !== teamName) continue;
     const target = summary.address.target;
     if (target.kind === 'cross-team') continue;
     const key = conversationScopeKey(

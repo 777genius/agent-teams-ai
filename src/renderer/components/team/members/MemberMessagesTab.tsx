@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
@@ -12,6 +12,7 @@ import { Button } from '@renderer/components/ui/button';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { selectMemberMessagesForTeamMember } from '@renderer/store/slices/teamSlice';
+import { sameMessageActionOwner } from '@renderer/types/messageTaskSeed';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -21,6 +22,7 @@ import { buildMemberActivityEntries } from './memberActivityEntries';
 
 import type { MemberActivityFilter } from './memberDetailTypes';
 import type { TimelineItem } from '@renderer/components/team/activity/LeadThoughtsGroup';
+import type { MessageActionOwner, MessageTaskSeed } from '@renderer/types/messageTaskSeed';
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface MemberMessagesTabProps {
@@ -29,7 +31,7 @@ interface MemberMessagesTabProps {
   members: ResolvedTeamMember[];
   tasks: TeamTaskWithKanban[];
   initialFilter?: MemberActivityFilter;
-  onCreateTask?: (subject: string, description: string) => void;
+  onCreateTask?: (seed: MessageTaskSeed) => void;
   onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
 
@@ -52,12 +54,36 @@ export const MemberMessagesTab = ({
   const { t } = useAppTranslation('team');
   const [activityFilter, setActivityFilter] = useState<MemberActivityFilter>(initialFilter);
   const [expandedItem, setExpandedItem] = useState<TimelineItem | null>(null);
-  const { messages, messagesState, loadOlderTeamMessages } = useStore(
+  const [expandedOwner, setExpandedOwner] = useState<MessageActionOwner | null>(null);
+  const { contextId, messages, messagesState, loadOlderTeamMessages } = useStore(
     useShallow((s) => ({
+      contextId: s.activeContextId,
       messages: selectMemberMessagesForTeamMember(s, teamName, memberName),
       messagesState: teamName ? s.teamMessagesByName[teamName] : undefined,
       loadOlderTeamMessages: s.loadOlderTeamMessages,
     }))
+  );
+  const actionOwner = useMemo(
+    () => ({
+      contextId,
+      teamName,
+      scopeKey: JSON.stringify(['member-activity', memberName, activityFilter]),
+    }),
+    [activityFilter, contextId, memberName, teamName]
+  );
+  const currentOwnerRef = useRef(actionOwner);
+  currentOwnerRef.current = actionOwner;
+  const isCurrentOwner = useCallback(
+    () =>
+      sameMessageActionOwner(actionOwner, currentOwnerRef.current) &&
+      useStore.getState().activeContextId === contextId,
+    [actionOwner, contextId]
+  );
+  const handleCreateTask = useCallback(
+    (seed: MessageTaskSeed) => {
+      if (isCurrentOwner() && seed.source.teamName === teamName) onCreateTask?.(seed);
+    },
+    [isCurrentOwner, onCreateTask, teamName]
   );
   const { readSet } = useTeamMessagesRead(teamName, messages);
   const taskMap = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
@@ -118,21 +144,23 @@ export const MemberMessagesTab = ({
   const handleExpandItem = useCallback(
     (key: string) => {
       const next = expandedItemsByKey.get(key);
-      if (next) {
+      if (next && isCurrentOwner()) {
+        setExpandedOwner(actionOwner);
         setExpandedItem(next);
       }
     },
-    [expandedItemsByKey]
+    [actionOwner, expandedItemsByKey, isCurrentOwner]
   );
 
   const handleTaskIdClick = useCallback(
     (taskId: string) => {
+      if (!isCurrentOwner()) return;
       const task = taskMap.get(taskId) ?? tasks.find((candidate) => candidate.displayId === taskId);
       if (task) {
         onTaskClick?.(task);
       }
     },
-    [onTaskClick, taskMap, tasks]
+    [isCurrentOwner, onTaskClick, taskMap, tasks]
   );
 
   const initialPageLoading = loading && activityEntries.length === 0;
@@ -178,7 +206,6 @@ export const MemberMessagesTab = ({
           displayEntries.map((entry, index) => {
             const messageKey = toMessageKey(entry.message);
             const renderProps = resolveMessageRenderProps(entry.message, messageContext);
-            const timelineItem: TimelineItem = { type: 'message', message: entry.message };
             const isUnread = isUserUnreadMessage(entry.message, readSet, toMessageKey);
 
             return (
@@ -187,11 +214,11 @@ export const MemberMessagesTab = ({
                 className="cursor-pointer"
                 role="button"
                 tabIndex={0}
-                onClick={() => setExpandedItem(timelineItem)}
+                onClick={() => handleExpandItem(messageKey)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    setExpandedItem(timelineItem);
+                    handleExpandItem(messageKey);
                   }
                 }}
               >
@@ -205,7 +232,7 @@ export const MemberMessagesTab = ({
                   isUnread={isUnread}
                   expandItemKey={messageKey}
                   onExpand={handleExpandItem}
-                  onCreateTask={onCreateTask}
+                  onCreateTask={onCreateTask ? handleCreateTask : undefined}
                   onTaskIdClick={handleTaskIdClick}
                   memberRole={renderProps.memberRole}
                   memberColor={renderProps.memberColor}
@@ -240,7 +267,13 @@ export const MemberMessagesTab = ({
       </div>
 
       <MessageExpandDialog
-        expandedItem={expandedItem}
+        expandedItem={
+          expandedItem?.type === 'message'
+            ? (expandedItemsByKey.get(toMessageKey(expandedItem.message)) ?? null)
+            : null
+        }
+        actionOwner={actionOwner}
+        expandedOwner={expandedOwner}
         open={expandedItem !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -250,7 +283,7 @@ export const MemberMessagesTab = ({
         teamName={teamName}
         members={members}
         onTaskIdClick={handleTaskIdClick}
-        onCreateTaskFromMessage={onCreateTask}
+        onCreateTaskFromMessage={onCreateTask ? handleCreateTask : undefined}
       />
     </div>
   );
