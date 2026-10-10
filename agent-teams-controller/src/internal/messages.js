@@ -168,23 +168,24 @@ function assertNotGroupReply(context, flags) {
   }
 }
 
-function sendMessage(context, flags) {
+function prepareMessageSend(context, flags) {
   assertNotGroupReply(context, flags);
   const normalized = normalizeMessageSendFlags(context, normalizePlaceholderTaskRefPrefixes(flags));
   assertUserDirectedMessageHasSender(context, normalized);
   assertOpenCodeMessageIsNotBootstrapNoise(context, normalized);
-  return messageStore.sendInboxMessage(context.paths, normalized);
+  return normalized;
+}
+
+function sendMessage(context, flags) {
+  return messageStore.sendInboxMessage(context.paths, prepareMessageSend(context, flags));
+}
+
+async function sendMessageAsync(context, flags) {
+  return messageStore.sendInboxMessageAsync(context.paths, prepareMessageSend(context, flags));
 }
 
 function sendTrustedMessage(context, flags) {
-  assertNotGroupReply(context, flags);
-  const normalized = normalizeMessageSendFlags(
-    { ...context, allowUserMessageSender: true },
-    normalizePlaceholderTaskRefPrefixes(flags)
-  );
-  assertUserDirectedMessageHasSender(context, normalized);
-  assertOpenCodeMessageIsNotBootstrapNoise(context, normalized);
-  return messageStore.sendInboxMessage(context.paths, normalized);
+  return sendMessage({ ...context, allowUserMessageSender: true }, flags);
 }
 
 function appendSentMessage(context, flags) {
@@ -204,5 +205,6 @@ module.exports = {
   lookupMessage,
   retractUnreadTaskNotifications,
   sendMessage,
+  sendMessageAsync,
   sendTrustedMessage,
 };

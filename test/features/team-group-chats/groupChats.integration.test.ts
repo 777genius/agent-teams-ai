@@ -387,7 +387,18 @@ describe('group chat main authority and durable identity', () => {
     const originalRoot = state.root;
     state.root = join(claudeDir, 'teams');
     await mkdir(join(state.root, 'sandbox', 'inboxes'), { recursive: true });
-    await writeFile(join(state.root, 'sandbox', 'config.json'), JSON.stringify({ name: 'sandbox' }));
+    await writeFile(join(state.root, 'sandbox', 'config.json'), JSON.stringify({
+      name: 'sandbox', members: roster.map(name => ({ name, agentType: name === 'lead' ? 'team-lead' : 'teammate' })),
+    }));
+    const { createController } = createRequire(import.meta.url)(
+      '../../../agent-teams-controller/src/controller.js'
+    ) as typeof import('agent-teams-controller');
+    const controller = createController({ teamName: 'sandbox', claudeDir });
+    let locked!: () => void;
+    const groupLocked = new Promise<void>(resolve => { locked = resolve; });
+    let release!: () => void;
+    const holdGroup = new Promise<void>(resolve => { release = resolve; });
+    let held = false;
     const writer = new TeamInboxWriter();
     feature = createTeamGroupChatsFeature({ roster: async () => roster,
       getRun: async (_team, member) => ({ runKey: `synthetic:${member}`, protocolVersion: 1,
@@ -395,7 +406,16 @@ describe('group chat main authority and durable identity', () => {
       configurationOperation: (_team, operation) => operation(),
       deliver: async (team, message, _run, shouldStillWrite) => {
         deliveries.push(message);
-        const sent = await writer.sendMessage(team, { ...message, attachments: undefined, member: message.to }, { shouldStillWrite });
+        const sent = await writer.sendMessage(team, { ...message, attachments: undefined, member: message.to }, {
+          shouldStillWrite: async () => {
+            if (message.to === 'alice' && message.text === 'GROUP_TEXT' && !held) {
+              held = true;
+              locked();
+              await holdGroup;
+            }
+            return shouldStillWrite();
+          },
+        });
         return sent.deliveredToInbox ? 'accepted' : 'skipped';
       },
     });
@@ -431,8 +451,23 @@ describe('group chat main authority and durable identity', () => {
       await app.listen({ host: '127.0.0.1', port: 0 });
       expect((await ipc('create', { id, name: 'Transport', selectedMemberNames: ['lead', 'alice'],
         excludedMemberNames: ['bob'], autoIncludeNewMembers: true })).error).toBeUndefined();
-      await writer.sendMessage('sandbox', { member: 'alice', from: 'user', text: 'PRIVATE_DM', messageId: 'private-dm' });
-      expect((await ipc('send', { groupChatId: id, messageId: randomUUID(), text: 'GROUP_TEXT' })).error).toBeUndefined();
+      const groupPost = ipc('send', { groupChatId: id, messageId: randomUUID(), text: 'GROUP_TEXT' });
+      await groupLocked;
+      // The controller must yield while the same-process async group writer owns the file.
+      const releaseTimer = setTimeout(release, 25);
+      try {
+        const [posted, privateReply] = await Promise.all([
+          groupPost,
+          controller.messages.sendMessageAsync({ member: 'alice', from: 'user', text: 'PRIVATE_DM', messageId: 'private-dm' }),
+        ]);
+        expect(posted.error).toBeUndefined();
+        expect(privateReply).toMatchObject({ deliveredToInbox: true, messageId: 'private-dm' });
+        expect(await controller.messages.sendMessageAsync({ member: 'alice', from: 'user', text: 'PRIVATE_DM', messageId: 'private-dm' })).toMatchObject({ deduplicated: true, messageId: 'private-dm' });
+        await expect(controller.messages.sendMessageAsync({ member: 'alice', from: 'user', text: 'BLOCK PRIVATE GROUP REPLY', groupChatId: id })).rejects.toThrow('group_chat_send');
+      } finally {
+        clearTimeout(releaseTimer);
+        release();
+      }
       const inbound = deliveries.find(message => message.to === 'alice')!;
       const reply = await mcp('group_chat_send', { groupChatId: id, messageId: randomUUID(), text: 'GROUP_REPLY', relayOfMessageId: inbound.messageId });
       expect(reply).toMatchObject({ saved: true, groupChatId: id, relayOfMessageId: inbound.messageId });

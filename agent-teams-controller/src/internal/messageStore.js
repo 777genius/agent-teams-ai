@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
 const { assertValidGroupInboxRows } = require('./groupEnvelope.js');
-const { withFileLockSync } = require('./fileLock.js');
+const { withFileLock, withFileLockSync } = require('./fileLock.js');
 const { looksLikeIdleAckOnlyText } = require('./idleAckText.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const taskStore = require('./taskStore.js');
@@ -449,38 +449,44 @@ function getMessageIdDuplicate(list, row) {
   return list.find((candidate) => candidate && candidate.messageId === messageId) || null;
 }
 
-function appendInboxRow(filePath, row, options = {}) {
-  return withFileLockSync(filePath, () => {
-    const current = readMessageRows(filePath);
-    const list = Array.isArray(current) ? current : [];
-    const sameMessageId = getMessageIdDuplicate(list, row);
-    if (sameMessageId) {
-      return { row: sameMessageId, deduplicated: true, messageIdMatch: true };
-    }
-    const duplicate = getRuntimeDeliveryDuplicate(list, row, options);
-    if (duplicate) {
-      return { row: duplicate, deduplicated: true };
-    }
-    const relayScoped = getRelayScopedUserRestatement(list, row, options);
-    if (relayScoped) {
-      return { row: relayScoped, deduplicated: true, relayScoped: true };
-    }
-    const postCompletion = getPostCompletionFinalMessage(list, row, options.resolveBoardCompletion);
-    if (postCompletion) {
-      return { row: postCompletion, deduplicated: true, postCompletion: true };
-    }
-    const repeated = getRepeatedMessageDuplicate(list, row, options);
-    if (repeated) {
-      return { row: repeated, deduplicated: true, repeated: true };
-    }
+function appendInboxRowUnlocked(filePath, row, options) {
+  const current = readMessageRows(filePath);
+  const list = Array.isArray(current) ? current : [];
+  const sameMessageId = getMessageIdDuplicate(list, row);
+  if (sameMessageId) {
+    return { row: sameMessageId, deduplicated: true, messageIdMatch: true };
+  }
+  const duplicate = getRuntimeDeliveryDuplicate(list, row, options);
+  if (duplicate) {
+    return { row: duplicate, deduplicated: true };
+  }
+  const relayScoped = getRelayScopedUserRestatement(list, row, options);
+  if (relayScoped) {
+    return { row: relayScoped, deduplicated: true, relayScoped: true };
+  }
+  const postCompletion = getPostCompletionFinalMessage(list, row, options.resolveBoardCompletion);
+  if (postCompletion) {
+    return { row: postCompletion, deduplicated: true, postCompletion: true };
+  }
+  const repeated = getRepeatedMessageDuplicate(list, row, options);
+  if (repeated) {
+    return { row: repeated, deduplicated: true, repeated: true };
+  }
 
-    list.push(row);
-    writeMessageRows(filePath, list);
-    return { row, deduplicated: false };
-  });
+  list.push(row);
+  writeMessageRows(filePath, list);
+  return { row, deduplicated: false };
 }
 
-function sendInboxMessage(paths, flags) {
+function appendInboxRow(filePath, row, options = {}) {
+  return withFileLockSync(filePath, () => appendInboxRowUnlocked(filePath, row, options));
+}
+
+function appendInboxRowAsync(filePath, row, options = {}) {
+  return withFileLock(filePath, () => appendInboxRowUnlocked(filePath, row, options));
+}
+
+function prepareInboxMessage(paths, flags) {
   const memberName =
     typeof flags.member === 'string' && flags.member.trim()
       ? flags.member.trim()
@@ -496,19 +502,26 @@ function sendInboxMessage(paths, flags) {
     to: memberName,
     read: false,
   });
-  const appended = appendInboxRow(getInboxPath(paths, memberName), payload, {
-    resolveBoardCompletion: () => {
-      const epoch = readBoardCompletionEpoch(paths);
-      return epoch
-        ? {
-            ...epoch,
-            hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
-            isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
-          }
-        : null;
+  return {
+    filePath: getInboxPath(paths, memberName),
+    payload,
+    options: {
+      resolveBoardCompletion: () => {
+        const epoch = readBoardCompletionEpoch(paths);
+        return epoch
+          ? {
+              ...epoch,
+              hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
+              isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
+            }
+          : null;
+      },
+      hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
     },
-    hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
-  });
+  };
+}
+
+function inboxSendResult(appended) {
   return {
     deliveredToInbox: true,
     messageId: appended.row.messageId,
@@ -529,6 +542,16 @@ function sendInboxMessage(paths, flags) {
         }
       : {}),
   };
+}
+
+function sendInboxMessage(paths, flags) {
+  const { filePath, payload, options } = prepareInboxMessage(paths, flags);
+  return inboxSendResult(appendInboxRow(filePath, payload, options));
+}
+
+async function sendInboxMessageAsync(paths, flags) {
+  const { filePath, payload, options } = prepareInboxMessage(paths, flags);
+  return inboxSendResult(await appendInboxRowAsync(filePath, payload, options));
 }
 
 function isRetractableTaskNotificationRow(row, taskId, displayToken) {
@@ -666,4 +689,5 @@ module.exports = {
   lookupMessage,
   retractUnreadTaskNotifications,
   sendInboxMessage,
+  sendInboxMessageAsync,
 };

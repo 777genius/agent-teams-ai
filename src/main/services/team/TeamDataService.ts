@@ -2578,7 +2578,7 @@ export class TeamDataService {
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = this.getController(teamName).messages.sendMessage({
+    const result = (await this.getController(teamName).messages.sendMessageAsync({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
@@ -2603,7 +2603,7 @@ export class TeamDataService {
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
-    }) as SendMessageResult;
+    })) as SendMessageResult;
     this.invalidateMessageFeed(teamName);
     return result;
   }

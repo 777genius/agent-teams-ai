@@ -164,6 +164,7 @@ declare module 'agent-teams-controller' {
     appendSentMessage(flags: Record<string, unknown>): unknown;
     lookupMessage(messageId: string): { message: Record<string, unknown>; store: string };
     sendMessage(flags: Record<string, unknown>): unknown;
+    sendMessageAsync(flags: Record<string, unknown>): Promise<unknown>;
   }
 
   export interface ControllerProcessApi {
