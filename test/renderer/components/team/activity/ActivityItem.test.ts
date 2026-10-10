@@ -1422,7 +1422,7 @@ describe('message task action and dialog ownership', () => {
   });
   const message: InboxMessage = {
     from: 'alice',
-    text: 'Keep the original group',
+    text: 'Keep the original group\n<info_for_agent>\nprivate task context\n</info_for_agent>',
     summary: 'Group task',
     groupChatId: 'group-a',
     messageId: 'message-a',
@@ -1483,9 +1483,12 @@ describe('message task action and dialog ownership', () => {
     await act(() => Promise.resolve(taskAction(host).click()));
     expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
     expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
-    expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Description"]')?.value).toContain(
-      'Keep the original group'
-    );
+    const description = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description"]'
+    )?.value;
+    expect(description).toContain('Keep the original group');
+    expect(description).not.toContain('info_for_agent');
+    expect(description).not.toContain('private task context');
     await act(() => Promise.resolve(createButton(host).click()));
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
     expect(submit.mock.calls[0][0].groupChatId).toBe('group-a');
