@@ -1,0 +1,327 @@
+[
+  {
+    "name": "mutable var is rejected",
+    "path": "src/main/parity/var.ts",
+    "rule": "no-var",
+    "severity": 2,
+    "bad": "export var value = 1;",
+    "good": "export const value = 1;",
+    "native": true,
+    "nativeCode": "eslint(no-var)",
+    "nativeSpan": {
+      "offset": 7,
+      "length": 3,
+      "line": 1,
+      "column": 8
+    }
+  },
+  {
+    "name": "unmodified let is rejected",
+    "path": "src/main/parity/const.ts",
+    "rule": "prefer-const",
+    "severity": 2,
+    "bad": "let value = 1; export { value };",
+    "good": "const value = 1; export { value };",
+    "native": true,
+    "nativeCode": "eslint(prefer-const)",
+    "nativeSpan": {
+      "offset": 4,
+      "length": 5,
+      "line": 1,
+      "column": 5
+    }
+  },
+  {
+    "name": "coercive equality rejects numbers but allows null",
+    "path": "src/main/parity/equal.ts",
+    "rule": "eqeqeq",
+    "severity": 2,
+    "bad": "export const compare = (x: number) => x == 2;",
+    "good": "export const compare = (x: number | null) => x == null;",
+    "native": true,
+    "nativeCode": "eslint(eqeqeq)",
+    "nativeSpan": {
+      "offset": 40,
+      "length": 2,
+      "line": 1,
+      "column": 41
+    }
+  },
+  {
+    "name": "unused source binding stays a warning",
+    "path": "src/main/parity/unused.ts",
+    "rule": "@typescript-eslint/no-unused-vars",
+    "severity": 1,
+    "bad": "const unused = 1; export {};",
+    "good": "const _unused = 1; export {};",
+    "native": true,
+    "nativeCode": "eslint(no-unused-vars)",
+    "nativeSpan": {
+      "offset": 6,
+      "length": 6,
+      "line": 1,
+      "column": 7
+    }
+  },
+  {
+    "name": "renderer to main crossing stays a warning",
+    "path": "src/renderer/parity/boundary.ts",
+    "rule": "boundaries/element-types",
+    "severity": 1,
+    "bad": "export { value } from '@main/parity/value';",
+    "good": "export { value } from '@shared/parity/value';",
+    "native": false
+  },
+  {
+    "name": "feature private imports reject consumers",
+    "path": "src/preload/parity/private.ts",
+    "rule": "no-restricted-imports",
+    "severity": 2,
+    "bad": "export { value } from '@features/parity/core/domain/value';",
+    "good": "export { value } from '@features/parity/contracts';",
+    "native": false
+  },
+  {
+    "name": "domain forbids Electron",
+    "path": "src/features/parity/core/domain/platform.ts",
+    "rule": "no-restricted-imports",
+    "severity": 2,
+    "bad": "export { ipcMain } from 'electron';",
+    "good": "export { value } from '@shared/parity/value';",
+    "native": false
+  },
+  {
+    "name": "feature UI forbids store",
+    "path": "src/features/parity/renderer/ui/Store.tsx",
+    "rule": "no-restricted-imports",
+    "severity": 2,
+    "bad": "export { value } from '@renderer/store/parity';",
+    "good": "export { value } from '@shared/parity/value';",
+    "native": false
+  },
+  {
+    "name": "missing alias rejects main resolution",
+    "path": "src/main/parity/alias.ts",
+    "rule": "import/no-unresolved",
+    "severity": 2,
+    "bad": "export { value } from '@shared/parity/missing';",
+    "good": "export { value } from '@shared/parity/value';",
+    "native": false
+  },
+  {
+    "name": "default export remains warning",
+    "path": "src/main/parity/default.ts",
+    "rule": "import/no-default-export",
+    "severity": 1,
+    "bad": "export default 1;",
+    "good": "export const value = 1;",
+    "native": false
+  },
+  {
+    "name": "cycle is rejected",
+    "path": "src/main/parity/cycle.ts",
+    "rule": "import/no-cycle",
+    "severity": 2,
+    "bad": "import { value } from './cycleB'; export const first = value;",
+    "good": "export const first = 1;",
+    "native": false
+  },
+  {
+    "name": "direct window.webContents send is rejected",
+    "path": "src/main/parity/windowwebContents.ts",
+    "rule": "no-restricted-syntax",
+    "severity": 2,
+    "bad": "declare const window: any; window.webContents.send('channel');",
+    "good": "declare const safeSendToRenderer: (channel: string) => void; safeSendToRenderer('channel');",
+    "native": false
+  },
+  {
+    "name": "direct event.sender send is rejected",
+    "path": "src/main/parity/eventsender.ts",
+    "rule": "no-restricted-syntax",
+    "severity": 2,
+    "bad": "declare const event: any; event.sender.send('channel');",
+    "good": "declare const safeSendToRenderer: (channel: string) => void; safeSendToRenderer('channel');",
+    "native": false
+  },
+  {
+    "name": "direct contents send is rejected",
+    "path": "src/main/parity/contents.ts",
+    "rule": "no-restricted-syntax",
+    "severity": 2,
+    "bad": "declare const contents: any; contents.send('channel');",
+    "good": "declare const safeSendToRenderer: (channel: string) => void; safeSendToRenderer('channel');",
+    "native": false
+  },
+  {
+    "name": "blanket suppression is rejected",
+    "path": "src/main/parity/blanket.ts",
+    "rule": "@eslint-community/eslint-comments/no-unlimited-disable",
+    "severity": 2,
+    "bad": "/* eslint-disable -- blanket */\nexport const value = 1;\n/* eslint-enable */",
+    "good": "export const value = 1;",
+    "native": false
+  },
+  {
+    "name": "unpaired suppression is rejected",
+    "path": "src/main/parity/pair.ts",
+    "rule": "@eslint-community/eslint-comments/disable-enable-pair",
+    "severity": 2,
+    "bad": "/* eslint-disable no-var -- reason */\nexport var value = 1;",
+    "good": "/* eslint-disable no-var -- reason */\nexport var value = 1;\n/* eslint-enable no-var */",
+    "native": false
+  },
+  {
+    "name": "duplicate suppression is rejected",
+    "path": "src/main/parity/duplicate.ts",
+    "rule": "@eslint-community/eslint-comments/no-duplicate-disable",
+    "severity": 2,
+    "bad": "/* eslint-disable no-var -- reason */\n/* eslint-disable no-var -- reason */\nexport var value = 1;\n/* eslint-enable no-var */",
+    "good": "/* eslint-disable no-var -- reason */\nexport var value = 1;\n/* eslint-enable no-var */",
+    "native": false
+  },
+  {
+    "name": "missing suppression description stays warning",
+    "path": "src/main/parity/description.ts",
+    "rule": "@eslint-community/eslint-comments/require-description",
+    "severity": 1,
+    "bad": "// eslint-disable-next-line no-var\nexport var value = 1;",
+    "good": "// eslint-disable-next-line no-var -- synthetic control\nexport var value = 1;",
+    "native": false
+  },
+  {
+    "name": "unused suppression is rejected",
+    "path": "src/main/parity/directive.ts",
+    "rule": "@eslint-community/eslint-comments/no-unused-disable",
+    "severity": 2,
+    "bad": "// eslint-disable-next-line no-var -- unused\nexport const value = 1;",
+    "good": "export const value = 1;",
+    "native": false
+  },
+  {
+    "name": "Tailwind conflicts reject",
+    "path": "src/renderer/parity/Conflict.tsx",
+    "rule": "tailwindcss/no-contradicting-classname",
+    "severity": 2,
+    "bad": "export const View = () => <div className=\"p-2 p-4\" />;",
+    "good": "export const View = () => <div className=\"bg-surface-raised p-4 text-text-secondary animate-in\" />;",
+    "native": false
+  },
+  {
+    "name": "unknown Tailwind class stays warning",
+    "path": "src/renderer/parity/Custom.tsx",
+    "rule": "tailwindcss/no-custom-classname",
+    "severity": 1,
+    "bad": "export const View = () => <div className=\"parity-unknown\" />;",
+    "good": "export const View = () => <div className=\"bg-surface-raised\" />;",
+    "native": false
+  },
+  {
+    "name": "custom import groups reject reversed order",
+    "path": "src/main/parity/sort.ts",
+    "rule": "simple-import-sort/imports",
+    "severity": 2,
+    "bad": "// local comment\nimport { value } from './value';\nimport { basename } from 'node:path';\nexport const result = basename(String(value));",
+    "good": "import { basename } from 'node:path';\n\n// local comment\nimport { value } from './value';\n\nexport const result = basename(String(value));",
+    "native": false
+  },
+  {
+    "name": "export sort is enforced",
+    "path": "src/main/parity/exports.ts",
+    "rule": "simple-import-sort/exports",
+    "severity": 2,
+    "bad": "export { value } from './value';\nexport { value as other } from './cycleB';",
+    "good": "export { value as other } from './cycleB';\nexport { value } from './value';",
+    "native": false
+  },
+  {
+    "name": "floating promise stays warning",
+    "path": "src/main/parity/floating.ts",
+    "rule": "@typescript-eslint/no-floating-promises",
+    "severity": 1,
+    "bad": "Promise.resolve(1);",
+    "good": "void Promise.resolve(1);",
+    "native": false
+  },
+  {
+    "name": "void return promise assignment rejects but argument exemption holds",
+    "path": "src/main/parity/misused.ts",
+    "rule": "@typescript-eslint/no-misused-promises",
+    "severity": 2,
+    "bad": "export const callback: () => void = async () => {};",
+    "good": "declare const consume: (callback: () => void) => void; consume(async () => {});",
+    "native": false
+  },
+  {
+    "name": "conditional hooks stay warning",
+    "path": "src/renderer/parity/Hook.tsx",
+    "rule": "react-hooks/rules-of-hooks",
+    "severity": 1,
+    "bad": "import { useState } from 'react'; export const View = ({ flag }: { flag: boolean }) => { if (flag) useState(0); return null; };",
+    "good": "import { useState } from 'react'; export const View = () => { useState(0); return null; };",
+    "native": false
+  },
+  {
+    "name": "effect dependencies stay warning",
+    "path": "src/renderer/parity/Deps.tsx",
+    "rule": "react-hooks/exhaustive-deps",
+    "severity": 1,
+    "bad": "import { useEffect } from 'react'; export const View = ({ value }: { value: string }) => { useEffect(() => { console.log(value); }, []); return null; };",
+    "good": "import { useEffect } from 'react'; export const View = ({ value }: { value: string }) => { useEffect(() => { console.log(value); }, [value]); return null; };",
+    "native": false
+  },
+  {
+    "name": "list JSX keys are required",
+    "path": "src/renderer/parity/Key.tsx",
+    "rule": "react/jsx-key",
+    "severity": 2,
+    "bad": "export const View = () => [1, 2].map((v) => <div>{v}</div>);",
+    "good": "export const View = () => [1, 2].map((v) => <div key={v}>{v}</div>);",
+    "native": false
+  },
+  {
+    "name": "image alt is required",
+    "path": "src/renderer/parity/Alt.tsx",
+    "rule": "jsx-a11y/alt-text",
+    "severity": 2,
+    "bad": "export const View = () => <img src=\"image.png\" />;",
+    "good": "export const View = () => <img src=\"image.png\" alt=\"test\" />;",
+    "native": false
+  },
+  {
+    "name": "Refresh mixed exports stay warning",
+    "path": "src/renderer/parity/Refresh.tsx",
+    "rule": "react-refresh/only-export-components",
+    "severity": 1,
+    "bad": "export const helper = () => 1; export const View = () => <div />;",
+    "good": "export const count = 1; export const View = () => <div />;",
+    "native": false
+  },
+  {
+    "name": "expression eval rejects",
+    "path": "src/main/parity/eval.ts",
+    "rule": "security/detect-eval-with-expression",
+    "severity": 2,
+    "bad": "export const run = (code: string) => eval(code);",
+    "good": "export const run = () => eval(\"1 + 1\");",
+    "native": false
+  },
+  {
+    "name": "duplicated branches stay warning",
+    "path": "src/main/parity/branches.ts",
+    "rule": "sonarjs/no-all-duplicated-branches",
+    "severity": 1,
+    "bad": "export const pick = (flag: boolean) => { if (flag) return 1; else return 1; };",
+    "good": "export const pick = (flag: boolean) => { if (flag) return 1; else return 2; };",
+    "native": false
+  },
+  {
+    "name": "external prompt override keeps a11y rejection",
+    "path": "src/features/external-agent-connection/renderer/ExternalAgentPromptDialog.tsx",
+    "rule": "jsx-a11y/no-noninteractive-element-interactions",
+    "severity": 2,
+    "bad": "export const View = () => <p onClick={() => {}}>text</p>;",
+    "good": "export const View = () => <button onClick={() => {}}>text</button>;",
+    "native": false
+  }
+]
