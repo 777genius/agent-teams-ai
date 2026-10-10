@@ -3,7 +3,7 @@ import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import { lstat } from 'fs/promises';
 import * as path from 'path';
 
-import { atomicWriteAsync } from '../atomicWrite';
+import { atomicWriteInboxAsync } from '../atomicWrite';
 import { withFileLock } from '../fileLock';
 import { withInboxLock } from '../inboxLock';
 import { getEffectiveInboxMessageId } from '../inboxMessageIdentity';
@@ -112,7 +112,7 @@ export async function markTeamInboxMessagesRead(
       }
 
       if (!changed) return;
-      await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+      await atomicWriteInboxAsync(inboxPath, JSON.stringify(parsed, null, 2));
     });
   });
 }

@@ -1,8 +1,8 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { atomicWriteInboxAsync } from '../../services/team/atomicWrite';
 import { withFileLock } from '../../services/team/fileLock';
 import { withInboxLock } from '../../services/team/inboxLock';
 import { getEffectiveInboxMessageId } from '../../services/team/inboxMessageIdentity';
@@ -215,7 +215,7 @@ export async function discardQueuedUserMessages(
       const { kept, discarded } = discardQueuedUserMessagesFromRows(rows, messageIds);
       const remainingQueued = listQueuedUserMessagesFromRows(kept).length;
       if (discarded > 0) {
-        await atomicWriteAsync(inboxPath, JSON.stringify(kept, null, 2));
+        await atomicWriteInboxAsync(inboxPath, JSON.stringify(kept, null, 2));
       }
       result = { discarded, remainingQueued };
     });

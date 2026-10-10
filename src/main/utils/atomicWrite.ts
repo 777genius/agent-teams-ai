@@ -12,6 +12,8 @@ export { isOwnedReviewFileTransactionHardlink } from './reviewFileTransactionOwn
 
 export interface AtomicWriteOptions {
   mode?: number;
+  /** Mode for newly created parent directories; existing paths are never chmodded. */
+  directoryMode?: number;
   durability?: 'best-effort' | 'strict';
   syncDirectory?: boolean;
   /**
@@ -268,7 +270,10 @@ export async function atomicWriteAsync(
   const tmpPath = path.join(dir, `.tmp.${randomUUID()}`);
 
   try {
-    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.mkdir(dir, {
+      recursive: true,
+      ...(options.directoryMode === undefined ? {} : { mode: options.directoryMode }),
+    });
     await fs.promises.writeFile(tmpPath, data, {
       ...(typeof data === 'string' ? { encoding: 'utf8' as const } : {}),
       flag: 'wx',

@@ -62,11 +62,15 @@ function renameWithRetrySync(tempPath, filePath) {
 }
 
 function atomicWriteFileSync(filePath, data, options) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
   const tempPath = path.join(path.dirname(filePath), `.tmp.${crypto.randomUUID()}`);
 
   try {
-    fs.writeFileSync(tempPath, data, options);
+    fs.writeFileSync(
+      tempPath,
+      data,
+      typeof options === 'string' ? { encoding: options, mode: 0o600 } : { mode: 0o600, ...options }
+    );
     fsyncFileBestEffort(tempPath);
     renameWithRetrySync(tempPath, filePath);
   } catch (error) {
