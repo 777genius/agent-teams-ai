@@ -346,6 +346,56 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     });
   });
 
+  it.each(['opencode.reconcileTeam', 'opencode.stopTeam', 'opencode.sendMessage'] as const)(
+    'carries the exact persisted original behavior into %s without a versioned Stop target',
+    async (command) => {
+      const originalBehavior = 'abf9322bf1e7602cfe9d5f6c878cdbcc29633e42ac6e4bfb4fe2aa65f7e2d092';
+      manifestReader.manifest = {
+        ...manifestReader.manifest,
+        behaviorFingerprint: originalBehavior,
+      };
+      clientIdentity.bridgeProtocol.supportedCommands.push(command);
+      const server = peerIdentity('agent_teams_orchestrator');
+      server.bridgeProtocol.supportedCommands.push(command);
+      handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+        { client: clientIdentity, server },
+        [command]
+      );
+      expect(handshakePort.nextHandshake.stopRecoveryContractVersion).toBeUndefined();
+      bridge.resultFactory = ({ command, body, options }) => {
+        expect(body.preconditions.expectedBehaviorFingerprint).toBe(originalBehavior);
+        return bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+          },
+        });
+      };
+      const input =
+        command === 'opencode.sendMessage'
+          ? { ...buildSendInput('observed'), command }
+          : { ...buildStopInput(), command };
+      const service = createService();
+      await expect(service.execute({ ...input, runId: 'stale-run' })).rejects.toThrow(
+        'persisted lane'
+      );
+      await expect(
+        service.execute({ ...input, capabilitySnapshotId: 'wrong-cap' })
+      ).rejects.toThrow('persisted lane');
+      expect(bridge.calls).toHaveLength(0);
+      await expect(service.execute(input)).resolves.toMatchObject({ ok: true });
+      expect(bridge.calls).toHaveLength(1);
+      expect(bridge.calls[0].body).not.toHaveProperty('stopRecovery');
+    }
+  );
+
   it('binds stop to the persisted lane manifest without guessing the project latest model', async () => {
     const input = buildStopInput();
     input.capabilitySnapshotId = null;

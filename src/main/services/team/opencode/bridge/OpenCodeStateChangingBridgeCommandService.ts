@@ -155,6 +155,13 @@ export class OpenCodeStateChangingBridgeCommandService {
       input.command === 'opencode.stopTeam'
     );
     const { capabilitySnapshotId, body: commandBody } = bindLifecycleManifest(input, manifest);
+    const behaviorFingerprint =
+      input.behaviorFingerprint ??
+      (input.command === 'opencode.reconcileTeam' ||
+      input.command === 'opencode.stopTeam' ||
+      input.command === 'opencode.sendMessage'
+        ? (manifest.behaviorFingerprint ?? null)
+        : null);
     const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
       input.command
     );
@@ -189,7 +196,7 @@ export class OpenCodeStateChangingBridgeCommandService {
                 laneId: normalizedLaneId,
                 runId: input.runId,
                 capabilitySnapshotId: bound.capabilitySnapshotId,
-                behaviorFingerprint: input.behaviorFingerprint,
+                behaviorFingerprint,
                 cwd: input.cwd,
                 body: bound.body,
               },
@@ -280,7 +287,7 @@ export class OpenCodeStateChangingBridgeCommandService {
                 laneId: normalizedLaneId,
                 runId: input.runId,
                 capabilitySnapshotId,
-                behaviorFingerprint: input.behaviorFingerprint,
+                behaviorFingerprint,
                 cwd: input.cwd,
                 body: commandBody,
               },
@@ -312,7 +319,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           expectedRunId: input.runId,
           expectedCapabilitySnapshotId: capabilitySnapshotId,
           expectedBehaviorFingerprint:
-            stopRequest?.target.expectedBehaviorFingerprint ?? input.behaviorFingerprint,
+            stopRequest?.target.expectedBehaviorFingerprint ?? behaviorFingerprint,
           expectedManifestHighWatermark,
           commandLeaseId: lease.leaseId,
           idempotencyKey,
@@ -333,7 +340,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           laneId: normalizedLaneId,
           runId: input.runId,
           capabilitySnapshotId: capabilitySnapshotId,
-          behaviorFingerprint: input.behaviorFingerprint,
+          behaviorFingerprint,
           manifestHighWatermark: expectedManifestHighWatermark,
           body: commandBody,
         }),
