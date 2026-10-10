@@ -1823,10 +1823,7 @@ function onContextSwitched(context: ServiceContext): void {
   });
 }
 
-/**
- * Rebuilds the local ServiceContext using the current configured Claude root paths.
- * Called when general.claudeRootPath changes.
- */
+/** Rebuilds local context and retires root-bound team reads after a Claude root change. */
 function reconfigureLocalContextForClaudeRoot(): void {
   try {
     const currentLocal = contextRegistry.get('local');
@@ -1834,6 +1831,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
       throw new Error('Cannot reconfigure local context: local context not found');
     }
 
+    getTeamDataWorkerClient().dispose();
     const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
     const projectsDir = getProjectsBasePath();
     const todosDir = getTodosBasePath();

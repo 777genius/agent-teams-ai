@@ -4,6 +4,16 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useGroupChatComposer } from '../../../src/features/team-group-chats/renderer/hooks/useGroupChatComposer';
+import {
+  invalidateContextScopedRequestEpoch,
+  resetContextScopedRequestEpochForTests,
+} from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+
+import type { GroupChatSendRequest } from '../../../src/features/team-group-chats/contracts';
+import type {
+  ComposerDraftAddress,
+  ComposerDraftContent,
+} from '../../../src/renderer/types/composerDraft';
 
 const ports = vi.hoisted(() => ({ send: vi.fn(), load: vi.fn(), save: vi.fn() }));
 vi.mock('@renderer/api', () => ({ api: { teamGroupChats: { send: ports.send } } }));
@@ -257,6 +267,126 @@ describe('group composer canonical send outcome', () => {
       expect(composer!.text).toBe('');
     } finally {
       act(() => view.unmount());
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps a frozen attempt for retry when the root epoch changes during its durable save', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    resetContextScopedRequestEpochForTests();
+    ports.send.mockReset();
+    ports.save.mockReset();
+    const original: ComposerDraftContent = {
+      text: 'Original root message',
+      chips: [],
+      attachments: [],
+      actionMode: 'do',
+      groupRecipient: { kind: 'member', memberName: 'bob' },
+      restoredOrigin: {
+        kind: 'unconfirmed-send',
+        attemptId: '11111111-1111-4111-8111-111111111111',
+        messageId: '11111111-1111-4111-8111-111111111111',
+      },
+    };
+    let stored: ComposerDraftContent | null = original;
+    let releaseSave: (() => void) | undefined;
+    const saved = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    ports.load.mockImplementation((address: ComposerDraftAddress) =>
+      Promise.resolve({
+        working: {
+          version: 2,
+          address,
+          workingRevision: 'loaded',
+          content: stored,
+          editorContext: { kind: 'plain' },
+          updatedAt: 0,
+        },
+        status: 'durable',
+      })
+    );
+    ports.save.mockImplementation(
+      async (
+        _address: ComposerDraftAddress,
+        _revision: string,
+        nextRevision: string,
+        content: ComposerDraftContent | null
+      ) => {
+        stored = content;
+        await saved;
+        return { kind: 'saved', workingRevision: nextRevision, status: 'durable' };
+      }
+    );
+    ports.send.mockRejectedValue(
+      Object.assign(new Error('Conflicting message in the new root'), { code: 'conflicting-id' })
+    );
+    const refresh = vi.fn(() => Promise.resolve());
+    let composer: ReturnType<typeof useGroupChatComposer> | undefined;
+    function Probe() {
+      composer = useGroupChatComposer('team-a', 'root-a', 'group-a', refresh, 'Discussion', 'lead');
+      return null;
+    }
+    const view = createRoot(document.createElement('div'));
+    try {
+      await act(async () => {
+        view.render(<Probe key="original-root" />);
+        await Promise.resolve();
+      });
+      let sending: Promise<void> | undefined;
+      await act(async () => {
+        sending = composer!.send();
+        await Promise.resolve();
+      });
+      expect(ports.save).toHaveBeenCalledTimes(1);
+      expect(stored).toEqual(original);
+      expect(composer!.pending).toBe(true);
+      invalidateContextScopedRequestEpoch();
+      await act(async () => {
+        releaseSave!();
+        await sending;
+      });
+      expect(ports.send).not.toHaveBeenCalled();
+      expect(stored).toEqual(original);
+      expect(composer!.attemptId).toBe(original.restoredOrigin!.attemptId);
+      expect(composer!.text).toBe(original.text);
+      expect(composer!.recipientName).toBe('bob');
+      expect(composer!.pending).toBe(false);
+      expect(refresh).not.toHaveBeenCalled();
+
+      // Returning to the original root restores the same immutable attempt.
+      invalidateContextScopedRequestEpoch();
+      await act(async () => {
+        view.render(<Probe key="returned-root" />);
+        await Promise.resolve();
+      });
+      ports.send.mockImplementation((request: GroupChatSendRequest) =>
+        Promise.resolve({
+          saved: true,
+          groupChatId: request.groupChatId,
+          messageId: request.messageId,
+          statusPersisted: true,
+        })
+      );
+      await act(async () => {
+        await composer!.send();
+      });
+      expect(ports.send).toHaveBeenCalledTimes(1);
+      expect(ports.send.mock.calls[0][0]).toEqual({
+        teamName: 'team-a',
+        groupChatId: 'group-a',
+        messageId: original.restoredOrigin!.messageId,
+        text: original.text,
+        recipientName: 'bob',
+      });
+      expect(stored).toBeNull();
+      expect(composer!.attemptId).toBeNull();
+      expect(composer!.text).toBe('');
+      expect(refresh).toHaveBeenCalledTimes(1);
+    } finally {
+      releaseSave!();
+      act(() => view.unmount());
+      resetContextScopedRequestEpochForTests();
       vi.unstubAllGlobals();
     }
   });

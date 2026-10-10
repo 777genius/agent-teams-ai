@@ -7,6 +7,9 @@ import { useCallback, useRef } from 'react';
 
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
+
+import { resetWorkspaceForRootChange } from '../resetWorkspaceForRootChange';
 
 import type { RepositoryDropdownItem } from './useSettingsConfig';
 import type { AppConfig, NotificationTrigger } from '@renderer/types/data';
@@ -390,8 +393,23 @@ export function useSettingsHandlers({
         },
       };
 
+      const rootInfo =
+        useStore.getState().connectionMode === 'local'
+          ? await api.config.getClaudeRootInfo()
+          : null;
+      const rootMayChange = rootInfo !== null && rootInfo.resolvedPath !== rootInfo.defaultPath;
+      if (rootMayChange) {
+        const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+        if (lifecycleClose !== true && !(await lifecycleClose)) return;
+      }
+
       await api.config.update('notifications', defaultConfig.notifications);
       await api.config.update('general', defaultConfig.general);
+      if (rootMayChange && useStore.getState().connectionMode === 'local') {
+        resetWorkspaceForRootChange();
+        const { fetchProjects, fetchRepositoryGroups } = useStore.getState();
+        await Promise.all([fetchProjects(), fetchRepositoryGroups()]);
+      }
       await api.config.update('providerConnections', defaultConfig.providerConnections);
       await api.config.update('runtime', defaultConfig.runtime);
       const updatedConfig = await api.config.update('display', defaultConfig.display);
@@ -439,6 +457,19 @@ export function useSettingsHandlers({
         setSaving(true);
         const text = await file.text();
         const importedConfig = JSON.parse(text) as AppConfig;
+        const rootInfo =
+          importedConfig.general &&
+          Object.prototype.hasOwnProperty.call(importedConfig.general, 'claudeRootPath') &&
+          useStore.getState().connectionMode === 'local'
+            ? await api.config.getClaudeRootInfo()
+            : null;
+        const rootMayChange =
+          rootInfo !== null &&
+          rootInfo.resolvedPath !== (importedConfig.general.claudeRootPath ?? rootInfo.defaultPath);
+        if (rootMayChange) {
+          const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+          if (lifecycleClose !== true && !(await lifecycleClose)) return;
+        }
 
         if (importedConfig.notifications) {
           await api.config.update('notifications', importedConfig.notifications);
@@ -448,6 +479,11 @@ export function useSettingsHandlers({
         }
         if (importedConfig.general) {
           await api.config.update('general', importedConfig.general);
+          if (rootMayChange && useStore.getState().connectionMode === 'local') {
+            resetWorkspaceForRootChange();
+            const { fetchProjects, fetchRepositoryGroups } = useStore.getState();
+            await Promise.all([fetchProjects(), fetchRepositoryGroups()]);
+          }
         }
         if (importedConfig.display) {
           await api.config.update('display', importedConfig.display);
