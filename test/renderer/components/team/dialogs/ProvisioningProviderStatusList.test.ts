@@ -374,7 +374,7 @@ describe('ProvisioningProviderStatusList', () => {
               providerId: 'opencode',
               status: 'failed',
               details: [
-                'Runtime status command failed.\nExit code: 1\nStderr: error: Unexpected\nAPI_KEY=private-value\nAuthorization: Bearer private-bearer\n{"apiKey":"private-json"}\nhttps://name:private-url@example.test/v1?token=private-query\n--- JSONC Input ---\n{ \"notes\": \"private-project-note\" }\n--- Errors ---\nInvalidSymbol at line 1, column 3\nLine 1: private-source-excerpt',
+                'Runtime status command failed.\nExit code: 1\nStderr: error: Unexpected\nAPI_KEY=private-value\nAuthorization: Bearer private-bearer\n{"apiKey":"private-json"}\nhttps://name:private-url@example.test/v1?token=private-query\n--- JSONC Input ---\n{ \"notes\": \"private-project-note\" }\n--- Errors ---\nInvalidSymbol at line 1, column 3\n   Line 1: private-source-excerpt\n\tLine 2: private-tab-excerpt',
               ],
             },
           ],
@@ -402,6 +402,7 @@ describe('ProvisioningProviderStatusList', () => {
       'private-query',
       'private-project-note',
       'private-source-excerpt',
+      'private-tab-excerpt',
     ]) {
       expect(payload).not.toContain(secret);
       expect(host.textContent).not.toContain(secret);

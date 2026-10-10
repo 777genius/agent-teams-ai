@@ -2,14 +2,16 @@ import { boundedDiagnosticString } from './diagnosticsRedaction';
 
 const ESCAPE_CHARACTER = String.fromCharCode(27);
 const ANSI_ESCAPE_PATTERN = new RegExp(`${ESCAPE_CHARACTER}\\[[0-?]*[ -/]*[@-~]`, 'g');
-const SENSITIVE_DUMP_PATTERN =
-  /\b(?:env(?:ironment)?|auth|credentials?|config(?:uration)?)\b["']?\s*[:=]\s*[{[]|\b(?:environment|credentials?|configuration|auth|config)\s+dump\b/i;
+const SENSITIVE_DUMP_PATTERNS = [
+  /\b(?:env|environment|auth|credential|credentials|config|configuration)\b["']?\s*[:=]\s*[{[]/i,
+  /\b(?:environment|credentials?|configuration|auth|config)\s+dump\b/i,
+];
 
 /** Sanitizes runtime evidence for both main-process and renderer diagnostic boundaries. */
 export function sanitizeRuntimeDiagnosticText(value: unknown, limit: number): string | undefined {
   if (typeof value !== 'string') return undefined;
   // Suppress entire dumps, including arbitrary non-secret config/environment fields.
-  if (SENSITIVE_DUMP_PATTERN.test(value)) {
+  if (SENSITIVE_DUMP_PATTERNS.some((pattern) => pattern.test(value))) {
     return boundedDiagnosticString('[configuration/auth/environment dump hidden]', limit);
   }
   const sanitized = value
@@ -18,14 +20,19 @@ export function sanitizeRuntimeDiagnosticText(value: unknown, limit: number): st
       /(---\s*JSONC? Input\s*---)[\s\S]*?(?=---\s*(?:Errors|End)\s*---|$)/gi,
       '$1\n[configuration contents hidden]\n'
     )
-    .replace(/^(Line\s+\d+\s*:)[^\r\n]*/gim, '$1 [configuration source hidden]')
+    .replace(/^[\t ]*(Line\s+\d+\s*:)[^\r\n]*/gim, '$1 [configuration source hidden]')
     .replace(
       /\b[A-Z][A-Z0-9_]*\s*=\s*("[^"]*"|'[^']*'|[^\s,;}]+)/g,
       '[environment assignment hidden]'
     )
     .replace(/\b((?:proxy-)?authorization\s*["']?\s*:\s*["']?)[^\r\n]+/gi, '$1[redacted]')
+    .replace(/\b((?:api[_-]?key)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;}]+)/gi, '$1[redacted]')
     .replace(
-      /\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|token|secret|password|cookie)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;}]+)/gi,
+      /\b((?:access|refresh|auth)[_-]?token["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;}]+)/gi,
+      '$1[redacted]'
+    )
+    .replace(
+      /\b((?:token|secret|password|cookie)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;}]+)/gi,
       '$1[redacted]'
     )
     .replace(/\b((?:bearer|basic)\s+)[^\s"',;]+/gi, '$1[redacted]')
