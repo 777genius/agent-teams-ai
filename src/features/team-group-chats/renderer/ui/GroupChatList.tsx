@@ -5,6 +5,7 @@ import {
   countUniqueUnread,
   GroupChatAvatar,
 } from '@features/team-direct-chats/renderer';
+import { formatActivityTimestamp } from '@renderer/components/team/activity/activityTimestamp';
 import {
   buildMemberAvatarMap,
   displayMemberName,
@@ -44,14 +45,21 @@ export const GroupChatList = ({
       (message) => message.groupChatId === group.id && message.messageId === message.groupMessageId
     );
     const unread = countUniqueUnread(history, readSet, toMessageKey);
+    const latestMessage = history.reduce<InboxMessage | undefined>(
+      (latest, message) =>
+        !latest || Date.parse(message.timestamp) > Date.parse(latest.timestamp) ? message : latest,
+      undefined
+    );
+    const time = latestMessage ? formatActivityTimestamp(latestMessage.timestamp) : '';
     return (
       <button
         type="button"
         key={group.id}
         data-group-chat-id={group.id}
         data-archived={!!group.archivedAt}
+        aria-label={`${group.name}, ${t('messages.chats.activityUnread', { count: unread.unreadCount })}, ${t('messages.groups.mentions', { count: unread.attentionCount })}`}
         aria-pressed={selectedScope?.kind === 'group' && selectedScope.groupChatId === group.id}
-        className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left hover:bg-[var(--color-surface-raised)] ${group.archivedAt ? 'opacity-50' : ''}`}
+        className={`flex w-full items-start gap-2.5 overflow-visible rounded px-2 py-2 text-left hover:bg-[var(--color-surface-raised)] ${group.archivedAt ? 'opacity-50' : ''}`}
         onClick={() => onOpen({ kind: 'group', groupChatId: group.id })}
       >
         <GroupChatAvatar
@@ -75,10 +83,18 @@ export const GroupChatList = ({
             ) : null}
           </span>
           <span className="block truncate text-xs text-[var(--color-text-muted)]">
-            {history.at(-1)?.text || t('messages.chats.emptyPreview')}
+            {latestMessage?.text || t('messages.chats.emptyPreview')}
           </span>
         </span>
-        <ChatUnreadBadges {...unread} />
+        <span className="mt-0.5 flex shrink-0 flex-col items-end gap-1 overflow-visible">
+          {time ? (
+            <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">{time}</span>
+          ) : null}
+          <ChatUnreadBadges
+            {...unread}
+            attentionLabel={t('messages.groups.mentions', { count: unread.attentionCount })}
+          />
+        </span>
       </button>
     );
   };

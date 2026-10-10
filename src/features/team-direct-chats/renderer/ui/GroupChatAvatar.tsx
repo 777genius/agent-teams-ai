@@ -34,11 +34,13 @@ export const GroupChatAvatar = ({
   const radius = (AVATAR_SIZE - size) / 2;
   const position = (index: number) => {
     const angle = (index * 2 * Math.PI) / count - (count === 2 ? (3 * Math.PI) / 4 : Math.PI / 2);
+    const top = radius + (count === 1 ? 0 : Math.sin(angle) * radius);
     return {
+      zIndex: Math.round(top * 100),
       width: size,
       height: size,
       left: radius + (count === 1 ? 0 : Math.cos(angle) * radius),
-      top: radius + (count === 1 ? 0 : Math.sin(angle) * radius),
+      top,
     };
   };
 
@@ -46,7 +48,7 @@ export const GroupChatAvatar = ({
     <span
       role="img"
       aria-label={`${members.length}: ${members.map((member) => member.displayName ?? member.name).join(', ')}`}
-      className="pointer-events-none relative block size-[34px] shrink-0"
+      className="pointer-events-none relative isolate block size-[34px] shrink-0"
       data-group-avatar-count={members.length}
     >
       {visible.map((member, index) => (
@@ -63,7 +65,15 @@ export const GroupChatAvatar = ({
         <span
           aria-hidden="true"
           className="absolute flex items-center justify-center rounded-full border border-[var(--color-surface)] bg-[var(--color-surface-raised)] font-medium text-[var(--color-text-secondary)]"
-          style={{ width: 16, height: 16, left: 9, top: 9, fontSize: 8, lineHeight: 1 }}
+          style={{
+            width: 16,
+            height: 16,
+            left: 9,
+            top: 9,
+            fontSize: 8,
+            lineHeight: 1,
+            zIndex: 10000,
+          }}
         >
           +{members.length - visible.length}
         </span>

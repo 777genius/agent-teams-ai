@@ -736,6 +736,7 @@
   },
   "messages": {
     "groups": {
+      "mentions": "{{count}} mentions of you",
       "create": "Create group chat",
       "description": "Choose at least two agents. You are included automatically.",
       "name": "Chat name",
