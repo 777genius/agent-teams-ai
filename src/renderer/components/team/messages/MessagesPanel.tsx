@@ -1043,6 +1043,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const sharedComposerProps = {
     teamName,
+    groupBroadcast: { group: groupConversation.catalog.defaultGroup },
     members,
     isTeamAlive,
     sending: sendingMessage,

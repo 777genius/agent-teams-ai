@@ -11,6 +11,8 @@ export interface TeamGroupChatDTO {
   membership: GroupMembership;
   archivedAt: string | null;
   memberNames: string[];
+  /** Compatible current recipients; empty when the group is structurally blocked. */
+  availableRecipientNames: string[];
   canSend: boolean;
   reason?: string;
 }
@@ -28,6 +30,8 @@ export interface GroupChatSendRequest {
   teamName: string;
   groupChatId: string;
   messageId: string;
+  /** Human-only target; absence addresses all current group members. */
+  recipientName?: string;
   text: string;
   summary?: string;
   taskRefs?: TaskRef[];

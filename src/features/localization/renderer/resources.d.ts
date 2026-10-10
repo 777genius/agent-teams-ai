@@ -4915,6 +4915,8 @@ export default interface Resources {
         "teamLaunchingPlaceholder": "Team is launching... message will be queued for inbox delivery."
       },
       "recipient": {
+        "all": "All",
+        "broadcastTextOnly": "Plain text to all agents. Attachments and action modes are available for a single recipient.",
         "noResults": "No results",
         "searchPlaceholder": "Search...",
         "select": "Select..."
@@ -5061,6 +5063,8 @@ export default interface Resources {
         "message": "Message this group",
         "minimum": "Select at least two agents.",
         "name": "Chat name",
+        "recipient": "To {{name}}",
+        "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
         "restartHint": "All participants must be running a compatible runtime before sending.",
         "restore": "Restore chat",
         "retryCreate": "Retry creation",

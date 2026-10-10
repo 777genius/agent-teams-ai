@@ -3,6 +3,10 @@ import { cn } from '@renderer/lib/utils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 
 import { MessageComposerInput } from './MessageComposerInput';
+import {
+  MessageComposerRecipientSelector,
+  type MessageComposerRecipientSelectorProps,
+} from './MessageComposerRecipientSelector';
 import { useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 
@@ -20,6 +24,7 @@ export interface TextMessageComposerProps {
   autoFocusKey?: number;
   cornerActionPrefix?: ReactNode;
   notice?: ReactNode;
+  recipientSelector?: MessageComposerRecipientSelectorProps;
   textInput: {
     label: string;
     ariaLabel: string;
@@ -43,6 +48,7 @@ export const TextMessageComposer = ({
   autoFocusKey,
   cornerActionPrefix,
   notice,
+  recipientSelector,
   textInput,
 }: TextMessageComposerProps): React.JSX.Element => {
   const { textareaRef, internalTextareaRef } = useComposerTextarea(
@@ -62,7 +68,11 @@ export const TextMessageComposer = ({
       role="group"
     >
       <div className="message-composer-flat-toolbar flex min-w-0 items-center justify-end px-3 text-xs">
-        <span className="truncate text-[var(--color-text-secondary)]">{textInput.label}</span>
+        {recipientSelector ? (
+          <MessageComposerRecipientSelector {...recipientSelector} />
+        ) : (
+          <span className="truncate text-[var(--color-text-secondary)]">{textInput.label}</span>
+        )}
       </div>
       <MessageComposerInput
         textareaRef={textareaRef}

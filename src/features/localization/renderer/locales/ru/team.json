@@ -760,7 +760,9 @@
         "failed": "ошибка",
         "unknown": "неизвестно",
         "skipped": "пропущено"
-      }
+      },
+      "recipient": "Кому: {{name}}",
+      "recipientRestartHint": "Перед отправкой {{name}} должен работать с совместимой версией среды выполнения."
     },
     "actions": {
       "toLatest": "К последним",
@@ -1760,7 +1762,9 @@
     "recipient": {
       "select": "Выбрать...",
       "searchPlaceholder": "Поиск...",
-      "noResults": "Ничего не найдено"
+      "noResults": "Ничего не найдено",
+      "all": "Все",
+      "broadcastTextOnly": "Текст всем агентам. Вложения и режимы действий доступны при выборе одного получателя."
     },
     "actions": {
       "voiceToText": "Voice to text",

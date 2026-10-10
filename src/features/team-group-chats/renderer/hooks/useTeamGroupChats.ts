@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '../../contracts';
+
 import type { GroupChatCreateRequest, TeamGroupChatDTO } from '../../contracts';
 
 export function useTeamGroupChats(teamName: string, contextId: string, rosterKey: string) {
@@ -29,10 +31,14 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
   useEffect(() => {
     void refresh();
   }, [refresh, rosterKey]);
-  useEffect(() => api.teams.onTeamChange?.((_event, change) => {
-    if (change.teamName === teamName && (change.type === 'config' || change.type === 'inbox'))
-      void refresh();
-  }), [refresh, teamName]);
+  useEffect(
+    () =>
+      api.teams.onTeamChange?.((_event, change) => {
+        if (change.teamName === teamName && (change.type === 'config' || change.type === 'inbox'))
+          void refresh();
+      }),
+    [refresh, teamName]
+  );
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
@@ -42,9 +48,11 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
   const upsert = useCallback(
     (group: TeamGroupChatDTO) => {
       if (currentIdentity.current !== identity) return;
-      setGroups((previous) => previous.some((item) => item.id === group.id)
-        ? previous.map((item) => item.id === group.id ? group : item)
-        : [...previous, group]);
+      setGroups((previous) =>
+        previous.some((item) => item.id === group.id)
+          ? previous.map((item) => (item.id === group.id ? group : item))
+          : [...previous, group]
+      );
     },
     [identity]
   );
@@ -63,5 +71,12 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
     },
     [teamName, upsert]
   );
-  return { groups, error, refresh, create, setArchived };
+  return {
+    groups: groups.filter((group) => group.id !== DEFAULT_TEAM_GROUP_CHAT_ID),
+    defaultGroup: groups.find((group) => group.id === DEFAULT_TEAM_GROUP_CHAT_ID),
+    error,
+    refresh,
+    create,
+    setArchived,
+  };
 }

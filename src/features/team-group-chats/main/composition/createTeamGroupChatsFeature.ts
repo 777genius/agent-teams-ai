@@ -2,7 +2,13 @@ import { withInboxLock } from '@main/services/team/inboxLock';
 import { createHash } from 'crypto';
 import { isDeepStrictEqual } from 'util';
 
-import { effectiveGroupMembers, GroupChatError } from '../../core/domain/groupChat';
+import { DEFAULT_TEAM_GROUP_CHAT_ID, DEFAULT_TEAM_GROUP_CHAT_NAME } from '../../contracts';
+import {
+  effectiveGroupMembers,
+  GroupChatError,
+  groupSendRecipients,
+  matchesHumanGroupTarget,
+} from '../../core/domain/groupChat';
 import { GroupChatStorage, safeGroupTeamPath } from '../infrastructure/GroupChatStorage';
 
 import type {
@@ -116,16 +122,26 @@ export function createTeamGroupChatsFeature(
         : from !== 'user' && !memberNames.includes(from)
           ? 'not-member'
           : undefined;
+    let availableRecipientNames: string[] = [];
     if (!reason) {
       const runs = await Promise.all(
         memberNames.map(async (name) => ({ name, run: await ports.getRun(teamName, name) }))
       );
+      availableRecipientNames = runs
+        .filter(({ name, run }) => name !== from && run?.protocolVersion === 1)
+        .map(({ name }) => name);
       const unavailable = runs
         .filter(({ run }) => !run || run.protocolVersion !== 1)
         .map(({ name }) => name);
       if (unavailable.length) reason = `recipient-unavailable: ${unavailable.join(', ')}`;
     }
-    return { ...group, memberNames, canSend: !reason, ...(reason ? { reason } : {}) };
+    return {
+      ...group,
+      memberNames,
+      availableRecipientNames,
+      canSend: !reason,
+      ...(reason ? { reason } : {}),
+    };
   }
   const feature: TeamGroupChatsFeature = {
     async list({ teamName }, from = 'user') {
@@ -141,6 +157,8 @@ export function createTeamGroupChatsFeature(
     async create(request: GroupChatCreateRequest) {
       validText(request.teamName, 'team name', 200);
       validateId(request.id);
+      if (request.id === DEFAULT_TEAM_GROUP_CHAT_ID)
+        throw new GroupChatError('reserved-group', 'The standard group destination is reserved');
       validText(request.name, 'chat name', 100);
       names(request.selectedMemberNames);
       names(request.excludedMemberNames);
@@ -179,17 +197,21 @@ export function createTeamGroupChatsFeature(
     async setArchived({ teamName, groupChatId, archived }) {
       validText(teamName, 'team name', 200);
       validateId(groupChatId);
+      if (groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID)
+        throw new GroupChatError('reserved-group', 'The standard group cannot be archived');
       if (typeof archived !== 'boolean')
         throw new GroupChatError('invalid-input', 'Archive state must be boolean');
-      const savedGroup = await storage.withRegistry(teamName, async (groups, save) => {
-        const group = findGroup(groups, groupChatId);
-        if (!!group.archivedAt !== archived) {
-          group.archivedAt = archived ? new Date().toISOString() : null;
-          await save();
-          ports.changed?.(teamName);
-        }
-        return structuredClone(group);
-      });
+      const savedGroup = await ports.configurationOperation(teamName, () =>
+        storage.withRegistry(teamName, async (groups, save) => {
+          const group = findGroup(groups, groupChatId);
+          if (!!group.archivedAt !== archived) {
+            group.archivedAt = archived ? new Date().toISOString() : null;
+            await save();
+            ports.changed?.(teamName);
+          }
+          return structuredClone(group);
+        })
+      );
       return project(teamName, savedGroup, await ports.roster(teamName));
     },
     async send(request, from = 'user') {
@@ -198,6 +220,13 @@ export function createTeamGroupChatsFeature(
       validateId(request.messageId);
       validText(request.text, 'message');
       validText(from, 'sender', 200);
+      if (from !== 'user' && Object.prototype.hasOwnProperty.call(request, 'recipientName'))
+        throw new GroupChatError('invalid-input', 'Only human posts may select a recipient');
+      if (request.recipientName !== undefined) {
+        validText(request.recipientName, 'recipient', 200);
+        if (request.recipientName.trim() !== request.recipientName)
+          throw new GroupChatError('invalid-input', 'Invalid recipient');
+      }
       if (
         request.summary !== undefined &&
         (typeof request.summary !== 'string' || request.summary.length > 1000)
@@ -226,7 +255,9 @@ export function createTeamGroupChatsFeature(
         if (prior) {
           if (
             prior.groupMessageId !== request.messageId ||
-            !isDeepStrictEqual(payload(prior), immutable)
+            !isDeepStrictEqual(payload(prior), immutable) ||
+            (from === 'user' &&
+              !matchesHumanGroupTarget(prior.groupRecipientNames!, request.recipientName))
           )
             throw new GroupChatError(
               'conflicting-id',
@@ -236,8 +267,28 @@ export function createTeamGroupChatsFeature(
         }
         const runs = new Map<string, GroupChatRun>();
         const canonical = await ports.configurationOperation(request.teamName, () =>
-          storage.withRegistry(request.teamName, async (groups) => {
-            const group = findGroup(groups, request.groupChatId);
+          storage.withRegistry(request.teamName, async (groups, save) => {
+            const existing = groups.find((group) => group.id === request.groupChatId);
+            const isDefault = request.groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID;
+            if (
+              isDefault &&
+              existing &&
+              (existing.name !== DEFAULT_TEAM_GROUP_CHAT_NAME ||
+                existing.archivedAt !== null ||
+                existing.membership.kind !== 'auto' ||
+                existing.membership.excludedMemberNames.length)
+            )
+              throw new GroupChatError('reserved-group', 'Invalid standard group destination');
+            const group =
+              !existing && isDefault && from === 'user'
+                ? {
+                    id: DEFAULT_TEAM_GROUP_CHAT_ID,
+                    name: DEFAULT_TEAM_GROUP_CHAT_NAME,
+                    createdAt: new Date().toISOString(),
+                    archivedAt: null,
+                    membership: { kind: 'auto' as const, excludedMemberNames: [] },
+                  }
+                : findGroup(groups, request.groupChatId);
             const roster = await ports.roster(request.teamName);
             const members = effectiveGroupMembers(group, roster);
             if (group.archivedAt) throw new GroupChatError('archived', 'Chat is archived');
@@ -245,7 +296,10 @@ export function createTeamGroupChatsFeature(
               throw new GroupChatError('minimum-members', 'Chat requires two current agents');
             if (from !== 'user' && !members.includes(from))
               throw new GroupChatError('not-member', 'Sender is not a chat member');
-            for (const memberName of members) {
+            const recipients = groupSendRecipients(members, from, request.recipientName);
+            // A directed post must not probe or wake unrelated group members.
+            const requiredRuns = from === 'user' ? recipients : members;
+            for (const memberName of requiredRuns) {
               const run = await ports.getRun(request.teamName, memberName);
               if (!run || run.protocolVersion !== 1)
                 throw new GroupChatError(
@@ -275,7 +329,10 @@ export function createTeamGroupChatsFeature(
                   'Reply does not reference a physical inbound for this sender'
                 );
             }
-            const recipients = members.filter((name) => name !== from);
+            if (!existing) {
+              groups.push(group);
+              await save();
+            }
             const message: InboxMessage = {
               ...immutable,
               to: 'user',

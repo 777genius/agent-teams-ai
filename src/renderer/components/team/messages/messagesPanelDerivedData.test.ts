@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/store', () => ({ useStore: vi.fn() }));
 vi.mock('./messagesPanelConversations', () => ({
-  conversationScopeKey: vi.fn(),
+  conversationScopeKey: vi.fn((scope) => JSON.stringify(scope)),
   filterScopedMessages: vi.fn((messages) => messages),
 }));
 vi.mock('../activity/LeadThoughtsGroup', () => ({
@@ -10,16 +10,19 @@ vi.mock('../activity/LeadThoughtsGroup', () => ({
   groupTimelineItems: vi.fn(),
 }));
 
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
+
 import {
   canonicalTeamMessages,
   canOpenConversationAddress,
   conversationDraftAddress,
+  localDraftsByConversationScope,
   memberConversationParticipants,
   outboxViewAddress,
   visibleTeamMessages,
 } from './messagesPanelDerivedData';
 
-import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
 import type { CrossTeamTarget, InboxMessage } from '@shared/types';
 
 const message: InboxMessage = {
@@ -41,6 +44,35 @@ describe('messages panel derived data', () => {
       teamName: 'team-alpha',
       target: { kind: 'direct', participant: 'alice' },
     });
+    const allAddress: ComposerDraftAddress = {
+      contextId: 'local',
+      teamName: 'team-alpha',
+      target: { kind: 'group', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID },
+    };
+    const allDraft: ComposerWorkingSummary = {
+      version: 1,
+      workingRevision: 'test-draft',
+      address: allAddress,
+      preview: 'All draft',
+      updatedAt: 2,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain',
+    };
+    const leadDraft: ComposerWorkingSummary = {
+      ...allDraft,
+      address: { ...allAddress, target: { kind: 'team-feed' } },
+      preview: 'Lead draft',
+      updatedAt: 1,
+    };
+    const key = JSON.stringify({ kind: 'team-feed' });
+    expect(localDraftsByConversationScope([allDraft, leadDraft]).get(key)?.preview).toBe(
+      'All draft'
+    );
+    expect(localDraftsByConversationScope([leadDraft, allDraft]).get(key)?.preview).toBe(
+      'All draft'
+    );
+    expect(allDraft.address).toBe(allAddress);
   });
 
   it('recognizes a normalized direct address for a mixed-case member', () => {

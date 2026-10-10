@@ -11,7 +11,8 @@ export function useGroupChatComposer(
   contextId: string,
   groupChatId: string,
   refresh: () => Promise<void>,
-  groupChatName?: string
+  groupChatName?: string,
+  defaultRecipientName?: string | null
 ) {
   const address = useMemo<ComposerDraftAddress>(
     () => ({ teamName, contextId, target: { kind: 'group', groupChatId } }),
@@ -19,7 +20,10 @@ export function useGroupChatComposer(
   );
   const [text, setText] = useState('');
   const [attemptId, setAttemptId] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [selection, setSelection] = useState<string | null | undefined>(undefined);
+  const recipientName = selection === undefined ? (defaultRecipientName ?? null) : selection;
+  const [readyAddress, setReadyAddress] = useState<ComposerDraftAddress | null>(null);
+  const ready = readyAddress === address;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GroupChatSendResult | null>(null);
@@ -60,9 +64,10 @@ export function useGroupChatComposer(
   );
   useEffect(() => {
     let active = true;
-    setReady(false);
+    setReadyAddress(null);
     setText('');
     setAttemptId(null);
+    setSelection(undefined);
     setPending(false);
     setResult(null);
     setError(null);
@@ -72,7 +77,15 @@ export function useGroupChatComposer(
       session.revision = loaded.working.workingRevision;
       setText(loaded.working.content?.text ?? '');
       setAttemptId(loaded.working.content?.restoredOrigin?.attemptId ?? null);
-      setReady(!loaded.writeBlocked);
+      const savedSelection = loaded.working.content?.groupRecipient;
+      setSelection(
+        savedSelection?.kind === 'member'
+          ? savedSelection.memberName
+          : savedSelection?.kind === 'all' || loaded.working.content?.restoredOrigin
+            ? null
+            : undefined
+      );
+      setReadyAddress(loaded.writeBlocked ? null : address);
       setError(loaded.readError ?? null);
     });
     return () => {
@@ -84,24 +97,43 @@ export function useGroupChatComposer(
     chips: [],
     attachments: [],
     actionMode: 'do',
+    groupRecipient:
+      recipientName === null ? { kind: 'all' } : { kind: 'member', memberName: recipientName },
     ...(id
       ? { restoredOrigin: { kind: 'unconfirmed-send', attemptId: id, messageId: id } as const }
       : {}),
   });
   const change = (value: string) => {
+    if (!ready || session.sending || pending || attemptId) return;
+    setSelection(recipientName);
     setText(value);
     void persist(content(value, null)).catch(() => undefined);
+  };
+  const selectRecipient = (name: string | null) => {
+    if (!ready || session.sending || pending || attemptId) return;
+    setSelection(name);
+    void persist({
+      ...content(text, null),
+      groupRecipient: name === null ? { kind: 'all' } : { kind: 'member', memberName: name },
+    }).catch(() => undefined);
   };
   const send = async () => {
     if (!ready || session.sending || pending || !text.trim()) return;
     session.sending = true;
     const id = attemptId ?? crypto.randomUUID();
+    setSelection(recipientName);
     setAttemptId(id);
     setPending(true);
     setError(null);
     try {
       await persist(content(text, id));
-      const sent = await api.teamGroupChats.send({ teamName, groupChatId, messageId: id, text });
+      const sent = await api.teamGroupChats.send({
+        teamName,
+        groupChatId,
+        messageId: id,
+        text,
+        ...(recipientName === null ? {} : { recipientName }),
+      });
       if (current.current === address) {
         setResult(sent);
         setText('');
@@ -133,6 +165,8 @@ export function useGroupChatComposer(
           [
             'invalid-input',
             'invalid-members',
+            'invalid-recipient',
+            'reserved-group',
             'archived',
             'minimum-members',
             'not-member',
@@ -151,5 +185,16 @@ export function useGroupChatComposer(
       if (current.current === address) setPending(false);
     }
   };
-  return { text, change, send, ready, pending, error, result, attemptId };
+  return {
+    text,
+    change,
+    send,
+    ready,
+    pending,
+    error,
+    result,
+    attemptId,
+    recipientName,
+    selectRecipient,
+  };
 }

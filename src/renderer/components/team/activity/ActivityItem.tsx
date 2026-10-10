@@ -1044,6 +1044,7 @@ export const ActivityItem = memo(
 
     const senderBadgeForHeader = (
       <ActivitySenderBadge
+        groupMessage={message}
         name={senderName}
         color={senderColor}
         teamName={teamName}
