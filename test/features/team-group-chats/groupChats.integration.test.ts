@@ -124,7 +124,7 @@ describe('group chat main authority and durable identity', () => {
         entered = resolve;
       });
       const slowFeature = createTeamGroupChatsFeature({
-        roster: async () => roster,
+        roster: () => Promise.resolve(roster),
         getRun: async (_team, name) => {
           entered();
           await pending;
@@ -133,23 +133,25 @@ describe('group chat main authority and durable identity', () => {
         configurationOperation: (_team, run) => run(),
         deliver: (...args) => deliver(...args),
       });
-      const slowResult =
-        operation === 'list'
-          ? slowFeature.list({ teamName: 'sandbox' })
-          : operation === 'restore'
-            ? slowFeature.setArchived({
-                teamName: 'sandbox',
-                groupChatId: '10000000-0000-4000-8000-000000000001',
-                archived: false,
-              })
-            : slowFeature.create({
-                teamName: 'sandbox',
-                id: operation === 'create' ? randomUUID() : '10000000-0000-4000-8000-000000000001',
-                name: 'Another',
-                selectedMemberNames: ['lead', 'alice'],
-                excludedMemberNames: [],
-                autoIncludeNewMembers: false,
-              });
+      let slowResult: Promise<unknown>;
+      if (operation === 'list') {
+        slowResult = slowFeature.list({ teamName: 'sandbox' });
+      } else if (operation === 'restore') {
+        slowResult = slowFeature.setArchived({
+          teamName: 'sandbox',
+          groupChatId: '10000000-0000-4000-8000-000000000001',
+          archived: false,
+        });
+      } else {
+        slowResult = slowFeature.create({
+          teamName: 'sandbox',
+          id: operation === 'create' ? randomUUID() : '10000000-0000-4000-8000-000000000001',
+          name: 'Another',
+          selectedMemberNames: ['lead', 'alice'],
+          excludedMemberNames: [],
+          autoIncludeNewMembers: false,
+        });
+      }
       let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
         await projecting;

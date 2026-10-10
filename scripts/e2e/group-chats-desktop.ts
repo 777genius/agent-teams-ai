@@ -196,7 +196,7 @@ async function click(expression: string) {
     await cdp.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
 }
 const button = (text: string, root = 'document') =>
-  `Array.from(${root}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)})`;
+  `Array.from(${root}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)} || e.getAttribute('aria-label') === ${JSON.stringify(text)})`;
 const row = (id: string) => `document.querySelector('[data-group-chat-id="${id}"]')`;
 const back = () => click(`document.querySelector('button[aria-label="Back to chats"]')`);
 async function fill(selector: string, value: string) {
@@ -334,7 +334,10 @@ async function main() {
     await cdp.evaluate(`(async () => { const s = window.__agentTeamsDevStore.getState(); s.openTeamTab(${JSON.stringify(f.teamName)}, ${JSON.stringify(f.projectPath)}); await s.selectTeam(${JSON.stringify(f.teamName)}, { skipProjectAutoSelect: true }); s.setMessagesPanelMode('sidebar'); })()`);
     await waitFor(row(id), 'saved group after reload');
     await click(row(id));
-    await waitFor(`document.body.innerText.includes('GROUP_HISTORY_ONLY') && document.body.innerText.includes('bob: queued, lead: unknown')`, 'persisted delivery snapshot after reload');
+    await waitFor(`document.body.innerText.includes('GROUP_HISTORY_ONLY')`, 'persisted group history after reload');
+    assert.equal(await cdp.evaluate(`document.querySelector('[data-testid="group-chat-composer"]')?.textContent?.includes('bob: queued') || document.querySelector('[data-testid="group-chat-composer"]')?.textContent?.includes('lead: unknown')`), false, 'Technical delivery receipts stay outside the composer');
+    const persistedHistory = JSON.parse(await readFile(path.join(f.teamDir, 'inboxes', 'user.json'), 'utf8')) as { messageId?: string; groupDeliverySummary?: unknown }[];
+    assert.deepEqual(persistedHistory.find(message => message.messageId === savedId)?.groupDeliverySummary, saved.groupDeliverySummary, 'Backend delivery receipt remains intact');
     await waitFor(`document.querySelector('[data-testid="group-chat-composer"] textarea')?.value === 'OFFLINE_DRAFT_PRESERVED'`, 'offline draft after reload');
     await click(button('Archive chat'));
     await waitFor(button('Restore chat'), 'archive readonly header');

@@ -6,7 +6,7 @@ import {
   GroupChatAvatar,
 } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { Plus } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
 
 import type { TeamGroupChatDTO } from '../../contracts';
 import type { InboxMessage } from '@shared/types';
@@ -48,11 +48,18 @@ export const GroupChatList = ({
       >
         <GroupChatAvatar />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{group.name}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-medium">{group.name}</span>
+            {group.archivedAt ? (
+              <Archive
+                size={12}
+                className="shrink-0 text-[var(--color-text-muted)]"
+                aria-hidden="true"
+              />
+            ) : null}
+          </span>
           <span className="block truncate text-xs text-[var(--color-text-muted)]">
-            {group.archivedAt
-              ? t('messages.groups.archived')
-              : history.at(-1)?.text || t('messages.chats.emptyPreview')}
+            {history.at(-1)?.text || t('messages.chats.emptyPreview')}
           </span>
         </span>
         <ChatUnreadBadges {...unread} />
@@ -67,8 +74,9 @@ export const GroupChatList = ({
         className="flex w-full items-center gap-2 rounded border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-raised)]"
         onClick={onCreate}
       >
-        <Plus size={14} />
+        <GroupChatAvatar />
         {t('messages.groups.create')}
+        <Plus size={14} className="ml-auto shrink-0" aria-hidden="true" />
       </button>
       {error ? (
         <p role="alert" className="p-2 text-xs text-red-400">

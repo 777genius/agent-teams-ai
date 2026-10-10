@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { Archive, ArchiveRestore } from 'lucide-react';
 
 import type { TeamGroupChatDTO } from '../../contracts';
 
@@ -16,6 +18,9 @@ export const GroupChatArchiveAction = ({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!group) return null;
+  const actionLabel = group.archivedAt
+    ? t('messages.groups.restore')
+    : t('messages.groups.archive');
   const change = async () => {
     setPending(true);
     setError(null);
@@ -29,17 +34,24 @@ export const GroupChatArchiveAction = ({
   };
   return (
     <span className="flex flex-col items-end">
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={pending}
-        onClick={(event) => {
-          event.stopPropagation();
-          void change();
-        }}
-      >
-        {group.archivedAt ? t('messages.groups.restore') : t('messages.groups.archive')}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            aria-label={actionLabel}
+            disabled={pending}
+            onClick={(event) => {
+              event.stopPropagation();
+              void change();
+            }}
+          >
+            {group.archivedAt ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{actionLabel}</TooltipContent>
+      </Tooltip>
       {error ? (
         <span role="alert" className="text-xs text-red-400">
           {error}

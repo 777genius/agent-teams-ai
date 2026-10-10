@@ -218,7 +218,7 @@ export async function startGroupChatModelServer(receiptPath: string) {
         await persist;
       }
       errors.push(String(error)); response.writeHead(500, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ error: { type: 'api_error', message: String(error) } }));
+      response.end(JSON.stringify({ error: { type: 'api_error', message: 'Synthetic model request failed' } }));
     }
   });
   await new Promise<void>((resolve, reject) => {

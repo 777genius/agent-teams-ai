@@ -8,7 +8,10 @@ const EMPTY_MESSAGES: InboxMessage[] = [];
 
 export function useGroupChatHistory(teamName: string, contextId: string, groupChatId?: string) {
   const identity = JSON.stringify([contextId, teamName, groupChatId ?? '']);
-  const [history, setHistory] = useState<{ identity: string; messages: InboxMessage[] }>({ identity, messages: [] });
+  const [history, setHistory] = useState<{ identity: string; messages: InboxMessage[] }>({
+    identity,
+    messages: [],
+  });
   const [page, setPage] = useState<MessagesPage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +39,12 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
             ? [...result.messages, ...messages]
             : [...messages, ...result.messages];
           const unique = new Map(combined.map((message) => [message.messageId, message]));
-          return { identity, messages: [...unique.values()].sort(
-            (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)
-          ) };
+          return {
+            identity,
+            messages: [...unique.values()].sort(
+              (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)
+            ),
+          };
         });
         if (older || !session.cursor) {
           session.cursor = result.nextCursor;
@@ -64,18 +70,24 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
   }, [identity, load, session]);
   useEffect(() => {
     if (!groupChatId) return;
-    const timer = window.setInterval(() => void load(), 3000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 3000);
     return () => window.clearInterval(timer);
   }, [groupChatId, load]);
-  useEffect(() => api.teams.onTeamChange?.((_event, change) => {
-    if (groupChatId && change.teamName === teamName && change.type === 'inbox') void load();
-  }), [groupChatId, load, teamName]);
+  useEffect(
+    () =>
+      api.teams.onTeamChange?.((_event, change) => {
+        if (groupChatId && change.teamName === teamName && change.type === 'inbox') void load();
+      }),
+    [groupChatId, load, teamName]
+  );
   const isCurrentHistory = history.identity === identity;
   return {
     // Passive effects clear state after render; never expose the previous root's
     // rows to read-backfill or thread consumers during that intervening render.
     messages: isCurrentHistory ? history.messages : EMPTY_MESSAGES,
-    hasMore: isCurrentHistory ? page?.hasMore ?? false : false,
+    hasMore: isCurrentHistory ? (page?.hasMore ?? false) : false,
     loading: isCurrentHistory ? loading : !!groupChatId,
     error: isCurrentHistory ? error : null,
     refresh: () => load(),

@@ -30,8 +30,6 @@ function nowIso() {
 function readMessageRows(filePath) {
   try {
     const raw = fs.readFileSync(filePath);
-    if (raw.length > 10 * 1024 * 1024)
-      throw new Error('Inbox storage unavailable: size limit exceeded');
     const rows = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(raw));
     assertValidGroupInboxRows(rows);
     return rows;
@@ -41,10 +39,10 @@ function readMessageRows(filePath) {
   }
 }
 
-function writeMessageRows(filePath, rows) {
+function writeMessageRows(filePath, rows, newGroupMessage = false) {
   assertValidGroupInboxRows(rows);
   if (
-    rows.some((row) => row?.groupChatId) &&
+    newGroupMessage &&
     Buffer.byteLength(JSON.stringify(rows, null, 2), 'utf8') > 10 * 1024 * 1024
   ) {
     throw new Error('Inbox storage unavailable: size limit exceeded');
@@ -255,7 +253,7 @@ function appendRow(filePath, row) {
     const current = readMessageRows(filePath);
     const list = Array.isArray(current) ? current : [];
     list.push(row);
-    writeMessageRows(filePath, list);
+    writeMessageRows(filePath, list, !!row.groupChatId);
     return row;
   });
 }
@@ -474,7 +472,7 @@ function appendInboxRowUnlocked(filePath, row, options) {
   }
 
   list.push(row);
-  writeMessageRows(filePath, list);
+  writeMessageRows(filePath, list, !!row.groupChatId);
   return { row, deduplicated: false };
 }
 

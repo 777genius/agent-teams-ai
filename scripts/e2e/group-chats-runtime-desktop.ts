@@ -109,8 +109,20 @@ async function evaluate<T>(expression: string): Promise<T> {
 }
 const literal = (value: unknown) => JSON.stringify(value);
 const api = <T>(expression: string) => evaluate<T>(`(async () => { return await (${expression}); })()`);
-async function click(expression: string) {
-  const point = await evaluate<Json | null>(`(() => { const e=${expression}; if (!(e instanceof HTMLElement)) return null; e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+async function click(expression: string, waitForReady = false) {
+  const readPoint = () => evaluate<Json | null>(`(async () => {
+    const e=${expression}; if (!(e instanceof HTMLElement)) return null;
+    e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect();
+    if (${waitForReady}) {
+      if (e.matches(':disabled') || !e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})) return null;
+      await new Promise(requestAnimationFrame); const next=e.getBoundingClientRect();
+      if (['x','y','width','height'].some(key=>r[key]!==next[key])) return null;
+      const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+      if (!hit || !e.contains(hit)) return null;
+    }
+    return {x:r.x+r.width/2,y:r.y+r.height/2};
+  })()`);
+  const point = waitForReady ? await bounded('visible enabled stable UI target: '+expression,readPoint) : await readPoint();
   assert(point, `Missing UI target: ${expression}`);
   for (const type of ['mousePressed', 'mouseReleased']) await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
 }
@@ -169,7 +181,7 @@ async function groupUiSend(group: TeamGroupChatDTO, text: string) {
     return false;
   });
   await fill('[data-testid="group-chat-composer"] textarea', text);
-  await click(`Array.from(document.querySelector('[data-testid="group-chat-composer"]').querySelectorAll('button')).find(e=>e.textContent.trim()==='Send')`);
+  await click(`Array.from(document.querySelector('[data-testid="group-chat-composer"]').querySelectorAll('button')).find(e=>e.textContent.trim()==='Send')`, true);
 }
 async function genuineReady(team: string, names: string[], group: TeamGroupChatDTO, output: string, teamDir: string) {
   const result = await bounded('current protocol1 admission and live runtime identities', async () => {

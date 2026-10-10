@@ -38,14 +38,6 @@ export function useMessagesGroupConversation(
   const archiveAction = groupId ? (
     <GroupChatArchiveAction key={groupId} group={group} setArchived={catalog.setArchived} />
   ) : undefined;
-  const saved = history.messages.findLast((message) => message.from === 'user');
-  const lastResult =
-    composer.result ??
-    (saved?.messageId
-      ? {
-          deliverySummary: saved.groupDeliverySummary,
-        }
-      : undefined);
   const blocked = !group?.canSend || !!group.archivedAt;
   const renderComposer = (
     options: Pick<TextMessageComposerProps, 'layout' | 'widthMode' | 'cornerActionPrefix'> = {}
@@ -82,16 +74,6 @@ export function useMessagesGroupConversation(
             {composer.error ? (
               <p role="alert" className="text-xs text-red-400">
                 {composer.error}
-              </p>
-            ) : null}
-            {lastResult ? (
-              <p role="status" className="text-xs text-[var(--color-text-muted)]">
-                {lastResult.deliverySummary?.recipients
-                  .map(
-                    (recipient) =>
-                      `${recipient.memberName}: ${t(`messages.groups.delivery.${recipient.status}`)}`
-                  )
-                  .join(', ') || t('messages.groups.unknownDelivery')}
               </p>
             ) : null}
           </>
