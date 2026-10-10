@@ -24,8 +24,8 @@ export async function createDraftTeamConfig(
   const teamDir = path.join(teamsBasePath, request.teamName);
   const tasksDir = path.join(tasksBasePath, request.teamName);
   await Promise.all([
-    fs.promises.mkdir(teamsBasePath, { recursive: true }),
-    fs.promises.mkdir(tasksBasePath, { recursive: true }),
+    fs.promises.mkdir(teamsBasePath, { recursive: true, mode: 0o700 }),
+    fs.promises.mkdir(tasksBasePath, { recursive: true, mode: 0o700 }),
   ]);
 
   const pathExists = async (targetPath: string): Promise<boolean> => {
@@ -42,7 +42,7 @@ export async function createDraftTeamConfig(
   }
 
   try {
-    await fs.promises.mkdir(teamDir);
+    await fs.promises.mkdir(teamDir, { mode: 0o700 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
       throw new Error(`Team already exists: ${request.teamName}`);
@@ -52,9 +52,9 @@ export async function createDraftTeamConfig(
 
   let tasksDirectoryCreated = false;
   try {
-    await fs.promises.mkdir(tasksDir);
+    await fs.promises.mkdir(tasksDir, { mode: 0o700 });
     tasksDirectoryCreated = true;
-    await fs.promises.mkdir(path.join(teamDir, 'inboxes'));
+    await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
 
     const joinedAt = Date.now();
     // Save team-level metadata to team.meta.json (NOT config.json).

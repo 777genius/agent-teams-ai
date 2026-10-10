@@ -313,9 +313,9 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
   const teamDir = path.join(getTeamsBasePath(), request.teamName);
   const tasksDir = path.join(getTasksBasePath(), request.teamName);
-  const createdTeamDirectory = await fs.promises.mkdir(teamDir, { recursive: true });
-  await fs.promises.mkdir(tasksDir, { recursive: true });
-  if (createdTeamDirectory) await fs.promises.mkdir(path.join(teamDir, 'inboxes'));
+  const createdTeamDirectory = await fs.promises.mkdir(teamDir, { recursive: true, mode: 0o700 });
+  await fs.promises.mkdir(tasksDir, { recursive: true, mode: 0o700 });
+  if (createdTeamDirectory) await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
   await teamMetaStore.writeMeta(
     request.teamName,
     buildCreateTeamMetaPayload(request, launchIdentity)

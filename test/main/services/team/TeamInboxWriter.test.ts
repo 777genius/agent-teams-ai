@@ -141,7 +141,7 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 }));
 
 vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
-  atomicWriteAsync: hoisted.atomicWrite,
+  atomicWriteInboxAsync: hoisted.atomicWrite,
 }));
 
 vi.mock('../../../../src/main/services/team/fileLock', () => ({

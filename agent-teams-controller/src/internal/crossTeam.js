@@ -318,7 +318,7 @@ function sendCrossTeamMessage(context, flags) {
 
     // Cross-process safe inbox write
     withFileLockSync(inboxPath, () => {
-      fs.mkdirSync(path.dirname(inboxPath), { recursive: true });
+      fs.mkdirSync(path.dirname(inboxPath), { recursive: true, mode: 0o700 });
       const current = readJson(inboxPath, []);
       const list = Array.isArray(current) ? current : [];
       list.push({
