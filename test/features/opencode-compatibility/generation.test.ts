@@ -1,4 +1,8 @@
-import { classifyNativeVersion, negotiateOpenCodeProtocol } from '@features/opencode-compatibility';
+import {
+  classifyNativeVersion,
+  isRecognizedOpenCodeRuntimeVersion,
+  negotiateOpenCodeProtocol,
+} from '@features/opencode-compatibility';
 import { evaluateOpenCodeSupport } from '@main/services/team/opencode/version/OpenCodeVersionPolicy';
 import {
   compareVersions,
@@ -9,6 +13,24 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import type { OpenCodeApiCapabilities } from '@main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
+
+describe('native runtime discovery', () => {
+  it.each([
+    ['1.18.35', true],
+    ['2.0.0', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', false],
+    ['2.0.21-beta.1', false],
+    ['2.0.21+build.7', false],
+    ['1.15.9', false],
+    [undefined, false],
+  ])('recognizes only measured native dialects (%s)', (version, recognized) => {
+    expect(isRecognizedOpenCodeRuntimeVersion(version)).toBe(recognized);
+    if (version?.includes('2.0.')) {
+      expect(isAgentTeamsOpenCodeVersionSupported(version)).toBe(false);
+    }
+  });
+});
 
 // Before A0 these future-version cases return production_supported with ready V1 evidence.
 describe('current public OpenCode policy consumers', () => {

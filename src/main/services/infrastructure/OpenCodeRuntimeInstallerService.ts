@@ -1,4 +1,4 @@
-import { classifyNativeVersion } from '@features/opencode-compatibility';
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
@@ -18,7 +18,6 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import {
   getUnsupportedAgentTeamsOpenCodeVersionMessage,
-  isAgentTeamsOpenCodeVersionSupported,
 } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readdirSync, readFileSync } from 'fs';
@@ -130,7 +129,7 @@ export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Prom
     return null;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version) ? binaryPath : null;
+  return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version) ? binaryPath : null;
 }
 
 export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): Promise<boolean> {
@@ -138,7 +137,7 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
     return false;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && classifyNativeVersion(version.version ?? '').kind === 'recognized';
+  return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version);
 }
 
 function getExecutableName(): string {
@@ -300,7 +299,7 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
       }
       seen.add(normalized);
       const version = await probeOpenCodeBinaryVersionCached(launchBinaryPath);
-      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+      if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
         return {
           ok: true,
           binaryPath: launchBinaryPath,
@@ -810,7 +809,7 @@ export class OpenCodeRuntimeInstallerService {
       return { installed: false, source: 'missing', state: 'idle' };
     }
     const version = await probeOpenCodeBinaryVersionCached(manifest.binaryPath);
-    if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+    if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
       return {
         installed: true,
         binaryPath: manifest.binaryPath,
@@ -866,7 +865,7 @@ export class OpenCodeRuntimeInstallerService {
       isAbsoluteExistingFile(latestStatus.binaryPath)
     ) {
       const version = await probeOpenCodeBinaryVersion(latestStatus.binaryPath);
-      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+      if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
         return {
           installed: true,
           binaryPath: latestStatus.binaryPath,
@@ -882,7 +881,7 @@ export class OpenCodeRuntimeInstallerService {
       return null;
     }
     const version = await probeOpenCodeBinaryVersion(manifest.binaryPath);
-    if (!version.ok || !isAgentTeamsOpenCodeVersionSupported(version.version)) {
+    if (!version.ok || !isRecognizedOpenCodeRuntimeVersion(version.version)) {
       return null;
     }
     return {

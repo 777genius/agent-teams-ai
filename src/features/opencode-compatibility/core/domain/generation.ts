@@ -70,6 +70,11 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
   return { kind: 'blocked', reason: parsed.major === 0 ? 'too_old' : 'unknown_generation' };
 }
 
+/** Native discovery recognizes reviewed dialects; launch eligibility still requires runtime evidence. */
+export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefined): boolean {
+  return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
+}
+
 export function isLegacyOpenCodeVersionSupported(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);
