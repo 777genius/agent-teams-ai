@@ -26,7 +26,12 @@ function fail(message) {
 async function runSmokeCommand(label, command, args, env, timeoutMs, maxBuffer) {
   const startedAt = Date.now();
   process.stdout.write(`[public-runtime-bootstrap-e2e] starting ${label}\n`);
-  const child = spawn(command, args, { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(command, args, {
+    cwd: repoRoot,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
   let stdout = '';
   let stderr = '';
   let error;
@@ -51,7 +56,12 @@ async function runSmokeCommand(label, command, args, env, timeoutMs, maxBuffer) 
         if (code !== 0) child.kill('SIGKILL');
       });
     } else {
-      child.kill('SIGKILL');
+      try {
+        // Descendants can inherit the captured pipes on POSIX as well.
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
     }
   };
   const timer = setTimeout(

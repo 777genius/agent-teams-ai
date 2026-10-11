@@ -82,6 +82,7 @@ test('cached bootstrap waits for publication lock before validating or executing
   const publication = new Promise((resolve) => { unlock = resolve; });
   const run = runInNewContext(`${functionSource}; ensureBootstrappedRuntime`, {
     fs, path,
+    logRuntimePhase: () => {},
     runtimeCacheRoot: root,
     readRuntimeLock: () => ({ version: 'fixture', sourceRef: 'fixture',
       assets: { fixture: { binaryName: 'orchestrator', sha256: 'a'.repeat(64) } } }),

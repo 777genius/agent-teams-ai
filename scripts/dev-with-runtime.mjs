@@ -429,7 +429,6 @@ async function downloadWithProgress(download, destinationPath) {
       'user-agent': 'claude-team-dev-runtime-bootstrap',
     },
     redirect: 'follow',
-    signal: AbortSignal.timeout(180_000),
   });
   logRuntimePhase(`release response: HTTP ${response.status}`);
 
