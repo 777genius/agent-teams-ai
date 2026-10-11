@@ -13,6 +13,7 @@ interface MessageComposerInputProps extends Omit<
   layout?: 'default' | 'compact';
   canSend: boolean;
   onSend: () => void;
+  onQueue?: () => void;
   sendLabel?: string;
   sendUnavailableReason?: string;
   cornerActionPrefix?: ReactNode;
@@ -24,6 +25,7 @@ export const MessageComposerInput = ({
   layout = 'default',
   canSend,
   onSend,
+  onQueue,
   sendLabel,
   sendUnavailableReason,
   cornerActionPrefix,
@@ -39,6 +41,7 @@ export const MessageComposerInput = ({
       {...textareaProps}
       ref={textareaRef}
       onModEnter={submit}
+      onQueue={onQueue}
       cornerActionInset={layout === 'compact' ? 'compact' : 'default'}
       cornerAction={
         <div className="flex items-center gap-2">
