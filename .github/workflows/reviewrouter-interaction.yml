@@ -45,7 +45,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: "24"
+          # This job does not check out the repository, so .node-version is unavailable.
+          # Keep in sync with .node-version.
+          node-version: "26.11.1"
 
       - name: Preflight ReviewRouter interaction
         id: preflight
