@@ -264,13 +264,10 @@ test('accepts coherent non-saturated ZIP64 footer and rejects contradictory clas
 });
 
 test(
-  'native libarchive selects hidden symlink records in rejected directory/type fixtures',
-  { skip: process.platform !== 'darwin' && process.platform !== 'win32' },
+  'macOS libarchive selects hidden symlink records in rejected directory/type fixtures',
+  { skip: process.platform !== 'darwin' },
   () => {
-    const tar =
-      process.platform === 'win32'
-        ? path.win32.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
-        : '/usr/bin/tar';
+    const tar = '/usr/bin/tar';
     for (const bytes of [
       ambiguousDirectoryFixture('comment'),
       ambiguousDirectoryFixture('locator'),

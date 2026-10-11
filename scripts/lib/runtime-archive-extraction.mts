@@ -39,6 +39,8 @@ function extras(buffer: Buffer): Map<number, Buffer> {
     // Accept only ZIP64 sizes, NTFS/extended timestamps and Unix uid/gid.
     // Other fields (including local 'xl') can override paths or entry types.
     if (![0x0001, 0x000a, 0x5455, 0x7875].includes(id)) unsafe('unsupported ZIP extra metadata');
+    // This allowlist is the current Compress-Archive/Info-ZIP runtime producer
+    // contract. Unknown extra fields fail closed until explicitly qualified.
     result.set(id, buffer.subarray(cursor, cursor + size));
     cursor += size;
   }
