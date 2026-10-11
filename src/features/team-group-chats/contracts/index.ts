@@ -1,4 +1,5 @@
 export type {
+  AgentGroupChatCreateRequest,
   GroupChatCreateRequest,
   GroupChatReactionRequest,
   GroupChatReactionResult,

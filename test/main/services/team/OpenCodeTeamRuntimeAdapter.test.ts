@@ -2143,6 +2143,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       teamName: 'team-a', laneId: 'secondary:opencode:bob', runId: 'lane-run-1',
       memberName: 'bob', cwd: '/repo', text: 'group text' }));
     expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining(envelope));
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Canonical original sourceMessageId for group_chat_create: canonical-1.'),
+    }));
   });
 
   it('sends direct teammate messages through the OpenCode message bridge', async () => {

@@ -42,6 +42,7 @@ const AGENT_TEAMS_REVIEW_TOOL_NAMES = [
 
 const AGENT_TEAMS_MESSAGE_TOOL_NAMES = [
   'message_send',
+  'group_chat_create',
   'group_chat_list',
   'group_chat_send',
   'group_chat_react',

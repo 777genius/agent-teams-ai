@@ -15,3 +15,7 @@ locks or runtime probes. It cannot treat human reactions as consumption proof.
 Focused coverage lives in `test/features/team-group-chats`, with OpenCode
 consumption checks at its delivery/read-commit seams and controller/MCP transport
 checks in their existing test suites.
+
+Agent creation uses `group_chat_create` through the app-bound control API. The human must explicitly request creation in an original direct or group message addressed to the actor. The tool takes that saved original `sourceMessageId` (the canonical `groupMessageId` for group posts), at least two selected current agents, a name and an optional auto policy defaulting to true. The human participates implicitly; the lead is optional. Direct sources require stored DO or lead DELEGATE; ASK and historical rows without a mode cannot create a new chat. Main proves provenance/address/mode; semantic intent is the agent's responsibility.
+
+One original request creates one chat. Uncertain retries keep the same original ID and unchanged normalized payload. Identical accepted retries return the current stored group after archive, rename, roster expansion or source retention loss, without restoring it or changing membership. Conflicting payloads fail. Creation emits the existing catalog change event, without posting, creating tasks or launching runtimes. Replies use the originating conversation. The tool is unavailable without the desktop binding.

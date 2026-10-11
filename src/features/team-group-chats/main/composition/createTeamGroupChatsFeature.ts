@@ -11,11 +11,12 @@ import {
   isGroupUuid,
   matchesHumanGroupTarget,
 } from '../../core/domain/groupChat';
+import { createGroupCreation } from '../application/groupCreation';
 import { createGroupReactions } from '../application/groupReactions';
 import { GroupChatStorage, safeGroupTeamPath } from '../infrastructure/GroupChatStorage';
 
 import type {
-  GroupChatCreateRequest,
+  AgentGroupChatCreateRequest,
   GroupChatReactionRequest,
   GroupChatReactionResult,
   GroupChatSendRequest,
@@ -39,6 +40,7 @@ export interface GroupChatRun {
 
 export interface TeamGroupChatsPorts {
   roster(teamName: string): Promise<string[]>;
+  leadName?(teamName: string): Promise<string | null>;
   getRun(teamName: string, memberName: string): Promise<GroupChatRun | null>;
   configurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   deliver(
@@ -52,6 +54,7 @@ export interface TeamGroupChatsPorts {
 }
 
 export interface TeamGroupChatsFeature extends TeamGroupChatsAPI {
+  createFromAgent(request: AgentGroupChatCreateRequest): Promise<TeamGroupChatDTO>;
   react(request: GroupChatReactionRequest): Promise<GroupChatReactionResult>;
   hasAcknowledgedInbound(request: GroupInboundAcknowledgementTarget): Promise<boolean>;
   list(request: { teamName: string }, from?: string): Promise<TeamGroupChatDTO[]>;
@@ -68,15 +71,6 @@ function validateId(value: unknown): asserts value is string {
 function validatePhysicalId(value: unknown): asserts value is string {
   if (!isGroupPhysicalId(value))
     throw new GroupChatError('invalid-input', 'Invalid group/message identity');
-}
-function names(value: unknown): asserts value is string[] {
-  if (
-    !Array.isArray(value) ||
-    value.length > 200 ||
-    value.some((v) => typeof v !== 'string' || !v.trim() || v.trim() !== v) ||
-    new Set(value).size !== value.length
-  )
-    throw new GroupChatError('invalid-input', 'Invalid member selection');
 }
 function payload(
   message: Pick<
@@ -140,7 +134,11 @@ export function createTeamGroupChatsFeature(
       if (unavailable.length) reason = `recipient-unavailable: ${unavailable.join(', ')}`;
     }
     return {
-      ...group,
+      id: group.id,
+      name: group.name,
+      createdAt: group.createdAt,
+      membership: structuredClone(group.membership),
+      archivedAt: group.archivedAt,
       memberNames,
       availableRecipientNames,
       canSend: !reason,
@@ -149,6 +147,7 @@ export function createTeamGroupChatsFeature(
   }
   const feature: TeamGroupChatsFeature = {
     ...createGroupReactions(ports, storage),
+    ...createGroupCreation(ports, storage, project),
     async list({ teamName }, from = 'user') {
       validText(teamName, 'team name', 200);
       await safeGroupTeamPath(teamName);
@@ -158,46 +157,6 @@ export function createTeamGroupChatsFeature(
         structuredClone(snapshot)
       );
       return Promise.all(groups.map((group) => project(teamName, group, roster, from)));
-    },
-    async create(request: GroupChatCreateRequest) {
-      validText(request.teamName, 'team name', 200);
-      validateId(request.id);
-      if (request.id === DEFAULT_TEAM_GROUP_CHAT_ID)
-        throw new GroupChatError('reserved-group', 'The standard group destination is reserved');
-      validText(request.name, 'chat name', 100);
-      names(request.selectedMemberNames);
-      names(request.excludedMemberNames);
-      if (
-        typeof request.autoIncludeNewMembers !== 'boolean' ||
-        request.selectedMemberNames.some((name) => request.excludedMemberNames.includes(name))
-      )
-        throw new GroupChatError('invalid-input', 'Member selection overlaps');
-      const savedGroup = await ports.configurationOperation(request.teamName, () =>
-        storage.withRegistry(request.teamName, async (groups, save) => {
-          const roster = await ports.roster(request.teamName);
-          const existing = groups.find((group) => group.id === request.id);
-          if (existing) return structuredClone(existing);
-          if (
-            request.selectedMemberNames.length < 2 ||
-            request.selectedMemberNames.some((name) => !roster.includes(name))
-          )
-            throw new GroupChatError('invalid-members', 'Select at least two current agents');
-          const group: GroupChat = {
-            id: request.id,
-            name: request.name.trim(),
-            createdAt: new Date().toISOString(),
-            archivedAt: null,
-            membership: request.autoIncludeNewMembers
-              ? { kind: 'auto', excludedMemberNames: [...request.excludedMemberNames] }
-              : { kind: 'fixed', memberNames: [...request.selectedMemberNames] },
-          };
-          groups.push(group);
-          await save();
-          ports.changed?.(request.teamName);
-          return structuredClone(group);
-        })
-      );
-      return project(request.teamName, savedGroup, await ports.roster(request.teamName));
     },
     async setArchived({ teamName, groupChatId, archived }) {
       validText(teamName, 'team name', 200);

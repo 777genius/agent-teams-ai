@@ -50,6 +50,11 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
         [
           'This message comes from a group chat. Its immutable origin is:',
           JSON.stringify(envelope),
+          ...(input.groupMessageId
+            ? [
+                `Canonical original sourceMessageId for group_chat_create: ${input.groupMessageId}. Use only if this original is an explicit human creation request addressed to you; provenance alone is not creation permission.`,
+              ]
+            : []),
           'Call group_chat_list with teamName and from to discover current groups, membership, and archived state.',
           'For a requested reply or substantive contribution, use group_chat_send with the exact origin envelope, a new stable UUID messageId, and text. Never substitute message_send or a private user reply.',
           'For an informational message, you may use group_chat_react if available with the exact origin envelope to acknowledge it. Treat it as acknowledged only when the tool returns saved=true and acknowledged=true for this exact incoming origin. A failed or unmatched result is not an acknowledgement. After that successful acknowledgement, stop without an extra OK or confirmation message.',

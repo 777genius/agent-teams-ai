@@ -1,11 +1,23 @@
 import type { GroupMembership } from '../../contracts';
 
+/** Private immutable admission and payload, unaffected by later membership or archive changes. */
+export interface AgentGroupCreation {
+  sourceMessageId: string;
+  recipientNames: string[];
+  payload: {
+    name: string;
+    selectedMemberNames: string[];
+    autoIncludeNewMembers: boolean;
+  };
+}
+
 export interface GroupChat {
   id: string;
   name: string;
   createdAt: string;
   membership: GroupMembership;
   archivedAt: string | null;
+  agentCreation?: AgentGroupCreation;
 }
 
 export function effectiveGroupMembers(group: GroupChat, roster: readonly string[]): string[] {

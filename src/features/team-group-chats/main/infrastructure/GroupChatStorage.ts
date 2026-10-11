@@ -7,8 +7,8 @@ import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
-import { assertValidGroupInboxRows } from '../../contracts';
-import { GroupChatError } from '../../core/domain/groupChat';
+import { assertValidGroupInboxRows, hasGroupChatEnvelopeMarker } from '../../contracts';
+import { GroupChatError, isGroupPhysicalId } from '../../core/domain/groupChat';
 import { parseGroupReactions } from '../../core/domain/groupReactions';
 
 import type { GroupChat } from '../../core/domain/groupChat';
@@ -77,7 +77,71 @@ function isNames(value: unknown): value is string[] {
   );
 }
 
+function validCreationMetadata(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const metadata = value as Record<string, unknown>;
+  const payload = metadata.payload as Record<string, unknown> | undefined;
+  return (
+    isGroupPhysicalId(metadata.sourceMessageId) &&
+    isNames(metadata.recipientNames) &&
+    metadata.recipientNames.length > 0 &&
+    metadata.recipientNames.length <= 200 &&
+    !metadata.recipientNames.some((name) => name.toLowerCase() === 'user') &&
+    !!payload &&
+    typeof payload.name === 'string' &&
+    !!payload.name.trim() &&
+    payload.name.length <= 100 &&
+    payload.name === payload.name.trim() &&
+    typeof payload.autoIncludeNewMembers === 'boolean' &&
+    isNames(payload.selectedMemberNames) &&
+    payload.selectedMemberNames.length >= 2 &&
+    payload.selectedMemberNames.length <= 200 &&
+    !payload.selectedMemberNames.includes('user')
+  );
+}
+
 export class GroupChatStorage {
+  /** Exact raw originals only; unreadable/ambiguous stores must never become authorization. */
+  async readCreationOriginal(
+    teamName: string,
+    from: string,
+    messageId: string
+  ): Promise<Record<string, unknown>> {
+    const files = [
+      await safeGroupTeamPath(teamName, 'sentMessages.json'),
+      await safeGroupTeamPath(teamName, 'inboxes', `${from}.json`),
+      await safeGroupTeamPath(teamName, 'inboxes', 'user.json'),
+    ];
+    const matches: Record<string, unknown>[] = [];
+    for (const file of files) {
+      const raw = await readBounded(file);
+      if (raw === undefined) continue;
+      try {
+        assertValidGroupInboxRows(raw);
+      } catch {
+        throw new GroupChatError('storage-unavailable', 'Malformed original message storage');
+      }
+      for (const row of raw) {
+        if (
+          row &&
+          typeof row === 'object' &&
+          (row as Record<string, unknown>).messageId === messageId
+        ) {
+          // Canonical group originals live only in the human inbox; direct originals do not.
+          if (hasGroupChatEnvelopeMarker(row) !== (file === files[2]))
+            throw new GroupChatError(
+              'invalid-user-request',
+              'Original is in the wrong conversation store'
+            );
+          matches.push(row as Record<string, unknown>);
+        }
+      }
+    }
+    if (matches.length !== 1)
+      throw new GroupChatError('invalid-user-request', 'Original request is missing or ambiguous');
+    return matches[0];
+  }
+
   async readReactions(teamName: string): Promise<GroupMessageReactions[]> {
     const file = await safeGroupTeamPath(teamName, 'group-chat-reactions.json');
     return parseGroupReactions(await readBounded(file));
@@ -126,6 +190,7 @@ export class GroupChatStorage {
             !row.name.trim() ||
             typeof row.createdAt !== 'string' ||
             (row.archivedAt !== null && typeof row.archivedAt !== 'string') ||
+            (row.agentCreation !== undefined && !validCreationMetadata(row.agentCreation)) ||
             !row.membership ||
             (row.membership.kind === 'fixed'
               ? !isNames(row.membership.memberNames)

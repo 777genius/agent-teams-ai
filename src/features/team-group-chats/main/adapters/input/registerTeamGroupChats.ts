@@ -1,7 +1,11 @@
 import { GROUP_CHAT_CHANNELS } from '../../../contracts';
 import { GroupChatError } from '../../../core/domain/groupChat';
 
-import type { GroupChatReactionRequest, GroupChatSendRequest } from '../../../contracts';
+import type {
+  AgentGroupChatCreateRequest,
+  GroupChatReactionRequest,
+  GroupChatSendRequest,
+} from '../../../contracts';
 import type { TeamGroupChatsFeature } from '../../composition/createTeamGroupChatsFeature';
 import type { IpcMain } from 'electron';
 import type { FastifyInstance } from 'fastify';
@@ -62,6 +66,24 @@ export function registerTeamGroupChatsHttp(
       }
     });
   }
+  app.post<{ Params: { teamName: string } }>(
+    '/api/teams/:teamName/group-chats/create',
+    async (request, reply) => {
+      const sourceMessageId = (request.body as Record<string, unknown> | null)?.sourceMessageId;
+      try {
+        // The desktop root-generation hook validates this required context before admission.
+        if (typeof request.headers['x-agent-teams-app-context'] !== 'string')
+          throw new GroupChatError('invalid-input', 'App-bound creation context required');
+        const body = objectInput(request.body);
+        return await feature.createFromAgent({
+          ...body,
+          teamName: request.params.teamName,
+        } as unknown as AgentGroupChatCreateRequest);
+      } catch (error) {
+        return reply.code(400).send({ error: errorPayload(error), sourceMessageId });
+      }
+    }
+  );
   for (const method of ['list', 'send', 'react'] as const) {
     app.post<{ Params: { teamName: string } }>(
       `/api/teams/:teamName/group-chats/${method}`,

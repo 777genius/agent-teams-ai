@@ -52,6 +52,28 @@ describe('agent-teams-mcp tools', () => {
     ).toBe(true);
   });
 
+  it('exposes creation with an original identity and rejects spoof creation fields', () => {
+    const schema = collectTools().get('group_chat_create')?.parameters;
+    const request = {
+      teamName: 'sandbox',
+      from: 'alice',
+      sourceMessageId: 'original-human-id',
+      name: 'Release',
+      selectedMemberNames: ['alice', 'bob'],
+    };
+    expect(schema?.safeParse(request).success).toBe(true);
+    for (const field of [
+      'id',
+      'grant',
+      'userConfirmed',
+      'excludedMemberNames',
+      'recipientName',
+      'source',
+    ])
+      expect(schema?.safeParse({ ...request, [field]: true }).success).toBe(false);
+    expect(schema?.safeParse({ ...request, sourceMessageId: '' }).success).toBe(false);
+  });
+
   it('limits reactions to the one physical inbound acknowledgement contract', () => {
     const parameters = collectTools().get('group_chat_react')?.parameters;
     const target = {

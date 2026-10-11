@@ -1,6 +1,7 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { createGroupChatRuntimePorts } from '../infrastructure/groupChatRuntimePorts';
 
@@ -41,6 +42,18 @@ export function createDesktopTeamGroupChats(deps: {
             .map((member) => member.name)
         ),
       ];
+    },
+    leadName: async (teamName) => {
+      const [config, metadata] = await Promise.all([
+        configReader.getConfig(teamName),
+        membersMeta.getMembers(teamName),
+      ]);
+      if (!config || config.deletedAt) throw new Error('Team not found');
+      return (
+        memberResolver
+          .resolveMembers(config, metadata, [], [])
+          .find((member) => !member.removedAt && isLeadMember(member))?.name ?? null
+      );
     },
     getRun: runtime.getRun,
     configurationOperation: deps.configurationOperation,
