@@ -17,6 +17,8 @@ on:
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
+      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
+      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
       - scripts/e2e/opencode-diagnostics/catalog.mjs
@@ -49,6 +51,8 @@ jobs:
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
+      - name: Typecheck admission diagnostic
+        run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
@@ -82,14 +86,47 @@ jobs:
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Qualify cold and warm packaged starts
+        id: qualify
         shell: pwsh
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install | Tee-Object -Variable qualificationOutput
+          $qualificationExit = $LASTEXITCODE
+          $roots = @($qualificationOutput | Where-Object { $_ -match '^Packaged artifacts/profile: ' })
+          if ($roots.Count -eq 1) { "root=$($roots[0].Substring('Packaged artifacts/profile: '.Length))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append }
+          if ($qualificationExit -ne 0) { exit $qualificationExit }
+      - name: Checkout exact SDK admission source for failure evidence
+        if: always() && failure() && steps.qualify.outcome == 'failure'
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: d6361e0f50821ffc31cc5a9efd0dcaf6643c850d
+          path: .test-tmp/sdk-admission
+          persist-credentials: false
+      - name: Record selected identity admission failure evidence
+        if: always() && failure() && steps.qualify.outcome == 'failure'
+        timeout-minutes: 2
+        shell: pwsh
+        env:
+          QUALIFICATION_ROOT: ${{ steps.qualify.outputs.root }}
+        run: |
+          $sdk = Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission'
+          if (Test-Path (Join-Path $sdk '.git')) {
+            git -C $sdk config core.autocrlf false
+            git -C $sdk checkout-index --force --all
+          }
+          $packaged = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked'
+          $bun = Join-Path $packaged 'resources/runtime/bun/bun.exe'
+          $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
+          if (!(Test-Path $bun)) {
+            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"packaged_bun_missing","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
+          } else {
+            & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged | Set-Content $receipt -Encoding utf8
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Archive qualified Windows test build
         shell: pwsh
         run: |
@@ -128,6 +165,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: |
+            ${{ runner.temp }}/selected-identity-diagnostic.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png
