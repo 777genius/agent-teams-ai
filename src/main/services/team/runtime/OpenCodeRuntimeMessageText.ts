@@ -1,5 +1,6 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
+import { buildOriginalUserRequestBlock } from '../messageDeliveryText';
 import {
   classifyOpenCodeDeliveryReplyContract,
   OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT,
@@ -196,6 +197,9 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages for what this message already produced. Do NOT redo an action that is already complete: do not create a task that already exists, and do not re-send a reply you already sent. Work that is only started or partly done is NOT handled: continue it and finish what is missing. Only when everything this message asked for is verifiably complete, end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
     actionModeWorkScopeReminder,
     teamToolAccessRule,
+    input.from?.trim().toLowerCase() === 'user' && input.messageId && !input.relayOfMessageId
+      ? buildOriginalUserRequestBlock(input.messageId)
+      : null,
     ...responseInstructions,
     'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',
