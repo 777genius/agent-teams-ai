@@ -20,8 +20,10 @@ import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
 } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+import { handleComposerEnterKey } from '../../../src/renderer/utils/composerEnterKey';
+import { MAX_TEXT_LENGTH } from '../../../src/shared/constants';
 
-import { clearStore, directRoute, scope, seed, working } from './queueFixture';
+import { clearStore, directRoute, readWorking, scope, seed, working } from './queueFixture';
 
 import type {
   QueueItem,
@@ -291,12 +293,17 @@ describe('selected manual send contract', () => {
         });
         const refresh = vi.fn(async () => {});
         const transport = vi.fn();
+        let draft = working('', route);
+        const consume = vi.fn(async (commit: (record: typeof draft) => Promise<typeof draft>) => {
+          await commit(draft);
+        });
         let queue!: ReturnType<typeof useManualMessageQueue>;
         function Probe() {
           queue = useManualMessageQueue({
             teamName: target.teamName,
             route,
-            consume: async () => {},
+            text: draft.content?.text ?? '',
+            consume,
             blockedReason: () => null,
             prepare: (row, id) => ({ messageId: id, text: row.text, actionMode: row.actionMode }),
             transport,
@@ -338,6 +345,40 @@ describe('selected manual send contract', () => {
             limit: 100,
             ...(route.kind === 'group' ? { groupChatId: route.groupChatId } : {}),
           });
+          if (scenario === 'direct' || scenario === 'group') {
+            for (const text of [null, '', ' \n ', 'x'.repeat(MAX_TEXT_LENGTH + 1)]) {
+              draft = working(text ?? '', route);
+              if (text === null) draft = { ...draft, content: null };
+              await seed(draft);
+              await act(async () => view.render(React.createElement(Probe)));
+              const send = vi.fn();
+              const event = {
+                key: 'Enter',
+                ctrlKey: true,
+                nativeEvent: { isComposing: false },
+                preventDefault: vi.fn(),
+                stopPropagation: vi.fn(),
+              } as unknown as React.KeyboardEvent<HTMLTextAreaElement>;
+              await act(async () => {
+                expect(handleComposerEnterKey(event, send, queue.onEnqueue, false)).toBe(true);
+                expect(await readWorking(draft)).toEqual(draft);
+                expect(await repository.list(target, ownsQueueAttempt)).toEqual([]);
+              });
+              if (!isValidElement<QueueListProps>(queue.list))
+                throw new Error('Missing queue view');
+              expect(queue.list.props.items).toEqual([]);
+              expect(queue.list.props.busy).toBe(false);
+              expect(event.preventDefault).toHaveBeenCalledOnce();
+              expect(send).not.toHaveBeenCalled();
+              if (text !== null && text.length > MAX_TEXT_LENGTH) {
+                expect(consume).toHaveBeenCalledOnce();
+                expect(queue.list.props.error).toBe('messages.manualQueue.conflict');
+              } else {
+                expect(consume).not.toHaveBeenCalled();
+                expect(queue.list.props.error).toBeNull();
+              }
+            }
+          }
         } finally {
           act(() => view.unmount());
         }

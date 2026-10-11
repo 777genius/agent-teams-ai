@@ -25,6 +25,7 @@ import type { ReactNode } from 'react';
 export interface ManualQueueOptions {
   teamName: string;
   route: QueueRoute;
+  text: string;
   unavailableReason?: string | null;
   consume: (
     commit: (working: ComposerWorkingRecord) => Promise<ComposerWorkingRecord>
@@ -172,7 +173,7 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
     return queueRepository.enqueue(scope, options.route, working, () => snapshotIsCurrent(epoch));
   };
   const enqueue = (): void => {
-    if (options.unavailableReason || !scope) return;
+    if (!options.text.trim() || options.unavailableReason || !scope) return;
     const epoch = captureContextScopedRequestEpoch();
     void run(() => options.consume((working) => commitEnqueue(working, epoch))).catch(
       () => undefined

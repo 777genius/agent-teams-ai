@@ -45,6 +45,7 @@ export function useGroupMessageQueue(options: {
       groupChatId: options.groupChatId,
       recipientName: composer.recipientName,
     },
+    text: composer.text,
     unavailableReason:
       parseStandaloneSlashCommand(stripEncodedTaskReferenceMetadata(composer.text).trim()) !== null
         ? String(t('messages.manualQueue.richUnsupported'))

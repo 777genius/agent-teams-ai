@@ -64,6 +64,7 @@ export function useDirectMessageQueue(options: {
   const queue = useManualMessageQueue({
     teamName: options.teamName,
     route,
+    text: draft.text,
     unavailableReason: unsupported
       ? String(t('messages.manualQueue.richUnsupported'))
       : !draft.canSubmit || options.disabled
