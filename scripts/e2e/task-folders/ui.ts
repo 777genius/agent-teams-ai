@@ -1,0 +1,243 @@
+import assert from 'node:assert/strict';
+import { delay, until, type Desktop } from './runtime.ts';
+import type { Snapshot } from '../../../src/features/task-folders/core/domain/folders.ts';
+
+export const selectors = {
+  toggle: '[data-testid="task-folders-toggle"]',
+  panel: '[data-testid="task-folders-panel"]',
+  create: '[data-testid="task-folders-new-folder"]',
+  tree: '[data-testid="task-folders-tree"]',
+  archived: '[data-testid="task-folders-show-archived"]',
+  sidebar: '#sidebar-tasks-panel',
+  folderHandle: '[data-testid="task-folder-drag-handle"]',
+  taskHandle: '[data-testid="sidebar-task-drag-handle"]',
+};
+export const el = (selector: string) => `document.querySelector(${JSON.stringify(selector)})`;
+export const label = (
+  text: string,
+  root = 'document',
+  roles = 'button,[role="button"],[role="menuitem"],[role="option"]'
+) =>
+  `Array.from(${root}.querySelectorAll(${JSON.stringify(roles)})).find(e=>e.getAttribute('aria-label')===${JSON.stringify(text)} || e.textContent?.trim()===${JSON.stringify(text)})`;
+export const folderRow = (id: string) => el(`${selectors.tree} [data-folder-id="${id}"]`);
+export const taskRow = (team: string, id: string, root = selectors.tree) =>
+  `Array.from(${el(root)}.querySelectorAll('[data-task-key]')).find(e=>e.getAttribute('data-task-key')===${JSON.stringify(JSON.stringify([team, id]))})`;
+export interface Point {
+  x: number;
+  y: number;
+}
+export class UI {
+  dragEvidence: unknown[] = [];
+  constructor(readonly desktop: Desktop) {}
+  get cdp() {
+    assert(this.desktop.cdp);
+    return this.desktop.cdp;
+  }
+  async value<T>(expression: string): Promise<T> {
+    return (await this.cdp.evaluate(expression)) as T;
+  }
+  async wait(expression: string, name: string, timeout?: number) {
+    await until(() => this.value(`(async()=>Boolean(await (${expression})))()`), name, timeout);
+  }
+  async locate(expression: string) {
+    const exists = () =>
+      this.value<boolean>(`(() => {try{return !!(${expression});}catch{return false;}})()`);
+    if (await exists()) return;
+    if (!expression.includes(selectors.tree)) throw new Error('Missing selector: ' + expression);
+    // Navigate the real virtual scroll container, including during an intercepted native drag.
+    await this.cdp.evaluate(`${el(selectors.tree)}.scrollTop=0`);
+    await delay(80);
+    const steps = await this.value<number>(
+      `Math.ceil(${el(selectors.tree)}.scrollHeight / Math.max(100,${el(selectors.tree)}.clientHeight/2))+2`
+    );
+    for (let step = 0; step < steps; step++) {
+      if (await exists()) return;
+      await this.cdp.evaluate(
+        `${el(selectors.tree)}.scrollTop+=Math.max(100,${el(selectors.tree)}.clientHeight/2)`
+      );
+      await delay(50);
+    }
+    throw new Error('Missing selector after virtual tree navigation: ' + expression);
+  }
+  async point(expression: string, fraction = 0.5): Promise<Point> {
+    await this.locate(expression);
+    const point = await this.value<Point | null>(`(() => { const e=${expression}; if(!e)return null;
+      e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();
+      if(!r.width || !r.height)return null;return {x:r.x+r.width/2,y:r.y+r.height*${fraction}}; })()`);
+    assert(point, 'Missing/hidden selector: ' + expression);
+    const hit = await this.value<boolean>(
+      `(() => {const e=${expression};const h=document.elementFromPoint(${point.x},${point.y});return e===h||e.contains(h);})()`
+    );
+    assert(hit, 'Target obscured: ' + expression);
+    return point;
+  }
+  async move(point: Point, buttons = 0) {
+    await this.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point, buttons });
+  }
+  async click(expression: string) {
+    const p = await this.point(expression);
+    await this.move(p);
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await this.cdp.send('Input.dispatchMouseEvent', {
+        type,
+        ...p,
+        button: 'left',
+        clickCount: 1,
+      });
+  }
+  async key(key: string, code = key, modifiers = 0) {
+    const vk: Record<string, number> = {
+      Enter: 13,
+      Escape: 27,
+      Tab: 9,
+      ArrowDown: 40,
+      ArrowUp: 38,
+      Home: 36,
+      F2: 113,
+      a: 65,
+    };
+    for (const type of ['rawKeyDown', 'keyUp'])
+      await this.cdp.send('Input.dispatchKeyEvent', {
+        type,
+        key,
+        code,
+        modifiers,
+        windowsVirtualKeyCode: vk[key] ?? 0,
+        nativeVirtualKeyCode: vk[key] ?? 0,
+      });
+  }
+  async fill(expression: string, text: string) {
+    await this.click(expression);
+    await this.key('a', 'KeyA', 2);
+    await this.cdp.send('Input.insertText', { text });
+  }
+  async menu(row: string, action?: string) {
+    await this.click(label('Folder or task actions', row));
+    await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
+    if (action) await this.click(label(action, 'document', '[role="menuitem"]'));
+  }
+  async expand(id: string) {
+    await this.locate(folderRow(id));
+    const button = label('Expand folder', folderRow(id));
+    if (await this.value(`!!(${button})`)) await this.click(button);
+  }
+  async snapshot(): Promise<Snapshot> {
+    return await this.value('JSON.parse(localStorage.getItem("taskFolders:v1"))');
+  }
+  async persisted(predicate: (s: Snapshot) => boolean, label: string) {
+    await until(async () => predicate(await this.snapshot()), 'persisted ' + label);
+  }
+  async open() {
+    if (!(await this.value(`!!${el(selectors.panel)}`))) await this.click(el(selectors.toggle));
+    await this.wait(el(selectors.tree), 'folder tree');
+  }
+  async close() {
+    await this.click(label('Close', el(selectors.panel)));
+    await this.wait(`!${el(selectors.panel)}`, 'panel closed');
+  }
+  async create(name: string, parent?: string) {
+    if (parent) await this.menu(folderRow(parent), 'New subfolder');
+    else await this.click(el(selectors.create));
+    await this.wait('document.querySelector(\'[role="dialog"] input\')', 'new folder dialog');
+    await this.fill(el('[role="dialog"] input'), name);
+    await this.key('Enter');
+    await this.persisted((s) => s.folders.some((f) => f.name === name), 'folder creation ' + name);
+    return (await this.snapshot()).folders.find((f) => f.name === name)!.id;
+  }
+  async unfocus() {
+    // Observer/setup only: blur removes the focused source hold. Pointer travels through native CDP.
+    await this.cdp.evaluate('document.activeElement?.blur()');
+    await this.move({ x: 10, y: 80 });
+  }
+  async beginDrag(source: string, expectedTask?: { teamName: string; taskId: string }) {
+    this.desktop.takeDrag();
+    await this.cdp.evaluate(`(() => {window.__taskFoldersE2EDragStarts=[];
+      if(!window.__taskFoldersE2EObserving){window.__taskFoldersE2EObserving=true;
+        document.addEventListener('dragstart',e=>window.__taskFoldersE2EDragStarts.push({trusted:e.isTrusted,handle:e.target?.getAttribute('data-testid')}),true);}})()`);
+    const start = await this.point(source);
+    await this.move(start);
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      ...start,
+      button: 'left',
+      buttons: 1,
+      clickCount: 1,
+    });
+    for (let i = 1; i <= 8; i++) await this.move({ x: start.x - i * 5, y: start.y + i }, 1);
+    let data: Record<string, unknown> | undefined;
+    await until(
+      async () => {
+        data = this.desktop.takeDrag();
+        return !!data;
+      },
+      'Chromium native drag interception',
+      5000
+    );
+    assert(data, 'No actual native mouse drag');
+    const observed = await this.value<{ trusted: boolean; handle: string }[]>(
+      'window.__taskFoldersE2EDragStarts'
+    );
+    assert(
+      observed.some(
+        (e) =>
+          e.trusted && ['task-folder-drag-handle', 'sidebar-task-drag-handle'].includes(e.handle)
+      ),
+      'Trusted native dragstart missing'
+    );
+
+    if (expectedTask) {
+      const item = (data.items as { mimeType: string; data: string }[]).find(
+        (i) => i.mimeType === 'application/x-agent-teams-task-v1'
+      );
+      assert(item, 'Native task MIME missing');
+      assert.deepEqual(JSON.parse(item.data), { version: 1, identity: expectedTask });
+    }
+    this.dragEvidence.push({
+      source,
+      nativeInput: true,
+      intercepted: data,
+      observedDragStarts: observed,
+      at: new Date().toISOString(),
+    });
+    await this.wait(el(selectors.panel), 'native drag opened panel');
+    return data;
+  }
+  async dragOver(data: Record<string, unknown>, point: Point, enter = false) {
+    await this.move(point, 1);
+    await this.cdp.send('Input.dispatchDragEvent', {
+      type: enter ? 'dragEnter' : 'dragOver',
+      ...point,
+      data,
+    });
+  }
+  async finishDrag(data: Record<string, unknown>, point: Point, cancel = false) {
+    if (cancel) {
+      await this.cdp.send('Input.dispatchDragEvent', { type: 'dragCancel', ...point, data });
+      await this.cdp.send('Input.cancelDragging');
+      await this.key('Escape');
+    } else {
+      await this.dragOver(data, point);
+      await this.cdp.send('Input.dispatchDragEvent', { type: 'drop', ...point, data });
+    }
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      ...point,
+      button: 'left',
+      buttons: 0,
+      clickCount: 1,
+    });
+    await this.cdp.send('Input.cancelDragging');
+  }
+  async drag(
+    source: string,
+    target: string,
+    fraction = 0.5,
+    expectedTask?: { teamName: string; taskId: string }
+  ) {
+    const data = await this.beginDrag(source, expectedTask);
+    const point = await this.point(target, fraction);
+    await this.dragOver(data, point, true);
+    await delay(100);
+    await this.finishDrag(data, point);
+  }
+}
