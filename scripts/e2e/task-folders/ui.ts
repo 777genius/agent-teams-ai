@@ -72,7 +72,12 @@ export class UI {
     return point;
   }
   async move(point: Point, buttons = 0) {
-    await this.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point, buttons });
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      ...point,
+      button: buttons ? 'left' : 'none',
+      buttons,
+    });
   }
   async click(expression: string) {
     const p = await this.point(expression);
@@ -199,7 +204,10 @@ export class UI {
       buttons: 1,
       clickCount: 1,
     });
-    for (let i = 1; i <= 8; i++) await this.move({ x: start.x - i * 5, y: start.y + i }, 1);
+    for (let i = 1; i <= 8; i++) {
+      await this.move({ x: start.x - i * 5, y: start.y + i }, 1);
+      await delay(30);
+    }
     let data: Record<string, unknown> | undefined;
     await until(
       async () => {
