@@ -45,7 +45,6 @@ import {
   setTeamMessagesSidebarUiState,
 } from '../sidebar/teamSidebarUiState';
 
-import { MessageComposer } from './MessageComposer';
 import { MessageHistoryNotice } from './MessageHistoryNotice';
 import { MessagesConversationList } from './MessagesConversationList';
 import {
@@ -53,7 +52,6 @@ import {
   LatestMessageControl,
   WideThreadHeader,
 } from './MessagesExpandedChrome';
-import { MessagesFloatingComposerModeControls } from './MessagesFloatingComposerModeControls';
 import { MessagesInlineBackButton } from './MessagesInlineBackButton';
 import { MessagesInlineLayoutActions, MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
 import {
@@ -88,11 +86,11 @@ import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems
 import { MessagesThreadView } from './MessagesThreadView';
 import { MessagesTimelineSection } from './MessagesTimelineSection';
 import { StatusBlock } from './StatusBlock';
-import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import { useComposerOutboxItems } from './useComposerOutboxItems';
 import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
+import { useMessagesComposerSections } from './useMessagesComposerSections';
 import { useMessagesGroupConversation } from './useMessagesGroupConversation';
 import {
   useDirectThreadAutoOlder,
@@ -170,7 +168,6 @@ interface MessagesPanelProps {
   expandedChatHost?: ExpandedChatHost;
 }
 
-const MessagesComposerSection = memo(MessageComposer);
 const MessagesStatusSection = memo(StatusBlock);
 
 export const MessagesPanel = memo(function MessagesPanel({
@@ -1033,7 +1030,23 @@ export const MessagesPanel = memo(function MessagesPanel({
     ]
   );
 
-  const sharedComposerProps = {
+  const {
+    renderDefaultComposerSection,
+    renderCompactComposerSection,
+    renderFloatingComposerSection,
+  } = useMessagesComposerSections({
+    groupId,
+    renderGroupComposer,
+    groupArchiveAction,
+    modeControls: {
+      label: t('messages.panelMode'),
+      sortChatsByActivity,
+      onSortChatsByActivityChange: setSortChatsByActivity,
+      onMoveToInline: moveToInline,
+      onMoveToBottomSheet: moveToBottomSheet,
+      onMoveToSidebar: moveToSidebar,
+      onMoveToFloatingComposer: moveToFloatingComposer,
+    },
     teamName,
     groupBroadcast: { group: groupConversation.catalog.defaultGroup },
     members,
@@ -1059,52 +1072,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     onRevisionPreparationChange: handleRevisionPreparationChange,
     onRevisionCancel: handleRevisionCancel,
     onRevisionComplete: handleRevisionComplete,
-  };
-
-  const renderDefaultComposerSection = (): React.JSX.Element =>
-    groupId ? renderGroupComposer() : <ThreadAwareMessageComposer {...sharedComposerProps} />;
-
-  const renderFloatingComposerModeControls = (): React.JSX.Element => (
-    <MessagesFloatingComposerModeControls
-      label={t('messages.panelMode')}
-      sortChatsByActivity={sortChatsByActivity}
-      onSortChatsByActivityChange={setSortChatsByActivity}
-      onMoveToInline={moveToInline}
-      onMoveToBottomSheet={moveToBottomSheet}
-      onMoveToSidebar={moveToSidebar}
-      onMoveToFloatingComposer={moveToFloatingComposer}
-    />
-  );
-
-  const renderCompactComposerSection = (): React.JSX.Element =>
-    groupId ? (
-      renderGroupComposer({ layout: 'compact' })
-    ) : (
-      <ThreadAwareMessageComposer layout="compact" {...sharedComposerProps} />
-    );
-
-  const renderFloatingComposerSection = (): React.JSX.Element =>
-    groupId ? (
-      renderGroupComposer({
-        layout: 'compact',
-        widthMode: 'floating-adaptive',
-        cornerActionPrefix: (
-          <>
-            {groupArchiveAction}
-            {renderFloatingComposerModeControls()}
-          </>
-        ),
-      })
-    ) : (
-      <MessagesComposerSection
-        {...sharedComposerProps}
-        layout="compact"
-        widthMode="floating-adaptive"
-        cornerActionPrefix={
-          <div className="flex items-center gap-1">{renderFloatingComposerModeControls()}</div>
-        }
-      />
-    );
+  });
 
   const renderStatusSection = (
     position: 'inline' | 'sidebar',

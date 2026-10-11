@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { useGroupMessageQueue } from '@features/manual-message-queue/renderer';
 import {
   GroupChatArchiveAction,
   useGroupChatComposer,
@@ -45,6 +46,13 @@ export function useMessagesGroupConversation(
     members.find((member) => isLeadMember(member) && group?.memberNames.includes(member.name))
       ?.name ?? null
   );
+  const manualQueue = useGroupMessageQueue({
+    teamName,
+    groupChatId: groupId ?? '',
+    group,
+    composer,
+    refresh: history.refresh,
+  });
   const archiveAction = groupId ? (
     <GroupChatArchiveAction key={groupId} group={group} setArchived={catalog.setArchived} />
   ) : undefined;
@@ -77,6 +85,7 @@ export function useMessagesGroupConversation(
         {...editorOptions}
         {...options}
         teamName={teamName}
+        queue={manualQueue}
         {...getGroupComposerPresentation({
           snapshot: composer,
           label: group?.name ?? t('messages.groups.unavailable'),
