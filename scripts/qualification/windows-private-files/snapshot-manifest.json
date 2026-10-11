@@ -4,7 +4,7 @@
     {
       "source": "src/features/local-http-auth/main/infrastructure/privateFiles.ts",
       "fixture": "fixtures/privateFiles.ts",
-      "sha256": "bf1809e2dba712ab23bcb908fd032e6599333555a63560106822e73aa5327a0d"
+      "sha256": "bddd6c87a45bdf980de69f696eca5e231f9b155f15800a75ed4bf92f9ee02673"
     },
     {
       "source": "src/features/local-http-auth/main/infrastructure/windowsPrivateAcl.ts",

@@ -21,6 +21,13 @@ export async function validateProfileRoot(root: string): Promise<string> {
     assertWindowsProfileRoot(root, homedir());
     assertPrivateWindowsAcl(root);
   }
+  return validateOwnedDirectoryRoot(root);
+}
+
+/** Canonical, existing, owner-controlled directory topology only; Windows callers must also check ACLs. */
+export async function validateOwnedDirectoryRoot(root: string): Promise<string> {
+  if (!path.isAbsolute(root) || path.resolve(root) !== root)
+    throw new Error('Expected absolute profile root');
   // Refuse links at every existing component, including the profile root.
   let cursor = root;
   while (true) {
