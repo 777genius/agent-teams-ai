@@ -153,6 +153,7 @@ async function main() {
     receipt.outcome = 'REJECTED';
     receipt.class = error instanceof Error && ['cleanup_unknown', 'selection_unavailable', 'identity_mismatch'].includes(error.message)
       ? error.message : 'other_error';
+    if (receipt.phase === 'admission_result') receipt.class = 'result_mismatch';
     receipt.helperFailure = null;
     if (error instanceof cleanup.OpenCodeVersionProbeCleanupError && record(error)) {
       const helper = error.helperFailure;

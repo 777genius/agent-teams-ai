@@ -39,14 +39,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Enable long paths
-        run: |
-          git config --global core.longpaths true
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git config --global core.autocrlf false
-          if ($LASTEXITCODE -ne 0) { Write-Warning 'SDK line-ending configuration failed; admission evidence may be unavailable'; $global:LASTEXITCODE = 0 }
+        run: git config --global core.longpaths true
       - name: Checkout exact SDK admission source
         id: sdk_source
         continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
         uses: actions/checkout@v6
         with:
           repository: 777genius/agent_teams_orchestrator
