@@ -13,7 +13,7 @@ export const GroupMessageReaction = ({ target }: { target: GroupMessageReactionT
   const action = snapshot?.hasUserReacted ? 'remove' : 'add';
   const label = t(`activity.reactions.${action}`, { count });
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" data-group-message-reaction="true">
       <Tooltip>
         <TooltipTrigger asChild>
           <span

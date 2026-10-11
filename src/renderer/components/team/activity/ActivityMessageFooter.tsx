@@ -20,7 +20,10 @@ export const ActivityMessageFooter = ({
   const showAttachments = expanded && !!message.attachments?.length && !!message.messageId;
   if (!canonical && !showAttachments) return null;
   return (
-    <div className="px-2.5 pb-2.5">
+    <div
+      className="px-2.5 pb-2.5"
+      data-activity-message-footer={showAttachments ? 'attachments' : 'reaction'}
+    >
       {showAttachments ? (
         <AttachmentDisplay
           teamName={teamName}
