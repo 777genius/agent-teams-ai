@@ -37,7 +37,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '26.10.0'
+          node-version-file: .node-version
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm typecheck
@@ -112,7 +112,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '26.10.0'
+          node-version-file: .node-version
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Require canonical typecheck and typed immutable-input tooling lint
