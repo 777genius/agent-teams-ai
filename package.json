@@ -400,7 +400,24 @@
     },
     "dmg": {
       "sign": false,
-      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}"
+      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}",
+      "title": "Agent Teams AI Installer",
+      "background": "resources/dmg/background.png",
+      "iconSize": 112,
+      "iconTextSize": 14,
+      "contents": [
+        {
+          "x": 229,
+          "y": 245,
+          "type": "file"
+        },
+        {
+          "x": 571,
+          "y": 245,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "win": {
       "target": [
