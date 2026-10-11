@@ -2016,8 +2016,8 @@ async function initializeServices(): Promise<void> {
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
-    configurationOperation: (teamName, operation) =>
-      teamDataService.runConfigurationOperation(teamName, operation),
+    configurationOperation: (name, op) => teamDataService.runConfigurationOperation(name, op),
+    leadName: (teamName) => teamDataService.getLeadMemberName(teamName),
     inboxWriter: teamInboxWriter,
     reactionChanged: (teamName, detail) =>
       forwardTeamChangeToRendererAndHttp({ teamName, detail, type: 'group-reactions' }),

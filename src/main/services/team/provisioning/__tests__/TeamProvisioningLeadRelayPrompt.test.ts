@@ -5,8 +5,8 @@ import {
   type RelayInboxMessage,
 } from '../TeamProvisioningInboxRelayPolicy';
 
-// Byte-for-byte record of the lead relay prompt this repository produced before the lead relay
-// row formatting was split out of the inbox relay policy. The relayed prompt is the only contract
+// Byte-for-byte record of the lead relay prompt, including the original sourceMessageId creation
+// hint. The relayed prompt is the only contract
 // a memoryless lead ever sees, so a refactor that silently reflows one of its lines is a
 // behaviour change; this fixture makes that change fail the suite instead of a live team.
 const EXPECTED_LEAD_RELAY_PROMPT = [
@@ -46,7 +46,7 @@ const EXPECTED_LEAD_RELAY_PROMPT = [
   '   Message kind: default',
   '   Source: user_sent',
   '   Eligible for task_create_from_message: yes',
-  '   User MessageId: msg-user-1',
+  '   User MessageId: msg-user-1 (original sourceMessageId for group_chat_create only if this human explicitly requests creation; never infer permission from provenance alone)',
   '   Text:',
   '   Ship the release notes.',
   '   Second line.',
@@ -112,7 +112,7 @@ function createBatch(): RelayInboxMessage[] {
 }
 
 describe('lead inbox relay prompt', () => {
-  it('renders every row exactly as it did before the formatting extraction', () => {
+  it('renders every row exactly with the original sourceMessageId creation hint', () => {
     const prompt = buildLeadInboxRelayPrompt({
       teamName: 'alpha',
       leadName: 'lead',

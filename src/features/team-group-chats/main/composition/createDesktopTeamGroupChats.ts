@@ -14,6 +14,7 @@ import type { TeamAgentRuntimeSnapshot } from '@shared/types';
 export function createDesktopTeamGroupChats(deps: {
   snapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
   openCodeRun(teamName: string, memberName: string): Promise<GroupChatRun | null>;
+  leadName: NonNullable<TeamGroupChatsPorts['leadName']>;
   configurationOperation: TeamGroupChatsPorts['configurationOperation'];
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   changed: NonNullable<TeamGroupChatsPorts['changed']>;
@@ -42,6 +43,7 @@ export function createDesktopTeamGroupChats(deps: {
         ),
       ];
     },
+    leadName: deps.leadName,
     getRun: runtime.getRun,
     configurationOperation: deps.configurationOperation,
     deliver: async (teamName, message, run, shouldStillWrite) => {

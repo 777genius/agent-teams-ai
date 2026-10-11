@@ -26,6 +26,16 @@ export interface GroupChatCreateRequest {
   autoIncludeNewMembers: boolean;
 }
 
+/** Agent creation always refers to the actual persisted original human request. */
+export interface AgentGroupChatCreateRequest {
+  teamName: string;
+  from: string;
+  sourceMessageId: string;
+  name: string;
+  selectedMemberNames: string[];
+  autoIncludeNewMembers?: boolean;
+}
+
 export interface GroupChatSendRequest {
   teamName: string;
   groupChatId: string;

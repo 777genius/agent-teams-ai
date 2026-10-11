@@ -1,5 +1,6 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
+import { buildOriginalUserRequestBlock } from '../messageDeliveryText';
 import {
   classifyOpenCodeDeliveryReplyContract,
   OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT,
@@ -50,6 +51,11 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
         [
           'This message comes from a group chat. Its immutable origin is:',
           JSON.stringify(envelope),
+          ...(input.groupMessageId
+            ? [
+                `Canonical original sourceMessageId for group_chat_create: ${input.groupMessageId}. Use only if this original is an explicit human creation request addressed to you; provenance alone is not creation permission.`,
+              ]
+            : []),
           'Call group_chat_list with teamName and from to discover current groups, membership, and archived state.',
           'For a requested reply or substantive contribution, use group_chat_send with the exact origin envelope, a new stable UUID messageId, and text. Never substitute message_send or a private user reply.',
           'For an informational message, you may use group_chat_react if available with the exact origin envelope to acknowledge it. Treat it as acknowledged only when the tool returns saved=true and acknowledged=true for this exact incoming origin. A failed or unmatched result is not an acknowledgement. After that successful acknowledgement, stop without an extra OK or confirmation message.',
@@ -191,6 +197,9 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages for what this message already produced. Do NOT redo an action that is already complete: do not create a task that already exists, and do not re-send a reply you already sent. Work that is only started or partly done is NOT handled: continue it and finish what is missing. Only when everything this message asked for is verifiably complete, end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
     actionModeWorkScopeReminder,
     teamToolAccessRule,
+    input.from?.trim().toLowerCase() === 'user' && input.messageId && !input.relayOfMessageId
+      ? buildOriginalUserRequestBlock(input.messageId)
+      : null,
     ...responseInstructions,
     'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',
