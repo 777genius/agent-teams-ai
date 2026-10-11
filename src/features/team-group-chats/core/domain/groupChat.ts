@@ -52,3 +52,17 @@ export class GroupChatError extends Error {
     this.name = 'GroupChatError';
   }
 }
+
+/** Canonical targets are UUIDs; physical inbox identities also include a recipient suffix. */
+export function isGroupUuid(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i.test(
+      value
+    )
+  );
+}
+
+export function isGroupPhysicalId(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,199}$/.test(value);
+}

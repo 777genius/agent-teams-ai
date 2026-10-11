@@ -6,7 +6,6 @@ import {
   MarkdownViewer,
 } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
-import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
@@ -71,6 +70,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { ActivityMessageFooter } from './ActivityMessageFooter';
 import { ActivityMessageHoverCard } from './ActivityMessageHoverCard';
 import {
   type ChatAppearance,
@@ -1651,15 +1651,9 @@ export const ActivityItem = memo(
                 </div>
               </div>
             ) : null}
-            {message.attachments?.length && message.messageId ? (
-              <AttachmentDisplay
-                teamName={teamName}
-                messageId={message.messageId}
-                attachments={message.attachments}
-              />
-            ) : null}
           </div>
         ) : null}
+        <ActivityMessageFooter teamName={teamName} message={message} expanded={isExpanded} />
       </article>
     );
     /* eslint-enable jsx-a11y/no-noninteractive-tabindex */

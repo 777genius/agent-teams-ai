@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Додати реакцію ({{count}})",
+      "remove": "Прибрати реакцію ({{count}})",
+      "count": "Реакції: {{count}}",
+      "failed": "Не вдалося оновити реакції"
+    },
     "actions": {
       "createTaskFromMessage": "Створити завдання з повідомлення",
       "editMessage": "Редагувати повідомлення",

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "స్పందనను జోడించు ({{count}})",
+      "remove": "స్పందనను తీసివేయి ({{count}})",
+      "count": "స్పందనలు: {{count}}",
+      "failed": "స్పందనలను నవీకరించలేకపోయాము"
+    },
     "actions": {
       "createTaskFromMessage": "సందేశం నుండి టాస్క్ సృష్టించు",
       "editMessage": "సందేశాన్ని సవరించు",

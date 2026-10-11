@@ -60,4 +60,36 @@ export function registerGroupChatTools(server: Pick<FastMCP, 'addTool'>) {
       }
     },
   });
+  server.addTool({
+    name: 'group_chat_react',
+    description:
+      'Optionally acknowledge an informational group inbound with one thumbs-up. from must be your configured member name; relayOfMessageId must be your physical inbound ID. No emoji, removal, new post or private DM. After success stop without an extra OK; never reply to a reaction. Still use group_chat_send when a reply is requested or you add information. Failed or unsupported acknowledgement never permits a private DM fallback.',
+    parameters: z
+      .object({
+        ...context,
+        groupChatId: z.string().uuid(),
+        relayOfMessageId: z.string().min(1).max(256),
+      })
+      .strict(),
+    execute: async ({ teamName, claudeDir, ...flags }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      try {
+        const result = await getController(teamName, claudeDir).groupChats.reactToGroupMessage(
+          flags
+        );
+        return jsonTextContent({ ...result, teamName });
+      } catch (error) {
+        const detail = error as Error & { code?: string };
+        return jsonTextContent({
+          error: { code: detail.code ?? 'reaction-unavailable', message: detail.message },
+          teamName,
+          groupChatId: flags.groupChatId,
+          relayOfMessageId: flags.relayOfMessageId,
+          from: flags.from,
+          protocolInstruction:
+            'Reaction failed. Do not redirect this acknowledgement into a private message.',
+        });
+      }
+    },
+  });
 }

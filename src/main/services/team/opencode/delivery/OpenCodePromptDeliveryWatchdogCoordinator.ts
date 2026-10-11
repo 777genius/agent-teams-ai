@@ -29,6 +29,7 @@ import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
 } from '../../runtime';
+import type { OpenCodeGroupAcknowledgementReader } from './OpenCodeGroupAcknowledgement';
 import type {
   OpenCodeLeadTurnActivityNotification,
   OpenCodeRuntimeMessageAdapter,
@@ -42,6 +43,7 @@ type OpenCodeDeliveryResponseState = NonNullable<
 >['state'];
 
 export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
+  hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   hasAcceptedMemberWorkSyncReport(input: {
     teamName: string;
     memberName: string;
@@ -135,6 +137,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   }): Promise<boolean> {
     return isOpenCodeDeliveryResponseReadCommitAllowed({
       ...input,
+      hasAcknowledgedInbound: this.ports.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (report) =>
         this.ports.hasAcceptedMemberWorkSyncReport(report),
       taskRefsIncludeAll: this.ports.taskRefsIncludeAll,

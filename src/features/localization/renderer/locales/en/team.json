@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Add reaction ({{count}})",
+      "remove": "Remove reaction ({{count}})",
+      "count": "Reactions: {{count}}",
+      "failed": "Could not update reactions"
+    },
     "actions": {
       "createTaskFromMessage": "Create task from message",
       "editMessage": "Edit message",

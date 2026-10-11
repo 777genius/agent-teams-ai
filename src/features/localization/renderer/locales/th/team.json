@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "เพิ่มปฏิกิริยา ({{count}})",
+      "remove": "ลบปฏิกิริยา ({{count}})",
+      "count": "ปฏิกิริยา: {{count}}",
+      "failed": "ไม่สามารถอัปเดตปฏิกิริยาได้"
+    },
     "actions": {
       "createTaskFromMessage": "สร้างงานจากข้อความ",
       "editMessage": "แก้ไขข้อความ",

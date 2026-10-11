@@ -52,6 +52,20 @@ describe('agent-teams-mcp tools', () => {
     ).toBe(true);
   });
 
+  it('limits reactions to the one physical inbound acknowledgement contract', () => {
+    const parameters = collectTools().get('group_chat_react')?.parameters;
+    const target = {
+      teamName: 'sandbox',
+      from: 'alice',
+      groupChatId: '4e8e1100-069d-4d95-8553-56b53b0886a3',
+      relayOfMessageId: 'physical',
+    };
+    expect(parameters?.safeParse(target).success).toBe(true);
+    expect(parameters?.safeParse({ ...target, relayOfMessageId: '' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...target, emoji: 'different' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...target, active: false }).success).toBe(false);
+  });
+
   const tools = collectTools();
   const tempDirs: string[] = [];
 

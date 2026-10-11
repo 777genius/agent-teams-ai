@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Tepki ekle ({{count}})",
+      "remove": "Tepkiyi kaldır ({{count}})",
+      "count": "Tepkiler: {{count}}",
+      "failed": "Tepkiler güncellenemedi"
+    },
     "actions": {
       "createTaskFromMessage": "Mesajdan görev oluştur",
       "editMessage": "Mesajı düzenle",

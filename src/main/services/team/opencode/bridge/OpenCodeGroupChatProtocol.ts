@@ -8,6 +8,7 @@ export interface OpenCodeGroupChatRunProof {
   runtimeSessionId: string;
   runtimePid: number;
   processorReady: boolean;
+  groupReactionProtocolVersion?: 1;
 }
 
 /** Physical inbox destination metadata is preserved by send and observation. */

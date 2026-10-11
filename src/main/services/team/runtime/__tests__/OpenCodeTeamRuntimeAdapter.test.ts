@@ -183,7 +183,10 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
 });
 
 describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
-  async function deliveredPromptText(replyRecipient: string | undefined): Promise<string> {
+  async function deliveredPromptText(
+    replyRecipient: string | undefined,
+    groupChatId?: string
+  ): Promise<string> {
     const sendOpenCodeTeamMessage = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
     >(async (_input) => ({
@@ -204,6 +207,7 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
       text: 'Dependency resolved for task 7.',
       messageId: 'origin-1',
       replyRecipient,
+      groupChatId,
       taskRefs: [{ teamName: 'team-a', taskId: 'task-7', displayId: '7' }],
     });
 
@@ -221,13 +225,39 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('You must not end this turn empty.');
   });
 
-  it('keeps the visible reply contract for lead reply recipients', async () => {
+  it('keeps requested replies visible and permits exact-origin group acknowledgements', async () => {
     const text = await deliveredPromptText('team-lead');
 
     expect(text).toContain('Required message_send argument envelope');
     expect(text).toContain('to="team-lead"');
     expect(text).not.toContain('informational system notice');
     expect(text).not.toContain('status report from your teammate');
+
+    const groupText = await deliveredPromptText('team-lead', 'group-a');
+    expect(groupText).toContain(
+      JSON.stringify({
+        teamName: 'team-a',
+        groupChatId: 'group-a',
+        from: 'Worker',
+        relayOfMessageId: 'origin-1',
+      })
+    );
+    expect(groupText).toContain('Dependency resolved for task 7.');
+    expect(groupText).toContain(
+      'For a requested reply or substantive contribution, use group_chat_send'
+    );
+    expect(groupText).not.toContain('Reply using group_chat_send');
+    expect(groupText).toContain(
+      'For an informational message, you may use group_chat_react if available'
+    );
+    expect(groupText).toContain('with the exact origin envelope');
+    expect(groupText).toContain('saved=true and acknowledged=true for this exact incoming origin');
+    expect(groupText).toContain('A failed or unmatched result is not an acknowledgement');
+    expect(groupText).toContain('stop without an extra OK or confirmation message');
+    expect(groupText).toContain('After a successful group_chat_send, stop.');
+    expect(groupText).toContain('Never substitute message_send or a private user reply.');
+    expect(groupText).toContain('Do not repair, retry in another destination, or echo privately.');
+    expect(groupText).not.toContain('Required message_send argument envelope');
   });
 
   it('builds a reply-optional teammate report envelope for teammate reply recipients', async () => {

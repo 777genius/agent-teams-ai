@@ -197,6 +197,62 @@ describe('OpenCodeVisibleReplyProofService', () => {
     );
   });
 
+  it('suppresses only the acknowledged inbound plain confirmation and keeps unmatched fallback', async () => {
+    const record = {
+      id: 'ledger',
+      teamName: 'team-a',
+      memberName: 'bob',
+      runId: 'run-a',
+      groupChatId: 'origin',
+      inboxMessageId: 'physical',
+      acceptedAt: ISO,
+      acceptanceUnknown: false,
+      observedAssistantPreview: 'OK',
+      responseState: 'responded_plain_text',
+      taskRefs: [],
+    } as unknown as OpenCodePromptDeliveryLedgerRecord;
+    const send = vi.fn(async () => ({
+      saved: true as const,
+      groupChatId: 'origin',
+      messageId: 'reply',
+      statusPersisted: true,
+    }));
+    const applyDestinationProof = vi.fn(async () => record);
+    const hasAcknowledgedInbound = vi.fn(
+      async (target) =>
+        target.groupChatId === 'origin' &&
+        target.memberName === 'bob' &&
+        target.inboxMessageId === 'physical' &&
+        target.runId === 'run-a'
+    );
+    const input = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      ledgerRecord: record,
+      send,
+      ledger: { applyDestinationProof } as unknown as OpenCodePromptDeliveryLedgerStore,
+      hasAcknowledgedInbound,
+      checkpoint: async () => {},
+      messageId: 'reply',
+      nowIso: () => ISO,
+    };
+    expect((await materializeOpenCodeGroupReply(input)).visibleReply).toBeNull();
+    expect(send).not.toHaveBeenCalled();
+    expect(applyDestinationProof).not.toHaveBeenCalled();
+    for (const mismatch of [
+      { inboxMessageId: 'other' },
+      { runId: 'run-b' },
+      { acceptanceUnknown: true },
+      { memberName: 'user' },
+    ]) {
+      await materializeOpenCodeGroupReply({ ...input, ledgerRecord: { ...record, ...mismatch } });
+    }
+    expect(send).toHaveBeenCalledTimes(4);
+    hasAcknowledgedInbound.mockRejectedValueOnce(new Error('corrupt snapshot'));
+    await materializeOpenCodeGroupReply(input);
+    expect(send).toHaveBeenCalledTimes(5);
+  });
+
   describe('findByRelayOfMessageId', () => {
     it('accepts exact observed OpenCode user replies for custom configured lead recipients', async () => {
       const service = makeService({
