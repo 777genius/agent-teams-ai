@@ -47,7 +47,10 @@ async function json(file: string): Promise<unknown> {
 }
 
 async function main() {
-  const [sdkArg, rootArg, packageArg, outputArg, ...extra] = process.argv.slice(2);
+  const instrumented = process.argv[2] === '--instrumented';
+  const args = process.argv.slice(instrumented ? 3 : 2);
+  if (instrumented) Object.assign(receipt, { diagnosticInstrumented: true, environmentEquivalentToPackagedRun: false, wrapperByteIdenticalToPackagedRun: false });
+  const [sdkArg, rootArg, packageArg, outputArg, ...extra] = args;
   const runnerTemp = process.env.RUNNER_TEMP;
   requireInput(outputArg && runnerTemp && path.isAbsolute(outputArg) && path.isAbsolute(runnerTemp));
   requireInput(path.basename(outputArg) === 'selected-identity-diagnostic.json');
@@ -57,7 +60,7 @@ async function main() {
   receiptPath = outputArg;
   saveReceipt();
   requireInput(process.platform === 'win32');
-  if (process.env.SDK_CHECKOUT_OUTCOME !== 'success') {
+  if (!instrumented && process.env.SDK_CHECKOUT_OUTCOME !== 'success') {
     receipt.phase = 'sdk_source_unavailable';
     return;
   }
@@ -66,39 +69,83 @@ async function main() {
   requireInput([sdkArg, rootArg, packageArg, runnerTemp].every(value => path.isAbsolute(value)));
   const [sdk, root, packaged, temp] = await Promise.all([sdkArg, rootArg, packageArg, runnerTemp].map(value => realpath(value)));
   requireInput(sdk && root && packaged && temp && contained(root, temp));
-  requireInput(path.basename(root).startsWith('opencode-diagnostics-e2e-'));
-  const manifest = await json(path.join(root, 'manifest.json'));
-  requireInput(record(manifest) && manifest.packaged === true && manifest.platform === 'win32');
-  requireInput(typeof manifest.root === 'string' && await realpath(manifest.root) === root);
-  requireInput(record(manifest.artifact) && record(manifest.artifact.app));
-  const app = path.join(packaged, 'AgentTeamsAI.exe');
-  requireInput(typeof manifest.artifact.app.path === 'string' && await realpath(manifest.artifact.app.path) === await realpath(app));
-  requireInput(typeof manifest.artifact.app.sha256 === 'string' && await hash(app) === manifest.artifact.app.sha256);
-  receipt.phase = 'native_receipt';
-  // Prefer the last owned run's saved receipt; no registry, auth or profile reads.
-  requireInput(typeof manifest.run === 'string' && ['cold', 'warm-1', 'warm-2'].includes(manifest.run));
-  const evidence = await json(path.join(root, manifest.run, 'evidence.json'));
-  requireInput(record(evidence) && record(evidence.opencode));
-  requireInput(evidence.opencode.version === '1.19.0' && evidence.opencode.sha256 === NATIVE_SHA);
-  requireInput(typeof evidence.opencode.path === 'string' && path.isAbsolute(evidence.opencode.path));
-  const native = await realpath(evidence.opencode.path);
-  requireInput(contained(native, path.join(root, 'user-data')) && await hash(native) === NATIVE_SHA);
+  requireInput(path.basename(root).startsWith(instrumented ? 'TEST-windows-selected-identity-' : 'opencode-diagnostics-e2e-'));
+  let native: string;
+  let wrapper: string;
+  let wrapperHash: string;
+  if (instrumented) {
+    receipt.phase = 'instrumented_provenance';
+    const provenance = await json(path.join(root, 'provenance.json'));
+    requireInput(record(provenance) && provenance.diagnosticInstrumented === true && provenance.sdkBase === SDK_HEAD);
+    requireInput(provenance.sdkHead === process.env.DIAGNOSTIC_SDK_SHA && /^[a-f0-9]{40}$/.test(String(provenance.sdkHead)));
+    requireInput(provenance.patchSha256 === process.env.DIAGNOSTIC_PATCH_SHA256 && /^[a-f0-9]{64}$/.test(String(provenance.patchSha256)));
+    requireInput(provenance.sdkClosureSha256 === process.env.DIAGNOSTIC_CLOSURE_SHA256 && /^[a-f0-9]{64}$/.test(String(provenance.sdkClosureSha256)));
+    const digest = (value: unknown) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+    const boundedText = (value: unknown) => typeof value === 'string' && /^[a-zA-Z0-9. _()-]{1,100}$/.test(value);
+    requireInput(typeof provenance.productSha === 'string' && /^[a-f0-9]{40}$/.test(provenance.productSha) && provenance.productSha === process.env.GITHUB_SHA);
+    requireInput(record(provenance.bun) && provenance.bun.version === '1.3.11' &&
+      provenance.bun.sha256 === 'b3e7109556f472490fd8cb2b69cf28aa264cbd2a6bd08d78f3e3d6c20b72d8a9' &&
+      provenance.bun.archiveSha256 === '9d0e0f923e9626f3bc6044fc32e0d3ab29039aea753f5678ef8801cf26f75288' &&
+      await hash(process.execPath) === provenance.bun.sha256);
+    requireInput(record(provenance.compiler) && provenance.compiler.framework === 'v4.0.30319' &&
+      boundedText(provenance.compiler.fileVersion) && digest(provenance.compiler.sha256));
+    requireInput(record(provenance.wrapper) && digest(provenance.wrapper.sha256) &&
+      digest(provenance.wrapper.stageHelperSha256) && digest(provenance.wrapper.sourceSha256) &&
+      await hash(path.join(packaged, 'scripts', 'stage-opencode-console-wrapper.mjs')) === provenance.wrapper.stageHelperSha256 &&
+      await hash(path.join(packaged, 'tools', 'opencode-console-wrapper', 'OpenCodeConsoleWrapper.cs')) === provenance.wrapper.sourceSha256);
+    requireInput(record(provenance.runnerImage) && provenance.runnerImage.os === 'Windows' && boundedText(provenance.runnerImage.imageVersion));
+    Object.assign(receipt, { sdkHead: provenance.sdkHead, sdkBase: SDK_HEAD, patchSha256: provenance.patchSha256,
+      sdkClosureSha256: provenance.sdkClosureSha256, productSha: provenance.productSha,
+      bun: { version: provenance.bun.version, sha256: provenance.bun.sha256, archiveSha256: provenance.bun.archiveSha256 },
+      nativePackage: { name: 'opencode-windows-x64', version: '1.19.0', integrity: 'sha512-FsCVPchl5kjXg/UWGOtc2HuD5Fz+o6LtszUVdlVGmfVA+j/o0fSxjcYBHmIAU9/7P3KezAoQ2kL8YNn40O1DwQ==' },
+      compiler: { framework: provenance.compiler.framework, fileVersion: provenance.compiler.fileVersion, sha256: provenance.compiler.sha256 },
+      wrapperProvenance: { sha256: provenance.wrapper.sha256, stageHelperSha256: provenance.wrapper.stageHelperSha256, sourceSha256: provenance.wrapper.sourceSha256 },
+      runnerImage: { os: provenance.runnerImage.os, imageVersion: provenance.runnerImage.imageVersion } });
+    native = await realpath(path.join(root, 'native', 'package', 'bin', 'opencode.exe'));
+    wrapper = await realpath(path.join(packaged, 'resources', 'runtime', 'opencode-console', 'opencode.exe'));
+    requireInput(contained(native, root) && contained(wrapper, packaged) && await hash(native) === NATIVE_SHA);
+    wrapperHash = await hash(wrapper);
+    requireInput(wrapperHash === provenance.wrapper.sha256);
+  } else {
+    const manifest = await json(path.join(root, 'manifest.json'));
+    requireInput(record(manifest) && manifest.packaged === true && manifest.platform === 'win32');
+    requireInput(typeof manifest.root === 'string' && await realpath(manifest.root) === root);
+    requireInput(record(manifest.artifact) && record(manifest.artifact.app));
+    const app = path.join(packaged, 'AgentTeamsAI.exe');
+    requireInput(typeof manifest.artifact.app.path === 'string' && await realpath(manifest.artifact.app.path) === await realpath(app));
+    requireInput(typeof manifest.artifact.app.sha256 === 'string' && await hash(app) === manifest.artifact.app.sha256);
+    receipt.phase = 'native_receipt';
+    // Prefer the last owned run's saved receipt; no registry, auth or profile reads.
+    requireInput(typeof manifest.run === 'string' && ['cold', 'warm-1', 'warm-2'].includes(manifest.run));
+    const evidence = await json(path.join(root, manifest.run, 'evidence.json'));
+    requireInput(record(evidence) && record(evidence.opencode));
+    requireInput(evidence.opencode.version === '1.19.0' && evidence.opencode.sha256 === NATIVE_SHA);
+    requireInput(typeof evidence.opencode.path === 'string' && path.isAbsolute(evidence.opencode.path));
+    native = await realpath(evidence.opencode.path);
+    requireInput(contained(native, path.join(root, 'user-data')) && await hash(native) === NATIVE_SHA);
+    receipt.nativeHash = NATIVE_SHA;
+    wrapper = await realpath(path.join(packaged, 'resources', 'runtime', 'opencode-console', 'opencode.exe'));
+    requireInput(contained(wrapper, packaged));
+    wrapperHash = await hash(wrapper);
+  }
   receipt.nativeHash = NATIVE_SHA;
-  receipt.phase = 'packaged_wrapper_sidecar';
-  const wrapper = await realpath(path.join(packaged, 'resources', 'runtime', 'opencode-console', 'opencode.exe'));
-  requireInput(contained(wrapper, packaged));
-  const wrapperHash = await hash(wrapper);
   receipt.wrapperHash = wrapperHash;
+  receipt.phase = 'wrapper_sidecar';
   const sidecar = path.join(path.dirname(wrapper), 'opencode.real.path');
   requireInput((await stat(sidecar)).size <= 4096);
   const target = (await readFile(sidecar, 'utf8')).trim();
   requireInput(path.isAbsolute(target) && await realpath(target) === native);
   receipt.wrapperSidecarMatchesNative = true;
   receipt.phase = 'sdk_source';
-  requireInput((await readFile(path.join(sdk, '.git', 'HEAD'), 'utf8')).trim() === SDK_HEAD);
-  for (const [relative, expected] of sourcePins) requireInput(await hash(path.join(sdk, relative)) === expected);
-  const closureHash = createHash('sha256').update(JSON.stringify(sourcePins.map(([file, sha256]) => ({ path: file, sha256 })))).digest('hex');
-  requireInput(closureHash === SDK_CLOSURE_SHA);
+  requireInput((await readFile(path.join(sdk, '.git', 'HEAD'), 'utf8')).trim() === receipt.sdkHead);
+  const actualPins: Array<{ path: string; sha256: string }> = [];
+  for (const [relative, expected] of sourcePins) {
+    const actual = await hash(path.join(sdk, relative));
+    if (!instrumented) requireInput(actual === expected);
+    actualPins.push({ path: relative, sha256: actual });
+  }
+  const closureHash = createHash('sha256').update(JSON.stringify(actualPins)).digest('hex');
+  requireInput(closureHash === receipt.sdkClosureSha256);
   receipt.sdkSourceVerified = true;
   const ownTmp = await mkdtemp(path.join(temp, 'TEST-windows-admission-'));
   const clean: NodeJS.ProcessEnv = {};
@@ -162,6 +209,27 @@ async function main() {
         (helper.exitCode === null || Number.isSafeInteger(helper.exitCode)) &&
         typeof helper.elapsedMs === 'number' && Number.isFinite(helper.elapsedMs) && helper.elapsedMs >= 0) {
         receipt.helperFailure = { operation: helper.operation, reason: helper.reason, exitCode: helper.exitCode, elapsedMs: helper.elapsedMs };
+      }
+    }
+    if (instrumented && error instanceof cleanup.OpenCodeVersionProbeCleanupError && record(error)) {
+      const probe = error.probeFailure;
+      const phases = ['started', 'initial_birth', 'census', 'anchor_birth', 'unanchored_members',
+        'candidate_birth', 'candidate_identity_order', 'candidate_reappeared', 'confirmation_census',
+        'confirmation_member_absent', 'confirmation_birth', 'signal_birth', 'signal',
+        'pending_retirement', 'final_census', 'deadline', 'self_in_group', 'sleep'];
+      const pid = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+      if (record(probe) && phases.includes(String(probe.phase)) &&
+        (probe.targetPid === null || pid(probe.targetPid)) &&
+        (probe.targetRole === null || ['leader', 'member'].includes(String(probe.targetRole))) &&
+        (probe.birthAvailable === null || typeof probe.birthAvailable === 'boolean') &&
+        (probe.alive === null || ['alive', 'gone', 'unknown'].includes(String(probe.alive))) &&
+        (probe.censusMemberCount === null || (typeof probe.censusMemberCount === 'number' && Number.isSafeInteger(probe.censusMemberCount) && probe.censusMemberCount >= 0)) &&
+        Array.isArray(probe.censusMemberPids) && probe.censusMemberPids.length <= 64 && probe.censusMemberPids.every(pid)) {
+        receipt.probeFailure = { phase: probe.phase, targetPid: probe.targetPid, targetRole: probe.targetRole,
+          birthAvailable: probe.birthAvailable, alive: probe.alive, censusMemberCount: probe.censusMemberCount,
+          censusMemberPids: probe.censusMemberPids };
+      } else if (probe !== undefined && probe !== null) {
+        receipt.probeFailureRejected = true;
       }
     }
     // Retained SDK owners may still use ownTmp; do not erase it on rejection.

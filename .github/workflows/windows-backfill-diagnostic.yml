@@ -3,6 +3,10 @@ name: Windows packaged backfill diagnostic
 on:
   workflow_dispatch:
     inputs:
+      selected_identity:
+        description: 'Instrumented admission diagnostic only; no app build or model calls'
+        type: boolean
+        default: false
       runtime_version:
         description: 'Manual qualification: exact X.Y.Z (no v); leave all three blank for shipped 0.0.87'
         type: string
@@ -40,7 +44,7 @@ concurrency:
 
 jobs:
   packaged-backfill:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name == 'workflow_dispatch' && inputs.selected_identity != true) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: windows-latest
     timeout-minutes: 35
     env:
@@ -224,5 +228,124 @@ jobs:
         with:
           name: windows-app-backfill-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.WINDOWS_BACKFILL_EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 14
+
+  selected-identity:
+    if: github.event_name == 'workflow_dispatch' && inputs.selected_identity == true
+    runs-on: windows-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      # Reviewed TEST-only private trace commit; never production qualification.
+      DIAGNOSTIC_SDK_SHA: 9bc9dc139408b26d5db446d0d14992fe3d453793
+      DIAGNOSTIC_PATCH_SHA256: aaa8a67d82677b38700f481b127bcd6a53352be21ddeb2e84563142c049f925f
+      DIAGNOSTIC_CLOSURE_SHA256: bd5ebd15192481a2ba82c9b3aac19124fad06a95ee1bfcebf384112c86509e85
+    steps:
+      - name: Initialize finite diagnostic receipt and require reviewed pins
+        run: |
+          $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
+          @{ schemaVersion = 1; diagnosticInstrumented = $true; outcome = 'NOT_RUN'; phase = 'instrumented_pins_unavailable'; admissionCalls = 0; physicalRetirement = 'unproven' } | ConvertTo-Json | Set-Content $receipt -Encoding utf8
+          if ($env:DIAGNOSTIC_SDK_SHA -cnotmatch '^[a-f0-9]{40}$' -or $env:DIAGNOSTIC_PATCH_SHA256 -cnotmatch '^[a-f0-9]{64}$' -or $env:DIAGNOSTIC_CLOSURE_SHA256 -cnotmatch '^[a-f0-9]{64}$') { throw 'Diagnostic source pins are not ready' }
+          @{ schemaVersion = 1; diagnosticInstrumented = $true; outcome = 'NOT_RUN'; phase = 'sdk_checkout'; admissionCalls = 0; physicalRetirement = 'unproven' } | ConvertTo-Json | Set-Content $receipt -Encoding utf8
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
+            scripts/stage-opencode-console-wrapper.mjs
+            tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs
+            .node-version
+      - name: Fetch exact private diagnostic closure
+        id: diagnostic_sdk
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: ${{ env.DIAGNOSTIC_SDK_SHA }}
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          path: .test-tmp/sdk-admission
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            src/services/opencode/OpenCodeBinaryResolver.ts
+            src/services/opencode/OpenCodeCursorAgentTreeKill.ts
+            src/services/opencode/compatibility/OpenCodeGenerationPolicy.ts
+            src/services/opencode/compatibility/OpenCodeNativeIdentity.ts
+            src/services/opencode/compatibility/OpenCodeVersionProbe.ts
+            src/services/opencode/profile/OpenCodeV2ManagedConfig.ts
+            src/services/opencode/transport/OpenCodeBoundedFetch.ts
+            src/utils/portableCli.ts
+            src/utils/processKill.ts
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.diagnostic_sdk.outcome == 'success'
+        with:
+          node-version-file: .node-version
+      - name: Stage verified native and Bun without dependency installation
+        if: steps.diagnostic_sdk.outcome == 'success'
+        timeout-minutes: 4
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP "TEST-windows-selected-identity-${{ github.run_id }}-${{ github.run_attempt }}"
+          New-Item -ItemType Directory -Force $root | Out-Null
+          "DIAGNOSTIC_ROOT=$root" >> $env:GITHUB_ENV
+          $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
+          @{ schemaVersion = 1; diagnosticInstrumented = $true; outcome = 'NOT_RUN'; phase = 'binary_staging'; admissionCalls = 0; physicalRetirement = 'unproven' } | ConvertTo-Json | Set-Content $receipt -Encoding utf8
+          $bunArchive = Join-Path $root 'bun.zip'
+          Invoke-WebRequest -TimeoutSec 120 -Uri 'https://github.com/oven-sh/bun/releases/download/bun-v1.3.11/bun-windows-x64-baseline.zip' -OutFile $bunArchive
+          if ((Get-FileHash $bunArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9d0e0f923e9626f3bc6044fc32e0d3ab29039aea753f5678ef8801cf26f75288') { throw 'Bun archive mismatch' }
+          Expand-Archive -LiteralPath $bunArchive -DestinationPath (Join-Path $root 'bun')
+          $bun = Join-Path $root 'bun/bun-windows-x64-baseline/bun.exe'
+          $bunHash = (Get-FileHash $bun -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($bunHash -ne 'b3e7109556f472490fd8cb2b69cf28aa264cbd2a6bd08d78f3e3d6c20b72d8a9') { throw 'Bun executable mismatch' }
+          "DIAGNOSTIC_BUN=$bun" >> $env:GITHUB_ENV
+          $archive = Join-Path $root 'native.tgz'
+          Invoke-WebRequest -TimeoutSec 120 -Uri 'https://registry.npmjs.org/opencode-windows-x64/-/opencode-windows-x64-1.19.0.tgz' -OutFile $archive
+          $integrity = [Convert]::ToBase64String([Security.Cryptography.SHA512]::HashData([IO.File]::ReadAllBytes($archive)))
+          if ($integrity -cne 'FsCVPchl5kjXg/UWGOtc2HuD5Fz+o6LtszUVdlVGmfVA+j/o0fSxjcYBHmIAU9/7P3KezAoQ2kL8YNn40O1DwQ==') { throw 'Native package integrity mismatch' }
+          $nativeDir = Join-Path $root 'native'
+          New-Item -ItemType Directory $nativeDir | Out-Null
+          & (Join-Path $env:SystemRoot 'System32/tar.exe') -xzf $archive -C $nativeDir package/bin/opencode.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Native extraction failed' }
+          $native = Join-Path $nativeDir 'package/bin/opencode.exe'
+          if ((Get-FileHash $native -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'bb731f311416df16691fa16763eb87657c4a5f5f3bcff5202718c416e8f7ab1a') { throw 'Native executable mismatch' }
+          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          $env:AGENT_TEAMS_CSC_PATH = $compiler
+          node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+          if ($LASTEXITCODE -ne 0) { throw 'Wrapper staging failed' }
+          $wrapper = Join-Path $env:GITHUB_WORKSPACE 'resources/runtime/opencode-console/opencode.exe'
+          [IO.File]::WriteAllText((Join-Path (Split-Path $wrapper) 'opencode.real.path'), $native)
+          @{ diagnosticInstrumented = $true; sdkBase = 'd6361e0f50821ffc31cc5a9efd0dcaf6643c850d'; sdkHead = $env:DIAGNOSTIC_SDK_SHA; patchSha256 = $env:DIAGNOSTIC_PATCH_SHA256; sdkClosureSha256 = $env:DIAGNOSTIC_CLOSURE_SHA256; productSha = '${{ github.sha }}'; runnerImage = @{ os = $env:RUNNER_OS; imageVersion = $env:ImageVersion }; bun = @{ version = '1.3.11'; sha256 = $bunHash; archiveSha256 = '9d0e0f923e9626f3bc6044fc32e0d3ab29039aea753f5678ef8801cf26f75288' }; compiler = @{ framework = 'v4.0.30319'; fileVersion = (Get-Item $compiler).VersionInfo.FileVersion.Split(' ')[0]; sha256 = (Get-FileHash $compiler -Algorithm SHA256).Hash.ToLowerInvariant() }; wrapper = @{ sha256 = (Get-FileHash $wrapper -Algorithm SHA256).Hash.ToLowerInvariant(); stageHelperSha256 = (Get-FileHash 'scripts/stage-opencode-console-wrapper.mjs' -Algorithm SHA256).Hash.ToLowerInvariant(); sourceSha256 = (Get-FileHash 'tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs' -Algorithm SHA256).Hash.ToLowerInvariant(); byteIdenticalToPackagedRun = $false } } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $root 'provenance.json') -Encoding utf8
+      - name: Perform exactly one instrumented admission
+        if: success() && steps.diagnostic_sdk.outcome == 'success'
+        timeout-minutes: 1
+        run: |
+          @{ schemaVersion = 1; diagnosticInstrumented = $true; outcome = 'NOT_RUN'; phase = 'admission_harness_started'; admissionCalls = 0; physicalRetirement = 'unproven' } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json') -Encoding utf8
+          & $env:DIAGNOSTIC_BUN --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts --instrumented (Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission') $env:DIAGNOSTIC_ROOT $env:GITHUB_WORKSPACE (Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Admission diagnostic process failed' }
+      - name: Record source checkout failure without private output
+        if: always() && steps.diagnostic_sdk.outcome == 'failure'
+        run: |
+          @{ schemaVersion = 1; diagnosticInstrumented = $true; outcome = 'NOT_RUN'; phase = 'sdk_source_unavailable'; admissionCalls = 0; physicalRetirement = 'unproven' } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json') -Encoding utf8
+      - name: Preserve only finite diagnostic receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-selected-identity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/selected-identity-diagnostic.json
           if-no-files-found: error
           retention-days: 14
