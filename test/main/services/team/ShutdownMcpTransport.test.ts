@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  configureDesktopMcpEnvironment,
   createDesktopExternalAgentConnection,
   getDesktopMcpChildEnvironment,
   isDesktopMcpEnvironmentBound,
@@ -17,7 +18,10 @@ import {
   AgentTeamsMcpHttpServer,
   agentTeamsMcpHttpServer as server,
 } from '@main/services/team/AgentTeamsMcpHttpServer';
-import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  OpenCodeBridgeCommandClient,
+  type OpenCodeBridgeProcessRunInput,
+} from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { buildOpenCodeAppScopedMcpUrl } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
   composeExternalAgentConnection,
@@ -115,6 +119,106 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
 }
 
 describe('shutdown MCP transport authority', () => {
+  it.each([false, true])(
+    'dispatches startup retirement without control, but refuses launch (HTTP=%s)',
+    async (useHttpMcpBridge) => {
+      const directory = await mkdtemp(join(tmpdir(), 'startup-no-control-'));
+      const unavailable = vi.fn(() => {
+        throw new Error('Desktop MCP control context is unavailable');
+      });
+      const revoke = configureDesktopMcpEnvironment(unavailable, () => false);
+      const env = {
+        ...hostEnv(),
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:49999/mcp',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-http-hash',
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"stale":true}',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify({
+          ...JSON.parse(hostEnv().CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON),
+          AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+          AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"stale":true}',
+        }),
+      };
+      const resolveEnv = bridgeResolver(env, {
+        useHttpMcpBridge,
+        getTeamControlApiBaseUrl: () => null,
+        refreshDesktopBridgeEnvironment,
+      }) as NonNullable<
+        ConstructorParameters<typeof OpenCodeBridgeCommandClient>[0]['envProvider']
+      >;
+      const run = vi.fn(async (_input: OpenCodeBridgeProcessRunInput) => ({
+        stdout: JSON.stringify({
+          ok: true,
+          schemaVersion: 1,
+          requestId: 'cleanup-test',
+          command: 'opencode.cleanupStartupHosts',
+          completedAt: '2026-10-11T00:00:00.000Z',
+          durationMs: 1,
+          runtime: {
+            providerId: 'opencode',
+            binaryPath: '/sandbox/opencode',
+            binaryFingerprint: 'test-bin',
+            version: '1.0.0',
+            capabilitySnapshotId: 'test-cap',
+          },
+          diagnostics: [],
+          data: {
+            cleaned: 0,
+            remaining: 0,
+            hosts: [],
+            diagnostics: [],
+            startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [] },
+          },
+        }),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      }));
+      const client = new OpenCodeBridgeCommandClient({
+        binaryPath: '/sandbox/cli',
+        tempDirectory: directory,
+        envProvider: resolveEnv,
+        requestIdFactory: () => 'cleanup-test',
+        processRunner: { run },
+      });
+      try {
+        expect(
+          (
+            await client.execute(
+              'opencode.cleanupStartupHosts',
+              {},
+              { cwd: directory, timeoutMs: 100 }
+            )
+          ).ok
+        ).toBe(true);
+        expect(run).toHaveBeenCalledTimes(1);
+        expect(unavailable).not.toHaveBeenCalled();
+        const cleanupEnv = run.mock.calls[0][0].env;
+        expect(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+        expect(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
+        expect(cleanupEnv.AGENT_TEAMS_BOUND_CONTROL_URL).toBeUndefined();
+        expect(cleanupEnv.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBeUndefined();
+        expect(
+          JSON.parse(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
+        ).not.toHaveProperty('AGENT_TEAMS_BOUND_CONTROL_URL');
+        expect(
+          JSON.parse(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
+        ).not.toHaveProperty('AGENT_TEAMS_BOUND_CONTEXT_JSON');
+        await expect(
+          client.execute('opencode.launchTeam', {}, { cwd: directory, timeoutMs: 100 })
+        ).rejects.toThrow(
+          useHttpMcpBridge
+            ? 'Desktop MCP control server is not ready'
+            : 'Desktop MCP control context is unavailable'
+        );
+        expect(run).toHaveBeenCalledTimes(1);
+      } finally {
+        revoke();
+        await rm(directory, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('drains admitted mutations and tears down transport when native run shutdown fails', async () => {
     const connection = composeExternalAgentConnection({
       appInstanceId: 'sandbox-native-stop-failure',

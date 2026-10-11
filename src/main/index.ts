@@ -276,6 +276,7 @@ import { HttpServer } from './services/infrastructure/HttpServer';
 import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer';
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import type { OpenCodeBridgeCommandName } from './services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeDiagnosticsStore } from './services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
 import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
@@ -638,11 +639,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
   await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
-  const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
+  const resolveBridgeCommandEnv = async (command?: OpenCodeBridgeCommandName) => {
     const nextEnv = { ...bridgeEnv };
     await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
-    if (!useHttpMcpBridge) {
-      await refreshDesktopBridgeEnvironment(nextEnv);
+    if (!useHttpMcpBridge || command === 'opencode.cleanupStartupHosts') {
+      await refreshDesktopBridgeEnvironment(nextEnv, command !== 'opencode.cleanupStartupHosts');
       return nextEnv;
     }
     if (!getTeamControlApiBaseUrl()) throw new Error('Desktop MCP control server is not ready');
