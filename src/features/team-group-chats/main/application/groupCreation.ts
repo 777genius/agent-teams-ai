@@ -62,7 +62,10 @@ export function createGroupCreation(
         const roster = await ports.roster(request.teamName);
         if (agent && (agent.from.toLowerCase() === 'user' || !roster.includes(agent.from)))
           throw new GroupChatError('invalid-members', 'Creator must be a current configured agent');
-        const existing = groups.find((group) => group.id === request.id);
+        const existing =
+          (agent
+            ? groups.find((group) => group.agentCreation?.sourceMessageId === agent.sourceMessageId)
+            : undefined) ?? groups.find((group) => group.id === request.id);
         if (existing) {
           if (!agent) return structuredClone(existing); // Preserve human first-ID-wins.
           const metadata = existing.agentCreation;

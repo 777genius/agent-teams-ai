@@ -18,7 +18,7 @@ import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import Fastify from 'fastify';
-import { mkdir, mkdtemp, readFile, rm,writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm,writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -147,7 +147,19 @@ describe('group chat main authority and durable identity', () => {
     const stored = JSON.parse(await readFile(registryFile(), 'utf8'));
     stored.groups[0].name = 'Renamed later';
     await writeFile(registryFile(), JSON.stringify(stored));
+    const movedRoot = `${state.root}-moved`;
+    await rename(state.root, movedRoot);
+    state.root = movedRoot; // The same registry may move; its accepted source identity survives.
+    const movedRegistry = await readFile(registryFile());
+    expect((await feature.createFromAgent(creationRequest)).id).toBe(first.id);
+    expect(await readFile(registryFile())).toEqual(movedRegistry);
     await rm(sourceFile()); // Accepted retries do not depend on retained original history.
+    await expect(
+      feature.createFromAgent({ ...creationRequest, name: 'Other' })
+    ).rejects.toMatchObject({ code: 'creation-conflict' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, from: 'alice' })
+    ).rejects.toMatchObject({ code: 'request-not-addressed' });
     const before = await readFile(registryFile());
     const archived = await feature.createFromAgent(creationRequest);
     expect(archived).toMatchObject({
