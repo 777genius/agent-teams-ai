@@ -20,13 +20,30 @@ import { projectFolders } from '../../../src/features/task-folders/renderer/view
 
 import type { Snapshot } from '../../../src/features/task-folders/core/domain/folders';
 import type { TaskFoldersHostModel } from '../../../src/features/task-folders/renderer/hooks/useTaskFoldersHost';
+import type { Node } from '../../../src/features/task-folders/renderer/view-models/projection';
+import type { TreeInstance } from '@headless-tree/core';
 import type { GlobalTask } from '@shared/types';
+const vendor = vi.hoisted(() => ({ trees: [] as TreeInstance<Node>[], rowLimit: Infinity }));
+vi.mock('@headless-tree/react', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@headless-tree/react')>();
+  return {
+    ...real,
+    useTree: (...args: Parameters<typeof real.useTree<Node>>) => {
+      const tree = real.useTree<Node>(...args);
+      vendor.trees.push(tree);
+      return tree;
+    },
+  };
+});
 // Layout is owned by Electron E2E. Render all projected rows here to exercise the real vendor state/rebuild and row interactions.
 vi.mock('@tanstack/react-virtual', () => ({
   defaultRangeExtractor: () => [],
   useVirtualizer: ({ count }: { count: number }) => ({
     getVirtualItems: () =>
-      Array.from({ length: count }, (_, index) => ({ index, start: index * 32 })),
+      Array.from({ length: Math.min(count, vendor.rowLimit) }, (_, index) => ({
+        index,
+        start: index * 32,
+      })),
     getTotalSize: () => count * 32,
     scrollToIndex: vi.fn(),
   }),
@@ -39,6 +56,8 @@ let host: HTMLDivElement;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   localStorage.clear();
+  vendor.trees = [];
+  vendor.rowLimit = Infinity;
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -209,4 +228,263 @@ it('keeps a saving confirmation visible and held through Escape until its comman
     await Promise.resolve();
   });
   expect(document.querySelector('[role="dialog"]')).toBeNull();
+});
+
+function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
+  const openTask = vi.fn();
+  let update!: (next: { tasks?: GlobalTask[]; snapshot?: Snapshot; shown?: boolean }) => void;
+  function Harness() {
+    const [state, set] = useState({ tasks, snapshot, shown: true });
+    update = (next) => set((previous) => ({ ...previous, ...next }));
+    const local = useTaskLocalState();
+    const model = {
+      projection: projectFolders(
+        state.snapshot,
+        state.tasks,
+        local.isArchived,
+        local.getRenamedSubject,
+        true
+      ),
+      local,
+      state: { status: 'ready', snapshot: state.snapshot },
+      panel: panelController.getSnapshot(),
+      openTask,
+      markUnread: vi.fn(),
+    } as unknown as TaskFoldersHostModel;
+    return (
+      <TooltipProvider>
+        {state.shown && <FolderTree model={model} dialog={vi.fn()} focusRequest={null} />}
+      </TooltipProvider>
+    );
+  }
+  return { Harness, openTask, update: (next: Parameters<typeof update>[0]) => update(next) };
+}
+
+it.each([false, true])(
+  'opens an arrow-focused task with Enter (archived=%s), preserving nested controls',
+  async (archived) => {
+    if (archived) localStorage.setItem('taskArchivedIds', JSON.stringify(['t:1']));
+    const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+    await act(async () => root.render(<fixture.Harness />));
+    const unfiled = host.querySelector(
+      '[role="treeitem"][aria-label="taskFolders.unfiled"]'
+    ) as HTMLElement;
+    await act(async () => unfiled.focus());
+    await act(async () =>
+      unfiled.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+    );
+    const row = host.querySelector('[data-task-key]') as HTMLElement;
+    expect(row.getAttribute('tabindex')).toBe('0');
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(document.activeElement).toBe(row);
+    expect(row.getAttribute('aria-label')).toBe(archived ? 'Task (taskFolders.archived)' : 'Task');
+    expect(row.querySelector('[draggable="true"]')).not.toBeNull();
+    await act(async () =>
+      row.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      )
+    );
+    expect(fixture.openTask).toHaveBeenCalledExactlyOnceWith('t', '1');
+    const button = row.querySelector('[aria-label="taskFolders.actions"]') as HTMLButtonElement;
+    await act(async () => button.focus());
+    await act(async () =>
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
+    expect(fixture.openTask).toHaveBeenCalledTimes(1);
+    await act(async () =>
+      row.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })
+      )
+    );
+    expect(fixture.openTask).toHaveBeenCalledTimes(1);
+  }
+);
+
+it('keeps Enter in the folder rename editor and nested buttons from triggering row actions', async () => {
+  const fixture = treeHarness(
+    [],
+    applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
+  );
+  const execute = vi.spyOn(folderController, 'execute').mockResolvedValue(emptySnapshot());
+  await act(async () => root.render(<fixture.Harness />));
+  const row = host.querySelector('[data-folder-id="a"]') as HTMLElement;
+  const expand = row.querySelector('button[aria-label="taskFolders.expand"]')!;
+  await act(async () =>
+    expand.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  expect(row.querySelector('input')).toBeNull();
+  await act(async () =>
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  const input = row.querySelector('input')!;
+  await act(async () =>
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })
+    )
+  );
+  expect(execute).not.toHaveBeenCalled();
+  await act(async () =>
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  );
+  expect(execute).toHaveBeenCalledExactlyOnceWith({ type: 'rename', id: 'a', name: 'A' });
+  expect(fixture.openTask).not.toHaveBeenCalled();
+});
+
+it.each(['context', 'dropdown'] as const)(
+  'releases an open real portaled %s menu on catalog removal with a full grace period',
+  async (kind) => {
+    vi.useFakeTimers();
+    const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+    panelController.begin('external');
+    panelController.end();
+    await act(async () => root.render(<fixture.Harness />));
+    const row = host.querySelector('[data-task-key]')!;
+    await act(async () => {
+      if (kind === 'context')
+        row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }));
+      else
+        row
+          .querySelector('[aria-label="taskFolders.actions"]')!
+          .dispatchEvent(
+            new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+          );
+    });
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    expect(host.querySelector('[role="menu"]')).toBeNull();
+    expect(panelController.escape()).toBe(false);
+    await act(async () => vi.advanceTimersByTime(4000));
+    expect(panelController.getSnapshot().open).toBe(true);
+    await act(async () => fixture.update({ tasks: [] }));
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    await act(async () => vi.advanceTimersByTime(1999));
+    expect(panelController.getSnapshot().open).toBe(true);
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(panelController.getSnapshot().open).toBe(false);
+  }
+);
+
+it('releases a menu owner when its row is virtualized away and on tree unmount', async () => {
+  vi.useFakeTimers();
+  const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+  await act(async () => root.render(<fixture.Harness />));
+  const row = host.querySelector('[data-task-key]')!;
+  await act(async () => row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true })));
+  expect(document.querySelector('[role="menu"]')).not.toBeNull();
+  vendor.rowLimit = 1;
+  await act(async () => fixture.update({}));
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  await act(async () => vi.advanceTimersByTime(2000));
+  expect(panelController.getSnapshot().open).toBe(false);
+  vendor.rowLimit = Infinity;
+  await act(async () => fixture.update({}));
+  await act(async () =>
+    host
+      .querySelector('[data-task-key]')!
+      .dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }))
+  );
+  expect(document.querySelector('[role="menu"]')).not.toBeNull();
+  await act(async () => fixture.update({ shown: false }));
+  await act(async () => vi.advanceTimersByTime(2000));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+
+it('removes deleted expanded IDs using real vendor state and cancels projection repair frames on change/unmount', async () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let serial = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    frames.set(++serial, callback);
+    return serial;
+  });
+  const cancel = vi.fn((id: number) => frames.delete(id));
+  vi.stubGlobal('cancelAnimationFrame', cancel);
+  let snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'a',
+    name: 'A',
+    parent: null,
+  });
+  snapshot = applyCommand(snapshot, { type: 'create', id: 'b', name: 'B', parent: null });
+  const fixture = treeHarness([], snapshot);
+  await act(async () => root.render(<fixture.Harness />));
+  const tree = vendor.trees.at(-1)!;
+  await act(async () => {
+    tree.getItemInstance('folder:b').expand();
+    tree.getItemInstance('folder:b').setFocused();
+  });
+  snapshot = applyCommand(snapshot, { type: 'delete', id: 'b' });
+  await act(async () => fixture.update({ snapshot }));
+  expect(tree.getState().expandedItems).not.toContain('folder:b');
+  expect(frames.size).toBe(1);
+  const stale = [...frames.values()][0];
+  const scroll = vi.spyOn(tree.getItemInstance('folder:a'), 'scrollTo');
+  const focus = vi.spyOn(tree, 'updateDomFocus');
+  const repairs = focus.mock.calls.length;
+  await act(async () => fixture.update({ snapshot: { ...snapshot } }));
+  expect(frames.size).toBe(0);
+  stale(0);
+  expect(scroll).not.toHaveBeenCalled();
+  expect(focus).toHaveBeenCalledTimes(repairs);
+  await act(async () => {
+    tree.getItemInstance('folder:a').setFocused();
+  });
+  await act(async () => fixture.update({ snapshot: emptySnapshot() }));
+  expect(frames.size).toBe(1);
+  const unmounted = [...frames.values()][0];
+  await act(async () => fixture.update({ shown: false }));
+  expect(frames.size).toBe(0);
+  unmounted(0);
+  expect(cancel).toHaveBeenCalledTimes(2);
+});
+
+it('does not update DOM focus after an already-started repair scroll settles for a stale projection', async () => {
+  let next: FrameRequestCallback | undefined;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    next = callback;
+    return 1;
+  });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  let snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'a',
+    name: 'A',
+    parent: null,
+  });
+  snapshot = applyCommand(snapshot, { type: 'create', id: 'b', name: 'B', parent: null });
+  const fixture = treeHarness([], snapshot);
+  await act(async () => root.render(<fixture.Harness />));
+  const tree = vendor.trees.at(-1)!;
+  await act(async () => tree.getItemInstance('folder:b').setFocused());
+  await act(async () =>
+    fixture.update({ snapshot: applyCommand(snapshot, { type: 'delete', id: 'b' }) })
+  );
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const scroll = vi.spyOn(tree.getItemInstance('folder:a'), 'scrollTo').mockReturnValue(pending);
+  const focus = vi.spyOn(tree, 'updateDomFocus');
+  next!(0);
+  expect(scroll).toHaveBeenCalledTimes(1);
+  const prior = focus.mock.calls.length;
+  await act(async () => fixture.update({}));
+  await act(async () => {
+    release();
+    await pending;
+  });
+  expect(focus).toHaveBeenCalledTimes(prior);
+});
+
+it('cancels a real internal vendor drag when catalog refresh removes its source without dragend', async () => {
+  const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+  await act(async () => root.render(<fixture.Harness />));
+  const tree = vendor.trees.at(-1)!;
+  const handle = host.querySelector('[data-task-key] [draggable="true"]')!;
+  await act(async () =>
+    handle.dispatchEvent(new Event('dragstart', { bubbles: true, cancelable: true }))
+  );
+  expect(tree.getState().dnd?.draggedItems?.[0].getId()).toBe('task:["t","1"]');
+  expect(panelController.getSnapshot().dragSource).toBe('task:["t","1"]');
+  await act(async () => fixture.update({ tasks: [] }));
+  expect(tree.getState().dnd).toBeNull();
+  expect(panelController.getSnapshot().dragSource).toBeNull();
 });

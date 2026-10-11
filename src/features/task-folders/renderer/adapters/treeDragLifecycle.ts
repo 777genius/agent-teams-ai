@@ -6,7 +6,7 @@ export function clearTreeDrag<T>(tree: TreeInstance<T>): void {
   ref.current.autoExpandTimeout = undefined;
   ref.current.lastDragCode = undefined;
   ref.current.lastAllowDrop = false;
-  if (tree.getState().dnd) tree.setState((state) => ({ ...state, dnd: null }));
+  if (tree.getState().dnd) tree.applySubStateUpdate('dnd', null);
 }
 export function cancelHoverExpansion<T>(tree: TreeInstance<T>): void {
   const ref = tree.getDataRef<DndDataRef>();

@@ -1,4 +1,10 @@
-import { createTree, dragAndDropFeature, syncDataLoaderFeature } from '@headless-tree/core';
+import {
+  createTree,
+  dragAndDropFeature,
+  hotkeysCoreFeature,
+  selectionFeature,
+  syncDataLoaderFeature,
+} from '@headless-tree/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FolderController } from '../../../src/features/task-folders/core/application/folderController';
@@ -163,7 +169,12 @@ describe('host lifecycle and vendor drop boundary', () => {
     ).toEqual(['task:["t","3"]', 'task:["t","1"]', 'task:["t","2"]']);
   });
   it('rejects reorder slots in freshness-sorted Unfiled while accepting unassignment on its node', async () => {
-    const placed = applyCommand(folder, { type: 'moveTask', identity, parent: 'a', anchor: append });
+    const placed = applyCommand(folder, {
+      type: 'moveTask',
+      identity,
+      parent: 'a',
+      anchor: append,
+    });
     const save = vi.fn(async () => undefined);
     const folders = new FolderController({
       load: async () => ({ kind: 'valid', snapshot: placed }),
@@ -171,7 +182,13 @@ describe('host lifecycle and vendor drop boundary', () => {
     });
     folders.setCatalog([identity]);
     await folders.load();
-    const projection = projectFolders(placed, tasks, () => false, () => undefined, true);
+    const projection = projectFolders(
+      placed,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
     const adapter = new TreeDropAdapter(() => projection, folders, new PanelController());
     const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
     const target = { item: { getId: () => 'unfiled' } } as DragTarget<Node>;
@@ -187,23 +204,42 @@ describe('host lifecycle and vendor drop boundary', () => {
 });
 
 describe('cancellation and edge scroll cleanup', () => {
-  it('clears real vendor foreign hover and cancels expansion without relying on dragend', () => {
+  it('clears real vendor internal source and foreign hover without dragend, restoring keyboard navigation', () => {
     vi.useFakeTimers();
     const tree = createTree({
       rootItemId: 'root',
-      features: [syncDataLoaderFeature, dragAndDropFeature],
-      dataLoader: { getItem: () => 'folder', getChildren: () => [] },
+      features: [syncDataLoaderFeature, selectionFeature, hotkeysCoreFeature, dragAndDropFeature],
+      dataLoader: { getItem: (id) => id, getChildren: (id) => (id === 'root' ? ['a', 'b'] : []) },
       getItemName: () => 'folder',
       isItemFolder: () => true,
     });
     tree.setMounted(true);
+    tree.rebuildTree();
+    expect(tree.getItems().map((item) => item.getId())).toEqual(['a', 'b']);
     const expand = vi.fn();
     tree.getDataRef<DndDataRef>().current.autoExpandTimeout = setTimeout(expand, 600);
-    tree.setState((state) => ({ ...state, dnd: { dragTarget: { item: tree.getRootItem() } } }));
+    const source = tree.getItemInstance('a');
+    source.setFocused();
+    source.getDragHandleProps().onDragStart!({ preventDefault: vi.fn() });
+    expect(tree.getState().dnd?.draggedItems).toEqual([source]);
+    const target = { item: tree.getItemInstance('b') };
+    tree.applySubStateUpdate('dnd', (state) => ({ ...state, dragTarget: target }));
+    expect(tree.getDragTarget()).toEqual(target);
     clearTreeDrag(tree);
     vi.advanceTimersByTime(1000);
     expect(expand).not.toHaveBeenCalled();
     expect(tree.getDragTarget()).toBeNull();
+    expect(tree.getState().dnd).toBeNull();
+    const element = document.createElement('div');
+    tree.registerElement(element);
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(tree.getState().focusedItem).toBe('b');
+    // Seed the foreign hover through the supported sub-state API, proving it is active.
+    tree.applySubStateUpdate('dnd', { dragTarget: target });
+    expect(tree.getDragTarget()).toEqual(target);
+    clearTreeDrag(tree);
+    expect(tree.getState().dnd).toBeNull();
+    tree.registerElement(null);
     tree.setMounted(false);
   });
   it('scrolls while stationary at the edge, clamps bounds and cancels the only RAF on stop', () => {

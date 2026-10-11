@@ -97,6 +97,76 @@ describe('folder invariants and durable commands', () => {
     expect(controller.getSnapshot().snapshot.folders[1].name).toBe('Changed');
     expect(controller.getSnapshot().snapshot.revision).toBe(3);
   });
+  it('retains every failed save across independent successful queued commands and retries in order', async () => {
+    const save = vi
+      .fn(async () => undefined)
+      .mockRejectedValueOnce(new Error('quota A'))
+      .mockRejectedValueOnce(new Error('quota B'));
+    const controller = new FolderController({ load: async () => ({ kind: 'empty' }), save });
+    const a = controller.execute({ type: 'create', id: 'a', name: 'A', parent: null });
+    const b = controller.execute({ type: 'create', id: 'b', name: 'B', parent: null });
+    const c = controller.execute({ type: 'create', id: 'c', name: 'C', parent: null });
+    await Promise.all([
+      expect(a).rejects.toThrow('quota A'),
+      expect(b).rejects.toThrow('quota B'),
+      c,
+    ]);
+    expect(controller.getSnapshot().snapshot.rootFolderIds).toEqual(['c']);
+    expect(controller.getSnapshot().pending).toBe(0);
+    expect(controller.getSnapshot().error).toBe('quota A');
+    await Promise.all([controller.retry(), controller.retry()]);
+    expect(controller.getSnapshot().snapshot.rootFolderIds).toEqual(['c', 'a']);
+    expect(controller.getSnapshot().error).toBe('quota B');
+    await controller.retry();
+    expect(controller.getSnapshot().snapshot.rootFolderIds).toEqual(['c', 'a', 'b']);
+    expect(controller.getSnapshot().error).toBeNull();
+    expect(save).toHaveBeenCalledTimes(5);
+  });
+  it('does not offer storage Retry for repeated validation failures or overwrite an earlier save failure', async () => {
+    const save = vi.fn(async () => undefined);
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot: fixture() }),
+      save,
+    });
+    await controller.load();
+    const invalid = [
+      { type: 'moveFolder', id: 'a', parent: 'b', anchor: append },
+      { type: 'rename', id: 'a', name: '' },
+      { type: 'moveTask', identity, parent: 'a', anchor: append },
+    ] as const;
+    for (const command of invalid) {
+      await expect(controller.execute(command)).rejects.toThrow();
+      await expect(controller.execute(command)).rejects.toThrow();
+      expect(controller.getSnapshot().error).toBeNull();
+      await controller.retry();
+    }
+    expect(save).not.toHaveBeenCalled();
+    save.mockRejectedValueOnce(new Error('quota'));
+    await expect(controller.execute({ type: 'rename', id: 'a', name: 'Changed' })).rejects.toThrow(
+      'quota'
+    );
+    await expect(controller.execute(invalid[0])).rejects.toThrow('cycle');
+    expect(controller.getSnapshot().error).toBe('quota');
+    await controller.retry();
+    expect(controller.getSnapshot().snapshot.folders[0].name).toBe('Changed');
+    expect(controller.getSnapshot().error).toBeNull();
+  });
+  it('retires a failed save that becomes invalid before retry without trying storage again', async () => {
+    const save = vi.fn(async () => undefined).mockRejectedValueOnce(new Error('quota'));
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot: fixture() }),
+      save,
+    });
+    controller.setCatalog([identity]);
+    await expect(
+      controller.execute({ type: 'moveTask', identity, parent: 'a', anchor: append })
+    ).rejects.toThrow('quota');
+    controller.setCatalog([]);
+    await expect(controller.retry()).rejects.toThrow('missing-task');
+    expect(controller.getSnapshot().error).toBeNull();
+    await controller.retry();
+    expect(save).toHaveBeenCalledTimes(1);
+  });
   it('blocks writes until load succeeds and rechecks task availability when queued moves execute', async () => {
     let finish!: (result: { kind: 'valid'; snapshot: Snapshot }) => void;
     const save = vi.fn(async () => undefined);
@@ -162,6 +232,8 @@ describe('folder invariants and durable commands', () => {
       await expect(
         controller.execute({ type: 'create', id: 'x', name: 'X', parent: null })
       ).rejects.toThrow('read-only');
+      expect(controller.getSnapshot().error).toBeNull();
+      await controller.retry();
       expect(storage.setItem).not.toHaveBeenCalled();
       await controller.reset();
       expect(storage.setItem).toHaveBeenCalledWith(

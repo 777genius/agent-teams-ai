@@ -46,6 +46,22 @@ import type { Node } from '../view-models/projection';
 import type { FolderDialog } from './FolderDialogs';
 import type { ItemInstance } from '@headless-tree/core';
 import type { Virtualizer } from '@tanstack/react-virtual';
+import type { ReactNode } from 'react';
+/** Radix roots do not notify onOpenChange when a virtual row disappears. */
+const RowMenuOwner = ({ id, children }: { id: string; children: ReactNode }): React.JSX.Element => {
+  useEffect(
+    () => () => {
+      panelController.hold(`menu:context:${id}`, false);
+      panelController.hold(`menu:dropdown:${id}`, false);
+    },
+    [id]
+  );
+  return (
+    <ContextMenu onOpenChange={(open) => panelController.hold(`menu:context:${id}`, open)}>
+      {children}
+    </ContextMenu>
+  );
+};
 export interface TreeFocusRequest {
   id: string;
   parent: string | null;
@@ -120,7 +136,7 @@ export const FolderTree = ({
   });
   const consumedFocus = useRef<TreeFocusRequest | null>(null);
   const previous = useRef(model.projection);
-  const oldProjection = previous.current;
+  const repairedProjection = useRef(model.projection);
   if (previous.current !== model.projection) {
     tree.scheduleRebuildTree();
     previous.current = model.projection;
@@ -150,13 +166,24 @@ export const FolderTree = ({
       consumedFocus.current = focusRequest;
       const item = tree.getItemInstance(id);
       item.setFocused();
+      let active = true;
       const frame = requestAnimationFrame(() => {
-        void item.scrollTo().then(() => tree.updateDomFocus());
+        if (!active) return;
+        void item.scrollTo().then(() => {
+          if (active) tree.updateDomFocus();
+        });
       });
-      return () => cancelAnimationFrame(frame);
+      return () => {
+        active = false;
+        cancelAnimationFrame(frame);
+      };
     }
-  }, [focusRequest, tree]);
+  }, [focusRequest, model.projection, tree]);
   useEffect(() => {
+    const oldProjection = repairedProjection.current;
+    repairedProjection.current = model.projection;
+    let frame: number | undefined;
+    let active = true;
     const focused = tree.getState().focusedItem;
     if (focused && !tree.getItems().some((item) => item.getId() === focused)) {
       const oldNode = oldProjection.nodes.get(focused);
@@ -175,8 +202,11 @@ export const FolderTree = ({
       if (target) {
         const item = tree.getItemInstance(target);
         item.setFocused();
-        requestAnimationFrame(() => {
-          void item.scrollTo().then(() => tree.updateDomFocus());
+        frame = requestAnimationFrame(() => {
+          if (!active) return;
+          void item.scrollTo().then(() => {
+            if (active) tree.updateDomFocus();
+          });
         });
       }
     }
@@ -189,12 +219,16 @@ export const FolderTree = ({
       tree.setSelectedItems(focused && visible.has(focused) ? [focused] : []);
     }
     if (expanded.length !== state.expandedItems.length)
-      tree.setState((current) => ({ ...current, expandedItems: expanded }));
+      tree.applySubStateUpdate('expandedItems', expanded);
     if ((!source && tree.getState().dnd) || (source && !model.projection.nodes.has(source))) {
       panelController.end();
       clearTreeDrag(tree);
     }
-  }, [model.projection, oldProjection, source, tree]);
+    return () => {
+      active = false;
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [model.projection, source, tree]);
   useEffect(() => {
     const container = scroll.current;
     if (!container) return;
@@ -308,13 +342,16 @@ export const FolderTree = ({
     const drag = item.getDragHandleProps();
     const editing = n.kind === 'folder' && rename === n.folderId;
     return (
-      <ContextMenu onOpenChange={(open) => panelController.hold(`menu:context:${n.id}`, open)}>
+      <RowMenuOwner id={n.id}>
         <ContextMenuTrigger asChild>
           <div
             {...props}
             role="treeitem"
             tabIndex={props.tabIndex ?? -1}
             aria-selected={item.isSelected()}
+            aria-label={
+              n.archived ? `${n.name} (${t('taskFolders.archived')})` : props['aria-label']
+            }
             data-folder-id={n.folderId}
             data-task-key={
               n.identity ? JSON.stringify([n.identity.teamName, n.identity.taskId]) : undefined
@@ -322,7 +359,11 @@ export const FolderTree = ({
             className={`flex h-8 items-center gap-1 rounded px-1 text-xs outline-none focus:ring-1 focus:ring-blue-400 ${n.archived ? 'text-text-muted opacity-60' : 'text-text'} ${item.isDragTarget() ? 'bg-blue-500/20' : ''}`}
             style={{ paddingLeft: `${item.getItemMeta().level * 16}px` }}
             onKeyDown={(event) => {
-              if (event.key === 'F2' && n.kind === 'folder') {
+              if (event.target !== event.currentTarget || editing || isImeComposing(event)) return;
+              if (event.key === 'Enter' && n.kind === 'task') {
+                event.preventDefault();
+                item.primaryAction();
+              } else if (event.key === 'F2' && n.kind === 'folder') {
                 event.preventDefault();
                 startRename(n);
               } else props.onKeyDown?.(event);
@@ -470,7 +511,7 @@ export const FolderTree = ({
             ))}
           </ContextMenuContent>
         )}
-      </ContextMenu>
+      </RowMenuOwner>
     );
   };
   const container = tree.getContainerProps(t('taskFolders.title'));

@@ -9,12 +9,13 @@ export type Hold =
   | `menu:${string}`;
 export interface PanelState {
   open: boolean;
+  manual: boolean;
   dragSource: string | null;
   session: number;
 }
 /** Host-owned lifecycle survives virtual row unmounts. Duplicate end events are harmless. */
 export class PanelController {
-  private state: PanelState = { open: false, dragSource: null, session: 0 };
+  private state: PanelState = { open: false, manual: false, dragSource: null, session: 0 };
   private holds = new Set<Hold>();
   private timer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
@@ -38,7 +39,7 @@ export class PanelController {
     if (active) {
       this.holds.add(reason);
       this.cancelTimer();
-      this.publish({ open: true });
+      this.publish({ open: true, ...(reason === 'manual' ? { manual: true } : {}) });
     } else {
       this.holds.delete(reason);
       this.schedule();
@@ -49,7 +50,8 @@ export class PanelController {
     if (this.holds.size || !this.state.open) return;
     const generation = this.generation;
     this.timer = setTimeout(() => {
-      if (generation === this.generation && !this.holds.size) this.publish({ open: false });
+      if (generation === this.generation && !this.holds.size)
+        this.publish({ open: false, manual: false });
     }, 2000);
   }
   begin(source: string): number {
@@ -93,7 +95,7 @@ export class PanelController {
   close(): void {
     this.cancelTimer();
     this.holds.clear();
-    this.publish({ open: false, dragSource: null });
+    this.publish({ open: false, manual: false, dragSource: null });
   }
   dispose(): void {
     this.close();

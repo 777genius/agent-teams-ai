@@ -148,7 +148,15 @@ export const TaskFoldersHost = ({
     </>
   );
   const visible = model.panel.open && !collapsed;
-  const fallback = model.rect?.width === 0;
+  const fallback = !!model.rect && model.rect.width < 240;
+  const fallbackOpen = visible && fallback && model.panel.manual;
+  useEffect(
+    () => () => {
+      panelController.hold('pointer', false);
+      panelController.hold('focus', false);
+    },
+    [visible, fallback, fallbackOpen]
+  );
   return (
     <>
       <Tooltip>
@@ -158,7 +166,7 @@ export const TaskFoldersHost = ({
             size="sm"
             data-testid="task-folders-toggle"
             aria-label={t('taskFolders.title')}
-            aria-expanded={visible}
+            aria-expanded={fallback ? fallbackOpen : visible}
             onClick={() => panelController.toggle()}
           >
             <FolderTreeIcon className="size-3.5" />
@@ -190,15 +198,26 @@ export const TaskFoldersHost = ({
           document.body
         )}
       <Dialog
-        open={visible && !!fallback}
+        open={fallbackOpen}
         onOpenChange={(open) => {
           if (!open) panelController.close();
         }}
       >
         <DialogContent>
           <DialogTitle>{t('taskFolders.title')}</DialogTitle>
-          <div data-testid="task-folders-panel" className="flex h-[60vh] flex-col">
-            {visible && fallback ? content : null}
+          <div
+            ref={panelRef}
+            data-testid="task-folders-panel"
+            className="flex h-[60vh] flex-col"
+            onPointerEnter={() => panelController.hold('pointer', true)}
+            onPointerLeave={() => panelController.hold('pointer', false)}
+            onFocusCapture={() => panelController.hold('focus', true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                panelController.hold('focus', false);
+            }}
+          >
+            {fallbackOpen ? content : null}
           </div>
         </DialogContent>
       </Dialog>

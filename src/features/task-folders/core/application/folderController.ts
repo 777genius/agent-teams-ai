@@ -27,7 +27,7 @@ export class FolderController {
   private queue: Promise<unknown> = Promise.resolve();
   private loading: Promise<void> | undefined;
   private catalog = new Set<string>();
-  private retryCommand: Command | undefined;
+  private failures: { command: Command; error: string }[] = [];
   constructor(private repository: FolderRepository) {}
   getSnapshot = (): FolderState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -60,46 +60,61 @@ export class FolderController {
     return this.loading;
   }
   execute(command: Command): Promise<Snapshot> {
+    return this.enqueue(command);
+  }
+  private enqueue(
+    command: Command,
+    retry?: { command: Command; error: string }
+  ): Promise<Snapshot> {
     this.publish({ pending: this.state.pending + 1 });
     const action = this.queue
       .then(async () => {
         await this.load();
-        if (this.state.status !== 'ready') throw new Error('read-only');
-        if (command.type === 'moveTask' && !this.hasTask(command.identity))
-          throw new Error('missing-task');
-        const next = applyCommand(this.state.snapshot, command);
-        if (next !== this.state.snapshot) await this.repository.save(next);
-        this.retryCommand = undefined;
-        this.publish({ snapshot: next, error: null });
+        if (retry && !this.failures.includes(retry)) return this.state.snapshot;
+        // Validation failures belong to the caller's interaction, not storage Retry.
+        let next: Snapshot;
+        try {
+          if (this.state.status !== 'ready') throw new Error('read-only');
+          if (command.type === 'moveTask' && !this.hasTask(command.identity))
+            throw new Error('missing-task');
+          next = applyCommand(this.state.snapshot, command);
+        } catch (error) {
+          if (retry) this.removeFailure(retry);
+          throw error;
+        }
+        try {
+          if (next !== this.state.snapshot) await this.repository.save(next);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'save';
+          if (retry) retry.error = message;
+          else this.failures.push({ command, error: message });
+          this.publish({ error: this.failures[0].error });
+          throw error;
+        }
+        if (retry) this.removeFailure(retry);
+        this.publish({ snapshot: next, error: this.failures[0]?.error ?? null });
         return next;
-      })
-      .catch((error: unknown) => {
-        this.retryCommand = command;
-        this.publish({ error: error instanceof Error ? error.message : 'save' });
-        throw error;
       })
       .finally(() => this.publish({ pending: this.state.pending - 1 }));
     this.queue = action.catch(() => undefined);
     return action;
   }
+  private removeFailure(failure: { command: Command; error: string }): void {
+    this.failures = this.failures.filter((entry) => entry !== failure);
+    this.publish({ error: this.failures[0]?.error ?? null });
+  }
   retry(): Promise<Snapshot> {
-    return this.retryCommand
-      ? this.execute(this.retryCommand)
-      : Promise.resolve(this.state.snapshot);
+    const failure = this.failures[0];
+    return failure ? this.enqueue(failure.command, failure) : Promise.resolve(this.state.snapshot);
   }
   reset(): Promise<void> {
-    const action = this.queue
-      .then(async () => {
-        await this.load();
-        const snapshot = emptySnapshot();
-        await this.repository.save(snapshot);
-        this.retryCommand = undefined;
-        this.publish({ snapshot, status: 'ready', error: null });
-      })
-      .catch((error: unknown) => {
-        this.publish({ error: String(error) });
-        throw error;
-      });
+    const action = this.queue.then(async () => {
+      await this.load();
+      const snapshot = emptySnapshot();
+      await this.repository.save(snapshot);
+      this.failures = [];
+      this.publish({ snapshot, status: 'ready', error: null });
+    });
     this.queue = action.catch(() => undefined);
     return action;
   }
