@@ -136,6 +136,7 @@ export function useDirectMessageQueue(options: {
   });
   return {
     ...queue,
+    list: options.isCrossTeam ? null : queue.list,
     unavailableReason:
       draft.text.trim() ||
       draft.chips.length ||

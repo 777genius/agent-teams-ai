@@ -22,7 +22,7 @@ const ports = vi.hoisted(() => ({
 vi.mock('../../../src/features/manual-message-queue/renderer/hooks/useManualMessageQueue', () => ({
   useManualMessageQueue: (options: ManualQueueOptions) => {
     ports.options = options;
-    return options;
+    return { ...options, list: 'local queue' };
   },
 }));
 vi.mock('@features/localization/renderer', () => ({
@@ -40,6 +40,7 @@ describe('composer queue adapters', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let draft!: ReturnType<typeof useComposerDraft>;
     let queue!: ReturnType<typeof useDirectMessageQueue>;
+    let isCrossTeam = false;
     const address = {
       contextId: scope.contextId,
       teamName: scope.teamName,
@@ -56,11 +57,12 @@ describe('composer queue adapters', () => {
         draft,
         onSend,
         disabled: false,
-        isCrossTeam: false,
+        isCrossTeam,
       });
-      return null;
+      return queue.list;
     }
-    const view = createRoot(document.createElement('div'));
+    const host = document.createElement('div');
+    const view = createRoot(host);
     try {
       await act(async () => {
         view.render(<Probe />);
@@ -112,6 +114,27 @@ describe('composer queue adapters', () => {
       const [row] = await repository.list(scope, () => false);
       expect(row.text).toBe('Captured request');
       expect(row.actionMode).toBe('ask');
+      const localWorking = (await composerDraftRepository.loadWorking(address)).working;
+      expect(host.textContent).toBe('local queue');
+      isCrossTeam = true;
+      act(() => view.render(<Probe />));
+      expect(queue.list).toBeNull();
+      expect(host.textContent).toBe('');
+      expect(ports.options!.unavailableReason).toContain('richUnsupported');
+      expect(ports.options!.blockedReason(row)).toContain('queueDisabled');
+      expect(await repository.list(scope, () => false)).toEqual([row]);
+      expect(draft.text).toBe('Next working message');
+      await act(async () => {
+        expect((await composerDraftRepository.loadWorking(address)).working).toEqual(localWorking);
+      });
+      isCrossTeam = false;
+      act(() => view.render(<Probe />));
+      expect(queue.list).toBe('local queue');
+      expect(host.textContent).toBe('local queue');
+      expect(await repository.list(scope, () => false)).toEqual([row]);
+      await act(async () => {
+        expect((await composerDraftRepository.loadWorking(address)).working).toEqual(localWorking);
+      });
       const request = options.prepare(row, crypto.randomUUID());
       expect(request).toMatchObject({ member: 'Bob' });
       members[0].name = 'BOB';
