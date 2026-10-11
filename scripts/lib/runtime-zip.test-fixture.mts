@@ -134,7 +134,9 @@ export function ambiguousDirectoryFixture(kind: 'comment' | 'locator'): Buffer {
         hiddenCentral,
         zip64Footer(2, hiddenCentral.length, bodyOffset + hiddenOffset),
       ]),
-      centralExtra: zipExtra(0x9999, locator),
+      // NTFS is qualified metadata, so rejection must come from the locator
+      // validation rather than the unknown-extra allowlist.
+      centralExtra: zipExtra(0x000a, locator),
     },
   ]);
 }

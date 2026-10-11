@@ -75,8 +75,8 @@ jobs:
         if: matrix.platform == 'win32-x64'
         run: node --test --test-name-pattern="Windows inbox tar" scripts/lib/runtime-payload-cache.test.mjs
 
-      - name: Verify Windows ZIP metadata before extraction
-        if: matrix.platform == 'win32-x64'
+      - name: Verify ZIP metadata and native reader differentials
+        if: matrix.platform != 'linux-x64'
         run: node --test scripts/lib/runtime-archive-extraction.test.mts
 
       - name: Download, extract, and execute pinned runtime anonymously

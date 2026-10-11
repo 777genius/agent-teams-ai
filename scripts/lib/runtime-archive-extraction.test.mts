@@ -214,10 +214,7 @@ test('Windows shared extraction rejects the link archive before invoking any ext
 test('rejects alternate native directories hidden in an EOCD comment or ZIP64 locator', () => {
   for (const kind of ['comment', 'locator'] as const)
     archiveTest(ambiguousDirectoryFixture(kind), (file) =>
-      assert.throws(
-        () => assertSafeRuntimeZip(file),
-        /Malformed runtime ZIP|Unsupported runtime archive entry/
-      )
+      assert.throws(() => assertSafeRuntimeZip(file), /Malformed runtime ZIP/)
     );
 });
 test('rejects local xl attributes and unknown extras before native extraction', () => {
