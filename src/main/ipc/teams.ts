@@ -3023,11 +3023,7 @@ async function handleSendMessage(
       replyRecipient,
       ...(recipientProviderId ? { providerId: recipientProviderId } : {}),
     });
-    const inboxMessageId =
-      validatedMessageId?.value ??
-      (directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
-        ? crypto.randomUUID()
-        : undefined);
+    const inboxMessageId = validatedMessageId?.value ?? crypto.randomUUID();
     const memberDeliveryText = buildMessageDeliveryText(baseText, {
       actionMode,
       isLeadRecipient,
