@@ -9,6 +9,7 @@ import { runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import { phase } from './runtime-bootstrap-diagnostics.mts';
+import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
 import { zipFixture } from './runtime-zip.test-fixture.mts';
 import {
   extractArchive,
@@ -154,6 +155,7 @@ function windowsExtractor() {
   return runInNewContext(`${functions}; extractArchive`, {
     fs,
     path,
+    assertSafeRuntimeZip,
     process: { platform: 'win32', env: { SystemRoot: 'C:\\Windows' } },
   });
 }
@@ -163,6 +165,7 @@ for (const caller of ['bootstrap', 'stager']) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-zip-contract-'));
     const archive = path.join(root, "archive [x] 'quote'.zip");
     const destination = path.join(root, "extracted [x] 'quote'");
+    fs.writeFileSync(archive, zipFixture([{ name: 'runtime/file', data: 'fixture' }]));
     const shared = windowsExtractor();
     const extract =
       caller === 'bootstrap'

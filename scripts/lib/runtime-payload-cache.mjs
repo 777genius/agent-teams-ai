@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
+
 import { RUNTIME_ARCHIVE_SHA256_PATTERN } from './runtime-archive-checksum.mjs';
 
 const receiptName = '.archive-payload.json';
@@ -107,6 +109,9 @@ function assertRegularArchiveEntries(root) {
 }
 
 export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) {
+  if (fs.existsSync(extractDir) && !fs.lstatSync(extractDir).isDirectory()) {
+    throw new Error(`Unsupported runtime archive entry: ${extractDir}`);
+  }
   fs.mkdirSync(extractDir, { recursive: true });
 
   if (archiveKind === 'tar.gz') {
@@ -120,6 +125,8 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
       if (typeof systemRoot !== 'string' || !/^[A-Za-z]:[\\/]/u.test(systemRoot)) {
         throw new Error('Windows runtime ZIP extraction requires an absolute SystemRoot');
       }
+      assertSafeRuntimeZip(archivePath);
+      assertRegularArchiveEntries(extractDir);
       const tarPath = path.win32.join(systemRoot, 'System32', 'tar.exe');
       runOrExit(tarPath, ['-xf', archivePath, '-C', extractDir], { shell: false });
       assertRegularArchiveEntries(extractDir);
