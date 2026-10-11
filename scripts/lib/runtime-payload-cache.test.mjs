@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
+import { phase } from './runtime-bootstrap-diagnostics.mts';
 import {
   extractArchive, findExtractedBinary, isRuntimePayloadCacheValid, publishRuntimePayload,
 } from './runtime-payload-cache.mjs';
@@ -81,7 +82,7 @@ test('cached bootstrap waits for publication lock before validating or executing
   let unlock;
   const publication = new Promise((resolve) => { unlock = resolve; });
   const run = runInNewContext(`${functionSource}; ensureBootstrappedRuntime`, {
-    fs, path,
+    fs, path, phase,
     runtimeCacheRoot: root,
     readRuntimeLock: () => ({ version: 'fixture', sourceRef: 'fixture',
       assets: { fixture: { binaryName: 'orchestrator', sha256: 'a'.repeat(64) } } }),

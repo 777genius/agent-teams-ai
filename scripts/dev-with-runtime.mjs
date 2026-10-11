@@ -19,6 +19,7 @@ import {
   publishRuntimePayload,
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { phase } from './lib/runtime-bootstrap-diagnostics.mts';
 import {
   formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
@@ -578,38 +579,6 @@ async function acquireBootstrapLock(lockPath) {
 }
 
 async function ensureBootstrappedRuntime() {
-  function phase(name, operation) {
-    const enabled = globalThis.process?.env.CLAUDE_DEV_RUNTIME_DIAGNOSTICS === '1';
-    const started = Date.now();
-    const report = (state) => {
-      if (enabled)
-        process.stderr.write(
-          `[runtime-bootstrap] ${name} ${state} elapsedMs=${Date.now() - started}\n`
-        );
-    };
-    report('begin');
-    try {
-      const result = operation();
-      if (result && typeof result.then === 'function') {
-        return result.then(
-          (value) => {
-            report('end');
-            return value;
-          },
-          (error) => {
-            report('error');
-            throw error;
-          }
-        );
-      }
-      report('end');
-      return result;
-    } catch (error) {
-      report('error');
-      throw error;
-    }
-  }
-
   const runtimeLock = readRuntimeLock();
   const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
   const platformKey = getPlatformAssetKey();
