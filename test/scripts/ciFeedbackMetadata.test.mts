@@ -288,7 +288,7 @@ test('CLI without authenticated API access selects literal full execution output
     assert.equal(child.status, 0, child.stderr);
     assert.equal(
       readFileSync(outputFile, 'utf8'),
-      'full=true\nmetadata=false\nreuse=false\nsource_run=\nimage=unknown\nlinux_arch=unknown\n'
+      'scope=full\nfull=true\nmetadata=false\nreuse=false\nsource_run=\nimage=unknown\nlinux_arch=unknown\n'
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -889,7 +889,7 @@ void test('completed real metadata qualification preserves continuity to its com
     {
       ...base,
       id: 2,
-      name: 'Full qualification',
+      name: 'Metadata qualification',
       conclusion: 'success',
       steps: [
         completedStep('Verify completed current-code qualification after metadata edits'),
@@ -949,4 +949,21 @@ void test('metadata gate reauthenticates completed full evidence and rejects pen
   );
   assert.equal(await qualifyMetadata(env, event({ base: { from: 'other' } }), read), false);
   assert.equal(await qualifyMetadata(env, event(undefined, true), read), false);
+});
+
+
+test('full metadata producers permit only authenticated skipped scoped jobs', async () => {
+  const input = event();
+  const data = fixture(input, 'completed');
+  const response = data.get(jobsEndpoint) as JsonObject;
+  const currentJobs = jobs(data);
+  const template = currentJobs[0];
+  for (const name of ['Focused documentation and asset validation', 'Renderer source validation', 'macOS DMG artwork end-to-end']) {
+    currentJobs.push({ ...template, id: currentJobs.length + 1, name, conclusion: 'skipped', steps: [] });
+  }
+  response.total_count = currentJobs.length;
+  const read = (endpoint: string) => Promise.resolve(structuredClone(data.get(endpoint)));
+  assert.equal(await qualifyMetadata(env, input, read), true);
+  currentJobs[currentJobs.length - 1].conclusion = 'success';
+  assert.equal(await qualifyMetadata(env, input, read), false);
 });

@@ -1,4 +1,4 @@
-export type PackagedScope = 'full' | 'app';
+export type PackagedScope = 'full' | 'app' | 'docs' | 'assets' | 'dmg' | 'source';
 export interface PackagedDecision {
   scope: PackagedScope;
   run: boolean;
@@ -197,7 +197,15 @@ export function assertFullPackagedGate(input: {
   scope: string | undefined;
   scopeResult: string | undefined;
   packagedResult: string | undefined;
+  run?: string;
 }): void {
+  if (
+    ['docs', 'assets', 'dmg', 'source'].includes(input.scope ?? '') &&
+    input.run === 'false' &&
+    input.scopeResult === 'success' &&
+    input.packagedResult === 'skipped'
+  )
+    return;
   if (
     input.scope !== 'full' ||
     input.scopeResult !== 'success' ||
