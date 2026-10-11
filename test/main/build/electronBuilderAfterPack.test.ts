@@ -210,6 +210,76 @@ describe('electron-builder afterPack', () => {
     ]);
   });
 
+  it.each([
+    ['linux', 'x64', 1],
+    ['darwin', 'arm64', 3],
+    ['darwin', 'x64', 1],
+    ['win32', 'x64', 1],
+    ['win32', 'arm64', 3],
+  ] as const)('prunes portable runtime optional binaries for %s-%s while preserving target bytes', async (platform, arch, archCode) => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const resources = platform === 'darwin' ? 'Agent Teams AI.app/Contents/Resources' : 'resources';
+    const graph = path.join(tempDir, resources, 'runtime', 'local-cli', 'node_modules');
+    const binaries = [
+      ['linux', 'x64', createElfBuffer('x64')],
+      ['linux', 'arm64', createElfBuffer('arm64')],
+      ['darwin', 'x64', createMachOBuffer('x64')],
+      ['darwin', 'arm64', createMachOBuffer('arm64')],
+      ['win32', 'x64', createPortableExecutableBuffer('x64')],
+      ['win32', 'arm64', createPortableExecutableBuffer('arm64')],
+    ] as const;
+    const retained: {path: string; bytes: Buffer}[] = [];
+    for (const prefix of ['', '@opencode/server-v2-floor/node_modules/']) {
+      for (const [p, a, bytes] of binaries) {
+        const file = path.join(graph, prefix, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', p + '-' + a, 'tree-sitter-bash.node');
+        writeFile(file, bytes);
+        if (p === platform && a === arch) retained.push({path: file, bytes});
+      }
+    }
+    const libraries = [
+      ['linux', 'x64', 'librust_pty.so', createElfBuffer('x64')],
+      ['linux', 'arm64', 'librust_pty_arm64.so', createElfBuffer('arm64')],
+      ['darwin', 'x64', 'librust_pty.dylib', createMachOBuffer('x64')],
+      ['darwin', 'arm64', 'librust_pty_arm64.dylib', createMachOBuffer('arm64')],
+      ['win32', 'x64', 'rust_pty.dll', createPortableExecutableBuffer('x64')],
+    ] as const;
+    for (const [p, a, name, bytes] of libraries) {
+      const file = path.join(graph, 'bun-pty/rust-pty/target/release', name);
+      writeFile(file, bytes);
+      if (p === platform && a === arch) retained.push({path: file, bytes});
+    }
+    const documentation = path.join(graph, 'bun-pty/rust-pty/target/release', 'README.txt');
+    writeFile(documentation, Buffer.from('retain nonnative package data'));
+    const targetBytes = platform === 'linux' ? createElfBuffer('x64')
+      : platform === 'darwin' ? createMachOBuffer(arch) : createPortableExecutableBuffer(arch);
+    const mixedDirectoryFile = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', platform === 'linux' ? 'darwin-arm64' : 'linux-arm64', 'compatible-extra.node');
+    writeFile(mixedDirectoryFile, targetBytes);
+    await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
+    expect(retained).toHaveLength(platform === 'win32' && arch === 'arm64' ? 2 : 3);
+    for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
+    expect(fs.readFileSync(mixedDirectoryFile)).toEqual(targetBytes);
+    expect(fs.existsSync(documentation)).toBe(true);
+    await expect(validateNativeBinaries(tempDir, platform, arch)).resolves.toEqual([]);
+  });
+
+  it('keeps unknown runtime binaries and rejects malformed target prebuilds', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
+    const unknown = path.join(graph, 'unknown/bad.node');
+    const unknownLibrary = path.join(graph, 'bun-pty/rust-pty/target/release/constructor');
+    const target = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds/linux-x64/tree-sitter-bash.node');
+    writeFile(unknown, createMachOBuffer('arm64'));
+    writeFile(unknownLibrary, createMachOBuffer('arm64'));
+    writeFile(target, createMachOBuffer('arm64'));
+    await expect(afterPackModule({appOutDir: tempDir, electronPlatformName: 'linux', arch: 1}))
+      .rejects.toThrow('Found incompatible native binaries');
+    expect(fs.existsSync(unknown)).toBe(true);
+    expect(fs.existsSync(unknownLibrary)).toBe(true);
+    expect(fs.existsSync(target)).toBe(true);
+  });
+
   it('accepts a clean arm64 mac bundle after pruning', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

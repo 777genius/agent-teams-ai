@@ -248,12 +248,63 @@ function findNodeModulesSequence(segments, sequence) {
 }
 
 function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
+  const relativePath = path.relative(appOutDir, filePath);
+  const segments = relativePath.split(path.sep);
+  const normalizedPath = segments.join('/');
+  const isPortableRuntimeGraph =
+    normalizedPath.startsWith('resources/runtime/local-cli/node_modules/') ||
+    /^(?:[^/]+\.app\/)?Contents\/Resources\/runtime\/local-cli\/node_modules\//.test(
+      normalizedPath
+    );
+
+  if (isPortableRuntimeGraph) {
+    const prebuildIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      'tree-sitter-bash',
+      'prebuilds',
+    ]);
+    const prebuildArchIndex = prebuildIndex + 3;
+    const prebuildArch = prebuildIndex >= 0 ? segments[prebuildArchIndex] : null;
+    if (
+      prebuildArch &&
+      /^(darwin|linux|win32)-(x64|arm64|universal)$/.test(prebuildArch) &&
+      segments.length === prebuildArchIndex + 2 &&
+      segments[prebuildArchIndex + 1] === 'tree-sitter-bash.node' &&
+      !shouldKeepNodePtyPrebuild(prebuildArch, targetPlatform, targetArch)
+    ) {
+      return filePath;
+    }
+
+    const ptyIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      'bun-pty',
+      'rust-pty',
+      'target',
+      'release',
+    ]);
+    const library =
+      ptyIndex >= 0 && segments.length === ptyIndex + 6 ? segments[ptyIndex + 5] : null;
+    const libraryTargets = {
+      'librust_pty.so': ['linux', 'x64'],
+      'librust_pty_arm64.so': ['linux', 'arm64'],
+      'librust_pty.dylib': ['darwin', 'x64'],
+      'librust_pty_arm64.dylib': ['darwin', 'arm64'],
+      'rust_pty.dll': ['win32', 'x64'],
+    };
+    const target =
+      library && Object.hasOwn(libraryTargets, library) ? libraryTargets[library] : null;
+    if (
+      target &&
+      (target[0] !== targetPlatform ||
+        (target[1] !== targetArch && !(targetPlatform === 'darwin' && targetArch === 'universal')))
+    ) {
+      return filePath;
+    }
+  }
+
   if (targetPlatform !== 'win32') {
     return null;
   }
-
-  const relativePath = path.relative(appOutDir, filePath);
-  const segments = relativePath.split(path.sep);
 
   const conptyIndex = findNodeModulesSequence(segments, [
     'node_modules',
