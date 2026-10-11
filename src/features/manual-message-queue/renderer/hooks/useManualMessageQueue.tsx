@@ -188,7 +188,7 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
         isCurrent: () =>
           identityRef.current === identity && isContextScopedRequestEpochCurrent(epoch),
         blockedReason: (queued) => current.current.blockedReason(queued),
-        prepare: options.prepare,
+        prepare: (queued, messageId) => current.current.prepare(queued, messageId),
         transport: options.transport,
       });
       // Transport settles durably even if its initiating composer unmounts.
@@ -214,26 +214,45 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
       if (item.state !== 'unknown' || !item.attempt) return;
       await isBound();
       const epoch = captureContextScopedRequestEpoch();
-      const page = await api.teams.getMessagesPage(item.scope.teamName, {
-        limit: 100,
-        ...(item.route.kind === 'group' ? { groupChatId: item.route.groupChatId } : {}),
-      });
-      await isBound();
-      if (!isContextScopedRequestEpochCurrent(epoch)) throw new Error('rootUnavailable');
-      if (
-        page.messages.some(
-          (entry) =>
-            entry.from === 'user' &&
-            entry.messageId === item.attempt!.messageId &&
-            (item.route.kind === 'group'
-              ? entry.groupChatId === item.route.groupChatId
-              : !entry.groupChatId && entry.to?.trim().toLowerCase() === item.route.participant)
+      const visited = new Set<string>();
+      let cursor: string | null = null;
+      while (true) {
+        await isBound();
+        if (!isContextScopedRequestEpochCurrent(epoch)) throw new Error('rootUnavailable');
+        const page = await api.teams.getMessagesPage(item.scope.teamName, {
+          cursor,
+          limit: 100,
+          ...(item.route.kind === 'group' ? { groupChatId: item.route.groupChatId } : {}),
+        });
+        await isBound();
+        if (!isContextScopedRequestEpochCurrent(epoch)) throw new Error('rootUnavailable');
+        if (
+          page.messages.some(
+            (entry) =>
+              entry.from === 'user' &&
+              entry.messageId === item.attempt!.messageId &&
+              (item.route.kind === 'group'
+                ? entry.groupChatId === item.route.groupChatId
+                : !entry.groupChatId && entry.to?.trim().toLowerCase() === item.route.participant)
+          )
+        ) {
+          await queueRepository.remove(item);
+          if (identityRef.current === identity && isContextScopedRequestEpochCurrent(epoch))
+            await options.refresh();
+          return;
+        }
+        if (
+          !page.hasMore ||
+          page.messages.length === 0 ||
+          typeof page.nextCursor !== 'string' ||
+          !page.nextCursor ||
+          visited.has(page.nextCursor)
         )
-      ) {
-        await queueRepository.remove(item);
-        if (identityRef.current === identity && isContextScopedRequestEpochCurrent(epoch))
-          await options.refresh();
-      } else throw new Error(String(t('messages.manualQueue.notFound')));
+          break;
+        visited.add(page.nextCursor);
+        cursor = page.nextCursor;
+      }
+      throw new Error(String(t('messages.manualQueue.notFound')));
     });
   const blockedReason = (item: QueueItem): string | null =>
     !scope || switching

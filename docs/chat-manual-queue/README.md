@@ -1,7 +1,7 @@
 # Manual message queue handoff
 
 The accepted implementation specification is [plan.md](plan.md), SHA-256
-`788971fe19c90d58b0caa2107d299d122c9eed7fe05a1c2db1cb23583565d4b2`.
+`54b1eb2694011f19b15f4e3346d04a0a7cb8044a79d21d9000e9b94d5a955d0c`.
 The design reference is [reference.png](reference.png).
 
 Use Cmd+Enter on macOS or Ctrl+Enter elsewhere to save ordinary text in the

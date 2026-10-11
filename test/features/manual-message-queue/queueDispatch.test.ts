@@ -1,3 +1,6 @@
+import React, { act, isValidElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { captureQueueScope } from '../../../src/features/manual-message-queue/renderer/adapters/queueBinding';
@@ -6,12 +9,17 @@ import {
   ownsQueueAttempt,
 } from '../../../src/features/manual-message-queue/renderer/adapters/queueDispatch';
 import { IndexedDbQueueRepository } from '../../../src/features/manual-message-queue/renderer/adapters/queueRepository';
+import { useManualMessageQueue } from '../../../src/features/manual-message-queue/renderer/hooks/useManualMessageQueue';
 import {
   acquireComposerSubmission,
   releaseComposerSubmission,
   resetComposerSubmissionForTests,
   runComposerSubmission,
 } from '../../../src/renderer/components/team/messages/composerSubmission';
+import {
+  invalidateContextScopedRequestEpoch,
+  resetContextScopedRequestEpochForTests,
+} from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
 import { clearStore, directRoute, scope, seed, working } from './queueFixture';
 
@@ -19,6 +27,8 @@ import type {
   QueueItem,
   QueueRoute,
 } from '../../../src/features/manual-message-queue/core/domain/queue';
+import type { QueueListProps } from '../../../src/features/manual-message-queue/renderer/ui/QueueList';
+import type { InboxMessage } from '../../../src/shared/types';
 
 const bindingPorts = vi.hoisted(() => ({
   state: {
@@ -28,10 +38,24 @@ const bindingPorts = vi.hoisted(() => ({
   },
   root: vi.fn(),
   ssh: vi.fn(),
+  pages: vi.fn(),
+  translate: (key: string) => key,
 }));
-vi.mock('@renderer/store', () => ({ useStore: { getState: () => bindingPorts.state } }));
+vi.mock('@renderer/store', () => ({
+  useStore: Object.assign(
+    (select: (state: typeof bindingPorts.state) => unknown) => select(bindingPorts.state),
+    { getState: () => bindingPorts.state }
+  ),
+}));
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({ t: bindingPorts.translate }),
+}));
 vi.mock('@renderer/api', () => ({
-  api: { config: { getClaudeRootInfo: bindingPorts.root }, ssh: { getState: bindingPorts.ssh } },
+  api: {
+    config: { getClaudeRootInfo: bindingPorts.root },
+    ssh: { getState: bindingPorts.ssh },
+    teams: { getMessagesPage: bindingPorts.pages },
+  },
 }));
 
 describe('selected manual send contract', () => {
@@ -214,5 +238,113 @@ describe('selected manual send contract', () => {
     const [row] = await repository.list(target, ownsQueueAttempt);
     expect(row.state).toBe('queued');
     expect(row.attempt).toBeUndefined();
+  });
+  it('checks older exact echoes while absence, cursor loops, errors and a context switch preserve unknown delivery', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    try {
+      for (const scenario of ['direct', 'group', 'absent', 'cursor-loop', 'switch', 'error']) {
+        await clearStore();
+        resetContextScopedRequestEpochForTests();
+        bindingPorts.state = {
+          activeContextId: 'local',
+          isContextSwitching: false,
+          connectedHost: null,
+        };
+        bindingPorts.root.mockReset().mockResolvedValue({ resolvedPath: scope.root });
+        const route: QueueRoute =
+          scenario === 'group'
+            ? { kind: 'group', groupChatId: 'custom', recipientName: 'bob' }
+            : directRoute;
+        const { repository, target, item } = await queued(route);
+        const messageId = crypto.randomUUID();
+        const claimed = await repository.claim(item, {
+          messageId,
+          text: item.text,
+          actionMode: item.actionMode,
+        });
+        await repository.settle(claimed, 'unknown');
+        const [unknown] = await repository.list(target, ownsQueueAttempt);
+        const echo: InboxMessage = {
+          from: 'user',
+          to: 'Bob',
+          messageId,
+          text: item.text,
+          timestamp: '2026-10-11T00:00:00Z',
+          read: true,
+          ...(route.kind === 'group' ? { groupChatId: route.groupChatId } : {}),
+        };
+        const wrong = { ...echo, groupChatId: 'another-group' };
+        let reads = 0;
+        bindingPorts.pages.mockReset().mockImplementation(async (_team, request) => {
+          reads += 1;
+          if (scenario === 'error') throw new Error('History unavailable');
+          if (reads === 1)
+            return { messages: [wrong], hasMore: true, nextCursor: 'older', feedRevision: 'test' };
+          expect(request.cursor).toBe('older');
+          if (scenario === 'switch') invalidateContextScopedRequestEpoch();
+          return {
+            messages: scenario === 'absent' || scenario === 'cursor-loop' ? [wrong] : [echo],
+            hasMore: scenario === 'cursor-loop',
+            nextCursor: scenario === 'cursor-loop' ? 'older' : null,
+            feedRevision: 'test',
+          };
+        });
+        const refresh = vi.fn(async () => {});
+        const transport = vi.fn();
+        let queue!: ReturnType<typeof useManualMessageQueue>;
+        function Probe() {
+          queue = useManualMessageQueue({
+            teamName: target.teamName,
+            route,
+            consume: async () => {},
+            blockedReason: () => null,
+            prepare: (row, id) => ({ messageId: id, text: row.text, actionMode: row.actionMode }),
+            transport,
+            refresh,
+          });
+          return null;
+        }
+        const view = createRoot(document.createElement('div'));
+        try {
+          await act(async () => {
+            view.render(React.createElement(Probe));
+          });
+          await act(async () => {
+            await repository.list(target, ownsQueueAttempt);
+          });
+          if (!isValidElement<QueueListProps>(queue.list)) throw new Error('Missing queue view');
+          expect(queue.list.props.items).toHaveLength(1);
+          const check = queue.list.props.onCheck;
+          await act(async () => {
+            const operation = check(unknown);
+            if (scenario === 'direct' || scenario === 'group') await operation;
+            else await expect(operation).rejects.toThrow();
+          });
+          let remaining: readonly QueueItem[] = [];
+          await act(async () => {
+            remaining = await repository.list(target, ownsQueueAttempt);
+          });
+          expect(transport).not.toHaveBeenCalled();
+          if (scenario === 'direct' || scenario === 'group') {
+            expect(remaining).toEqual([]);
+            expect(refresh).toHaveBeenCalledTimes(1);
+          } else {
+            expect(remaining).toEqual([unknown]);
+            expect(refresh).not.toHaveBeenCalled();
+          }
+          expect(reads).toBe(scenario === 'error' ? 1 : 2);
+          expect(bindingPorts.pages.mock.calls[0][1]).toMatchObject({
+            cursor: null,
+            limit: 100,
+            ...(route.kind === 'group' ? { groupChatId: route.groupChatId } : {}),
+          });
+        } finally {
+          act(() => view.unmount());
+        }
+      }
+    } finally {
+      vi.unstubAllGlobals();
+      resetContextScopedRequestEpochForTests();
+    }
   });
 });

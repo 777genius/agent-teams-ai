@@ -46,19 +46,20 @@ export function useDirectMessageQueue(options: {
     draft.editorContext.kind !== 'plain' ||
     draft.snapshot().restoredOrigin ||
     parseStandaloneSlashCommand(stripEncodedTaskReferenceMetadata(draft.text).trim()) !== null;
+  const recipientFor = (item: QueueItem): ResolvedTeamMember | undefined => {
+    if (item.route.kind !== 'direct') return undefined;
+    const captured = item.route;
+    return options.members.find(
+      (candidate) =>
+        normalizeConversationParticipant(candidate.name) === captured.participant &&
+        (!captured.agentId || candidate.agentId === captured.agentId) &&
+        (captured.joinedAt === undefined || candidate.joinedAt === captured.joinedAt)
+    );
+  };
   const blockedReason = (item: QueueItem): string | null => {
     if (options.disabled || options.isCrossTeam)
       return String(t('messages.manualQueue.queueDisabled'));
-    if (item.route.kind !== 'direct') return String(t('messages.manualQueue.recipientUnavailable'));
-    const captured = item.route;
-    const recipient = options.members.find(
-      (candidate) => normalizeConversationParticipant(candidate.name) === captured.participant
-    );
-    return !recipient ||
-      (item.route.agentId && recipient.agentId !== item.route.agentId) ||
-      (item.route.joinedAt !== undefined && recipient.joinedAt !== item.route.joinedAt)
-      ? String(t('messages.manualQueue.recipientUnavailable'))
-      : null;
+    return recipientFor(item) ? null : String(t('messages.manualQueue.recipientUnavailable'));
   };
   const queue = useManualMessageQueue({
     teamName: options.teamName,
@@ -92,13 +93,15 @@ export function useDirectMessageQueue(options: {
     blockedReason,
     prepare: (item, messageId) => {
       if (item.route.kind !== 'direct') throw new Error('queue-conflict');
+      const recipient = recipientFor(item);
+      if (!recipient) throw new Error('recipientUnavailable');
       const text = stripEncodedTaskReferenceMetadata(item.text).trim();
       const prepared = buildPreparedSendRequest({
         attemptId: messageId,
         teamName: item.scope.teamName,
         selectedTeam: null,
         crossTeamRecipient: null,
-        localRecipient: item.route.participant,
+        localRecipient: recipient.name,
         text,
         summary: text,
         attachments: [],
@@ -112,9 +115,14 @@ export function useDirectMessageQueue(options: {
       return { ...prepared.request, messageId, actionMode: item.actionMode };
     },
     transport: (item, request) => {
-      if (item.route.kind !== 'direct') throw new Error('queue-conflict');
+      if (
+        item.route.kind !== 'direct' ||
+        !('member' in request) ||
+        typeof request.member !== 'string'
+      )
+        throw new Error('queue-conflict');
       return options.onSend(
-        item.route.participant,
+        request.member,
         request.text,
         request.summary,
         undefined,

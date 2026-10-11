@@ -46,7 +46,7 @@ describe('composer queue adapters', () => {
       target: { kind: 'direct' as const, participant: 'bob' },
     };
     const onSend = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'canonical-direct' }));
-    const members = [{ name: 'bob', agentId: 'bob-1' }] as ResolvedTeamMember[];
+    const members = [{ name: 'Bob', agentId: 'bob-1' }] as ResolvedTeamMember[];
     function Probe() {
       draft = useComposerDraft(address);
       queue = useDirectMessageQueue({
@@ -113,9 +113,11 @@ describe('composer queue adapters', () => {
       expect(row.text).toBe('Captured request');
       expect(row.actionMode).toBe('ask');
       const request = options.prepare(row, crypto.randomUUID());
+      expect(request).toMatchObject({ member: 'Bob' });
+      members[0].name = 'BOB';
       await options.transport(row, request);
       expect(onSend).toHaveBeenCalledWith(
-        'bob',
+        'Bob',
         'Captured request',
         'Captured request',
         undefined,

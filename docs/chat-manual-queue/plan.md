@@ -1,8 +1,8 @@
 # Ручная очередь сообщений во всех чатах — план для независимой критики
 
-Дата: 2026-10-11. Статус: **PLAN ONLY; independent q critique incorporated, ожидается финальная acceptance критика**. Это новое требование пользователя заменяет прежнюю идею auto-send. Пользователь управляет добавлением, редактированием, удалением и отправкой. Нет автоматического drain, проверки idle/ready, scheduler, leases, backpressure или agent API очереди.
+Дата: 2026-10-11. Статус: **Принятая спецификация; реализация и проверка находятся в [PR #904](https://github.com/777genius/agent-teams-ai/pull/904)**. Это новое требование пользователя заменяет прежнюю идею auto-send. Пользователь управляет добавлением, редактированием, удалением и отправкой. Нет автоматического drain, проверки idle/ready, scheduler, leases, backpressure или agent API очереди.
 
-Применён явно указанный [q SKILL.md](/Users/belief/.codex/plugins/cache/777genius-agent-rules/777genius-agent-rules/1.0.0/skills/q/SKILL.md). Canonical repo `777genius/agent-teams-ai`, fresh main `3dbca54368ac28d31b75a8c2c0a6418e6b26f7f6`, tree `0c0d1e31501355e20a0e17383e03e151bfc64612`; проверен через gh 2026-10-11. Read-only исследование сделано на checkout с тем же tree. Для дальнейшей работы coordinator подготовил clean isolated exact-main checkout `/srv/workers/jobs/agent-teams-ai/hosted-web-v1/workspaces/hosted-v1-chat-reactions-queue-20261011-r1/app`, branch `feat/chat-reactions-manual-queue`. Dirty локальный checkout не трогать.
+Применены Clean Architecture, SOLID и DRY согласно [архитектурному стандарту](../FEATURE_ARCHITECTURE_STANDARD.md), включая независимую q-критику. Canonical repo `777genius/agent-teams-ai`, baseline main `3dbca54368ac28d31b75a8c2c0a6418e6b26f7f6`, tree `0c0d1e31501355e20a0e17383e03e151bfc64612`; проверен через gh 2026-10-11. Работа ведётся в изолированной ветке `feat/chat-manual-message-queue`; пользовательские изменения не затрагиваются.
 
 ## 1. Обязательное поведение
 
@@ -19,9 +19,9 @@ Bounded payload scope: ordinary text, direct `do` **или `ask`** mode; group �
 
 ## 2. Визуальный handoff и доступность
 
-Reference просмотрен через view_image и скопирован из transient clipboard в принадлежащий задаче файл: [manual-queue-reference.png](/private/tmp/chat-next-research-20261011/references/manual-queue-reference.png).
+Reference: [reference.png](reference.png).
 
-![User queue reference](/private/tmp/chat-next-research-20261011/references/manual-queue-reference.png)
+![User queue reference](reference.png)
 
 Повторить компактный rounded container над composer, слева queue icon и single-line ellipsized preview. Справа arrow Send, trash Delete и **pencil Edit вместо ellipsis**. Надпись Steer на reference не переносить: это обычный existing send transport, без steering semantics. Использовать текущие theme tokens и shared Button/Tooltip primitives, без native title.
 
@@ -29,7 +29,7 @@ Reference просмотрен через view_image и скопирован и�
 
 Edit — inline editor под выбранной строкой, с сохранённым исходным текстом, Save и Cancel. Сохраняется queue id/позиция/recipient. До Save редактирование только локальное. Cancel и Escape отменяют unsaved edit, возвращают focus на pencil; Save возвращает focus на строку. Текущий composer draft, его selection, attachments и адресат не меняются. Не открывать второй editor без Save/Cancel первого. Enter внутри inline editor — newline; Ctrl/Cmd+Enter — Save; не вызывать enqueue или transport. Пустой/слишком длинный текст не сохраняется.
 
-После реализации сохранить этот план/accepted revision и PNG в owned repository documentation (`docs/chat-manual-queue/plan.md` и `docs/chat-manual-queue/reference.png`) для handoff; image copy не является image editing. Не помещать UI screenshot в runtime bundle. Пока репозиторий не изменён: это task artifacts для критика.
+Эта спецификация и [reference.png](reference.png) сохранены в repository documentation для handoff. UI screenshot не входит в runtime bundle.
 
 ## 3. Самая маленькая архитектура
 
@@ -99,13 +99,13 @@ Reaction worker: reaction feature contracts/main storage/tool/controller/read co
 
 Actual desktop `pnpm dev:mcp` через intended CDP 9222; только new sandbox team/projects и test APIs/fixtures для staging. Не Computer Use/native folder picker/browser mode, не real user projects. Один app/team и evidence owner у coordinator. Открытие диалогов, клавиши, Save/Delete/Send и screenshots выполняются в реальном renderer, не только unit mocks.
 
-| UI сценарий | 1on1 | Standard Group All | Custom group All | Custom group member |
-|---|---|---|---|---|
-| Add 2 items, current draft remains editable | Да | Да | Да | Да |
-| Inline edit Save/Cancel + Delete | Да | Да | Да | Да |
-| Switch chat/recipient + reload persistence | Да | Да | Да | Да |
-| Manual Send selected second item; first remains queued, draft untouched | Да | Да | Да | Да |
-| No sending on status changes/refresh/reload | Да | Да | Да | Да |
+| UI сценарий                                                             | 1on1 | Standard Group All | Custom group All | Custom group member |
+| ----------------------------------------------------------------------- | ---- | ------------------ | ---------------- | ------------------- |
+| Add 2 items, current draft remains editable                             | Да   | Да                 | Да               | Да                  |
+| Inline edit Save/Cancel + Delete                                        | Да   | Да                 | Да               | Да                  |
+| Switch chat/recipient + reload persistence                              | Да   | Да                 | Да               | Да                  |
+| Manual Send selected second item; first remains queued, draft untouched | Да   | Да                 | Да               | Да                  |
+| No sending on status changes/refresh/reload                             | Да   | Да                 | Да               | Да                  |
 
 Дополнительные общие UI checks: narrow width, compact/floating/expanded placement; archive/member-removed blocked reason; root switch isolation; unknown frozen row и exact-id history check. Transport matrix требует supported authenticated sandbox runtime и canonical/inbox receipts. Coordinator уже подтвердил supported runtime107 Codex OAuth authenticated=true, codex-native authoritative, teamLaunch=true/oneShot=true, healthy app-server/model catalog; один bounded baseline sandbox разрешён, но фактический E2E receipt ещё не получен. Queue CRUD/no-auto можно доказать без model turn; если live запуск впоследствии заблокирован, завершить доступные actual-renderer проверки и честно указать конкретную неподтверждённую manual transport строку, не записывать fake server как real LLM pass.
 
@@ -115,4 +115,4 @@ Normal checks: pnpm typecheck, pnpm lint:fast:files -- <owned changed files>, fo
 
 All-chat manual text queue с inline edit, durable root/chat/recipient scope и sending/unknown boundary: **650–950 production LOC + 300–480 essential test LOC = 950–1 430 LOC**. Docs/assets и generated code не включены; это оценка, не measured diff. Confidence 8/10, reliability после checks 9/10, complexity 5/10. UI/storage ~400–600, wiring/preparation/latch/transport edges ~250–350; тесты преимущественно atomic persistence и cross-route boundaries, а не snapshot зеркала разметки.
 
-Не включены: auto-send/idle/readiness, agents queue API, rich queued attachments/chips, delegate/revision workflows, editing delivered messages, group arbitrary subset fanout, background daemon, leases, provider protocol rewrite, migration old drafts/outbox, cross-team queue или guarantees exactly-once runtime execution. No provider-runtime code нужен для feature. Замечания independent q critic включены: direct ask, latch всех трёх send paths, actual local team transport root вместо SSH session projects path, единый unknown Remove record UX, canonical history/status reuse, active remount vs process recovery, один durable claim без лишнего marker write, memory-only rejection. Нужна финальная acceptance исправленного плана; архитектурная неопределённость этих пунктов устранена.
+Не включены: auto-send/idle/readiness, agents queue API, rich queued attachments/chips, delegate/revision workflows, editing delivered messages, group arbitrary subset fanout, background daemon, leases, provider protocol rewrite, migration old drafts/outbox, cross-team queue или guarantees exactly-once runtime execution. No provider-runtime code нужен для feature. Замечания independent q critic включены: direct ask, latch всех трёх send paths, actual local team transport root вместо SSH session projects path, единый unknown Remove record UX, canonical history/status reuse, active remount vs process recovery, один durable claim без лишнего marker write, memory-only rejection. Спецификация принята после независимой критики; фактические source review, CI и UI-проверки фиксируются при доставке реализации.
