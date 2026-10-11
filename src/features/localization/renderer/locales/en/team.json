@@ -903,6 +903,34 @@
         "active": "This message is still being sent.",
         "deleteBlocked": "The local copy could not be removed safely."
       }
+    },
+    "manualQueue": {
+      "title": "Queued messages",
+      "send": "Send",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editorLabel": "Edit queued message",
+      "all": "All",
+      "allHint": "All current group members when you send",
+      "do": "Do",
+      "ask": "Ask",
+      "sending": "Sending",
+      "unknownWarning": "Delivery is unknown. Removing this record will not cancel the message; sending the text again may create a duplicate.",
+      "removeRecord": "Remove record; delivery is not cancelled",
+      "copy": "Copy text",
+      "checkHistory": "Check in history",
+      "invalidText": "Enter text of up to {{maximum}} characters.",
+      "operationFailed": "Could not update the queue.",
+      "queueDisabled": "Add to queue (Cmd/Ctrl+Enter)",
+      "richUnsupported": "Only plain text in Do or Ask mode can be queued. Remove attachments, file chips, commands or review actions first.",
+      "persistenceRequired": "The draft must be saved durably before adding it to the queue.",
+      "rootUnavailable": "The message destination is still loading.",
+      "recipientUnavailable": "This recipient is no longer available.",
+      "schemaError": "Saved queue uses unsupported data; left untouched.",
+      "conflict": "Queue or draft changed. Your text was kept; try again.",
+      "notFound": "No matching message in loaded history. Delivery remains unknown."
     }
   },
   "modelSelector": {

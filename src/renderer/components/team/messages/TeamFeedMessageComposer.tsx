@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useGroupMessageQueue } from '@features/manual-message-queue/renderer';
 import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
 import { useGroupChatComposer } from '@features/team-group-chats/renderer';
 import { useStore } from '@renderer/store';
@@ -33,6 +34,15 @@ export const TeamFeedMessageComposer = ({
     t('messageComposer.recipient.all'),
     null
   );
+  const manualQueue = useGroupMessageQueue({
+    teamName: props.teamName,
+    groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+    group: props.groupBroadcast?.group,
+    composer,
+    fallbackCanSend:
+      !!props.isTeamAlive && props.members.filter((member) => member.name !== 'user').length >= 2,
+    refresh: () => refresh(props.teamName),
+  });
   const [mode, setMode] = useState<{ identity: string; all: boolean; recipient?: string } | null>(
     null
   );
@@ -67,6 +77,7 @@ export const TeamFeedMessageComposer = ({
     return (
       <TextMessageComposer
         teamName={props.teamName}
+        queue={manualQueue}
         layout={props.layout}
         widthMode={props.widthMode}
         textareaRef={props.textareaRef}
@@ -101,6 +112,7 @@ export const TeamFeedMessageComposer = ({
     <div data-testid="group-chat-composer">
       <TextMessageComposer
         teamName={props.teamName}
+        queue={manualQueue}
         layout={props.layout}
         widthMode={props.widthMode}
         textareaRef={props.textareaRef}
