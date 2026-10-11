@@ -83,6 +83,7 @@ vi.mock('zustand/react/shallow', () => ({
 vi.mock('lucide-react', () => {
   const Icon = (props: React.SVGProps<SVGSVGElement>) => React.createElement('svg', props);
   return {
+    GripVertical: Icon,
     CheckCircle2: Icon,
     Circle: Icon,
     Eye: Icon,
@@ -417,31 +418,28 @@ describe('SidebarTaskItem unread styling', () => {
     }
   );
 
-  it.each([undefined, 'invalid'])(
-    'omits time when both timestamps are unusable (%s)',
-    (date) => {
-      vi.useFakeTimers();
-      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  it.each([undefined, 'invalid'])('omits time when both timestamps are unusable (%s)', (date) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
-      const host = document.createElement('div');
-      document.body.appendChild(host);
-      const root = createRoot(host);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
 
-      act(() => {
-        root.render(
-          React.createElement(SidebarTaskItem, {
-            task: makeTask({ createdAt: date, updatedAt: date }),
-          })
-        );
-      });
+    act(() => {
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          task: makeTask({ createdAt: date, updatedAt: date }),
+        })
+      );
+    });
 
-      expect(host.querySelector('[data-testid="sidebar-task-relative-time"]')).toBeNull();
-      expect(host.textContent).not.toContain('Invalid');
-      expect(vi.getTimerCount()).toBe(0);
+    expect(host.querySelector('[data-testid="sidebar-task-relative-time"]')).toBeNull();
+    expect(host.textContent).not.toContain('Invalid');
+    expect(vi.getTimerCount()).toBe(0);
 
-      act(() => root.unmount());
-    }
-  );
+    act(() => root.unmount());
+  });
 
   it.each(['update', 'creation'])(
     'refreshes the relative %s label from the shared clock',

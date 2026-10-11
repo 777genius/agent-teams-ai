@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskDragHandle } from '@features/task-folders/renderer';
 import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -173,6 +174,7 @@ const SidebarTaskItemContent = ({
   return (
     <button
       type="button"
+      data-task-key={JSON.stringify([task.teamName, task.id])}
       className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onPointerEnter={preloadGlobalTaskDetailDialog}
@@ -225,9 +227,12 @@ const SidebarTaskItemContent = ({
           <span
             className="line-clamp-2 text-[13px] font-medium leading-tight"
             style={{ color: 'var(--color-text-muted)' }}
-            title={displaySubject}
           >
             <StatusIcon className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)} />
+            <TaskDragHandle
+              identity={{ teamName: task.teamName, taskId: task.id }}
+              subject={displaySubject}
+            />
             {unreadCount > 0 &&
               (unreadCount === 1 ? (
                 <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
