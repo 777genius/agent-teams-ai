@@ -4,6 +4,10 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import {
+  findTaskReferenceMatches,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { ArrowUp, Copy, History, ListOrdered, Loader2, Pencil, Trash2 } from 'lucide-react';
 
@@ -23,6 +27,21 @@ export interface QueueListProps {
   readonly onRemove: (item: QueueItem) => Promise<void>;
   readonly onCheck: (item: QueueItem) => Promise<void>;
   readonly onCopy: (item: QueueItem) => Promise<void>;
+}
+
+// Plain textarea edits can leave hidden task metadata attached to a different visible ID.
+function reconcileEditedTaskReferences(text: string): string {
+  let result = '';
+  let cursor = 0;
+  for (const match of findTaskReferenceMatches(text, [])) {
+    result += stripEncodedTaskReferenceMetadata(text.slice(cursor, match.start));
+    result +=
+      match.ref.toLowerCase() === match.suggestion.name.toLowerCase()
+        ? text.slice(match.start, match.end)
+        : match.raw;
+    cursor = match.end;
+  }
+  return result + stripEncodedTaskReferenceMetadata(text.slice(cursor));
 }
 
 const QueueAction = ({
@@ -269,7 +288,7 @@ export const QueueList = ({
                     disabled={disabled || frozen}
                     className="min-h-20 text-xs"
                     onChange={(event) => {
-                      const text = event.target.value;
+                      const text = reconcileEditedTaskReferences(event.target.value);
                       setEditor((current) => (current ? { ...current, text } : null));
                     }}
                     onKeyDown={(event) => {

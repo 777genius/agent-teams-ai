@@ -157,13 +157,10 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
     working: ComposerWorkingRecord,
     epoch: number
   ): Promise<ComposerWorkingRecord> => {
-    if (
-      !scope ||
-      !working.content ||
-      !queueTextValid(working.content.text, MAX_TEXT_LENGTH) ||
-      !isContextScopedRequestEpochCurrent(epoch)
-    )
+    if (!scope || !working.content || !isContextScopedRequestEpochCurrent(epoch))
       throw new Error('queue-conflict');
+    if (!queueTextValid(working.content.text, MAX_TEXT_LENGTH))
+      throw new Error('queue-invalid-text');
     await isBound();
     if (options.route.kind === 'group') {
       const saved = working.content.groupRecipient;

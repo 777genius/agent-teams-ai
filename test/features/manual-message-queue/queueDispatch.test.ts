@@ -372,7 +372,7 @@ describe('selected manual send contract', () => {
               expect(send).not.toHaveBeenCalled();
               if (text !== null && text.length > MAX_TEXT_LENGTH) {
                 expect(consume).toHaveBeenCalledOnce();
-                expect(queue.list.props.error).toBe('messages.manualQueue.conflict');
+                expect(queue.list.props.error).toBe('messages.manualQueue.invalidText');
               } else {
                 expect(consume).not.toHaveBeenCalled();
                 expect(queue.list.props.error).toBeNull();
