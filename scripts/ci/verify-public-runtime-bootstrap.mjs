@@ -19,6 +19,26 @@ const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
 const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-public-runtime-e2e-'));
 const platformKey = `${process.platform}-${process.arch}`;
 
+function phase(name, operation) {
+  const enabled = globalThis.process?.env.CLAUDE_DEV_RUNTIME_DIAGNOSTICS === '1';
+  const started = Date.now();
+  const report = (state) => {
+    if (enabled)
+      process.stderr.write(
+        `[runtime-bootstrap] ${name} ${state} elapsedMs=${Date.now() - started}\n`
+      );
+  };
+  report('begin');
+  try {
+    const result = operation();
+    report(result && (result.error || result.status !== 0) ? 'error' : 'end');
+    return result;
+  } catch (error) {
+    report('error');
+    throw error;
+  }
+}
+
 function fail(message, result) {
   if (result?.stdout) {
     process.stderr.write(result.stdout);
@@ -42,15 +62,18 @@ try {
   delete env.GITHUB_TOKEN;
   delete env.GH_ENTERPRISE_TOKEN;
 
-  const bootstrap = spawnSync(
-    process.execPath,
-    [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env,
-      maxBuffer: 16 * 1024 * 1024,
-    }
+  const bootstrap = phase('anonymous-bootstrap', () =>
+    spawnSync(
+      process.execPath,
+      [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env,
+        maxBuffer: 16 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'inherit'],
+      }
+    )
   );
   if (bootstrap.error || bootstrap.status !== 0) {
     fail(
@@ -86,12 +109,15 @@ try {
     fail(`expected runtime path ${expectedRuntimePath}, got ${runtimePath}`, bootstrap);
   }
 
-  const version = spawnSync(runtimePath, ['--version'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env,
-    maxBuffer: 1024 * 1024,
-  });
+  const version = phase('version', () =>
+    spawnSync(runtimePath, ['--version'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env,
+      maxBuffer: 1024 * 1024,
+      timeout: 30_000,
+    })
+  );
   const versionText = `${version.stdout ?? ''}\n${version.stderr ?? ''}`.trim();
   if (
     version.error ||
@@ -104,15 +130,18 @@ try {
     );
   }
 
-  const cachedBootstrap = spawnSync(
-    process.execPath,
-    [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env,
-      maxBuffer: 1024 * 1024,
-    }
+  const cachedBootstrap = phase('cached-bootstrap', () =>
+    spawnSync(
+      process.execPath,
+      [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env,
+        maxBuffer: 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'inherit'],
+      }
+    )
   );
   if (cachedBootstrap.error || cachedBootstrap.status !== 0) {
     fail(
@@ -144,12 +173,14 @@ try {
   );
 } finally {
   try {
-    fs.rmSync(cacheRoot, {
-      recursive: true,
-      force: true,
-      maxRetries: 5,
-      retryDelay: 200,
-    });
+    phase('cleanup', () =>
+      fs.rmSync(cacheRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      })
+    );
   } catch (error) {
     process.stderr.write(
       `[public-runtime-bootstrap-e2e] warning: failed to remove temporary cache ${cacheRoot}: ${error instanceof Error ? error.message : String(error)}\n`

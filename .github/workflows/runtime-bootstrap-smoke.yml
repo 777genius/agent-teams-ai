@@ -34,7 +34,7 @@ jobs:
   bootstrap:
     name: anonymous bootstrap (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.platform == 'win32-x64' && 45 || 15 }}
     strategy:
       fail-fast: false
       matrix:
@@ -58,4 +58,6 @@ jobs:
           node-version-file: .node-version
 
       - name: Download, extract, and execute pinned runtime anonymously
+        env:
+          CLAUDE_DEV_RUNTIME_DIAGNOSTICS: '1'
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs

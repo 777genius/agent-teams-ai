@@ -383,7 +383,7 @@ async function resolveElectronViteArgs(args) {
 }
 
 function readBinaryVersion(binaryPath) {
-  return runAndCapture(binaryPath, ['--version']);
+  return runAndCapture(binaryPath, ['--version'], { timeout: 30_000 });
 }
 
 function isExecutable(filePath) {
@@ -578,6 +578,38 @@ async function acquireBootstrapLock(lockPath) {
 }
 
 async function ensureBootstrappedRuntime() {
+  function phase(name, operation) {
+    const enabled = globalThis.process?.env.CLAUDE_DEV_RUNTIME_DIAGNOSTICS === '1';
+    const started = Date.now();
+    const report = (state) => {
+      if (enabled)
+        process.stderr.write(
+          `[runtime-bootstrap] ${name} ${state} elapsedMs=${Date.now() - started}\n`
+        );
+    };
+    report('begin');
+    try {
+      const result = operation();
+      if (result && typeof result.then === 'function') {
+        return result.then(
+          (value) => {
+            report('end');
+            return value;
+          },
+          (error) => {
+            report('error');
+            throw error;
+          }
+        );
+      }
+      report('end');
+      return result;
+    } catch (error) {
+      report('error');
+      throw error;
+    }
+  }
+
   const runtimeLock = readRuntimeLock();
   const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
   const platformKey = getPlatformAssetKey();
@@ -597,10 +629,10 @@ async function ensureBootstrappedRuntime() {
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCacheValid()) {
+    if (phase('cache-validation', isCacheValid)) {
       return {
         binaryPath: cachedBinaryPath,
-        versionText: readBinaryVersion(cachedBinaryPath),
+        versionText: phase('cached-version', () => readBinaryVersion(cachedBinaryPath)),
         sourceLabel: `cached release ${runtimeLock.sourceRef}`,
         cacheDir,
         downloaded: false,
@@ -613,24 +645,26 @@ async function ensureBootstrappedRuntime() {
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
-      if (!downloadReleaseAssetWithGh(download, archivePath)) {
-        await downloadWithProgress(download, archivePath);
-      }
+      await phase('download', async () => {
+        if (!downloadReleaseAssetWithGh(download, archivePath)) {
+          await downloadWithProgress(download, archivePath);
+        }
+      });
 
-      await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
+      await phase('checksum', () => verifyRuntimeArchiveChecksum(archivePath, asset, platformKey));
 
       const extractDir = path.join(workDir, 'extracted');
-      extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
+      phase('extract', () => extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit));
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
-      const versionText = readBinaryVersion(extractedBinaryPath);
+      const versionText = phase('extracted-version', () => readBinaryVersion(extractedBinaryPath));
       if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
         throw new Error(
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
-      publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      phase('publish', () => publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256));
       return {
         binaryPath: cachedBinaryPath,
         versionText,
@@ -639,7 +673,7 @@ async function ensureBootstrappedRuntime() {
         downloaded: true,
       };
     } finally {
-      fs.rmSync(workDir, { recursive: true, force: true });
+      phase('work-cleanup', () => fs.rmSync(workDir, { recursive: true, force: true }));
     }
   } finally {
     await lockHandle.close();
