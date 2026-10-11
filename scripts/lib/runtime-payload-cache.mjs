@@ -115,7 +115,17 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
         'System32',
         'tar.exe'
       );
-      runOrExit(tarPath, ['-xf', archivePath, '-C', extractDir]);
+      // Windows bsdtar converts argv paths through the active ANSI code page.
+      // Inherit the open archive file and let Node set the Unicode cwd instead.
+      const archiveFd = fs.openSync(archivePath, 'r');
+      try {
+        runOrExit(tarPath, ['-xf', '-'], {
+          cwd: extractDir,
+          stdio: [archiveFd, 'inherit', 'inherit'],
+        });
+      } finally {
+        fs.closeSync(archiveFd);
+      }
       return;
     }
 

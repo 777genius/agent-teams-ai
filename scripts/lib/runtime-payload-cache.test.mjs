@@ -85,12 +85,14 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
 
     const archive = path.join(root, 'runtime архив with spaces.zip');
     if (process.platform === 'win32') {
-      const tarPath = path.join(
-        process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows',
-        'System32',
-        'tar.exe'
-      );
-      execFileSync(tarPath, ['-caf', archive, '-C', source, '.']);
+      // PowerShell preserves Unicode archive paths and UTF-8 ZIP entry names.
+      const command = `$ErrorActionPreference = 'Stop'; Compress-Archive -LiteralPath '${payload.replace(/'/g, "''")}' -DestinationPath '${archive.replace(/'/g, "''")}' -Force`;
+      execFileSync('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        Buffer.from(command, 'utf16le').toString('base64'),
+      ]);
     } else {
       execFileSync('zip', ['-qr', archive, '.'], { cwd: source });
     }
@@ -101,7 +103,9 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
     );
 
     const extracted = path.join(root, 'extracted тест with spaces');
-    extractArchive(archive, extracted, 'zip', (cmd, args) => execFileSync(cmd, args));
+    extractArchive(archive, extracted, 'zip', (cmd, args, options) =>
+      execFileSync(cmd, args, options)
+    );
     const binary = findExtractedBinary(extracted, 'orchestrator.exe');
     assert.equal(fs.readFileSync(binary, 'utf8'), 'fixture binary; never execute');
     assert.deepEqual(fs.readFileSync(path.join(path.dirname(binary), companion)), contents);

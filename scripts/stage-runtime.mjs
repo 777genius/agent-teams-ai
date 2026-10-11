@@ -62,11 +62,12 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function runOrThrow(command, args) {
+function runOrThrow(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
     stdio: 'inherit',
     shell: false,
+    ...options,
   });
 
   if (result.error) {
