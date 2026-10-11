@@ -48,8 +48,13 @@ export async function gracefulClose(cdp: Cdp, port: number, group: number) {
       endpointClosed = !targets.some((target) => target.type === 'page');
     } catch (error) {
       // A timeout/HTTP/protocol failure does not prove the window closed.
-      if ((error as { cause?: NodeJS.ErrnoException }).cause?.code !== 'ECONNREFUSED') throw error;
-      endpointClosed = true;
+      const code = (error as { cause?: NodeJS.ErrnoException }).cause?.code;
+      if (code === 'ECONNREFUSED') endpointClosed = true;
+      else if (code === 'UND_ERR_SOCKET' || code === 'ECONNRESET') {
+        // An in-flight request can lose its socket during shutdown. Retry for
+        // refusal/no page; socket closure alone is not endpoint closure proof.
+        endpointClosed = false;
+      } else throw error;
     }
     nativeExited = !(await groupProcesses(group)).some((p) => native.some((n) => n.pid === p.pid));
     if (settled && endpointClosed && nativeExited) break;
