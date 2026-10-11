@@ -6,6 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SDK_HEAD = 'd6361e0f50821ffc31cc5a9efd0dcaf6643c850d';
+const CANDIDATE_BASE = 'b43ec00234a6b742052c104716e9c41ed93e337d';
 const NATIVE_SHA = 'bb731f311416df16691fa16763eb87657c4a5f5f3bcff5202718c416e8f7ab1a';
 const SDK_CLOSURE_SHA = '60c1b866f6d90ce272001513e29a84a416306fe64bb61fc7e8fdfe6dbc05706f';
 const sourcePins: ReadonlyArray<readonly [string, string]> = [
@@ -48,8 +49,13 @@ async function json(file: string): Promise<unknown> {
 
 async function main() {
   const instrumented = process.argv[2] === '--instrumented';
-  const args = process.argv.slice(instrumented ? 3 : 2);
-  if (instrumented) Object.assign(receipt, { diagnosticInstrumented: true, environmentEquivalentToPackagedRun: false, wrapperByteIdenticalToPackagedRun: false });
+  const candidate = process.argv[2] === '--production-fix-candidate';
+  const standalone = instrumented || candidate;
+  const sdkKind = candidate ? 'production_fix_candidate' : 'trace';
+  const sdkBase = candidate ? CANDIDATE_BASE : SDK_HEAD;
+  const args = process.argv.slice(standalone ? 3 : 2);
+  if (standalone) Object.assign(receipt, { diagnosticOnly: true, diagnosticInstrumented: instrumented, sdkKind, sdkContainsTrace: instrumented, environmentEquivalentToPackagedRun: false, wrapperByteIdenticalToPackagedRun: false });
+  if (candidate) receipt.retirementEvidenceScope = 'child_close_and_full_census';
   const [sdkArg, rootArg, packageArg, outputArg, ...extra] = args;
   const runnerTemp = process.env.RUNNER_TEMP;
   requireInput(outputArg && runnerTemp && path.isAbsolute(outputArg) && path.isAbsolute(runnerTemp));
@@ -60,7 +66,7 @@ async function main() {
   receiptPath = outputArg;
   saveReceipt();
   requireInput(process.platform === 'win32');
-  if (!instrumented && process.env.SDK_CHECKOUT_OUTCOME !== 'success') {
+  if (!standalone && process.env.SDK_CHECKOUT_OUTCOME !== 'success') {
     receipt.phase = 'sdk_source_unavailable';
     return;
   }
@@ -69,14 +75,17 @@ async function main() {
   requireInput([sdkArg, rootArg, packageArg, runnerTemp].every(value => path.isAbsolute(value)));
   const [sdk, root, packaged, temp] = await Promise.all([sdkArg, rootArg, packageArg, runnerTemp].map(value => realpath(value)));
   requireInput(sdk && root && packaged && temp && contained(root, temp));
-  requireInput(path.basename(root).startsWith(instrumented ? 'TEST-windows-selected-identity-' : 'opencode-diagnostics-e2e-'));
+  requireInput(path.basename(root).startsWith(standalone ? 'TEST-windows-selected-identity-' : 'opencode-diagnostics-e2e-'));
   let native: string;
   let wrapper: string;
   let wrapperHash: string;
-  if (instrumented) {
-    receipt.phase = 'instrumented_provenance';
+  if (standalone) {
+    receipt.phase = 'standalone_provenance';
     const provenance = await json(path.join(root, 'provenance.json'));
-    requireInput(record(provenance) && provenance.diagnosticInstrumented === true && provenance.sdkBase === SDK_HEAD);
+    requireInput(record(provenance) && provenance.diagnosticOnly === true && provenance.diagnosticInstrumented === instrumented &&
+      provenance.sdkKind === sdkKind && provenance.sdkContainsTrace === instrumented && provenance.sdkBase === sdkBase);
+    requireInput(process.env.DIAGNOSTIC_SDK_BASE === sdkBase);
+    requireInput(process.env.DIAGNOSTIC_SDK_KIND === sdkKind);
     requireInput(provenance.sdkHead === process.env.DIAGNOSTIC_SDK_SHA && /^[a-f0-9]{40}$/.test(String(provenance.sdkHead)));
     requireInput(provenance.patchSha256 === process.env.DIAGNOSTIC_PATCH_SHA256 && /^[a-f0-9]{64}$/.test(String(provenance.patchSha256)));
     requireInput(provenance.sdkClosureSha256 === process.env.DIAGNOSTIC_CLOSURE_SHA256 && /^[a-f0-9]{64}$/.test(String(provenance.sdkClosureSha256)));
@@ -94,7 +103,7 @@ async function main() {
       await hash(path.join(packaged, 'scripts', 'stage-opencode-console-wrapper.mjs')) === provenance.wrapper.stageHelperSha256 &&
       await hash(path.join(packaged, 'tools', 'opencode-console-wrapper', 'OpenCodeConsoleWrapper.cs')) === provenance.wrapper.sourceSha256);
     requireInput(record(provenance.runnerImage) && provenance.runnerImage.os === 'Windows' && boundedText(provenance.runnerImage.imageVersion));
-    Object.assign(receipt, { sdkHead: provenance.sdkHead, sdkBase: SDK_HEAD, patchSha256: provenance.patchSha256,
+    Object.assign(receipt, { sdkHead: provenance.sdkHead, sdkBase, patchSha256: provenance.patchSha256,
       sdkClosureSha256: provenance.sdkClosureSha256, productSha: provenance.productSha,
       bun: { version: provenance.bun.version, sha256: provenance.bun.sha256, archiveSha256: provenance.bun.archiveSha256 },
       nativePackage: { name: 'opencode-windows-x64', version: '1.19.0', integrity: 'sha512-FsCVPchl5kjXg/UWGOtc2HuD5Fz+o6LtszUVdlVGmfVA+j/o0fSxjcYBHmIAU9/7P3KezAoQ2kL8YNn40O1DwQ==' },
@@ -141,7 +150,7 @@ async function main() {
   const actualPins: Array<{ path: string; sha256: string }> = [];
   for (const [relative, expected] of sourcePins) {
     const actual = await hash(path.join(sdk, relative));
-    if (!instrumented) requireInput(actual === expected);
+    if (!standalone) requireInput(actual === expected);
     actualPins.push({ path: relative, sha256: actual });
   }
   const closureHash = createHash('sha256').update(JSON.stringify(actualPins)).digest('hex');
@@ -185,7 +194,7 @@ async function main() {
     const result: unknown = await identity.inspectOpenCodeReadSelection(abort.signal);
     if (timedOut) return;
     receipt.elapsedMs = Math.round(performance.now() - started);
-    receipt.physicalRetirement = 'confirmed_by_owned_probe';
+    receipt.physicalRetirement = candidate ? 'confirmed_by_child_close_and_census' : 'confirmed_by_owned_probe';
     receipt.phase = 'admission_result';
     requireInput(record(result) && record(result.policy));
     requireInput(result.path === wrapper && result.fingerprint === wrapperHash);
