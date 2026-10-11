@@ -263,6 +263,89 @@ describe('electron-builder afterPack', () => {
     await expect(validateNativeBinaries(tempDir, platform, arch)).resolves.toEqual([]);
   });
 
+  it.each([
+    ['x64', 1],
+    ['arm64', 3],
+  ] as const)(
+    'prunes only the known portable ffi-rs ia32 optional binary for win32-%s',
+    async (arch, archCode) => {
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+      const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
+      const ia32Package = path.join(graph, '@yuuang/ffi-rs-win32-ia32-msvc');
+      const foreign = path.join(ia32Package, 'ffi-rs.win32-ia32-msvc.node');
+      const target = path.join(
+        graph,
+        `@yuuang/ffi-rs-win32-${arch}-msvc/ffi-rs.win32-${arch}-msvc.node`
+      );
+      const bytes = createPortableExecutableBuffer(arch);
+      const documentation = path.join(ia32Package, 'README.md');
+      writeFile(foreign, createPortableExecutableBuffer('ia32'));
+      writeFile(target, bytes);
+      writeFile(documentation, Buffer.from('package documentation'));
+      await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: archCode });
+      expect(fs.existsSync(foreign)).toBe(false);
+      expect(fs.readFileSync(target)).toEqual(bytes);
+      expect(fs.readFileSync(documentation)).toEqual(Buffer.from('package documentation'));
+      await expect(validateNativeBinaries(tempDir, 'win32', arch)).resolves.toEqual([]);
+    }
+  );
+
+  it('preserves compatible bytes under the ia32 ffi-rs filename and on ia32 targets', async () => {
+    for (const [arch, archCode] of [
+      ['x64', 1],
+      ['ia32', 0],
+    ] as const) {
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+      const file = path.join(
+        tempDir,
+        'resources/runtime/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node'
+      );
+      const bytes = createPortableExecutableBuffer(arch);
+      writeFile(file, bytes);
+      await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: archCode });
+      expect(fs.readFileSync(file)).toEqual(bytes);
+    }
+  });
+
+  it.each([
+    [
+      'unknown package',
+      'resources/runtime/local-cli/node_modules/unknown/ffi-rs.win32-ia32-msvc.node',
+      createPortableExecutableBuffer('ia32'),
+    ],
+    [
+      'unknown filename',
+      'resources/runtime/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/other.node',
+      createPortableExecutableBuffer('ia32'),
+    ],
+    [
+      'outside runtime graph',
+      'resources/app.asar.unpacked/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node',
+      createPortableExecutableBuffer('ia32'),
+    ],
+    [
+      'wrong binary format',
+      'resources/runtime/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node',
+      createElfBuffer('x64'),
+    ],
+    [
+      'wrong foreign architecture',
+      'resources/runtime/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node',
+      createPortableExecutableBuffer('arm64'),
+    ],
+  ] as const)('keeps ffi-rs pruning fail-closed for %s', async (_label, relative, bytes) => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const file = path.join(tempDir, relative);
+    writeFile(file, bytes);
+    await expect(
+      afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 1 })
+    ).rejects.toThrow('Found incompatible native binaries');
+    expect(fs.readFileSync(file)).toEqual(bytes);
+  });
+
   it('keeps unknown runtime binaries and rejects malformed target prebuilds', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

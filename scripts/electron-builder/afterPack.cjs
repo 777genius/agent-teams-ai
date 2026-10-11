@@ -258,6 +258,20 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
     );
 
   if (isPortableRuntimeGraph) {
+    const ffiIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      '@yuuang',
+      'ffi-rs-win32-ia32-msvc',
+      'ffi-rs.win32-ia32-msvc.node',
+    ]);
+    if (
+      targetPlatform === 'win32' &&
+      (targetArch === 'x64' || targetArch === 'arm64') &&
+      ffiIndex >= 0 &&
+      segments.length === ffiIndex + 4
+    ) {
+      return filePath;
+    }
     const prebuildIndex = findNodeModulesSequence(segments, [
       'node_modules',
       'tree-sitter-bash',
@@ -367,6 +381,14 @@ async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, 
     }
 
     if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+      continue;
+    }
+
+    // The ffi-rs optional artifact must also match its advertised PE ia32 header.
+    if (
+      path.basename(rootToRemove) === 'ffi-rs.win32-ia32-msvc.node' &&
+      (metadata.format !== 'pe' || metadata.archs.size !== 1 || !metadata.archs.has('ia32'))
+    ) {
       continue;
     }
 
