@@ -2243,7 +2243,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(humanText).not.toContain('<opencode_delivery_context>');
     expect(humanText).toContain('Original User MessageId: human-direct-1');
     expect(humanText).toContain('Use this exact sourceMessageId, never guess one; ASK cannot authorize creation.');
-    const replyEnvelope = humanText.match(/Required message_send argument envelope: (.+)\. Copy every/);
+    const replyEnvelope = /Required message_send argument envelope: (.+)\. Copy every/.exec(humanText);
     expect(JSON.parse(replyEnvelope?.[1] ?? '{}')).toEqual({
       teamName: 'team-a', to: 'user', from: 'bob', source: 'runtime_delivery',
       relayOfMessageId: 'human-direct-1',

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
-import { registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
+import { createDesktopTeamGroupChats, registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
 import { createOpenCodeBridgeHandshakeIdentityHash, type OpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
@@ -377,6 +377,36 @@ describe('group chat main authority and durable identity', () => {
       await expect(
         feature.createFromAgent({ ...creationRequest, sourceMessageId: freshId })
       ).resolves.toMatchObject({ name: 'Release' });
+      for (const metadataOnly of [true, false]) {
+        const members = ['a-captain', 'alice', 'bob'].map((name) => ({ name }));
+        await writeFile(join(state.root, 'sandbox', 'config.json'), JSON.stringify({
+          name: 'sandbox', members: metadataOnly ? [] : members,
+        }));
+        await writeFile(join(state.root, 'sandbox', 'members.meta.json'), JSON.stringify({
+          version: 1, members: metadataOnly ? members : [],
+        }));
+        const leadService = new TeamDataService();
+        expect(await leadService.getLeadMemberName('sandbox')).toBe('a-captain');
+        const desktopFeature = createDesktopTeamGroupChats({
+          leadName: (teamName) => leadService.getLeadMemberName(teamName),
+          snapshot: async () => ({ teamName: 'sandbox', runId: null,
+            updatedAt: new Date().toISOString(), members: {} }),
+          openCodeRun: async () => null,
+          configurationOperation: (_team, operation) => operation(),
+          inboxWriter: new TeamInboxWriter(), changed: inboxChanged, reactionChanged,
+        });
+        const delegateId = randomUUID();
+        await service.sendDirectToLead('sandbox', 'a-captain', original().text,
+          undefined, undefined, undefined, delegateId, 'delegate');
+        await expect(desktopFeature.createFromAgent({ ...creationRequest,
+          from: 'a-captain', sourceMessageId: delegateId,
+        })).resolves.toMatchObject({ name: 'Release', memberNames: ['alice', 'bob'] });
+        const nonLeadId = randomUUID();
+        await stageOriginal({ to: 'alice', actionMode: 'delegate', messageId: nonLeadId });
+        await expect(desktopFeature.createFromAgent({ ...creationRequest,
+          from: 'alice', sourceMessageId: nonLeadId,
+        })).rejects.toMatchObject({ code: 'invalid-user-request' });
+      }
     } finally {
       state.root = claudeDir;
     }

@@ -1,7 +1,6 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { createGroupChatRuntimePorts } from '../infrastructure/groupChatRuntimePorts';
 
@@ -15,6 +14,7 @@ import type { TeamAgentRuntimeSnapshot } from '@shared/types';
 export function createDesktopTeamGroupChats(deps: {
   snapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
   openCodeRun(teamName: string, memberName: string): Promise<GroupChatRun | null>;
+  leadName: NonNullable<TeamGroupChatsPorts['leadName']>;
   configurationOperation: TeamGroupChatsPorts['configurationOperation'];
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   changed: NonNullable<TeamGroupChatsPorts['changed']>;
@@ -43,18 +43,7 @@ export function createDesktopTeamGroupChats(deps: {
         ),
       ];
     },
-    leadName: async (teamName) => {
-      const [config, metadata] = await Promise.all([
-        configReader.getConfig(teamName),
-        membersMeta.getMembers(teamName),
-      ]);
-      if (!config || config.deletedAt) throw new Error('Team not found');
-      return (
-        memberResolver
-          .resolveMembers(config, metadata, [], [])
-          .find((member) => !member.removedAt && isLeadMember(member))?.name ?? null
-      );
-    },
+    leadName: deps.leadName,
     getRun: runtime.getRun,
     configurationOperation: deps.configurationOperation,
     deliver: async (teamName, message, run, shouldStillWrite) => {
