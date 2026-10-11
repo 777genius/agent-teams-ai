@@ -135,3 +135,7 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   throw new Error(`Unsupported runtime archive kind: ${archiveKind}`);
 }
+
+export function logRuntimePhase(message) {
+  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
+}
