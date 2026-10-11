@@ -108,11 +108,24 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrExit('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -Path '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      // Windows ships bsdtar with ZIP support. Use the system executable so
+      // Git's GNU tar on PATH cannot shadow it (GNU tar cannot extract ZIPs).
+      const tarPath = path.join(
+        process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows',
+        'System32',
+        'tar.exe'
+      );
+      // Windows bsdtar converts argv paths through the active ANSI code page.
+      // Inherit the open archive file and let Node set the Unicode cwd instead.
+      const archiveFd = fs.openSync(archivePath, 'r');
+      try {
+        runOrExit(tarPath, ['-xf', '-'], {
+          cwd: extractDir,
+          stdio: [archiveFd, 'inherit', 'inherit'],
+        });
+      } finally {
+        fs.closeSync(archiveFd);
+      }
       return;
     }
 
@@ -121,4 +134,8 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
   }
 
   throw new Error(`Unsupported runtime archive kind: ${archiveKind}`);
+}
+
+export function logRuntimePhase(message) {
+  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
 }
