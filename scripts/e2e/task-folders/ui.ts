@@ -121,6 +121,38 @@ export class UI {
     const button = label('Expand folder', folderRow(id));
     if (await this.value(`!!(${button})`)) await this.click(button);
   }
+  async accessibility(expression: string) {
+    const result = (await this.cdp.send('Runtime.evaluate', {
+      expression,
+      returnByValue: false,
+    })) as { result: { objectId?: string } };
+    const objectId = result.result.objectId;
+    assert(objectId, 'Missing accessibility target: ' + expression);
+    try {
+      const { node } = (await this.cdp.send('DOM.describeNode', { objectId })) as {
+        node: { backendNodeId: number };
+      };
+      const { nodes } = (await this.cdp.send('Accessibility.getPartialAXTree', {
+        backendNodeId: node.backendNodeId,
+        fetchRelatives: false,
+      })) as {
+        nodes: {
+          ignored: boolean;
+          role?: { value: string };
+          name?: { value: string };
+          description?: { value: string };
+        }[];
+      };
+      assert(nodes[0] && !nodes[0].ignored, 'Accessibility target is ignored');
+      return {
+        role: nodes[0].role?.value,
+        name: nodes[0].name?.value,
+        description: nodes[0].description?.value,
+      };
+    } finally {
+      await this.cdp.send('Runtime.releaseObject', { objectId });
+    }
+  }
   async snapshot(): Promise<Snapshot> {
     return await this.value('JSON.parse(localStorage.getItem("taskFolders:v1"))');
   }
@@ -149,7 +181,11 @@ export class UI {
     await this.cdp.evaluate('document.activeElement?.blur()');
     await this.move({ x: 10, y: 80 });
   }
-  async beginDrag(source: string, expectedTask?: { teamName: string; taskId: string }) {
+  async beginDrag(
+    source: string,
+    expectedTask?: { teamName: string; taskId: string },
+    expectPanel = true
+  ) {
     this.desktop.takeDrag();
     await this.cdp.evaluate(`(() => {window.__taskFoldersE2EDragStarts=[];
       if(!window.__taskFoldersE2EObserving){window.__taskFoldersE2EObserving=true;
@@ -199,7 +235,7 @@ export class UI {
       observedDragStarts: observed,
       at: new Date().toISOString(),
     });
-    await this.wait(el(selectors.panel), 'native drag opened panel');
+    if (expectPanel) await this.wait(el(selectors.panel), 'native drag opened panel');
     return data;
   }
   async dragOver(data: Record<string, unknown>, point: Point, enter = false) {

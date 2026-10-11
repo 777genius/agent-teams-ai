@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Desktop, delay, fixture, json } from './task-folders/runtime.ts';
+import { narrowViewport } from './task-folders/narrow.ts';
 import { UI, el, folderRow, label, selectors, taskRow } from './task-folders/ui.ts';
 import type { Snapshot } from '../../src/features/task-folders/core/domain/folders.ts';
 
@@ -49,6 +50,8 @@ async function main() {
     'scripts/e2e/task-folders/runtime.ts',
     'scripts/e2e/task-folders/ui.ts',
     'scripts/e2e/task-folders/deny-runtime.ts',
+    'scripts/e2e/task-folders/shutdown.ts',
+    'scripts/e2e/task-folders/narrow.ts',
     'scripts/tsconfig/tsconfig.desktop-e2e.json',
   ];
   const harnessHashes = Object.fromEntries(
@@ -124,7 +127,7 @@ async function main() {
   let cleanupPromise: Promise<void> | undefined;
   const cleanup = () =>
     (cleanupPromise ??= (async () => {
-      await desktop.stop().catch((error) => {
+      await desktop.stop(!passed).catch((error) => {
         passed = false;
         failure = String(error);
         process.exitCode = 1;
@@ -186,10 +189,19 @@ async function main() {
         localStorage.setItem('taskFolders:v1',${JSON.stringify(JSON.stringify(f.snapshot))});
         localStorage.setItem('taskArchivedIds',${JSON.stringify(JSON.stringify([f.team + ':archived']))});
       })()`);
+      const origin = await ui.value<string>('location.origin');
       await desktop.stop();
       await desktop.start();
+      assert.equal(
+        await ui.value('location.origin'),
+        origin,
+        'Seed restart storage origin changed'
+      );
       assert.deepEqual(await ui.snapshot(), f.snapshot);
-      return { folders: f.snapshot.folders.length, team: f.team, seededStorageOnly: true };
+      assert.deepEqual(await ui.value('JSON.parse(localStorage.getItem("taskArchivedIds"))'), [
+        f.team + ':archived',
+      ]);
+      return { folders: f.snapshot.folders.length, team: f.team, origin, seededStorageOnly: true };
     });
     await check('manual-toggle-and-adjacent-geometry', async () => {
       await ui.cdp.send('Emulation.setDeviceMetricsOverride', {
@@ -312,6 +324,13 @@ async function main() {
         `${taskRow(f.team, 'a')}.querySelector('[aria-label="Archived task"]')`,
         'accessible archived icon'
       );
+      const accessible = await ui.accessibility(taskRow(f.team, 'a'));
+      assert.equal(accessible.role, 'treeitem');
+      assert(accessible.name?.includes('TEST task a'), JSON.stringify(accessible));
+      assert(
+        /Archived task/i.test([accessible.name, accessible.description].join(' ')),
+        JSON.stringify(accessible)
+      );
       assert(
         await ui.value(`Number(getComputedStyle(${taskRow(f.team, 'a')}).opacity)<1`),
         'Archived row must be muted'
@@ -335,11 +354,23 @@ async function main() {
         `!${taskRow(f.team, 'a')}.querySelector('[aria-label="Archived task"]')`,
         'restored active row'
       );
+      const restored = await ui.accessibility(taskRow(f.team, 'a'));
+      assert(
+        !/Archived task/i.test([restored.name, restored.description].join(' ')),
+        JSON.stringify(restored)
+      );
       assert.deepEqual(await ui.snapshot(), before);
+      return { archived: accessible, restored };
     });
     await check('keyboard-move-chooser', async () => {
       // Main sidebar handle has a keyboard equivalent; invoke Enter on the actual focused control.
       await ui.value(`${taskSource('b')}.focus()`);
+      assert(
+        await ui.value(
+          `document.activeElement === ${taskSource('b')} && document.activeElement.matches('button,[role="button"]')`
+        ),
+        'Actual drag handle button must receive keyboard activation'
+      );
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
       await ui.click(label('Destination folder', el('[role="dialog"]')));
@@ -486,37 +517,7 @@ async function main() {
         nativeDropTarget: target,
       };
     });
-    await check('narrow-viewport', async () => {
-      await ui.cdp.send('Emulation.setDeviceMetricsOverride', {
-        width: 440,
-        height: 750,
-        deviceScaleFactor: 1,
-        mobile: false,
-      });
-      await delay(300);
-      await ui.open();
-      const geometry = await ui.value<{
-        left: number;
-        right: number;
-        width: number;
-        sidebarLeft: number;
-      }>(
-        `(() => {const p=${el(selectors.panel)}.getBoundingClientRect();const s=${el(selectors.sidebar)}.getBoundingClientRect();return {left:p.left,right:p.right,width:p.width,sidebarLeft:s.left};})()`
-      );
-      assert(
-        geometry.left >= 0 && geometry.right <= 440 && geometry.width > 0 && geometry.width <= 200,
-        JSON.stringify(geometry)
-      );
-      assert(Math.abs(geometry.right - geometry.sidebarLeft) <= 2, 'Narrow panel overlaps sidebar');
-      await screenshot('narrow-viewport');
-      await ui.cdp.send('Emulation.setDeviceMetricsOverride', {
-        width: 1280,
-        height: 850,
-        deviceScaleFactor: 1,
-        mobile: false,
-      });
-      return geometry;
-    });
+    await check('narrow-viewport', () => narrowViewport(ui, f, screenshot));
     await check('missing-reference-reappears', async () => {
       await ui.value(`${el(selectors.tree)}.scrollTop=0`);
       await expandSeeds();
@@ -567,7 +568,15 @@ async function main() {
         `${taskRow(f.team, 'archived')}.querySelector('[aria-label="Archived task"]')`,
         'archived task survives process restart'
       );
+      const accessible = await ui.accessibility(taskRow(f.team, 'archived'));
+      assert.equal(accessible.role, 'treeitem');
+      assert(accessible.name?.includes('TEST task archived'), JSON.stringify(accessible));
+      assert(
+        /Archived task/i.test([accessible.name, accessible.description].join(' ')),
+        JSON.stringify(accessible)
+      );
       await capture('after-restart');
+      return { origin, accessibility: accessible };
     });
     await check('no-runtime-launch-or-renderer-faults', async () => {
       const audit = (await readFile(f.audit, 'utf8'))
@@ -598,7 +607,10 @@ async function main() {
       [...declared],
       'Every declared check must pass'
     );
-    assert.equal(screenshots.length, 3);
+    assert.deepEqual(
+      screenshots.map((file) => path.basename(file)),
+      ['adjacent-panel.png', 'nested-tree-archived.png', 'narrow-360.png', 'narrow-440.png']
+    );
     passed = true;
   } catch (error) {
     failure = error instanceof Error ? error.stack : String(error);

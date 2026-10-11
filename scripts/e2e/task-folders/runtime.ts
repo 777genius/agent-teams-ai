@@ -5,6 +5,7 @@ import { chmod, mkdir, mkdtemp, readFile, realpath, utimes, writeFile } from 'no
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { gracefulClose, stopOwnedGroup } from './shutdown.ts';
 // Existing transport only; the harness below owns its typed interaction contract.
 // @ts-expect-error Existing CDP JavaScript transport has no declarations.
 import { CdpClient } from '../comment-notification/cdp.mjs';
@@ -35,11 +36,13 @@ export async function fixture(repo: string) {
     process.env.TASK_FOLDERS_E2E_SCRATCH ?? path.join(repo, '.tool', 'scratch')
   );
   assert(scratch.startsWith('/srv/workers/'), 'Scratch must be under /srv/workers');
-  if (process.env.TMPDIR)
+  if (process.env.TMPDIR) {
+    const tmp = await realpath(process.env.TMPDIR);
     assert(
-      process.env.TMPDIR.startsWith('/srv/workers/'),
-      'TMPDIR must be job scratch under /srv/workers'
+      tmp.startsWith(path.join(repo, '.tool') + path.sep) || tmp.startsWith(scratch + path.sep),
+      'TMPDIR must resolve inside owned job scratch'
     );
+  }
   const root = await mkdtemp(path.join(scratch, 'tf-TEST-'));
   try {
     const team = 'task-folders-TEST-' + randomUUID();
@@ -84,10 +87,6 @@ export async function fixture(repo: string) {
     ];
     await Promise.all(dirs.map((dir) => mkdir(dir, { recursive: true })));
     if (process.env.TMPDIR) {
-      assert(
-        process.env.TMPDIR.startsWith('/srv/workers/'),
-        'TMPDIR must be job scratch under /srv/workers'
-      );
       // Preserve operator's short symlink spelling for UNIX socket path limits.
       env.TMPDIR = await mkdtemp(path.join(process.env.TMPDIR, 'tf-'));
     }
@@ -229,6 +228,8 @@ export class Desktop {
   faults: unknown[] = [];
   ownership: unknown[] = [];
   private spawnError?: Error;
+  private rendererPort?: number;
+  private rendererOrigin?: string;
   private intercepted?: Record<string, unknown>;
   constructor(
     readonly repo: string,
@@ -245,15 +246,40 @@ export class Desktop {
       .then((result) => result.stdout)
       .catch((error) => 'ss ownership probe failed: ' + String(error));
     this.ownership.push({ defaultPort: 9222, available, portOwnership });
+    assert(!this.app, 'Previous owned launch must stop before restart');
+    if (!this.rendererPort) {
+      this.rendererPort = await new Promise<number>((resolve, reject) => {
+        const server = createServer();
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => {
+          const address = server.address();
+          assert(address && typeof address !== 'string');
+          server.close(() => resolve(address.port));
+        });
+      });
+    }
+    // Installed electron-vite 5 documents --config (not a renderer --port flag).
+    // strictPort fails on a collision instead of silently changing the storage origin.
+    const config = path.join(this.f.root, 'electron.e2e.config.mts');
+    await writeFile(
+      config,
+      `import config from ${JSON.stringify(path.join(this.repo, 'electron.vite.config.ts'))};
+export default {...config, renderer: {...config.renderer, server: {...config.renderer?.server, port: ${this.rendererPort}, strictPort: true}}};
+`
+    );
     const pnpm = process.env.TASK_FOLDERS_E2E_PNPM;
     this.logs = '';
     this.spawnError = undefined;
-    this.app = spawn(pnpm ? process.execPath : 'pnpm', pnpm ? [pnpm, 'dev:mcp'] : ['dev:mcp'], {
-      cwd: this.repo,
-      env: this.f.env,
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    this.app = spawn(
+      pnpm ? process.execPath : 'pnpm',
+      pnpm ? [pnpm, 'dev:mcp', '--', '--config', config] : ['dev:mcp', '--', '--config', config],
+      {
+        cwd: this.repo,
+        env: this.f.env,
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
     this.app.on('error', (error) => {
       this.spawnError = error;
     });
@@ -299,6 +325,10 @@ export class Desktop {
       (t) => t.type === 'page' && /^http:\/\/localhost:\d+/.test(t.url)
     );
     assert(renderer, 'Owned desktop renderer missing');
+    const origin = new URL(renderer.url).origin;
+    assert.equal(new URL(origin).port, String(this.rendererPort), 'Unexpected renderer port');
+    if (this.rendererOrigin) assert.equal(origin, this.rendererOrigin, 'Renderer origin changed');
+    this.rendererOrigin = origin;
     await this.cdp?.close();
     this.cdp = (await CdpClient.connect(renderer.webSocketDebuggerUrl)) as Cdp;
     this.ownership.push({
@@ -355,25 +385,31 @@ export class Desktop {
     this.intercepted = undefined;
     return data;
   }
-  async stop() {
-    await this.cdp?.close().catch(() => undefined);
-    this.cdp = undefined;
-    if (this.app?.pid) {
-      const group = this.app.pid;
-      for (const [signal, wait] of [
-        ['SIGTERM', 1000],
-        ['SIGKILL', 100],
-      ] as const) {
-        try {
-          process.kill(-group, signal);
-        } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== 'ESRCH') throw e;
-        }
-        await delay(wait);
+  async stop(emergency = false) {
+    const group = this.app?.pid;
+    try {
+      if (group && !emergency) {
+        assert(this.cdp && this.port, 'Graceful stop requires owned renderer');
+        const evidence = await gracefulClose(this.cdp, this.port, group);
+        this.ownership.push({ gracefulClose: evidence, group });
       }
-      this.ownership.push({ stoppedGroup: group, stoppedAt: new Date().toISOString() });
+    } finally {
+      // Only after native exit (or a failed close): remove own launcher/build descendants.
+      if (group) await stopOwnedGroup(group);
+      if (this.cdp) {
+        await Promise.race([
+          this.cdp.close(),
+          delay(2000).then(() => {
+            throw new Error('CDP cleanup timed out');
+          }),
+        ]);
+      }
+      this.cdp = undefined;
+      this.port = undefined;
+      this.ownership.push({ stoppedGroup: group, emergency, stoppedAt: new Date().toISOString() });
+      this.logHistory.push(this.logs);
+      this.logs = '';
+      this.app = undefined;
     }
-    this.logHistory.push(this.logs);
-    this.app = undefined;
   }
 }
