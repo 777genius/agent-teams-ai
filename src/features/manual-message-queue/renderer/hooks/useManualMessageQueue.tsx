@@ -92,7 +92,7 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
     const load = async (): Promise<void> => {
       const capturedVersion = ++version;
       try {
-        const scope = await captureQueueScope(owner.teamName, owner.route);
+        const scope = await captureQueueScope(owner.teamName, owner.route, useStore.getState);
         const items = await queueRepository.list(scope, ownsQueueAttempt);
         if (active && capturedVersion === version && identityRef.current === identity) {
           setLoaded({ identity, scope, items });
@@ -132,7 +132,8 @@ export function useManualMessageQueue(options: ManualQueueOptions): ManualQueueB
       setBusy(false);
     }
   };
-  const binding = (): Promise<QueueScope> => captureQueueScope(options.teamName, options.route);
+  const binding = (): Promise<QueueScope> =>
+    captureQueueScope(options.teamName, options.route, useStore.getState);
   const isBound = async (): Promise<void> => {
     if (
       !scope ||

@@ -128,7 +128,7 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 
-vi.mock('@features/manual-message-queue/renderer', () => ({
+vi.mock('@features/manual-message-queue', () => ({
   captureManualQueueNamespace: hoisted.captureManualQueueNamespace,
   discardManualMessageQueueNamespace: hoisted.discardManualMessageQueueNamespace,
 }));
@@ -4538,7 +4538,10 @@ describe('teamSlice actions', () => {
       'context-before-delete',
       'my-team'
     );
-    expect(hoisted.captureManualQueueNamespace).toHaveBeenCalledWith('my-team');
+    expect(hoisted.captureManualQueueNamespace).toHaveBeenCalledWith(
+      'my-team',
+      expect.any(Function)
+    );
     expect(hoisted.discardManualMessageQueueNamespace).toHaveBeenCalledWith(namespace);
     expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
     expect(store.getState().teamDataCacheByName['other-team']).toBeDefined();

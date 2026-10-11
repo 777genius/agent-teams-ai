@@ -88,14 +88,16 @@ describe('selected manual send contract', () => {
       host: 'sandbox',
       remoteProjectsPath: '/remote/projects',
     });
-    const captured = await captureQueueScope('test-team', directRoute);
+    const captured = await captureQueueScope('test-team', directRoute, () => bindingPorts.state);
     expect(captured).toMatchObject({
       root: '/local/configured/.claude',
       contextId: 'ssh-sandbox',
       host: 'sandbox',
     });
     bindingPorts.ssh.mockResolvedValue({ state: 'connected', host: 'different' });
-    await expect(captureQueueScope('test-team', directRoute)).rejects.toThrow('rootUnavailable');
+    await expect(
+      captureQueueScope('test-team', directRoute, () => bindingPorts.state)
+    ).rejects.toThrow('rootUnavailable');
     bindingPorts.ssh.mockResolvedValue({ state: 'connected', host: 'sandbox' });
     bindingPorts.root.mockImplementation(async () => {
       bindingPorts.state = {
@@ -105,7 +107,9 @@ describe('selected manual send contract', () => {
       };
       return { resolvedPath: '/local/configured/.claude' };
     });
-    await expect(captureQueueScope('test-team', directRoute)).rejects.toThrow('rootUnavailable');
+    await expect(
+      captureQueueScope('test-team', directRoute, () => bindingPorts.state)
+    ).rejects.toThrow('rootUnavailable');
   });
   it('claims before one direct transport, shares the ordinary-send latch, survives remount, and settles without its UI', async () => {
     const { repository, target, item } = await queued();

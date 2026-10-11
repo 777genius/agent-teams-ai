@@ -1,5 +1,4 @@
 import { api } from '@renderer/api';
-import { useStore } from '@renderer/store';
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
@@ -7,26 +6,36 @@ import {
 
 import type { QueueRoute, QueueScope } from '../../core/domain/queue';
 
-export async function captureQueueNamespace(teamName: string): Promise<Omit<QueueScope, 'chat'>> {
+export interface QueueNamespaceAuthority {
+  readonly activeContextId: string;
+  readonly isContextSwitching: boolean;
+  readonly connectedHost: string | null;
+}
+
+export async function captureQueueNamespace(
+  teamName: string,
+  getAuthority: () => QueueNamespaceAuthority
+): Promise<Omit<QueueScope, 'chat'>> {
   const epoch = captureContextScopedRequestEpoch();
-  const state = useStore.getState();
+  const state = getAuthority();
   const contextId = state.activeContextId;
   if (state.isContextSwitching) throw new Error('rootUnavailable');
   const [root, ssh] = await Promise.all([
     api.config.getClaudeRootInfo(),
     contextId === 'local' ? Promise.resolve(null) : api.ssh.getState(),
   ]);
+  const current = getAuthority();
   if (
     !root.resolvedPath ||
     !isContextScopedRequestEpochCurrent(epoch) ||
-    useStore.getState().activeContextId !== contextId ||
-    useStore.getState().isContextSwitching ||
+    current.activeContextId !== contextId ||
+    current.isContextSwitching ||
     (contextId !== 'local' &&
       (ssh?.state !== 'connected' ||
         !ssh.host ||
         contextId !== 'ssh-' + ssh.host ||
         state.connectedHost !== ssh.host ||
-        useStore.getState().connectedHost !== ssh.host))
+        current.connectedHost !== ssh.host))
   )
     throw new Error('rootUnavailable');
   return {
@@ -38,9 +47,13 @@ export async function captureQueueNamespace(teamName: string): Promise<Omit<Queu
   };
 }
 
-export async function captureQueueScope(teamName: string, route: QueueRoute): Promise<QueueScope> {
+export async function captureQueueScope(
+  teamName: string,
+  route: QueueRoute,
+  getAuthority: () => QueueNamespaceAuthority
+): Promise<QueueScope> {
   return {
-    ...(await captureQueueNamespace(teamName)),
+    ...(await captureQueueNamespace(teamName, getAuthority)),
     chat: route.kind === 'direct' ? 'direct:' + route.participant : 'group:' + route.groupChatId,
   };
 }

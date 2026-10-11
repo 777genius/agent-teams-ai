@@ -1,7 +1,7 @@
 import {
   captureManualQueueNamespace,
   discardManualMessageQueueNamespace,
-} from '@features/manual-message-queue/renderer';
+} from '@features/manual-message-queue';
 import {
   type QueuedMessagesHeadRead,
   readTeamData,
@@ -3987,7 +3987,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   permanentlyDeleteTeam: async (teamName: string) => {
     const deletedContextId = get().activeContextId;
-    const queueNamespace = captureManualQueueNamespace(teamName).catch((error) => {
+    const queueNamespace = captureManualQueueNamespace(teamName, get).catch((error) => {
       logger.warn(`Manual queue scope capture failed for ${teamName}`, error);
       return null;
     });
