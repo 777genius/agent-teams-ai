@@ -46,6 +46,10 @@ const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
 const terminalDaemonBinaryEnv = 'CLAUDE_TERMINAL_DAEMON_BINARY';
 const organizationDemoEnv = 'AGENT_TEAMS_ORG_DEMO';
 
+function logRuntimePhase(message) {
+  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
+}
+
 function prependPathEntries(entries) {
   const currentPath = process.env.PATH ?? '';
   const currentEntries = new Set(currentPath.split(path.delimiter).filter(Boolean));
@@ -383,7 +387,10 @@ async function resolveElectronViteArgs(args) {
 }
 
 function readBinaryVersion(binaryPath) {
-  return runAndCapture(binaryPath, ['--version']);
+  logRuntimePhase(`checking executable version: ${binaryPath}`);
+  const version = runAndCapture(binaryPath, ['--version']);
+  logRuntimePhase(`executable version checked: ${version}`);
+  return version;
 }
 
 function isExecutable(filePath) {
@@ -416,12 +423,15 @@ function isCachedBinaryValid(binaryPath, expectedVersion) {
 }
 
 async function downloadWithProgress(download, destinationPath) {
+  logRuntimePhase(`requesting anonymous release asset: ${download.assetName}`);
   const response = await fetch(download.url, {
     headers: {
       'user-agent': 'claude-team-dev-runtime-bootstrap',
     },
     redirect: 'follow',
+    signal: AbortSignal.timeout(180_000),
   });
+  logRuntimePhase(`release response: HTTP ${response.status}`);
 
   if (!response.ok || !response.body) {
     throw new Error(
@@ -594,10 +604,13 @@ async function ensureBootstrappedRuntime() {
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
   ensureDir(cacheDir);
+  logRuntimePhase(`acquiring cache lock for ${platformKey} release ${runtimeLock.version}`);
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
+    logRuntimePhase('validating cached runtime payload');
     if (isCacheValid()) {
+      logRuntimePhase('cached runtime payload validated');
       return {
         binaryPath: cachedBinaryPath,
         versionText: readBinaryVersion(cachedBinaryPath),
@@ -613,14 +626,18 @@ async function ensureBootstrappedRuntime() {
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
+      logRuntimePhase(`downloading release asset: ${asset.file}`);
       if (!downloadReleaseAssetWithGh(download, archivePath)) {
         await downloadWithProgress(download, archivePath);
       }
 
+      logRuntimePhase('verifying archive checksum');
       await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
 
       const extractDir = path.join(workDir, 'extracted');
+      logRuntimePhase(`extracting ${asset.archiveKind} archive`);
       extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
+      logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
@@ -630,7 +647,9 @@ async function ensureBootstrappedRuntime() {
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
+      logRuntimePhase('publishing verified runtime payload');
       publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      logRuntimePhase('runtime payload published');
       return {
         binaryPath: cachedBinaryPath,
         versionText,
@@ -639,11 +658,13 @@ async function ensureBootstrappedRuntime() {
         downloaded: true,
       };
     } finally {
+      logRuntimePhase('removing bootstrap work directory');
       fs.rmSync(workDir, { recursive: true, force: true });
     }
   } finally {
     await lockHandle.close();
     await fs.promises.rm(path.join(cacheDir, '.bootstrap.lock'), { force: true });
+    logRuntimePhase('cache lock released');
   }
 }
 
