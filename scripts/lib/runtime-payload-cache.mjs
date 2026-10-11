@@ -108,11 +108,14 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrExit('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -Path '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      // Windows ships bsdtar with ZIP support. Use the system executable so
+      // Git's GNU tar on PATH cannot shadow it (GNU tar cannot extract ZIPs).
+      const tarPath = path.join(
+        process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows',
+        'System32',
+        'tar.exe'
+      );
+      runOrExit(tarPath, ['-xf', archivePath, '-C', extractDir]);
       return;
     }
 
