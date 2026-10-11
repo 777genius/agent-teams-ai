@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
-import { zipFixture } from './runtime-zip.test-fixture.mts';
+import {
+  ambiguousDirectoryFixture,
+  xlLinkFixture,
+  zipExtra,
+  zip64Footer,
+  zipFixture,
+} from './runtime-zip.test-fixture.mts';
 
 function archiveTest(bytes: Buffer, check: (file: string) => void): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-runtime-zip-preflight-'));
@@ -26,6 +33,10 @@ for (const name of [
   'runtime/.. /escape',
   'runtime/COM¹.log',
   'runtime/LPT³',
+  'runtime/COM0.log',
+  'runtime/LPT0',
+  'runtime/CONIN$',
+  'runtime/CONOUT$.log',
 ]) {
   test(`rejects unsafe ZIP path before extraction: ${name}`, () =>
     archiveTest(zipFixture([{ name, data: 'forbidden' }]), (file) =>
@@ -105,8 +116,8 @@ test('rejects case/path aliases and a regular file used as an ancestor', () => {
     );
   }
 });
-function descriptorFixture(zip64: boolean): Buffer {
-  const original = zipFixture([{ name: 'runtime/file', data: 'retained' }]);
+function descriptorFixture(zip64: boolean, deflate = true): Buffer {
+  const original = zipFixture([{ name: 'runtime/file', data: 'retained', deflate }]);
   const end = original.length - 22;
   const centralOffset = original.readUInt32LE(end + 16);
   const header = Buffer.from(original.subarray(0, 30));
@@ -160,7 +171,7 @@ test('rejects contradictory populated descriptor fields and ZIP64 extra sizes', 
   const zip64 = descriptorFixture(true);
   zip64.writeBigUInt64LE(99n, 30 + zip64.readUInt16LE(26) + 4);
   const missing = descriptorFixture(true);
-  missing.writeUInt16LE(2, 30 + missing.readUInt16LE(26));
+  missing.writeUInt16LE(0x5455, 30 + missing.readUInt16LE(26));
   for (const bytes of [ordinary, zip64, missing])
     archiveTest(bytes, (file) =>
       assert.throws(() => assertSafeRuntimeZip(file), /Malformed runtime ZIP/)
@@ -197,5 +208,101 @@ test('Windows shared extraction rejects the link archive before invoking any ext
       );
       assert.equal(calls, 0, 'native extractor must never receive an unsafe archive');
     }
+  );
+});
+
+test('rejects alternate native directories hidden in an EOCD comment or ZIP64 locator', () => {
+  for (const kind of ['comment', 'locator'] as const)
+    archiveTest(ambiguousDirectoryFixture(kind), (file) =>
+      assert.throws(
+        () => assertSafeRuntimeZip(file),
+        /Malformed runtime ZIP|Unsupported runtime archive entry/
+      )
+    );
+});
+test('rejects local xl attributes and unknown extras before native extraction', () => {
+  for (const bytes of [
+    xlLinkFixture(),
+    zipFixture([
+      { name: 'runtime/file', data: 'retained', centralExtra: zipExtra(0x9999, Buffer.alloc(0)) },
+    ]),
+  ])
+    archiveTest(bytes, (file) =>
+      assert.throws(() => assertSafeRuntimeZip(file), /Unsupported runtime archive entry/)
+    );
+});
+test('rejects unsupported compression methods and stored data descriptors', () => {
+  const unsupported = zipFixture([{ name: 'runtime/file', data: 'retained' }]);
+  unsupported.writeUInt16LE(9, 8);
+  unsupported.writeUInt16LE(9, unsupported.readUInt32LE(unsupported.length - 6) + 10);
+  const storedDescriptor = descriptorFixture(false, false);
+  for (const bytes of [unsupported, storedDescriptor])
+    archiveTest(bytes, (file) =>
+      assert.throws(() => assertSafeRuntimeZip(file), /Unsupported runtime archive entry/)
+    );
+});
+test('accepts coherent non-saturated ZIP64 footer and rejects contradictory classic fields', () => {
+  const original = zipFixture([{ name: 'runtime/file', data: 'retained' }]);
+  const end = original.length - 22;
+  const footer = Buffer.from(original.subarray(end));
+  const locator = Buffer.alloc(20);
+  locator.writeUInt32LE(0x07064b50);
+  locator.writeBigUInt64LE(BigInt(end), 8);
+  locator.writeUInt32LE(1, 16);
+  const bytes = Buffer.concat([
+    original.subarray(0, end),
+    zip64Footer(1, footer.readUInt32LE(12), footer.readUInt32LE(16)),
+    locator,
+    footer,
+  ]);
+  archiveTest(bytes, (file) => assertSafeRuntimeZip(file));
+  bytes.writeUInt16LE(2, bytes.length - 12);
+  bytes.writeUInt16LE(2, bytes.length - 14);
+  archiveTest(bytes, (file) =>
+    assert.throws(() => assertSafeRuntimeZip(file), /Malformed runtime ZIP/)
+  );
+});
+
+test(
+  'native libarchive selects hidden symlink records in rejected directory/type fixtures',
+  { skip: process.platform !== 'darwin' && process.platform !== 'win32' },
+  () => {
+    const tar =
+      process.platform === 'win32'
+        ? path.win32.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+        : '/usr/bin/tar';
+    for (const bytes of [
+      ambiguousDirectoryFixture('comment'),
+      ambiguousDirectoryFixture('locator'),
+      xlLinkFixture(),
+    ])
+      archiveTest(bytes, (file) => {
+        // Listing uses the real native archive reader without creating a link.
+        const result = spawnSync(tar, ['-tvf', file], {
+          encoding: 'utf8',
+          shell: false,
+          timeout: 30_000,
+        });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(result.stdout, /link -> \.\.\/outside/);
+        assert.doesNotMatch(result.stdout, /runtime\/safe/);
+        assert.throws(
+          () => assertSafeRuntimeZip(file),
+          /Malformed runtime ZIP|Unsupported runtime archive entry/
+        );
+      });
+  }
+);
+
+test('rejects central entry comments even without a second EOCD', () => {
+  const original = zipFixture([{ name: 'runtime/file', data: 'retained' }]);
+  const end = original.length - 22;
+  const central = original.readUInt32LE(end + 16);
+  const footer = Buffer.from(original.subarray(end));
+  footer.writeUInt32LE(footer.readUInt32LE(12) + 1, 12);
+  original.writeUInt16LE(1, central + 32);
+  const bytes = Buffer.concat([original.subarray(0, end), Buffer.from('x'), footer]);
+  archiveTest(bytes, (file) =>
+    assert.throws(() => assertSafeRuntimeZip(file), /Malformed runtime ZIP/)
   );
 });

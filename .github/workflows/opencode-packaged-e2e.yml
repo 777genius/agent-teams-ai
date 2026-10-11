@@ -21,6 +21,11 @@ on:
       - scripts/e2e/opencode-diagnostics/platform.mjs
       - scripts/e2e/opencode-diagnostics/catalog.mjs
       - runtime.lock.json
+      - scripts/stage-runtime.mjs
+      - scripts/lib/github-release-download-error.mjs
+      - scripts/lib/runtime-archive-checksum.mjs
+      - scripts/lib/runtime-payload-cache.mjs
+      - scripts/lib/runtime-archive-extraction.mts
 
 permissions:
   contents: read

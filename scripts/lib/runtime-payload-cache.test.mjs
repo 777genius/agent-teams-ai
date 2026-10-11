@@ -10,7 +10,11 @@ import { runInNewContext } from 'node:vm';
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import { phase } from './runtime-bootstrap-diagnostics.mts';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
-import { zipFixture } from './runtime-zip.test-fixture.mts';
+import {
+  ambiguousDirectoryFixture,
+  xlLinkFixture,
+  zipFixture,
+} from './runtime-zip.test-fixture.mts';
 import {
   extractArchive,
   findExtractedBinary,
@@ -314,7 +318,7 @@ test('stager extraction failure preserves previous payload and removes only its 
 });
 
 test(
-  'Windows inbox tar rejects malformed ZIP and contains hostile entries before publication',
+  'Windows inbox tar inputs are rejected by preflight before extractor invocation',
   { skip: process.platform !== 'win32' },
   () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "runtime-zip-safety [x] 'quote'-"));
@@ -325,6 +329,9 @@ test(
     fs.writeFileSync(sentinel, sentinelBytes);
     const archives = [
       ['malformed', Buffer.from('not a ZIP archive')],
+      ['comment-directory', ambiguousDirectoryFixture('comment')],
+      ['locator-directory', ambiguousDirectoryFixture('locator')],
+      ['xl-link', xlLinkFixture()],
       ['parent', zipFixture([{ name: '../outside/escape', data: 'outside write forbidden' }])],
       [
         'absolute',
@@ -349,17 +356,18 @@ test(
         const extracted = path.join(root, `extracted-${name}`);
         fs.writeFileSync(archive, bytes);
         let rejected = false;
+        let nativeCalls = 0;
         try {
-          extractArchive(archive, extracted, 'zip', (command, args, options) =>
-            execFileSync(command, args, options)
-          );
+          extractArchive(archive, extracted, 'zip', (command, args, options) => {
+            nativeCalls++;
+            return execFileSync(command, args, options);
+          });
         } catch (error) {
           assert(error instanceof Error);
           rejected = true;
         }
-        if (name === 'malformed' || name === 'link')
-          assert(rejected, `${name} archive must be rejected`);
-        // Absolute/parent paths may be safely rejected or normalized by inbox tar.
+        assert(rejected, `${name} archive must be rejected`);
+        assert.equal(nativeCalls, 0, `${name} must not reach the native extractor`);
         assert.deepEqual(
           fs.readdirSync(outside),
           ['sentinel'],

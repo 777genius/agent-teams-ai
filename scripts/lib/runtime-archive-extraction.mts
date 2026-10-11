@@ -23,7 +23,7 @@ function assertName(name: string): void {
     if (
       part === '..' ||
       (part !== '.' && /[. ]$/u.test(part)) ||
-      /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/iu.test(part)
+      /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])(?:\.|$)/iu.test(part)
     )
       unsafe(name);
   }
@@ -36,9 +36,9 @@ function extras(buffer: Buffer): Map<number, Buffer> {
       size = buffer.readUInt16LE(cursor + 2);
     cursor += 4;
     if (cursor + size > buffer.length || result.has(id)) malformed();
-    // These fields can override names or carry Unix link targets independently
-    // of the central-directory type. Runtime ZIP producers do not emit them.
-    if (id === 0x000d || id === 0x756e || id === 0x7075) unsafe('ZIP path/link extra metadata');
+    // Accept only ZIP64 sizes, NTFS/extended timestamps and Unix uid/gid.
+    // Other fields (including local 'xl') can override paths or entry types.
+    if (![0x0001, 0x000a, 0x5455, 0x7875].includes(id)) unsafe('unsupported ZIP extra metadata');
     result.set(id, buffer.subarray(cursor, cursor + size));
     cursor += size;
   }
@@ -79,27 +79,24 @@ export function assertSafeRuntimeZip(archivePath: string): void {
       return bytes;
     };
     if (fileSize < 22) malformed();
-    const tailOffset = Math.max(0, fileSize - 65_557),
-      tail = read(tailOffset, fileSize - tailOffset);
-    let end = -1;
-    for (let cursor = tail.length - 22; cursor >= 0; cursor--) {
-      if (
-        tail.readUInt32LE(cursor) === 0x06054b50 &&
-        cursor + 22 + tail.readUInt16LE(cursor + 20) === tail.length
-      ) {
-        end = cursor;
-        break;
-      }
-    }
-    if (end < 0) malformed();
-    const endOffset = tailOffset + end;
+    // Runtime producers emit no comments. A terminal, comment-free EOCD
+    // prevents native readers selecting another EOCD hidden in a comment.
+    const endOffset = fileSize - 22,
+      tail = read(endOffset, 22),
+      end = 0;
+    if (tail.readUInt32LE(0) !== 0x06054b50 || tail.readUInt16LE(20) !== 0) malformed();
     if (tail.readUInt16LE(end + 4) !== 0 || tail.readUInt16LE(end + 6) !== 0) malformed();
     let count = tail.readUInt16LE(end + 10),
       centralSize = tail.readUInt32LE(end + 12),
       centralOffset = tail.readUInt32LE(end + 16),
       footerOffset = endOffset;
     if (tail.readUInt16LE(end + 8) !== count) malformed();
-    if (count === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) {
+    const saturated =
+      count === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff;
+    const hasLocator = endOffset >= 20 && read(endOffset - 20, 4).readUInt32LE(0) === 0x07064b50;
+    if (saturated && !hasLocator) malformed();
+    // Native libarchive follows a locator even when classic fields fit.
+    if (hasLocator) {
       const locator = read(endOffset - 20, 20);
       if (
         locator.readUInt32LE(0) !== 0x07064b50 ||
@@ -113,15 +110,25 @@ export function assertSafeRuntimeZip(archivePath: string): void {
       if (
         zip64.readUInt32LE(0) !== 0x06064b50 ||
         recordSize < 44 ||
+        recordSize > 16_372 ||
         footerOffset + recordSize + 12 !== endOffset - 20 ||
         zip64.readUInt32LE(16) !== 0 ||
         zip64.readUInt32LE(20) !== 0 ||
         zip64.readBigUInt64LE(24) !== zip64.readBigUInt64LE(32)
       )
         malformed();
-      count = safeNumber(zip64.readBigUInt64LE(32));
-      centralSize = safeNumber(zip64.readBigUInt64LE(40));
-      centralOffset = safeNumber(zip64.readBigUInt64LE(48));
+      const largeCount = safeNumber(zip64.readBigUInt64LE(32)),
+        largeSize = safeNumber(zip64.readBigUInt64LE(40)),
+        largeOffset = safeNumber(zip64.readBigUInt64LE(48));
+      if (
+        (count !== 0xffff && count !== largeCount) ||
+        (centralSize !== 0xffffffff && centralSize !== largeSize) ||
+        (centralOffset !== 0xffffffff && centralOffset !== largeOffset)
+      )
+        malformed();
+      count = largeCount;
+      centralSize = largeSize;
+      centralOffset = largeOffset;
     }
     if (centralOffset + centralSize !== footerOffset || count > centralSize / 46) malformed();
     const central = read(centralOffset, centralSize),
@@ -134,7 +141,8 @@ export function assertSafeRuntimeZip(archivePath: string): void {
         extraSize = central.readUInt16LE(cursor + 30),
         commentSize = central.readUInt16LE(cursor + 32);
       const next = cursor + 46 + nameSize + extraSize + commentSize;
-      if (next > central.length || central.readUInt16LE(cursor + 34) !== 0) malformed();
+      if (commentSize !== 0 || next > central.length || central.readUInt16LE(cursor + 34) !== 0)
+        malformed();
       const name = central.subarray(cursor + 46, cursor + 46 + nameSize),
         text = name.toString('utf8');
       assertName(text);
@@ -169,13 +177,16 @@ export function assertSafeRuntimeZip(archivePath: string): void {
       if (offset === 0xffffffff) offset = large();
       const flags = central.readUInt16LE(cursor + 8);
       if ((flags & ~(0x0800 | 0x0008 | 0x0006)) !== 0) unsafe('unsupported ZIP entry flags');
+      const method = central.readUInt16LE(cursor + 10);
+      if ((method !== 0 && method !== 8) || (method === 0 && (flags & 8) !== 0))
+        unsafe('unsupported ZIP compression method or stored descriptor');
       entries.push({
         offset,
         compressed,
         uncompressed,
         crc: central.readUInt32LE(cursor + 16),
         flags,
-        method: central.readUInt16LE(cursor + 10),
+        method,
         name,
       });
       cursor = next;
