@@ -39,6 +39,7 @@ describe('composer queue adapters', () => {
     await clearStore();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let draft!: ReturnType<typeof useComposerDraft>;
+    let queue!: ReturnType<typeof useDirectMessageQueue>;
     const address = {
       contextId: scope.contextId,
       teamName: scope.teamName,
@@ -48,7 +49,7 @@ describe('composer queue adapters', () => {
     const members = [{ name: 'bob', agentId: 'bob-1' }] as ResolvedTeamMember[];
     function Probe() {
       draft = useComposerDraft(address);
-      useDirectMessageQueue({
+      queue = useDirectMessageQueue({
         teamName: scope.teamName,
         recipient: 'bob',
         members,
@@ -64,6 +65,11 @@ describe('composer queue adapters', () => {
       await act(async () => {
         view.render(<Probe />);
       });
+      act(() => draft.setActionMode('delegate'));
+      expect(queue.unavailableReason).toBeUndefined();
+      expect(ports.options!.unavailableReason).toContain('richUnsupported');
+      act(() => draft.setText('Unsupported delegate request'));
+      expect(queue.unavailableReason).toContain('richUnsupported');
       act(() => {
         draft.setText('Captured request');
         draft.setActionMode('ask');

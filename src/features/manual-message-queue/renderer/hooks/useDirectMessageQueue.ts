@@ -60,7 +60,7 @@ export function useDirectMessageQueue(options: {
       ? String(t('messages.manualQueue.recipientUnavailable'))
       : null;
   };
-  return useManualMessageQueue({
+  const queue = useManualMessageQueue({
     teamName: options.teamName,
     route,
     unavailableReason: unsupported
@@ -125,4 +125,15 @@ export function useDirectMessageQueue(options: {
     },
     refresh: () => useStore.getState().refreshTeamData(options.teamName),
   });
+  return {
+    ...queue,
+    unavailableReason:
+      draft.text.trim() ||
+      draft.chips.length ||
+      draft.attachments.length ||
+      draft.editorContext.kind !== 'plain' ||
+      draft.snapshot().restoredOrigin
+        ? queue.unavailableReason
+        : undefined,
+  };
 }
