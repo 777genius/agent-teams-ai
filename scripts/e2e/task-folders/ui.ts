@@ -61,15 +61,27 @@ export class UI {
   }
   async point(expression: string, fraction = 0.5): Promise<Point> {
     await this.locate(expression);
-    const point = await this.value<Point | null>(`(() => { const e=${expression}; if(!e)return null;
-      e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();
-      if(!r.width || !r.height)return null;return {x:r.x+r.width/2,y:r.y+r.height*${fraction}}; })()`);
-    assert(point, 'Missing/hidden selector: ' + expression);
-    const hit = await this.value<boolean>(
-      `(() => {const e=${expression};const h=document.elementFromPoint(${point.x},${point.y});return e===h||e.contains(h);})()`
-    );
-    assert(hit, 'Target obscured: ' + expression);
-    return point;
+    const deadline = Date.now() + 5000;
+    let reason = 'Missing/hidden selector';
+    while (Date.now() < deadline) {
+      // Reacquire after scrolling/layout/portal transitions; geometry and hit belong to one sample.
+      const result = await this.value<{ point?: Point; reason: string }>(`(() => {
+        let e;try{e=${expression};}catch{return {reason:'Missing/hidden selector'};}
+        if(!e)return {reason:'Missing/hidden selector'};
+        e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();
+        if(r.width<=0 || r.height<=0 || !e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}))
+          return {reason:'Missing/hidden selector'};
+        const p={x:r.x+r.width/2,y:r.y+r.height*${fraction}};
+        if(!Number.isFinite(p.x) || !Number.isFinite(p.y) || p.x<0 || p.y<0 ||
+          p.x>=innerWidth || p.y>=innerHeight)return {reason:'Target obscured/offscreen'};
+        const h=document.elementFromPoint(p.x,p.y);
+        return h && (e===h || e.contains(h)) ? {point:p,reason:''} : {reason:'Target obscured'};
+      })()`);
+      if (result.point) return result.point;
+      reason = result.reason;
+      await delay(50);
+    }
+    throw new Error(`${reason} after 5000ms hit readiness wait: ${expression}`);
   }
   async move(point: Point, buttons = 0) {
     await this.cdp.send('Input.dispatchMouseEvent', {
