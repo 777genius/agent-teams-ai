@@ -46,9 +46,11 @@ export interface QueueIndex {
   readonly nextPosition: number;
   readonly items: readonly QueueItem[];
 }
+export const QUEUE_STORAGE_PREFIX = 'manual-message-queue:v1:';
+
 export function queueScopeKey(scope: QueueScope): string {
   return (
-    'manual-message-queue:v1:' +
+    QUEUE_STORAGE_PREFIX +
     encodeURIComponent(
       JSON.stringify([
         scope.transport,

@@ -1,4 +1,8 @@
-import { composerDraftReadwrite, requestValue } from '@renderer/services/composerDraftIndexedDb';
+import {
+  composerDraftEntriesByPrefix,
+  composerDraftReadwrite,
+  requestValue,
+} from '@renderer/services/composerDraftIndexedDb';
 import { isComposerWorkingRecord } from '@renderer/services/composerDraftRecovery';
 import {
   nextWorkingSummaries,
@@ -9,7 +13,7 @@ import {
   composerWorkingIndexKey,
 } from '@renderer/utils/composerDraftIdentity';
 
-import { decodeQueueIndex, queueScopeKey } from '../../core/domain/queue';
+import { decodeQueueIndex, QUEUE_STORAGE_PREFIX, queueScopeKey } from '../../core/domain/queue';
 
 import type {
   QueueIndex,
@@ -51,6 +55,26 @@ export class IndexedDbQueueRepository implements QueuePersistence {
   }
   private changed(): void {
     for (const listener of this.listeners) listener();
+  }
+  async discardNamespace(namespace: Omit<QueueScope, 'chat'>): Promise<void> {
+    await composerDraftReadwrite(async (store) => {
+      for (const [key] of await composerDraftEntriesByPrefix(store, QUEUE_STORAGE_PREFIX)) {
+        let identity: unknown;
+        try {
+          identity = JSON.parse(decodeURIComponent(key.slice(QUEUE_STORAGE_PREFIX.length)));
+        } catch {
+          continue;
+        }
+        if (
+          Array.isArray(identity) &&
+          identity.length === 6 &&
+          typeof identity[5] === 'string' &&
+          queueScopeKey({ ...namespace, chat: identity[5] }) === key
+        )
+          store.delete(key);
+      }
+    });
+    this.changed();
   }
   async list(
     scope: QueueScope,
@@ -200,4 +224,6 @@ export class IndexedDbQueueRepository implements QueuePersistence {
     );
   }
 }
-export const queueRepository: QueuePersistence = new IndexedDbQueueRepository();
+export const queueRepository = new IndexedDbQueueRepository();
+export const discardManualMessageQueueNamespace = (namespace: Omit<QueueScope, 'chat'>) =>
+  queueRepository.discardNamespace(namespace);

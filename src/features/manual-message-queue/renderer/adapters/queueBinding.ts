@@ -7,7 +7,7 @@ import {
 
 import type { QueueRoute, QueueScope } from '../../core/domain/queue';
 
-export async function captureQueueScope(teamName: string, route: QueueRoute): Promise<QueueScope> {
+export async function captureQueueNamespace(teamName: string): Promise<Omit<QueueScope, 'chat'>> {
   const epoch = captureContextScopedRequestEpoch();
   const state = useStore.getState();
   const contextId = state.activeContextId;
@@ -35,6 +35,12 @@ export async function captureQueueScope(teamName: string, route: QueueRoute): Pr
     contextId,
     host: ssh?.host ?? null,
     teamName,
+  };
+}
+
+export async function captureQueueScope(teamName: string, route: QueueRoute): Promise<QueueScope> {
+  return {
+    ...(await captureQueueNamespace(teamName)),
     chat: route.kind === 'direct' ? 'direct:' + route.participant : 'group:' + route.groupChatId,
   };
 }

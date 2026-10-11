@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { queueScopeKey } from '../../../src/features/manual-message-queue/core/domain/queue';
 import { IndexedDbQueueRepository } from '../../../src/features/manual-message-queue/renderer/adapters/queueRepository';
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '../../../src/features/team-group-chats/contracts';
 import {
   composerDraftReadwrite,
   requestValue,
@@ -46,6 +47,38 @@ describe('manual queue real IndexedDB transaction', () => {
     ]) {
       expect(await repository.list(other, () => false)).toEqual([]);
     }
+    const groupRoute = {
+      kind: 'group' as const,
+      groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      recipientName: null,
+    };
+    const groupScope = { ...scope, chat: 'group:' + DEFAULT_TEAM_GROUP_CHAT_ID };
+    const groupDraft = working('Old team All message', groupRoute);
+    await seed(groupDraft);
+    await repository.enqueue(groupScope, groupRoute, groupDraft, () => true);
+    const otherScopes = [
+      { ...scope, root: '/other' },
+      { ...scope, contextId: 'ssh-test', host: 'test' },
+      { ...scope, teamName: 'other-team' },
+    ];
+    for (const other of otherScopes) {
+      const original = working('Keep other namespace');
+      const draft = {
+        ...original,
+        address: { ...original.address, contextId: other.contextId, teamName: other.teamName },
+      };
+      await seed(draft);
+      await repository.enqueue(other, directRoute, draft, () => true);
+    }
+    const kept = await Promise.all(otherScopes.map((other) => repository.list(other, () => false)));
+    changed.mockClear();
+    await repository.discardNamespace(scope);
+    expect(changed).toHaveBeenCalledOnce();
+    expect(await repository.list(scope, () => false)).toEqual([]);
+    expect(await repository.list(groupScope, () => false)).toEqual([]);
+    expect(
+      await Promise.all(otherScopes.map((other) => repository.list(other, () => false)))
+    ).toEqual(kept);
   });
   it('rolls back on concurrent text, epoch change, unsupported schema, and actual transaction abort', async () => {
     const repository = new IndexedDbQueueRepository();
