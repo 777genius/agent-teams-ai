@@ -231,6 +231,7 @@ const REQUIRED_MOCK_AGENT_TEAMS_TOOLS = [
   'cross_team_send',
   'group_chat_list',
   'group_chat_send',
+  'group_chat_react',
   'lead_briefing',
   'member_briefing',
   'message_send',

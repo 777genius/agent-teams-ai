@@ -3566,6 +3566,12 @@ export default interface Resources {
         "user": "user"
       },
       "rawJson": "Raw JSON",
+      "reactions": {
+        "add": "Add reaction ({{count}})",
+        "count": "Reactions: {{count}}",
+        "failed": "Could not update reactions",
+        "remove": "Remove reaction ({{count}})"
+      },
       "reply": {
         "action": "Reply",
         "replyingTo": "Replying to"

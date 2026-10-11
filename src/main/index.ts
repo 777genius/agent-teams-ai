@@ -2019,6 +2019,8 @@ async function initializeServices(): Promise<void> {
     configurationOperation: (teamName, operation) =>
       teamDataService.runConfigurationOperation(teamName, operation),
     inboxWriter: teamInboxWriter,
+    reactionChanged: (teamName, detail) =>
+      forwardTeamChangeToRendererAndHttp({ teamName, detail, type: 'group-reactions' }),
     changed: (teamName) => {
       const event: TeamChangeEvent = { teamName, type: 'inbox' };
       invalidateTeamChangeMessageFeed(event);

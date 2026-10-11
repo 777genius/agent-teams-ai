@@ -1198,6 +1198,7 @@ export interface TeamChangeEvent {
   type:
     | 'config'
     | 'inbox'
+    | 'group-reactions'
     | 'log-source-change'
     | 'task-log-change'
     | 'task'

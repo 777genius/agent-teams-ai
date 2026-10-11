@@ -65,14 +65,21 @@ export function createGroupChatRuntimePorts(deps: GroupChatRuntimeDependencies):
         process.kill(pid, 0);
         const current = await deps.getTeamAgentRuntimeSnapshot(teamName);
         const currentMember = current.members[memberName];
-        if (!isDesktopMcpControlAvailable() || !currentMember?.alive ||
+        if (
+          !isDesktopMcpControlAvailable() ||
+          !currentMember?.alive ||
           currentMember.providerId === 'opencode' ||
           (currentMember.runtimePid ?? currentMember.pid) !== pid ||
           (capability.bootstrapRunId !== current.runId &&
-            capability.bootstrapRunId !== currentMember.runtimeSessionId)) return null;
+            capability.bootstrapRunId !== currentMember.runtimeSessionId)
+        )
+          return null;
         return {
           runKey: capability.groupRunKey,
           protocolVersion: 1,
+          ...(capability.groupReactionProtocolVersion === 1
+            ? { groupReactionProtocolVersion: 1 as const }
+            : {}),
           provider: member.backendType === 'lead' ? 'lead' : 'native',
         };
       } catch {

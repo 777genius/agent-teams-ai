@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "எதிர்வினையைச் சேர் ({{count}})",
+      "remove": "எதிர்வினையை அகற்று ({{count}})",
+      "count": "எதிர்வினைகள்: {{count}}",
+      "failed": "எதிர்வினைகளைப் புதுப்பிக்க முடியவில்லை"
+    },
     "actions": {
       "createTaskFromMessage": "செய்தியிலிருந்து task ஐ உருவாக்கு",
       "editMessage": "செய்தியைத் திருத்து",

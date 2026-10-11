@@ -108,7 +108,7 @@
     "src/renderer/components/sidebar/DateGroupedSessions.tsx": 1130,
     "src/renderer/components/sidebar/GlobalTaskList.tsx": 1861,
     "src/renderer/components/splash/splashScene.ts": 1015,
-    "src/renderer/components/team/activity/ActivityItem.tsx": 1719,
+    "src/renderer/components/team/activity/ActivityItem.tsx": 1713,
     "src/renderer/components/team/activity/ActivityTimeline.tsx": 870,
     "src/renderer/components/team/activity/LeadThoughtsGroup.tsx": 1186,
     "src/renderer/components/team/dialogs/CreateTeamDialog.tsx": 3109,
@@ -150,6 +150,6 @@
     "src/renderer/utils/teamModelCatalog.ts": 868,
     "src/renderer/utils/teamProvisioningPresentation.ts": 1414,
     "src/shared/types/api.ts": 1158,
-    "src/shared/types/team.ts": 1958
+    "src/shared/types/team.ts": 1839
   }
 }

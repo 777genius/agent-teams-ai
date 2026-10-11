@@ -7,15 +7,21 @@ import {
   effectiveGroupMembers,
   GroupChatError,
   groupSendRecipients,
+  isGroupPhysicalId,
+  isGroupUuid,
   matchesHumanGroupTarget,
 } from '../../core/domain/groupChat';
+import { createGroupReactions } from '../application/groupReactions';
 import { GroupChatStorage, safeGroupTeamPath } from '../infrastructure/GroupChatStorage';
 
 import type {
   GroupChatCreateRequest,
+  GroupChatReactionRequest,
+  GroupChatReactionResult,
   GroupChatSendRequest,
   GroupChatSendResult,
   GroupDeliveryRecipient,
+  GroupInboundAcknowledgementTarget,
   TeamGroupChatDTO,
   TeamGroupChatsAPI,
 } from '../../contracts';
@@ -25,6 +31,7 @@ import type { InboxMessage } from '@shared/types';
 export interface GroupChatRun {
   runKey: string;
   protocolVersion: 1;
+  groupReactionProtocolVersion?: 1;
   provider: 'native' | 'lead' | 'opencode';
   /** Request-scoped currency check for an admitted live bridge owner. */
   isCurrent?: () => Promise<boolean>;
@@ -41,9 +48,12 @@ export interface TeamGroupChatsPorts {
     shouldStillWrite: () => Promise<boolean>
   ): Promise<GroupDeliveryRecipient['status']>;
   changed?(teamName: string): void;
+  reactionChanged?(teamName: string, messageId: string): void;
 }
 
 export interface TeamGroupChatsFeature extends TeamGroupChatsAPI {
+  react(request: GroupChatReactionRequest): Promise<GroupChatReactionResult>;
+  hasAcknowledgedInbound(request: GroupInboundAcknowledgementTarget): Promise<boolean>;
   list(request: { teamName: string }, from?: string): Promise<TeamGroupChatDTO[]>;
   send(request: GroupChatSendRequest, from?: string): Promise<GroupChatSendResult>;
 }
@@ -53,16 +63,10 @@ function validText(value: unknown, label: string, max = 100_000): asserts value 
     throw new GroupChatError('invalid-input', `Invalid ${label}`);
 }
 function validateId(value: unknown): asserts value is string {
-  if (
-    typeof value !== 'string' ||
-    !/^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i.test(
-      value
-    )
-  )
-    throw new GroupChatError('invalid-input', 'Invalid group/message UUID');
+  if (!isGroupUuid(value)) throw new GroupChatError('invalid-input', 'Invalid group/message UUID');
 }
 function validatePhysicalId(value: unknown): asserts value is string {
-  if (typeof value !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,199}$/.test(value))
+  if (!isGroupPhysicalId(value))
     throw new GroupChatError('invalid-input', 'Invalid group/message identity');
 }
 function names(value: unknown): asserts value is string[] {
@@ -144,6 +148,7 @@ export function createTeamGroupChatsFeature(
     };
   }
   const feature: TeamGroupChatsFeature = {
+    ...createGroupReactions(ports, storage),
     async list({ teamName }, from = 'user') {
       validText(teamName, 'team name', 200);
       await safeGroupTeamPath(teamName);

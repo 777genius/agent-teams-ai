@@ -11,6 +11,7 @@ import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode
 import { buildGroupPlainTextVisibleReplyMessageId, buildPlainTextVisibleReplyMessageId } from '@main/services/team/opencode/delivery/OpenCodeGroupVisibleReply';
 import { createOpenCodePromptDeliveryLedgerStore } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OpenCodeVisibleReplyProofService } from '@main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
+import * as groupAtomicWrite from '@main/services/team/atomicWrite';
 import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
@@ -42,6 +43,9 @@ describe('group chat main authority and durable identity', () => {
   let available: boolean;
   let unavailableMembers: Set<string>;
   let runPrefix: string;
+  let reactionSupported: boolean;
+  const reactionChanged = vi.fn();
+  const inboxChanged = vi.fn();
   let deliver: TeamGroupChatsPorts['deliver'];
   const create = () =>
     feature.create({
@@ -66,6 +70,9 @@ describe('group chat main authority and durable identity', () => {
     roster = ['lead', 'alice', 'bob'];
     deliveries = [];
     available = true;
+    reactionSupported = true;
+    reactionChanged.mockClear();
+    inboxChanged.mockClear();
     unavailableMembers = new Set();
     runPrefix = 'run';
     deliver = async (_team, message) => {
@@ -76,13 +83,250 @@ describe('group chat main authority and durable identity', () => {
       roster: async () => roster,
       getRun: async (_team, name) =>
         available && !unavailableMembers.has(name)
-          ? { runKey: `${runPrefix}:${name}`, protocolVersion: 1, provider: 'native' } : null,
+          ? { runKey: `${runPrefix}:${name}`, protocolVersion: 1, provider: 'native', ...(reactionSupported ? { groupReactionProtocolVersion: 1 as const } : {}) } : null,
       configurationOperation: (_team, operation) => operation(),
       deliver: (...args) => deliver(...args),
+      reactionChanged,
+      changed: inboxChanged,
     });
   });
   afterEach(async () => {
     await rm(state.root, { recursive: true, force: true });
+  });
+
+  // These cases fail on lost actors, forged/stale acknowledgement proof, or inbox side effects.
+  const reactionTarget = {
+    teamName: 'sandbox',
+    groupChatId: '10000000-0000-4000-8000-000000000001',
+    messageId: '20000000-0000-4000-8000-000000000001',
+  };
+  const reactionFile = () => join(state.root, 'sandbox', 'group-chat-reactions.json');
+  async function stageReactionInbounds() {
+    await create();
+    await send();
+    for (const message of deliveries)
+      await writeFile(
+        join(state.root, 'sandbox', 'inboxes', `${message.to}.json`),
+        JSON.stringify([message])
+      );
+    reactionChanged.mockClear();
+    inboxChanged.mockClear();
+    return deliveries.find((row) => row.to === 'alice')!;
+  }
+  const acknowledge = (physical: InboxMessage) =>
+    feature.react({
+      teamName: 'sandbox',
+      groupChatId: physical.groupChatId!,
+      from: physical.to!,
+      relayOfMessageId: physical.messageId!,
+    });
+
+  it('persists unique concurrent actors and human toggle without inbox delivery or ordinary changes', async () => {
+    const alice = await stageReactionInbounds();
+    const inboxFiles = ['user', 'alice', 'lead'].map((name) =>
+      join(state.root, 'sandbox', 'inboxes', `${name}.json`)
+    );
+    const before = await Promise.all(inboxFiles.map((file) => readFile(file)));
+    const beforeDeliveries = deliveries.length;
+    await Promise.all([
+      acknowledge(alice),
+      acknowledge(deliveries.find((row) => row.to === 'lead')!),
+      feature.setReaction({ ...reactionTarget, active: true }),
+    ]);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({
+      actorNames: expect.arrayContaining(['alice', 'lead', 'user']),
+      hasUserReacted: true,
+      canReact: true,
+    });
+    const persisted = await readFile(reactionFile());
+    await acknowledge(alice);
+    await feature.setReaction({ ...reactionTarget, active: true });
+    expect(await readFile(reactionFile())).toEqual(persisted);
+    expect(reactionChanged).toHaveBeenCalledTimes(3);
+    await feature.setReaction({ ...reactionTarget, active: false });
+    expect((await feature.getReaction(reactionTarget)).actorNames.sort()).toEqual([
+      'alice',
+      'lead',
+    ]);
+    expect(
+      JSON.parse(await readFile(reactionFile(), 'utf8'))
+        .entries[0].actors.map((actor: { name: string }) => actor.name)
+        .sort()
+    ).toEqual(['alice', 'lead']);
+    expect(await Promise.all(inboxFiles.map((file) => readFile(file)))).toEqual(before);
+    expect(deliveries).toHaveLength(beforeDeliveries);
+    expect(inboxChanged).not.toHaveBeenCalled();
+    expect(
+      reactionChanged.mock.calls.every(
+        ([team, id]) => team === 'sandbox' && id === reactionTarget.messageId
+      )
+    ).toBe(true);
+  });
+
+  it('refreshes same-actor current inbound proof without changing count, name, reactedAt or refresh events', async () => {
+    const alice = await stageReactionInbounds();
+    await acknowledge(alice);
+    const original = JSON.parse(await readFile(reactionFile(), 'utf8')).entries[0].actors[0];
+    runPrefix = 'fresh';
+    const fresh = { ...alice, messageId: `${alice.messageId}:fresh`, groupRunKey: 'fresh:alice' };
+    await writeFile(
+      join(state.root, 'sandbox', 'inboxes', 'alice.json'),
+      JSON.stringify([alice, fresh])
+    );
+    const result = await acknowledge(fresh);
+    expect(result).toEqual({
+      saved: true,
+      acknowledged: true,
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      messageId: reactionTarget.messageId,
+      relayOfMessageId: fresh.messageId,
+      from: 'alice',
+      groupRunKey: 'fresh:alice',
+    });
+    const stored = JSON.parse(await readFile(reactionFile(), 'utf8')).entries[0].actors;
+    expect(stored).toEqual([
+      { ...original, inboxMessageId: fresh.messageId, groupRunKey: 'fresh:alice' },
+    ]);
+    expect(reactionChanged).toHaveBeenCalledTimes(1);
+    const proof = {
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      memberName: 'alice',
+    };
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        inboxMessageId: alice.messageId!,
+        runId: 'run:alice',
+      })
+    ).toBe(false);
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        inboxMessageId: fresh.messageId!,
+        runId: 'fresh:alice',
+      })
+    ).toBe(true);
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        memberName: 'lead',
+        inboxMessageId: fresh.messageId!,
+        runId: 'fresh:alice',
+      })
+    ).toBe(false);
+    const bytes = await readFile(reactionFile());
+    await feature.setArchived({
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      archived: true,
+    });
+    expect(await acknowledge(fresh)).toEqual(result);
+    expect(await readFile(reactionFile())).toEqual(bytes);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({
+      actorNames: ['alice'],
+      canReact: false,
+    });
+    await expect(acknowledge(alice)).rejects.toMatchObject({ code: 'invalid-relay' });
+  });
+
+  it('rejects agent spoofing, wrong targets, stale/unsupported runs and archived mutations across human/agent HTTP boundaries', async () => {
+    const alice = await stageReactionInbounds();
+    const app = Fastify();
+    registerTeamGroupChatsHttp(app, feature);
+    const agent = {
+      from: 'alice',
+      groupChatId: reactionTarget.groupChatId,
+      relayOfMessageId: alice.messageId,
+    };
+    const post = (url: string, payload: object) => app.inject({ method: 'POST', url, payload });
+    try {
+      for (const [input, code] of [
+        [{ ...agent, from: 'user' }, 'invalid-input'],
+        [{ ...agent, from: 'User' }, 'invalid-input'],
+        [{ ...agent, from: 'bob' }, 'not-member'],
+        [{ ...agent, relayOfMessageId: reactionTarget.messageId }, 'invalid-relay'],
+        [{ ...agent, groupChatId: randomUUID() }, 'not-found'],
+      ] as const) {
+        expect((await post('/api/teams/sandbox/group-chats/react', input)).json().error.code).toBe(
+          code
+        );
+      }
+      reactionSupported = false;
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'reaction-unsupported'
+      );
+      reactionSupported = true;
+      runPrefix = 'stale';
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'invalid-relay'
+      );
+      runPrefix = 'run';
+      expect(
+        (
+          await post('/api/team-group-chats/setReaction', {
+            ...reactionTarget,
+            active: true,
+            from: 'alice',
+          })
+        ).json()
+      ).toMatchObject({ actorNames: ['user'], hasUserReacted: true });
+      const bytes = await readFile(reactionFile());
+      await feature.setArchived({
+        teamName: 'sandbox',
+        groupChatId: reactionTarget.groupChatId,
+        archived: true,
+      });
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'archived'
+      );
+      await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject(
+        { code: 'archived' }
+      );
+      expect(await feature.setReaction({ ...reactionTarget, active: true })).toMatchObject({
+        actorNames: ['user'],
+        canReact: false,
+      });
+      expect(await readFile(reactionFile())).toEqual(bytes);
+      expect(
+        await feature.hasAcknowledgedInbound({
+          teamName: 'sandbox',
+          groupChatId: reactionTarget.groupChatId,
+          memberName: 'user',
+          inboxMessageId: alice.messageId!,
+          runId: 'run:alice',
+        })
+      ).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('preserves prior bytes and events on failed writes or corrupt reaction storage', async () => {
+    await stageReactionInbounds();
+    await feature.setReaction({ ...reactionTarget, active: true });
+    const bytes = await readFile(reactionFile());
+    reactionChanged.mockClear();
+    const failedWrite = vi
+      .spyOn(groupAtomicWrite, 'atomicWriteAsync')
+      .mockRejectedValueOnce(new Error('Disk unavailable'));
+    try {
+      await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject(
+        { code: 'storage-unavailable' }
+      );
+    } finally {
+      failedWrite.mockRestore();
+    }
+    expect(await readFile(reactionFile())).toEqual(bytes);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({ actorNames: ['user'] });
+    const corrupt = Buffer.from('{"version":2,"entries":[]}');
+    await writeFile(reactionFile(), corrupt);
+    await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject({
+      code: 'storage-unavailable',
+    });
+    expect(await readFile(reactionFile())).toEqual(corrupt);
+    expect(reactionChanged).not.toHaveBeenCalled();
   });
 
   it('keeps initial exclusions and adds future members even in archive; create retry returns first record', async () => {
@@ -504,7 +748,7 @@ describe('group chat main authority and durable identity', () => {
     const writer = new TeamInboxWriter();
     feature = createTeamGroupChatsFeature({ roster: async () => roster,
       getRun: async (_team, member) => ({ runKey: `synthetic:${member}`, protocolVersion: 1,
-        provider: member === 'alice' ? 'opencode' : 'native', isCurrent: async () => true }),
+        provider: member === 'alice' ? 'opencode' : 'native', groupReactionProtocolVersion: 1, isCurrent: async () => true }),
       configurationOperation: (_team, operation) => operation(),
       deliver: async (team, message, _run, shouldStillWrite) => {
         deliveries.push(message);
@@ -540,7 +784,7 @@ describe('group chat main authority and durable identity', () => {
       try {
         await client.initialize();
         const discovery = await client.listTools() as { result: { tools: { name: string }[] } };
-        expect(discovery.result.tools.map(item => item.name)).toEqual(expect.arrayContaining(['group_chat_list', 'group_chat_send']));
+        expect(discovery.result.tools.map(item => item.name)).toEqual(expect.arrayContaining(['group_chat_list', 'group_chat_send', 'group_chat_react']));
         const response = await client.callTool(tool, { teamName: 'sandbox', from: 'alice', ...input }) as {
           result?: { content: { text: string }[]; isError?: boolean }; error?: unknown;
         };
@@ -571,6 +815,8 @@ describe('group chat main authority and durable identity', () => {
         release();
       }
       const inbound = deliveries.find(message => message.to === 'alice')!;
+      expect(await mcp('group_chat_react', { groupChatId: id, relayOfMessageId: inbound.messageId })).toMatchObject({ saved: true, acknowledged: true, groupChatId: id, messageId: inbound.groupMessageId, relayOfMessageId: inbound.messageId, from: 'alice', groupRunKey: 'synthetic:alice' });
+      expect((await ipc('getReaction', { groupChatId: id, messageId: inbound.groupMessageId })).result).toMatchObject({ actorNames: ['alice'] });
       const reply = await mcp('group_chat_send', { groupChatId: id, messageId: randomUUID(), text: 'GROUP_REPLY', relayOfMessageId: inbound.messageId });
       expect(reply).toMatchObject({ saved: true, groupChatId: id, relayOfMessageId: inbound.messageId });
       expect(await mcp('group_chat_send', { groupChatId: id, messageId: randomUUID(), text: 'PROACTIVE' })).toMatchObject({ saved: true });

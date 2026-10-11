@@ -684,6 +684,7 @@ export function createTeamProvisioningServiceComposition(
     host.visibleReplyProof,
     {
       sendGroupChatReply: groupMessaging.sendReply,
+      hasAcknowledgedInbound: groupMessaging.hasAcknowledgedInbound,
       warn: (message) => logger.warn(message),
       getErrorMessage,
       nowIso,
@@ -696,6 +697,7 @@ export function createTeamProvisioningServiceComposition(
   );
   const openCodePromptDeliveryWatchdogCoordinator = createOpenCodePromptDeliveryWatchdogCoordinator(
     {
+      hasAcknowledgedInbound: groupMessaging.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (input) =>
         servicePorts.memberWorkSyncProofBoundary.hasAcceptedMemberWorkSyncReport(input),
       taskRefsIncludeAll: openCodeTaskRefsIncludeAllValue,

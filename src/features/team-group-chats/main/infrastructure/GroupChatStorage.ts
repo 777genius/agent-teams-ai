@@ -9,8 +9,10 @@ import * as path from 'path';
 
 import { assertValidGroupInboxRows } from '../../contracts';
 import { GroupChatError } from '../../core/domain/groupChat';
+import { parseGroupReactions } from '../../core/domain/groupReactions';
 
 import type { GroupChat } from '../../core/domain/groupChat';
+import type { GroupMessageReactions } from '../../core/domain/groupReactions';
 import type { InboxMessage } from '@shared/types';
 
 export async function safeGroupTeamPath(teamName: string, ...parts: string[]): Promise<string> {
@@ -76,6 +78,31 @@ function isNames(value: unknown): value is string[] {
 }
 
 export class GroupChatStorage {
+  async readReactions(teamName: string): Promise<GroupMessageReactions[]> {
+    const file = await safeGroupTeamPath(teamName, 'group-chat-reactions.json');
+    return parseGroupReactions(await readBounded(file));
+  }
+
+  async withReactions<T>(
+    teamName: string,
+    action: (entries: GroupMessageReactions[], save: () => Promise<void>) => Promise<T>
+  ): Promise<T> {
+    const file = await safeGroupTeamPath(teamName, 'group-chat-reactions.json');
+    return withFileLock(file, async () => {
+      const entries = parseGroupReactions(await readBounded(file));
+      return action(entries, async () => {
+        try {
+          await writeGroupStorage(file, { version: 1, entries });
+        } catch (error) {
+          throw new GroupChatError(
+            'storage-unavailable',
+            `Cannot save reactions: ${String(error)}`
+          );
+        }
+      });
+    });
+  }
+
   async withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>

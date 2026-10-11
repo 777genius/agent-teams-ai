@@ -51,9 +51,14 @@ async function sendGroupMessage(context, flags = {}) {
   });
 }
 
+async function reactToGroupMessage(context, flags = {}) {
+  const { from, groupChatId, relayOfMessageId } = flags;
+  return request(context, 'react', { from, groupChatId, relayOfMessageId });
+}
+
 async function buildGroupChatBriefing(context, memberName) {
   const instruction =
-    'Group chats: call group_chat_list(teamName, from) for a fresh catalog before proactive messages. Reply to a group with group_chat_send and the exact groupChatId, a new UUID messageId, and relayOfMessageId set to the physical inbound messageId. Never send a group reply through message_send or private user DM. Archived groups are readable but reject new posts. A blocked group send must not fall back to a private message.';
+    'Group chats: call group_chat_list(teamName, from) for a fresh catalog before proactive messages. Reply to a group with group_chat_send and the exact groupChatId, a new UUID messageId, and relayOfMessageId set to the physical inbound messageId. Never send a group reply through message_send or private user DM. Archived groups are readable but reject new posts. A blocked group send must not fall back to a private message. For an informational acknowledgement you may optionally call group_chat_react(teamName, from, groupChatId, relayOfMessageId) with your physical inbound ID. After success, stop without an extra OK; never reply to a reaction. Use group_chat_send for requested replies or additional information. A failed or unsupported reaction never permits a private DM fallback.';
   if (!desktopBinding.isDesktopBound()) return instruction;
   try {
     const catalog = await request(context, 'list', { from: memberName }, 3000);
@@ -63,4 +68,4 @@ async function buildGroupChatBriefing(context, memberName) {
   }
 }
 
-module.exports = { listGroupChats, sendGroupMessage, buildGroupChatBriefing };
+module.exports = { listGroupChats, sendGroupMessage, reactToGroupMessage, buildGroupChatBriefing };
