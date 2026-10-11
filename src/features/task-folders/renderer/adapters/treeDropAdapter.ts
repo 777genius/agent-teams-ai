@@ -90,12 +90,9 @@ export class TreeDropAdapter {
   dropForeign = async (transfer: DataTransfer, target: DragTarget<Node>): Promise<void> => {
     if (!this.canForeign(transfer, target, true)) throw new Error('invalid-drop');
     const source = this.foreignSource(transfer, true)!;
-    const session = this.panel.getSnapshot().session;
-    try {
-      await this.folders.execute(this.command(source, target, true));
-    } finally {
-      this.panel.end(session);
-    }
+    const command = this.command(source, target, true);
+    this.panel.end();
+    await this.folders.execute(command);
   };
   canInternal = (sources: Node[], target: DragTarget<Node>): boolean => {
     if (sources.length !== 1 || this.folders.getSnapshot().status !== 'ready') return false;
@@ -110,9 +107,10 @@ export class TreeDropAdapter {
   };
   dropInternal = async (sources: Node[], target: DragTarget<Node>): Promise<void> => {
     if (!this.canInternal(sources, target)) throw new Error('invalid-drop');
-    await this.folders.execute(
-      this.command(this.projection().nodes.get(sources[0].id)!, target, false)
-    );
+    if (!this.panel.getSnapshot().dragSource) throw new Error('invalid-drop');
+    const command = this.command(this.projection().nodes.get(sources[0].id)!, target, false);
+    this.panel.end();
+    await this.folders.execute(command);
   };
 }
 export function writeTaskDrag(transfer: DataTransfer, identity: TaskIdentity): void {

@@ -177,3 +177,102 @@ it('registers manual fallback pointer/focus/dialog and real portaled menu holds 
   await act(async () => vi.advanceTimersByTime(1));
   expect(panelController.getSnapshot().open).toBe(false);
 });
+
+it('resubmits the same create operation and panel Retry preserves only independent failures', async () => {
+  await renderAt(300);
+  const storage = vi
+    .spyOn(localStorage, 'setItem')
+    .mockImplementationOnce(() => {
+      throw new Error('independent');
+    })
+    .mockImplementationOnce(() => {
+      throw new Error('dialog');
+    });
+  await act(async () => {
+    await expect(
+      folderController.execute({ type: 'create', id: 'independent', parent: null, name: 'Other' })
+    ).rejects.toThrow('independent');
+    panelController.begin('external');
+    panelController.end();
+  });
+  await act(async () =>
+    (document.querySelector('[data-testid="task-folders-new-folder"]') as HTMLButtonElement).click()
+  );
+  const input = document.querySelector(
+    'input[aria-label="taskFolders.folderName"]'
+  ) as HTMLInputElement;
+  const change = async (name: string) =>
+    act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, name);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  const submit = () =>
+    [...document.querySelectorAll('[role="dialog"] button')].find(
+      (button) => button.textContent === 'taskFolders.newFolder'
+    ) as HTMLButtonElement;
+  await change('');
+  await act(async () => submit().click());
+  expect(storage).toHaveBeenCalledTimes(1); // name validation never enters storage Retry
+  await change('One');
+  await act(async () => submit().click());
+  expect(document.querySelector('input[aria-label="taskFolders.folderName"]')).not.toBeNull();
+  expect(folderController.getSnapshot().snapshot.folders).toHaveLength(0);
+  await change('Revised');
+  await act(async () => submit().click());
+  expect(document.querySelector('input[aria-label="taskFolders.folderName"]')).toBeNull();
+  expect(folderController.getSnapshot().snapshot.folders.map((f) => f.name)).toEqual(['Revised']);
+  expect(folderController.getSnapshot().error).toBe('independent');
+  await act(async () =>
+    (
+      [...document.querySelectorAll('button')].find(
+        (button) => button.textContent === 'taskFolders.retry'
+      ) as HTMLButtonElement
+    ).click()
+  );
+  expect(folderController.getSnapshot().snapshot.folders.map((f) => f.name)).toEqual([
+    'Revised',
+    'Other',
+  ]);
+  expect(folderController.getSnapshot().error).toBeNull();
+  await act(async () => folderController.retry());
+  expect(folderController.getSnapshot().snapshot.folders).toHaveLength(2);
+  expect(storage).toHaveBeenCalledTimes(4);
+  expect(folderController.getSnapshot().pending).toBe(0);
+});
+
+it('releases the automatic panel rename hold on wide/narrow/wide transition with full final grace and Escape', async () => {
+  vi.useFakeTimers();
+  await folderController.execute({ type: 'create', id: 'a', parent: null, name: 'A' });
+  await renderAt(300);
+  await startSidebarDrag();
+  await act(async () => window.dispatchEvent(new Event('blur')));
+  await act(async () =>
+    document
+      .querySelector('[data-folder-id="a"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  expect(document.querySelector('input[aria-label="taskFolders.renameFolder"]')).not.toBeNull();
+  await act(async () => vi.advanceTimersByTime(4000));
+  await renderAt(80);
+  expect(document.querySelector('input[aria-label="taskFolders.renameFolder"]')).toBeNull();
+  await renderAt(300);
+  expect(document.querySelector('input[aria-label="taskFolders.renameFolder"]')).toBeNull();
+  await act(async () => panelController.hold('pointer', true));
+  await act(async () => vi.advanceTimersByTime(4000));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => {
+    panelController.hold('focus', false);
+    panelController.hold('pointer', false);
+  });
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+  await act(async () =>
+    (host.querySelector('[data-testid="task-folders-toggle"]') as HTMLButtonElement).click()
+  );
+  await act(async () =>
+    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  );
+  expect(panelController.getSnapshot().open).toBe(false);
+});

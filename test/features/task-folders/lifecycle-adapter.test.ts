@@ -36,6 +36,7 @@ afterEach(() => {
 });
 describe('host lifecycle and vendor drop boundary', () => {
   it('keeps a new drag active when an earlier drop finishes after event propagation', async () => {
+    vi.useFakeTimers();
     const panel = new PanelController();
     panel.begin('task:a');
     panel.endAfterDrop();
@@ -44,8 +45,19 @@ describe('host lifecycle and vendor drop boundary', () => {
     expect(panel.getSnapshot().dragSource).toBe('task:b');
     panel.endAfterDrop();
     await Promise.resolve();
+    expect(panel.getSnapshot().dragSource).toBe('task:b');
+    vi.advanceTimersByTime(0);
     expect(panel.getSnapshot().dragSource).toBeNull();
+    vi.advanceTimersByTime(1999);
+    expect(panel.getSnapshot().open).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(panel.getSnapshot().open).toBe(false);
+    panel.begin('task:c');
+    panel.endAfterDrop();
+    panel.endAfterDrop();
     panel.dispose();
+    vi.runAllTimers();
+    expect(panel.getSnapshot().open).toBe(false);
   });
   it('gives the last hold a full grace period and prevents duplicate end/stale timer closure', () => {
     vi.useFakeTimers();
@@ -189,7 +201,8 @@ describe('host lifecycle and vendor drop boundary', () => {
       () => undefined,
       true
     );
-    const adapter = new TreeDropAdapter(() => projection, folders, new PanelController());
+    const panel = new PanelController();
+    const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
     const target = { item: { getId: () => 'unfiled' } } as DragTarget<Node>;
     const ordered = { ...target, insertionIndex: 0 } as DragTarget<Node>;
@@ -197,6 +210,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     await expect(adapter.dropInternal([source], ordered)).rejects.toThrow('invalid-drop');
     expect(save).not.toHaveBeenCalled();
     expect(adapter.canInternal([source], target)).toBe(true);
+    panel.begin(source.id);
     await adapter.dropInternal([source], target);
     expect(folders.getSnapshot().snapshot.folders[0].children).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1);
@@ -270,3 +284,101 @@ describe('cancellation and edge scroll cleanup', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
+
+// Model the browser's native listener checkpoint explicitly: dispatchEvent runs listeners
+// under one JS stack and cannot reproduce the checkpoint between capture and vendor.
+it.each(['foreign', 'internal'] as const)(
+  'preserves %s source across capture/checkpoint/vendor and consumes before save',
+  async (kind) => {
+    vi.useFakeTimers();
+    let snapshot = applyCommand(folder, { type: 'create', id: 'b', parent: null, name: 'B' });
+    snapshot = applyCommand(snapshot, { type: 'moveTask', identity, parent: 'a', anchor: append });
+    let finish!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const save = vi.fn(async () => gate);
+    const folders = new FolderController({ load: async () => ({ kind: 'valid', snapshot }), save });
+    await folders.load();
+    folders.setCatalog([identity]);
+    const projection = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
+    const panel = new PanelController();
+    const adapter = new TreeDropAdapter(() => projection, folders, panel);
+    const execute = vi.spyOn(folders, 'execute');
+    const tree = createTree<Node>({
+      rootItemId: 'root',
+      features: [syncDataLoaderFeature, selectionFeature, hotkeysCoreFeature, dragAndDropFeature],
+      dataLoader: {
+        getItem: (id) => projection.nodes.get(id)!,
+        getChildren: (id) => projection.nodes.get(id)?.children ?? [],
+      },
+      getItemName: (item) => item.getItemData().name,
+      isItemFolder: (item) => item.getItemData().kind !== 'task',
+      canDrop: (items, target) =>
+        adapter.canInternal(
+          items.map((item) => item.getItemData()),
+          target
+        ),
+      onDrop: (items, target) =>
+        adapter.dropInternal(
+          items.map((item) => item.getItemData()),
+          target
+        ),
+      canDropForeignDragObject: (transfer, target) => adapter.canForeign(transfer, target, true),
+      onDropForeignDragObject: (transfer, target) => adapter.dropForeign(transfer, target),
+    });
+    tree.setMounted(true);
+    tree.rebuildTree();
+    const release = panel.subscribe(() => {
+      if (!panel.getSnapshot().dragSource) clearTreeDrag(tree);
+    });
+    const source = kind === 'foreign' ? 'task:["t","1"]' : 'folder:a';
+    if (kind === 'internal')
+      tree.getItemInstance(source).getDragHandleProps().onDragStart!({ preventDefault: vi.fn() });
+    const session = panel.begin(source);
+    const capture = () => panel.endAfterDrop();
+    document.addEventListener('drop', capture, true);
+    document.dispatchEvent(new Event('drop'));
+    await Promise.resolve(); // native checkpoint after document capture, before vendor listener
+    expect(panel.getSnapshot().dragSource).toBe(source);
+    if (kind === 'internal') expect(tree.getState().dnd?.draggedItems).toHaveLength(1);
+    const transfer = {
+      types: [TASK_MIME],
+      getData: () => JSON.stringify({ version: 1, identity }),
+    } as unknown as DataTransfer;
+    const drop = tree.getContainerProps().onDrop!({
+      dataTransfer: transfer,
+      preventDefault: vi.fn(),
+    });
+    expect(panel.getSnapshot().dragSource).toBeNull();
+    expect(execute).toHaveBeenCalledTimes(1);
+    panel.end(session); // subsequent native dragend
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(save).toHaveBeenCalledTimes(1);
+    const duplicate = tree.getContainerProps().onDrop!({
+      dataTransfer: transfer,
+      preventDefault: vi.fn(),
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    panel.begin('new-session');
+    vi.advanceTimersByTime(5000);
+    expect(panel.getSnapshot().dragSource).toBe('new-session');
+    finish();
+    await drop;
+    await duplicate;
+    expect(panel.getSnapshot().dragSource).toBe('new-session');
+    expect(save).toHaveBeenCalledTimes(1);
+    document.removeEventListener('drop', capture, true);
+    release();
+    tree.setMounted(false);
+    panel.dispose();
+  }
+);

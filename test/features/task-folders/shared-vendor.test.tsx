@@ -488,3 +488,103 @@ it('cancels a real internal vendor drag when catalog refresh removes its source 
   expect(tree.getState().dnd).toBeNull();
   expect(panelController.getSnapshot().dragSource).toBeNull();
 });
+
+it('cancels vanished editors and ignores old async rename completion after a new session or unmount', async () => {
+  vi.useFakeTimers();
+  let snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'a',
+    parent: null,
+    name: 'A',
+  });
+  snapshot = applyCommand(snapshot, { type: 'create', id: 'b', parent: null, name: 'B' });
+  const fixture = treeHarness([], snapshot);
+  let finish!: (s: Snapshot) => void;
+  const gate = new Promise<Snapshot>((resolve) => {
+    finish = resolve;
+  });
+  vi.spyOn(folderController, 'execute').mockReturnValue(gate);
+  panelController.begin('external');
+  panelController.end();
+  await act(async () => root.render(<fixture.Harness />));
+  const rename = async (id: string) =>
+    act(async () =>
+      host
+        .querySelector(`[data-folder-id="${id}"]`)!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+    );
+  await rename('a');
+  await act(async () =>
+    host
+      .querySelector('input')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  );
+  snapshot = applyCommand(snapshot, { type: 'delete', id: 'a' });
+  await act(async () => fixture.update({ snapshot }));
+  expect(host.querySelector('input')).toBeNull();
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+  await rename('b');
+  await act(async () => {
+    finish(snapshot);
+    await gate;
+  });
+  expect(host.querySelector('input')).not.toBeNull();
+  expect(panelController.escape()).toBe(false);
+  panelController.hold('edit:independent', true);
+  await act(async () => fixture.update({ shown: false }));
+  expect(panelController.escape()).toBe(false);
+  await act(async () => vi.advanceTimersByTime(4000));
+  expect(panelController.getSnapshot().open).toBe(true);
+  panelController.hold('edit:independent', false);
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+
+it('ignores a pending rename rejection after tree unmount and preserves the replacement editor', async () => {
+  const snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'a',
+    parent: null,
+    name: 'A',
+  });
+  const fixture = treeHarness([], snapshot);
+  let fail!: (error: Error) => void;
+  const gate = new Promise<Snapshot>((_resolve, reject) => {
+    fail = reject;
+  });
+  vi.spyOn(folderController, 'execute').mockReturnValue(gate);
+  await act(async () => root.render(<fixture.Harness />));
+  const rename = async () =>
+    act(async () =>
+      host
+        .querySelector('[data-folder-id="a"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+    );
+  await rename();
+  await act(async () =>
+    host
+      .querySelector('input')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  );
+  await act(async () => fixture.update({ shown: false }));
+  await act(async () => fixture.update({ shown: true }));
+  await rename();
+  await act(async () => {
+    fail(new Error('save'));
+    await gate.catch(() => undefined);
+  });
+  expect(host.querySelector('input')!.getAttribute('aria-invalid')).toBe('false');
+  expect(host.querySelector('input')!.disabled).toBe(false);
+  expect(panelController.escape()).toBe(false);
+  await act(async () =>
+    host
+      .querySelector('input')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  );
+  expect(host.querySelector('input')).toBeNull();
+});

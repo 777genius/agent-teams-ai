@@ -60,7 +60,13 @@ export class FolderController {
     return this.loading;
   }
   execute(command: Command): Promise<Snapshot> {
-    return this.enqueue(command);
+    const failure = this.failures.find(
+      (entry) =>
+        command.type === 'create' &&
+        entry.command.type === 'create' &&
+        entry.command.id === command.id
+    );
+    return this.enqueue(command, failure);
   }
   private enqueue(
     command: Command,
@@ -86,8 +92,10 @@ export class FolderController {
           if (next !== this.state.snapshot) await this.repository.save(next);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'save';
-          if (retry) retry.error = message;
-          else this.failures.push({ command, error: message });
+          if (retry) {
+            retry.command = command;
+            retry.error = message;
+          } else this.failures.push({ command, error: message });
           this.publish({ error: this.failures[0].error });
           throw error;
         }

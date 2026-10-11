@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
@@ -78,6 +78,8 @@ export const FolderTree = ({
   const { t } = useAppTranslation('common');
   const scroll = useRef<HTMLDivElement>(null);
   const virtualRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(null);
+  const editHold = `edit:${useId()}` as const;
+  const editSession = useRef<object | null>(null);
   const [rename, setRename] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
@@ -268,13 +270,26 @@ export const FolderTree = ({
     setRename(n.folderId!);
     setValue(n.name);
     setError(false);
-    panelController.hold('edit', true);
+    editSession.current = {};
+    panelController.hold(editHold, true);
   };
-  const cancelRename = (): void => {
+  const cancelRename = useCallback((): void => {
+    editSession.current = null;
     setRename(null);
     setError(false);
-    panelController.hold('edit', false);
-  };
+    setSaving(false);
+    panelController.hold(editHold, false);
+  }, [editHold]);
+  useEffect(
+    () => () => {
+      editSession.current = null;
+      panelController.hold(editHold, false);
+    },
+    [editHold]
+  );
+  useEffect(() => {
+    if (rename && !items.some((item) => item.getId() === `folder:${rename}`)) cancelRename();
+  }, [rename, items, cancelRename]);
   const saveRename = async (): Promise<void> => {
     if (!rename || saving) return;
     try {
@@ -283,14 +298,15 @@ export const FolderTree = ({
       setError(true);
       return;
     }
+    const session = editSession.current;
     setSaving(true);
     try {
       await folderController.execute({ type: 'rename', id: rename, name: value });
-      cancelRename();
+      if (editSession.current === session) cancelRename();
     } catch {
-      setError(true);
+      if (editSession.current === session) setError(true);
     } finally {
-      setSaving(false);
+      if (editSession.current === session) setSaving(false);
     }
   };
   const actions = (n: Node): { label: string; run(): void }[] =>

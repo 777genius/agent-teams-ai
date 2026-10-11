@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -48,6 +48,7 @@ export const FolderDialogs = ({
   renameTask(team: string, id: string, name: string): void;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const createOperation = useRef<{ action: FolderDialog; id: string } | null>(null);
   const [name, setName] = useState('');
   const [edited, setEdited] = useState(false);
   const inputName = action?.kind === 'renameTask' && !edited ? action.name : name;
@@ -68,6 +69,7 @@ export const FolderDialogs = ({
             : t('taskFolders.move');
   const dismiss = (): void => {
     if (busy) return;
+    createOperation.current = null;
     close();
     moveRequest.close();
     panelController.hold('dialog', false);
@@ -89,7 +91,9 @@ export const FolderDialogs = ({
     setBusy(true);
     try {
       if (action?.kind === 'create') {
-        const id = crypto.randomUUID();
+        if (createOperation.current?.action !== action)
+          createOperation.current = { action, id: crypto.randomUUID() };
+        const { id } = createOperation.current;
         await folderController.execute({ type: 'create', id, parent: action.parent, name });
         created(id, action.parent);
       } else if (action?.kind === 'delete')
@@ -111,6 +115,7 @@ export const FolderDialogs = ({
           parent: target === 'unfiled' ? null : target,
           anchor: append,
         });
+      createOperation.current = null;
       close();
       moveRequest.close();
       panelController.hold('dialog', false);
