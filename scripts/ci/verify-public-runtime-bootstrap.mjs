@@ -85,7 +85,9 @@ async function runSmokeCommand(label, command, args, env, timeoutMs, maxBuffer) 
   });
 
   return await new Promise((resolve) => {
-    child.on('error', (spawnError) => { error ??= spawnError; });
+    child.on('error', (spawnError) => {
+      error ??= spawnError;
+    });
     child.on('close', (status, signal) => {
       clearTimeout(timer);
       process.stdout.write(
