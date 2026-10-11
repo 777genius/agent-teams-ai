@@ -11,6 +11,9 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
+      - 'scripts/lib/runtime-zip.test-fixture.mts'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
   pull_request:
     paths:
@@ -20,6 +23,9 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
+      - 'scripts/lib/runtime-zip.test-fixture.mts'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
 
 permissions:
@@ -56,6 +62,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+
+      - name: Verify native Windows ZIP extraction and containment
+        if: matrix.platform == 'win32-x64'
+        run: node --test --test-name-pattern="Windows inbox tar" scripts/lib/runtime-payload-cache.test.mjs
 
       - name: Download, extract, and execute pinned runtime anonymously
         env:

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { extractArchive as extractRuntimeArchive } from './lib/runtime-payload-cache.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -181,11 +182,7 @@ function extractArchive(archivePath, extractDir, archiveKind) {
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      extractRuntimeArchive(archivePath, extractDir, archiveKind, runOrThrow);
       return;
     }
 

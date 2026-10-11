@@ -98,6 +98,14 @@ export function publishRuntimePayload(extractedBinaryPath, payloadDir, archiveSh
   }
 }
 
+function assertRegularArchiveEntries(root) {
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const file = path.join(root, entry.name);
+    if (entry.isDirectory()) assertRegularArchiveEntries(file);
+    else if (!entry.isFile()) throw new Error(`Unsupported runtime archive entry: ${file}`);
+  }
+}
+
 export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) {
   fs.mkdirSync(extractDir, { recursive: true });
 
@@ -108,11 +116,13 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrExit('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -Path '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      const systemRoot = process.env.SystemRoot;
+      if (typeof systemRoot !== 'string' || !/^[A-Za-z]:[\\/]/u.test(systemRoot)) {
+        throw new Error('Windows runtime ZIP extraction requires an absolute SystemRoot');
+      }
+      const tarPath = path.win32.join(systemRoot, 'System32', 'tar.exe');
+      runOrExit(tarPath, ['-xf', archivePath, '-C', extractDir], { shell: false });
+      assertRegularArchiveEntries(extractDir);
       return;
     }
 
