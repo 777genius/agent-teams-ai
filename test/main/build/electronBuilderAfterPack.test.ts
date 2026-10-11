@@ -291,6 +291,76 @@ describe('electron-builder afterPack', () => {
     }
   );
 
+  it.each([
+    ['x64', 1, createElfBuffer('x64')],
+    ['arm64', 3, createElfBuffer('x64')],
+    ['arm64', 3, createPortableExecutableBuffer('x64')],
+  ] as const)(
+    'prunes only incompatible known msgpackr build files for win32-%s',
+    async (arch, archCode, foreignBytes) => {
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+      const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
+      const release = 'msgpackr-extract/build/Release';
+      const leaves = ['extract.node', 'obj.target/extract.node', 'obj.target/extract/src/extract.o'];
+      const targetBytes = createPortableExecutableBuffer(arch);
+      for (const leaf of leaves) {
+        writeFile(path.join(graph, release, leaf), foreignBytes);
+        writeFile(path.join(graph, 'nested/node_modules', release, leaf), targetBytes);
+      }
+      const packageData = path.join(graph, release, 'obj.target/extract/src/extract.cc');
+      writeFile(packageData, Buffer.from('retain nonnative build data'));
+      await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: archCode });
+      for (const leaf of leaves) {
+        expect(fs.existsSync(path.join(graph, release, leaf))).toBe(false);
+        expect(fs.readFileSync(path.join(graph, 'nested/node_modules', release, leaf))).toEqual(
+          targetBytes
+        );
+      }
+      expect(fs.readFileSync(packageData)).toEqual(Buffer.from('retain nonnative build data'));
+      await expect(validateNativeBinaries(tempDir, 'win32', arch)).resolves.toEqual([]);
+    }
+  );
+
+  it('preserves compatible Linux msgpackr build artifacts', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const release = path.join(
+      tempDir,
+      'resources/runtime/local-cli/node_modules/msgpackr-extract/build/Release'
+    );
+    const bytes = createElfBuffer('x64');
+    for (const leaf of [
+      'extract.node',
+      'obj.target/extract.node',
+      'obj.target/extract/src/extract.o',
+    ])
+      writeFile(path.join(release, leaf), bytes);
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'linux', arch: 1 });
+    for (const leaf of [
+      'extract.node',
+      'obj.target/extract.node',
+      'obj.target/extract/src/extract.o',
+    ])
+      expect(fs.readFileSync(path.join(release, leaf))).toEqual(bytes);
+  });
+
+  it.each([
+    'resources/runtime/local-cli/node_modules/msgpackr-extract/build/Release/other.node',
+    'resources/runtime/local-cli/node_modules/msgpackr-extract/build/Debug/extract.node',
+    'resources/app.asar.unpacked/node_modules/msgpackr-extract/build/Release/extract.node',
+  ])('keeps msgpackr pruning fail-closed outside known runtime artifacts: %s', async (relative) => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const file = path.join(tempDir, relative);
+    const bytes = createElfBuffer('x64');
+    writeFile(file, bytes);
+    await expect(
+      afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 })
+    ).rejects.toThrow('Found incompatible native binaries');
+    expect(fs.readFileSync(file)).toEqual(bytes);
+  });
+
   it('preserves compatible bytes under the ia32 ffi-rs filename and on ia32 targets', async () => {
     for (const [arch, archCode] of [
       ['x64', 1],

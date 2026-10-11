@@ -258,6 +258,22 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
     );
 
   if (isPortableRuntimeGraph) {
+    // Portable payloads can contain these exact host-built msgpackr outputs.
+    // Prune individual files only after the metadata compatibility check below.
+    const msgpackrIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      'msgpackr-extract',
+      'build',
+      'Release',
+    ]);
+    if (
+      msgpackrIndex >= 0 &&
+      ['extract.node', 'obj.target/extract.node', 'obj.target/extract/src/extract.o'].includes(
+        segments.slice(msgpackrIndex + 4).join('/')
+      )
+    ) {
+      return filePath;
+    }
     const ffiIndex = findNodeModulesSequence(segments, [
       'node_modules',
       '@yuuang',
