@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import { object, REPOSITORY, rootTestShards, sha, WORKFLOW } from './ci-feedback-reuse.mts';
+import { object, REPOSITORY, rootTestShards, sha, WORKFLOW, withoutSkippedScopeJobs } from './ci-feedback-reuse.mts';
 import type { GitHubRead, JsonObject } from './ci-feedback-reuse.mts';
 
 const lifecycle = ['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'];
@@ -112,12 +112,13 @@ function skippedDraftNodeCleanup(gate: JsonObject, step: JsonObject): boolean {
     positive(step.number) > positive(failure[0].number) && positive(failure[0].number) > positive(setup[0].number);
 }
 function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, shards: 2 | 4, action?: string): boolean {
+  jobs = withoutSkippedScopeJobs(jobs, run);
   const skippedHeavy = configuredHeavySkips(shards);
   requireProof(jobs.every((job) => job.run_id === run.id && job.run_attempt === run.run_attempt &&
     job.head_sha === run.head_sha && job.status === 'completed'), 'Job attempt mismatch');
   const plan = sourceProof(jobs, run, pr);
   const metadata = jobs.find((job) => job.name === 'Metadata CI result' ||
-    (job.name === 'Full qualification' && successfulStep(job, 'Verify completed current-code qualification after metadata edits')));
+    (['Full qualification', 'Metadata qualification'].includes(String(job.name)) && successfulStep(job, 'Verify completed current-code qualification after metadata edits')));
   if (metadata) {
     requireProof(action === 'edited' || action === undefined, 'Lifecycle producer claimed metadata');
     const metadataStep = metadata.name === 'Metadata CI result' ? 'Preserve existing current-code checks after metadata edits' : 'Verify completed current-code qualification after metadata edits';
