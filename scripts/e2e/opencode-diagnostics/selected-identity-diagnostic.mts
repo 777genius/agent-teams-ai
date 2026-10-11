@@ -1,7 +1,7 @@
 // Failure evidence only: never changes the qualification gate or SDK acceptance.
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { mkdtemp, readFile, realpath, rm, stat } from 'node:fs/promises';
+import { createReadStream, writeFileSync } from 'node:fs';
+import { lstat, mkdtemp, readFile, realpath, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -23,6 +23,10 @@ const receipt: Record<string, unknown> = {
   schemaVersion: 1, sdkHead: SDK_HEAD, sdkClosureSha256: SDK_CLOSURE_SHA,
   outcome: 'NOT_RUN', admissionCalls: 0, physicalRetirement: 'unproven', phase: 'platform',
 };
+let receiptPath: string | undefined;
+const saveReceipt = () => {
+  if (receiptPath) writeFileSync(receiptPath, JSON.stringify(receipt) + '\n');
+};
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 function requireInput(ok: unknown): asserts ok {
@@ -43,10 +47,21 @@ async function json(file: string): Promise<unknown> {
 }
 
 async function main() {
-  requireInput(process.platform === 'win32');
-  receipt.phase = 'owned_inputs';
-  const [sdkArg, rootArg, packageArg, ...extra] = process.argv.slice(2);
+  const [sdkArg, rootArg, packageArg, outputArg, ...extra] = process.argv.slice(2);
   const runnerTemp = process.env.RUNNER_TEMP;
+  requireInput(outputArg && runnerTemp && path.isAbsolute(outputArg) && path.isAbsolute(runnerTemp));
+  requireInput(path.basename(outputArg) === 'selected-identity-diagnostic.json');
+  requireInput(await realpath(path.dirname(outputArg)) === await realpath(runnerTemp));
+  const outputLeaf = await lstat(outputArg);
+  requireInput(outputLeaf.isFile() && !outputLeaf.isSymbolicLink());
+  receiptPath = outputArg;
+  saveReceipt();
+  requireInput(process.platform === 'win32');
+  if (process.env.SDK_CHECKOUT_OUTCOME !== 'success') {
+    receipt.phase = 'sdk_source_unavailable';
+    return;
+  }
+  receipt.phase = 'owned_inputs';
   requireInput(sdkArg && rootArg && packageArg && runnerTemp && extra.length === 0);
   requireInput([sdkArg, rootArg, packageArg, runnerTemp].every(value => path.isAbsolute(value)));
   const [sdk, root, packaged, temp] = await Promise.all([sdkArg, rootArg, packageArg, runnerTemp].map(value => realpath(value)));
@@ -82,6 +97,8 @@ async function main() {
   receipt.phase = 'sdk_source';
   requireInput((await readFile(path.join(sdk, '.git', 'HEAD'), 'utf8')).trim() === SDK_HEAD);
   for (const [relative, expected] of sourcePins) requireInput(await hash(path.join(sdk, relative)) === expected);
+  const closureHash = createHash('sha256').update(JSON.stringify(sourcePins.map(([file, sha256]) => ({ path: file, sha256 })))).digest('hex');
+  requireInput(closureHash === SDK_CLOSURE_SHA);
   receipt.sdkSourceVerified = true;
   const ownTmp = await mkdtemp(path.join(temp, 'TEST-windows-admission-'));
   const clean: NodeJS.ProcessEnv = {};
@@ -97,25 +114,41 @@ async function main() {
   for (const key of Object.keys(process.env)) delete process.env[key];
   Object.assign(process.env, clean);
   receipt.phase = 'sdk_import';
+  saveReceipt();
   const identity: unknown = await import(pathToFileURL(path.join(sdk, 'src/services/opencode/compatibility/OpenCodeNativeIdentity.ts')).href);
   const cleanup: unknown = await import(pathToFileURL(path.join(sdk, 'src/services/opencode/compatibility/OpenCodeVersionProbe.ts')).href);
   requireInput(record(identity) && typeof identity.inspectOpenCodeReadSelection === 'function');
   requireInput(record(cleanup) && typeof cleanup.OpenCodeVersionProbeCleanupError === 'function');
   receipt.admissionCalls = 1;
   receipt.phase = 'admission';
+  receipt.outcome = 'IN_PROGRESS';
+  saveReceipt();
   const started = performance.now();
+  const abort = new AbortController();
+  let timedOut = false;
+  // SDK keeps its own 5s acquisition / 8s cleanup budget. This outer guard
+  // records a stalled diagnostic without granting any additional kill authority.
+  const deadline = setTimeout(() => {
+    timedOut = true;
+    Object.assign(receipt, { outcome: 'TIMEOUT', elapsedMs: Math.round(performance.now() - started), physicalRetirement: 'unproven' });
+    saveReceipt();
+    abort.abort();
+  }, 15000);
   try {
-    const result: unknown = await identity.inspectOpenCodeReadSelection();
+    const result: unknown = await identity.inspectOpenCodeReadSelection(abort.signal);
+    if (timedOut) return;
     receipt.elapsedMs = Math.round(performance.now() - started);
     receipt.physicalRetirement = 'confirmed_by_owned_probe';
+    receipt.phase = 'admission_result';
     requireInput(record(result) && record(result.policy));
     requireInput(result.path === wrapper && result.fingerprint === wrapperHash);
     requireInput(result.policy.generation === 'v1' && result.policy.version === '1.19.0');
     Object.assign(receipt, { policy: 'v1', version: '1.19.0', fingerprint: result.fingerprint });
     requireInput(await hash(wrapper) === wrapperHash && await hash(native) === NATIVE_SHA);
+    if (timedOut) return;
     receipt.outcome = 'ADMITTED';
-    await rm(ownTmp, { recursive: true, force: true });
   } catch (error) {
+    if (timedOut) return;
     receipt.elapsedMs = Math.round(performance.now() - started);
     receipt.outcome = 'REJECTED';
     receipt.class = error instanceof Error && ['cleanup_unknown', 'selection_unavailable', 'identity_mismatch'].includes(error.message)
@@ -131,8 +164,20 @@ async function main() {
       }
     }
     // Retained SDK owners may still use ownTmp; do not erase it on rejection.
+  } finally {
+    clearTimeout(deadline);
+  }
+  saveReceipt();
+  if (receipt.outcome === 'ADMITTED') {
+    try {
+      await rm(ownTmp, { recursive: true, force: true });
+      receipt.ownTmpRemoved = true;
+    } catch (error) {
+      receipt.ownTmpRemoved = false;
+      receipt.cleanupFailure = record(error) && ['EBUSY', 'EPERM', 'EACCES'].includes(String(error.code)) ? error.code : 'other_error';
+    }
   }
 }
 try { await main(); }
 catch { receipt.outcome = receipt.admissionCalls === 1 ? 'REJECTED' : 'NOT_RUN'; }
-console.log(JSON.stringify(receipt));
+saveReceipt();

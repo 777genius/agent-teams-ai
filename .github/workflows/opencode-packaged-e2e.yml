@@ -39,7 +39,33 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Enable long paths
-        run: git config --global core.longpaths true
+        run: |
+          git config --global core.longpaths true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git config --global core.autocrlf false
+          if ($LASTEXITCODE -ne 0) { Write-Warning 'SDK line-ending configuration failed; admission evidence may be unavailable'; $global:LASTEXITCODE = 0 }
+      - name: Checkout exact SDK admission source
+        id: sdk_source
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: d6361e0f50821ffc31cc5a9efd0dcaf6643c850d
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          path: .test-tmp/sdk-admission
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            src/services/opencode/OpenCodeBinaryResolver.ts
+            src/services/opencode/OpenCodeCursorAgentTreeKill.ts
+            src/services/opencode/compatibility/OpenCodeGenerationPolicy.ts
+            src/services/opencode/compatibility/OpenCodeNativeIdentity.ts
+            src/services/opencode/compatibility/OpenCodeVersionProbe.ts
+            src/services/opencode/profile/OpenCodeV2ManagedConfig.ts
+            src/services/opencode/transport/OpenCodeBoundedFetch.ts
+            src/utils/portableCli.ts
+            src/utils/processKill.ts
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -98,33 +124,23 @@ jobs:
           $roots = @($qualificationOutput | Where-Object { $_ -match '^Packaged artifacts/profile: ' })
           if ($roots.Count -eq 1) { "root=$($roots[0].Substring('Packaged artifacts/profile: '.Length))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append }
           if ($qualificationExit -ne 0) { exit $qualificationExit }
-      - name: Checkout exact SDK admission source for failure evidence
-        if: always() && failure() && steps.qualify.outcome == 'failure'
-        uses: actions/checkout@v6
-        with:
-          repository: 777genius/agent_teams_orchestrator
-          ref: d6361e0f50821ffc31cc5a9efd0dcaf6643c850d
-          path: .test-tmp/sdk-admission
-          persist-credentials: false
       - name: Record selected identity admission failure evidence
         if: always() && failure() && steps.qualify.outcome == 'failure'
         timeout-minutes: 2
         shell: pwsh
         env:
           QUALIFICATION_ROOT: ${{ steps.qualify.outputs.root }}
+          SDK_CHECKOUT_OUTCOME: ${{ steps.sdk_source.outcome }}
         run: |
           $sdk = Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission'
-          if (Test-Path (Join-Path $sdk '.git')) {
-            git -C $sdk config core.autocrlf false
-            git -C $sdk checkout-index --force --all
-          }
           $packaged = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked'
           $bun = Join-Path $packaged 'resources/runtime/bun/bun.exe'
           $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
           if (!(Test-Path $bun)) {
             '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"packaged_bun_missing","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
           } else {
-            & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged | Set-Content $receipt -Encoding utf8
+            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"process_start","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
+            & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged $receipt
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Archive qualified Windows test build
