@@ -70,6 +70,13 @@ export const nativeImage = { createFromPath: () => proxyObj, createEmpty: () => 
 export const net = { fetch: globalThis.fetch };
 export const safeStorage = { isEncryptionAvailable: () => false, encryptString: noop, decryptString: () => '' };
 export const screen = proxyObj;
+// Standalone has no desktop windows: no renderer targets exist to look up.
+export const webContents = {
+  getAllWebContents: () => [],
+  getFocusedWebContents: () => null,
+  fromId: () => undefined,
+  fromDevToolsTargetId: () => undefined
+};
 export default proxyObj;
 `
   return {
