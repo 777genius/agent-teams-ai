@@ -725,7 +725,15 @@ export const RuntimeProviderQuickConnect = ({
   return (
     <>
       <RuntimeProviderQuickConnectView
-        cards={sortQuickConnectCards(openCodeCards)}
+        cards={sortQuickConnectCards(openCodeCards).map((card) =>
+          gate === 'ready' && (!card.actionLabel || !card.onAction)
+            ? {
+                ...card,
+                actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
+                onAction: () => onOpenCodeProviderAction(card.providerId, 'settings-connect'),
+              }
+            : card
+        )}
         gate={gate}
         runtimeStatus={openCodeRuntimeStatus}
         directoryError={directory.error}

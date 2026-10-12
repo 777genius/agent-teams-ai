@@ -102,13 +102,32 @@ const QuickProviderCard = ({
       data-testid={`provider-quick-card-${card.id}`}
       data-disabled={disabled ? 'true' : undefined}
       className={cn(
-        'relative grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] content-center items-center gap-x-3 overflow-hidden border-b px-3 py-3.5 last:border-b-0 sm:px-4',
+        'group/provider relative grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] content-center items-center gap-x-3 overflow-hidden border-b px-3 py-3.5 transition-colors last:border-b-0 sm:px-4',
+        !disabled && card.actionLabel && card.onAction
+          ? 'focus-within:bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-hover)]'
+          : null,
         isLastDesktopRow ? 'md:border-b-0' : 'md:border-b',
         disabled ? 'bg-white/[0.012]' : null
       )}
       style={{ borderColor: 'var(--color-border-subtle)' }}
     >
-      <div className={cn('row-span-2 self-center', disabled ? 'opacity-50 grayscale' : null)}>
+      {card.actionLabel && card.onAction ? (
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label={`${card.displayName}: ${card.actionLabel}`}
+          data-testid={`provider-quick-open-${card.id}`}
+          className="absolute inset-0 h-full w-full rounded-none p-0 hover:bg-transparent focus-visible:ring-inset"
+          disabled={disabled}
+          onClick={card.onAction}
+        />
+      ) : null}
+      <div
+        className={cn(
+          'pointer-events-none relative row-span-2 self-center',
+          disabled ? 'opacity-50 grayscale' : null
+        )}
+      >
         <ProviderBrandIcon
           provider={{ providerId: card.providerId, displayName: card.displayName }}
           size="large"
@@ -116,7 +135,7 @@ const QuickProviderCard = ({
       </div>
       <div
         className={cn(
-          'col-start-2 row-start-1 flex min-w-0 items-center gap-1.5',
+          'pointer-events-none relative col-start-2 row-start-1 flex min-w-0 items-center gap-1.5',
           card.actionLabel && card.onAction ? null : 'col-span-2'
         )}
       >
@@ -128,7 +147,7 @@ const QuickProviderCard = ({
             <button
               type="button"
               aria-label={`${card.displayName}: ${card.description}`}
-              className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
+              className="pointer-events-auto inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 group-focus-within/provider:opacity-100 group-hover/provider:opacity-100 [@media(hover:none)]:opacity-100"
             >
               <Info className="size-3.5" />
             </button>
@@ -144,7 +163,7 @@ const QuickProviderCard = ({
       </div>
       <span
         className={cn(
-          'col-start-2 row-start-2 flex min-w-0 items-center gap-1.5 text-xs',
+          'pointer-events-none relative col-start-2 row-start-2 flex min-w-0 items-center gap-1.5 text-xs',
           !card.actionLabel || !card.onAction ? 'col-span-2' : null,
           disabled ? 'text-[var(--color-text-muted)]' : cardStateClassName(card.state)
         )}
@@ -159,7 +178,7 @@ const QuickProviderCard = ({
           data-testid={`provider-quick-action-${card.id}`}
           variant="ghost"
           size="sm"
-          className="col-start-3 row-span-2 row-start-1 h-7 shrink-0 self-center px-2 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          className="relative col-start-3 row-span-2 row-start-1 h-7 shrink-0 self-center px-2 text-[10px] text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text)] group-focus-within/provider:opacity-100 group-hover/provider:opacity-100 [@media(hover:none)]:opacity-100"
           disabled={disabled}
           onClick={card.onAction}
         >
