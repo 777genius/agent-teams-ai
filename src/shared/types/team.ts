@@ -395,17 +395,27 @@ export type AttachmentMediaType = string;
 /** Supported image MIME types (used for preview/validation in UI). */
 export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
-export interface AttachmentMeta {
+interface NativeAttachmentDigest {
+  sha256?: string;
+}
+interface NativeMemberCapability {
+  nativeInboxAttachmentsSupported?: boolean;
+}
+
+export interface AttachmentMeta extends NativeAttachmentDigest {
   id: string;
   filename: string;
   mimeType: AttachmentMediaType;
   size: number;
-  /** Absolute path to the file on disk. Absent for metadata-only references. */
   filePath?: string;
 }
-
 export interface AttachmentPayload extends AttachmentMeta {
   data: string;
+}
+
+export interface NativeAttachmentDeliveryEnvelope {
+  version: 1;
+  recipientRuntimeInstanceId: string;
 }
 
 export interface AttachmentFileData {
@@ -487,6 +497,8 @@ export interface InboxMessage extends GroupChatEnvelope {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
+  /** Main-generated delivery identity; never accepted from renderer message input. */
+  nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
   /** Lead session ID that produced this message (for session boundary detection). */
   leadSessionId?: string;
   /** Stable cross-team thread ID shared across request/reply turns. */
@@ -711,7 +723,7 @@ export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
-export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'> {
+export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   agentId?: string;
   status: MemberStatus;
@@ -780,7 +792,7 @@ export interface TeamProcess {
   registeredAt: string;
   stoppedAt?: string;
 }
-export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'> {
+export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   agentId?: string;
   currentTaskId: string | null;

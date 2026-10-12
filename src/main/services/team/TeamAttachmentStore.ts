@@ -2,12 +2,15 @@ import {
   type DurablePathRemovalProofHooks,
   removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
+import { atomicCreateAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { withFileLock } from './fileLock';
 
 import type { AttachmentFileData, AttachmentPayload } from '@shared/types';
 
@@ -27,6 +30,24 @@ interface StoredAttachmentIndex {
   id: string;
   filename: string;
   mimeType: string;
+  size?: number;
+  sha256?: string;
+  nativeAttachmentDeliveryVersion?: 1;
+}
+
+interface PendingNativeAttachmentDescriptor {
+  schemaVersion: 1;
+  state: 'pending';
+  attachments: StoredAttachmentIndex[];
+}
+
+export interface NativeStoredAttachmentMeta {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  filePath: string;
+  sha256: string;
 }
 
 export class TeamAttachmentStore {
@@ -90,6 +111,14 @@ export class TeamAttachmentStore {
     return path.join(this.getMessageDir(teamName, messageId), '_index.json');
   }
 
+  private getPendingNativePath(teamName: string, messageId: string): string {
+    return path.join(this.getMessageDir(teamName, messageId), '_pending-native.json');
+  }
+
+  private getMessageLockPath(teamName: string, messageId: string): string {
+    return `${this.getMessageDir(teamName, messageId)}.lock`;
+  }
+
   /** Legacy JSON bundle path (old format). */
   private getLegacyFilePath(teamName: string, messageId: string): string {
     this.assertSafePathSegment('messageId', messageId);
@@ -117,49 +146,307 @@ export class TeamAttachmentStore {
     messageId: string,
     attachments: AttachmentPayload[]
   ): Promise<Map<string, string>> {
-    const filePaths = new Map<string, string>();
-    if (attachments.length === 0) return filePaths;
+    if (attachments.length === 0) return new Map();
 
-    const dir = this.getMessageDir(teamName, messageId);
-    await fs.promises.mkdir(dir, { recursive: true });
+    return withFileLock(this.getMessageLockPath(teamName, messageId), async () => {
+      const filePaths = new Map<string, string>();
+      const dir = this.getMessageDir(teamName, messageId);
+      await fs.promises.mkdir(dir, { recursive: true });
 
-    const indexEntries: StoredAttachmentIndex[] = [];
+      const existingIndex = await this.readStoredIndex(teamName, messageId, false);
+      const pendingNative = await this.readPendingNativeDescriptor(teamName, messageId);
+      const nativeOwners = [existingIndex, pendingNative].filter((index) =>
+        this.isNativeOwnedIndex(index)
+      );
+      if (nativeOwners.length > 0) {
+        const nativeRequest = this.toNativeStoredAttachments(teamName, messageId, attachments);
+        for (const owner of nativeOwners) {
+          await this.assertExactNativeBundle(owner, nativeRequest);
+        }
+        await this.completeNativeOwnedBundle(teamName, messageId, nativeRequest, attachments);
+        for (const attachment of nativeRequest) filePaths.set(attachment.id, attachment.filePath);
+        return filePaths;
+      }
 
-    for (const att of attachments) {
-      const buffer = Buffer.from(att.data, 'base64');
-      if (buffer.length > MAX_ATTACHMENT_SIZE) {
-        logger.warn(
-          `[${teamName}] Skipping oversized attachment ${att.id} (${(buffer.length / (1024 * 1024)).toFixed(1)} MB)`
+      const indexEntries: StoredAttachmentIndex[] = [];
+      for (const att of attachments) {
+        const buffer = this.decodeLegacyAttachment(att);
+        if (buffer.length > MAX_ATTACHMENT_SIZE) {
+          logger.warn(`[${teamName}] Skipping oversized or invalid attachment ${att.id}`);
+          continue;
+        }
+
+        const storedPath = this.getStoredFilePath(teamName, messageId, att.id, att.filename);
+        try {
+          await atomicWriteAsync(storedPath, buffer);
+        } catch (writeError) {
+          logger.warn(`[${teamName}] Failed to write attachment ${att.id}: ${writeError}`);
+          continue;
+        }
+        filePaths.set(att.id, storedPath);
+        indexEntries.push({ id: att.id, filename: att.filename, mimeType: att.mimeType });
+      }
+
+      if (indexEntries.length > 0) {
+        await atomicWriteAsync(
+          this.getIndexPath(teamName, messageId),
+          JSON.stringify(indexEntries, null, 2)
         );
-        continue;
       }
 
-      const storedPath = this.getStoredFilePath(teamName, messageId, att.id, att.filename);
-      try {
-        await atomicWriteAsync(storedPath, buffer);
-      } catch (writeError) {
-        logger.warn(`[${teamName}] Failed to write attachment ${att.id}: ${writeError}`);
-        continue;
-      }
-      filePaths.set(att.id, storedPath);
+      logger.debug(
+        `[${teamName}] Saved ${filePaths.size} attachment file(s) for message ${messageId}`
+      );
+      return filePaths;
+    });
+  }
 
-      indexEntries.push({
-        id: att.id,
-        filename: att.filename,
-        mimeType: att.mimeType,
+  /**
+   * Atomically complete a native-owned bundle. The canonical index is published last;
+   * identical retries may complete files left by an interrupted or ENOSPC save.
+   */
+  async saveNativeAttachments(
+    teamName: string,
+    messageId: string,
+    attachments: AttachmentPayload[]
+  ): Promise<NativeStoredAttachmentMeta[]> {
+    return withFileLock(this.getMessageLockPath(teamName, messageId), async () => {
+      const stored = this.toNativeStoredAttachments(teamName, messageId, attachments);
+      const existingIndex = await this.readStoredIndex(teamName, messageId, true);
+      const pendingNative = await this.readPendingNativeDescriptor(teamName, messageId);
+      if (existingIndex.length > 0) {
+        await this.assertExactNativeBundle(existingIndex, stored);
+      }
+      if (pendingNative.length > 0) {
+        await this.assertExactNativeBundle(pendingNative, stored);
+      }
+
+      await fs.promises.mkdir(this.getMessageDir(teamName, messageId), {
+        recursive: true,
+        mode: 0o700,
       });
+      if (pendingNative.length === 0 && !this.isNativeOwnedIndex(existingIndex)) {
+        await this.createPendingNativeDescriptor(
+          teamName,
+          messageId,
+          stored.map((attachment) => this.toStoredAttachmentIndex(attachment))
+        );
+      }
+      await this.completeNativeOwnedBundle(teamName, messageId, stored, attachments);
+      return stored;
+    });
+  }
+
+  private async completeNativeOwnedBundle(
+    teamName: string,
+    messageId: string,
+    stored: readonly NativeStoredAttachmentMeta[],
+    attachments: readonly AttachmentPayload[]
+  ): Promise<void> {
+    for (let index = 0; index < stored.length; index += 1) {
+      await this.createOrReuseImmutableAttachment(stored[index], attachments[index]);
     }
 
-    // Write metadata index for successful files (mimeType, original filename)
-    if (indexEntries.length > 0) {
-      const indexPath = this.getIndexPath(teamName, messageId);
-      await atomicWriteAsync(indexPath, JSON.stringify(indexEntries, null, 2));
-    }
-
-    logger.debug(
-      `[${teamName}] Saved ${filePaths.size} attachment file(s) for message ${messageId}`
+    const indexEntries: StoredAttachmentIndex[] = stored.map((attachment) =>
+      this.toStoredAttachmentIndex(attachment)
     );
-    return filePaths;
+    await atomicWriteAsync(
+      this.getIndexPath(teamName, messageId),
+      JSON.stringify(indexEntries, null, 2),
+      { mode: 0o600, directoryMode: 0o700, durability: 'strict', syncDirectory: true }
+    );
+  }
+
+  private toNativeStoredAttachments(
+    teamName: string,
+    messageId: string,
+    attachments: AttachmentPayload[]
+  ): NativeStoredAttachmentMeta[] {
+    const ids = new Set<string>();
+    return attachments.map((attachment) => {
+      this.assertSafePathSegment('attachmentId', attachment.id);
+      if (ids.has(attachment.id)) throw new Error(`Duplicate attachment ID: ${attachment.id}`);
+      ids.add(attachment.id);
+      const buffer = this.decodeNativeAttachment(attachment);
+      if (buffer === null) throw new Error(`Invalid attachment data: ${attachment.id}`);
+      if (buffer.length !== attachment.size) {
+        throw new Error(`Attachment size mismatch: ${attachment.id}`);
+      }
+      return {
+        id: attachment.id,
+        filename: attachment.filename,
+        mimeType: attachment.mimeType,
+        size: buffer.length,
+        filePath: this.getStoredFilePath(teamName, messageId, attachment.id, attachment.filename),
+        sha256: createHash('sha256').update(buffer).digest('hex'),
+      };
+    });
+  }
+
+  private decodeLegacyAttachment(attachment: AttachmentPayload): Buffer {
+    return Buffer.from(attachment.data, 'base64');
+  }
+
+  private decodeNativeAttachment(attachment: AttachmentPayload): Buffer | null {
+    try {
+      if (
+        attachment.data.length === 0 ||
+        attachment.data.length % 4 !== 0 ||
+        !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(attachment.data)
+      ) {
+        return null;
+      }
+      const buffer = Buffer.from(attachment.data, 'base64');
+      return buffer.length <= MAX_ATTACHMENT_SIZE ? buffer : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private toStoredAttachmentIndex(attachment: NativeStoredAttachmentMeta): StoredAttachmentIndex {
+    return {
+      id: attachment.id,
+      filename: attachment.filename,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      sha256: attachment.sha256,
+      nativeAttachmentDeliveryVersion: 1,
+    };
+  }
+
+  private async readPendingNativeDescriptor(
+    teamName: string,
+    messageId: string
+  ): Promise<StoredAttachmentIndex[]> {
+    try {
+      const raw = await fs.promises.readFile(
+        this.getPendingNativePath(teamName, messageId),
+        'utf8'
+      );
+      const parsed = JSON.parse(raw) as Partial<PendingNativeAttachmentDescriptor>;
+      if (
+        parsed.schemaVersion !== 1 ||
+        parsed.state !== 'pending' ||
+        !Array.isArray(parsed.attachments) ||
+        !this.isNativeOwnedIndex(parsed.attachments)
+      ) {
+        throw new Error('Pending native attachment descriptor is invalid');
+      }
+      return parsed.attachments;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+  }
+
+  private async createPendingNativeDescriptor(
+    teamName: string,
+    messageId: string,
+    attachments: StoredAttachmentIndex[]
+  ): Promise<void> {
+    const descriptor: PendingNativeAttachmentDescriptor = {
+      schemaVersion: 1,
+      state: 'pending',
+      attachments,
+    };
+    try {
+      await atomicCreateAsync(
+        this.getPendingNativePath(teamName, messageId),
+        JSON.stringify(descriptor, null, 2),
+        { mode: 0o600 }
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      const existing = await this.readPendingNativeDescriptor(teamName, messageId);
+      await this.assertExactNativeBundle(
+        existing,
+        this.fromStoredAttachmentIndex(teamName, messageId, attachments)
+      );
+    }
+  }
+
+  private fromStoredAttachmentIndex(
+    teamName: string,
+    messageId: string,
+    attachments: readonly StoredAttachmentIndex[]
+  ): NativeStoredAttachmentMeta[] {
+    return attachments.map((attachment) => ({
+      id: attachment.id,
+      filename: attachment.filename,
+      mimeType: attachment.mimeType,
+      size: attachment.size ?? 0,
+      filePath: this.getStoredFilePath(teamName, messageId, attachment.id, attachment.filename),
+      sha256: attachment.sha256 ?? '',
+    }));
+  }
+
+  private async readStoredIndex(
+    teamName: string,
+    messageId: string,
+    strict: boolean
+  ): Promise<StoredAttachmentIndex[]> {
+    try {
+      const raw = await fs.promises.readFile(this.getIndexPath(teamName, messageId), 'utf8');
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) throw new Error('Attachment index is invalid');
+      return parsed as StoredAttachmentIndex[];
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      if (strict) throw error;
+      return [];
+    }
+  }
+
+  private isNativeOwnedIndex(index: readonly StoredAttachmentIndex[]): boolean {
+    return index.length > 0 && index.every((entry) => entry.nativeAttachmentDeliveryVersion === 1);
+  }
+
+  private async assertExactNativeBundle(
+    existing: readonly StoredAttachmentIndex[],
+    incoming: readonly NativeStoredAttachmentMeta[]
+  ): Promise<void> {
+    if (existing.length !== incoming.length) {
+      throw new Error('Attachment bundle conflict for immutable message ID');
+    }
+    for (let index = 0; index < incoming.length; index += 1) {
+      const left = existing[index];
+      const right = incoming[index];
+      if (
+        left?.id !== right.id ||
+        left.filename !== right.filename ||
+        left.mimeType !== right.mimeType ||
+        left.size !== right.size ||
+        left.sha256 !== right.sha256
+      ) {
+        throw new Error(`Attachment bundle conflict for immutable message ID: ${right.id}`);
+      }
+      const current = await fs.promises.readFile(right.filePath).catch((error: unknown) => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw error;
+      });
+      if (current === null) continue;
+      if (createHash('sha256').update(current).digest('hex') !== right.sha256) {
+        throw new Error(`Attachment artifact changed for immutable message ID: ${right.id}`);
+      }
+    }
+  }
+
+  private async createOrReuseImmutableAttachment(
+    attachment: NativeStoredAttachmentMeta,
+    payload: AttachmentPayload
+  ): Promise<void> {
+    const data = this.decodeNativeAttachment(payload);
+    if (data === null) throw new Error(`Invalid attachment data: ${attachment.id}`);
+    try {
+      await atomicCreateAsync(attachment.filePath, data, { mode: 0o600 });
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
+    const current = await fs.promises.readFile(attachment.filePath);
+    if (createHash('sha256').update(current).digest('hex') !== attachment.sha256) {
+      throw new Error(`Attachment artifact conflict: ${attachment.id}`);
+    }
   }
 
   /**
