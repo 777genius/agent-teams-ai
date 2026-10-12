@@ -62,11 +62,12 @@ async function main() {
     apiStopped: false,
     heldStopRequested: stopProbe === '--held-stop',
     heldStopConfirmed: false,
+    restartPersistenceConfirmed: false,
   };
   const checkpoint = () =>
     writeFile(proofFile, JSON.stringify(proof, null, 2) + '\n', { mode: 0o600 });
   await checkpoint();
-  const app = await desktop.launch(executable);
+  let app = await desktop.launch(executable);
   let submitted = false;
   let heldProcess: { pid: number; identity: string; taskId: string } | undefined;
   try {
@@ -195,6 +196,44 @@ async function main() {
     }
     assert.equal(await readFile(result, 'utf8'), nonce + '\n');
     proof.apiStopped = true;
+    if (heldProcess) {
+      proof.stage = 'restart-persistence';
+      await checkpoint();
+      assert(/^[a-zA-Z0-9_-]+$/.test(heldProcess.taskId), 'Safe owned task ID required');
+      const retainedPath = path.join(
+        desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!, 'tasks', desktop.teamName,
+        `${heldProcess.taskId}.json`
+      );
+      await app.close();
+      // Capture after shutdown has settled activity intervals, not before it.
+      const retainedStat = await lstat(retainedPath);
+      assert(retainedStat.isFile() && !retainedStat.isSymbolicLink() && retainedStat.nlink === 1);
+      const before = JSON.parse(await readFile(retainedPath, 'utf8')) as {
+        id: string; owner?: string; status: string;
+      };
+      assert.equal(before.id, heldProcess.taskId);
+      assert(['pending', 'in_progress'].includes(before.status));
+      const markerPath = path.join(desktop.projectPath, 'held-started.json');
+      const markerBefore = await readFile(markerPath, 'utf8');
+      app = await desktop.launch(executable);
+      await waitFor(async () => {
+        const startup = await app.call('getStartupStatus');
+        assert(!startup.error, 'Owned application restart failed');
+        return startup.ready ? true : null;
+      }, 'owned app restart ready', 180_000);
+      assert.equal(await app.call('processAlive'), false, 'Restart must not auto-launch stopped team');
+      const restored = await app.call('getRuntime');
+      assert(Object.values(restored.members).every((member) => !member.alive));
+      const data = await app.call('getData');
+      const restoredTask = data.tasks.find((task) => task.id === heldProcess!.taskId);
+      assert(restoredTask, 'Restarted app must read the retained task');
+      assert.equal(restoredTask.owner, before.owner);
+      assert.equal(restoredTask.status, before.status);
+      assert.deepEqual(JSON.parse(await readFile(retainedPath, 'utf8')), before);
+      assert.equal(await readFile(markerPath, 'utf8'), markerBefore, 'Stopped input replayed');
+      assert.equal(await readFile(result, 'utf8'), nonce + '\n');
+      proof.restartPersistenceConfirmed = true;
+    }
     proof.status = 'passed';
     await checkpoint();
     console.log(`Short Electron integration proof: ${proofFile}`);

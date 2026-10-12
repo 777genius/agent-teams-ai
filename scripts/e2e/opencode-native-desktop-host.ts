@@ -168,6 +168,7 @@ export async function prepareNativeDesktop() {
         // This variable belongs only to this fresh renderer. No production hook.
         await cdp.evaluate(`window.__opencodeNativeProof = { port: ${serializedFunction(electronTeamPort)}(
           window.electronAPI, ${JSON.stringify(teamName)}, ${JSON.stringify(projectPath)}), calls: {} }; true`);
+        let closed = false;
         return {
           pid: child.pid!,
           async call<K extends Operation>(operation: K, ...args: Arguments<K>): Promise<Result<K>> {
@@ -244,6 +245,7 @@ export async function prepareNativeDesktop() {
             return cdp!.evaluate<Port['progress']>('window.__opencodeNativeProof.port.progress');
           },
           async close() {
+            if (closed) return;
             // The scenario must confirm native team cleanup before closing its app.
             const failures: unknown[] = [];
             try {
@@ -259,6 +261,9 @@ export async function prepareNativeDesktop() {
               }
             }
             if (failures.length) throw new AggregateError(failures, 'Owned app close failed');
+            closed = true;
+            // Only a confirmed exit permits deliberate reopening of this TEST profile.
+            launched = false;
           },
         };
       } catch (error) {
