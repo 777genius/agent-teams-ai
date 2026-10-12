@@ -100,8 +100,20 @@ const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
   },
 };
 function bridgeResolver(env: Record<string, string>, overrides: Record<string, unknown> = {}) {
-  const node = sourceNode('resolveBridgeCommandEnv') as ts.VariableDeclaration;
-  return compileExpression(node.initializer!.getText(mainSource), {
+  const node = sourceNode('bridgeClient') as ts.VariableDeclaration;
+  const constructor = node.initializer;
+  if (!constructor || !ts.isNewExpression(constructor))
+    throw new Error('Bridge client constructor missing');
+  const options = constructor.arguments?.[0];
+  if (!options || !ts.isObjectLiteralExpression(options))
+    throw new Error('Bridge client options missing');
+  const provider = options.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) && property.name.getText(mainSource) === 'envProvider'
+  );
+  if (!provider || !ts.isArrowFunction(provider.initializer))
+    throw new Error('Bridge client environment provider missing');
+  return compileExpression(provider.initializer.getText(mainSource), {
     bridgeEnv: env,
     getTeamControlApiBaseUrl: () => 'http://127.0.0.1:41000',
     useHttpMcpBridge: true,
