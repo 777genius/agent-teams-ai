@@ -234,7 +234,9 @@ export async function prepareNativeDesktop() {
                 return entry.state === 'done' ? { value: entry.result } : null;
               },
               `single ${operation} IPC result`,
-              180_000
+              // Normal create/launch includes the app's 300s readiness budget
+              // and Darwin's 180s startup budget; the host must outlive both.
+              operation === 'createTeam' || operation === 'launchTeam' ? 510_000 : 180_000
             );
             return completed.value as Result<K>;
           },
