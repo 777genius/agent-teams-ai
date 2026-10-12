@@ -114,6 +114,32 @@ async function dispatchTrustedPointerMove(x: number, y: number) {
   Object.defineProperty(event, 'isTrusted', { value: true });
   await act(async () => document.dispatchEvent(event));
 }
+function capturePanelMutation(panel: HTMLElement, action: () => void): void {
+  const observer = new MutationObserver(() => undefined);
+  observer.observe(panel, { childList: true, subtree: true });
+  let records: MutationRecord[] = [];
+  act(action);
+  records = observer.takeRecords();
+  observer.disconnect();
+  expect(records.some((record) => record.removedNodes.length > 0)).toBe(true);
+}
+function trackFocusReleaseAfterRemoval() {
+  let arm = (): void => undefined;
+  let released!: () => void;
+  const focusReleased = new Promise<void>((resolve) => {
+    released = resolve;
+  });
+  const hold = panelController.hold.bind(panelController);
+  let armed = false;
+  arm = (): void => {
+    armed = true;
+  };
+  vi.spyOn(panelController, 'hold').mockImplementation((reason, active) => {
+    hold(reason, active);
+    if (armed && reason === 'focus' && !active) released();
+  });
+  return { arm, focusReleased };
+}
 it.each([0, 80, 239])(
   'uses only the manual button fallback at %s px without introducing a drag modal or drop surface',
   async (left) => {
@@ -132,6 +158,9 @@ it.each([0, 80, 239])(
     );
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     expect(document.querySelector('[data-testid="task-folders-tree"]')).not.toBeNull();
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.contains(document.activeElement)).toBe(true);
     expect(
       document.querySelector('[data-testid="task-folders-toggle"]')!.getAttribute('aria-expanded')
     ).toBe('true');
@@ -480,3 +509,113 @@ it('releases the automatic panel rename hold on wide/narrow/wide transition with
   );
   expect(panelController.getSnapshot().open).toBe(false);
 });
+
+it('reconciles a focused editor unmount without ancestor blur and keeps a full final grace', async () => {
+  vi.useFakeTimers();
+  await folderController.execute({ type: 'create', id: 'a', parent: null, name: 'A' });
+  await renderAt(300);
+  await startSidebarDrag();
+  await act(async () => window.dispatchEvent(new Event('blur')));
+  const panel = document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement;
+  await act(async () =>
+    panel
+      .querySelector('[data-folder-id="a"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  const editor = panel.querySelector<HTMLInputElement>(
+    'input[aria-label="taskFolders.renameFolder"]'
+  )!;
+  editor.focus();
+  expect(document.activeElement).toBe(editor);
+
+  // Browser removal may move focus to BODY without delivering the React blur path.
+  const focusRelease = trackFocusReleaseAfterRemoval();
+  focusRelease.arm();
+  capturePanelMutation(panel, () =>
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  );
+  expect(panel.querySelector('input[aria-label="taskFolders.renameFolder"]')).toBeNull();
+  expect(document.activeElement).toBe(document.body);
+  await act(async () => focusRelease.focusReleased);
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+
+it('keeps current replacement focus inside the live panel after a descendant is removed', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await startSidebarDrag();
+  await act(async () => window.dispatchEvent(new Event('blur')));
+  const panel = document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement;
+  const removed = document.createElement('button');
+  const replacement = document.createElement('button');
+  panel.append(removed);
+  await act(async () => removed.focus());
+  panel.append(replacement);
+  await act(async () => replacement.focus());
+  capturePanelMutation(panel, () => removed.remove());
+  expect(document.activeElement).toBe(replacement);
+  await act(async () => vi.advanceTimersByTime(4000));
+  expect(panelController.getSnapshot().open).toBe(true);
+
+  const focusRelease = trackFocusReleaseAfterRemoval();
+  focusRelease.arm();
+  capturePanelMutation(panel, () => {
+    replacement.remove();
+    panel.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+  });
+  await act(async () => focusRelease.focusReleased);
+  expect(document.activeElement).toBe(document.body);
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+
+it('releases only focus when removed descendant focus transfers outside the live panel', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await startSidebarDrag();
+  await act(async () => window.dispatchEvent(new Event('blur')));
+  const panel = document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement;
+  const removed = document.createElement('button');
+  panel.append(removed);
+  await act(async () => removed.focus());
+  expect(document.activeElement).toBe(removed);
+  const outside = host.querySelector('[data-testid="sidebar-task-drag-handle"]') as HTMLElement;
+
+  const focusRelease = trackFocusReleaseAfterRemoval();
+  focusRelease.arm();
+  capturePanelMutation(panel, () => {
+    removed.remove();
+    outside.focus();
+  });
+  await act(async () => focusRelease.focusReleased);
+  expect(document.activeElement).toBe(outside);
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+
+it.each(['edit:replacement', 'menu:replacement', 'dialog', 'pointer'] as const)(
+  'retains independent %s hold in a fresh host and releases a full final grace',
+  async (hold) => {
+    vi.useFakeTimers();
+    await renderAt(300);
+    await startSidebarDrag();
+    await act(async () => window.dispatchEvent(new Event('blur')));
+
+    await act(async () => panelController.hold(hold, true));
+    await act(async () => vi.advanceTimersByTime(4000));
+    expect(panelController.getSnapshot().open).toBe(true);
+
+    await act(async () => panelController.hold(hold, false));
+    await act(async () => vi.advanceTimersByTime(1999));
+    expect(panelController.getSnapshot().open).toBe(true);
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(panelController.getSnapshot().open).toBe(false);
+  }
+);

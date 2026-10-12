@@ -25,10 +25,10 @@ export const TaskFoldersHost = ({
   collapsed: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
-  const model = useTaskFoldersHost(sidebar, collapsed);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const model = useTaskFoldersHost(sidebar, collapsed, panelRef);
   const [action, setAction] = useState<FolderDialog | null>(null);
   const [focus, setFocus] = useState<TreeFocusRequest | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const dialog = (next: FolderDialog): void => {
     panelController.hold('dialog', true);
     setAction(next);
@@ -183,7 +183,6 @@ export const TaskFoldersHost = ({
   useEffect(
     () => () => {
       panelController.hold('pointer', false);
-      panelController.hold('focus', false);
     },
     [visible, fallback, fallbackOpen]
   );
@@ -209,7 +208,7 @@ export const TaskFoldersHost = ({
         !fallback &&
         createPortal(
           <div
-            ref={panelRef}
+            ref={model.registerPanel}
             data-testid="task-folders-panel"
             role="region"
             aria-label={t('taskFolders.title')}
@@ -233,10 +232,10 @@ export const TaskFoldersHost = ({
           if (!open) panelController.close();
         }}
       >
-        <DialogContent>
+        <DialogContent aria-modal="true">
           <DialogTitle>{t('taskFolders.title')}</DialogTitle>
           <div
-            ref={panelRef}
+            ref={model.registerPanel}
             data-testid="task-folders-panel"
             className="flex h-[60vh] flex-col"
             onPointerEnter={() => panelController.hold('pointer', true)}
