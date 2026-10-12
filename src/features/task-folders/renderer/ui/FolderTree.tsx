@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 
 import { parentOf, validateName } from '../../core/domain/folders';
-import { createEdgeScroll } from '../adapters/edgeScroll';
+import { createEdgeScroll, observeEdgeDrag } from '../adapters/edgeScroll';
 import { moveRequest } from '../adapters/moveRequest';
 import { cancelHoverExpansion, clearTreeDrag } from '../adapters/treeDragLifecycle';
 import { TreeDropAdapter } from '../adapters/treeDropAdapter';
@@ -279,25 +279,26 @@ export const FolderTree = ({
         clearTreeDrag(tree);
       }
     });
-    const over = (event: DragEvent): void => {
-      if (panelController.getSnapshot().dragSource) edge.over(event.clientY);
-    };
+    const stopObserving = observeEdgeDrag(
+      container,
+      edge,
+      () => !!panelController.getSnapshot().dragSource
+    );
     const leave = (event: DragEvent): void => {
       if (!container.contains(event.relatedTarget as globalThis.Node | null)) {
         edge.stop();
         cancelHoverExpansion(tree);
       }
     };
-    container.addEventListener('dragover', over);
     container.addEventListener('dragleave', leave);
     document.addEventListener('drop', edge.stop, true);
     document.addEventListener('dragend', edge.stop, true);
     window.addEventListener('blur', edge.stop);
     return () => {
+      stopObserving();
       edge.stop();
       release();
       cancelHoverExpansion(tree);
-      container.removeEventListener('dragover', over);
       container.removeEventListener('dragleave', leave);
       document.removeEventListener('drop', edge.stop, true);
       document.removeEventListener('dragend', edge.stop, true);

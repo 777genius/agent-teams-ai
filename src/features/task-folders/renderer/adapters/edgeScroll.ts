@@ -1,5 +1,10 @@
+export interface EdgeScroll {
+  over(y: number): void;
+  stop(): void;
+}
+
 /** One RAF loop keeps scrolling even when the pointer stops producing dragover events. */
-export function createEdgeScroll(container: HTMLElement): { over(y: number): void; stop(): void } {
+export function createEdgeScroll(container: HTMLElement): EdgeScroll {
   let pointer: number | undefined;
   let frame: number | undefined;
   let previous: number | undefined;
@@ -35,5 +40,22 @@ export function createEdgeScroll(container: HTMLElement): { over(y: number): voi
       if (frame === undefined) frame = requestAnimationFrame(tick);
     },
     stop,
+  };
+}
+
+/** Capture coordinates before row handlers can stop native drag events from bubbling. */
+export function observeEdgeDrag(
+  container: HTMLElement,
+  edge: Pick<EdgeScroll, 'over'>,
+  isActive: () => boolean
+): () => void {
+  const track = (event: DragEvent): void => {
+    if (isActive()) edge.over(event.clientY);
+  };
+  container.addEventListener('dragenter', track, true);
+  container.addEventListener('dragover', track, true);
+  return () => {
+    container.removeEventListener('dragenter', track, true);
+    container.removeEventListener('dragover', track, true);
   };
 }

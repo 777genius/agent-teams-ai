@@ -31,6 +31,15 @@ export interface Point {
   x: number;
   y: number;
 }
+export interface FolderPoint extends Point {
+  folderId: string;
+  hitFolderId: string | null;
+  dragTargetHighlighted: boolean;
+}
+interface PointSample extends Partial<FolderPoint> {
+  point?: Point;
+  reason: string;
+}
 const TARGET_PRESENCE_TIMEOUT_MS = 5000;
 const TREE_NAVIGATION_TIMEOUT_MS = 30_000;
 const boundedPresence = async (probe: () => Promise<boolean>, timeout: number) => {
@@ -87,12 +96,15 @@ export class UI {
     throw new Error('Missing selector after virtual tree navigation: ' + expression);
   }
   async point(expression: string, fraction = 0.5): Promise<Point> {
+    return (await this.pointSample(expression, fraction)).point!;
+  }
+  private async pointSample(expression: string, fraction = 0.5): Promise<PointSample> {
     await this.locate(expression);
     const deadline = Date.now() + 5000;
     let reason = 'Missing/hidden selector';
     while (Date.now() < deadline) {
       // Reacquire after scrolling/layout/portal transitions; geometry and hit belong to one sample.
-      const result = await this.value<{ point?: Point; reason: string }>(`(() => {
+      const result = await this.value<PointSample>(`(() => {
         let e;try{e=${expression};}catch{return {reason:'Missing/hidden selector'};}
         if(!e)return {reason:'Missing/hidden selector'};
         e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();
@@ -102,13 +114,60 @@ export class UI {
         if(!Number.isFinite(p.x) || !Number.isFinite(p.y) || p.x<0 || p.y<0 ||
           p.x>=innerWidth || p.y>=innerHeight)return {reason:'Target obscured/offscreen'};
         const h=document.elementFromPoint(p.x,p.y);
-        return h && (e===h || e.contains(h)) ? {point:p,reason:''} : {reason:'Target obscured'};
+        if(!h || (e!==h && !e.contains(h)))return {reason:'Target obscured'};
+        const hit=h.closest('[data-folder-id]');
+        return {
+          point:p,
+          reason:'',
+          folderId:e.getAttribute('data-folder-id'),
+          hitFolderId:hit?.getAttribute('data-folder-id') ?? null,
+          dragTargetHighlighted:e.classList.contains('bg-blue-500/20'),
+        };
       })()`);
-      if (result.point) return result.point;
+      if (result.point) return result;
       reason = result.reason;
       await delay(50);
     }
     throw new Error(`${reason} after 5000ms hit readiness wait: ${expression}`);
+  }
+  async folderPoint(id: string, requireDragTarget = false): Promise<FolderPoint> {
+    const sample = await this.pointSample(folderRow(id));
+    assert.equal(sample.folderId, id, 'Folder point changed identity');
+    assert.equal(sample.hitFolderId, id, 'Folder center was not the real hit target');
+    if (requireDragTarget)
+      assert(sample.dragTargetHighlighted, 'Vendor drag-target highlight missing for ' + id);
+    return {
+      ...sample.point!,
+      folderId: id,
+      hitFolderId: sample.hitFolderId!,
+      dragTargetHighlighted: sample.dragTargetHighlighted!,
+    };
+  }
+  async visibleFolderCenter(excludeId: string): Promise<FolderPoint> {
+    const id = await this.value<string | null>(`(() => {
+      const tree=${el(selectors.tree)};if(!tree)return null;
+      const bounds=tree.getBoundingClientRect();
+      return Array.from(tree.querySelectorAll('[data-folder-id]')).find(e=>{
+        if(e.getAttribute('data-folder-id')===${JSON.stringify(excludeId)})return false;
+        const r=e.getBoundingClientRect();
+        if(r.top<=bounds.top+32 || r.bottom>=bounds.bottom-32)return false;
+        const p={x:r.x+r.width/2,y:r.y+r.height/2};
+        const h=document.elementFromPoint(p.x,p.y);
+        return !!h && (h===e || e.contains(h));
+      })?.getAttribute('data-folder-id') ?? null;
+    })()`);
+    assert(id, 'Auto-scroll exposed no real visible folder center');
+    return await this.folderPoint(id);
+  }
+  async waitForStableScroll(): Promise<number> {
+    await this.wait(
+      `(async()=>{const tree=${el(selectors.tree)};if(!tree)return false;let last=tree.scrollTop;
+        for(let i=0;i<2;i++){await new Promise(resolve=>requestAnimationFrame(resolve));
+          if(tree.scrollTop!==last)return false;last=tree.scrollTop;}return true;})()`,
+      'native center drag stopped edge scrolling across consecutive RAFs',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
+    return await this.value<number>(`${el(selectors.tree)}.scrollTop`);
   }
   async move(point: Point, buttons = 0) {
     await this.cdp.send('Input.dispatchMouseEvent', {
@@ -172,6 +231,13 @@ export class UI {
     await this.wait(
       `!document.querySelector('[role="menu"]') && document.activeElement === (${trigger})`,
       'action menu closed with default row focus restored',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
+  }
+  async waitDropFocusRestored() {
+    await this.wait(
+      `(() => {const active=document.activeElement;return !!active && active.matches('[role="treeitem"]') && active.getAttribute('tabindex')==='0' && ${el(selectors.tree)}?.contains(active);})()`,
+      'vendor drop completion restored tree focus',
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }

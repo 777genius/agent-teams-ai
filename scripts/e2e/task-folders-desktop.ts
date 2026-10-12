@@ -418,10 +418,11 @@ async function main() {
     await check('release-grace', async () => {
       await ui.close();
       await ui.drag(taskSource('b'), folderRow(f.parent), 0.5, { teamName: f.team, taskId: 'b' });
-      await ui.persisted(
-        (s) => children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
-        'release drop'
-      );
+        await ui.persisted(
+          (s) => children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
+          'release drop'
+        );
+      await ui.waitDropFocusRestored();
       return await grace();
     });
     await check('cancel-grace', async () => {
@@ -490,13 +491,19 @@ async function main() {
         await ui.value(`!!${folderRow(f.parent)}`),
         'Native source must stay mounted outside visible range'
       );
-      const target = await ui.value<string>(
-        `(() => {const rows=Array.from(${el(selectors.tree)}.querySelectorAll('[data-folder-id]'));return rows.find(e=>{const r=e.getBoundingClientRect();return r.top> ${el(selectors.tree)}.getBoundingClientRect().top+32 && r.bottom<${el(selectors.tree)}.getBoundingClientRect().bottom-32 && e.getAttribute('data-folder-id')!==${JSON.stringify(f.parent)}})?.getAttribute('data-folder-id');})()`
+      const center = await ui.value<{ x: number; y: number }>(
+        `(() => {const r=${el(selectors.tree)}.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`
       );
-      assert(target, 'Auto-scroll exposed no valid target');
-      const targetPoint = await ui.point(folderRow(target));
-      await ui.dragOver(data, targetPoint);
-      await ui.finishDrag(data, targetPoint);
+      await ui.dragOver(data, center, true);
+      await ui.dragOver(data, center);
+      const centerScrollTop = await ui.waitForStableScroll();
+      const selected = await ui.visibleFolderCenter(f.parent);
+      const target = selected.folderId;
+      await ui.dragOver(data, selected, true);
+      await ui.dragOver(data, selected);
+      const dropTarget = await ui.folderPoint(target, true);
+      assert.equal(dropTarget.hitFolderId, target, 'Drop target identity changed after reacquire');
+      await ui.finishDrag(data, dropTarget);
       await ui.persisted(
         (s) => children(s, target).some((c) => c.kind === 'folder' && c.id === f.parent),
         'post auto-scroll native drop'
@@ -515,6 +522,7 @@ async function main() {
         fixtureTasks: 1004,
         scrollBefore: before,
         scrollAfter: after,
+        centerScrollTop,
         nativeDropTarget: target,
       };
     });
@@ -527,7 +535,9 @@ async function main() {
         children(before, f.nested).some((c) => c.kind === 'task' && c.identity.taskId === 'missing')
       );
       assert(
-        await ui.value(`${folderRow(f.nested)}.querySelector('[aria-label*="1 unavailable"]')`)
+        await ui.value<boolean>(
+          `Boolean(${folderRow(f.nested)}.querySelector('[aria-label*="1 unavailable"]'))`
+        )
       );
       await json(path.join(f.claude, 'tasks', f.team, 'missing.json'), {
         id: 'missing',
@@ -547,7 +557,9 @@ async function main() {
         'Catalog refresh must preserve canonical references/order'
       );
       assert(
-        await ui.value(`${folderRow(f.nested)}.querySelector('[aria-label*="0 unavailable"]')`)
+        await ui.value<boolean>(
+          `Boolean(${folderRow(f.nested)}.querySelector('[aria-label*="0 unavailable"]'))`
+        )
       );
     });
     await check('full-process-restart-persistence', async () => {
