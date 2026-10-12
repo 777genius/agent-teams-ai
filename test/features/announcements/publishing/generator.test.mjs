@@ -49,9 +49,9 @@ function commit(f) {
   git(
     f,
     '-c',
-    'user.name=iliya',
+    'user.name=Fixture',
     '-c',
-    'user.email=iliyazelenkog@gmail.com',
+    'user.email=fixture@example.invalid',
     'commit',
     '-qm',
     'fixture'
