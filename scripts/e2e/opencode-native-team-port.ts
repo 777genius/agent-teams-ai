@@ -7,7 +7,7 @@ import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/
  * Importing it never submits work. All mutations are explicit and single-shot.
  */
 export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string) {
-  if (!/^TEST-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
+  if (!/^test-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
   if (!projectPath || !/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(projectPath)) {
     throw new Error('TEST project required; host must also verify its opt-in marker');
   }

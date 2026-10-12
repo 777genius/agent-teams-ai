@@ -37,7 +37,7 @@ export async function prepareNativeDesktop() {
   const parent = process.platform === 'darwin' ? '/tmp' : os.tmpdir();
   const root = await realpath(await mkdtemp(path.join(parent, 'TEST-oc-')));
   const projectPath = path.join(root, 'TEST-project');
-  const teamName = `TEST-opencode-${randomUUID()}`;
+  const teamName = `test-opencode-${randomUUID()}`;
   const env: NodeJS.ProcessEnv = {};
   for (const key of [
     'PATH',
