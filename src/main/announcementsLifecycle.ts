@@ -5,7 +5,7 @@ import {
   createAnnouncementsFeature,
   registerAnnouncementsIpc,
 } from '@features/announcements/main';
-import { type BrowserWindow, type IpcMainInvokeEvent, powerMonitor } from 'electron';
+import { app, type BrowserWindow, type IpcMainInvokeEvent, powerMonitor } from 'electron';
 
 import { safeSendToRenderer } from './utils/safeWebContentsSend';
 import { announcementsSourcePolicy } from './announcementsSourcePolicy';
@@ -82,6 +82,7 @@ export class AnnouncementsLifecycle {
   }): Promise<void> {
     const feature = createAnnouncementsFeature({
       userDataPath: options.userDataPath,
+      runtime: { platform: process.platform, appVersion: app.getVersion() },
       origin: options.profile.origin,
       production: options.production,
       isolatedProfile: options.isolatedProfile,

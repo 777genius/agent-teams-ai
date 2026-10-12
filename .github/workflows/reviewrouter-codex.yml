@@ -37,7 +37,8 @@ jobs:
 
   codex-refresh:
     name: codex-refresh
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    # Rotating OAuth verifies GitHub-hosted OIDC runner claims.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
       group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284

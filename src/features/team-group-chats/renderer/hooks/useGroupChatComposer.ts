@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import {
+  acquireComposerSubmission,
+  releaseComposerSubmission,
+} from '@renderer/components/team/messages/composerSubmission';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import {
   captureContextScopedRequestEpoch,
@@ -8,7 +12,11 @@ import {
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 import type { GroupChatSendResult } from '../../contracts';
-import type { ComposerDraftAddress, ComposerDraftContent } from '@renderer/types/composerDraft';
+import type {
+  ComposerDraftAddress,
+  ComposerDraftContent,
+  ComposerWorkingRecord,
+} from '@renderer/types/composerDraft';
 
 export function useGroupChatComposer(
   teamName: string,
@@ -34,9 +42,13 @@ export function useGroupChatComposer(
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GroupChatSendResult | null>(null);
   const session = useMemo(
-    () => ({ address, revision: '', queue: Promise.resolve(), sending: false }),
+    () => ({ address, revision: '', queue: Promise.resolve(), sending: false, consuming: false }),
     [address]
   );
+  const textRef = useRef(text);
+  textRef.current = text;
+  const recipientRef = useRef(recipientName);
+  recipientRef.current = recipientName;
   const current = useRef(address);
   current.current = address;
   const persist = useCallback(
@@ -114,11 +126,13 @@ export function useGroupChatComposer(
   const change = (value: string) => {
     if (!ready || session.sending || pending || attemptId) return;
     setSelection(recipientName);
+    textRef.current = value;
     setText(value);
     void persist(content(value, null)).catch(() => undefined);
   };
   const selectRecipient = (name: string | null) => {
     if (!ready || session.sending || pending || attemptId) return;
+    recipientRef.current = name;
     setSelection(name);
     void persist({
       ...content(text, null),
@@ -126,10 +140,11 @@ export function useGroupChatComposer(
     }).catch(() => undefined);
   };
   const send = async () => {
-    if (!ready || session.sending || pending || !text.trim()) return;
+    if (!ready || session.sending || session.consuming || pending || !text.trim()) return;
     const capturedContextEpoch = captureContextScopedRequestEpoch();
-    session.sending = true;
     const id = attemptId ?? crypto.randomUUID();
+    if (!acquireComposerSubmission(contextId, id)) return;
+    session.sending = true;
     setSelection(recipientName);
     setAttemptId(id);
     setPending(true);
@@ -192,8 +207,48 @@ export function useGroupChatComposer(
       }
     } finally {
       session.sending = false;
+      releaseComposerSubmission(contextId, id);
       if (current.current === address) setPending(false);
     }
+  };
+  const consumeForQueue = (
+    operation: (working: ComposerWorkingRecord) => Promise<ComposerWorkingRecord>
+  ): Promise<void> => {
+    if (!ready || session.sending || session.consuming || pending || attemptId)
+      return Promise.reject(new Error('queue-frozen'));
+    session.consuming = true;
+    const capturedText = textRef.current;
+    const capturedRecipient = recipientRef.current;
+    const consumed = session.queue.then(async () => {
+      const loaded = await composerDraftRepository.loadWorking(address);
+      if (loaded.status !== 'durable') throw new Error('persistenceRequired');
+      const working = loaded.working;
+      const savedRecipient = working.content?.groupRecipient;
+      const savedName = savedRecipient?.kind === 'member' ? savedRecipient.memberName : null;
+      if (
+        working.workingRevision !== session.revision ||
+        working.content?.text !== capturedText ||
+        savedName !== capturedRecipient ||
+        current.current !== address
+      )
+        throw new Error('queue-conflict');
+      const cleared = await operation(working);
+      session.revision = cleared.workingRevision;
+      composerDraftRepository.acceptExternalWorkingCommit?.(cleared);
+      if (
+        current.current === address &&
+        textRef.current === capturedText &&
+        recipientRef.current === capturedRecipient
+      ) {
+        textRef.current = '';
+        setText('');
+      }
+    });
+    const completed = consumed.finally(() => {
+      session.consuming = false;
+    });
+    session.queue = completed.catch(() => undefined);
+    return completed;
   };
   return {
     text,
@@ -207,5 +262,6 @@ export function useGroupChatComposer(
     attemptId,
     recipientName,
     selectRecipient,
+    consumeForQueue,
   };
 }

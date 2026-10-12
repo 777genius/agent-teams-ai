@@ -1682,7 +1682,8 @@ describe('ipc teams handlers', () => {
         | { text?: string; messageId?: string }
         | undefined;
       expect(request).toBeDefined();
-      expect(request).not.toHaveProperty('messageId');
+      expect(request?.messageId).toEqual(expect.any(String));
+      expect(request?.text).toContain(`Original User MessageId: ${request?.messageId}`);
       expect(request?.text).toContain('Reply using the SendMessage tool');
       expect(request?.text).toContain('to="user"');
       expect(request?.text).not.toContain('agent-teams_message_send');
@@ -2233,7 +2234,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'ask'
     );
   });
 
@@ -2259,7 +2261,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      'attempt-lead-1'
+      'attempt-lead-1',
+      'do'
     );
   });
 
@@ -2408,7 +2411,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'do'
     );
   });
 
@@ -2443,7 +2447,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'do'
     );
   });
 

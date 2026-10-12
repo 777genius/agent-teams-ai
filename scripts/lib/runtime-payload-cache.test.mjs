@@ -91,6 +91,63 @@ for (const archiveKind of ['tar.gz']) {
   }
 }
 
+test('ZIP extraction preserves Unicode and spaced companions through cache publication', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime ZIP тест with spaces-'));
+  try {
+    const source = path.join(root, 'source payload');
+    const payload = path.join(source, 'runtime');
+    const companion = 'cursor-managed/plugin/тест with spaces.js';
+    const contents = Buffer.from('fixture companion bytes: тест\n');
+    fs.mkdirSync(path.dirname(path.join(payload, companion)), { recursive: true });
+    fs.writeFileSync(path.join(payload, 'orchestrator.exe'), 'fixture binary; never execute');
+    fs.writeFileSync(path.join(payload, companion), contents);
+    fs.writeFileSync(path.join(payload, 'cursor-managed/manifest.json'), '{"fixture":true}');
+
+    const archive = path.join(root, 'runtime архив with spaces.zip');
+    if (process.platform === 'win32') {
+      // PowerShell preserves Unicode archive paths and UTF-8 ZIP entry names.
+      const command = `$ErrorActionPreference = 'Stop'; Compress-Archive -LiteralPath '${payload.replace(/'/g, "''")}' -DestinationPath '${archive.replace(/'/g, "''")}' -Force`;
+      execFileSync('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        Buffer.from(command, 'utf16le').toString('base64'),
+      ]);
+    } else {
+      execFileSync('zip', ['-qr', archive, '.'], { cwd: source });
+    }
+    const sha256 = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+    await verifyRuntimeArchiveChecksum(archive, { sha256 }, 'fixture');
+    await assert.rejects(
+      verifyRuntimeArchiveChecksum(archive, { sha256: '0'.repeat(64) }, 'fixture')
+    );
+
+    const extracted = path.join(root, 'extracted тест with spaces');
+    extractArchive(archive, extracted, 'zip', (cmd, args, options) =>
+      execFileSync(cmd, args, options)
+    );
+    const binary = findExtractedBinary(extracted, 'orchestrator.exe');
+    assert.equal(fs.readFileSync(binary, 'utf8'), 'fixture binary; never execute');
+    assert.deepEqual(fs.readFileSync(path.join(path.dirname(binary), companion)), contents);
+    assert.equal(
+      fs.readFileSync(path.join(path.dirname(binary), 'cursor-managed/manifest.json'), 'utf8'),
+      '{"fixture":true}'
+    );
+
+    const cache = path.join(root, 'cached тест with spaces');
+    publishRuntimePayload(binary, cache, sha256);
+    fs.rmSync(extracted, { recursive: true, force: true });
+    assert.deepEqual(fs.readFileSync(path.join(cache, companion)), contents);
+    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), true);
+    assert.equal(isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator.exe'), false);
+    fs.appendFileSync(path.join(cache, companion), 'tampered');
+    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
 test('cached bootstrap waits for publication lock before validating or executing the binary', async () => {
   const source = fs.readFileSync(new URL('../dev-with-runtime.mjs', import.meta.url), 'utf8');
   const functionSource = source.slice(
@@ -107,6 +164,7 @@ test('cached bootstrap waits for publication lock before validating or executing
     fs,
     path,
     phase,
+    logRuntimePhase: () => {},
     runtimeCacheRoot: root,
     readRuntimeLock: () => ({
       version: 'fixture',
@@ -192,7 +250,10 @@ for (const caller of ['bootstrap', 'stager']) {
     try {
       runner = (command, args, options) => {
         assert.equal(command, 'C:\\Windows\\System32\\tar.exe');
-        assert.deepEqual(Array.from(args), ['-xf', archive, '-C', destination]);
+        assert.deepEqual(Array.from(args), ['-xf', '-']);
+        assert.equal(options.cwd, destination);
+        assert.equal(typeof options.stdio[0], 'number');
+        assert.equal(fs.fstatSync(options.stdio[0]).size, fs.statSync(archive).size);
         assert.equal(options.shell, false);
         fs.mkdirSync(path.join(destination, 'nested'), { recursive: true });
         fs.writeFileSync(path.join(destination, 'nested', 'companion'), 'unchanged');

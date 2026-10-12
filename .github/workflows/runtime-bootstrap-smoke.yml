@@ -78,6 +78,8 @@ jobs:
       - name: Verify ZIP metadata and native reader differentials
         if: matrix.platform != 'linux-x64'
         run: node --test scripts/lib/runtime-archive-extraction.test.mts
+      - name: Verify ZIP extraction and companion integrity
+        run: node --test --test-name-pattern="ZIP extraction" scripts/lib/runtime-payload-cache.test.mjs
 
       - name: Download, extract, and execute pinned runtime anonymously
         env:

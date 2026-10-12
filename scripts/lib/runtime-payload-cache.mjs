@@ -100,6 +100,10 @@ export function publishRuntimePayload(extractedBinaryPath, payloadDir, archiveSh
   }
 }
 
+export function logRuntimePhase(message) {
+  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
+}
+
 function assertRegularArchiveEntries(root) {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const file = path.join(root, entry.name);
@@ -128,7 +132,18 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
       assertSafeRuntimeZip(archivePath);
       assertRegularArchiveEntries(extractDir);
       const tarPath = path.win32.join(systemRoot, 'System32', 'tar.exe');
-      runOrExit(tarPath, ['-xf', archivePath, '-C', extractDir], { shell: false });
+      // Windows bsdtar converts argv paths through the active ANSI code page.
+      // Inherit the open archive file and let Node set the Unicode cwd instead.
+      const archiveFd = fs.openSync(archivePath, 'r');
+      try {
+        runOrExit(tarPath, ['-xf', '-'], {
+          shell: false,
+          cwd: extractDir,
+          stdio: [archiveFd, 'inherit', 'inherit'],
+        });
+      } finally {
+        fs.closeSync(archiveFd);
+      }
       assertRegularArchiveEntries(extractDir);
       return;
     }

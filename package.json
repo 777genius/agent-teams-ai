@@ -295,6 +295,7 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-sonarjs": "^3.0.6",
     "eslint-plugin-tailwindcss": "^3.18.2",
+    "fake-indexeddb": "6.2.5",
     "globals": "^17.2.0",
     "happy-dom": "^20.9.0",
     "husky": "^9.1.7",
@@ -399,7 +400,24 @@
     },
     "dmg": {
       "sign": false,
-      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}"
+      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}",
+      "title": "Agent Teams AI Installer",
+      "background": "resources/dmg/background.png",
+      "iconSize": 112,
+      "iconTextSize": 14,
+      "contents": [
+        {
+          "x": 229,
+          "y": 245,
+          "type": "file"
+        },
+        {
+          "x": 571,
+          "y": 245,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "win": {
       "target": [

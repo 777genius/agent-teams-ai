@@ -180,6 +180,8 @@ export interface ComposerDraftRepositoryEvent {
 }
 
 export interface ComposerDraftRepository {
+  /** Notify guarded draft subscribers only after an external atomic transaction commits. */
+  acceptExternalWorkingCommit?(working: ComposerWorkingRecord): void;
   loadWorking(address: ComposerDraftAddress): Promise<{
     working: ComposerWorkingRecord;
     status: ComposerPersistenceStatus;

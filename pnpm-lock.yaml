@@ -595,6 +595,9 @@ importers:
       eslint-plugin-tailwindcss:
         specifier: ^3.18.2
         version: 3.18.2(tailwindcss@3.4.19(tsx@4.23.15)(yaml@2.9.0))
+      fake-indexeddb:
+        specifier: 6.2.5
+        version: 6.2.5
       globals:
         specifier: ^17.2.0
         version: 17.2.0
@@ -7185,6 +7188,10 @@ packages:
 
   externality@1.0.2:
     resolution: {integrity: sha512-LyExtJWKxtgVzmgtEHyQtLFpw1KFhQphF9nTG8TpAIVkiI/xQ3FJh75tRFLYl4hkn7BNIIdLJInuDAavX35pMw==}
+
+  fake-indexeddb@6.2.5:
+    resolution: {integrity: sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w==}
+    engines: {node: '>=18'}
 
   fast-decode-uri-component@1.0.1:
     resolution: {integrity: sha512-WKgKWg5eUxvRZGwW8FvfbaH7AXSh2cL+3j5fMGzUMCxWBJ3dV3a7Wz8y2f/uQ0e3B6WmodD3oS54jTQ9HVTIIg==}
@@ -19749,6 +19756,8 @@ snapshots:
       mlly: 1.8.2
       pathe: 1.1.2
       ufo: 1.6.4
+
+  fake-indexeddb@6.2.5: {}
 
   fast-decode-uri-component@1.0.1: {}
 

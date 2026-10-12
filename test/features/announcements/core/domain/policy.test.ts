@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ANNOUNCEMENTS_MAX_STATE_IDS } from '../../../../../src/features/announcements/contracts';
 import {
+  announcementRuntimeAllowed,
   consumeAnnouncement,
   countOpenInterval,
   createAnnouncementState,
@@ -312,4 +313,33 @@ it('keeps dismissal writable when handled history already consumes the full boun
   expect(dismissed.dismissedIds).toEqual([]);
   const normalized = normalizeAnnouncementState(dismissed);
   expect(normalizeAnnouncementState(normalized)).toEqual(normalized);
+});
+
+describe('temporary macOS 2.17.1 recovery audience', () => {
+  const targeted = () =>
+    normalizeAnnouncement(item('recovery', { macosManualUpdate2171Only: true }));
+  it.each([
+    ['darwin', '2.17.1', true],
+    ['darwin', '2.17.0', false],
+    ['darwin', '2.17.2', false],
+    ['darwin', '2.17.1-beta.1', false],
+    ['win32', '2.17.1', false],
+    ['linux', '2.17.1', false],
+  ])('matches %s %s: %s', (platform, appVersion, allowed) => {
+    expect(announcementRuntimeAllowed(targeted(), { platform, appVersion })).toBe(allowed);
+  });
+  it('fails closed without identity, preserves untargeted news and validates the flag', () => {
+    expect(announcementRuntimeAllowed(targeted())).toBe(false);
+    expect(announcementRuntimeAllowed(normalizeAnnouncement(item()))).toBe(true);
+    expect(
+      announcementRuntimeAllowed(
+        normalizeAnnouncement(item('off', { macosManualUpdate2171Only: false }))
+      )
+    ).toBe(true);
+    for (const value of [null, 'true', 1, {}]) {
+      expect(() =>
+        normalizeAnnouncement(item('bad', { macosManualUpdate2171Only: value }))
+      ).toThrow('macosManualUpdate2171Only');
+    }
+  });
 });

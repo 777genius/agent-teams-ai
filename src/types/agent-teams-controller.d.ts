@@ -231,8 +231,29 @@ declare module 'agent-teams-controller' {
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
     groupChats: {
+      createGroupChat(flags: {
+        from: string;
+        sourceMessageId: string;
+        name: string;
+        selectedMemberNames: string[];
+        autoIncludeNewMembers?: boolean;
+      }): Promise<unknown>;
       listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
       sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+      reactToGroupMessage(flags: {
+        from: string;
+        groupChatId: string;
+        relayOfMessageId: string;
+      }): Promise<{
+        teamName: string;
+        saved: true;
+        acknowledged: true;
+        groupChatId: string;
+        messageId: string;
+        relayOfMessageId: string;
+        from: string;
+        groupRunKey: string;
+      }>;
     };
     workSync: ControllerWorkSyncApi;
   }

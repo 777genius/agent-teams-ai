@@ -16,6 +16,7 @@ import {
   extractArchive,
   findExtractedBinary,
   isRuntimePayloadCacheValid,
+  logRuntimePhase,
   publishRuntimePayload,
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
@@ -614,16 +615,20 @@ async function ensureBootstrappedRuntime() {
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
+      logRuntimePhase(`downloading release asset: ${asset.file}`);
       await phase('download', async () => {
         if (!downloadReleaseAssetWithGh(download, archivePath)) {
           await downloadWithProgress(download, archivePath);
         }
       });
 
+      logRuntimePhase('verifying archive checksum');
       await phase('checksum', () => verifyRuntimeArchiveChecksum(archivePath, asset, platformKey));
 
       const extractDir = path.join(workDir, 'extracted');
+      logRuntimePhase(`extracting ${asset.archiveKind} archive`);
       phase('extract', () => extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit));
+      logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);

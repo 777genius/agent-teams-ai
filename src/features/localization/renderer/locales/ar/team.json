@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "إضافة تفاعل ({{count}})",
+      "remove": "إزالة التفاعل ({{count}})",
+      "count": "التفاعلات: {{count}}",
+      "failed": "تعذر تحديث التفاعلات"
+    },
     "actions": {
       "createTaskFromMessage": "إنشاء مهمة من الرسالة",
       "editMessage": "تعديل الرسالة",

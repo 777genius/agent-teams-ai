@@ -7,15 +7,22 @@ import {
   effectiveGroupMembers,
   GroupChatError,
   groupSendRecipients,
+  isGroupPhysicalId,
+  isGroupUuid,
   matchesHumanGroupTarget,
 } from '../../core/domain/groupChat';
+import { createGroupCreation } from '../application/groupCreation';
+import { createGroupReactions } from '../application/groupReactions';
 import { GroupChatStorage, safeGroupTeamPath } from '../infrastructure/GroupChatStorage';
 
 import type {
-  GroupChatCreateRequest,
+  AgentGroupChatCreateRequest,
+  GroupChatReactionRequest,
+  GroupChatReactionResult,
   GroupChatSendRequest,
   GroupChatSendResult,
   GroupDeliveryRecipient,
+  GroupInboundAcknowledgementTarget,
   TeamGroupChatDTO,
   TeamGroupChatsAPI,
 } from '../../contracts';
@@ -25,6 +32,7 @@ import type { InboxMessage } from '@shared/types';
 export interface GroupChatRun {
   runKey: string;
   protocolVersion: 1;
+  groupReactionProtocolVersion?: 1;
   provider: 'native' | 'lead' | 'opencode';
   /** Request-scoped currency check for an admitted live bridge owner. */
   isCurrent?: () => Promise<boolean>;
@@ -32,6 +40,7 @@ export interface GroupChatRun {
 
 export interface TeamGroupChatsPorts {
   roster(teamName: string): Promise<string[]>;
+  leadName?(teamName: string): Promise<string | null>;
   getRun(teamName: string, memberName: string): Promise<GroupChatRun | null>;
   configurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   deliver(
@@ -41,9 +50,13 @@ export interface TeamGroupChatsPorts {
     shouldStillWrite: () => Promise<boolean>
   ): Promise<GroupDeliveryRecipient['status']>;
   changed?(teamName: string): void;
+  reactionChanged?(teamName: string, messageId: string): void;
 }
 
 export interface TeamGroupChatsFeature extends TeamGroupChatsAPI {
+  createFromAgent(request: AgentGroupChatCreateRequest): Promise<TeamGroupChatDTO>;
+  react(request: GroupChatReactionRequest): Promise<GroupChatReactionResult>;
+  hasAcknowledgedInbound(request: GroupInboundAcknowledgementTarget): Promise<boolean>;
   list(request: { teamName: string }, from?: string): Promise<TeamGroupChatDTO[]>;
   send(request: GroupChatSendRequest, from?: string): Promise<GroupChatSendResult>;
 }
@@ -53,26 +66,11 @@ function validText(value: unknown, label: string, max = 100_000): asserts value 
     throw new GroupChatError('invalid-input', `Invalid ${label}`);
 }
 function validateId(value: unknown): asserts value is string {
-  if (
-    typeof value !== 'string' ||
-    !/^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i.test(
-      value
-    )
-  )
-    throw new GroupChatError('invalid-input', 'Invalid group/message UUID');
+  if (!isGroupUuid(value)) throw new GroupChatError('invalid-input', 'Invalid group/message UUID');
 }
 function validatePhysicalId(value: unknown): asserts value is string {
-  if (typeof value !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,199}$/.test(value))
+  if (!isGroupPhysicalId(value))
     throw new GroupChatError('invalid-input', 'Invalid group/message identity');
-}
-function names(value: unknown): asserts value is string[] {
-  if (
-    !Array.isArray(value) ||
-    value.length > 200 ||
-    value.some((v) => typeof v !== 'string' || !v.trim() || v.trim() !== v) ||
-    new Set(value).size !== value.length
-  )
-    throw new GroupChatError('invalid-input', 'Invalid member selection');
 }
 function payload(
   message: Pick<
@@ -136,7 +134,11 @@ export function createTeamGroupChatsFeature(
       if (unavailable.length) reason = `recipient-unavailable: ${unavailable.join(', ')}`;
     }
     return {
-      ...group,
+      id: group.id,
+      name: group.name,
+      createdAt: group.createdAt,
+      membership: structuredClone(group.membership),
+      archivedAt: group.archivedAt,
       memberNames,
       availableRecipientNames,
       canSend: !reason,
@@ -144,6 +146,8 @@ export function createTeamGroupChatsFeature(
     };
   }
   const feature: TeamGroupChatsFeature = {
+    ...createGroupReactions(ports, storage),
+    ...createGroupCreation(ports, storage, project),
     async list({ teamName }, from = 'user') {
       validText(teamName, 'team name', 200);
       await safeGroupTeamPath(teamName);
@@ -153,46 +157,6 @@ export function createTeamGroupChatsFeature(
         structuredClone(snapshot)
       );
       return Promise.all(groups.map((group) => project(teamName, group, roster, from)));
-    },
-    async create(request: GroupChatCreateRequest) {
-      validText(request.teamName, 'team name', 200);
-      validateId(request.id);
-      if (request.id === DEFAULT_TEAM_GROUP_CHAT_ID)
-        throw new GroupChatError('reserved-group', 'The standard group destination is reserved');
-      validText(request.name, 'chat name', 100);
-      names(request.selectedMemberNames);
-      names(request.excludedMemberNames);
-      if (
-        typeof request.autoIncludeNewMembers !== 'boolean' ||
-        request.selectedMemberNames.some((name) => request.excludedMemberNames.includes(name))
-      )
-        throw new GroupChatError('invalid-input', 'Member selection overlaps');
-      const savedGroup = await ports.configurationOperation(request.teamName, () =>
-        storage.withRegistry(request.teamName, async (groups, save) => {
-          const roster = await ports.roster(request.teamName);
-          const existing = groups.find((group) => group.id === request.id);
-          if (existing) return structuredClone(existing);
-          if (
-            request.selectedMemberNames.length < 2 ||
-            request.selectedMemberNames.some((name) => !roster.includes(name))
-          )
-            throw new GroupChatError('invalid-members', 'Select at least two current agents');
-          const group: GroupChat = {
-            id: request.id,
-            name: request.name.trim(),
-            createdAt: new Date().toISOString(),
-            archivedAt: null,
-            membership: request.autoIncludeNewMembers
-              ? { kind: 'auto', excludedMemberNames: [...request.excludedMemberNames] }
-              : { kind: 'fixed', memberNames: [...request.selectedMemberNames] },
-          };
-          groups.push(group);
-          await save();
-          ports.changed?.(request.teamName);
-          return structuredClone(group);
-        })
-      );
-      return project(request.teamName, savedGroup, await ports.roster(request.teamName));
     },
     async setArchived({ teamName, groupChatId, archived }) {
       validText(teamName, 'team name', 200);

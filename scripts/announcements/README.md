@@ -57,3 +57,5 @@ Before first publication, configure the actual Render landing service (a separat
 After a separately authorized deployment, use GET/HEAD to verify the real feed URL returns JSON, a body URL returns Markdown whose SHA matches, asset paths load, headers match, and a nonexistent announcement returns 404 rather than HTML 200. Keep `autoShowEnabled: false` until production paths are proven. Then enabling auto display is a separate content change. Roll back by setting it false or withdrawing a post, publishing normally, and checking the served feed. Neither action erases local handled IDs.
 
 Official references checked 2026-09-04: [Render headers](https://render.com/docs/static-site-headers), [rewrites](https://render.com/docs/redirects-rewrites), [CI gated deploys](https://render.com/docs/deploys#integrating-with-ci).
+
+Temporary audience metadata: `macosManualUpdate2171Only: true` targets macOS app version 2.17.1 in clients that support the flag. It is immutable after publication. Shipped 2.17.1 ignores it; see the [recovery limitation and unpublished draft](../../docs/announcements-macos-2171-recovery.md) before publishing.

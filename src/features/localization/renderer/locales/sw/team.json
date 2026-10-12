@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Ongeza hisia ({{count}})",
+      "remove": "Ondoa hisia ({{count}})",
+      "count": "Hisia: {{count}}",
+      "failed": "Imeshindwa kusasisha hisia"
+    },
     "actions": {
       "createTaskFromMessage": "Unda kazi kutoka ujumbe",
       "editMessage": "Hariri ujumbe",

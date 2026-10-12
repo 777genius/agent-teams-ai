@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/electron-packaged-ci.yml'
       - 'scripts/ci/packaged-ci-*.mts'
+      - 'scripts/ci/ci-change-scope.mts'
+      - 'scripts/ci/verify-dmg-artwork.mts'
+      - 'resources/dmg/**'
       - 'scripts/tsconfig/tsconfig.packaged-ci.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -176,13 +179,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-      - name: Require full verification on every platform
-        if: needs.packaged-scope.outputs.run != 'false'
+      - name: Require selected packaging verification
+        if: needs.packaged-scope.outputs.scope != 'full' || needs.packaged-scope.outputs.run != 'false'
         env:
           PACKAGED_SCOPE: ${{ needs.packaged-scope.outputs.scope }}
           SCOPE_RESULT: ${{ needs.packaged-scope.result }}
           PACKAGED_RESULT: ${{ needs.packaged-smoke.result }}
+          PACKAGED_RUN: ${{ needs.packaged-scope.outputs.run }}
         run: node scripts/ci/packaged-ci-cli.mts gate
       - name: Preserve existing code checks after metadata edits
-        if: needs.packaged-scope.outputs.run == 'false'
+        if: needs.packaged-scope.outputs.scope == 'full' && needs.packaged-scope.outputs.run == 'false'
         run: echo 'Title/body edit only. Existing packaged code checks are unchanged.'
