@@ -23,13 +23,13 @@ import {
 } from './hooks/useRuntimeProviderCompanion';
 import { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
 import { sortQuickConnectCards } from './quickProviderCards';
+import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 import { RuntimeProviderCompanionSetupDialog } from './ui/RuntimeProviderCompanionSetupDialog';
 import {
   type RuntimeProviderQuickCardViewModel,
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
-import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type {
   RuntimeProviderCompanionActionDto,

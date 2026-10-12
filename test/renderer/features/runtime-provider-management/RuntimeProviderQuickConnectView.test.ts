@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RuntimeProviderQuickConnect } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect';
-import * as quickConnectDirectory from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import * as companion from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion';
+import * as quickConnectDirectory from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
+import { RuntimeProviderQuickConnect } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect';
 import {
   type RuntimeProviderQuickCardViewModel,
   RuntimeProviderQuickConnectView,
