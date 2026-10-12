@@ -1,0 +1,125 @@
+import type { ElectronAPI } from '@shared/types/api';
+import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
+
+/** Renderer adapter for the existing full-team scenario. The host driver must
+ * first verify its owned Electron PID/CDP listener and isolated TEST profile.
+ * This module does not launch Electron or establish that host ownership proof.
+ * Importing it never submits work. All mutations are explicit and single-shot.
+ */
+export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string) {
+  if (!/^TEST-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
+  if (!projectPath || !/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(projectPath)) {
+    throw new Error('TEST project required; host must also verify its opt-in marker');
+  }
+  const progress: TeamProvisioningProgress[] = [];
+  let runId: string | undefined;
+  let submitted = false;
+  let relaunchAttempted = false;
+  let launchPending = false;
+  const pendingProgress: TeamProvisioningProgress[] = [];
+  const unsubscribe = api.teams.onProvisioningProgress((_event, value) => {
+    if (value.teamName !== teamName) return;
+    if (launchPending) pendingProgress.push(value);
+    else if (!runId || value.runId === runId) progress.push(value);
+  });
+  const tasks = new Set<string>();
+  let disposed = false;
+  const check = () => {
+    if (disposed) throw new Error('renderer port disposed');
+  };
+  const selectedTask = (id: string) => {
+    check();
+    if (!tasks.has(id)) throw new Error('task is not owned by this TEST scenario');
+  };
+  return {
+    progress,
+    async createTeam(request: TeamCreateRequest) {
+      check();
+      if (
+        submitted ||
+        request.teamName !== teamName ||
+        request.cwd !== projectPath ||
+        request.providerId !== 'opencode'
+      )
+        throw new Error('single owned OpenCode launch required');
+      // Never repeat an uncertain createTeam after an IPC timeout.
+      submitted = true;
+      await api.config.addCustomProjectPath(projectPath);
+      const result = await api.teams.createTeam(request);
+      runId = result.runId;
+      return result;
+    },
+    async createTask(request: Parameters<ElectronAPI['teams']['createTask']>[1]) {
+      check();
+      if (!runId) throw new Error('owned team launch required');
+      const result = await api.teams.createTask(teamName, request);
+      tasks.add(result.id);
+      return result;
+    },
+    async startTask(id: string) {
+      selectedTask(id);
+      return api.teams.startTask(teamName, id);
+    },
+    async getTask(id: string) {
+      selectedTask(id);
+      return api.teams.getTask(teamName, id);
+    },
+    async updateTaskOwner(id: string, owner: string | null) {
+      selectedTask(id);
+      return api.teams.updateTaskOwner(teamName, id, owner);
+    },
+    async getProvisioningStatus() {
+      check();
+      if (!runId) throw new Error('owned launch required');
+      return api.teams.getProvisioningStatus(runId);
+    },
+    async getRuntime() {
+      check();
+      return api.teams.getTeamAgentRuntime(teamName);
+    },
+    async getData() {
+      check();
+      return api.teams.getData(teamName);
+    },
+    async sendMessage(request: Parameters<ElectronAPI['teams']['sendMessage']>[1]) {
+      check();
+      return api.teams.sendMessage(teamName, request);
+    },
+    async stop() {
+      check();
+      if (submitted) await api.teams.stop(teamName);
+    },
+    async processAlive() {
+      check();
+      return api.teams.processAlive(teamName);
+    },
+    async launchTeam(request: Parameters<ElectronAPI['teams']['launchTeam']>[0]) {
+      check();
+      if (
+        relaunchAttempted ||
+        !runId ||
+        request.teamName !== teamName ||
+        request.cwd !== projectPath ||
+        request.providerId !== 'opencode'
+      )
+        throw new Error('same owned team relaunch required');
+      const previous = runId;
+      relaunchAttempted = true;
+      launchPending = true;
+      progress.length = 0;
+      const result = await api.teams.launchTeam(request);
+      if (result.runId === previous) throw new Error('fresh run identity required');
+      runId = result.runId;
+      progress.push(...pendingProgress.filter((value) => value.runId === runId));
+      pendingProgress.length = 0;
+      launchPending = false;
+      return result;
+    },
+    dispose() {
+      if (!disposed) {
+        disposed = true;
+        unsubscribe();
+      }
+    },
+  };
+}
