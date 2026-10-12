@@ -10,7 +10,7 @@ Do not publish this draft as an exclusively targeted recovery message until a de
 
 ## Prepared content, not in the publication catalog
 
-The [draft](announcements-drafts/macos-2.17.1-manual-update/body.md) and [metadata](announcements-drafts/macos-2.17.1-manual-update/meta.json) live outside `landing/content/announcements`, so neither the landing build nor feed generation publishes them. `feed.config.json` remains unchanged. The draft is English, matching the single-language feed; title: **⚠️ macOS 2.17.1: manual update required**.
+The [draft](announcements-drafts/macos-2171-manual-update/body.md) and [metadata](announcements-drafts/macos-2171-manual-update/meta.json) live outside `landing/content/announcements`, so neither the landing build nor feed generation publishes them. `feed.config.json` remains unchanged. The draft is English, matching the single-language feed; title: **⚠️ macOS 2.17.1: manual update required**.
 
 The first body line links directly to `https://agentteams.live/#download`, whose `download` anchor is owned by `landing/components/sections/DownloadSection.vue`. Do not promise that auto-update is fixed in the destination release until release verification proves it.
 
