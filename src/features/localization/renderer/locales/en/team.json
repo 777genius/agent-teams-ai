@@ -1,5 +1,12 @@
 {
   "activity": {
+    "chatVisualization": {
+      "description": "Full visualization view",
+      "exceedsLimits": "Visualization exceeds display limits",
+      "incomplete": "Visualization incomplete",
+      "open": "Open visualization",
+      "unavailable": "Visualization unavailable"
+    },
     "reactions": {
       "add": "Add reaction ({{count}})",
       "remove": "Remove reaction ({{count}})",

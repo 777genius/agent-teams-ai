@@ -1,5 +1,6 @@
 import { Fragment, memo, useCallback, useMemo } from 'react';
 
+import { summarizeVisualizationFences } from '@features/chat-visualizations/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   CompactMarkdownPreview,
@@ -84,6 +85,7 @@ import {
   parseQualifiedRecipient,
   parseStructuredAgentMessageCached,
 } from './activityMessagePresentation';
+import { getCommandOutputSummary } from './activityMessagePreview';
 import { isDirectParticipantSender, shouldHideDirectMemberRoute } from './activityRecipientRoute';
 import {
   encodeCacheParts,
@@ -138,16 +140,6 @@ const PermissionStatusIcon = memo(function PermissionStatusIcon({
   if (isPending) return <Clock size={12} className="animate-pulse text-amber-400" />;
   return <Check size={12} className="text-emerald-400/50" />;
 });
-
-function getCommandOutputSummary(text: string): string {
-  const firstLine = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean);
-
-  if (!firstLine) return '';
-  return firstLine.length > 120 ? `${firstLine.slice(0, 120)}…` : firstLine;
-}
 
 function parseIdlePeerSummaryRoute(summary: string): { recipient: string | null; body: string } {
   const trimmed = summary.trim();
@@ -847,7 +839,7 @@ export const ActivityItem = memo(
       // Fallback: use the beginning of message text as preview for plain-text messages
       const plain = strippedText?.trim() ?? '';
       if (!plain) return '';
-      return plain.replace(/\n+/g, ' ');
+      return summarizeVisualizationFences(plain).replace(/\n+/g, ' ');
     }, [
       crossTeamPreview,
       isSlashCommandMessage,
@@ -860,7 +852,7 @@ export const ActivityItem = memo(
       structured,
     ]);
     const rawSummary = stripAgentBlocks(summarySource);
-    const summaryText = extractMarkdownPlainTextCached(rawSummary);
+    const summaryText = extractMarkdownPlainTextCached(summarizeVisualizationFences(rawSummary));
     const compactPreviewSource = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
         return idleSemantic.peerSummary;
@@ -895,7 +887,9 @@ export const ActivityItem = memo(
       slashCommandMeta,
       summaryText,
     ]);
-    const compactPreviewMarkdown = stripAgentBlocks(compactPreviewSource);
+    const compactPreviewMarkdown = summarizeVisualizationFences(
+      stripAgentBlocks(compactPreviewSource)
+    );
     const compactPreviewTooltipText = useMemo(() => {
       const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown)
         .replace(/\n+/g, ' ')

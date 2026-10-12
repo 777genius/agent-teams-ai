@@ -1,0 +1,396 @@
+{
+  "generated": "scripts/openui/generate-chat-visualization-protocol.ts",
+  "protocolVersion": 1,
+  "instructions": "Use a visualization only when it makes the requested answer clearer; keep readable prose around it.\nOutput a fenced ```openui-lang block, not JSX, JSON, HTML, or an OpenUI Cloud bundle. Put it outside hidden agent blocks and keep ordinary citations outside the fence.\nUse only the listed signatures and static values. Do not use Query, Mutation, state, actions, built-in functions, remote assets, or invented data.\nPass component arguments positionally in the listed props order. Never use named arguments such as height: 240 or variant: \"grouped\". Omit trailing optional arguments, or use null for an optional position before a later argument.\nDeclare root = Stack([...]) first, then define each referenced statement as it becomes complete, using semicolon/newline-delimited DSL. Close the fence.\nExample:\nroot = Stack([Card([CardHeader(\"Report\"), Table([Col(\"Name\", [\"Alpha\", \"Beta\"], \"string\"), Col(\"Value\", [10, 20], \"number\")]), BarChart([\"Alpha\", \"Beta\"], [Series(\"Count\", [10, 20])])])]);",
+  "spec": {
+    "root": "Stack",
+    "components": {
+      "Stack": {
+        "signature": "Stack(children: Card[])",
+        "description": "Fixed vertical root stack containing Cards."
+      },
+      "Card": {
+        "signature": "Card(children: (CardHeader | TextContent | Table | BarChart | LineChart | PieChart)[])",
+        "description": "Read-only summary card containing display content."
+      },
+      "CardHeader": {
+        "signature": "CardHeader(title?: string, subtitle?: string)",
+        "description": "Plain-text title and subtitle."
+      },
+      "TextContent": {
+        "signature": "TextContent(text: string, size?: \"small\" | \"default\" | \"large\" | \"small-heavy\" | \"large-heavy\")",
+        "description": "Literal plain text. Markdown, links, images, and scripts are not interpreted."
+      },
+      "Table": {
+        "signature": "Table(columns: Col[])",
+        "description": "Read-only column-oriented table."
+      },
+      "Col": {
+        "signature": "Col(label: string, data: (string | number | boolean | any)[], type?: \"string\" | \"number\")",
+        "description": "Table column containing static scalar cells."
+      },
+      "BarChart": {
+        "signature": "BarChart(labels: string[], series: Series[], variant?: \"grouped\" | \"stacked\", xLabel?: string, yLabel?: string, height?: number)",
+        "description": "Categorical bar chart using static Series data."
+      },
+      "LineChart": {
+        "signature": "LineChart(labels: string[], series: Series[], variant?: \"linear\" | \"natural\" | \"step\", xLabel?: string, yLabel?: string, height?: number)",
+        "description": "Categorical trend chart using static Series data."
+      },
+      "PieChart": {
+        "signature": "PieChart(labels: string[], values: number[], variant?: \"pie\" | \"donut\", appearance?: \"circular\" | \"semiCircular\")",
+        "description": "Part-to-whole chart using static values."
+      },
+      "Series": {
+        "signature": "Series(category: string, values: number[])",
+        "description": "Named finite numeric series."
+      }
+    },
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "Stack": {
+          "$ref": "#/$defs/Stack"
+        },
+        "Card": {
+          "$ref": "#/$defs/Card"
+        },
+        "CardHeader": {
+          "$ref": "#/$defs/CardHeader"
+        },
+        "TextContent": {
+          "$ref": "#/$defs/TextContent"
+        },
+        "Table": {
+          "$ref": "#/$defs/Table"
+        },
+        "Col": {
+          "$ref": "#/$defs/Col"
+        },
+        "BarChart": {
+          "$ref": "#/$defs/BarChart"
+        },
+        "LineChart": {
+          "$ref": "#/$defs/LineChart"
+        },
+        "PieChart": {
+          "$ref": "#/$defs/PieChart"
+        },
+        "Series": {
+          "$ref": "#/$defs/Series"
+        }
+      },
+      "required": [
+        "Stack",
+        "Card",
+        "CardHeader",
+        "TextContent",
+        "Table",
+        "Col",
+        "BarChart",
+        "LineChart",
+        "PieChart",
+        "Series"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "Stack": {
+          "type": "object",
+          "properties": {
+            "children": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Card"
+              }
+            }
+          },
+          "required": [
+            "children"
+          ],
+          "additionalProperties": false,
+          "description": "Fixed vertical root stack containing Cards."
+        },
+        "Card": {
+          "type": "object",
+          "properties": {
+            "children": {
+              "maxItems": 24,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/CardHeader"
+                  },
+                  {
+                    "$ref": "#/$defs/TextContent"
+                  },
+                  {
+                    "$ref": "#/$defs/Table"
+                  },
+                  {
+                    "$ref": "#/$defs/BarChart"
+                  },
+                  {
+                    "$ref": "#/$defs/LineChart"
+                  },
+                  {
+                    "$ref": "#/$defs/PieChart"
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "children"
+          ],
+          "additionalProperties": false,
+          "description": "Read-only summary card containing display content."
+        },
+        "CardHeader": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "subtitle": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "additionalProperties": false,
+          "description": "Plain-text title and subtitle."
+        },
+        "TextContent": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "maxLength": 10000
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "small",
+                "default",
+                "large",
+                "small-heavy",
+                "large-heavy"
+              ]
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "description": "Literal plain text. Markdown, links, images, and scripts are not interpreted."
+        },
+        "Table": {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Col"
+              }
+            }
+          },
+          "required": [
+            "columns"
+          ],
+          "additionalProperties": false,
+          "description": "Read-only column-oriented table."
+        },
+        "Col": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "data": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "data"
+          ],
+          "additionalProperties": false,
+          "description": "Table column containing static scalar cells."
+        },
+        "BarChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Series"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "grouped",
+                "stacked"
+              ]
+            },
+            "xLabel": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "yLabel": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 160,
+              "maximum": 600
+            }
+          },
+          "required": [
+            "labels",
+            "series"
+          ],
+          "additionalProperties": false,
+          "description": "Categorical bar chart using static Series data."
+        },
+        "Series": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "values": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "required": [
+            "category",
+            "values"
+          ],
+          "additionalProperties": false,
+          "description": "Named finite numeric series."
+        },
+        "LineChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Series"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "linear",
+                "natural",
+                "step"
+              ]
+            },
+            "xLabel": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "yLabel": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 160,
+              "maximum": 600
+            }
+          },
+          "required": [
+            "labels",
+            "series"
+          ],
+          "additionalProperties": false,
+          "description": "Categorical trend chart using static Series data."
+        },
+        "PieChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "values": {
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "pie",
+                "donut"
+              ]
+            },
+            "appearance": {
+              "type": "string",
+              "enum": [
+                "circular",
+                "semiCircular"
+              ]
+            }
+          },
+          "required": [
+            "labels",
+            "values"
+          ],
+          "additionalProperties": false,
+          "description": "Part-to-whole chart using static values."
+        }
+      }
+    }
+  }
+}

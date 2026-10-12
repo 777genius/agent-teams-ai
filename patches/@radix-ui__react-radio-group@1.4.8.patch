@@ -1,0 +1,196 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -68,6 +68,27 @@
+ var import_react_presence = require("@radix-ui/react-presence");
+ var import_react_primitive = require("@radix-ui/react-primitive");
+ var import_jsx_runtime = require("react/jsx-runtime");
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) return;
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var RADIO_NAME = "Radio";
+ var [createRadioContext, createRadioScope] = (0, import_react_context.createContextScope)(RADIO_NAME);
+ var [RadioProviderImpl, useRadioContext] = createRadioContext(RADIO_NAME);
+@@ -86,7 +107,9 @@
+     internal_do_not_use_render
+   } = props;
+   const [control, setControl] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const [userInteractionCount, onUserInteraction] = React.useReducer(
+     (count) => count + 1,
+@@ -104,13 +127,13 @@
+     form,
+     value,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     hasConsumerStoppedPropagationRef,
+     userInteractionCount,
+     onUserInteraction,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput,
++    setBubbleInput: setBubbleInputRef,
+     onCheck: /* @__PURE__ */ __name(() => onCheck?.(), "onCheck")
+   };
+   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadioProviderImpl, { scope: __scopeRadio, ...context, children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children });
+@@ -123,14 +146,14 @@
+       checked,
+       disabled,
+       value,
+-      setControl,
++      setControl: setControlRef,
+       onCheck,
+       hasConsumerStoppedPropagationRef,
+       onUserInteraction,
+       isFormControl,
+       bubbleInput
+     } = useRadioContext(TRIGGER_NAME, __scopeRadio);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControl);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControlRef);
+     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+       import_react_primitive.Primitive.button,
+       {
+@@ -185,11 +208,11 @@
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput,
++      setBubbleInput: setBubbleInputRef,
+       hasConsumerStoppedPropagationRef,
+       userInteractionCount
+     } = useRadioContext(BUBBLE_INPUT_NAME, __scopeRadio);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInput);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInputRef);
+     const controlSize = (0, import_react_use_size.useSize)(control);
+     const shouldStopClickPropagationRef = React.useRef(false);
+     const prevCheckedRef = React.useRef(checked);
+@@ -297,7 +320,8 @@
+       caller: RADIO_GROUP_NAME
+     });
+     const [control, setControl] = React2.useState(null);
+-    const composedRefs = (0, import_react_compose_refs2.useComposedRefs)(forwardedRef, setControl);
++    const setControlRef = useGuardedNodeSetter(setControl);
++    const composedRefs = (0, import_react_compose_refs2.useComposedRefs)(forwardedRef, setControlRef);
+     const initialValueRef = React2.useRef(value);
+     React2.useEffect(() => {
+       const associatedForm = form ? control?.ownerDocument.getElementById(form) : control?.closest("form");
+diff --git a/dist/index.mjs b/dist/index.mjs
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -22,6 +22,27 @@
+ import { Presence } from "@radix-ui/react-presence";
+ import { Primitive } from "@radix-ui/react-primitive";
+ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) return;
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var RADIO_NAME = "Radio";
+ var [createRadioContext, createRadioScope] = createContextScope(RADIO_NAME);
+ var [RadioProviderImpl, useRadioContext] = createRadioContext(RADIO_NAME);
+@@ -40,7 +61,9 @@
+     internal_do_not_use_render
+   } = props;
+   const [control, setControl] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const [userInteractionCount, onUserInteraction] = React.useReducer(
+     (count) => count + 1,
+@@ -58,13 +81,13 @@
+     form,
+     value,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     hasConsumerStoppedPropagationRef,
+     userInteractionCount,
+     onUserInteraction,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput,
++    setBubbleInput: setBubbleInputRef,
+     onCheck: /* @__PURE__ */ __name(() => onCheck?.(), "onCheck")
+   };
+   return /* @__PURE__ */ jsx(RadioProviderImpl, { scope: __scopeRadio, ...context, children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children });
+@@ -77,14 +100,14 @@
+       checked,
+       disabled,
+       value,
+-      setControl,
++      setControl: setControlRef,
+       onCheck,
+       hasConsumerStoppedPropagationRef,
+       onUserInteraction,
+       isFormControl,
+       bubbleInput
+     } = useRadioContext(TRIGGER_NAME, __scopeRadio);
+-    const composedRefs = useComposedRefs(forwardedRef, setControl);
++    const composedRefs = useComposedRefs(forwardedRef, setControlRef);
+     return /* @__PURE__ */ jsx(
+       Primitive.button,
+       {
+@@ -139,11 +162,11 @@
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput,
++      setBubbleInput: setBubbleInputRef,
+       hasConsumerStoppedPropagationRef,
+       userInteractionCount
+     } = useRadioContext(BUBBLE_INPUT_NAME, __scopeRadio);
+-    const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
++    const composedRefs = useComposedRefs(forwardedRef, setBubbleInputRef);
+     const controlSize = useSize(control);
+     const shouldStopClickPropagationRef = React.useRef(false);
+     const prevCheckedRef = React.useRef(checked);
+@@ -251,7 +274,8 @@
+       caller: RADIO_GROUP_NAME
+     });
+     const [control, setControl] = React2.useState(null);
+-    const composedRefs = useComposedRefs2(forwardedRef, setControl);
++    const setControlRef = useGuardedNodeSetter(setControl);
++    const composedRefs = useComposedRefs2(forwardedRef, setControlRef);
+     const initialValueRef = React2.useRef(value);
+     React2.useEffect(() => {
+       const associatedForm = form ? control?.ownerDocument.getElementById(form) : control?.closest("form");

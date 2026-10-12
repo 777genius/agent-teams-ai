@@ -90,29 +90,29 @@ export const MermaidDiagram = React.memo(function MermaidDiagram({
     };
   }, [code]);
 
-  if (error) {
-    return (
+  return (
+    <>
+      {error ? (
+        <div
+          className="my-3 overflow-auto rounded-lg p-3 text-xs"
+          style={{
+            backgroundColor: PROSE_PRE_BG,
+            border: `1px solid ${PROSE_PRE_BORDER}`,
+          }}
+        >
+          <div className="mb-2 text-amber-400">{t('code.mermaidSyntaxError')}</div>
+          <pre className="whitespace-pre-wrap font-mono text-text-muted">{code}</pre>
+        </div>
+      ) : null}
       <div
-        className="my-3 overflow-auto rounded-lg p-3 text-xs"
+        ref={containerRef}
+        className="my-3 flex justify-center overflow-auto rounded-lg p-3"
         style={{
           backgroundColor: PROSE_PRE_BG,
           border: `1px solid ${PROSE_PRE_BORDER}`,
+          display: error ? 'none' : undefined,
         }}
-      >
-        <div className="mb-2 text-amber-400">{t('code.mermaidSyntaxError')}</div>
-        <pre className="whitespace-pre-wrap font-mono text-text-muted">{code}</pre>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="my-3 flex justify-center overflow-auto rounded-lg p-3"
-      style={{
-        backgroundColor: PROSE_PRE_BG,
-        border: `1px solid ${PROSE_PRE_BORDER}`,
-      }}
-    />
+      />
+    </>
   );
 });

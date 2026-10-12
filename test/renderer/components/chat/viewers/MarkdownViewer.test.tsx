@@ -42,6 +42,7 @@ vi.mock('@renderer/components/chat/viewers/FileLink', () => ({
 
 import {
   MarkdownViewer,
+  CompactMarkdownPreview,
   resolveRelativePath,
 } from '@renderer/components/chat/viewers/MarkdownViewer';
 
@@ -110,5 +111,37 @@ describe('MarkdownViewer local image path resolution', () => {
     expect(resolveRelativePath('..\\assets\\plot.png', '\\\\server\\share\\repo\\docs')).toBe(
       '\\\\server\\share\\repo\\assets\\plot.png'
     );
+  });
+});
+
+
+describe('Markdown visualization integration', () => {
+  it('preserves the shell DOM while an existing message grows', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => root.render(<MarkdownViewer bare content={'```openui-lang\nroot = Stack(['} />));
+    const shell = host.querySelector('[data-chat-visualization-kind="openui"]');
+    expect(shell).not.toBeNull();
+    await act(async () => root.render(<MarkdownViewer bare content={'```openui-lang\nroot = Stack([Card([TextContent("Result")])]);\n```'} />));
+    expect(host.querySelector('[data-chat-visualization-kind="openui"]')).toBe(shell);
+    await act(async () => root.unmount());
+    host.remove();
+  });
+  it('uses compact labels for OpenUI and Mermaid without mounting visualization renderers', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => root.render(<CompactMarkdownPreview content={'Comparison\n```openui-lang\nroot = Stack([Card([TextContent("secretDSL")])]);\n```\n```mermaid\ngraph TD; secretNode-->B;\n```'} />));
+    expect(host.textContent).toContain('Comparison');
+    expect(host.textContent).toContain('Visualization');
+    expect(host.textContent).toContain('Diagram');
+    expect(host.textContent).not.toContain('secretDSL');
+    expect(host.textContent).not.toContain('secretNode');
+    expect(host.querySelector('[data-chat-visualization-kind]')).toBeNull();
+    await act(async () => root.unmount());
+    host.remove();
   });
 });
