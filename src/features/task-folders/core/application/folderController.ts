@@ -15,6 +15,11 @@ export interface FolderState {
   pending: number;
   error: string | null;
 }
+interface FailedOperation {
+  operationId: string;
+  command: Command;
+  error: string;
+}
 /** Save before publication; each queued command revalidates against the committed snapshot. */
 export class FolderController {
   private state: FolderState = {
@@ -27,7 +32,8 @@ export class FolderController {
   private queue: Promise<unknown> = Promise.resolve();
   private loading: Promise<void> | undefined;
   private catalog = new Set<string>();
-  private failures: { command: Command; error: string }[] = [];
+  private failures: FailedOperation[] = [];
+  private operationSequence = 0;
   constructor(private repository: FolderRepository) {}
   getSnapshot = (): FolderState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -59,18 +65,19 @@ export class FolderController {
       });
     return this.loading;
   }
-  execute(command: Command): Promise<Snapshot> {
-    const failure = this.failures.find(
-      (entry) =>
-        command.type === 'create' &&
-        entry.command.type === 'create' &&
-        entry.command.id === command.id
-    );
-    return this.enqueue(command, failure);
+  execute(command: Command, operationId?: string): Promise<Snapshot> {
+    const logicalOperationId =
+      operationId ??
+      (command.type === 'create'
+        ? `create:${command.id}`
+        : `command:${(this.operationSequence += 1)}`);
+    const failure = this.failures.find((entry) => entry.operationId === logicalOperationId);
+    return this.enqueue(command, logicalOperationId, failure);
   }
   private enqueue(
     command: Command,
-    retry?: { command: Command; error: string }
+    operationId: string,
+    retry?: FailedOperation
   ): Promise<Snapshot> {
     this.publish({ pending: this.state.pending + 1 });
     const action = this.queue
@@ -85,7 +92,7 @@ export class FolderController {
             throw new Error('missing-task');
           next = applyCommand(this.state.snapshot, command);
         } catch (error) {
-          if (retry) this.removeFailure(retry);
+          if (retry) this.removeOperation(retry.operationId);
           throw error;
         }
         try {
@@ -93,13 +100,17 @@ export class FolderController {
         } catch (error) {
           const message = error instanceof Error ? error.message : 'save';
           if (retry) {
-            retry.command = command;
-            retry.error = message;
-          } else this.failures.push({ command, error: message });
+            const index = this.failures.findIndex(
+              (entry) => entry.operationId === retry.operationId
+            );
+            const updated: FailedOperation = { operationId, command, error: message };
+            if (index >= 0) this.failures.splice(index, 1, updated);
+            else this.failures.push(updated);
+          } else this.failures.push({ operationId, command, error: message });
           this.publish({ error: this.failures[0].error });
           throw error;
         }
-        if (retry) this.removeFailure(retry);
+        if (retry) this.removeOperation(retry.operationId);
         this.publish({ snapshot: next, error: this.failures[0]?.error ?? null });
         return next;
       })
@@ -107,13 +118,15 @@ export class FolderController {
     this.queue = action.catch(() => undefined);
     return action;
   }
-  private removeFailure(failure: { command: Command; error: string }): void {
-    this.failures = this.failures.filter((entry) => entry !== failure);
+  private removeOperation(operationId: string): void {
+    this.failures = this.failures.filter((entry) => entry.operationId !== operationId);
     this.publish({ error: this.failures[0]?.error ?? null });
   }
   retry(): Promise<Snapshot> {
     const failure = this.failures[0];
-    return failure ? this.enqueue(failure.command, failure) : Promise.resolve(this.state.snapshot);
+    return failure
+      ? this.enqueue(failure.command, failure.operationId, failure)
+      : Promise.resolve(this.state.snapshot);
   }
   reset(): Promise<void> {
     const action = this.queue.then(async () => {

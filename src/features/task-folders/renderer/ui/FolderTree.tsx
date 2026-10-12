@@ -47,18 +47,46 @@ import type { FolderDialog } from './FolderDialogs';
 import type { ItemInstance } from '@headless-tree/core';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import type { ReactNode } from 'react';
+interface RowMenuLifecycle {
+  deferAction(action: () => void): void;
+  onCloseAutoFocus(event: Event): void;
+}
 /** Radix roots do not notify onOpenChange when a virtual row disappears. */
-const RowMenuOwner = ({ id, children }: { id: string; children: ReactNode }): React.JSX.Element => {
-  useEffect(
-    () => () => {
+const RowMenuOwner = ({
+  id,
+  children,
+}: {
+  id: string;
+  children: (lifecycle: RowMenuLifecycle) => ReactNode;
+}): React.JSX.Element => {
+  const pendingAction = useRef<(() => void) | null>(null);
+  const actionFrame = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    return () => {
+      pendingAction.current = null;
+      if (actionFrame.current !== undefined) cancelAnimationFrame(actionFrame.current);
       panelController.hold(`menu:context:${id}`, false);
       panelController.hold(`menu:dropdown:${id}`, false);
+    };
+  }, [id]);
+  const lifecycle: RowMenuLifecycle = {
+    deferAction(action) {
+      pendingAction.current = action;
     },
-    [id]
-  );
+    onCloseAutoFocus(event) {
+      event.preventDefault();
+      const action = pendingAction.current;
+      pendingAction.current = null;
+      if (!action) return;
+      actionFrame.current = requestAnimationFrame(() => {
+        actionFrame.current = undefined;
+        action();
+      });
+    },
+  };
   return (
     <ContextMenu onOpenChange={(open) => panelController.hold(`menu:context:${id}`, open)}>
-      {children}
+      {children(lifecycle)}
     </ContextMenu>
   );
 };
@@ -79,7 +107,7 @@ export const FolderTree = ({
   const scroll = useRef<HTMLDivElement>(null);
   const virtualRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(null);
   const editHold = `edit:${useId()}` as const;
-  const editSession = useRef<object | null>(null);
+  const editSession = useRef<string | null>(null);
   const [rename, setRename] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
@@ -270,7 +298,7 @@ export const FolderTree = ({
     setRename(n.folderId!);
     setValue(n.name);
     setError(false);
-    editSession.current = {};
+    editSession.current = crypto.randomUUID();
     panelController.hold(editHold, true);
   };
   const cancelRename = useCallback((): void => {
@@ -301,7 +329,10 @@ export const FolderTree = ({
     const session = editSession.current;
     setSaving(true);
     try {
-      await folderController.execute({ type: 'rename', id: rename, name: value });
+      await folderController.execute(
+        { type: 'rename', id: rename, name: value },
+        editSession.current ?? undefined
+      );
       if (editSession.current === session) cancelRename();
     } catch {
       if (editSession.current === session) setError(true);
@@ -359,173 +390,180 @@ export const FolderTree = ({
     const editing = n.kind === 'folder' && rename === n.folderId;
     return (
       <RowMenuOwner id={n.id}>
-        <ContextMenuTrigger asChild>
-          <div
-            {...props}
-            role="treeitem"
-            tabIndex={props.tabIndex ?? -1}
-            aria-selected={item.isSelected()}
-            aria-label={
-              n.archived ? `${n.name} (${t('taskFolders.archived')})` : props['aria-label']
-            }
-            data-folder-id={n.folderId}
-            data-task-key={
-              n.identity ? JSON.stringify([n.identity.teamName, n.identity.taskId]) : undefined
-            }
-            className={`flex h-8 items-center gap-1 rounded px-1 text-xs outline-none focus:ring-1 focus:ring-blue-400 ${n.archived ? 'text-text-muted opacity-60' : 'text-text'} ${item.isDragTarget() ? 'bg-blue-500/20' : ''}`}
-            style={{ paddingLeft: `${item.getItemMeta().level * 16}px` }}
-            onKeyDown={(event) => {
-              if (event.target !== event.currentTarget || editing || isImeComposing(event)) return;
-              if (event.key === 'Enter' && n.kind === 'task') {
-                event.preventDefault();
-                item.primaryAction();
-              } else if (event.key === 'F2' && n.kind === 'folder') {
-                event.preventDefault();
-                startRename(n);
-              } else props.onKeyDown?.(event);
-            }}
-          >
-            {n.kind !== 'unfiled' && (
-              <button
-                {...drag}
-                type="button"
-                tabIndex={-1}
-                aria-label={t(
-                  n.kind === 'folder' ? 'taskFolders.dragFolder' : 'taskFolders.dragTask'
-                )}
-                data-testid={
-                  n.kind === 'folder' ? 'task-folder-drag-handle' : 'sidebar-task-drag-handle'
+        {({ deferAction, onCloseAutoFocus }) => (
+          <>
+            <ContextMenuTrigger asChild>
+              <div
+                {...props}
+                role="treeitem"
+                tabIndex={props.tabIndex ?? -1}
+                aria-selected={item.isSelected()}
+                aria-label={
+                  n.archived ? `${n.name} (${t('taskFolders.archived')})` : props['aria-label']
                 }
-                onDragStart={(event) => {
-                  drag.onDragStart?.(event);
-                  if (!event.defaultPrevented) panelController.begin(n.id);
-                }}
-                onDragEnd={(event) => {
-                  drag.onDragEnd?.(event);
-                  panelController.end();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (n.identity) moveRequest.open(n.identity);
-                  else dialog({ kind: 'moveFolder', id: n.folderId! });
-                }}
-                className="shrink-0 cursor-grab"
-              >
-                <GripVertical className="size-3" />
-              </button>
-            )}
-            {item.isFolder() ? (
-              <button
-                type="button"
-                aria-label={t(item.isExpanded() ? 'taskFolders.collapse' : 'taskFolders.expand')}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (item.isExpanded()) item.collapse();
-                  else item.expand();
-                }}
-              >
-                {item.isExpanded() ? (
-                  <ChevronDown className="size-3" />
-                ) : (
-                  <ChevronRight className="size-3" />
-                )}
-              </button>
-            ) : n.archived ? (
-              <Archive aria-label={t('taskFolders.archived')} className="size-3 shrink-0" />
-            ) : null}
-            {n.kind === 'folder' && <Folder className="size-3 shrink-0" />}
-            {editing ? (
-              <Input
-                autoFocus
-                value={value}
-                aria-label={t('taskFolders.renameFolder')}
-                aria-invalid={error}
-                disabled={saving}
-                className="h-6 min-w-0 px-1 text-xs"
-                onChange={(event) => {
-                  setValue(event.target.value);
-                  setError(false);
-                }}
-                onClick={(event) => event.stopPropagation()}
+                data-folder-id={n.folderId}
+                data-task-key={
+                  n.identity ? JSON.stringify([n.identity.teamName, n.identity.taskId]) : undefined
+                }
+                className={`flex h-8 items-center gap-1 rounded px-1 text-xs outline-none focus:ring-1 focus:ring-blue-400 ${n.archived ? 'text-text-muted opacity-60' : 'text-text'} ${item.isDragTarget() ? 'bg-blue-500/20' : ''}`}
+                style={{ paddingLeft: `${item.getItemMeta().level * 16}px` }}
                 onKeyDown={(event) => {
-                  event.stopPropagation();
-                  if (event.key === 'Escape') cancelRename();
-                  else if (event.key === 'Enter' && !isImeComposing(event)) {
+                  if (event.target !== event.currentTarget || editing || isImeComposing(event))
+                    return;
+                  if (event.key === 'Enter' && n.kind === 'task') {
                     event.preventDefault();
-                    void saveRename();
-                  }
+                    item.primaryAction();
+                  } else if (event.key === 'F2' && n.kind === 'folder') {
+                    event.preventDefault();
+                    startRename(n);
+                  } else props.onKeyDown?.(event);
                 }}
-              />
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="min-w-0 flex-1 truncate">
-                    {n.kind === 'unfiled' ? t('taskFolders.unfiled') : n.name}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {n.kind === 'unfiled' ? t('taskFolders.unfiled') : n.name}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {editing && error && (
-              <span role="alert" className="text-red-400">
-                {t('taskFolders.invalidName')}
-              </span>
-            )}
-            {item.isFolder() && (
-              <span
-                className="ml-auto shrink-0 text-[10px] text-text-muted"
-                aria-label={t('taskFolders.counts', {
-                  active: n.active,
-                  archived: n.archivedCount,
-                  unavailable: n.unavailable,
-                })}
               >
-                {n.active}/{n.archivedCount}
-                {n.unavailable ? ` +${n.unavailable}?` : ''}
-              </span>
-            )}
-            {menu.length > 0 && (
-              <DropdownMenu
-                onOpenChange={(open) => panelController.hold(`menu:dropdown:${n.id}`, open)}
-              >
-                <DropdownMenuTrigger asChild>
+                {n.kind !== 'unfiled' && (
+                  <button
+                    {...drag}
+                    type="button"
+                    tabIndex={-1}
+                    aria-label={t(
+                      n.kind === 'folder' ? 'taskFolders.dragFolder' : 'taskFolders.dragTask'
+                    )}
+                    data-testid={
+                      n.kind === 'folder' ? 'task-folder-drag-handle' : 'sidebar-task-drag-handle'
+                    }
+                    onDragStart={(event) => {
+                      drag.onDragStart?.(event);
+                      if (!event.defaultPrevented) panelController.begin(n.id);
+                    }}
+                    onDragEnd={(event) => {
+                      drag.onDragEnd?.(event);
+                      panelController.end();
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (n.identity) moveRequest.open(n.identity);
+                      else dialog({ kind: 'moveFolder', id: n.folderId! });
+                    }}
+                    className="shrink-0 cursor-grab"
+                  >
+                    <GripVertical className="size-3" />
+                  </button>
+                )}
+                {item.isFolder() ? (
                   <button
                     type="button"
-                    aria-label={t('taskFolders.actions')}
-                    onClick={(event) => event.stopPropagation()}
+                    aria-label={t(
+                      item.isExpanded() ? 'taskFolders.collapse' : 'taskFolders.expand'
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (item.isExpanded()) item.collapse();
+                      else item.expand();
+                    }}
                   >
-                    <MoreHorizontal className="size-3" />
+                    {item.isExpanded() ? (
+                      <ChevronDown className="size-3" />
+                    ) : (
+                      <ChevronRight className="size-3" />
+                    )}
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {menu.map((a) => (
-                    <DropdownMenuItem
-                      key={a.label}
-                      disabled={model.state.status !== 'ready'}
-                      onSelect={a.run}
-                    >
-                      {a.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                ) : n.archived ? (
+                  <Archive aria-label={t('taskFolders.archived')} className="size-3 shrink-0" />
+                ) : null}
+                {n.kind === 'folder' && <Folder className="size-3 shrink-0" />}
+                {editing ? (
+                  <Input
+                    autoFocus
+                    value={value}
+                    aria-label={t('taskFolders.renameFolder')}
+                    aria-invalid={error}
+                    disabled={saving}
+                    className="h-6 min-w-0 px-1 text-xs"
+                    onChange={(event) => {
+                      setValue(event.target.value);
+                      setError(false);
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                      if (event.key === 'Escape') cancelRename();
+                      else if (event.key === 'Enter' && !isImeComposing(event)) {
+                        event.preventDefault();
+                        void saveRename();
+                      }
+                    }}
+                  />
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="min-w-0 flex-1 truncate">
+                        {n.kind === 'unfiled' ? t('taskFolders.unfiled') : n.name}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {n.kind === 'unfiled' ? t('taskFolders.unfiled') : n.name}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {editing && error && (
+                  <span role="alert" className="text-red-400">
+                    {t('taskFolders.invalidName')}
+                  </span>
+                )}
+                {item.isFolder() && (
+                  <span
+                    className="ml-auto shrink-0 text-[10px] text-text-muted"
+                    aria-label={t('taskFolders.counts', {
+                      active: n.active,
+                      archived: n.archivedCount,
+                      unavailable: n.unavailable,
+                    })}
+                  >
+                    {n.active}/{n.archivedCount}
+                    {n.unavailable ? ` +${n.unavailable}?` : ''}
+                  </span>
+                )}
+                {menu.length > 0 && (
+                  <DropdownMenu
+                    onOpenChange={(open) => panelController.hold(`menu:dropdown:${n.id}`, open)}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={t('taskFolders.actions')}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <MoreHorizontal className="size-3" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent onCloseAutoFocus={onCloseAutoFocus}>
+                      {menu.map((a) => (
+                        <DropdownMenuItem
+                          key={a.label}
+                          disabled={model.state.status !== 'ready'}
+                          onSelect={() => deferAction(a.run)}
+                        >
+                          {a.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </ContextMenuTrigger>
+            {menu.length > 0 && (
+              <ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
+                {menu.map((a) => (
+                  <ContextMenuItem
+                    key={a.label}
+                    disabled={model.state.status !== 'ready'}
+                    onSelect={() => deferAction(a.run)}
+                  >
+                    {a.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
             )}
-          </div>
-        </ContextMenuTrigger>
-        {menu.length > 0 && (
-          <ContextMenuContent>
-            {menu.map((a) => (
-              <ContextMenuItem
-                key={a.label}
-                disabled={model.state.status !== 'ready'}
-                onSelect={a.run}
-              >
-                {a.label}
-              </ContextMenuItem>
-            ))}
-          </ContextMenuContent>
+          </>
         )}
       </RowMenuOwner>
     );

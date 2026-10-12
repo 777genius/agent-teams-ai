@@ -240,6 +240,49 @@ it('resubmits the same create operation and panel Retry preserves only independe
   expect(folderController.getSnapshot().pending).toBe(0);
 });
 
+it('keeps the page interactive after a menu-launched nested folder dialog closes', async () => {
+  await folderController.execute({ type: 'create', id: 'parent', parent: null, name: 'Parent' });
+  await renderAt(300);
+  await act(async () => {
+    panelController.begin('external');
+    panelController.end();
+  });
+  const actions = document.querySelector(
+    '[data-folder-id="parent"] [aria-label="taskFolders.actions"]'
+  ) as HTMLButtonElement;
+  await act(async () =>
+    actions.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+    )
+  );
+  const newSubfolder = [...document.querySelectorAll('[role="menuitem"]')].find(
+    (item) => item.textContent === 'taskFolders.newSubfolder'
+  ) as HTMLElement;
+  await act(async () => newSubfolder.click());
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  for (let frame = 0; frame < 10 && !document.querySelector('[role="dialog"]'); frame += 1)
+    await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  const input = document.querySelector(
+    'input[aria-label="taskFolders.folderName"]'
+  ) as HTMLInputElement;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Child');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  });
+  await act(async () => Promise.resolve());
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(document.body.style.pointerEvents).not.toBe('none');
+  expect(
+    folderController.getSnapshot().snapshot.folders.map((folder) => [folder.id, folder.name])
+  ).toEqual([
+    ['parent', 'Parent'],
+    [expect.any(String), 'Child'],
+  ]);
+});
+
 it('releases the automatic panel rename hold on wide/narrow/wide transition with full final grace and Escape', async () => {
   vi.useFakeTimers();
   await folderController.execute({ type: 'create', id: 'a', parent: null, name: 'A' });

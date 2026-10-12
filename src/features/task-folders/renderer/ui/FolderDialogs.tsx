@@ -94,7 +94,10 @@ export const FolderDialogs = ({
         if (createOperation.current?.action !== action)
           createOperation.current = { action, id: crypto.randomUUID() };
         const { id } = createOperation.current;
-        await folderController.execute({ type: 'create', id, parent: action.parent, name });
+        await folderController.execute(
+          { type: 'create', id, parent: action.parent, name },
+          `create:${id}`
+        );
         created(id, action.parent);
       } else if (action?.kind === 'delete')
         await folderController.execute({ type: 'delete', id: action.id });

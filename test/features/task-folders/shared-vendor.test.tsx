@@ -326,7 +326,9 @@ it('keeps Enter in the folder rename editor and nested buttons from triggering r
   await act(async () =>
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
   );
-  expect(execute).toHaveBeenCalledExactlyOnceWith({ type: 'rename', id: 'a', name: 'A' });
+  expect(execute).toHaveBeenCalledOnce();
+  expect(execute.mock.calls[0][0]).toEqual({ type: 'rename', id: 'a', name: 'A' });
+  expect(execute.mock.calls[0][1]).toEqual(expect.any(String));
   expect(fixture.openTask).not.toHaveBeenCalled();
 });
 
