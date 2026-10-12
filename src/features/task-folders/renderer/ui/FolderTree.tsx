@@ -55,6 +55,9 @@ interface PendingRowAction {
   run: () => void;
   restoreFocus: boolean;
 }
+const stopRowMenuEvent = (event: React.SyntheticEvent): void => {
+  event.stopPropagation();
+};
 /** Radix roots do not notify onOpenChange when a virtual row disappears. */
 const RowMenuOwner = ({
   id,
@@ -558,7 +561,11 @@ export const FolderTree = ({
                         <MoreHorizontal className="size-3" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent onCloseAutoFocus={onCloseAutoFocus}>
+                    <DropdownMenuContent
+                      onCloseAutoFocus={onCloseAutoFocus}
+                      onClick={stopRowMenuEvent}
+                      onKeyDown={stopRowMenuEvent}
+                    >
                       {menu.map((a) => (
                         <DropdownMenuItem
                           key={a.label}
@@ -574,7 +581,11 @@ export const FolderTree = ({
               </div>
             </ContextMenuTrigger>
             {menu.length > 0 && (
-              <ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
+              <ContextMenuContent
+                onCloseAutoFocus={onCloseAutoFocus}
+                onClick={stopRowMenuEvent}
+                onKeyDown={stopRowMenuEvent}
+              >
                 {menu.map((a) => (
                   <ContextMenuItem
                     key={a.label}

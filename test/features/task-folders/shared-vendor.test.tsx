@@ -332,6 +332,105 @@ it('keeps Enter in the folder rename editor and nested buttons from triggering r
   expect(fixture.openTask).not.toHaveBeenCalled();
 });
 
+it.each([
+  ['context', 'click'],
+  ['context', 'keyboard'],
+  ['dropdown', 'click'],
+  ['dropdown', 'keyboard'],
+] as const)(
+  'keeps a real %s menu %s activation from toggling the folder row',
+  async (kind, activation) => {
+    const fixture = treeHarness(
+      [],
+      applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
+    );
+    await act(async () => root.render(<fixture.Harness />));
+    const row = host.querySelector('[data-folder-id="a"]') as HTMLElement;
+    const tree = vendor.trees[0];
+    await act(async () =>
+      (row.querySelector('[aria-label="taskFolders.expand"]') as HTMLButtonElement).click()
+    );
+    expect(tree.getItemInstance('folder:a').isExpanded()).toBe(true);
+
+    if (kind === 'context') {
+      await act(async () =>
+        row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+      );
+    } else {
+      await act(async () =>
+        row
+          .querySelector('[aria-label="taskFolders.actions"]')!
+          .dispatchEvent(
+            new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+          )
+      );
+    }
+    const rename = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === 'taskFolders.renameFolder'
+    )!;
+    expect(rename).toBeDefined();
+    await act(async () => {
+      if (activation === 'click') rename.click();
+      else
+        rename.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+        );
+    });
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+
+    expect(tree.getItemInstance('folder:a').isExpanded()).toBe(true);
+    expect(host.querySelector('[data-folder-id="a"]')).not.toBeNull();
+    expect(row.getAttribute('aria-selected')).toBe('false');
+    expect((host.querySelector('[data-folder-id="a"] input') as HTMLInputElement).value).toBe('A');
+  }
+);
+
+it.each([
+  ['context', 'click'],
+  ['context', 'keyboard'],
+  ['dropdown', 'click'],
+  ['dropdown', 'keyboard'],
+] as const)(
+  'keeps a real %s menu %s activation from opening a task row',
+  async (kind, activation) => {
+    const fixture = treeHarness([
+      { teamName: 't', id: '1', subject: 'Task' },
+    ] as GlobalTask[]);
+    await act(async () => root.render(<fixture.Harness />));
+    const row = host.querySelector('[data-task-key]') as HTMLElement;
+
+    if (kind === 'context') {
+      await act(async () =>
+        row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+      );
+    } else {
+      await act(async () =>
+        row
+          .querySelector('[aria-label="taskFolders.actions"]')!
+          .dispatchEvent(
+            new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+          )
+      );
+    }
+    const pin = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === 'taskContextMenu.pin'
+    )!;
+    expect(pin).toBeDefined();
+    await act(async () => {
+      if (activation === 'click') pin.click();
+      else
+        pin.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+        );
+    });
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+
+    expect(fixture.openTask).not.toHaveBeenCalled();
+    expect(row.getAttribute('aria-selected')).toBe('false');
+    expect(JSON.parse(localStorage.getItem('taskPinnedIds')!)).toEqual(['t:1']);
+  }
+);
+
 it.each(['context', 'dropdown'] as const)(
   'releases an open real portaled %s menu on catalog removal with a full grace period',
   async (kind) => {
