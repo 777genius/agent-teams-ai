@@ -4,16 +4,19 @@
  *   <built SDK cli> <pinned OpenCode binary> <model> <explicit local auth file>
  */
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { prepareNativeDesktop } from './opencode-native-desktop-host';
 import { waitFor } from './release-updater/cdp.mts';
 
 async function main() {
   assert.equal(process.platform, 'darwin', 'Windows requires its full native scenario');
-  const [executable, sdk, binary, model, authFile] = process.argv.slice(2);
+  const [executable, sdk, binary, model, authFile, stopProbe] = process.argv.slice(2);
+  assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model), 'Explicit provider/model required');
   for (const file of [executable, sdk, binary, authFile]) assert(path.isAbsolute(file));
@@ -55,12 +58,15 @@ async function main() {
     taskCompleted: false,
     independentFile: false,
     apiStopped: false,
+    heldStopRequested: stopProbe === '--held-stop',
+    heldStopConfirmed: false,
   };
   const checkpoint = () =>
     writeFile(proofFile, JSON.stringify(proof, null, 2) + '\n', { mode: 0o600 });
   await checkpoint();
   const app = await desktop.launch(executable);
   let submitted = false;
+  let heldProcess: { pid: number; identity: string; taskId: string } | undefined;
   try {
     submitted = true;
     const launch = await app.call('createTeam', {
@@ -110,10 +116,66 @@ async function main() {
     assert(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1);
     assert.equal(await readFile(result, 'utf8'), nonce + '\n');
     proof.independentFile = true;
+    if (stopProbe === '--held-stop') {
+      const program = path.join(desktop.projectPath, 'held-command.cjs');
+      const marker = path.join(desktop.projectPath, 'held-started.json');
+      const temporary = marker + '.tmp';
+      const script = `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(temporary)},JSON.stringify({pid:process.pid,nonce:${JSON.stringify(nonce)}}));fs.renameSync(${JSON.stringify(temporary)},${JSON.stringify(marker)});setInterval(()=>{},1000);\n`;
+      await writeFile(program, script, { mode: 0o600 });
+      const held = await app.call('createTask', {
+        subject: 'Hold a native command until team stop',
+        owner: 'alice',
+        startImmediately: true,
+        prompt: `Run node ${JSON.stringify(program)} in the foreground. Do not edit it, delegate, detach or complete this task. The test host will stop the team.`,
+      });
+      const started = await waitFor(
+        async () => {
+          try {
+            return JSON.parse(await readFile(marker, 'utf8')) as { pid: number; nonce: string };
+          } catch (error) {
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+              return null;
+            throw error;
+          }
+        },
+        'held native command started',
+        180_000
+      );
+      assert.equal(started.nonce, nonce);
+      assert(Number.isSafeInteger(started.pid) && started.pid > 1);
+      const identity = await processIdentity(started.pid);
+      assert(identity && identity.includes(program), 'Held PID is not the TEST command');
+      heldProcess = { pid: started.pid, identity, taskId: held.id };
+      const activeTask = await app.call('getTask', held.id);
+      assert(activeTask && activeTask.status === 'in_progress');
+      assert.equal(await readFile(program, 'utf8'), script);
+    }
+    if (heldProcess) {
+      assert.equal(
+        await processIdentity(heldProcess.pid),
+        heldProcess.identity,
+        'Held command must still be active immediately before stop'
+      );
+    }
     await app.call('stop');
     assert.equal(await app.call('processAlive'), false);
     const stopped = await app.call('getRuntime');
     assert(Object.values(stopped.members).every((member) => !member.alive));
+    if (heldProcess) {
+      await waitFor(
+        async () =>
+          (await processIdentity(heldProcess!.pid)) !== heldProcess!.identity ? true : null,
+        'original held command physically retired',
+        20_000
+      );
+      proof.heldStopConfirmed = true;
+      const retainedTask = await app.call('getTask', heldProcess.taskId);
+      assert(
+        retainedTask && ['pending', 'in_progress'].includes(retainedTask.status),
+        'Stopped task must remain unfinished and retained'
+      );
+    }
+    assert.equal(await readFile(result, 'utf8'), nonce + '\n');
     proof.apiStopped = true;
     proof.status = 'passed';
     await checkpoint();
@@ -129,8 +191,30 @@ async function main() {
         assert.equal(await app.call('processAlive'), false);
       }
     } finally {
-      await app.close();
+      try {
+        // A failed stop stays failed. Retire only this independently identified
+        // TEST command so failure cannot leave our foreground probe running.
+        if (heldProcess && (await processIdentity(heldProcess.pid)) === heldProcess.identity) {
+          process.kill(heldProcess.pid, 'SIGTERM');
+        }
+      } finally {
+        await app.close();
+      }
     }
+  }
+}
+
+async function processIdentity(pid: number): Promise<string | null> {
+  try {
+    const { stdout } = await promisify(execFile)(
+      '/bin/ps',
+      ['-p', String(pid), '-o', 'lstart=', '-o', 'command='],
+      { timeout: 2000, maxBuffer: 4096 }
+    );
+    return stdout.trim() || null;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 1) return null;
+    throw error;
   }
 }
 
