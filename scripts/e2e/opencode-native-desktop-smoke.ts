@@ -1,7 +1,7 @@
 /** Short native Unix Electron integration. Full V2 tool/message/lifecycle proof is
  * reused separately by source impact, never inferred from this smoke.
  * pnpm exec tsx scripts/e2e/opencode-native-desktop-smoke.ts <app executable>
- *   <built SDK cli> <pinned OpenCode binary> <model> <explicit local auth file>
+ *   <SDK cli or bundled> <pinned OpenCode binary> <model> <explicit local auth file>
  */
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -19,9 +19,12 @@ async function main() {
   assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model), 'Explicit provider/model required');
-  for (const file of [executable, sdk, binary, authFile]) assert(path.isAbsolute(file));
+  for (const file of [executable, binary, authFile]) assert(path.isAbsolute(file));
+  assert(sdk === 'bundled' || path.isAbsolute(sdk), 'Explicit SDK path or bundled selection required');
   const desktop = await prepareNativeDesktop();
-  desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
+  if (sdk !== 'bundled') {
+    desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
+  }
   desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = await realpath(binary);
   // Only the explicitly selected provider enters this fresh local TEST profile.
   // Preserve it after the run: OAuth may have refreshed during execution.
@@ -55,6 +58,7 @@ async function main() {
     teamName: desktop.teamName,
     projectPath: desktop.projectPath,
     model,
+    sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     runId: '',
     taskId: '',
     taskCompleted: false,
