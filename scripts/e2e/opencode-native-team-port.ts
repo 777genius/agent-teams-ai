@@ -69,6 +69,10 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       selectedTask(id);
       return api.teams.getTask(teamName, id);
     },
+    async getTaskLogStream(id: string) {
+      selectedTask(id);
+      return api.teams.getTaskLogStream(teamName, id);
+    },
     async updateTaskOwner(id: string, owner: string | null) {
       selectedTask(id);
       return api.teams.updateTaskOwner(teamName, id, owner);
@@ -84,7 +88,14 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     },
     async getData() {
       check();
-      return api.teams.getData(teamName);
+      const data = await api.teams.getData(teamName);
+      // Persisted tasks remain within this same private TEST team after restart.
+      for (const task of data.tasks) tasks.add(task.id);
+      return data;
+    },
+    async getMessagesPage(request: Parameters<ElectronAPI['teams']['getMessagesPage']>[1]) {
+      check();
+      return api.teams.getMessagesPage(teamName, request);
     },
     async sendMessage(request: Parameters<ElectronAPI['teams']['sendMessage']>[1]) {
       check();
@@ -102,14 +113,23 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       check();
       if (
         relaunchAttempted ||
-        !runId ||
         request.teamName !== teamName ||
         request.cwd !== projectPath ||
         request.providerId !== 'opencode'
       )
         throw new Error('same owned team relaunch required');
-      const previous = runId;
       relaunchAttempted = true;
+      // A confirmed TEST app restart creates a fresh renderer adapter. Recover
+      // the stopped team's persisted run identity through the normal API.
+      if (!runId) {
+        const retained = await api.teams.getTeamAgentRuntime(teamName);
+        if (!retained.runId || (await api.teams.processAlive(teamName))) {
+          throw new Error('retained stopped TEST run required');
+        }
+        runId = retained.runId;
+      }
+      const previous = runId;
+      submitted = true;
       launchPending = true;
       progress.length = 0;
       const result = await api.teams.launchTeam(request);

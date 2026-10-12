@@ -1,0 +1,154 @@
+name: OpenCode native Windows real tasks
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_ref:
+        description: Independently reviewed exact SDK commit with qualified Windows native gate
+        required: true
+        type: string
+      model:
+        description: Explicit authorized OpenRouter model ID including openrouter/ prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  real-tasks:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate exact inputs
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+          SELECTED_MODEL: ${{ inputs.model }}
+        run: |
+          if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required' }
+          if ($env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: ${{ inputs.sdk_ref }}
+          path: .test-sdk
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+      - name: Qualify exact Windows native producer and candidate runtime
+        working-directory: .test-sdk
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+          CANDIDATE_PLATFORM: win32-x64
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD) -ne $env:SDK_REF) { throw 'SDK checkout identity mismatch' }
+          bun install --frozen-lockfile --linker hoisted
+          if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
+          bun scripts/opencode-v2/compile-windows.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }
+          bun test scripts/opencode-v2/stage-windows.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Native producer contract failed' }
+          $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
+          bun scripts/opencode-v2/windows-owner-probe.ts $ownerRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Native held-directory contract failed' }
+          $commandRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-command-" + [guid]::NewGuid().ToString('N'))
+          $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
+          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
+          if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
+          bun scripts/package-runtime.ts --platform win32-x64
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime candidate build failed' }
+          New-Item -ItemType Directory -Force candidate/runtime | Out-Null
+          Copy-Item dist/cli.exe candidate/runtime/claude-multimodel.exe
+          foreach ($name in @('cursor-managed', 'local-cli', 'bun')) { Copy-Item "dist/$name" "candidate/runtime/$name" -Recurse }
+          bun scripts/ci/verify-packaged-delivery.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Physical delivery identity failed' }
+          Set-Content candidate/runtime/COMMIT_SHA $env:SDK_REF
+          $runtimeRoot = (Resolve-Path candidate/runtime).Path
+          $digests = [ordered]@{}
+          Get-ChildItem $runtimeRoot -File -Recurse | Sort-Object FullName | ForEach-Object {
+            $relative = [System.IO.Path]::GetRelativePath($runtimeRoot, $_.FullName).Replace([char]92, [char]47)
+            $digests[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          }
+          $manifest = Join-Path $env:RUNNER_TEMP 'TEST-opencode-runtime-manifest.json'
+          @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
+          "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Compress-Archive candidate/runtime candidate/TEST-runtime-win32-x64.zip
+          $lock = Get-Content ../runtime.lock.json -Raw | ConvertFrom-Json
+          $lock.version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $lock.sourceRef = $env:SDK_REF
+          $lock.releaseTag = "TEST-native-candidate-$($env:SDK_REF)"
+          $lock.assets.'win32-x64'.file = 'TEST-runtime-win32-x64.zip'
+          $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $lock | ConvertTo-Json -Depth 20 | Set-Content ../runtime.lock.json -Encoding utf8NoBOM
+          New-Item -ItemType Directory -Force ../resources | Out-Null
+          if (Test-Path ../resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }
+          New-Item -ItemType Directory -Force ../resources/runtime | Out-Null
+          Copy-Item candidate/runtime/* ../resources/runtime -Recurse -Force
+      - name: Install and package the desktop app
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          node scripts/ci/install-dependencies-with-retry.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop install failed' }
+          node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
+          if ($LASTEXITCODE -ne 0) { throw 'Terminal staging failed' }
+          node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+          if ($LASTEXITCODE -ne 0) { throw 'Console wrapper staging failed' }
+          pnpm build
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed' }
+          pnpm pack:win:x64 --dir --publish never
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop package failed' }
+          node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop native architecture failed' }
+      - name: Install exact official OpenCode CLI pins
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.21'))) {
+            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
+          }
+      - name: Seed private runner-local TEST provider auth
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: pnpm exec tsx scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
+      - name: Real V1 and V2 tasks through the bundled runtime
+        shell: pwsh
+        env:
+          SELECTED_MODEL: ${{ inputs.model }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
+            $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
+            $version = (& $binary --version).Trim()
+            if ($LASTEXITCODE -ne 0 -or $version -ne $pin[2]) { throw 'Selected CLI version mismatch' }
+            $scenario = @()
+            if ($pin[0] -eq 'floor') { $scenario = @('--short') }
+            pnpm exec tsx scripts/e2e/opencode-native-windows-full.ts $app bundled $binary $env:SELECTED_MODEL $env:OPENCODE_NATIVE_E2E_AUTH_FILE @scenario
+            if ($LASTEXITCODE -ne 0) { throw 'Real Windows task scenario failed; no automatic replay' }
+          }
+      - name: Preserve only sanitized scenario proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-native-windows-proof-${{ github.sha }}
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/TEST-oc-*/proof.json
