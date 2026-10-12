@@ -25,7 +25,10 @@ interface Target {
 }
 interface RendererState {
   port: Port;
-  calls: Record<string, { state: 'pending' | 'done' | 'failed'; result?: unknown }>;
+  calls: Record<
+    string,
+    { state: 'pending' | 'done' | 'failed'; result?: unknown; failure?: string }
+  >;
 }
 
 /** Prepare before seeding explicit local TEST auth. No ambient credentials or
@@ -180,8 +183,37 @@ export async function prepareNativeDesktop() {
                   state.calls[id] = { state: 'done', result };
                 })
                 // Do not copy provider error text across the boundary.
-                .catch(() => {
-                  state.calls[id] = { state: 'failed' };
+                .catch((error: unknown) => {
+                  // Static classifications only; never expose provider error text.
+                  const message =
+                    error &&
+                    typeof error === 'object' &&
+                    'message' in error &&
+                    typeof error.message === 'string'
+                      ? error.message
+                      : typeof error === 'string'
+                        ? error
+                        : '';
+                  const reasons = [
+                    'Team launch handlers are not initialized',
+                    'No handler registered',
+                    'RUNTIME_SELECTION_REQUIRED',
+                    'RUNTIME_SELECTION_UNSUPPORTED',
+                    'teamName must be kebab-case',
+                    'cwd is required',
+                    'members must be an array',
+                    'single owned OpenCode launch required',
+                    'TEST team required',
+                    'OpenCode CLI not found',
+                    'provider is not configured for runtime use',
+                    'provider is not authenticated',
+                    'agent-teams MCP preflight failed before team launch',
+                    'is not a function',
+                    'is not defined',
+                  ];
+                  const failure =
+                    reasons.find((reason) => message.includes(reason)) ?? 'unclassified';
+                  state.calls[id] = { state: 'failed', failure };
                 });
               return true;
             };
@@ -190,12 +222,14 @@ export async function prepareNativeDesktop() {
             );
             const completed = await waitFor(
               async () => {
-                const entry = await cdp!.evaluate<{ state: string; result?: Result<K> }>(
-                  `window.__opencodeNativeProof.calls[${JSON.stringify(id)}]`
-                );
+                const entry = await cdp!.evaluate<{
+                  state: string;
+                  result?: Result<K>;
+                  failure?: string;
+                }>(`window.__opencodeNativeProof.calls[${JSON.stringify(id)}]`);
                 assert(
                   entry.state !== 'failed',
-                  `Owned ${operation} IPC failed; preserve TEST state`
+                  `Owned ${operation} IPC failed (${entry.failure}); preserve TEST state`
                 );
                 return entry.state === 'done' ? { value: entry.result } : null;
               },

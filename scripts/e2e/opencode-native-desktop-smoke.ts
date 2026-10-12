@@ -50,6 +50,8 @@ async function main() {
     boundary: 'packaged Electron renderer -> normal preload -> real OpenCode task',
     scope: 'Darwin short integration only',
     status: 'running',
+    stage: 'launch',
+    failure: '',
     teamName: desktop.teamName,
     projectPath: desktop.projectPath,
     model,
@@ -68,6 +70,19 @@ async function main() {
   let submitted = false;
   let heldProcess: { pid: number; identity: string; taskId: string } | undefined;
   try {
+    proof.stage = 'app-ready';
+    await checkpoint();
+    await waitFor(
+      async () => {
+        const startup = await app.call('getStartupStatus');
+        assert(!startup.error, 'Owned application startup failed');
+        return startup.ready ? true : null;
+      },
+      'normal packaged application startup',
+      180_000
+    );
+    proof.stage = 'createTeam';
+    await checkpoint();
     submitted = true;
     const launch = await app.call('createTeam', {
       teamName: desktop.teamName,
@@ -80,6 +95,7 @@ async function main() {
         'Work only in this disposable TEST project. Do not install packages or delegate. Wait for a board task.',
     });
     proof.runId = launch.runId;
+    proof.stage = 'provisioning';
     await checkpoint();
     await waitFor(
       async () => {
@@ -97,6 +113,8 @@ async function main() {
     assert.equal(runtime.members.alice?.alive, true);
     const nonce = randomUUID();
     const code = `const a=require('node:assert/strict');a.equal(process.platform,'darwin');require('node:fs').writeFileSync('electron-result.txt',${JSON.stringify(nonce + '\n')});`;
+    proof.stage = 'task';
+    await checkpoint();
     const task = await app.call('createTask', {
       subject: 'Verify a native command through Electron',
       owner: 'alice',
@@ -180,7 +198,14 @@ async function main() {
     proof.status = 'passed';
     await checkpoint();
     console.log(`Short Electron integration proof: ${proofFile}`);
-  } catch {
+  } catch (error) {
+    proof.failure =
+      error instanceof Error &&
+      /^Owned (createTeam|createTask|stop) IPC failed \([a-zA-Z0-9 _-]+\); preserve TEST state$/.test(
+        error.message
+      )
+        ? error.message
+        : 'scenario assertion or transport failure';
     proof.status = 'failed';
     await checkpoint();
     throw new Error(`Short Electron integration failed; retained TEST proof: ${proofFile}`);

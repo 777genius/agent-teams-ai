@@ -33,6 +33,11 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
   };
   return {
     progress,
+    async getStartupStatus() {
+      check();
+      if (!api.startup) throw new Error('Packaged startup API required');
+      return api.startup.getStatus();
+    },
     async createTeam(request: TeamCreateRequest) {
       check();
       if (
