@@ -22,6 +22,11 @@ export const label = (
 export const folderRow = (id: string) => el(`${selectors.tree} [data-folder-id="${id}"]`);
 export const taskRow = (team: string, id: string, root = selectors.tree) =>
   `Array.from(${el(root)}.querySelectorAll('[data-task-key]')).find(e=>e.getAttribute('data-task-key')===${JSON.stringify(JSON.stringify([team, id]))})`;
+// Helper expressions embed the selector through JSON.stringify, so the raw
+// selector text alone does not identify generated virtual-tree targets.
+const escapedTreeSelector = JSON.stringify(selectors.tree).slice(1, -1);
+const isTreeTargetExpression = (expression: string) =>
+  expression.includes(selectors.tree) || expression.includes(escapedTreeSelector);
 export interface Point {
   x: number;
   y: number;
@@ -53,7 +58,7 @@ export class UI {
     const exists = () =>
       this.value<boolean>(`(() => {try{return !!(${expression});}catch{return false;}})()`);
     if (await exists()) return;
-    if (!expression.includes(selectors.tree)) {
+    if (!isTreeTargetExpression(expression)) {
       if (await boundedPresence(exists, TARGET_PRESENCE_TIMEOUT_MS)) return;
       throw new Error(
         `Missing selector after ${TARGET_PRESENCE_TIMEOUT_MS}ms target presence wait: ${expression}`
