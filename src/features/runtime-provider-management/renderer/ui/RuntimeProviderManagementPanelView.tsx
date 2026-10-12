@@ -2519,6 +2519,22 @@ export const RuntimeProviderManagementPanelView = ({
             )}
           </div>
 
+          {state.activeFormProviderId &&
+          !(useDirectoryRows ? visibleDirectoryRows : filteredProviders).some(
+            (provider) => provider.providerId === state.activeFormProviderId
+          ) ? (
+            <ProviderSetupFormPanel
+              provider={{
+                providerId: state.activeFormProviderId,
+                displayName: state.setupForm?.displayName ?? state.activeFormProviderId,
+              }}
+              state={state}
+              busy={state.savingProviderId === state.activeFormProviderId}
+              disabled={disabled}
+              actions={actions}
+            />
+          ) : null}
+
           {useDirectoryRows &&
           !state.directoryLoading &&
           visibleDirectoryRows.length === 0 &&

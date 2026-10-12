@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as companion from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion';
+import * as quickConnectDirectory from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import { RuntimeProviderQuickConnect } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect';
 import {
   type RuntimeProviderQuickCardViewModel,
@@ -87,6 +89,73 @@ describe('RuntimeProviderQuickConnectView', () => {
     await act(async () => root.unmount());
     host.remove();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps every provider action available when the directory fails to load', async () => {
+    vi.spyOn(companion, 'useRuntimeProviderCompanion').mockReturnValue({
+      status: null,
+      loading: false,
+      runInstallAndConnect: vi.fn(),
+      runConnect: vi.fn(),
+      runAction: vi.fn(),
+      refresh: vi.fn(),
+    });
+    vi.spyOn(quickConnectDirectory, 'useRuntimeProviderQuickConnect').mockReturnValue({
+      entries: [],
+      loading: false,
+      loaded: false,
+      authoritativeLoaded: false,
+      authoritativePending: false,
+      error: 'Could not load OpenCode provider status',
+      refresh: vi.fn(),
+    });
+    const onOpenCodeProviderAction = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'app-managed',
+            state: 'ready',
+            version: '1.18.32',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+    const cards = host.querySelectorAll('[data-testid^="provider-quick-card-"]');
+    expect(cards).toHaveLength(10);
+    for (const providerCard of cards) {
+      const action = providerCard.querySelector<HTMLButtonElement>(
+        '[data-testid^="provider-quick-action-"]'
+      );
+      const open = providerCard.querySelector<HTMLButtonElement>(
+        '[data-testid^="provider-quick-open-"]'
+      );
+      expect(action).not.toBeNull();
+      expect(open).not.toBeNull();
+      expect(action?.disabled).toBe(false);
+    }
+    const superGrok = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-open-supergrok"]'
+    );
+    act(() => superGrok?.click());
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xai', 'settings-connect');
+    onOpenCodeProviderAction.mockClear();
+    const xiaomi = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-open-xiaomi-mimo-token-plan"]'
+    );
+    await act(async () => xiaomi?.click());
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-testid="xiaomi-mimo-base-url"]')).not.toBeNull();
   });
 
   it('places local model setup beside the provider catalog action', async () => {
@@ -397,6 +466,20 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(superGrok?.querySelector('[role="progressbar"]')).toBeNull();
     act(() => manageButton?.click());
     expect(onManage).toHaveBeenCalledTimes(1);
+
+    const cardButton = superGrok?.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-open-supergrok"]'
+    );
+    expect(cardButton?.getAttribute('aria-label')).toBe('SuperGrok: Manage');
+    expect(cardButton?.tabIndex).toBe(-1);
+    act(() => cardButton?.click());
+    expect(onManage).toHaveBeenCalledTimes(2);
+
+    const infoButton = superGrok?.querySelector<HTMLButtonElement>(
+      'button[aria-label="SuperGrok: supergrok description"]'
+    );
+    act(() => infoButton?.click());
+    expect(onManage).toHaveBeenCalledTimes(2);
 
     const retry = [...host.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === 'Retry'
