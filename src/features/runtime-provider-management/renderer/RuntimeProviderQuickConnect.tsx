@@ -704,7 +704,12 @@ export const RuntimeProviderQuickConnect = ({
             ? {
                 ...card,
                 actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
-                onAction: () => onOpenCodeProviderAction(card.providerId, 'settings-connect'),
+                onAction:
+                  card.id === 'xiaomi-mimo-token-plan'
+                    ? () => setXiaomiDialogOpen(true)
+                    : card.id === 'kiro' || card.id === 'cursor'
+                      ? () => handleCompanionCardAction(card.id as CompanionPlanId)
+                      : () => onOpenCodeProviderAction(card.providerId, 'settings-connect'),
               }
             : card
         )}

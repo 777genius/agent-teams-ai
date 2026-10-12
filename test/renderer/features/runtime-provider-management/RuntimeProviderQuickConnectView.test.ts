@@ -149,6 +149,13 @@ describe('RuntimeProviderQuickConnectView', () => {
     );
     act(() => superGrok?.click());
     expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xai', 'settings-connect');
+    onOpenCodeProviderAction.mockClear();
+    const xiaomi = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-open-xiaomi-mimo-token-plan"]'
+    );
+    await act(async () => xiaomi?.click());
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-testid="xiaomi-mimo-base-url"]')).not.toBeNull();
   });
 
   it('places local model setup beside the provider catalog action', async () => {
@@ -464,6 +471,7 @@ describe('RuntimeProviderQuickConnectView', () => {
       '[data-testid="provider-quick-open-supergrok"]'
     );
     expect(cardButton?.getAttribute('aria-label')).toBe('SuperGrok: Manage');
+    expect(cardButton?.tabIndex).toBe(-1);
     act(() => cardButton?.click());
     expect(onManage).toHaveBeenCalledTimes(2);
 

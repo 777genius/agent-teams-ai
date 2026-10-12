@@ -115,6 +115,8 @@ const QuickProviderCard = ({
         <Button
           type="button"
           variant="ghost"
+          tabIndex={-1}
+          aria-hidden="true"
           aria-label={`${card.displayName}: ${card.actionLabel}`}
           data-testid={`provider-quick-open-${card.id}`}
           className="absolute inset-0 h-full w-full rounded-none p-0 hover:bg-transparent focus-visible:ring-inset"

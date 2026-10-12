@@ -26,4 +26,3 @@ export function sortQuickConnectCards(
       (QUICK_CONNECT_CARD_RANK.get(right.id) ?? Number.MAX_SAFE_INTEGER)
   );
 }
-
