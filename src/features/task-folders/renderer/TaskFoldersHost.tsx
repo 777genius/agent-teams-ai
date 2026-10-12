@@ -44,23 +44,49 @@ export const TaskFoldersHost = ({
     }
   }, [collapsed]);
   useEffect(() => {
-    let pointer: { x: number; y: number } | undefined;
+    let lastPointer: { x: number; y: number } | undefined;
+    let sessionPointer: { point: { x: number; y: number }; session: number } | undefined;
+    const insidePanel = (point: { x: number; y: number } | undefined): boolean => {
+      const r = panelRef.current?.getBoundingClientRect();
+      return (
+        !!r &&
+        !!point &&
+        point.x >= r.left &&
+        point.x <= r.right &&
+        point.y >= r.top &&
+        point.y <= r.bottom
+      );
+    };
+    const start = (): void => {
+      // Dragover coordinates describe one native session and must never seed the next one.
+      sessionPointer = undefined;
+    };
     const over = (event: DragEvent): void => {
-      pointer = { x: event.clientX, y: event.clientY };
+      if (!panelController.getSnapshot().dragSource) return;
+      sessionPointer = {
+        point: { x: event.clientX, y: event.clientY },
+        session: panelController.getSnapshot().session,
+      };
+    };
+    const move = (event: PointerEvent): void => {
+      if (!event.isTrusted) return;
+      const point = { x: event.clientX, y: event.clientY };
+      lastPointer = point;
+      sessionPointer = { point, session: panelController.getSnapshot().session };
+      panelController.hold('pointer', insidePanel(point));
     };
     const end = (event: DragEvent): void => {
-      if (!panelController.getSnapshot().dragSource) return;
-      const r = panelRef.current?.getBoundingClientRect();
-      const point = event.type === 'drop' ? { x: event.clientX, y: event.clientY } : pointer;
-      panelController.hold(
-        'pointer',
-        !!r &&
-          !!point &&
-          point.x >= r.left &&
-          point.x <= r.right &&
-          point.y >= r.top &&
-          point.y <= r.bottom
-      );
+      const state = panelController.getSnapshot();
+      if (!state.dragSource) return;
+      const point =
+        event.type === 'drop'
+          ? { x: event.clientX, y: event.clientY }
+          : sessionPointer?.session === state.session
+            ? sessionPointer.point
+            : lastPointer;
+      if (event.type === 'drop' && point)
+        sessionPointer = { point, session: state.session };
+      panelController.hold('pointer', insidePanel(point));
       if (event.type === 'drop') panelController.endAfterDrop();
       else panelController.end();
     };
@@ -78,12 +104,16 @@ export const TaskFoldersHost = ({
       }
     };
     document.addEventListener('keydown', escape, true);
+    document.addEventListener('dragstart', start, true);
     document.addEventListener('dragover', over, true);
+    document.addEventListener('pointermove', move, { capture: true, passive: true });
     document.addEventListener('drop', end, true);
     document.addEventListener('dragend', end, true);
     return () => {
       document.removeEventListener('keydown', escape, true);
+      document.removeEventListener('dragstart', start, true);
       document.removeEventListener('dragover', over, true);
+      document.removeEventListener('pointermove', move, true);
       document.removeEventListener('drop', end, true);
       document.removeEventListener('dragend', end, true);
     };

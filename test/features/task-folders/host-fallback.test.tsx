@@ -80,6 +80,40 @@ async function startSidebarDrag() {
   expect(panelController.getSnapshot().dragSource).toBe('task:["t","1"]');
   return source;
 }
+function mockPanelGeometry(panel: HTMLElement) {
+  vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue({
+    left: 0,
+    right: 300,
+    top: 0,
+    bottom: 800,
+    width: 300,
+    height: 800,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect);
+}
+async function dispatchDragEvent(type: 'dragover' | 'dragend' | 'drop', x?: number, y?: number) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  if (x !== undefined && y !== undefined) {
+    Object.defineProperties(event, {
+      clientX: { value: x },
+      clientY: { value: y },
+    });
+  }
+  await act(async () => document.dispatchEvent(event));
+}
+async function dispatchTrustedPointerMove(x: number, y: number) {
+  const event = new PointerEvent('pointermove', {
+    bubbles: true,
+    cancelable: true,
+    clientX: x,
+    clientY: y,
+    pointerType: 'mouse',
+  });
+  Object.defineProperty(event, 'isTrusted', { value: true });
+  await act(async () => document.dispatchEvent(event));
+}
 it.each([0, 80, 239])(
   'uses only the manual button fallback at %s px without introducing a drag modal or drop surface',
   async (left) => {
@@ -114,6 +148,71 @@ it('keeps a same-window drag nonmodal with an adjacent usable panel at 240px', a
   expect(document.querySelector('[data-radix-focus-guard]')).toBeNull();
   await act(async () => window.dispatchEvent(new Event('blur')));
   expect(panelController.getSnapshot().dragSource).toBeNull();
+});
+it('ignores a stale prior-session dragover when a later drag cancels outside without panel pointerleave', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await startSidebarDrag();
+  mockPanelGeometry(document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement);
+  await dispatchDragEvent('dragover', 200, 400);
+  await dispatchDragEvent('dragend', 200, 400);
+  await act(async () =>
+    document
+      .querySelector('[data-testid="task-folders-panel"]')!
+      .dispatchEvent(new PointerEvent('pointerout', { bubbles: true, relatedTarget: host }))
+  );
+  await act(async () => vi.advanceTimersByTime(2000));
+  expect(panelController.getSnapshot().open).toBe(false);
+
+  await startSidebarDrag();
+  mockPanelGeometry(document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement);
+  await dispatchDragEvent('dragend', 301, 400);
+  expect(panelController.getSnapshot().dragSource).toBeNull();
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+it('reconciles cancellation outside the panel from trusted pointer movement without panel pointerleave', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await startSidebarDrag();
+  mockPanelGeometry(document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement);
+  await dispatchDragEvent('dragover', 200, 400);
+  await dispatchTrustedPointerMove(301, 400);
+  await dispatchDragEvent('dragend');
+  expect(panelController.getSnapshot().dragSource).toBeNull();
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+it('restarts the complete grace period when trusted pointer movement leaves after release', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await startSidebarDrag();
+  mockPanelGeometry(document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement);
+  await dispatchDragEvent('dragover', 200, 400);
+  await dispatchDragEvent('dragend', 200, 400);
+  await act(async () => vi.advanceTimersByTime(2300));
+  expect(panelController.getSnapshot().open).toBe(true);
+
+  await dispatchTrustedPointerMove(301, 400);
+  await act(async () => vi.advanceTimersByTime(1999));
+  expect(panelController.getSnapshot().open).toBe(true);
+  await act(async () => vi.advanceTimersByTime(1));
+  expect(panelController.getSnapshot().open).toBe(false);
+});
+it('keeps a stationary pointer inside the current panel beyond the full release grace', async () => {
+  vi.useFakeTimers();
+  await renderAt(300);
+  await dispatchTrustedPointerMove(200, 400);
+  await startSidebarDrag();
+  mockPanelGeometry(document.querySelector('[data-testid="task-folders-panel"]') as HTMLElement);
+  await dispatchDragEvent('dragend');
+  expect(panelController.getSnapshot().dragSource).toBeNull();
+  await act(async () => vi.advanceTimersByTime(2300));
+  expect(panelController.getSnapshot().open).toBe(true);
 });
 it('restores normal keyboard focus when an action menu closes without a pending action', async () => {
   await folderController.execute({ type: 'create', id: 'a', parent: null, name: 'A' });
