@@ -166,12 +166,7 @@ async function commandEvidence(
     async () => {
       const stream = await app.call('getTaskLogStream', taskId);
       for (const segment of stream.segments) {
-        if (
-          segment.actor.memberName !== member ||
-          segment.actor.sessionId !== session ||
-          segment.actor.isSidechain
-        )
-          continue;
+        if (segment.actor.memberName !== member || segment.actor.sessionId !== session) continue;
         for (const chunk of segment.chunks) {
           if (chunk.chunkType !== 'ai') continue;
           const assistantModels = chunk.responses

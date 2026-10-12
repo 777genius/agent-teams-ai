@@ -89,15 +89,6 @@ jobs:
           bun scripts/ci/verify-packaged-delivery.ts
           if ($LASTEXITCODE -ne 0) { throw 'Physical delivery identity failed' }
           Set-Content candidate/runtime/COMMIT_SHA $env:SDK_REF
-          $runtimeRoot = (Resolve-Path candidate/runtime).Path
-          $digests = [ordered]@{}
-          Get-ChildItem $runtimeRoot -File -Recurse | Sort-Object FullName | ForEach-Object {
-            $relative = [System.IO.Path]::GetRelativePath($runtimeRoot, $_.FullName).Replace([char]92, [char]47)
-            $digests[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          }
-          $manifest = Join-Path $env:RUNNER_TEMP 'TEST-opencode-runtime-manifest.json'
-          @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
-          "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Compress-Archive candidate/runtime candidate/TEST-runtime-win32-x64.zip
           $lock = Get-Content ../runtime.lock.json -Raw | ConvertFrom-Json
           $lock.version = (Get-Content package.json -Raw | ConvertFrom-Json).version
@@ -128,6 +119,39 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Desktop package failed' }
           node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
           if ($LASTEXITCODE -ne 0) { throw 'Desktop native architecture failed' }
+      - name: Verify retained candidate bytes and record post-pack manifest
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Apply the existing afterPack pruning policy to the independent candidate.
+          # Retained expected bytes still originate from the SDK build, not the app.
+          New-Item -ItemType Directory .test-sdk/candidate/resources | Out-Null
+          Move-Item .test-sdk/candidate/runtime .test-sdk/candidate/resources/runtime
+          node -e "(async () => { const p = require('./scripts/electron-builder/afterPack.cjs')._internal; const root = require('node:path').resolve('.test-sdk/candidate'); await p.pruneKnownIncompatibleNativeArtifacts(root, 'win32', 'x64'); await p.pruneNodePtyArtifacts(root, 'win32', 'x64'); })().catch(() => process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate pruning qualification failed' }
+          $candidateRoot = (Resolve-Path .test-sdk/candidate/resources/runtime).Path
+          $packagedRoot = (Resolve-Path release/win-unpacked/resources/runtime).Path
+          $required = @('claude-multimodel.exe', 'COMMIT_SHA', 'bun/bun.exe', 'local-cli/cli.js', 'local-cli/native/win32-x64/opencode-v2-windows-helper.exe', 'local-cli/native/win32-x64/opencode-v2-windows-realpath.dll')
+          foreach ($relative in $required) {
+            if (!(Test-Path (Join-Path $candidateRoot $relative) -PathType Leaf)) { throw "Required candidate component missing: $relative" }
+          }
+          if ((Get-Content (Join-Path $candidateRoot 'COMMIT_SHA') -Raw).Trim() -ne $env:SDK_REF) { throw 'Candidate commit identity mismatch' }
+          $candidateEntries = @(Get-ChildItem $candidateRoot -Recurse -Force)
+          if ($candidateEntries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw 'Candidate link forbidden' }
+          $digests = [ordered]@{}
+          $candidateEntries | Where-Object { !$_.PSIsContainer } | Sort-Object FullName | ForEach-Object {
+            $relative = [System.IO.Path]::GetRelativePath($candidateRoot, $_.FullName).Replace([char]92, [char]47)
+            $expectedHash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $delivered = Join-Path $packagedRoot $relative
+            if (!(Test-Path $delivered -PathType Leaf) -or ((Get-Item $delivered).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Retained candidate component missing: $relative" }
+            if ((Get-FileHash $delivered -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expectedHash) { throw "Packaged candidate bytes changed: $relative" }
+            $digests[$relative] = $expectedHash
+          }
+          $manifest = Join-Path $env:RUNNER_TEMP 'TEST-opencode-runtime-manifest.json'
+          @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
+          "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
       - name: Install exact official OpenCode CLI pins
         shell: pwsh
         run: |
@@ -141,11 +165,15 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: pnpm exec tsx scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
       - name: Real V1 and V2 tasks through the bundled runtime
+        id: real_tasks
         shell: pwsh
         env:
           SELECTED_MODEL: ${{ inputs.model }}
         run: |
           $ErrorActionPreference = 'Stop'
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $env:TMPDIR = $env:RUNNER_TEMP
           $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
@@ -157,9 +185,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Real Windows task scenario failed; no automatic replay' }
           }
       - name: Preserve only sanitized scenario proofs
-        if: always()
+        if: always() && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != ''
         uses: actions/upload-artifact@v4
         with:
           name: opencode-native-windows-proof-${{ github.sha }}
-          if-no-files-found: warn
+          if-no-files-found: error
           path: ${{ runner.temp }}/TEST-oc-*/proof.json
