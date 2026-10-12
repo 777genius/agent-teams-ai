@@ -48,8 +48,12 @@ import type { ItemInstance } from '@headless-tree/core';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import type { ReactNode } from 'react';
 interface RowMenuLifecycle {
-  deferAction(action: () => void): void;
+  deferAction(action: () => void, restoreFocus: boolean): void;
   onCloseAutoFocus(event: Event): void;
+}
+interface PendingRowAction {
+  run: () => void;
+  restoreFocus: boolean;
 }
 /** Radix roots do not notify onOpenChange when a virtual row disappears. */
 const RowMenuOwner = ({
@@ -59,28 +63,31 @@ const RowMenuOwner = ({
   id: string;
   children: (lifecycle: RowMenuLifecycle) => ReactNode;
 }): React.JSX.Element => {
-  const pendingAction = useRef<(() => void) | null>(null);
+  const pendingAction = useRef<PendingRowAction | null>(null);
   const actionFrame = useRef<number | undefined>(undefined);
   useEffect(() => {
     return () => {
       pendingAction.current = null;
-      if (actionFrame.current !== undefined) cancelAnimationFrame(actionFrame.current);
+      if (actionFrame.current !== undefined) {
+        cancelAnimationFrame(actionFrame.current);
+        actionFrame.current = undefined;
+      }
       panelController.hold(`menu:context:${id}`, false);
       panelController.hold(`menu:dropdown:${id}`, false);
     };
   }, [id]);
   const lifecycle: RowMenuLifecycle = {
-    deferAction(action) {
-      pendingAction.current = action;
+    deferAction(run, restoreFocus) {
+      pendingAction.current = { run, restoreFocus };
     },
     onCloseAutoFocus(event) {
-      event.preventDefault();
       const action = pendingAction.current;
       pendingAction.current = null;
       if (!action) return;
+      if (!action.restoreFocus) event.preventDefault();
       actionFrame.current = requestAnimationFrame(() => {
         actionFrame.current = undefined;
-        action();
+        action.run();
       });
     },
   };
@@ -340,29 +347,41 @@ export const FolderTree = ({
       if (editSession.current === session) setSaving(false);
     }
   };
-  const actions = (n: Node): { label: string; run(): void }[] =>
+  const actions = (n: Node): { label: string; run(): void; restoreFocus: boolean }[] =>
     n.kind === 'folder'
       ? [
           {
             label: t('taskFolders.newSubfolder'),
             run: () => dialog({ kind: 'create', parent: n.folderId! }),
+            restoreFocus: false,
           },
-          { label: t('taskFolders.renameFolder'), run: () => startRename(n) },
+          {
+            label: t('taskFolders.renameFolder'),
+            run: () => startRename(n),
+            restoreFocus: false,
+          },
           {
             label: t('taskFolders.move'),
             run: () => dialog({ kind: 'moveFolder', id: n.folderId! }),
+            restoreFocus: false,
           },
           {
             label: t('taskFolders.deleteFolder'),
             run: () => dialog({ kind: 'delete', id: n.folderId! }),
+            restoreFocus: false,
           },
         ]
       : n.identity
         ? [
-            { label: t('taskFolders.move'), run: () => moveRequest.open(n.identity!) },
+            {
+              label: t('taskFolders.move'),
+              run: () => moveRequest.open(n.identity!),
+              restoreFocus: false,
+            },
             {
               label: t('taskContextMenu.rename'),
               run: () => dialog({ kind: 'renameTask', identity: n.identity!, name: n.name }),
+              restoreFocus: false,
             },
             {
               label: t(
@@ -371,14 +390,17 @@ export const FolderTree = ({
                   : 'taskContextMenu.pin'
               ),
               run: () => model.local.togglePin(n.identity!.teamName, n.identity!.taskId),
+              restoreFocus: true,
             },
             {
               label: t(n.archived ? 'taskContextMenu.unarchive' : 'taskContextMenu.archive'),
               run: () => model.local.toggleArchive(n.identity!.teamName, n.identity!.taskId),
+              restoreFocus: true,
             },
             {
               label: t('taskContextMenu.markUnread'),
               run: () => model.markUnread(n.identity!.teamName, n.identity!.taskId),
+              restoreFocus: true,
             },
           ]
         : [];
@@ -540,7 +562,7 @@ export const FolderTree = ({
                         <DropdownMenuItem
                           key={a.label}
                           disabled={model.state.status !== 'ready'}
-                          onSelect={() => deferAction(a.run)}
+                          onSelect={() => deferAction(a.run, a.restoreFocus)}
                         >
                           {a.label}
                         </DropdownMenuItem>
@@ -556,7 +578,7 @@ export const FolderTree = ({
                   <ContextMenuItem
                     key={a.label}
                     disabled={model.state.status !== 'ready'}
-                    onSelect={() => deferAction(a.run)}
+                    onSelect={() => deferAction(a.run, a.restoreFocus)}
                   >
                     {a.label}
                   </ContextMenuItem>

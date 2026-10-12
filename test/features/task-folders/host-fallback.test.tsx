@@ -115,6 +115,60 @@ it('keeps a same-window drag nonmodal with an adjacent usable panel at 240px', a
   await act(async () => window.dispatchEvent(new Event('blur')));
   expect(panelController.getSnapshot().dragSource).toBeNull();
 });
+it('restores normal keyboard focus when an action menu closes without a pending action', async () => {
+  await folderController.execute({ type: 'create', id: 'a', parent: null, name: 'A' });
+  await renderAt(300);
+  await act(async () => {
+    panelController.begin('external');
+    panelController.end();
+  });
+  const trigger = document.querySelector(
+    '[data-folder-id="a"] [aria-label="taskFolders.actions"]'
+  ) as HTMLButtonElement;
+  await act(async () => trigger.focus());
+  await act(async () =>
+    trigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+    )
+  );
+  const menu = document.querySelector('[role="menu"]')!;
+  expect(menu).not.toBeNull();
+  await act(async () =>
+    menu.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
+  );
+  await act(async () => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  expect(panelController.getSnapshot().open).toBe(true);
+});
+it('restores row focus after a deferred state-only action', async () => {
+  await renderAt(300);
+  await act(async () => {
+    panelController.begin('external');
+    panelController.end();
+  });
+  const trigger = document.querySelector(
+    '[data-task-key] [aria-label="taskFolders.actions"]'
+  ) as HTMLButtonElement;
+  await act(async () => trigger.focus());
+  await act(async () =>
+    trigger.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+    )
+  );
+  const pin = [...document.querySelectorAll('[role="menuitem"]')].find(
+    (item) => item.textContent === 'taskContextMenu.pin'
+  ) as HTMLElement;
+  await act(async () => pin.click());
+  await act(async () => {
+    await vi.waitFor(() => {
+      if (document.activeElement !== trigger) throw new Error('Menu trigger focus was not restored');
+    }, { timeout: 1000, interval: 10 });
+  });
+  expect(JSON.parse(localStorage.getItem('taskPinnedIds')!)).toEqual(['t:1']);
+});
 it('registers manual fallback pointer/focus/dialog and real portaled menu holds and releases full grace after the final hold', async () => {
   vi.useFakeTimers();
   await renderAt(80);
@@ -250,6 +304,9 @@ it('keeps the page interactive after a menu-launched nested folder dialog closes
   const actions = document.querySelector(
     '[data-folder-id="parent"] [aria-label="taskFolders.actions"]'
   ) as HTMLButtonElement;
+  await act(async () => actions.focus());
+  const restoredToTrigger = vi.fn();
+  actions.addEventListener('focus', restoredToTrigger);
   await act(async () =>
     actions.dispatchEvent(
       new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
@@ -260,12 +317,17 @@ it('keeps the page interactive after a menu-launched nested folder dialog closes
   ) as HTMLElement;
   await act(async () => newSubfolder.click());
   expect(document.querySelector('[role="dialog"]')).toBeNull();
-  for (let frame = 0; frame < 10 && !document.querySelector('[role="dialog"]'); frame += 1)
-    await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
-  const input = document.querySelector(
-    'input[aria-label="taskFolders.folderName"]'
-  ) as HTMLInputElement;
-  expect(input).not.toBeNull();
+  let input!: HTMLInputElement;
+  await act(async () => {
+    input = await vi.waitFor(() => {
+      const next = document.querySelector<HTMLInputElement>(
+        'input[aria-label="taskFolders.folderName"]'
+      );
+      if (!next) throw new Error('Deferred folder dialog input did not mount');
+      return next;
+    }, { timeout: 1000, interval: 10 });
+  });
+  expect(restoredToTrigger).not.toHaveBeenCalled();
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Child');
     input.dispatchEvent(new Event('input', { bubbles: true }));

@@ -26,6 +26,16 @@ export interface Point {
   x: number;
   y: number;
 }
+const TARGET_PRESENCE_TIMEOUT_MS = 5000;
+const TREE_NAVIGATION_TIMEOUT_MS = 30_000;
+const boundedPresence = async (probe: () => Promise<boolean>, timeout: number) => {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (await probe()) return true;
+    await delay(50);
+  }
+  return probe();
+};
 export class UI {
   dragEvidence: unknown[] = [];
   constructor(readonly desktop: Desktop) {}
@@ -43,19 +53,31 @@ export class UI {
     const exists = () =>
       this.value<boolean>(`(() => {try{return !!(${expression});}catch{return false;}})()`);
     if (await exists()) return;
-    if (!expression.includes(selectors.tree)) throw new Error('Missing selector: ' + expression);
+    if (!expression.includes(selectors.tree)) {
+      if (await boundedPresence(exists, TARGET_PRESENCE_TIMEOUT_MS)) return;
+      throw new Error(
+        `Missing selector after ${TARGET_PRESENCE_TIMEOUT_MS}ms target presence wait: ${expression}`
+      );
+    }
+    await until(
+      () => this.value<boolean>(`!!${el(selectors.tree)}`),
+      'virtual tree presence',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
     // Navigate the real virtual scroll container, including during an intercepted native drag.
     await this.cdp.evaluate(`${el(selectors.tree)}.scrollTop=0`);
-    await delay(80);
+    await this.cdp.evaluate('new Promise(resolve => requestAnimationFrame(() => resolve()))');
+    if (await exists()) return;
     const steps = await this.value<number>(
       `Math.ceil(${el(selectors.tree)}.scrollHeight / Math.max(100,${el(selectors.tree)}.clientHeight/2))+2`
     );
-    for (let step = 0; step < steps; step++) {
-      if (await exists()) return;
+    const deadline = Date.now() + TREE_NAVIGATION_TIMEOUT_MS;
+    for (let step = 0; step < steps && Date.now() < deadline; step++) {
       await this.cdp.evaluate(
         `${el(selectors.tree)}.scrollTop+=Math.max(100,${el(selectors.tree)}.clientHeight/2)`
       );
-      await delay(50);
+      await this.cdp.evaluate('new Promise(resolve => requestAnimationFrame(() => resolve()))');
+      if (await exists()) return;
     }
     throw new Error('Missing selector after virtual tree navigation: ' + expression);
   }
@@ -131,7 +153,14 @@ export class UI {
   async menu(row: string, action?: string) {
     await this.click(label('Folder or task actions', row));
     await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
-    if (action) await this.click(label(action, 'document', '[role="menuitem"]'));
+    if (action) {
+      await this.click(label(action, 'document', '[role="menuitem"]'));
+      await this.wait(
+        '!document.querySelector(\'[role="menu"]\')',
+        'deferred action menu disposal',
+        TARGET_PRESENCE_TIMEOUT_MS
+      );
+    }
   }
   async expand(id: string) {
     await this.locate(folderRow(id));
@@ -194,9 +223,30 @@ export class UI {
     return (await this.snapshot()).folders.find((f) => f.name === name)!.id;
   }
   async unfocus() {
-    // Observer/setup only: blur removes the focused source hold. Pointer travels through native CDP.
-    await this.cdp.evaluate('document.activeElement?.blur()');
-    await this.move({ x: 10, y: 80 });
+    // Transfer both pointer and keyboard focus outside with trusted native input.
+    const target = await this.value<Point | null>(`(() => {
+      const panel=${el(selectors.panel)};
+      const interactive='button,[role="button"],input,textarea,select,a,[tabindex],[role="treeitem"],[data-task-key],[data-folder-id],[role="dialog"],[role="menu"]';
+      for(let y=1;y<innerHeight;y+=Math.max(8,Math.floor(innerHeight/20)))
+        for(let x=1;x<innerWidth;x+=Math.max(8,Math.floor(innerWidth/20))) {
+          const hit=document.elementFromPoint(x,y);
+          if(hit && !panel?.contains(hit) && !hit.closest(interactive)) return {x,y};
+        }
+      return null;
+    })()`);
+    assert(target, 'No noninteractive target outside the folder panel for trusted focus transfer');
+    await this.move(target);
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await this.cdp.send('Input.dispatchMouseEvent', {
+        type,
+        ...target,
+        button: 'left',
+        clickCount: 1,
+      });
+    await this.wait(
+      `!${el(selectors.panel)}?.contains(document.activeElement)`,
+      'focus transferred outside folder panel'
+    );
   }
   async beginDrag(
     source: string,
