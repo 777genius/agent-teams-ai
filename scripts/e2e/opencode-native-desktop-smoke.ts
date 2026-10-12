@@ -1,4 +1,4 @@
-/** Short Darwin Electron integration. Full V2 tool/message/lifecycle proof is
+/** Short native Unix Electron integration. Full V2 tool/message/lifecycle proof is
  * reused separately by source impact, never inferred from this smoke.
  * pnpm exec tsx scripts/e2e/opencode-native-desktop-smoke.ts <app executable>
  *   <built SDK cli> <pinned OpenCode binary> <model> <explicit local auth file>
@@ -14,7 +14,7 @@ import { prepareNativeDesktop } from './opencode-native-desktop-host';
 import { waitFor } from './release-updater/cdp.mts';
 
 async function main() {
-  assert.equal(process.platform, 'darwin', 'Windows requires its full native scenario');
+  assert(['darwin', 'linux'].includes(process.platform), 'Windows requires its full native scenario');
   const [executable, sdk, binary, model, authFile, stopProbe] = process.argv.slice(2);
   assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
@@ -48,7 +48,7 @@ async function main() {
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
     boundary: 'packaged Electron renderer -> normal preload -> real OpenCode task',
-    scope: 'Darwin short integration only',
+    scope: `${process.platform} short integration only`,
     status: 'running',
     stage: 'launch',
     failure: '',
@@ -112,7 +112,7 @@ async function main() {
     assert.equal(runtime.members.alice?.runtimeModel, model);
     assert.equal(runtime.members.alice?.alive, true);
     const nonce = randomUUID();
-    const code = `const a=require('node:assert/strict');a.equal(process.platform,'darwin');require('node:fs').writeFileSync('electron-result.txt',${JSON.stringify(nonce + '\n')});`;
+    const code = `const a=require('node:assert/strict');a.equal(process.platform,${JSON.stringify(process.platform)});require('node:fs').writeFileSync('electron-result.txt',${JSON.stringify(nonce + '\n')});`;
     proof.stage = 'task';
     await checkpoint();
     const task = await app.call('createTask', {
@@ -231,6 +231,17 @@ async function main() {
 
 async function processIdentity(pid: number): Promise<string | null> {
   try {
+    if (process.platform === 'linux') {
+      const birth = async () => {
+        const stat = await readFile(`/proc/${pid}/stat`, 'utf8');
+        return stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
+      };
+      const before = await birth();
+      assert(before && /^\d+$/.test(before), 'Held Linux process birth required');
+      const command = (await readFile(`/proc/${pid}/cmdline`, 'utf8')).replaceAll('\0', ' ');
+      if ((await birth()) !== before) return null;
+      return `${before} ${command}`;
+    }
     const { stdout } = await promisify(execFile)(
       '/bin/ps',
       ['-p', String(pid), '-o', 'lstart=', '-o', 'command='],
@@ -238,6 +249,7 @@ async function processIdentity(pid: number): Promise<string | null> {
     );
     return stdout.trim() || null;
   } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
     if (error && typeof error === 'object' && 'code' in error && error.code === 1) return null;
     throw error;
   }

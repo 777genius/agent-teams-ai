@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
-import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, readlink, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -271,6 +271,50 @@ export async function prepareNativeDesktop() {
 }
 
 async function ownsListener(pid: number, port: number): Promise<boolean> {
+  if (process.platform === 'linux') {
+    const processRoot = `/proc/${pid}`;
+    const birth = async () => {
+      const stat = await readFile(`${processRoot}/stat`, 'utf8');
+      return stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
+    };
+    const before = await birth();
+    assert(before && /^\d+$/.test(before), 'Owned Electron birth required');
+    const sockets = new Set<string>();
+    for (const fd of await readdir(`${processRoot}/fd`)) {
+      try {
+        const target = await readlink(`${processRoot}/fd/${fd}`);
+        const socket = /^socket:\[(\d+)\]$/.exec(target);
+        if (socket) sockets.add(socket[1]);
+      } catch (error) {
+        if (!(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT'))
+          throw error;
+      }
+    }
+    let found = false;
+    for (const table of ['tcp', 'tcp6']) {
+      let contents: string;
+      try {
+        contents = await readFile(`/proc/net/${table}`, 'utf8');
+      } catch (error) {
+        if (
+          table === 'tcp6' && error && typeof error === 'object' &&
+          'code' in error && error.code === 'ENOENT'
+        ) continue;
+        throw error;
+      }
+      const rows = contents.trim().split('\n').slice(1);
+      for (const row of rows) {
+        const fields = row.trim().split(/\s+/);
+        const [address, encodedPort] = fields[1].split(':');
+        if (fields[3] !== '0A' || parseInt(encodedPort, 16) !== port) continue;
+        assert(table === 'tcp' && address === '0100007F', 'Inspector must bind IPv4 loopback');
+        assert(sockets.has(fields[9]), 'Foreign inspector listener');
+        found = true;
+      }
+    }
+    assert.equal(await birth(), before, 'Owned Electron PID changed during listener check');
+    return found;
+  }
   if (process.platform === 'win32') {
     const { stdout } = await execute(
       'powershell.exe',
