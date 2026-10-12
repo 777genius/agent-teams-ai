@@ -230,10 +230,6 @@ function getReleaseAssetDownload(runtimeLock, asset) {
   };
 }
 
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-}
-
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) {
     return '0 B';
@@ -595,7 +591,7 @@ async function ensureBootstrappedRuntime() {
     isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  ensureDir(cacheDir);
+  fs.mkdirSync(cacheDir, { recursive: true });
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
@@ -610,7 +606,7 @@ async function ensureBootstrappedRuntime() {
     }
 
     const workDir = path.join(cacheDir, `.bootstrap-${process.pid}-${Date.now()}`);
-    ensureDir(workDir);
+    fs.mkdirSync(workDir, { recursive: true });
 
     try {
       const archivePath = path.join(workDir, asset.file);
