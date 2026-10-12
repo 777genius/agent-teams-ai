@@ -305,6 +305,7 @@ export const FolderTree = ({
     setRename(n.folderId!);
     setValue(n.name);
     setError(false);
+    setSaving(false);
     editSession.current = crypto.randomUUID();
     panelController.hold(editHold, true);
   };

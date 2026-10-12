@@ -149,6 +149,23 @@ describe('folder invariants and durable commands', () => {
     expect(save.mock.calls.at(-1)?.[0].folders[0].name).toBe('Corrected name');
     expect(controller.getSnapshot().error).toBeNull();
   });
+  it('preserves an empty explicit operation identity when retiring a failed edit', async () => {
+    const save = vi
+      .fn(async (_snapshot: Snapshot) => undefined)
+      .mockRejectedValueOnce(new Error('rename quota'));
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot: fixture() }),
+      save,
+    });
+    await expect(
+      controller.execute({ type: 'rename', id: 'a', name: 'First attempt' }, '')
+    ).rejects.toThrow('rename quota');
+    await controller.execute({ type: 'rename', id: 'a', name: 'Corrected name' }, '');
+    expect(controller.getSnapshot().error).toBeNull();
+    await controller.retry();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(controller.getSnapshot().snapshot.folders[0].name).toBe('Corrected name');
+  });
   it('does not offer storage Retry for repeated validation failures or overwrite an earlier save failure', async () => {
     const save = vi.fn(async () => undefined);
     const controller = new FolderController({

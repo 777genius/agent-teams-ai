@@ -547,6 +547,82 @@ it('cancels vanished editors and ignores old async rename completion after a new
   expect(panelController.getSnapshot().open).toBe(false);
 });
 
+it.each(['resolve', 'reject'] as const)(
+  'keeps a directly replaced rename editor usable and protected through stale %s completion',
+  async (outcome) => {
+    vi.useFakeTimers();
+    let snapshot = applyCommand(emptySnapshot(), {
+      type: 'create',
+      id: 'a',
+      parent: null,
+      name: 'A',
+    });
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'b', parent: null, name: 'B' });
+    const fixture = treeHarness([], snapshot);
+    const pending: {
+      promise: Promise<Snapshot>;
+      resolve: (value: Snapshot) => void;
+      reject: (error: Error) => void;
+    }[] = [];
+    const execute = vi.spyOn(folderController, 'execute').mockImplementation(() => {
+      let resolve!: (value: Snapshot) => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<Snapshot>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      pending.push({ promise, resolve, reject });
+      return promise;
+    });
+    panelController.begin('external');
+    panelController.end();
+    await act(async () => root.render(<fixture.Harness />));
+    const rename = async (id: string) =>
+      act(async () =>
+        host
+          .querySelector(`[data-folder-id="${id}"]`)!
+          .dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+      );
+    const submit = async () =>
+      act(async () =>
+        host
+          .querySelector('input')!
+          .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      );
+
+    await rename('a');
+    await submit();
+    expect(host.querySelector('input')!.disabled).toBe(true);
+    await rename('b');
+    expect(host.querySelector('input')!.value).toBe('B');
+    expect(host.querySelector('input')!.disabled).toBe(false);
+
+    const stale = pending[0];
+    await act(async () => {
+      if (outcome === 'resolve') stale.resolve(snapshot);
+      else stale.reject(new Error('stale save'));
+      await stale.promise.catch(() => undefined);
+    });
+    expect(host.querySelector('input')!.value).toBe('B');
+    expect(host.querySelector('input')!.disabled).toBe(false);
+    expect(host.querySelector('input')!.getAttribute('aria-invalid')).toBe('false');
+    expect(panelController.escape()).toBe(false);
+
+    await submit();
+    expect(pending).toHaveLength(2);
+    expect(host.querySelector('input')!.disabled).toBe(true);
+    await act(async () => {
+      pending[1].resolve(snapshot);
+      await pending[1].promise;
+    });
+    expect(host.querySelector('input')).toBeNull();
+    const operationIds = execute.mock.calls.map(([, operationId]) => operationId);
+    expect(operationIds[0]).toEqual(expect.any(String));
+    expect(operationIds[1]).toEqual(expect.any(String));
+    expect(operationIds[0]).not.toBe(operationIds[1]);
+  }
+);
+
 it('ignores a pending rename rejection after tree unmount and preserves the replacement editor', async () => {
   const snapshot = applyCommand(emptySnapshot(), {
     type: 'create',

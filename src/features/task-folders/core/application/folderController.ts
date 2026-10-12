@@ -66,11 +66,14 @@ export class FolderController {
     return this.loading;
   }
   execute(command: Command, operationId?: string): Promise<Snapshot> {
-    const logicalOperationId =
-      operationId ??
-      (command.type === 'create'
-        ? `create:${command.id}`
-        : `command:${(this.operationSequence += 1)}`);
+    let logicalOperationId = operationId;
+    if (logicalOperationId === undefined) {
+      if (command.type === 'create') logicalOperationId = `create:${command.id}`;
+      else {
+        this.operationSequence += 1;
+        logicalOperationId = `command:${this.operationSequence}`;
+      }
+    }
     const failure = this.failures.find((entry) => entry.operationId === logicalOperationId);
     return this.enqueue(command, logicalOperationId, failure);
   }
