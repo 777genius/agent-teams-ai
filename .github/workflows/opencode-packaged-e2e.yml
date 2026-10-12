@@ -3,6 +3,14 @@ name: OpenCode packaged Windows E2E
 on:
   workflow_dispatch:
     inputs:
+      native_sdk_ref:
+        description: 'Exact reviewed native SDK SHA for real Windows tasks; empty keeps diagnostics'
+        type: string
+        default: ''
+      native_model:
+        description: 'Explicit openrouter/provider-model for native real tasks'
+        type: string
+        default: ''
       runtime_candidate_run:
         description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
@@ -33,7 +41,16 @@ permissions:
   contents: read
 
 jobs:
+  native-real-tasks:
+    if: github.event_name == 'workflow_dispatch' && inputs.native_sdk_ref != ''
+    uses: ./.github/workflows/opencode-native-windows-e2e.yml
+    with:
+      sdk_ref: ${{ inputs.native_sdk_ref }}
+      model: ${{ inputs.native_model }}
+    secrets:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   packaged-windows:
+    if: inputs.native_sdk_ref == ''
     runs-on: windows-latest
     timeout-minutes: 60
     steps:

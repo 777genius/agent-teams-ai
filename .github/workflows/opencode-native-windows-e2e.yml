@@ -1,6 +1,17 @@
 name: OpenCode native Windows real tasks
 
 on:
+  workflow_call:
+    inputs:
+      sdk_ref:
+        required: true
+        type: string
+      model:
+        required: true
+        type: string
+    secrets:
+      OPENROUTER_API_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       sdk_ref:
