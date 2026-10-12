@@ -154,7 +154,7 @@ it('counts union of windows, excludes sleep, last-window gaps and missed heartbe
   expect(tracker.takePending()).toBe(25000);
 });
 
-function fixture() {
+function fixture(runtime?: { platform: string; appVersion: string }) {
   let now = Date.parse('2026-09-04T01:00:00Z');
   let mono = 0;
   let saved = initial();
@@ -203,6 +203,7 @@ function fixture() {
     clock: { now: () => now, monotonic: () => mono },
     origin: 'fresh',
     networkEnabled: true,
+    runtime,
   });
   const context = {
     windowId: 1,
@@ -807,3 +808,25 @@ it('keeps opened document assets across focus changes but revokes on document na
   ).toBeNull();
   await f.service.dispose();
 });
+
+it.each([
+  ['darwin', '2.17.1', true],
+  ['darwin', '2.17.2', false],
+  ['win32', '2.17.1', false],
+  ['linux', '2.17.1', false],
+])(
+  'filters recovery news in list, auto and manual for %s %s',
+  async (platform, appVersion, allowed) => {
+    const f = fixture({ platform, appVersion });
+    f.feed.items[1].macosManualUpdate2171Only = true;
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    await f.service.refresh();
+    expect((await f.service.getSnapshot()).items.map((item) => item.id)).toEqual(
+      allowed ? ['new', 'old'] : ['old']
+    );
+    expect((await f.service.prepareAuto(f.context))?.announcement.id).toBe(allowed ? 'new' : 'old');
+    expect(Boolean(await f.service.openManual('new', f.context))).toBe(allowed);
+    await f.service.dispose();
+  }
+);

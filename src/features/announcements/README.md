@@ -30,3 +30,5 @@ Default development runs do not fetch production announcements. An explicit loop
 Focused checks: `pnpm exec vitest run test/features/announcements`, `pnpm announcements:test`, `pnpm typecheck`. Shared overlay behavior is covered by `test/renderer/hooks/useOverlayOccupancy.test.tsx` and `test/renderer/components/ui/DialogContentFocusScope.test.tsx`.
 
 The feature does not synchronize devices, display notifications while the app is closed, or publish telemetry about reading activity. Live hosting headers and first real publication must be verified during deployment using the publishing runbook.
+
+Temporary audience metadata: `macosManualUpdate2171Only: true` targets macOS app version 2.17.1 in clients that support the flag. It is immutable after publication. Shipped 2.17.1 ignores it; see the [recovery limitation and unpublished draft](../../../docs/announcements-macos-2171-recovery.md) before publishing.
