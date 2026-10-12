@@ -49,9 +49,9 @@ function commit(f) {
   git(
     f,
     '-c',
-    'user.name=Fixture',
+    'user.name=iliya',
     '-c',
-    'user.email=fixture@example.invalid',
+    'user.email=iliyazelenkog@gmail.com',
     'commit',
     '-qm',
     'fixture'
@@ -332,4 +332,19 @@ test('allows exactly 20 MiB of document assets and rejects one byte over', async
     `${references.join('\n')}\n![over](assets/over.png)`
   );
   await assert.rejects(generateAnnouncements(f), /exceed 20 MiB in aggregate/);
+});
+
+test('publishes the recovery flag and rejects non-boolean audience values', async () => {
+  const f = await fixture({ macosManualUpdate2171Only: true });
+  assert.equal((await generateAnnouncements(f)).items[0].macosManualUpdate2171Only, true);
+  const baseRef = commit(f);
+  await metadata(f, { macosManualUpdate2171Only: false });
+  await assert.rejects(
+    generateAnnouncements({ ...f, baseRef }),
+    /immutable macosManualUpdate2171Only/
+  );
+  for (const value of [null, 'true', 1, {}]) {
+    await metadata(f, { macosManualUpdate2171Only: value });
+    await assert.rejects(generateAnnouncements(f), /macosManualUpdate2171Only must be boolean/);
+  }
 });

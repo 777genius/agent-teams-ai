@@ -61,6 +61,11 @@ export function normalizeAnnouncement(input: unknown): Announcement {
   if (typeof item.title !== 'string' || !item.title.trim() || item.title.trim().length > 200) {
     return invalid('title');
   }
+  if (
+    Object.hasOwn(item, 'macosManualUpdate2171Only') &&
+    typeof item.macosManualUpdate2171Only !== 'boolean'
+  )
+    return invalid('macosManualUpdate2171Only');
   const publishedAt = normalizeAnnouncementDate(item.publishedAt);
   const validUntil = Object.hasOwn(item, 'validUntil')
     ? normalizeAnnouncementDate(item.validUntil)
@@ -99,6 +104,9 @@ export function normalizeAnnouncement(input: unknown): Announcement {
     heroImagePath = item.heroImagePath;
   }
   return {
+    ...(Object.hasOwn(item, 'macosManualUpdate2171Only')
+      ? { macosManualUpdate2171Only: item.macosManualUpdate2171Only as boolean }
+      : {}),
     id: item.id,
     title: item.title.trim(),
     publishedAt,

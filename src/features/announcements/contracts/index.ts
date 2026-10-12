@@ -38,6 +38,7 @@ export interface AnnouncementSummary extends AnnouncementMetadata {
 }
 
 export interface Announcement extends AnnouncementMetadata {
+  macosManualUpdate2171Only?: boolean;
   heroImagePath?: string;
   showToNewUsers: boolean;
   minUsageMinutes: number;
