@@ -167,6 +167,14 @@ export class UI {
       );
     }
   }
+  async waitMenuClosedAndFocusRestored(row: string) {
+    const trigger = label('Folder or task actions', row);
+    await this.wait(
+      `!document.querySelector('[role="menu"]') && document.activeElement === (${trigger})`,
+      'action menu closed with default row focus restored',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
+  }
   async expand(id: string) {
     await this.locate(folderRow(id));
     const button = label('Expand folder', folderRow(id));

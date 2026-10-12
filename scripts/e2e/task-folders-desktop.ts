@@ -464,6 +464,7 @@ async function main() {
         await ui.value(`!!${el(selectors.panel)} && !!document.querySelector('[role="menu"]')`)
       );
       await ui.key('Escape');
+      await ui.waitMenuClosedAndFocusRestored(folderRow(f.parent));
       return await grace();
     });
     await check('virtualization-and-native-edge-scroll', async () => {
