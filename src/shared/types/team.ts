@@ -1,11 +1,26 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
+import type {
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  NativeAttachmentDeliveryEnvelope,
+  NativeMemberCapability,
+} from '@features/agent-attachments/contracts';
 import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
 export type * from './teamProvisioning';
+export type {
+  AttachmentFileData,
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  ImageMimeType,
+  NativeAttachmentDeliveryEnvelope,
+} from '@features/agent-attachments/contracts';
 
 export interface TeamMember {
   name: string;
@@ -381,49 +396,6 @@ export interface CommentAttachmentPayload {
   filename: string;
   mimeType: AttachmentMediaType;
   base64Data: string;
-}
-
-/**
- * Broad MIME type string (e.g. "image/png", "application/pdf").
- *
- * Note: the UI may still choose to preview only certain types (e.g. images),
- * but tasks/comments can store arbitrary attachments for agent workflows.
- */
-// eslint-disable-next-line sonarjs/redundant-type-aliases -- semantic alias for documentation/readability
-export type AttachmentMediaType = string;
-
-/** Supported image MIME types (used for preview/validation in UI). */
-export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
-
-interface NativeAttachmentDigest {
-  sha256?: string;
-}
-interface NativeMemberCapability {
-  nativeInboxAttachmentsSupported?: boolean;
-}
-
-export interface AttachmentMeta extends NativeAttachmentDigest {
-  id: string;
-  filename: string;
-  mimeType: AttachmentMediaType;
-  size: number;
-  filePath?: string;
-}
-export interface AttachmentPayload extends AttachmentMeta {
-  data: string;
-}
-
-export interface NativeAttachmentDeliveryEnvelope {
-  version: 1;
-  recipientRuntimeInstanceId: string;
-}
-
-export interface AttachmentFileData {
-  id: string;
-  data: string;
-  mimeType: AttachmentMediaType;
-  /** Absolute path to the persisted attachment file when available. */
-  filePath?: string;
 }
 
 /** Lightweight metadata for a single tool call (for UI display in tooltips). */

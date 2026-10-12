@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { admitNativeTeammateAttachmentMessage } from '../../../src/features/agent-attachments/main/application/nativeTeammateAttachmentAdmission';
+import {
+  admitNativeTeammateAttachmentMessage,
+  enrichTeamSnapshotNativeAttachmentSupport,
+} from '../../../src/features/agent-attachments/main/application/nativeTeammateAttachmentAdmission';
 
-import type { NativeInboxAttachmentCapabilityProof } from '../../../src/features/member-work-sync/main';
 import type {
   NativeAttachmentInboxRequest,
 } from '../../../src/features/agent-attachments/main/application/nativeTeammateAttachmentAdmission';
+import type { NativeInboxAttachmentCapabilityProof } from '../../../src/features/member-work-sync/main';
 import type { AttachmentPayload, TeamAgentRuntimeSnapshot } from '../../../src/shared/types';
 
 const attachment: AttachmentPayload = {
@@ -56,6 +59,37 @@ function snapshot(overrides: Partial<TeamAgentRuntimeSnapshot> = {}): TeamAgentR
 }
 
 describe('native teammate attachment admission', () => {
+  it.each([
+    ['claude-opus-4-6', 'anthropic'],
+    ['gpt-5.4', 'codex'],
+  ] as const)('enriches a current %s member with no explicit provider', async (model, providerId) => {
+    let expectedProviderId: string | undefined;
+    const result = await enrichTeamSnapshotNativeAttachmentSupport({
+      teamName: 'TEST-team',
+      snapshot: {
+        teamName: 'TEST-team',
+        config: { name: 'TEST-team' },
+        tasks: [],
+        members: [{ name: 'worker', model, currentTaskId: null, taskCount: 0 }],
+        kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+        processes: [],
+      },
+      deps: {
+        teamsBasePath: '/tmp/teams',
+        readCapability: async (input) => {
+          expectedProviderId = input.expectedProviderId;
+          return proof({ providerId });
+        },
+        readRuntimeSnapshot: async () => snapshot(),
+        isProcessAlive: (pid) => pid === 42,
+      },
+    });
+
+    expect(expectedProviderId).toBe(providerId);
+    expect(result.members[0].nativeInboxAttachmentsSupported).toBe(true);
+    expect(result.members[0].providerId).toBeUndefined();
+  });
+
   it('binds the immutable envelope to the current runtime actor', async () => {
     let written: NativeAttachmentInboxRequest | undefined;
     const result = await admitNativeTeammateAttachmentMessage(

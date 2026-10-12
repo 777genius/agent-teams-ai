@@ -3,7 +3,8 @@ import {
   resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/contracts';
 import {
-  admitNativeTeammateAttachmentMessage,
+  admitNativeTeammateAttachmentIpcMessage,
+  assertAttachmentRecipientOnline,
   enrichTeamSnapshotNativeAttachmentSupport,
   isNativeAttachmentRecipient,
   MAX_AGENT_IPC_ATTACHMENTS,
@@ -187,7 +188,6 @@ import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
-import { TeamInboxWriter } from '../services/team/TeamInboxWriter';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamLaunchStateStore } from '../services/team/TeamLaunchStateStore';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
@@ -580,7 +580,6 @@ let teamScopedResourceReleaser: TeamScopedResourceReleaser | null = null;
 let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
-const nativeAttachmentInboxWriter = new TeamInboxWriter();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
@@ -2878,21 +2877,12 @@ async function handleSendMessage(
     }
 
     if (validatedAttachments?.length) {
-      const supportedLiveLead = isLeadRecipient && isAlive;
-      const supportedLiveOpenCodeRecipient = !isLeadRecipient && isOpenCodeRecipient && isAlive;
-      const nativeRecipient = isNativeAttachmentRecipient({
+      assertAttachmentRecipientOnline({
         isLeadRecipient,
+        isAlive,
+        isOpenCodeRecipient,
         providerId: recipientProviderId,
       });
-      if (!supportedLiveLead && !supportedLiveOpenCodeRecipient && (!nativeRecipient || !isAlive)) {
-        throw new Error(
-          nativeRecipient
-            ? 'Native teammate attachments require the teammate to be online on a current runtime'
-            : isOpenCodeRecipient
-              ? 'Attachments for OpenCode teammates require the team to be online'
-              : 'Attachments are supported for the online team lead and online OpenCode teammates only'
-        );
-      }
     }
 
     // Smart routing: lead + alive → stdin direct, else → inbox
@@ -3043,34 +3033,25 @@ async function handleSendMessage(
       validatedAttachments?.length &&
       isNativeAttachmentRecipient({ isLeadRecipient, providerId: recipientProviderId })
     ) {
-      return admitNativeTeammateAttachmentMessage(
+      return admitNativeTeammateAttachmentIpcMessage(
         {
           teamName: tn,
           memberName,
           providerId: recipientProviderId!,
           messageId: inboxMessageId,
-          request: {
-            member: memberName,
-            text: inboxText,
-            summary: payload.summary,
-            from: storedFrom,
-            actionMode,
-            source: 'user_sent',
-            taskRefs: validatedTaskRefs.value,
-          },
+          text: inboxText,
+          summary: payload.summary,
+          from: storedFrom,
+          actionMode,
+          taskRefs: validatedTaskRefs.value,
           attachments: validatedAttachments,
         },
         {
-          teamsBasePath: getTeamsBasePath(),
-          readCapability: readNativeInboxAttachmentCapability,
           readRuntimeSnapshot: (teamName) =>
             getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
           attachmentStore,
-          writeInbox: (teamName, request, options) =>
-            nativeAttachmentInboxWriter.sendNativeAttachmentMessage(teamName, request, options),
           runWithLiveRosterMutation: (teamName, operation) =>
             getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation),
-          isProcessAlive,
         }
       );
     }

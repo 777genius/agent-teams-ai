@@ -1,3 +1,8 @@
+import {
+  inferTeamProviderIdFromModel,
+  normalizeOptionalTeamProviderId,
+} from '@shared/utils/teamProvider';
+
 import { resolveAgentAttachmentCapability } from '../../core/domain';
 
 import type {
@@ -143,13 +148,16 @@ export async function enrichTeamSnapshotNativeAttachmentSupport(input: {
   const runtimeSnapshot = await input.deps.readRuntimeSnapshot(input.teamName).catch(() => null);
   const members = await Promise.all(
     input.snapshot.members.map(async (member) => {
+      const providerId =
+        normalizeOptionalTeamProviderId(member.providerId) ??
+        inferTeamProviderIdFromModel(member.model);
       const native = isNativeAttachmentRecipient({
         isLeadRecipient: false,
-        providerId: member.providerId,
+        providerId,
       });
       if (!native || !runtimeSnapshot) return member;
       const expectedProviderId =
-        member.providerId === 'codex' ? ('codex' as const) : ('anthropic' as const);
+        providerId === 'codex' ? ('codex' as const) : ('anthropic' as const);
       const proof = await input.deps.readCapability({
         teamsBasePath: input.deps.teamsBasePath,
         teamName: input.teamName,
