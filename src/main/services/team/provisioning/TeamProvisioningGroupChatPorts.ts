@@ -1,6 +1,7 @@
 import type { TeamGroupChatsFeature } from '@features/team-group-chats/main';
 
-export type ProvisioningGroupChatCallbacks = Pick<TeamGroupChatsFeature, 'send'>;
+export type ProvisioningGroupChatCallbacks = Pick<TeamGroupChatsFeature, 'send'> &
+  Partial<Pick<TeamGroupChatsFeature, 'hasAcknowledgedInbound'>>;
 
 /** Focused callbacks are supplied by the outer composition root. */
 export function createProvisioningGroupChatPorts(source?: ProvisioningGroupChatCallbacks) {
@@ -12,5 +13,8 @@ export function createProvisioningGroupChatPorts(source?: ProvisioningGroupChatC
     required().send(input, input.from);
   return {
     sendReply,
+    hasAcknowledgedInbound: (
+      input: Parameters<TeamGroupChatsFeature['hasAcknowledgedInbound']>[0]
+    ) => source?.hasAcknowledgedInbound?.(input) ?? Promise.resolve(false),
   };
 }

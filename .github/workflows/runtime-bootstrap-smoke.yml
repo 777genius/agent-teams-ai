@@ -11,6 +11,8 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
   pull_request:
     paths:
@@ -20,6 +22,8 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
 
 permissions:
@@ -56,6 +60,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+
+      - name: Verify ZIP extraction and companion integrity
+        run: node --test --test-name-pattern="ZIP extraction" scripts/lib/runtime-payload-cache.test.mjs
 
       - name: Download, extract, and execute pinned runtime anonymously
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs

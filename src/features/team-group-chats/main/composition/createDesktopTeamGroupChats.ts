@@ -14,9 +14,11 @@ import type { TeamAgentRuntimeSnapshot } from '@shared/types';
 export function createDesktopTeamGroupChats(deps: {
   snapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
   openCodeRun(teamName: string, memberName: string): Promise<GroupChatRun | null>;
+  leadName: NonNullable<TeamGroupChatsPorts['leadName']>;
   configurationOperation: TeamGroupChatsPorts['configurationOperation'];
   inboxWriter: Pick<TeamInboxWriter, 'sendMessage'>;
   changed: NonNullable<TeamGroupChatsPorts['changed']>;
+  reactionChanged: NonNullable<TeamGroupChatsPorts['reactionChanged']>;
 }) {
   const configReader = new TeamConfigReader();
   const membersMeta = new TeamMembersMetaStore();
@@ -28,20 +30,35 @@ export function createDesktopTeamGroupChats(deps: {
   return createTeamGroupChatsFeature({
     roster: async (teamName) => {
       const [config, metadata] = await Promise.all([
-        configReader.getConfig(teamName), membersMeta.getMembers(teamName),
+        configReader.getConfig(teamName),
+        membersMeta.getMembers(teamName),
       ]);
       if (!config || config.deletedAt) throw new Error('Team not found');
-      return [...new Set(memberResolver.resolveMembers(config, metadata, [], [])
-        .filter((member) => !member.removedAt && member.agentType !== 'subagent')
-        .map((member) => member.name))];
+      return [
+        ...new Set(
+          memberResolver
+            .resolveMembers(config, metadata, [], [])
+            .filter((member) => !member.removedAt && member.agentType !== 'subagent')
+            .map((member) => member.name)
+        ),
+      ];
     },
+    leadName: deps.leadName,
     getRun: runtime.getRun,
     configurationOperation: deps.configurationOperation,
     deliver: async (teamName, message, run, shouldStillWrite) => {
-      const sent = await deps.inboxWriter.sendMessage(teamName,
-        { ...message, attachments: undefined, member: message.to }, { shouldStillWrite });
-      return sent.deliveredToInbox ? (run.provider === 'native' ? 'accepted' : 'queued') : 'skipped';
+      const sent = await deps.inboxWriter.sendMessage(
+        teamName,
+        { ...message, attachments: undefined, member: message.to },
+        { shouldStillWrite }
+      );
+      return sent.deliveredToInbox
+        ? run.provider === 'native'
+          ? 'accepted'
+          : 'queued'
+        : 'skipped';
     },
     changed: deps.changed,
+    reactionChanged: deps.reactionChanged,
   });
 }

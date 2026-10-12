@@ -30,13 +30,23 @@ interface RunComposerSubmissionOptions {
 
 const activeSubmissionIdsByContext = new Map<string, string>();
 
+export function acquireComposerSubmission(contextId: string, attemptId: string): boolean {
+  if (activeSubmissionIdsByContext.has(contextId)) return false;
+  activeSubmissionIdsByContext.set(contextId, attemptId);
+  return true;
+}
+export function releaseComposerSubmission(contextId: string, attemptId: string): void {
+  if (activeSubmissionIdsByContext.get(contextId) === attemptId)
+    activeSubmissionIdsByContext.delete(contextId);
+}
+
 export function isComposerSubmissionActive(attemptId?: string): boolean {
   return attemptId
     ? [...activeSubmissionIdsByContext.values()].includes(attemptId)
     : activeSubmissionIdsByContext.size > 0;
 }
 
-function classifyTransportResult(result: TransportResult): ComposerAttemptOutcome {
+export function classifyTransportResult(result: TransportResult): ComposerAttemptOutcome {
   if (
     result != null &&
     'runtimeDelivery' in result &&
@@ -75,10 +85,9 @@ export async function runComposerSubmission({
   transport,
   repository = composerDraftRepository,
 }: RunComposerSubmissionOptions): Promise<ComposerSubmissionResult> {
-  if (activeSubmissionIdsByContext.has(contextId) || repository.isAttemptActive(attemptId)) {
+  if (repository.isAttemptActive(attemptId) || !acquireComposerSubmission(contextId, attemptId)) {
     return { kind: 'blocked', attemptId };
   }
-  activeSubmissionIdsByContext.set(contextId, attemptId);
   repository.setAttemptActive(attemptId, true);
   let prepared: ComposerBeginAttemptResult | null = null;
   let outcome: ComposerAttemptOutcome | null = null;
@@ -114,9 +123,7 @@ export async function runComposerSubmission({
     };
   } finally {
     repository.setAttemptActive(attemptId, false, prepared?.address);
-    if (activeSubmissionIdsByContext.get(contextId) === attemptId) {
-      activeSubmissionIdsByContext.delete(contextId);
-    }
+    releaseComposerSubmission(contextId, attemptId);
   }
 }
 

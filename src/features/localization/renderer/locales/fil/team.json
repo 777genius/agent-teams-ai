@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Magdagdag ng reaksyon ({{count}})",
+      "remove": "Alisin ang reaksyon ({{count}})",
+      "count": "Mga reaksyon: {{count}}",
+      "failed": "Hindi ma-update ang mga reaksyon"
+    },
     "actions": {
       "createTaskFromMessage": "Lumikha ng task mula sa mensahe",
       "editMessage": "I-edit ang mensahe",

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Añadir reacción ({{count}})",
+      "remove": "Quitar reacción ({{count}})",
+      "count": "Reacciones: {{count}}",
+      "failed": "No se pudieron actualizar las reacciones"
+    },
     "actions": {
       "createTaskFromMessage": "Crear tarea desde el mensaje",
       "editMessage": "Editar mensaje",

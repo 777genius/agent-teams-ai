@@ -3595,6 +3595,12 @@ export default interface Resources {
         "user": "user"
       },
       "rawJson": "Raw JSON",
+      "reactions": {
+        "add": "Add reaction ({{count}})",
+        "count": "Reactions: {{count}}",
+        "failed": "Could not update reactions",
+        "remove": "Remove reaction ({{count}})"
+      },
       "reply": {
         "action": "Reply",
         "replyingTo": "Replying to"
@@ -5105,6 +5111,34 @@ export default interface Resources {
         "showTasksOnBoard": "Show tasks on board",
         "unavailable": "Chat unavailable",
         "unknownDelivery": "Saved. Delivery status is unknown."
+      },
+      "manualQueue": {
+        "all": "All",
+        "allHint": "All current group members when you send",
+        "ask": "Ask",
+        "cancel": "Cancel",
+        "checkHistory": "Check in history",
+        "conflict": "Queue or draft changed. Your text was kept; try again.",
+        "copy": "Copy text",
+        "delete": "Delete",
+        "do": "Do",
+        "edit": "Edit",
+        "editorLabel": "Edit queued message",
+        "invalidText": "Enter text of up to {{maximum}} characters.",
+        "notFound": "No matching message in loaded history. Delivery remains unknown.",
+        "operationFailed": "Could not update the queue.",
+        "persistenceRequired": "The draft must be saved durably before adding it to the queue.",
+        "queueDisabled": "Add to queue (Cmd/Ctrl+Enter)",
+        "recipientUnavailable": "This recipient is no longer available.",
+        "removeRecord": "Remove record; delivery is not cancelled",
+        "richUnsupported": "Only plain text in Do or Ask mode can be queued. Remove attachments, file chips, commands or review actions first.",
+        "rootUnavailable": "The message destination is still loading.",
+        "save": "Save",
+        "schemaError": "Saved queue uses unsupported data; left untouched.",
+        "send": "Send",
+        "sending": "Sending",
+        "title": "Queued messages",
+        "unknownWarning": "Delivery is unknown. Removing this record will not cancel the message; sending the text again may create a duplicate."
       },
       "outbox": {
         "actions": {

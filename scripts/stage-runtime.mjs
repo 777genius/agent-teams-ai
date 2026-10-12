@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { extractArchive as extractRuntimeArchive } from './lib/runtime-payload-cache.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -61,11 +62,12 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function runOrThrow(command, args) {
+function runOrThrow(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
     stdio: 'inherit',
     shell: false,
+    ...options,
   });
 
   if (result.error) {
@@ -172,28 +174,7 @@ function downloadReleaseAssetWithGh(runtimeLock, releaseTag, asset, destinationP
 }
 
 function extractArchive(archivePath, extractDir, archiveKind) {
-  fs.mkdirSync(extractDir, { recursive: true });
-
-  if (archiveKind === 'tar.gz') {
-    runOrThrow('tar', ['-xzf', archivePath, '-C', extractDir]);
-    return;
-  }
-
-  if (archiveKind === 'zip') {
-    if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
-      return;
-    }
-
-    runOrThrow('unzip', ['-oq', archivePath, '-d', extractDir]);
-    return;
-  }
-
-  throw new Error(`Unsupported runtime archive kind: ${archiveKind}`);
+  extractRuntimeArchive(archivePath, extractDir, archiveKind, runOrThrow);
 }
 
 function findRuntimePayloadDir(extractDir, binaryName) {

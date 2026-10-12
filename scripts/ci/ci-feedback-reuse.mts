@@ -100,10 +100,25 @@ const METADATA_SKIPPED_NAMES = [
   SKIPPED_FEEDBACK_NAME,
 ] as const;
 
+/** New tier jobs are irrelevant to a full producer only when demonstrably skipped. */
+export function withoutSkippedScopeJobs(jobs: JsonObject[], run: JsonObject): JsonObject[] {
+  const optional = ['Focused documentation and asset validation', 'Renderer source validation', 'macOS DMG artwork end-to-end'];
+  const present = jobs.filter((job) => optional.includes(String(job.name)));
+  requireProof(present.length === 0 || present.length === optional.length, 'Incomplete scoped job set');
+  for (const name of optional) {
+    const matching = jobs.filter((job) => job.name === name);
+    requireProof(matching.length <= 1, 'Duplicate scoped job');
+    if (matching.length === 0) continue;
+    const job = matching[0];
+    requireProof(job.run_id === run.id && job.run_attempt === run.run_attempt && job.head_sha === run.head_sha && job.status === 'completed' && job.conclusion === 'skipped' && array(job.steps).length === 0, 'Scoped producer is not complete full evidence');
+  }
+  return jobs.filter((job) => !optional.includes(String(job.name)));
+}
+
 function isMetadataGate(job: JsonObject): boolean {
   return (
     job.name === 'Metadata CI result' ||
-    (job.name === 'Full qualification' &&
+    (['Full qualification', 'Metadata qualification'].includes(String(job.name)) &&
       array(job.steps)
         .map(object)
         .some(
@@ -329,11 +344,12 @@ export async function provePostmergeReuse(
       const response = object(
         await read(`${prefix}/actions/runs/${id}/attempts/${attempt}/jobs?per_page=100`)
       );
-      const candidateJobs = array(response.jobs).map(object);
+      let candidateJobs = array(response.jobs).map(object);
       requireProof(
         response.total_count === candidateJobs.length && candidateJobs.length < 100,
         'Incomplete job list'
       );
+      candidateJobs = withoutSkippedScopeJobs(candidateJobs, candidateRun);
       // The plan name is assigned before strict event classification. Only the
       // result names a metadata decision, and its complete job proof must pass.
       if (candidateJobs.some(isMetadataGate)) {

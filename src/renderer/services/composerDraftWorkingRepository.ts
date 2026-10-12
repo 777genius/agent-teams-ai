@@ -19,7 +19,6 @@ import {
   readComposerWorkingIndex,
   refreshWorkingIndexSnapshot,
   removeComposerWorkingSummary,
-  sameComposerWorkingSummary,
   upsertComposerWorkingSummary,
   workingIndexRecord,
 } from '@renderer/services/composerDraftWorkingSummary';
@@ -35,6 +34,8 @@ import {
   sameComposerDraftAddress,
 } from '@renderer/utils/composerDraftIdentity';
 import { get } from 'idb-keyval';
+
+import { repairDurableComposerWorkingIndex } from './repairDurableComposerWorkingIndex';
 
 import type {
   ComposerDraftAddress,
@@ -335,30 +336,7 @@ export class ComposerDraftWorkingRepository {
       return undefined;
     }
     try {
-      const repaired = await readwrite(async (store) => {
-        const workingKey = composerDraftAddressKey(address);
-        const indexKey = composerWorkingIndexKey(address.contextId, address.teamName);
-        const [latestRaw, indexRaw] = await Promise.all([
-          requestValue(store.get(workingKey)),
-          requestValue(store.get(indexKey)),
-        ]);
-        const latest =
-          isWorkingRecord(latestRaw) && sameComposerDraftAddress(latestRaw.address, address)
-            ? latestRaw
-            : null;
-        const current = readComposerWorkingIndex(indexRaw);
-        if (current.unsupported) return null;
-        const key = composerDraftAddressKey(address);
-        const expected = latest ? workingSummaryFor(latest) : null;
-        const existing = current.summaries.find(
-          (summary) => composerDraftAddressKey(summary.address) === key
-        );
-        if (sameComposerWorkingSummary(existing, expected)) return false;
-        const summaries = nextWorkingSummaries(indexRaw, address, latest);
-        if (!summaries) return false;
-        store.put(workingIndexRecord(summaries), indexKey);
-        return true;
-      });
+      const repaired = await repairDurableComposerWorkingIndex(address);
       if (repaired == null) return 'The draft summary index uses an unsupported schema.';
       if (repaired) this.workingIndexEvent(address);
       return undefined;
@@ -367,6 +345,12 @@ export class ComposerDraftWorkingRepository {
     }
   }
 
+  acceptExternalWorkingCommit(working: ComposerWorkingRecord): void {
+    this.memoryWorking.set(composerDraftAddressKey(working.address), clone(working));
+    this.updateMemoryWorkingSummary(working.address, working);
+    this.workingEvent(working.address);
+    this.workingIndexEvent(working.address);
+  }
   async loadWorking(address: ComposerDraftAddress): Promise<{
     working: ComposerWorkingRecord;
     status: ComposerPersistenceStatus;

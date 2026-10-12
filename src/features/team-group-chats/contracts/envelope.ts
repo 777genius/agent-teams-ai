@@ -14,6 +14,8 @@ export interface GroupChatEnvelope {
 }
 
 export const GROUP_CHAT_CHANNELS = {
+  getReaction: 'team-group-chats:get-reaction',
+  setReaction: 'team-group-chats:set-reaction',
   list: 'team-group-chats:list',
   create: 'team-group-chats:create',
   setArchived: 'team-group-chats:set-archived',

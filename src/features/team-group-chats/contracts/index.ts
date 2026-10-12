@@ -1,11 +1,17 @@
 export type {
+  AgentGroupChatCreateRequest,
   GroupChatCreateRequest,
+  GroupChatReactionRequest,
+  GroupChatReactionResult,
   GroupChatSendRequest,
   GroupChatSendResult,
   GroupDeliveryRecipient,
   GroupDeliveryStatus,
   GroupDeliverySummary,
+  GroupInboundAcknowledgementTarget,
   GroupMembership,
+  GroupMessageReactionDTO,
+  GroupMessageReactionTarget,
   TeamGroupChatDTO,
   TeamGroupChatsAPI,
 } from './api';

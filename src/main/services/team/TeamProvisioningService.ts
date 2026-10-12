@@ -252,6 +252,10 @@ export function createDefaultTeamProvisioningService(
     undefined,
     undefined,
     undefined,
-    { send: (input, from) => getGroupChats().send(input, from) }
+    {
+      send: (input, from) => getGroupChats().send(input, from),
+      hasAcknowledgedInbound: (input) =>
+        getGroupChats().hasAcknowledgedInbound?.(input) ?? Promise.resolve(false),
+    }
   );
 }

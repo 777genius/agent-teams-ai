@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Tambahkan reaksi ({{count}})",
+      "remove": "Hapus reaksi ({{count}})",
+      "count": "Reaksi: {{count}}",
+      "failed": "Tidak dapat memperbarui reaksi"
+    },
     "actions": {
       "createTaskFromMessage": "Membuat tugas dari pesan",
       "editMessage": "Edit pesan",

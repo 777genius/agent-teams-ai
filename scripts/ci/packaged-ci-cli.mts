@@ -9,6 +9,7 @@ import {
   readPullRequest,
 } from './packaged-ci-policy.mts';
 import type { PackagedDecision } from './packaged-ci-policy.mts';
+import { collectChangeScope } from './ci-change-scope.mts';
 
 function git(args: string[], cwd: string): string {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
@@ -22,6 +23,12 @@ export function collectPackagedDecision(env: NodeJS.ProcessEnv, cwd: string): Pa
     const eventName = env.GITHUB_EVENT_NAME ?? '';
     const input = readPullRequest(eventName, event);
     if (!input || isMetadataOnlyEdit(input)) return classifyPackagedPr(eventName, event);
+    if (!input.draft && !input.labels.includes('ci:full')) {
+      const decision = collectChangeScope(env, cwd);
+      if (decision.scope !== 'full') {
+        return { scope: decision.scope, run: false, reason: decision.reason };
+      }
+    }
     // Full SHAs only; verify objects locally, never trust a paginated GitHub file list.
     for (const sha of [input.baseSha, input.headSha]) {
       if (
@@ -66,8 +73,11 @@ function main(): void {
       scope: process.env.PACKAGED_SCOPE,
       scopeResult: process.env.SCOPE_RESULT,
       packagedResult: process.env.PACKAGED_RESULT,
+      run: process.env.PACKAGED_RUN,
     });
-    console.log('Full packaged verification succeeded on all five platforms.');
+    console.log(
+      'Selected packaged verification passed; focused scopes are verified by CI qualification.'
+    );
     return;
   }
   throw new Error('Usage: node scripts/ci/packaged-ci-cli.mts classify|gate');

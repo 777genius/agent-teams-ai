@@ -2143,6 +2143,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       teamName: 'team-a', laneId: 'secondary:opencode:bob', runId: 'lane-run-1',
       memberName: 'bob', cwd: '/repo', text: 'group text' }));
     expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining(envelope));
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Canonical original sourceMessageId for group_chat_create: canonical-1.'),
+    }));
   });
 
   it('sends direct teammate messages through the OpenCode message bridge', async () => {
@@ -2227,6 +2230,24 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).not.toContain('The inbound app messageId is');
     expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(sentText).toContain('never use #00000000');
+    expect(sentText).not.toContain('Original User MessageId:');
+
+    await adapter.sendMessageToMember(openCodeRuntimeMessagePayload({
+      memberName: 'bob', from: 'user', text: 'Create Release with alice and bob',
+      messageId: 'human-direct-1', replyRecipient: 'user', actionMode: 'do',
+    }, {
+      runId: 'run-1', teamName: 'team-a', laneId: 'secondary:opencode:bob',
+      memberName: 'bob', cwd: '/repo', text: 'Create Release with alice and bob',
+    }));
+    const humanText = sendOpenCodeTeamMessage.mock.calls.at(-1)?.[0]?.text ?? '';
+    expect(humanText).not.toContain('<opencode_delivery_context>');
+    expect(humanText).toContain('Original User MessageId: human-direct-1');
+    expect(humanText).toContain('Use this exact sourceMessageId, never guess one; ASK cannot authorize creation.');
+    const replyEnvelope = /Required message_send argument envelope: (.+)\. Copy every/.exec(humanText);
+    expect(JSON.parse(replyEnvelope?.[1] ?? '{}')).toEqual({
+      teamName: 'team-a', to: 'user', from: 'bob', source: 'runtime_delivery',
+      relayOfMessageId: 'human-direct-1',
+    });
   });
 
   it('delivers teammate-originated messages with the reply-optional teammate report contract', async () => {

@@ -1,5 +1,10 @@
 import { createHash } from 'crypto';
 
+import {
+  hasOpenCodeGroupAcknowledgement,
+  type OpenCodeGroupAcknowledgementReader,
+} from './OpenCodeGroupAcknowledgement';
+
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
@@ -33,6 +38,7 @@ export function matchesOpenCodeGroupReply(message: InboxMessage, groupChatId?: s
 }
 
 export async function materializeOpenCodeGroupReply(input: {
+  hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   teamName: string;
   memberName: string;
   ledger: OpenCodePromptDeliveryLedgerStore;
@@ -66,6 +72,11 @@ export async function materializeOpenCodeGroupReply(input: {
     !text ||
     record.responseState !== 'responded_plain_text'
   ) {
+    return { ledgerRecord: record, visibleReply: null };
+  }
+  await input.checkpoint();
+  if (await hasOpenCodeGroupAcknowledgement(input)) {
+    await input.checkpoint();
     return { ledgerRecord: record, visibleReply: null };
   }
   await input.checkpoint();

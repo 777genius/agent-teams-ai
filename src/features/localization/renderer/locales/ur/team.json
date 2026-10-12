@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "ردعمل شامل کریں ({{count}})",
+      "remove": "ردعمل ہٹائیں ({{count}})",
+      "count": "ردعمل: {{count}}",
+      "failed": "ردعمل اپ ڈیٹ نہیں ہو سکے"
+    },
     "actions": {
       "createTaskFromMessage": "پیام سے کام بنائیں",
       "editMessage": "پیغام میں ترمیم کریں",

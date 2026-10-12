@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Thêm phản ứng ({{count}})",
+      "remove": "Xóa phản ứng ({{count}})",
+      "count": "Phản ứng: {{count}}",
+      "failed": "Không thể cập nhật phản ứng"
+    },
     "actions": {
       "createTaskFromMessage": "Tạo tác vụ từ tin nhắn",
       "editMessage": "Chỉnh sửa tin nhắn",

@@ -1283,7 +1283,7 @@ test('CLI writes only literal outputs and fast feedback cannot pass the full CLI
     assert.equal(child.status, 0, child.stderr);
     assert.equal(
       readFileSync(outputFile, 'utf8'),
-      `full=false\nmetadata=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
+      `scope=full\nfull=false\nmetadata=false\nreuse=false\nsource_run=\nimage=${linuxImage}\nlinux_arch=X64\n`
     );
     const gate = spawnSync(process.execPath, [cli, 'gate'], {
       encoding: 'utf8',

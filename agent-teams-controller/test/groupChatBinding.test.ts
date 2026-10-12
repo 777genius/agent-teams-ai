@@ -39,7 +39,27 @@ describe('app-bound group chat transport', () => {
         body: JSON.parse(body),
       });
       response.setHeader('content-type', 'application/json');
-      if (request.url?.endsWith('/send')) {
+      if (request.url?.endsWith('/create')) {
+        response.statusCode = 400;
+        response.end(
+          JSON.stringify({
+            error: { code: 'invalid-user-request', message: 'Original missing' },
+            sourceMessageId: 'original-id',
+          })
+        );
+      } else if (request.url?.endsWith('/react')) {
+        response.end(
+          JSON.stringify({
+            saved: true,
+            acknowledged: true,
+            groupChatId: 'group',
+            messageId: 'canonical',
+            relayOfMessageId: 'physical',
+            from: 'alice',
+            groupRunKey: 'run',
+          })
+        );
+      } else if (request.url?.endsWith('/send')) {
         response.statusCode = 400;
         response.end(
           JSON.stringify({ error: { code: 'GROUP_CHAT_ARCHIVED', message: 'Archived group' } })
@@ -56,8 +76,10 @@ describe('app-bound group chat transport', () => {
     delete require.cache[bindingPath];
     delete require.cache[groupPath];
     const api = require(groupPath) as {
+      createGroupChat(context: unknown, flags: unknown): Promise<unknown>;
       listGroupChats(context: unknown, flags: unknown): Promise<unknown>;
       sendGroupMessage(context: unknown, flags: unknown): Promise<unknown>;
+      reactToGroupMessage(context: unknown, flags: unknown): Promise<unknown>;
     };
     const context = { teamName: 'sandbox', claudeDir: '/tmp/group-transport-sandbox' };
     try {
@@ -87,8 +109,54 @@ describe('app-bound group chat transport', () => {
         messageId: 'post',
         text: 'Hello',
       });
-      await expect(api.listGroupChats(context, { from: 'user' })).rejects.toThrow('reserved');
+      await expect(api.reactToGroupMessage(context, { from: 'user' })).rejects.toThrow('reserved');
       expect(seen).toHaveLength(3);
+      expect(
+        await api.reactToGroupMessage(context, {
+          from: 'alice',
+          groupChatId: 'group',
+          relayOfMessageId: 'physical',
+          emoji: 'wrong',
+        })
+      ).toEqual({
+        saved: true,
+        acknowledged: true,
+        groupChatId: 'group',
+        messageId: 'canonical',
+        relayOfMessageId: 'physical',
+        from: 'alice',
+        groupRunKey: 'run',
+      });
+      expect(seen[3]).toMatchObject({
+        path: '/api/teams/sandbox/group-chats/react',
+        context: JSON.stringify(appContext),
+        body: { from: 'alice', groupChatId: 'group', relayOfMessageId: 'physical' },
+      });
+      expect(seen[3].body).not.toHaveProperty('emoji');
+      const creation = {
+        from: 'alice',
+        sourceMessageId: 'original-id',
+        name: 'Release',
+        selectedMemberNames: ['alice', 'bob'],
+      };
+      await expect(api.createGroupChat(context, creation)).rejects.toMatchObject({
+        code: 'invalid-user-request',
+      });
+      expect(seen[4]).toMatchObject({
+        path: '/api/teams/sandbox/group-chats/create',
+        context: JSON.stringify(appContext),
+        body: creation,
+      });
+      await expect(
+        api.createGroupChat({ ...context, claudeDir: '/other-root' }, creation)
+      ).rejects.toMatchObject({ code: 'APP_CONTEXT_MISMATCH' });
+      await expect(api.createGroupChat(context, { ...creation, from: 'user' })).rejects.toThrow(
+        'reserved'
+      );
+      await expect(
+        api.createGroupChat(context, { ...creation, userConfirmed: true })
+      ).rejects.toMatchObject({ code: 'invalid-input' });
+      expect(seen).toHaveLength(5); // No discovery or fallback request after invalid binding/input.
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

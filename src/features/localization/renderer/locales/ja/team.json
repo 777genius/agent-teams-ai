@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "リアクションを追加 ({{count}})",
+      "remove": "リアクションを削除 ({{count}})",
+      "count": "リアクション：{{count}}",
+      "failed": "リアクションを更新できませんでした"
+    },
     "actions": {
       "createTaskFromMessage": "メッセージからタスクを作成する",
       "editMessage": "メッセージを編集",

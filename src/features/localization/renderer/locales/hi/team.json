@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "प्रतिक्रिया जोड़ें ({{count}})",
+      "remove": "प्रतिक्रिया हटाएँ ({{count}})",
+      "count": "प्रतिक्रियाएँ: {{count}}",
+      "failed": "प्रतिक्रियाएँ अपडेट नहीं हो सकीं"
+    },
     "actions": {
       "createTaskFromMessage": "संदेश से कार्य करें",
       "editMessage": "संदेश संपादित करें",

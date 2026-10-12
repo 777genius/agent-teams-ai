@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,14 +19,83 @@ const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
 const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-public-runtime-e2e-'));
 const platformKey = `${process.platform}-${process.arch}`;
 
-function fail(message, result) {
-  if (result?.stdout) {
-    process.stderr.write(result.stdout);
-  }
-  if (result?.stderr) {
-    process.stderr.write(result.stderr);
-  }
+function fail(message) {
   throw new Error(`[public-runtime-bootstrap-e2e] ${message}`);
+}
+
+async function runSmokeCommand(label, command, args, env, timeoutMs, maxBuffer) {
+  const startedAt = Date.now();
+  process.stdout.write(`[public-runtime-bootstrap-e2e] starting ${label}\n`);
+  const child = spawn(command, args, {
+    cwd: repoRoot,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
+  let stdout = '';
+  let stderr = '';
+  let error;
+  let stopped = false;
+
+  const stop = (reason) => {
+    if (stopped) return;
+    stopped = true;
+    error = reason;
+    process.stderr.write(`[public-runtime-bootstrap-e2e] ${reason.message}\n`);
+    if (process.platform === 'win32' && child.pid) {
+      // The bootstrap can be waiting on PowerShell or the runtime executable.
+      // Killing only node.exe leaves those descendants holding its output pipes.
+      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+        timeout: 10_000,
+        killSignal: 'SIGKILL',
+      });
+      killer.on('error', () => child.kill('SIGKILL'));
+      killer.on('close', (code) => {
+        if (code !== 0) child.kill('SIGKILL');
+      });
+    } else {
+      try {
+        // Descendants can inherit the captured pipes on POSIX as well.
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+    }
+  };
+  const timer = setTimeout(
+    () => stop(new Error(`${label} timed out after ${timeoutMs / 1000}s`)),
+    timeoutMs
+  );
+
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => {
+    if (stopped) return;
+    process.stdout.write(chunk);
+    stdout += chunk;
+    if (Buffer.byteLength(stdout) > maxBuffer) stop(new Error(`${label} exceeded stdout limit`));
+  });
+  child.stderr.on('data', (chunk) => {
+    if (stopped) return;
+    process.stderr.write(chunk);
+    stderr += chunk;
+    if (Buffer.byteLength(stderr) > maxBuffer) stop(new Error(`${label} exceeded stderr limit`));
+  });
+
+  return await new Promise((resolve) => {
+    child.on('error', (spawnError) => {
+      error ??= spawnError;
+    });
+    child.on('close', (status, signal) => {
+      clearTimeout(timer);
+      process.stdout.write(
+        `[public-runtime-bootstrap-e2e] finished ${label} in ${((Date.now() - startedAt) / 1000).toFixed(1)}s (exit ${status}, signal ${signal ?? 'none'})\n`
+      );
+      resolve({ stdout, stderr, status, error });
+    });
+  });
 }
 
 try {
@@ -42,15 +111,13 @@ try {
   delete env.GITHUB_TOKEN;
   delete env.GH_ENTERPRISE_TOKEN;
 
-  const bootstrap = spawnSync(
+  const bootstrap = await runSmokeCommand(
+    'anonymous bootstrap',
     process.execPath,
     [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env,
-      maxBuffer: 16 * 1024 * 1024,
-    }
+    env,
+    8 * 60_000,
+    16 * 1024 * 1024
   );
   if (bootstrap.error || bootstrap.status !== 0) {
     fail(
@@ -86,12 +153,14 @@ try {
     fail(`expected runtime path ${expectedRuntimePath}, got ${runtimePath}`, bootstrap);
   }
 
-  const version = spawnSync(runtimePath, ['--version'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
+  const version = await runSmokeCommand(
+    'cached runtime version',
+    runtimePath,
+    ['--version'],
     env,
-    maxBuffer: 1024 * 1024,
-  });
+    30_000,
+    1024 * 1024
+  );
   const versionText = `${version.stdout ?? ''}\n${version.stderr ?? ''}`.trim();
   if (
     version.error ||
@@ -104,15 +173,13 @@ try {
     );
   }
 
-  const cachedBootstrap = spawnSync(
+  const cachedBootstrap = await runSmokeCommand(
+    'cached bootstrap',
     process.execPath,
     [path.join(repoRoot, 'scripts', 'dev-with-runtime.mjs'), '--print-runtime-path'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env,
-      maxBuffer: 1024 * 1024,
-    }
+    env,
+    2 * 60_000,
+    1024 * 1024
   );
   if (cachedBootstrap.error || cachedBootstrap.status !== 0) {
     fail(

@@ -24,6 +24,11 @@ export interface TextMessageComposerProps {
   autoFocusKey?: number;
   cornerActionPrefix?: ReactNode;
   notice?: ReactNode;
+  queue?: {
+    readonly onEnqueue: () => void;
+    readonly list: ReactNode;
+    readonly unavailableReason?: string;
+  };
   recipientSelector?: MessageComposerRecipientSelectorProps;
   textInput: {
     label: string;
@@ -48,6 +53,7 @@ export const TextMessageComposer = ({
   autoFocusKey,
   cornerActionPrefix,
   notice,
+  queue,
   recipientSelector,
   textInput,
 }: TextMessageComposerProps): React.JSX.Element => {
@@ -74,6 +80,7 @@ export const TextMessageComposer = ({
           <span className="truncate text-[var(--color-text-secondary)]">{textInput.label}</span>
         )}
       </div>
+      {queue?.list}
       <MessageComposerInput
         textareaRef={textareaRef}
         connectedToHeader
@@ -100,9 +107,19 @@ export const TextMessageComposer = ({
           textInput.value.trim().length <= MAX_TEXT_LENGTH
         }
         onSend={textInput.onSend}
+        onQueue={queue?.onEnqueue}
         sendLabel={textInput.sendLabel}
         cornerActionPrefix={cornerActionPrefix}
-        footerRight={notice}
+        footerRight={
+          <>
+            {notice}
+            {queue?.unavailableReason ? (
+              <p role="status" className="text-xs text-[var(--color-text-muted)]">
+                {queue.unavailableReason}
+              </p>
+            ) : null}
+          </>
+        }
       />
     </ComposerSurface>
   );
