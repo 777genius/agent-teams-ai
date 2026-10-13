@@ -67,7 +67,7 @@ describe('attachmentRecipientCapabilities', () => {
       nativeInboxTextAttachmentsSupported: true,
     });
     const text = payload({ filename: 'notes.txt', mimeType: 'text/plain' });
-    expect(getAttachmentInputAcceptForMember(ready)).toContain('.json');
+    expect(getAttachmentInputAcceptForMember(ready)).toBe('*/*');
     expect(
       validateAttachmentFilesForMember({
         member: ready,
@@ -84,6 +84,11 @@ describe('attachmentRecipientCapabilities', () => {
         attachments: [text, payload({ id: 'image' })],
       })
     ).toBeNull();
+    for (const filename of ['Dockerfile', 'Makefile', '.env.local']) {
+      expect(
+        validateAttachmentFilesForMember({ member: ready, files: [file(filename, '')] })
+      ).toBeNull();
+    }
     for (const restricted of [
       member({ ...ready, nativeInboxTextAttachmentsSupported: false }),
       member({ ...ready, name: 'team-lead' }),

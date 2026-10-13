@@ -247,7 +247,7 @@ function findNodeModulesSequence(segments, sequence) {
   return -1;
 }
 
-function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
+async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
   if (targetPlatform !== 'win32') {
     return null;
   }
@@ -267,7 +267,72 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
     return path.join(appOutDir, ...segments.slice(0, conptyArchIndex + 1));
   }
 
-  return null;
+  const runtimePrefix = ['resources', 'runtime', 'local-cli', 'node_modules'];
+  if (!runtimePrefix.every((segment, index) => segments[index] === segment)) {
+    return null;
+  }
+  const runtimeRoot = path.join(appOutDir, ...runtimePrefix);
+  const runtimePath = segments.slice(runtimePrefix.length).join('/');
+  let rootToRemove = null;
+  let targetSibling = null;
+  const treeSitterRoots = [
+    '@opencode/core/node_modules/tree-sitter-bash/prebuilds',
+    '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/tree-sitter-bash/prebuilds',
+  ];
+  for (const prebuildRoot of treeSitterRoots) {
+    if (!runtimePath.startsWith(`${prebuildRoot}/`)) continue;
+    const [variant, filename, extra] = runtimePath.slice(prebuildRoot.length + 1).split('/');
+    if (
+      !extra &&
+      filename === 'tree-sitter-bash.node' &&
+      /^(darwin|linux|win32)-(arm64|x64)$/.test(variant) &&
+      variant !== `win32-${targetArch}`
+    ) {
+      rootToRemove = path.join(runtimeRoot, ...prebuildRoot.split('/'), variant);
+      targetSibling = path.join(
+        runtimeRoot,
+        ...prebuildRoot.split('/'),
+        `win32-${targetArch}`,
+        filename
+      );
+    }
+  }
+
+  const ffiMatch = runtimePath.match(
+    /^@yuuang\/ffi-rs-win32-(ia32|x64|arm64)-msvc\/ffi-rs\.win32-\1-msvc\.node$/
+  );
+  if (ffiMatch && ffiMatch[1] !== targetArch) {
+    rootToRemove = path.join(runtimeRoot, '@yuuang', `ffi-rs-win32-${ffiMatch[1]}-msvc`);
+    targetSibling = path.join(
+      runtimeRoot,
+      '@yuuang',
+      `ffi-rs-win32-${targetArch}-msvc`,
+      `ffi-rs.win32-${targetArch}-msvc.node`
+    );
+  }
+
+  const bunPtyRelease = 'bun-pty/rust-pty/target/release';
+  const foreignBunPtyFiles = [
+    'librust_pty.dylib',
+    'librust_pty.so',
+    'librust_pty_arm64.dylib',
+    'librust_pty_arm64.so',
+  ];
+  if (foreignBunPtyFiles.some((filename) => runtimePath === `${bunPtyRelease}/${filename}`)) {
+    rootToRemove = filePath;
+    targetSibling = path.join(runtimeRoot, ...bunPtyRelease.split('/'), 'rust_pty.dll');
+  }
+
+  if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;
+  try {
+    const metadata = await detectBinaryMetadata(targetSibling);
+    return metadata &&
+      isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)
+      ? rootToRemove
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 // tools/opencode-console-wrapper, staged by scripts/stage-opencode-console-wrapper.mjs.
@@ -300,7 +365,7 @@ async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, 
   const rootsToRemove = new Set();
 
   for (const filePath of files) {
-    const rootToRemove = getKnownPrunableNativeArtifactRoot(
+    const rootToRemove = await getKnownPrunableNativeArtifactRoot(
       appOutDir,
       filePath,
       targetPlatform,

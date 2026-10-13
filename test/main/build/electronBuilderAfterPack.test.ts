@@ -192,6 +192,87 @@ describe('electron-builder afterPack', () => {
     expect(fs.existsSync(releaseDir)).toBe(true);
   });
 
+  it('prunes known Windows runtime variants while retaining compatible target siblings', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const modules = path.join(tempDir, 'resources', 'runtime', 'local-cli', 'node_modules');
+    const targetFiles: string[] = [];
+    const foreignFiles: string[] = [];
+    for (const coreRoot of [
+      path.join(modules, '@opencode', 'core'),
+      path.join(modules, '@opencode', 'server-v2-floor', 'node_modules', '@opencode', 'core'),
+    ]) {
+      const prebuilds = path.join(coreRoot, 'node_modules', 'tree-sitter-bash', 'prebuilds');
+      const target = path.join(prebuilds, 'win32-x64', 'tree-sitter-bash.node');
+      writeFile(target, createPortableExecutableBuffer('x64'));
+      targetFiles.push(target);
+      for (const [variant, bytes] of [
+        ['darwin-arm64', createMachOBuffer('arm64')],
+        ['darwin-x64', createMachOBuffer('x64')],
+        ['linux-arm64', createElfBuffer('arm64')],
+        ['linux-x64', createElfBuffer('x64')],
+        ['win32-arm64', createPortableExecutableBuffer('arm64')],
+      ] as const) {
+        const foreign = path.join(prebuilds, variant, 'tree-sitter-bash.node');
+        writeFile(foreign, bytes);
+        foreignFiles.push(foreign);
+      }
+    }
+    const ffiTarget = path.join(
+      modules, '@yuuang', 'ffi-rs-win32-x64-msvc', 'ffi-rs.win32-x64-msvc.node'
+    );
+    const ffiForeign = path.join(
+      modules, '@yuuang', 'ffi-rs-win32-ia32-msvc', 'ffi-rs.win32-ia32-msvc.node'
+    );
+    writeFile(ffiTarget, createPortableExecutableBuffer('x64'));
+    writeFile(ffiForeign, createPortableExecutableBuffer('ia32'));
+    targetFiles.push(ffiTarget);
+    foreignFiles.push(ffiForeign);
+    const release = path.join(modules, 'bun-pty', 'rust-pty', 'target', 'release');
+    const dll = path.join(release, 'rust_pty.dll');
+    writeFile(dll, createPortableExecutableBuffer('x64'));
+    targetFiles.push(dll);
+    for (const [filename, bytes] of [
+      ['librust_pty.dylib', createMachOBuffer('x64')],
+      ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
+      ['librust_pty.so', createElfBuffer('x64')],
+      ['librust_pty_arm64.so', createElfBuffer('arm64')],
+    ] as const) {
+      const foreign = path.join(release, filename);
+      writeFile(foreign, bytes);
+      foreignFiles.push(foreign);
+    }
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 1 });
+    expect(foreignFiles.every(file => !fs.existsSync(file))).toBe(true);
+    expect(targetFiles.every(file => fs.existsSync(file))).toBe(true);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'x64')).resolves.toEqual([]);
+  });
+
+  it('retains known runtime variants without compatible siblings and rejects unknown native files', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const modules = path.join(tempDir, 'resources', 'runtime', 'local-cli', 'node_modules');
+    const missingSibling = path.join(
+      modules, '@opencode', 'core', 'node_modules', 'tree-sitter-bash',
+      'prebuilds', 'darwin-arm64', 'tree-sitter-bash.node'
+    );
+    const invalidSibling = path.join(
+      modules, 'bun-pty', 'rust-pty', 'target', 'release', 'rust_pty.dll'
+    );
+    const foreign = path.join(path.dirname(invalidSibling), 'librust_pty.so');
+    const unknown = path.join(modules, 'unknown-package', 'unknown.node');
+    writeFile(missingSibling, createMachOBuffer('arm64'));
+    writeFile(invalidSibling, createPortableExecutableBuffer('arm64'));
+    writeFile(foreign, createElfBuffer('x64'));
+    writeFile(unknown, createMachOBuffer('x64'));
+
+    await expect(afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 1 }))
+      .rejects.toThrow('Found incompatible native binaries in win32-x64 bundle after pruning');
+    expect([missingSibling, invalidSibling, foreign, unknown].every(file => fs.existsSync(file)))
+      .toBe(true);
+  });
+
   it('fails validation when a foreign-arch native binary remains in the bundle', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

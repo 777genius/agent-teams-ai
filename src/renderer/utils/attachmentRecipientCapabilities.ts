@@ -7,7 +7,6 @@ import {
   getEffectiveMimeType,
   isImageMime,
   isVideoMime,
-  TEXT_FILE_EXTENSIONS,
 } from '@shared/constants/attachments';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
@@ -101,16 +100,7 @@ export function getAttachmentInputAcceptForMember(
       ...(capability.supportsVideo ? capability.supportedVideoMimeTypes : []),
     ].join(',');
   }
-  if (
-    capability.supportedFileMimeTypes.includes('text/*') ||
-    capability.supportedFileMimeTypes.includes('application/pdf')
-  )
-    return '*/*';
-  return [
-    ...capability.supportedImageMimeTypes,
-    ...capability.supportedFileMimeTypes,
-    ...Array.from(TEXT_FILE_EXTENSIONS, (extension) => `.${extension}`),
-  ].join(',');
+  return '*/*';
 }
 
 export function validateAttachmentFilesForMember(input: {
