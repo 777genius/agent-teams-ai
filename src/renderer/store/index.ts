@@ -1629,6 +1629,14 @@ export function initializeNotificationListeners(): () => void {
         return currentRunId != null && currentRunId !== event.runId;
       })();
 
+      if (
+        !isStaleRuntimeEvent &&
+        (event.type === 'task' ||
+          (event.type === 'task-log-change' && event.taskSignalKind !== 'log'))
+      ) {
+        useStore.getState().invalidateTaskDetailTeamSource(event.teamName, event.taskId);
+      }
+
       const seedCurrentRunIdIfMissing = (): void => {
         if (!event.runId) return;
         const currentRunId = useStore.getState().currentRuntimeRunIdByTeam[event.teamName];

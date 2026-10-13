@@ -12,6 +12,23 @@ export type TaskDetailReadPhase =
   | 'provisioning'
   | 'unavailable';
 
+export type TaskDetailEditPart =
+  | 'commentText'
+  | 'commentChips'
+  | 'pendingAttachments'
+  | 'reply'
+  | 'subject'
+  | 'description';
+
+export type TaskDetailSubmitPart = Extract<
+  TaskDetailEditPart,
+  'commentText' | 'commentChips' | 'pendingAttachments' | 'reply'
+>;
+
+export type TaskDetailSavePart = Extract<TaskDetailEditPart, 'subject' | 'description'>;
+
+export type TaskDetailPartRevisions = Record<TaskDetailEditPart, number>;
+
 export interface TaskDetailReplyDraft {
   taskId: string;
   author: string;
@@ -28,8 +45,14 @@ export interface TaskDetailSession {
   editingSubject: boolean;
   editingDescription: boolean;
   editRevision: number;
+  partRevisions: TaskDetailPartRevisions;
   submitRevision: number;
+  submittedPartRevisions: Partial<Record<TaskDetailSubmitPart, number>> | null;
+  saveRevision: number;
+  savedPartRevisions: Partial<Record<TaskDetailSavePart, number>> | null;
   inlineEditOwnerSurfaceId: string | null;
+  ownerSurfaceId: string | null;
+  ownerRevision: number;
 }
 
 export interface OpenTaskDetailTabResult {

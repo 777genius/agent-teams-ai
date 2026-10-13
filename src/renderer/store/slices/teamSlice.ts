@@ -45,6 +45,13 @@ import {
   createSidebarLogsHeightSlice,
   type SidebarLogsHeightSlice,
 } from '../team/sidebarLogsHeight';
+import {
+  isTaskDetailReadScopeCurrent,
+  isTaskDetailTokenCurrent,
+  readTeamSnapshotResource,
+  type TaskDetailReadHandle,
+  type TaskDetailReadToken,
+} from '../team/taskDetailReadAuthority';
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
 import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
 import {
@@ -295,6 +302,7 @@ const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const POST_PAINT_TEAM_ENRICHMENT_FALLBACK_MS = 500;
 const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
 const teamDataReadWork = new TeamDataReadWork<TeamViewSnapshot>();
+const selectionSnapshotTokenByTeam = new Map<string, TaskDetailReadToken>();
 interface PostPaintHandle {
   rafId?: number;
   timerId?: ReturnType<typeof setTimeout>;
@@ -825,17 +833,36 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+function toTaskDetailScope(teamName: string, requestScope: TeamRequestScope) {
+  return { ...requestScope, teamName };
+}
+
 function fetchTeamDataDeduped(
   teamName: string,
   requestScope: TeamRequestScope,
   options?: TeamGetDataOptions
-): Promise<TeamViewSnapshot> {
-  return teamDataReadWork.join(teamName, getTeamDataSnapshotMode(options), requestScope, () =>
-    fetchTeamDataFresh(teamName, options)
+): TaskDetailReadHandle<TeamViewSnapshot> {
+  return readTeamSnapshotResource(teamName, toTaskDetailScope(teamName, requestScope), () =>
+    teamDataReadWork.join(teamName, getTeamDataSnapshotMode(options), requestScope, () =>
+      fetchTeamDataPhysical(teamName, options)
+    )
   );
 }
 
 function fetchTeamDataFresh(
+  teamName: string,
+  requestScope: TeamRequestScope,
+  options?: TeamGetDataOptions
+): TaskDetailReadHandle<TeamViewSnapshot> {
+  return readTeamSnapshotResource(
+    teamName,
+    toTaskDetailScope(teamName, requestScope),
+    () => fetchTeamDataPhysical(teamName, options),
+    { forceNew: true }
+  );
+}
+
+function fetchTeamDataPhysical(
   teamName: string,
   options?: TeamGetDataOptions
 ): Promise<TeamViewSnapshot> {
@@ -2905,12 +2932,26 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     scheduleToolApprovalSettingsSync(teamName, selectedSettings);
 
     try {
-      const data = await fetchTeamDataDeduped(teamName, requestScope, {
+      const snapshotRead = fetchTeamDataDeduped(teamName, requestScope, {
         includeMemberBranches: false,
       });
+      selectionSnapshotTokenByTeam.set(teamName, snapshotRead.token);
+      const dataResult = await snapshotRead.result;
+      if (dataResult.error) throw dataResult.error;
+      const data = dataResult.value as TeamViewSnapshot;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         teamDataReadWork.takeQueuedFull(teamName, requestScope);
         return;
+      }
+      if (
+        !isTaskDetailReadScopeCurrent(
+          toTaskDetailScope(teamName, requestScope),
+          requestScope.contextId,
+          teamName
+        ) ||
+        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+      ) {
+        return get().selectTeam(teamName, { ...opts, allowReloadWhileProvisioning: true });
       }
       // Stale check: user may have switched to another team during the async call
       const stateAfterLoad = get();
@@ -3022,9 +3063,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ...(nextGlobalTasks !== state.globalTasks ? { globalTasks: nextGlobalTasks } : {}),
         };
       });
+      if (selectionSnapshotTokenByTeam.get(teamName) === snapshotRead.token) {
+        selectionSnapshotTokenByTeam.delete(teamName);
+      }
       if (projectedGlobalTaskNotifications) {
         processGlobalTaskNotifications(projectedGlobalTaskNotifications);
       }
+      get().applyTaskDetailSnapshot(teamName, committedTeamData.tasks);
       recordLastResolvedTeamDataRefresh(teamName);
 
       try {
@@ -3208,11 +3253,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     try {
       const previousData = selectTeamDataForName(get(), teamName);
-      const data = opts?.withDedup
-        ? await fetchTeamDataDeduped(teamName, requestScope)
-        : await fetchTeamDataFresh(teamName);
+      const snapshotRead = opts?.withDedup
+        ? fetchTeamDataDeduped(teamName, requestScope)
+        : fetchTeamDataFresh(teamName, requestScope);
+      const dataResult = await snapshotRead.result;
+      if (dataResult.error) throw dataResult.error;
+      const data = dataResult.value as TeamViewSnapshot;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         return;
+      }
+      if (
+        !isTaskDetailReadScopeCurrent(
+          toTaskDetailScope(teamName, requestScope),
+          requestScope.contextId,
+          teamName
+        ) ||
+        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+      ) {
+        return get().refreshTeamData(teamName, { withDedup: true });
       }
       const projectedTeamData = previousData
         ? {
@@ -3231,11 +3289,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                 [teamName]: nextTeamData,
               };
 
+        const selectionToken = selectionSnapshotTokenByTeam.get(teamName);
+        const supersededSelection =
+          selectionToken !== undefined &&
+          selectionToken.key === snapshotRead.token.key &&
+          snapshotRead.token.serial > selectionToken.serial;
         const selectedState =
           state.selectedTeamName === teamName
             ? {
                 selectedTeamData: nextTeamData,
                 selectedTeamError: null,
+                ...(state.selectedTeamLoading && supersededSelection
+                  ? { selectedTeamLoading: false }
+                  : {}),
               }
             : {};
         const nextGlobalTasks = projectTeamSnapshotOntoGlobalTasks(
@@ -3268,7 +3334,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (projectedGlobalTaskNotifications) {
         processGlobalTaskNotifications(projectedGlobalTaskNotifications);
       }
+      get().applyTaskDetailSnapshot(teamName, nextTeamData.tasks);
       recordLastResolvedTeamDataRefresh(teamName);
+      const selectionToken = selectionSnapshotTokenByTeam.get(teamName);
+      if (
+        selectionToken &&
+        selectionToken.key === snapshotRead.token.key &&
+        snapshotRead.token.serial > selectionToken.serial
+      ) {
+        selectionSnapshotTokenByTeam.delete(teamName);
+      }
       const invalidationState = previousData
         ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
         : { cacheKeys: [], taskIds: [] };

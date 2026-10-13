@@ -5,6 +5,7 @@ export interface TaskDetailReadEntry {
   identity: TaskDetailIdentity;
   phase: TaskDetailReadPhase;
   full: TeamTaskWithKanban | null;
+  compact: TeamTaskWithKanban | null;
   error: string | null;
   loading: boolean;
   refreshPending: boolean;
@@ -23,6 +24,7 @@ export function createTaskDetailReadEntry(identity: TaskDetailIdentity): TaskDet
     identity,
     phase: 'hydrating',
     full: null,
+    compact: null,
     error: null,
     loading: true,
     refreshPending: false,
@@ -70,7 +72,7 @@ export function invalidateTaskDetailFull(entry: TaskDetailReadEntry): TaskDetail
     ...entry,
     sourceEpoch: entry.sourceEpoch + 1,
     refreshPending: true,
-    loading: false,
+    loading: entry.loading,
   };
 }
 
@@ -121,9 +123,42 @@ export function commitTaskDetailFull(
     ...entry,
     phase: classified.phase,
     full: keepFull ? entry.full : result,
+    compact: entry.compact,
     error: classified.error,
     loading: false,
     refreshPending: false,
+  };
+}
+
+/** Compact snapshots are previews and limited derived state, never full-task authority. */
+export function applyTaskDetailCompact(
+  entry: TaskDetailReadEntry,
+  compact: TeamTaskWithKanban | undefined
+): TaskDetailReadEntry {
+  if (!compact) return entry;
+  const nextCompact = compact;
+  if (!entry.full) {
+    return entry.compact === nextCompact ? entry : { ...entry, compact: nextCompact };
+  }
+  const full = entry.full;
+  const derived: TeamTaskWithKanban = { ...full };
+  let changed = false;
+  if (derived.kanbanColumn !== compact.kanbanColumn) {
+    derived.kanbanColumn = compact.kanbanColumn;
+    changed = true;
+  }
+  if (derived.reviewer !== compact.reviewer) {
+    derived.reviewer = compact.reviewer;
+    changed = true;
+  }
+  if (derived.changePresence !== compact.changePresence) {
+    derived.changePresence = compact.changePresence;
+    changed = true;
+  }
+  return {
+    ...entry,
+    compact: nextCompact,
+    full: changed ? derived : full,
   };
 }
 
