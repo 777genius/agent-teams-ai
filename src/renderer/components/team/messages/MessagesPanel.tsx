@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
+import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   ChatUnreadBadges,
@@ -1098,7 +1099,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
   const renderTimelineSection = (): React.JSX.Element => (
-    <>
+    <ChatVisualizationPresentationProvider presentation={expanded ? 'inline' : 'card'}>
       {composerOutbox.readError ? (
         <p role="status" className="px-3 py-1 text-[10px] text-amber-400">
           {t('messages.outbox.storageWarning')}
@@ -1157,7 +1158,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         expandedItemKey={expandedItemKey}
         onExpandDialogChange={timelineActions.closeExpand}
       />
-    </>
+    </ChatVisualizationPresentationProvider>
   );
   const searchControlProps = {
     teamName,
@@ -1196,7 +1197,6 @@ export const MessagesPanel = memo(function MessagesPanel({
       onExpandedChange={handleExpandedChange}
     />
   );
-
   const wideThreadHeader = (
     <WideThreadHeader
       title={lockedRecipient ?? conversationTitle}

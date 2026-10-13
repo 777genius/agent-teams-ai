@@ -29,6 +29,7 @@ import {
   getTeammateRosterMembers,
   indentMultiline,
 } from './TeamProvisioningRosterPrompt';
+import { buildLeadChatVisualizationProtocol } from './TeamProvisioningVisualizationPrompt';
 
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
@@ -40,6 +41,7 @@ import type {
 } from '@shared/types';
 
 // Re-exported for backwards compatibility: these roster helpers used to live here.
+export { buildLeadRosterContextBlock } from './TeamProvisioningLeadRosterContext';
 export { buildCompactMembersRoster, buildMembersPrompt } from './TeamProvisioningRosterPrompt';
 
 const { protocols } = agentTeamsControllerModule;
@@ -812,27 +814,6 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
   );
 }
 
-export function buildLeadRosterContextBlock(
-  teamName: string,
-  leadName: string,
-  teammates: { name: string; role?: string }[]
-): string | null {
-  if (teammates.length === 0) return null;
-
-  const summary = teammates
-    .map((member) => (member.role ? `${member.name} (${member.role})` : member.name))
-    .join(', ');
-
-  return [
-    `Current durable team context:`,
-    `- Team name: ${teamName}`,
-    `- You are the live team lead "${leadName}"`,
-    `- Persistent teammates currently configured: ${summary}`,
-    `- This team is NOT in solo mode`,
-    `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
-  ].join('\n');
-}
-
 /**
  * Builds the durable lead context — constraints, communication protocol, board MCP ops,
  * and agent block policy — that must survive context compaction.
@@ -956,7 +937,9 @@ Message formatting:
 ${getVisibleTaskReferenceFormattingRule()}
 ${agentBlockPolicy}
 
-${membersFooter}${rosterRulesBlock}`;
+${membersFooter}${rosterRulesBlock}
+
+${buildLeadChatVisualizationProtocol()}`;
 }
 
 export function buildAgentBlockUsagePolicy(): string {

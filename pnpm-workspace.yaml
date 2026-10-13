@@ -106,6 +106,7 @@ overrides:
   'ws': '8.21.0'
   'yaml': '2.9.0'
 allowBuilds:
+  '@openuidev/lang-core': false
   '@parcel/watcher': false
   '@sentry/cli': false
   '@swc/core': false
@@ -121,6 +122,8 @@ allowBuilds:
   unrs-resolver: false
   vue-demi: false
 patchedDependencies:
+  '@radix-ui/react-radio-group@1.4.8': 'patches/@radix-ui__react-radio-group@1.4.8.patch'
+  '@radix-ui/react-slider@1.5.0': 'patches/@radix-ui__react-slider@1.5.0.patch'
   '@radix-ui/react-presence@1.1.5': 'patches/@radix-ui__react-presence@1.1.5.patch'
   '@radix-ui/react-focus-scope@1.1.7': 'patches/@radix-ui__react-focus-scope@1.1.7.patch'
   '@radix-ui/react-dismissable-layer@1.1.11': 'patches/@radix-ui__react-dismissable-layer@1.1.11.patch'

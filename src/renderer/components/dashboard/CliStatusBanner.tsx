@@ -101,7 +101,6 @@ import {
   Loader2,
   LogIn,
   LogOut,
-  Puzzle,
   RefreshCw,
   Settings2,
   SlidersHorizontal,
@@ -866,14 +865,12 @@ const InstalledBanner = ({
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
   );
-  const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const openTab = useStore((s) => s.openTab);
   const visibleProviders = useMemo(
     () => filterMainScreenCliProviders(cliStatus.providers),
     [cliStatus.providers]
   );
   const detailedProviders = visibleProviders;
-  const canOpenExtensions = cliStatus.installed;
   const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(
     visibleProviders.find((provider) => provider.providerId === 'opencode')?.modelCatalog?.models ??
       []
@@ -1046,17 +1043,6 @@ const InstalledBanner = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {/* Extensions button — available whenever the runtime is installed */}
-          {canOpenExtensions && (
-            <button
-              onClick={openExtensionsTab}
-              className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-            >
-              <Puzzle className="size-3.5" />
-              {t('cliStatus.actions.extensions')}
-            </button>
-          )}
           <button
             onClick={() => openTab({ type: 'token-usage', label: 'Usage' })}
             className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"

@@ -13,6 +13,7 @@
  * spanning two elements is not valid in either layer.
  */
 
+import { omitVisualizationSourceForSearch } from '@features/chat-visualizations/contracts';
 import { toHast } from 'mdast-util-to-hast';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
@@ -109,7 +110,7 @@ const HL_TAGS = new Set([
  * text segments that `highlightSearchInChildren` processes at render time.
  */
 export function collectTextSegments(markdown: string): string[] {
-  const mdast = parseMarkdown(markdown);
+  const mdast = parseMarkdown(omitVisualizationSourceForSearch(markdown));
   const hast = toHast(mdast);
   if (!hast) return [];
 

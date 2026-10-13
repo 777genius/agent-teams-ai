@@ -6,6 +6,7 @@
     "../../scripts/e2e/opencode-native-test-auth.ts",
     "../../scripts/e2e/opencode-native-desktop-smoke.ts",
     "../../scripts/e2e/opencode-native-team-port.ts",
+    "../../scripts/e2e/openui-desktop.ts",
     "../../scripts/e2e/group-chats-desktop.ts",
     "../../scripts/native-teammate-attachments-desktop.ts",
     "../../scripts/fixtures/native-teammate-attachments/generate.ts",
