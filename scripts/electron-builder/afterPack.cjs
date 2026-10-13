@@ -248,7 +248,11 @@ function findNodeModulesSequence(segments, sequence) {
 }
 
 async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
-  if (targetPlatform !== 'win32' && !(targetPlatform === 'linux' && targetArch === 'x64')) {
+  if (
+    targetPlatform !== 'win32' &&
+    !(targetPlatform === 'linux' && targetArch === 'x64') &&
+    !(targetPlatform === 'darwin' && targetArch === 'arm64')
+  ) {
     return null;
   }
 
@@ -271,7 +275,11 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     return path.join(appOutDir, ...segments.slice(0, conptyArchIndex + 1));
   }
 
-  const runtimePrefix = ['resources', 'runtime', 'local-cli', 'node_modules'];
+  if (targetPlatform === 'darwin' && !segments[0]?.endsWith('.app')) return null;
+  const runtimePrefix =
+    targetPlatform === 'darwin'
+      ? [segments[0], 'Contents', 'Resources', 'runtime', 'local-cli', 'node_modules']
+      : ['resources', 'runtime', 'local-cli', 'node_modules'];
   if (!runtimePrefix.every((segment, index) => segments[index] === segment)) {
     return null;
   }
@@ -323,7 +331,12 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     'librust_pty_arm64.so',
     'rust_pty.dll',
   ];
-  const targetBunPtyFile = targetPlatform === 'linux' ? 'librust_pty.so' : 'rust_pty.dll';
+  const targetBunPtyFile =
+    targetPlatform === 'darwin'
+      ? 'librust_pty_arm64.dylib'
+      : targetPlatform === 'linux'
+        ? 'librust_pty.so'
+        : 'rust_pty.dll';
   if (
     foreignBunPtyFiles.some(
       (filename) => filename !== targetBunPtyFile && runtimePath === `${bunPtyRelease}/${filename}`
