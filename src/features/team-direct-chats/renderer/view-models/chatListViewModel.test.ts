@@ -13,14 +13,14 @@ import type { ChatListDraftPreview } from './chatListViewModel';
 import type { InboxMessage } from '@shared/types';
 
 const aliceScope = createDirectScope('alice');
-const message = {
+const message: InboxMessage = {
   messageId: 'message-1',
   from: 'alice',
   to: 'user',
   text: 'last delivered message',
   timestamp: '2026-09-22T12:00:00.000Z',
   read: false,
-} as never;
+};
 const item: ChatListItem = {
   scope: aliceScope,
   displayName: 'alice',
@@ -82,6 +82,30 @@ describe('toChatListViewItems draft projection', () => {
 });
 
 describe('shared chat preview presentation', () => {
+  it.each(['openui', 'openui-lang', 'mermaid'])(
+    'summarizes %s fences before flattening and truncating message previews',
+    (language) => {
+      const label = language === 'mermaid' ? 'Diagram' : 'Visualization';
+      for (const closing of ['', '\n```']) {
+        const text = `Report\n\n\`\`\`${language}\nprivateVisualizationSource${'x'.repeat(100)}${closing}`;
+        expect(getChatMessagePreview({ ...message, text }, 'No messages')).toEqual({
+          previewText: `Report ${label}`,
+          previewFrom: 'alice',
+        });
+        expect(
+          getChatMessagePreview({ ...message, text: 'Fallback body', summary: text }, 'No messages')
+        ).toEqual({ previewText: `Report ${label}`, previewFrom: 'alice' });
+      }
+    }
+  );
+
+  it('preserves ordinary fenced code in message previews', () => {
+    expect(
+      getChatMessagePreview({ ...message, text: '```ts\nconst count = 2;\n```' }, 'No messages')
+        .previewText
+    ).toBe('```ts const count = 2; ```');
+  });
+
   const selected = {
     ...getChatMessagePreview(message, 'No messages'),
     previewTimestamp: item.latestActivityTimestamp,

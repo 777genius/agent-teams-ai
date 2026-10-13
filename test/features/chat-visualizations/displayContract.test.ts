@@ -69,6 +69,30 @@ describe('real OpenUI display contract', () => {
         source
       ).toBe(false);
   });
+  it.each(['BarChart', 'LineChart'])(
+    'rejects %s series names that overwrite SDK chart data',
+    (kind) => {
+      for (const names of [['category'], ['__proto__'], ['Count', 'Count']]) {
+        const series = names
+          .map((name, index) => `Series(${JSON.stringify(name)}, [${index + 1}, ${index + 2}])`)
+          .join(', ');
+        const parsed = parseChatVisualization(
+          `root = Stack([Card([${kind}(["Alpha", "Beta"], [${series}])])]);`
+        );
+        expect(parsed.meta.errors).toEqual([]);
+        for (const state of ['open', 'closed'] as const) {
+          expect(guardChatVisualizationProgram(parsed, state).status, names.join(', ')).toBe(
+            'rejected'
+          );
+        }
+      }
+      const safeChart = `${kind}(["Alpha", "Beta"], [Series("Count", [1, 2])])`;
+      const separateCharts = parseChatVisualization(
+        `root = Stack([Card([${safeChart}, ${safeChart}])]);`
+      );
+      expect(guardChatVisualizationProgram(separateCharts, 'closed').status).toBe('ready');
+    }
+  );
   it('checks open-fence bounds and invalid siblings after pending children', () => {
     expect(
       guardChatVisualizationNode(
