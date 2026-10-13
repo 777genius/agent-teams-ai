@@ -66,7 +66,14 @@ export function getMemberAttachmentUnavailableReason(
   if (!member) {
     return 'Select a recipient before attaching files.';
   }
-  const { capability } = resolveMemberAttachmentCapability(member);
+  const { capability, providerId } = resolveMemberAttachmentCapability(member);
+  if (
+    !isLeadMember(member) &&
+    (providerId === 'anthropic' || providerId === 'codex') &&
+    member.nativeInboxAttachmentsSupported !== true
+  ) {
+    return 'Native teammate attachments are unavailable until this teammate is running a current attachment-capable runtime.';
+  }
   if (canReceiveAnyAttachment(capability)) {
     return null;
   }
@@ -101,6 +108,8 @@ export function validateAttachmentFilesForMember(input: {
   if (files.length === 0) {
     return null;
   }
+  const unavailable = getMemberAttachmentUnavailableReason(member);
+  if (unavailable) return unavailable;
   const { capability } = resolveMemberAttachmentCapability(member);
   if (!canReceiveAnyAttachment(capability)) {
     return capability.displayText;
@@ -162,6 +171,8 @@ export function validateAttachmentPayloadsForMember(input: {
   if (!member || input.attachments.length === 0) {
     return null;
   }
+  const unavailable = getMemberAttachmentUnavailableReason(member);
+  if (unavailable) return unavailable;
   const { capability } = resolveMemberAttachmentCapability(member);
   if (!canReceiveAnyAttachment(capability)) {
     return capability.displayText;
@@ -237,5 +248,10 @@ export function canMemberShowAttachmentControl(
     return false;
   }
   const providerId = getMemberProviderId(member);
-  return isLeadMember(member) || providerId === 'opencode';
+  return (
+    isLeadMember(member) ||
+    providerId === 'opencode' ||
+    ((providerId === 'anthropic' || providerId === 'codex') &&
+      member.nativeInboxAttachmentsSupported === true)
+  );
 }

@@ -37,6 +37,26 @@ function payload(overrides: Partial<AttachmentPayload>): AttachmentPayload {
 }
 
 describe('attachmentRecipientCapabilities', () => {
+  it('requires current native capability before showing or accepting native attachments', () => {
+    const native = member({ providerId: 'codex', model: 'gpt-5.5' });
+    const ready = member({
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      nativeInboxAttachmentsSupported: true,
+    });
+
+    expect(getMemberAttachmentUnavailableReason(native)).toContain(
+      'current attachment-capable runtime'
+    );
+    expect(
+      validateAttachmentFilesForMember({ member: native, files: [file('diagram.png', 'image/png')] })
+    ).toContain('current attachment-capable runtime');
+    expect(getMemberAttachmentUnavailableReason(ready)).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({})] })
+    ).toBeNull();
+  });
+
   it('blocks OpenCode non-vision models before file selection or send', () => {
     const bob = member({
       providerId: 'opencode',
