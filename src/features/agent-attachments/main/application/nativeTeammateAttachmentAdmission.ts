@@ -226,6 +226,13 @@ function validateNativeAttachmentBatch(
     if (!supportedImage && !supportedFile) {
       throw new Error(`Attachment type is not supported by ${providerId}: ${attachment.mimeType}`);
     }
+    if (providerId === 'codex' && attachment.mimeType === 'text/plain') {
+      try {
+        new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+      } catch {
+        throw new Error(`Codex text attachment is not valid UTF-8: ${attachment.filename}`);
+      }
+    }
     total += buffer.length;
   }
   if (total > MAX_NATIVE_BYTES_TOTAL) {

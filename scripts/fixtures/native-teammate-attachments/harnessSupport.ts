@@ -363,24 +363,18 @@ export async function startOwnedDesktopApp(
       )) as Array<{ type: string; url: string; webSocketDebuggerUrl: string }>;
       for (const target of targets.filter((item) => item.type === 'page')) {
         const cdp = (await CdpClient.connect(target.webSocketDebuggerUrl)) as Cdp;
+        let selected = false;
         try {
           if (
             await cdp.evaluate<boolean>(
               'Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)'
             )
           ) {
+            selected = true;
             return { port: Number(match[1]), cdp };
           }
         } finally {
-          if (
-            !(await cdp
-              .evaluate<boolean>(
-                'Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)'
-              )
-              .catch(() => false))
-          ) {
-            await cdp.close().catch(() => undefined);
-          }
+          if (!selected) await cdp.close().catch(() => undefined);
         }
       }
       return null;

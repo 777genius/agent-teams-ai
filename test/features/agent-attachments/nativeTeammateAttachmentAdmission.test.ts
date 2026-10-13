@@ -179,6 +179,57 @@ describe('native teammate attachment admission', () => {
     expect(saved).toBe(false);
   });
 
+  it('rejects malformed Codex UTF-8 before saving any part of a mixed batch', async () => {
+    let saved = false;
+    let published = false;
+    await expect(
+      admitNativeTeammateAttachmentMessage(
+        {
+          teamName: 'TEST-team',
+          memberName: 'worker',
+          providerId: 'codex',
+          messageId: 'invalid-text-message',
+          request: { member: 'worker', text: 'inspect', from: 'user', source: 'user_sent' },
+          attachments: [
+            attachment,
+            {
+              ...attachment,
+              id: 'invalid-text',
+              filename: 'invalid.json',
+              mimeType: 'text/plain',
+              size: 1,
+              data: Buffer.from([0xff]).toString('base64'),
+            },
+          ],
+        },
+        {
+          teamsBasePath: '/tmp/teams',
+          readCapability: async () =>
+            proof({ providerId: 'codex', nativeInboxAttachmentsVersion: 2 }),
+          readRuntimeSnapshot: async () => snapshot(),
+          attachmentStore: {
+            saveNativeAttachments: async (_team, _message, attachments) => {
+              saved = true;
+              return attachments.map(({ data: _data, ...meta }) => ({
+                ...meta,
+                filePath: '/tmp/attachments/' + meta.filename,
+                sha256: 'abc',
+              }));
+            },
+          },
+          writeInbox: async () => {
+            published = true;
+            return { deliveredToInbox: true, messageId: 'invalid-text-message' };
+          },
+          runWithLiveRosterMutation: async (_team, operation) => operation(),
+          isProcessAlive: () => true,
+        }
+      )
+    ).rejects.toThrow(/not valid UTF-8/i);
+    expect(saved).toBe(false);
+    expect(published).toBe(false);
+  });
+
   it.each([
     [1, false, 'stable', true],
     [1, true, 'stable', false],
@@ -189,7 +240,15 @@ describe('native teammate attachment admission', () => {
   ] as const)(
     'fences Codex capability %s text %s lifecycle %s',
     async (version, textBatch, lifecycle, admitted) => {
-      const text = { ...attachment, id: 'text', filename: 'values.json', mimeType: 'text/plain' };
+      const textBytes = Buffer.from('\uFEFFПривіт_日本\n');
+      const text = {
+        ...attachment,
+        id: 'text',
+        filename: 'values.json',
+        mimeType: 'text/plain',
+        size: textBytes.length,
+        data: textBytes.toString('base64'),
+      };
       let reads = 0;
       let saved = false;
       let published = false;
@@ -222,6 +281,7 @@ describe('native teammate attachment admission', () => {
           attachmentStore: {
             saveNativeAttachments: async (_team, _message, attachments) => {
               saved = true;
+              expect(attachments).toEqual(textBatch ? [text, attachment] : [attachment]);
               return attachments.map(({ data: _data, ...meta }) => ({
                 ...meta,
                 filePath: '/tmp/attachments/' + meta.filename,
