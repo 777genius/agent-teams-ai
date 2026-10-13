@@ -64,7 +64,13 @@ describe('visualization modal inside message hover card', () => {
           )
         );
         expect(document.querySelector('[role="dialog"]')).toBeNull();
-        expect(document.activeElement).toBe(opener);
+        // FocusScope restores trigger focus from a deferred unmount callback.
+        await act(async () => {
+          await vi.waitFor(() => expect(document.activeElement).toBe(opener), {
+            timeout: 1000,
+            interval: 10,
+          });
+        });
       } finally {
         await act(async () => root.unmount());
         host.remove();
