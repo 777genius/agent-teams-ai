@@ -965,5 +965,34 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "taskFolders": {
+    "title": "Task folders",
+    "newFolder": "New folder",
+    "newSubfolder": "New subfolder",
+    "renameFolder": "Rename folder",
+    "deleteFolder": "Delete folder",
+    "move": "Move to…",
+    "reset": "Reset folder organization",
+    "folderName": "Folder name",
+    "destination": "Destination folder",
+    "unfiled": "Unfiled",
+    "root": "Root",
+    "showArchived": "Show archived tasks",
+    "archived": "Archived task",
+    "dragTask": "Drag task to a folder",
+    "dragFolder": "Drag folder",
+    "expand": "Expand folder",
+    "collapse": "Collapse folder",
+    "actions": "Folder or task actions",
+    "invalidName": "Use a name with 1–120 characters.",
+    "saveError": "Could not save folder organization. Your last saved structure is preserved.",
+    "readOnly": "Folder storage is unavailable or invalid. Organization is read only.",
+    "loading": "Loading folders…",
+    "retry": "Retry",
+    "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
+    "resetDescription": "Remove all folder organization. Tasks, pins, archives and task names are preserved.",
+    "organizationDescription": "Organize tasks without changing their team, project or status.",
+    "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable"
   }
 }

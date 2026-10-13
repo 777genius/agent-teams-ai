@@ -9,6 +9,12 @@ const storeState = {
   openGlobalTaskDetail: vi.fn(),
   teamByName: {} as Record<string, { members: unknown[] }>,
 };
+const moduleMocks = vi.hoisted(() => ({
+  clearTaskManualUnread: vi.fn(),
+  openTaskFolderMove: vi.fn(),
+  preloadGlobalTaskDetailDialog: vi.fn(),
+  taskFolderEditingReady: true,
+}));
 
 let unreadCountValue = 0;
 let isLightValue = false;
@@ -20,6 +26,25 @@ vi.mock('../../../../src/renderer/store', () => ({
 vi.mock('../../../../src/renderer/hooks/useUnreadCommentCount', () => ({
   useUnreadCommentCount: () => unreadCountValue,
 }));
+
+vi.mock('../../../../src/renderer/services/commentReadStorage', () => ({
+  clearTaskManualUnread: moduleMocks.clearTaskManualUnread,
+}));
+
+vi.mock(
+  '../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot',
+  () => ({
+    preloadGlobalTaskDetailDialog: moduleMocks.preloadGlobalTaskDetailDialog,
+  })
+);
+
+vi.mock(
+  '../../../../src/features/task-folders/renderer/adapters/taskFolderEditing',
+  () => ({
+    useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
+    taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
+  })
+);
 
 vi.mock('../../../../src/renderer/hooks/useTheme', () => ({
   useTheme: () => ({
@@ -83,6 +108,7 @@ vi.mock('zustand/react/shallow', () => ({
 vi.mock('lucide-react', () => {
   const Icon = (props: React.SVGProps<SVGSVGElement>) => React.createElement('svg', props);
   return {
+    GripVertical: Icon,
     CheckCircle2: Icon,
     Circle: Icon,
     Eye: Icon,
@@ -135,6 +161,10 @@ describe('SidebarTaskItem unread styling', () => {
     isLightValue = false;
     storeState.openGlobalTaskDetail.mockReset();
     storeState.teamByName = {};
+    moduleMocks.clearTaskManualUnread.mockReset();
+    moduleMocks.openTaskFolderMove.mockReset();
+    moduleMocks.preloadGlobalTaskDetailDialog.mockReset();
+    moduleMocks.taskFolderEditingReady = true;
   });
 
   afterEach(() => {
@@ -156,9 +186,171 @@ describe('SidebarTaskItem unread styling', () => {
       await Promise.resolve();
     });
 
-    const button = host.querySelector('button');
-    expect(button?.className).toContain('bg-blue-500/[0.025]');
-    expect(button?.className).not.toContain('bg-blue-500/[0.05]');
+    const row = host.querySelector('[data-task-key]');
+    expect(row?.className).toContain('bg-blue-500/[0.025]');
+    expect(row?.className).not.toContain('bg-blue-500/[0.05]');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders sibling native detail and move buttons and separates their actions', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>('[data-task-key]')!;
+    const detail = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-detail"]')!;
+    const move = host.querySelector<HTMLButtonElement>(
+      '[data-testid="sidebar-task-drag-handle"]'
+    )!;
+
+    expect(row.tagName).toBe('DIV');
+    expect(row.getAttribute('role')).toBeNull();
+    expect(row.getAttribute('tabindex')).toBeNull();
+    expect(detail.tagName).toBe('BUTTON');
+    expect(detail.type).toBe('button');
+    expect(move.tagName).toBe('BUTTON');
+    expect(move.type).toBe('button');
+    expect(move.disabled).toBe(false);
+    expect(move.getAttribute('draggable')).toBe('true');
+    expect(detail.contains(move)).toBe(false);
+    expect(move.closest('button')).toBe(move);
+
+    await act(async () => detail.focus());
+    expect(moduleMocks.preloadGlobalTaskDetailDialog).toHaveBeenCalled();
+
+    await act(async () =>
+      move.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      )
+    );
+    expect(moduleMocks.openTaskFolderMove).not.toHaveBeenCalled();
+    await act(async () => move.click());
+    expect(moduleMocks.openTaskFolderMove).toHaveBeenCalledExactlyOnceWith({
+      teamName: 'alpha-team',
+      taskId: 'task-1',
+    });
+    expect(storeState.openGlobalTaskDetail).not.toHaveBeenCalled();
+    expect(moduleMocks.clearTaskManualUnread).not.toHaveBeenCalled();
+
+    await act(async () =>
+      detail.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      )
+    );
+    expect(storeState.openGlobalTaskDetail).not.toHaveBeenCalled();
+    await act(async () => detail.click());
+    expect(storeState.openGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith(
+      'alpha-team',
+      'task-1'
+    );
+    expect(moduleMocks.clearTaskManualUnread).toHaveBeenCalledExactlyOnceWith(
+      'alpha-team',
+      'task-1'
+    );
+    expect(moduleMocks.openTaskFolderMove).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the move control disabled until task-folder editing is ready', async () => {
+    moduleMocks.taskFolderEditingReady = false;
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      await Promise.resolve();
+    });
+
+    const move = host.querySelector<HTMLButtonElement>(
+      '[data-testid="sidebar-task-drag-handle"]'
+    )!;
+    expect(move.disabled).toBe(true);
+    expect(move.getAttribute('draggable')).toBe('false');
+    await act(async () => move.click());
+    expect(moduleMocks.openTaskFolderMove).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the rename editor outside buttons and preserves IME, Escape and blur callbacks', async () => {
+    const onRenameComplete = vi.fn();
+    const onRenameCancel = vi.fn();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          task: makeTask(),
+          renamingKey: 'alpha-team:task-1',
+          onRenameComplete,
+          onRenameCancel,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>('[data-task-key]')!;
+    const input = row.querySelector<HTMLInputElement>('input')!;
+    expect(input.closest('button')).toBeNull();
+    expect(row.querySelector('button')).toBeNull();
+    await act(async () => input.focus());
+
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, 'Renamed task');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () =>
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Enter',
+          bubbles: true,
+          cancelable: true,
+          isComposing: true,
+        })
+      )
+    );
+    expect(onRenameComplete).not.toHaveBeenCalled();
+    expect(onRenameCancel).not.toHaveBeenCalled();
+
+    await act(async () =>
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      )
+    );
+    expect(onRenameCancel).toHaveBeenCalledExactlyOnceWith();
+
+    await act(async () => input.blur());
+    expect(onRenameComplete).toHaveBeenCalledExactlyOnceWith(
+      'alpha-team',
+      'task-1',
+      'Renamed task'
+    );
 
     await act(async () => {
       root.unmount();
@@ -417,31 +609,28 @@ describe('SidebarTaskItem unread styling', () => {
     }
   );
 
-  it.each([undefined, 'invalid'])(
-    'omits time when both timestamps are unusable (%s)',
-    (date) => {
-      vi.useFakeTimers();
-      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  it.each([undefined, 'invalid'])('omits time when both timestamps are unusable (%s)', (date) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
-      const host = document.createElement('div');
-      document.body.appendChild(host);
-      const root = createRoot(host);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
 
-      act(() => {
-        root.render(
-          React.createElement(SidebarTaskItem, {
-            task: makeTask({ createdAt: date, updatedAt: date }),
-          })
-        );
-      });
+    act(() => {
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          task: makeTask({ createdAt: date, updatedAt: date }),
+        })
+      );
+    });
 
-      expect(host.querySelector('[data-testid="sidebar-task-relative-time"]')).toBeNull();
-      expect(host.textContent).not.toContain('Invalid');
-      expect(vi.getTimerCount()).toBe(0);
+    expect(host.querySelector('[data-testid="sidebar-task-relative-time"]')).toBeNull();
+    expect(host.textContent).not.toContain('Invalid');
+    expect(vi.getTimerCount()).toBe(0);
 
-      act(() => root.unmount());
-    }
-  );
+    act(() => root.unmount());
+  });
 
   it.each(['update', 'creation'])(
     'refreshes the relative %s label from the shared clock',

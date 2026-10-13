@@ -1,3 +1,5 @@
+import { RESERVED_CHART_SERIES_NAMES } from './librarySchemas';
+
 import type { FenceState } from '../contracts';
 import type { ParseResult } from '@openuidev/lang-core';
 
@@ -125,8 +127,19 @@ function chart(
     checks.push(text(props.xLabel, 500, state, true), text(props.yLabel, 500, state, true));
     let points = 0;
     if (Array.isArray(props.series)) {
+      const categories = new Set<string>();
       for (const series of props.series) {
-        const values = propsOf(series).values;
+        const seriesProps = propsOf(series);
+        const category = seriesProps.category;
+        if (typeof category === 'string') {
+          if (RESERVED_CHART_SERIES_NAMES.some((name) => name === category)) {
+            checks.push(reject('Unsupported chart series name.'));
+          } else if (categories.has(category)) {
+            checks.push(reject('Chart series names must be unique.'));
+          }
+          categories.add(category);
+        }
+        const values = seriesProps.values;
         if (Array.isArray(values)) {
           points += values.length;
           if (

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const RESERVED_CHART_SERIES_NAMES = ['category', '__proto__'] as const;
+
 export const cardHeaderProps = z.object({
   title: z.string().max(500).optional(),
   subtitle: z.string().max(500).optional(),

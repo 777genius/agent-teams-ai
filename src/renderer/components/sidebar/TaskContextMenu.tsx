@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { taskFolderMoveRequest, useTaskFolderEditingReady } from '@features/task-folders/renderer';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -26,6 +27,7 @@ export interface TaskContextMenuProps {
 
 type TaskContextMenuContentProps = Pick<
   TaskContextMenuProps,
+  | 'task'
   | 'isPinned'
   | 'isArchived'
   | 'onTogglePin'
@@ -36,6 +38,7 @@ type TaskContextMenuContentProps = Pick<
 >;
 
 const TaskContextMenuLazyContent = ({
+  task,
   isPinned,
   isArchived,
   onTogglePin,
@@ -45,6 +48,7 @@ const TaskContextMenuLazyContent = ({
   onDelete,
 }: TaskContextMenuContentProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const taskFolderEditingReady = useTaskFolderEditingReady();
 
   return (
     <ContextMenuContent onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -60,6 +64,13 @@ const TaskContextMenuLazyContent = ({
             <span>{t('taskContextMenu.pin')}</span>
           </>
         )}
+      </ContextMenuItem>
+
+      <ContextMenuItem
+        disabled={!taskFolderEditingReady}
+        onSelect={() => taskFolderMoveRequest.open({ teamName: task.teamName, taskId: task.id })}
+      >
+        <span>{t('taskFolders.move')}</span>
       </ContextMenuItem>
 
       <ContextMenuItem onSelect={onRename}>
@@ -102,7 +113,7 @@ const TaskContextMenuLazyContent = ({
 };
 
 export const TaskContextMenu = ({
-  task: _task,
+  task,
   isPinned,
   isArchived,
   onTogglePin,
@@ -121,6 +132,7 @@ export const TaskContextMenu = ({
       </ContextMenuTrigger>
       {open ? (
         <TaskContextMenuLazyContent
+          task={task}
           isPinned={isPinned}
           isArchived={isArchived}
           onTogglePin={onTogglePin}

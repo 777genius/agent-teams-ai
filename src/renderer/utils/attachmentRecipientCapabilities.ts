@@ -56,7 +56,14 @@ export function resolveMemberAttachmentCapability(
   return {
     providerId,
     model,
-    capability: resolveAgentAttachmentCapability({ providerId, model }),
+    capability: resolveAgentAttachmentCapability({
+      providerId,
+      model,
+      nativeInboxTextAttachmentsSupported:
+        !isLeadMember(member) &&
+        member.nativeInboxAttachmentsSupported === true &&
+        member.nativeInboxTextAttachmentsSupported === true,
+    }),
   };
 }
 

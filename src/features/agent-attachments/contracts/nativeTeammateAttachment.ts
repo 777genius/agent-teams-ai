@@ -15,6 +15,7 @@ export interface NativeAttachmentDigest {
 }
 export interface NativeMemberCapability {
   nativeInboxAttachmentsSupported?: boolean;
+  nativeInboxTextAttachmentsSupported?: boolean;
 }
 
 export interface AttachmentMeta extends NativeAttachmentDigest {
