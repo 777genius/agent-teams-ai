@@ -84,8 +84,7 @@ export const TaskFoldersHost = ({
           : sessionPointer?.session === state.session
             ? sessionPointer.point
             : lastPointer;
-      if (event.type === 'drop' && point)
-        sessionPointer = { point, session: state.session };
+      if (event.type === 'drop' && point) sessionPointer = { point, session: state.session };
       panelController.hold('pointer', insidePanel(point));
       if (event.type === 'drop') panelController.endAfterDrop();
       else panelController.end();

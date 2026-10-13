@@ -244,10 +244,7 @@ export const FolderTree = ({
           const live = (id: string): boolean => model.projection.nodes.has(`folder:${id}`);
           const sibling =
             roots.slice(index + 1).find(live) ??
-            roots
-              .slice(0, Math.max(index, 0))
-              .reverse()
-              .find(live);
+            roots.slice(0, Math.max(index, 0)).reverse().find(live);
           old = sibling ? `folder:${sibling}` : UNFILED;
         }
       }
@@ -367,9 +364,7 @@ export const FolderTree = ({
     } catch (caught) {
       if (editSession.current === session)
         setError(
-          caught instanceof Error && caught.message === 'read-only'
-            ? 'read-only'
-            : 'save-error'
+          caught instanceof Error && caught.message === 'read-only' ? 'read-only' : 'save-error'
         );
     } finally {
       if (editSession.current === session) setSaving(false);

@@ -3,9 +3,7 @@ import { parentOf } from '../../core/domain/folders';
 import type { Snapshot } from '../../core/domain/folders';
 /** Paths distinguish equal names in different branches; sibling ordinals distinguish equal names in one branch. */
 export function folderChoices(snapshot: Snapshot): { id: string; label: string }[] {
-  const folders = new Map(
-    snapshot.folders.map((folder) => [folder.id, folder] as const)
-  );
+  const folders = new Map(snapshot.folders.map((folder) => [folder.id, folder] as const));
   const siblingIds = (parent: string | null): string[] =>
     parent === null
       ? snapshot.rootFolderIds

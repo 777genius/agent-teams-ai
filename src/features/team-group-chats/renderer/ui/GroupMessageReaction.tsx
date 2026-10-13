@@ -13,7 +13,11 @@ export const GroupMessageReaction = ({ target }: { target: GroupMessageReactionT
   const action = snapshot?.hasUserReacted ? 'remove' : 'add';
   const label = t(`activity.reactions.${action}`, { count });
   return (
-    <div className="flex items-center gap-2" data-group-message-reaction="true">
+    <div
+      className="flex items-center gap-2"
+      data-group-message-reaction="true"
+      data-reaction-hover-only={count === 0 && !pending && !failed ? 'true' : undefined}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <span
