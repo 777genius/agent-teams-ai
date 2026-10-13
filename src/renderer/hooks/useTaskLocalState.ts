@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 const PINNED_KEY = 'taskPinnedIds';
 const PINNED_PROJECT_KEY = 'taskPinnedProjectKeys';
@@ -72,124 +72,92 @@ export interface TaskLocalState {
   renameTask: (teamName: string, taskId: string, newSubject: string) => void;
 }
 
-export function useTaskLocalState(): TaskLocalState {
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => loadSet(PINNED_KEY));
-  const [pinnedProjectKeys, setPinnedProjectKeys] = useState<Set<string>>(() =>
-    loadSet(PINNED_PROJECT_KEY)
-  );
-  const [archivedIds, setArchivedIds] = useState<Set<string>>(() => loadSet(ARCHIVED_KEY));
-  const [renamedSubjects, setRenamedSubjects] = useState<Map<string, string>>(() =>
-    loadMap(RENAMED_KEY)
-  );
-
-  const isPinned = useCallback(
-    (teamName: string, taskId: string): boolean =>
-      pinnedIds.has(makeCompositeKey(teamName, taskId)),
-    [pinnedIds]
-  );
-
-  const isProjectPinned = useCallback(
-    (projectKey: string): boolean => pinnedProjectKeys.has(projectKey),
-    [pinnedProjectKeys]
-  );
-
-  const isArchived = useCallback(
-    (teamName: string, taskId: string): boolean =>
-      archivedIds.has(makeCompositeKey(teamName, taskId)),
-    [archivedIds]
-  );
-
-  const getRenamedSubject = useCallback(
-    (teamName: string, taskId: string): string | undefined =>
-      renamedSubjects.get(makeCompositeKey(teamName, taskId)),
-    [renamedSubjects]
-  );
-
-  const togglePin = useCallback((teamName: string, taskId: string): void => {
-    const key = makeCompositeKey(teamName, taskId);
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      saveSet(PINNED_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const toggleProjectPin = useCallback((projectKey: string): void => {
-    if (!projectKey) return;
-    setPinnedProjectKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(projectKey)) {
-        next.delete(projectKey);
-      } else {
-        next.add(projectKey);
-      }
-      saveSet(PINNED_PROJECT_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const toggleArchive = useCallback((teamName: string, taskId: string): void => {
-    const key = makeCompositeKey(teamName, taskId);
-    setArchivedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      saveSet(ARCHIVED_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const renameTask = useCallback((teamName: string, taskId: string, newSubject: string): void => {
-    const key = makeCompositeKey(teamName, taskId);
-    setRenamedSubjects((prev) => {
-      const next = new Map(prev);
-      const trimmed = newSubject.trim();
-      if (trimmed) {
-        next.set(key, trimmed);
-      } else {
-        next.delete(key);
-      }
+const listeners = new Set<() => void>();
+let shared: TaskLocalState | undefined;
+function readState(): TaskLocalState {
+  const pinnedIds = loadSet(PINNED_KEY);
+  const pinnedProjectKeys = loadSet(PINNED_PROJECT_KEY);
+  const archivedIds = loadSet(ARCHIVED_KEY);
+  const renamedSubjects = loadMap(RENAMED_KEY);
+  return makeState(pinnedIds, pinnedProjectKeys, archivedIds, renamedSubjects);
+}
+function makeState(
+  pinnedIds: Set<string>,
+  pinnedProjectKeys: Set<string>,
+  archivedIds: Set<string>,
+  renamedSubjects: Map<string, string>
+): TaskLocalState {
+  return {
+    pinnedIds,
+    pinnedProjectKeys,
+    archivedIds,
+    renamedSubjects,
+    isPinned: (team, id) => pinnedIds.has(makeCompositeKey(team, id)),
+    isProjectPinned: (key) => pinnedProjectKeys.has(key),
+    isArchived: (team, id) => archivedIds.has(makeCompositeKey(team, id)),
+    getRenamedSubject: (team, id) => renamedSubjects.get(makeCompositeKey(team, id)),
+    togglePin: (team, id) => toggle('pinnedIds', PINNED_KEY, makeCompositeKey(team, id)),
+    toggleProjectPin: (key) => {
+      if (key) toggle('pinnedProjectKeys', PINNED_PROJECT_KEY, key);
+    },
+    toggleArchive: (team, id) => toggle('archivedIds', ARCHIVED_KEY, makeCompositeKey(team, id)),
+    renameTask: (team, id, subject) => {
+      const state = getSnapshot();
+      const next = new Map(state.renamedSubjects);
+      const trimmed = subject.trim();
+      if (trimmed) next.set(makeCompositeKey(team, id), trimmed);
+      else next.delete(makeCompositeKey(team, id));
       saveMap(RENAMED_KEY, next);
-      return next;
-    });
-  }, []);
-
-  return useMemo(
-    () => ({
-      pinnedIds,
-      pinnedProjectKeys,
-      archivedIds,
-      renamedSubjects,
-      isPinned,
-      isProjectPinned,
-      isArchived,
-      getRenamedSubject,
-      togglePin,
-      toggleProjectPin,
-      toggleArchive,
-      renameTask,
-    }),
-    [
-      pinnedIds,
-      pinnedProjectKeys,
-      archivedIds,
-      renamedSubjects,
-      isPinned,
-      isProjectPinned,
-      isArchived,
-      getRenamedSubject,
-      togglePin,
-      toggleProjectPin,
-      toggleArchive,
-      renameTask,
-    ]
+      publish(makeState(state.pinnedIds, state.pinnedProjectKeys, state.archivedIds, next));
+    },
+  };
+}
+function publish(next: TaskLocalState): void {
+  shared = next;
+  listeners.forEach((listener) => listener());
+}
+function toggle(
+  field: 'pinnedIds' | 'pinnedProjectKeys' | 'archivedIds',
+  storageKey: string,
+  key: string
+): void {
+  const state = getSnapshot();
+  const next = new Set(state[field]);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  saveSet(storageKey, next);
+  const values = { ...state, [field]: next };
+  publish(
+    makeState(
+      values.pinnedIds,
+      values.pinnedProjectKeys,
+      values.archivedIds,
+      values.renamedSubjects
+    )
   );
+}
+function getSnapshot(): TaskLocalState {
+  shared ??= readState();
+  return shared;
+}
+function storageChanged(event: StorageEvent): void {
+  if (
+    event.key === null ||
+    [PINNED_KEY, PINNED_PROJECT_KEY, ARCHIVED_KEY, RENAMED_KEY].includes(event.key)
+  )
+    publish(readState());
+}
+function subscribe(listener: () => void): () => void {
+  if (!listeners.size) {
+    shared = readState();
+    window.addEventListener('storage', storageChanged);
+  }
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size) window.removeEventListener('storage', storageChanged);
+  };
+}
+export function useTaskLocalState(): TaskLocalState {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

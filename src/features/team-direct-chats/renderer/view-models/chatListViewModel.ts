@@ -1,3 +1,4 @@
+import { summarizeVisualizationFences } from '@features/chat-visualizations/contracts';
 import {
   getSanitizedInboxMessageSummary,
   getSanitizedInboxMessageText,
@@ -40,8 +41,10 @@ export function getChatMessagePreview(
   if (!message) {
     return { previewText: emptyPreview, previewFrom: null };
   }
-  const summary = getSanitizedInboxMessageSummary(message).replace(/\s+/g, ' ').trim();
-  const text = (summary || getSanitizedInboxMessageText(message)).replace(/\s+/g, ' ').trim();
+  const summary = getSanitizedInboxMessageSummary(message).trim();
+  const text = summarizeVisualizationFences(summary || getSanitizedInboxMessageText(message))
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!text) {
     return { previewText: emptyPreview, previewFrom: null };
   }

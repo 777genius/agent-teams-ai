@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskDragHandle } from '@features/task-folders/renderer';
 import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -171,153 +172,173 @@ const SidebarTaskItemContent = ({
     unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.015]' : 'bg-blue-500/[0.025]') : '';
 
   return (
-    <button
-      type="button"
-      className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
+    <div
+      data-task-key={JSON.stringify([task.teamName, task.id])}
+      className={`group/task-row sidebar-task-item relative flex w-full flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onPointerEnter={preloadGlobalTaskDetailDialog}
-      onFocus={preloadGlobalTaskDetailDialog}
-      onClick={() => {
-        if (!isRenaming) {
-          clearTaskManualUnread(task.teamName, task.id);
-          openGlobalTaskDetail(task.teamName, task.id);
-        }
-      }}
     >
-      {/* Row 1: status + subject */}
-      <div className="w-full overflow-hidden">
-        {isRenaming ? (
-          <div className="flex items-start gap-1.5">
-            <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
-            <input
-              ref={inputRef}
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (!isImeComposing(e) && e.key === 'Enter') {
-                  e.preventDefault();
-                  const trimmed = editValue.trim();
-                  if (trimmed && trimmed !== task.subject) {
-                    onRenameComplete?.(task.teamName, task.id, trimmed);
-                  } else {
-                    onRenameCancel?.();
-                  }
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  onRenameCancel?.();
-                }
-              }}
-              onBlur={() => {
+      {isRenaming ? (
+        <div className="flex w-full items-start gap-1.5">
+          <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (!isImeComposing(e) && e.key === 'Enter') {
+                e.preventDefault();
                 const trimmed = editValue.trim();
                 if (trimmed && trimmed !== task.subject) {
                   onRenameComplete?.(task.teamName, task.id, trimmed);
                 } else {
                   onRenameCancel?.();
                 }
-              }}
-              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
-              style={{ color: 'var(--color-text-muted)' }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        ) : (
-          <span
-            className="line-clamp-2 text-[13px] font-medium leading-tight"
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                onRenameCancel?.();
+              }
+            }}
+            onBlur={() => {
+              const trimmed = editValue.trim();
+              if (trimmed && trimmed !== task.subject) {
+                onRenameComplete?.(task.teamName, task.id, trimmed);
+              } else {
+                onRenameCancel?.();
+              }
+            }}
+            className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
             style={{ color: 'var(--color-text-muted)' }}
-            title={displaySubject}
-          >
-            <StatusIcon className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)} />
-            {unreadCount > 0 &&
-              (unreadCount === 1 ? (
-                <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
-              ) : (
-                <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              ))}
-            {displaySubject}
-            {isTeamTaskNeedsFixActionable(task) && (
-              <span
-                className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-              >
-                {tCommon('tasks.reviewState.needsFix')}
-              </span>
-            )}
-          </span>
-        )}
-      </div>
-
-      {/* Row 2: project + owner (when no team row) + date */}
-      <div
-        className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
-        style={{ color: 'var(--color-text-muted)' }}
-      >
-        {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
-        {projectLabel && (
-          <span
-            className="min-w-0 truncate"
-            style={projectColorSet ? { color: projectColorSet.text } : undefined}
-          >
-            {projectLabel}
-          </span>
-        )}
-        {!showTeamRow && (
-          <>
-            {projectLabel && (
-              <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
-                ·
-              </span>
-            )}
-            <span
-              className="hidden shrink-0 opacity-100 group-hover/task-row:inline dark:opacity-60"
-              style={ownerTextColor ? { color: ownerTextColor } : undefined}
-            >
-              {task.owner ?? t('tasks.unassigned')}
-            </span>
-          </>
-        )}
-        {dateLabel && exactDateLabel ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                data-testid="sidebar-task-relative-time"
-                dir="auto"
-                className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
-              >
-                {dateLabel}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="whitespace-nowrap">
-              {exactDateLabel}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-      </div>
-
-      {/* Row 3: Team: name · owner */}
-      {showTeamRow && (
-        <div
-          className={cn(
-            'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
-            revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
-          )}
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>
-          <span className="shrink-0" style={teamColor ? { color: teamColor.text } : undefined}>
-            {task.teamDisplayName}
-          </span>
-          <span className="opacity-100 dark:opacity-40">·</span>
-          <span
-            className="shrink-0 opacity-100 dark:opacity-60"
-            style={ownerTextColor ? { color: ownerTextColor } : undefined}
-          >
-            {task.owner ?? t('tasks.unassigned')}
-          </span>
+            onClick={(e) => e.stopPropagation()}
+            onFocus={preloadGlobalTaskDetailDialog}
+          />
         </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            data-testid="sidebar-task-detail"
+            className="flex w-full min-w-0 cursor-pointer flex-col justify-center text-left"
+            onFocus={preloadGlobalTaskDetailDialog}
+            onClick={() => {
+              clearTaskManualUnread(task.teamName, task.id);
+              openGlobalTaskDetail(task.teamName, task.id);
+            }}
+          >
+            {/* Row 1: status + subject */}
+            <div className="w-full overflow-hidden">
+              <span
+                className="line-clamp-2 text-[13px] font-medium leading-tight"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <StatusIcon
+                  className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)}
+                />
+                <span aria-hidden className="mr-1 inline-block size-3 align-middle" />
+                {unreadCount > 0 &&
+                  (unreadCount === 1 ? (
+                    <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
+                  ) : (
+                    <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  ))}
+                {displaySubject}
+                {isTeamTaskNeedsFixActionable(task) && (
+                  <span
+                    className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
+                  >
+                    {tCommon('tasks.reviewState.needsFix')}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Row 2: project + owner (when no team row) + date */}
+            <div
+              className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
+              {projectLabel && (
+                <span
+                  className="min-w-0 truncate"
+                  style={projectColorSet ? { color: projectColorSet.text } : undefined}
+                >
+                  {projectLabel}
+                </span>
+              )}
+              {!showTeamRow && (
+                <>
+                  {projectLabel && (
+                    <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
+                      ·
+                    </span>
+                  )}
+                  <span
+                    className="hidden shrink-0 opacity-100 group-hover/task-row:inline dark:opacity-60"
+                    style={ownerTextColor ? { color: ownerTextColor } : undefined}
+                  >
+                    {task.owner ?? t('tasks.unassigned')}
+                  </span>
+                </>
+              )}
+              {dateLabel && exactDateLabel ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      data-testid="sidebar-task-relative-time"
+                      dir="auto"
+                      className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
+                    >
+                      {dateLabel}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="whitespace-nowrap">
+                    {exactDateLabel}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+            </div>
+
+            {/* Row 3: Team: name · owner */}
+            {showTeamRow && (
+              <div
+                className={cn(
+                  'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
+                  revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
+                )}
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <span className="shrink-0 opacity-100 dark:opacity-50">
+                  {t('tasks.teamPrefix')}
+                </span>
+                <span
+                  className="shrink-0"
+                  style={teamColor ? { color: teamColor.text } : undefined}
+                >
+                  {task.teamDisplayName}
+                </span>
+                <span className="opacity-100 dark:opacity-40">·</span>
+                <span
+                  className="shrink-0 opacity-100 dark:opacity-60"
+                  style={ownerTextColor ? { color: ownerTextColor } : undefined}
+                >
+                  {task.owner ?? t('tasks.unassigned')}
+                </span>
+              </div>
+            )}
+          </button>
+          <TaskDragHandle
+            identity={{ teamName: task.teamName, taskId: task.id }}
+            subject={displaySubject}
+            className="absolute left-[22px] top-1.5 z-10"
+            onFocus={preloadGlobalTaskDetailDialog}
+          />
+        </>
       )}
-    </button>
+    </div>
   );
 };
 
