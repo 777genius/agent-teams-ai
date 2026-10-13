@@ -20,8 +20,6 @@ import {
   PROSE_HEADING,
   PROSE_LINK,
   PROSE_MUTED,
-  PROSE_PRE_BG,
-  PROSE_PRE_BORDER,
   PROSE_TABLE_BORDER,
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
@@ -46,7 +44,8 @@ import {
 import { highlightLine } from '../viewers/syntaxHighlighter';
 
 import { FileLink, isRelativeUrl } from './FileLink';
-import { MermaidDiagram } from './MermaidDiagram';
+import { MarkdownPre } from './MarkdownPre';
+import { MarkdownPreContext } from './MarkdownPreContext';
 
 // =============================================================================
 // Types
@@ -382,19 +381,6 @@ const LocalImage = React.memo(function LocalImage({
   return <img src={dataUrl} alt={alt || ''} className="my-2 max-w-full rounded" />;
 });
 
-/** Extract plain text from a hast (HTML AST) node tree */
-interface HastNode {
-  type: string;
-  value?: string;
-  children?: HastNode[];
-}
-
-function hastToText(node: HastNode): string {
-  if (node.type === 'text') return node.value ?? '';
-  if (node.children) return node.children.map(hastToText).join('');
-  return '';
-}
-
 function extractLanguageFromClassName(className?: string): string {
   return /(?:^|\s)language-([^\s]+)/.exec(className ?? '')?.[1] ?? '';
 }
@@ -408,7 +394,6 @@ function createViewerMarkdownComponents(
   isLight = false,
   teamColorByName: ReadonlyMap<string, string> = new Map(),
   onTeamClick?: (teamName: string) => void,
-  copyCodeBlocks: boolean = false,
   mode: ViewerMarkdownMode = 'default'
 ): Components {
   const hl = (children: React.ReactNode): React.ReactNode =>
@@ -702,46 +687,7 @@ function createViewerMarkdownComponents(
       );
     },
 
-    // Code blocks — intercept mermaid diagrams at the pre level
-    pre: ({ children, node }) => {
-      if (isCompactPreview) {
-        const compactText = extractTextFromReactNode(children).trim();
-        return (
-          <code
-            className="break-all rounded px-1.5 py-0.5 font-mono text-xs"
-            style={{
-              backgroundColor: PROSE_CODE_BG,
-              color: PROSE_CODE_TEXT,
-            }}
-          >
-            {compactText}
-          </code>
-        );
-      }
-      // Check if this pre contains a mermaid code block
-      const codeEl = node?.children?.[0];
-      if (codeEl && 'tagName' in codeEl && codeEl.tagName === 'code' && 'properties' in codeEl) {
-        const cls = (codeEl.properties as Record<string, unknown>)?.className;
-        if (Array.isArray(cls) && cls.some((c) => String(c) === 'language-mermaid')) {
-          return <MermaidDiagram code={hastToText(codeEl as unknown as HastNode)} />;
-        }
-      }
-
-      const codeText = copyCodeBlocks ? extractTextFromReactNode(children).trim() : '';
-
-      return (
-        <pre
-          className={`my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed ${codeText ? 'group relative' : ''}`.trim()}
-          style={{
-            backgroundColor: PROSE_PRE_BG,
-            border: `1px solid ${PROSE_PRE_BORDER}`,
-          }}
-        >
-          {codeText ? <CopyButton text={codeText} /> : null}
-          {children}
-        </pre>
-      );
-    },
+    pre: MarkdownPre,
 
     // Blockquotes
     blockquote: ({ children }) =>
@@ -925,7 +871,6 @@ export const CompactMarkdownPreview: React.FC<CompactMarkdownPreviewProps> = Rea
           isLight,
           teamColorByName,
           onTeamClick,
-          false,
           'compact-preview'
         ),
       [isLight, onTeamClick, teamColorByName]
@@ -933,16 +878,20 @@ export const CompactMarkdownPreview: React.FC<CompactMarkdownPreviewProps> = Rea
 
     return (
       <div className={`min-w-0 overflow-hidden ${className}`}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={REHYPE_PLUGINS_NO_HIGHLIGHT}
-          components={components}
-          urlTransform={allowCustomProtocols}
-          allowElement={isAllowedElement}
-          unwrapDisallowed
+        <MarkdownPreContext.Provider
+          value={{ originalMarkdown: content, copyCodeBlocks: false, compactPreview: true }}
         >
-          {content}
-        </ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={REHYPE_PLUGINS_NO_HIGHLIGHT}
+            components={components}
+            urlTransform={allowCustomProtocols}
+            allowElement={isAllowedElement}
+            unwrapDisallowed
+          >
+            {content}
+          </ReactMarkdown>
+        </MarkdownPreContext.Provider>
       </div>
     );
   }
@@ -1118,10 +1067,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
   const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick, copyable)
+    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick)
     : isLight
-      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick, copyable)
-      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick, copyable);
+      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick)
+      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick);
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir
@@ -1202,16 +1151,20 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
       {/* Markdown content with scroll */}
       <div className={`min-w-0 overflow-auto ${maxHeight}`}>
         <div className="min-w-0 break-words p-2">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={disableHighlight ? REHYPE_PLUGINS_NO_HIGHLIGHT : REHYPE_PLUGINS}
-            components={components}
-            urlTransform={allowCustomProtocols}
-            allowElement={isAllowedElement}
-            unwrapDisallowed
+          <MarkdownPreContext.Provider
+            value={{ originalMarkdown: content, copyCodeBlocks: copyable, compactPreview: false }}
           >
-            {content}
-          </ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={disableHighlight ? REHYPE_PLUGINS_NO_HIGHLIGHT : REHYPE_PLUGINS}
+              components={components}
+              urlTransform={allowCustomProtocols}
+              allowElement={isAllowedElement}
+              unwrapDisallowed
+            >
+              {content}
+            </ReactMarkdown>
+          </MarkdownPreContext.Provider>
         </div>
       </div>
     </div>

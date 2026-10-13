@@ -3,6 +3,8 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { createHash } from 'crypto';
 
+import { buildChatVisualizationBriefing } from '../provisioning/TeamProvisioningVisualizationPrompt';
+
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 const { createController } = agentTeamsControllerModule;
@@ -98,11 +100,7 @@ function buildContextText(params: {
   briefing: string;
   maxContextChars?: number;
 }): string {
-  const briefing = boundText(
-    redactNativeBootstrapContextText(params.briefing),
-    MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS
-  );
-  return boundText(
+  const prefix =
     [
       '<agent_teams_native_bootstrap_context>',
       `Team: ${params.teamName}`,
@@ -111,12 +109,17 @@ function buildContextText(params: {
       `Project: ${params.cwd}`,
       '',
       '<member_briefing_context_data>',
-      briefing,
-      '</member_briefing_context_data>',
-      '</agent_teams_native_bootstrap_context>',
-    ].join('\n'),
-    params.maxContextChars ?? MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS
+    ].join('\n') + '\n';
+  const suffix = '\n</member_briefing_context_data>\n</agent_teams_native_bootstrap_context>';
+  const maxChars = params.maxContextChars ?? MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS;
+  const briefing = buildChatVisualizationBriefing(
+    boundText(
+      redactNativeBootstrapContextText(params.briefing),
+      MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS
+    ),
+    Math.min(MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS, maxChars - prefix.length - suffix.length)
   );
+  return prefix + briefing + suffix;
 }
 
 function shouldUseCompactNativeBootstrapContext(nativeMemberCount: number): boolean {
@@ -331,6 +334,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
           await controller.taskBoard.memberBriefing(member.name, {
             runtimeProvider: resolveMemberBriefingRuntimeProvider(providerId),
             includeActiveProcesses: false,
+            includeChatVisualizationProtocol: false,
           })
         );
       } catch (error) {

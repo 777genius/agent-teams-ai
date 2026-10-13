@@ -13,6 +13,10 @@ const workSync = require('./internal/workSync.js');
 const groupChats = require('./internal/groupChats.js');
 const agentBlocks = require('./internal/agentBlocks.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
+const {
+  buildChatVisualizationProtocolText,
+  buildChatVisualizationRefreshInstruction,
+} = require('./internal/chatVisualizationProtocol.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -49,6 +53,8 @@ module.exports = {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },
   protocols: {
+    buildChatVisualizationProtocolText,
+    buildChatVisualizationRefreshInstruction,
     buildActionModeProtocolText: tasks.buildActionModeProtocolText,
     MEMBER_DELEGATE_DESCRIPTION: tasks.MEMBER_DELEGATE_DESCRIPTION,
     buildProcessProtocolText: tasks.buildProcessProtocolText,

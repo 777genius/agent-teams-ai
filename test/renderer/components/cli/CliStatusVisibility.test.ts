@@ -646,7 +646,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('keeps authenticated dashboard actions visible after install completion', async () => {
+  it('hides Extensions while keeping Usage visible after install completion', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = createInstalledCliStatus({
       authLoggedIn: true,
@@ -661,7 +661,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Extensions');
+    expect(host.textContent).not.toContain('Extensions');
+    expect(host.textContent).toContain('Usage');
 
     await act(async () => {
       root.unmount();
@@ -669,7 +670,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('keeps the dashboard Extensions button visible before authentication completes', async () => {
+  it('hides the dashboard Extensions button before authentication completes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = createInstalledCliStatus({
       authLoggedIn: false,
@@ -687,14 +688,9 @@ describe('CLI status visibility during completed install state', () => {
     const extensionsButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Extensions')
     );
-    expect(extensionsButton).not.toBeNull();
-
-    await act(async () => {
-      extensionsButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(storeState.openExtensionsTab).toHaveBeenCalledTimes(1);
+    expect(extensionsButton).toBeUndefined();
+    expect(storeState.openExtensionsTab).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Usage');
 
     await act(async () => {
       root.unmount();

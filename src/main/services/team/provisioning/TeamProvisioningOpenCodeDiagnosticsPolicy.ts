@@ -26,7 +26,7 @@ const OPEN_CODE_SECRET_FLAG_PATTERN =
   /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const OPEN_CODE_BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Z0-9._~+/=-]+/gi;
 const OPEN_CODE_SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
-const OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS = 12_000;
+export const OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS = 12_000;
 export const OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC =
   'OpenCode runtime binary is not installed or not reachable by launch preflight.';
 export const OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC =
