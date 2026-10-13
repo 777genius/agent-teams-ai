@@ -3,9 +3,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { GripVertical } from 'lucide-react';
 
 import { childKey } from '../../core/domain/folders';
-import { moveRequest } from '../adapters/moveRequest';
+import { taskFolderMoveRequest, useTaskFolderEditingReady } from '../adapters/taskFolderEditing';
 import { writeTaskDrag } from '../adapters/treeDropAdapter';
-import { folderController, panelController } from '../composition';
+import { panelController } from '../composition';
 
 import type { TaskIdentity } from '../../core/domain/folders';
 export const TaskDragHandle = ({
@@ -16,29 +16,32 @@ export const TaskDragHandle = ({
   subject: string;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const editingReady = useTaskFolderEditingReady();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           role="button"
-          tabIndex={0}
+          tabIndex={editingReady ? 0 : -1}
           aria-label={t('taskFolders.dragTask')}
+          aria-disabled={!editingReady}
           data-testid="sidebar-task-drag-handle"
-          draggable
-          className="mr-1 inline-flex cursor-grab align-middle"
+          draggable={editingReady}
+          className={`mr-1 inline-flex align-middle ${editingReady ? 'cursor-grab' : 'cursor-default opacity-50'}`}
           onClick={(event) => {
             event.stopPropagation();
-            moveRequest.open(identity);
+            if (!editingReady) return;
+            taskFolderMoveRequest.open(identity);
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               event.stopPropagation();
-              moveRequest.open(identity);
+              if (editingReady) taskFolderMoveRequest.open(identity);
             }
           }}
           onDragStart={(event) => {
-            if (folderController.getSnapshot().status !== 'ready') {
+            if (!editingReady) {
               event.preventDefault();
               return;
             }

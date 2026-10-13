@@ -33,9 +33,9 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 
-import { parentOf, validateName } from '../../core/domain/folders';
+import { childKey, parentOf, validateName } from '../../core/domain/folders';
 import { createEdgeScroll, observeEdgeDrag } from '../adapters/edgeScroll';
-import { moveRequest } from '../adapters/moveRequest';
+import { taskFolderMoveRequest } from '../adapters/taskFolderEditing';
 import { cancelHoverExpansion, clearTreeDrag } from '../adapters/treeDragLifecycle';
 import { TreeDropAdapter } from '../adapters/treeDropAdapter';
 import { folderController, panelController } from '../composition';
@@ -55,6 +55,7 @@ interface PendingRowAction {
   run: () => void;
   restoreFocus: boolean;
 }
+type RenameError = 'invalid-name' | 'read-only' | 'save-error';
 const stopRowMenuEvent = (event: React.SyntheticEvent): void => {
   event.stopPropagation();
 };
@@ -120,7 +121,7 @@ export const FolderTree = ({
   const editSession = useRef<string | null>(null);
   const [rename, setRename] = useState<string | null>(null);
   const [value, setValue] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<RenameError | null>(null);
   const [saving, setSaving] = useState(false);
   const projectionRef = useRef(model.projection);
   projectionRef.current = model.projection;
@@ -226,17 +227,29 @@ export const FolderTree = ({
     let active = true;
     const focused = tree.getState().focusedItem;
     if (focused && !tree.getItems().some((item) => item.getId() === focused)) {
+      let old: string | undefined;
       const oldNode = oldProjection.nodes.get(focused);
-      const parent = oldNode?.folderId
-        ? parentOf(oldProjection.snapshot, oldNode.folderId)
-        : oldProjection.snapshot.folders.find((f) =>
-            f.children.some(
-              (c) =>
-                c.kind === 'task' &&
-                `task:${JSON.stringify([c.identity.teamName, c.identity.taskId])}` === focused
-            )
-          )?.id;
-      const old = parent ? `folder:${parent}` : undefined;
+      if (oldNode?.kind === 'task') {
+        const container = oldProjection.snapshot.folders.find((f) =>
+          f.children.some((c) => c.kind === 'task' && childKey(c) === focused)
+        )?.id;
+        if (container) old = `folder:${container}`;
+      } else if (oldNode?.folderId) {
+        const parent = parentOf(oldProjection.snapshot, oldNode.folderId);
+        if (parent) old = `folder:${parent}`;
+        else {
+          const roots = oldProjection.snapshot.rootFolderIds;
+          const index = roots.indexOf(oldNode.folderId);
+          const live = (id: string): boolean => model.projection.nodes.has(`folder:${id}`);
+          const sibling =
+            roots.slice(index + 1).find(live) ??
+            roots
+              .slice(0, Math.max(index, 0))
+              .reverse()
+              .find(live);
+          old = sibling ? `folder:${sibling}` : UNFILED;
+        }
+      }
       const target =
         old && model.projection.nodes.has(old) && old !== ROOT ? old : tree.getItems()[0]?.getId();
       if (target) {
@@ -306,9 +319,10 @@ export const FolderTree = ({
     };
   }, [tree]);
   const startRename = (n: Node): void => {
+    if (model.state.status !== 'ready') return;
     setRename(n.folderId!);
     setValue(n.name);
-    setError(false);
+    setError(null);
     setSaving(false);
     editSession.current = crypto.randomUUID();
     panelController.hold(editHold, true);
@@ -316,7 +330,7 @@ export const FolderTree = ({
   const cancelRename = useCallback((): void => {
     editSession.current = null;
     setRename(null);
-    setError(false);
+    setError(null);
     setSaving(false);
     panelController.hold(editHold, false);
   }, [editHold]);
@@ -330,12 +344,15 @@ export const FolderTree = ({
   useEffect(() => {
     if (rename && !items.some((item) => item.getId() === `folder:${rename}`)) cancelRename();
   }, [rename, items, cancelRename]);
+  useEffect(() => {
+    if (rename && model.state.status !== 'ready') cancelRename();
+  }, [cancelRename, model.state.status, rename]);
   const saveRename = async (): Promise<void> => {
     if (!rename || saving) return;
     try {
       validateName(value);
     } catch {
-      setError(true);
+      setError('invalid-name');
       return;
     }
     const session = editSession.current;
@@ -346,8 +363,13 @@ export const FolderTree = ({
         editSession.current ?? undefined
       );
       if (editSession.current === session) cancelRename();
-    } catch {
-      if (editSession.current === session) setError(true);
+    } catch (caught) {
+      if (editSession.current === session)
+        setError(
+          caught instanceof Error && caught.message === 'read-only'
+            ? 'read-only'
+            : 'save-error'
+        );
     } finally {
       if (editSession.current === session) setSaving(false);
     }
@@ -380,7 +402,7 @@ export const FolderTree = ({
         ? [
             {
               label: t('taskFolders.move'),
-              run: () => moveRequest.open(n.identity!),
+              run: () => taskFolderMoveRequest.open(n.identity!),
               restoreFocus: false,
             },
             {
@@ -442,7 +464,7 @@ export const FolderTree = ({
                     item.primaryAction();
                   } else if (event.key === 'F2' && n.kind === 'folder') {
                     event.preventDefault();
-                    startRename(n);
+                    if (model.state.status === 'ready') startRename(n);
                   } else props.onKeyDown?.(event);
                 }}
               >
@@ -451,13 +473,20 @@ export const FolderTree = ({
                     {...drag}
                     type="button"
                     tabIndex={-1}
+                    disabled={model.state.status !== 'ready'}
+                    aria-disabled={model.state.status !== 'ready'}
                     aria-label={t(
                       n.kind === 'folder' ? 'taskFolders.dragFolder' : 'taskFolders.dragTask'
                     )}
                     data-testid={
                       n.kind === 'folder' ? 'task-folder-drag-handle' : 'sidebar-task-drag-handle'
                     }
+                    draggable={model.state.status === 'ready'}
                     onDragStart={(event) => {
+                      if (model.state.status !== 'ready') {
+                        event.preventDefault();
+                        return;
+                      }
                       drag.onDragStart?.(event);
                       if (!event.defaultPrevented) panelController.begin(n.id);
                     }}
@@ -467,10 +496,11 @@ export const FolderTree = ({
                     }}
                     onClick={(event) => {
                       event.stopPropagation();
-                      if (n.identity) moveRequest.open(n.identity);
+                      if (model.state.status !== 'ready') return;
+                      if (n.identity) taskFolderMoveRequest.open(n.identity);
                       else dialog({ kind: 'moveFolder', id: n.folderId! });
                     }}
-                    className="shrink-0 cursor-grab"
+                    className={`shrink-0 ${model.state.status === 'ready' ? 'cursor-grab' : 'cursor-default opacity-50'}`}
                   >
                     <GripVertical className="size-3" />
                   </button>
@@ -502,12 +532,12 @@ export const FolderTree = ({
                     autoFocus
                     value={value}
                     aria-label={t('taskFolders.renameFolder')}
-                    aria-invalid={error}
+                    aria-invalid={error === 'invalid-name'}
                     disabled={saving}
                     className="h-6 min-w-0 px-1 text-xs"
                     onChange={(event) => {
                       setValue(event.target.value);
-                      setError(false);
+                      setError(null);
                     }}
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => {
@@ -533,7 +563,13 @@ export const FolderTree = ({
                 )}
                 {editing && error && (
                   <span role="alert" className="text-red-400">
-                    {t('taskFolders.invalidName')}
+                    {t(
+                      error === 'invalid-name'
+                        ? 'taskFolders.invalidName'
+                        : error === 'read-only'
+                          ? 'taskFolders.readOnly'
+                          : 'taskFolders.saveError'
+                    )}
                   </span>
                 )}
                 {item.isFolder() && (

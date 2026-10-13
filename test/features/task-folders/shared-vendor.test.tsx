@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   append,
   applyCommand,
+  childKey,
   emptySnapshot,
 } from '../../../src/features/task-folders/core/domain/folders';
 import {
@@ -181,6 +182,12 @@ describe('shared task presentation and vendor external updates', () => {
 
 it('keeps a saving confirmation visible and held through Escape until its command settles', async () => {
   vi.useFakeTimers();
+  vi.spyOn(folderController, 'getSnapshot').mockReturnValue({
+    snapshot: emptySnapshot(),
+    status: 'ready',
+    pending: 0,
+    error: null,
+  });
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -232,9 +239,19 @@ it('keeps a saving confirmation visible and held through Escape until its comman
 
 function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
   const openTask = vi.fn();
-  let update!: (next: { tasks?: GlobalTask[]; snapshot?: Snapshot; shown?: boolean }) => void;
+  let update!: (next: {
+    tasks?: GlobalTask[];
+    snapshot?: Snapshot;
+    shown?: boolean;
+    status?: TaskFoldersHostModel['state']['status'];
+  }) => void;
   function Harness() {
-    const [state, set] = useState({ tasks, snapshot, shown: true });
+    const [state, set] = useState({
+      tasks,
+      snapshot,
+      shown: true,
+      status: 'ready' as TaskFoldersHostModel['state']['status'],
+    });
     update = (next) => set((previous) => ({ ...previous, ...next }));
     const local = useTaskLocalState();
     const model = {
@@ -246,7 +263,7 @@ function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
         true
       ),
       local,
-      state: { status: 'ready', snapshot: state.snapshot },
+      state: { status: state.status, snapshot: state.snapshot },
       panel: panelController.getSnapshot(),
       openTask,
       markUnread: vi.fn(),
@@ -257,8 +274,64 @@ function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
       </TooltipProvider>
     );
   }
-  return { Harness, openTask, update: (next: Parameters<typeof update>[0]) => update(next) };
+  return {
+    Harness,
+    openTask,
+    update: (next: Parameters<typeof update>[0]) => update(next),
+  };
 }
+
+it('keeps folder rename closed during non-ready loading and opens after readiness changes', async () => {
+  const fixture = treeHarness(
+    [],
+    applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
+  );
+  await act(async () => root.render(<fixture.Harness />));
+  const row = host.querySelector('[data-folder-id="a"]')!;
+  await act(async () => fixture.update({ status: 'loading' }));
+  expect(
+    (row.querySelector('[data-testid="task-folder-drag-handle"]') as HTMLButtonElement).disabled
+  ).toBe(true);
+  await act(async () =>
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  expect(row.querySelector('input')).toBeNull();
+  await act(async () => fixture.update({ status: 'ready' }));
+  expect(
+    (row.querySelector('[data-testid="task-folder-drag-handle"]') as HTMLButtonElement).disabled
+  ).toBe(false);
+  await act(async () =>
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  expect(row.querySelector('input')).not.toBeNull();
+});
+
+it('reports storage failure for a valid inline folder name as a save error', async () => {
+  const fixture = treeHarness(
+    [],
+    applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
+  );
+  vi.spyOn(folderController, 'execute').mockRejectedValue(new Error('quota'));
+  await act(async () => root.render(<fixture.Harness />));
+  const row = host.querySelector('[data-folder-id="a"]')!;
+  await act(async () =>
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+  );
+  const input = row.querySelector('input')!;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!;
+    setter.call(input, 'Valid name');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () =>
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  );
+  expect(row.querySelector('[role="alert"]')?.textContent).toBe('taskFolders.saveError');
+  expect(row.querySelector('[role="alert"]')?.textContent).not.toBe('taskFolders.invalidName');
+});
 
 it.each([false, true])(
   'opens an arrow-focused task with Enter (archived=%s), preserving nested controls',
@@ -505,6 +578,7 @@ it('removes deleted expanded IDs using real vendor state and cancels projection 
     parent: null,
   });
   snapshot = applyCommand(snapshot, { type: 'create', id: 'b', name: 'B', parent: null });
+  snapshot = applyCommand(snapshot, { type: 'create', id: 'c', name: 'C', parent: null });
   const fixture = treeHarness([], snapshot);
   await act(async () => root.render(<fixture.Harness />));
   const tree = vendor.trees.at(-1)!;
@@ -517,7 +591,7 @@ it('removes deleted expanded IDs using real vendor state and cancels projection 
   expect(tree.getState().expandedItems).not.toContain('folder:b');
   expect(frames.size).toBe(1);
   const stale = [...frames.values()][0];
-  const scroll = vi.spyOn(tree.getItemInstance('folder:a'), 'scrollTo');
+  const scroll = vi.spyOn(tree.getItemInstance('folder:c'), 'scrollTo');
   const focus = vi.spyOn(tree, 'updateDomFocus');
   const repairs = focus.mock.calls.length;
   await act(async () => fixture.update({ snapshot: { ...snapshot } }));
@@ -535,6 +609,38 @@ it('removes deleted expanded IDs using real vendor state and cancels projection 
   expect(frames.size).toBe(0);
   unmounted(0);
   expect(cancel).toHaveBeenCalledTimes(2);
+});
+
+it('repairs hidden task focus to its still-present containing folder', async () => {
+  const identity = { teamName: 't', taskId: '1' };
+  let snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'a',
+    name: 'A',
+    parent: null,
+  });
+  snapshot = applyCommand(snapshot, { type: 'create', id: 'b', name: 'B', parent: null });
+  snapshot = applyCommand(snapshot, {
+    type: 'moveTask',
+    identity,
+    parent: 'a',
+    anchor: append,
+  });
+  const fixture = treeHarness(
+    [{ teamName: identity.teamName, id: identity.taskId, subject: 'Task' }] as GlobalTask[],
+    snapshot
+  );
+  await act(async () => root.render(<fixture.Harness />));
+  const tree = vendor.trees.at(-1)!;
+  const task = childKey({ kind: 'task', identity });
+  await act(async () => {
+    tree.getItemInstance('folder:a').expand();
+    tree.getItemInstance(task).setFocused();
+  });
+  expect(tree.getState().focusedItem).toBe(task);
+
+  await act(async () => fixture.update({ tasks: [] }));
+  expect(tree.getState().focusedItem).toBe('folder:a');
 });
 
 it('does not update DOM focus after an already-started repair scroll settles for a stale projection', async () => {

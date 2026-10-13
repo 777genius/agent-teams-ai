@@ -20,6 +20,10 @@ interface FailedOperation {
   command: Command;
   error: string;
 }
+interface OperationSubmission {
+  latest: number;
+  pending: number;
+}
 /** Save before publication; each queued command revalidates against the committed snapshot. */
 export class FolderController {
   private state: FolderState = {
@@ -34,6 +38,7 @@ export class FolderController {
   private catalog = new Set<string>();
   private failures: FailedOperation[] = [];
   private operationSequence = 0;
+  private operationSubmissions = new Map<string, OperationSubmission>();
   constructor(private repository: FolderRepository) {}
   getSnapshot = (): FolderState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -74,14 +79,18 @@ export class FolderController {
         logicalOperationId = `command:${this.operationSequence}`;
       }
     }
-    const failure = this.failures.find((entry) => entry.operationId === logicalOperationId);
-    return this.enqueue(command, logicalOperationId, failure);
+    return this.enqueue(command, logicalOperationId);
   }
   private enqueue(
     command: Command,
     operationId: string,
     retry?: FailedOperation
   ): Promise<Snapshot> {
+    const operation = this.operationSubmissions.get(operationId) ?? { latest: 0, pending: 0 };
+    operation.latest += 1;
+    operation.pending += 1;
+    const submission = operation.latest;
+    this.operationSubmissions.set(operationId, operation);
     this.publish({ pending: this.state.pending + 1 });
     const action = this.queue
       .then(async () => {
@@ -95,29 +104,38 @@ export class FolderController {
             throw new Error('missing-task');
           next = applyCommand(this.state.snapshot, command);
         } catch (error) {
-          if (retry) this.removeOperation(retry.operationId);
+          this.removeOperation(operationId);
           throw error;
         }
         try {
           if (next !== this.state.snapshot) await this.repository.save(next);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'save';
-          if (retry) {
-            const index = this.failures.findIndex(
-              (entry) => entry.operationId === retry.operationId
-            );
-            const updated: FailedOperation = { operationId, command, error: message };
-            if (index >= 0) this.failures.splice(index, 1, updated);
-            else this.failures.push(updated);
-          } else this.failures.push({ operationId, command, error: message });
-          this.publish({ error: this.failures[0].error });
+          if (this.operationSubmissions.get(operationId)?.latest === submission) {
+            const index = this.failures.findIndex((entry) => entry.operationId === operationId);
+            const failed: FailedOperation = { operationId, command, error: message };
+            if (index >= 0) this.failures.splice(index, 1, failed);
+            else this.failures.push(failed);
+            this.publish({ error: this.failures[0].error });
+          }
           throw error;
         }
-        if (retry) this.removeOperation(retry.operationId);
+        // Explicit retries retire their captured failure even when another retry
+        // for that same failure is already queued. Manual actions still execute;
+        // only their failure bookkeeping follows the latest submission metadata.
+        if (retry || this.operationSubmissions.get(operationId)?.latest === submission)
+          this.removeOperation(operationId);
         this.publish({ snapshot: next, error: this.failures[0]?.error ?? null });
         return next;
       })
-      .finally(() => this.publish({ pending: this.state.pending - 1 }));
+      .finally(() => {
+        const operation = this.operationSubmissions.get(operationId);
+        if (operation) {
+          operation.pending -= 1;
+          if (operation.pending === 0) this.operationSubmissions.delete(operationId);
+        }
+        this.publish({ pending: this.state.pending - 1 });
+      });
     this.queue = action.catch(() => undefined);
     return action;
   }

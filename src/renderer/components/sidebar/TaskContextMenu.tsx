@@ -1,7 +1,10 @@
 import { useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { taskFolderMoveRequest } from '@features/task-folders/renderer';
+import {
+  taskFolderMoveRequest,
+  useTaskFolderEditingReady,
+} from '@features/task-folders/renderer';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -48,6 +51,7 @@ const TaskContextMenuLazyContent = ({
   onDelete,
 }: TaskContextMenuContentProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const taskFolderEditingReady = useTaskFolderEditingReady();
 
   return (
     <ContextMenuContent onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -66,6 +70,7 @@ const TaskContextMenuLazyContent = ({
       </ContextMenuItem>
 
       <ContextMenuItem
+        disabled={!taskFolderEditingReady}
         onSelect={() => taskFolderMoveRequest.open({ teamName: task.teamName, taskId: task.id })}
       >
         <span>{t('taskFolders.move')}</span>

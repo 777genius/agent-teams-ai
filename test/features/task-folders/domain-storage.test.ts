@@ -5,12 +5,14 @@ import {
   append,
   applyCommand,
   emptySnapshot,
+  parentOf,
   validateSnapshot,
 } from '../../../src/features/task-folders/core/domain/folders';
 import {
   BrowserFolderRepository,
   FOLDERS_STORAGE_KEY,
 } from '../../../src/features/task-folders/renderer/adapters/browserRepository';
+import { folderChoices } from '../../../src/features/task-folders/renderer/view-models/folderChoices';
 
 import type { Snapshot } from '../../../src/features/task-folders/core/domain/folders';
 const identity = { teamName: 'team:a', taskId: 'b' };
@@ -20,6 +22,17 @@ function fixture(): Snapshot {
   return applyCommand(s, { type: 'moveTask', identity, parent: 'b', anchor: append });
 }
 describe('folder invariants and durable commands', () => {
+  it('labels duplicate siblings in canonical root/child order rather than storage order', () => {
+    let snapshot = emptySnapshot();
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'z', parent: null, name: 'Same' });
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'a', parent: null, name: 'Same' });
+    snapshot.folders.reverse();
+    expect(folderChoices(snapshot)).toEqual([
+      { id: 'z', label: 'Same (1)' },
+      { id: 'a', label: 'Same (2)' },
+    ]);
+  });
+
   it('rejects cycles, duplicate placements and disconnected schema without touching the input', () => {
     const s = fixture();
     const before = JSON.stringify(s);
@@ -148,6 +161,105 @@ describe('folder invariants and durable commands', () => {
     ]);
     expect(save.mock.calls.at(-1)?.[0].folders[0].name).toBe('Corrected name');
     expect(controller.getSnapshot().error).toBeNull();
+  });
+  it('retires a changed-destination move retry without losing an independent failure', async () => {
+    let snapshot = fixture();
+    snapshot = applyCommand(snapshot, {
+      type: 'create',
+      id: 'x',
+      parent: null,
+      name: 'X',
+    });
+    const save = vi
+      .fn(async (_snapshot: Snapshot) => undefined)
+      .mockRejectedValueOnce(new Error('move quota'))
+      .mockRejectedValueOnce(new Error('independent quota'));
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot }),
+      save,
+    });
+    await expect(
+      controller.execute(
+        { type: 'moveFolder', id: 'b', parent: null, anchor: append },
+        'dialog-move'
+      )
+    ).rejects.toThrow('move quota');
+    await expect(
+      controller.execute({
+        type: 'create',
+        id: 'independent',
+        parent: null,
+        name: 'Independent',
+      })
+    ).rejects.toThrow('independent quota');
+    await controller.execute(
+      { type: 'moveFolder', id: 'b', parent: 'x', anchor: append },
+      'dialog-move'
+    );
+    expect(parentOf(controller.getSnapshot().snapshot, 'b')).toBe('x');
+    expect(controller.getSnapshot().error).toBe('independent quota');
+
+    await controller.retry();
+    expect(parentOf(controller.getSnapshot().snapshot, 'b')).toBe('x');
+    expect(controller.getSnapshot().snapshot.rootFolderIds).toEqual(['a', 'x', 'independent']);
+    expect(controller.getSnapshot().error).toBeNull();
+    await controller.retry();
+    expect(save).toHaveBeenCalledTimes(4);
+  });
+  it('supersedes queued submissions with one operation ID instead of retaining duplicate retries', async () => {
+    let snapshot = fixture();
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'x', parent: null, name: 'X' });
+    const save = vi
+      .fn(async (_snapshot: Snapshot) => undefined)
+      .mockRejectedValueOnce(new Error('quota'));
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot }),
+      save,
+    });
+    const stale = controller.execute(
+      { type: 'moveFolder', id: 'b', parent: null, anchor: append },
+      'dialog-move'
+    );
+    const current = controller.execute(
+      { type: 'moveFolder', id: 'b', parent: 'x', anchor: append },
+      'dialog-move'
+    );
+    await expect(stale).rejects.toThrow('quota');
+    await current;
+    expect(parentOf(controller.getSnapshot().snapshot, 'b')).toBe('x');
+    expect(controller.getSnapshot().error).toBeNull();
+    await controller.retry();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(parentOf(controller.getSnapshot().snapshot, 'b')).toBe('x');
+  });
+  it('executes a new valid manual command after an invalid same-operation predecessor retires a failure', async () => {
+    const save = vi.fn(async () => undefined);
+    const controller = new FolderController({
+      load: async () => ({ kind: 'empty' }),
+      save,
+    });
+    await controller.execute({ type: 'create', id: 'original', parent: null, name: 'Original' });
+    save.mockRejectedValueOnce(new Error('quota'));
+    await expect(
+      controller.execute({ type: 'rename', id: 'original', name: 'Failed' }, 'workflow')
+    ).rejects.toThrow('quota');
+
+    const invalid = controller.execute({ type: 'rename', id: 'original', name: '' }, 'workflow');
+    const valid = controller.execute(
+      { type: 'rename', id: 'original', name: 'Latest' },
+      'workflow'
+    );
+    const [invalidResult, validResult] = await Promise.allSettled([invalid, valid]);
+
+    expect(invalidResult.status).toBe('rejected');
+    expect((invalidResult as PromiseRejectedResult).reason).toMatchObject({ message: 'name' });
+    expect(validResult.status).toBe('fulfilled');
+    expect(controller.getSnapshot().snapshot).toMatchObject({
+      revision: 2,
+      folders: [{ id: 'original', name: 'Latest', children: [] }],
+    });
+    expect(controller.getSnapshot().error).toBeNull();
+    expect(save).toHaveBeenCalledTimes(3);
   });
   it('preserves an empty explicit operation identity when retiring a failed edit', async () => {
     const save = vi
