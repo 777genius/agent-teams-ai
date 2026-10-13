@@ -23,8 +23,12 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ theme: 'dark', resolvedTheme: 'dark', isDark: true, isLight: false }),
 }));
 vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({
-  MarkdownViewer: ({ content }: { content: string }) =>
-    React.createElement('div', { 'data-markdown-renderer': 'full' }, content),
+  MarkdownViewer: ({ content, maxHeight }: { content: string; maxHeight?: string }) =>
+    React.createElement(
+      'div',
+      { 'data-markdown-renderer': 'full', 'data-max-height': maxHeight },
+      content
+    ),
   CompactMarkdownPreview: ({ content, className }: { content: string; className?: string }) =>
     React.createElement('div', { className, 'data-markdown-renderer': 'compact' }, content),
 }));
@@ -125,9 +129,6 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
-}));
-vi.mock('@renderer/components/team/activity/ReplyQuoteBlock', () => ({
-  ReplyQuoteBlock: () => null,
 }));
 
 describe('ActivityItem compact header preview', () => {
@@ -1765,6 +1766,85 @@ describe('collapsed message visualization access', () => {
       expect(host.querySelector('[data-markdown-renderer="compact"]')?.textContent).toBe(
         'Ordinary short reply'
       );
+      expect(host.querySelector('[data-markdown-renderer="full"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+describe('reply visualization presentation', () => {
+  it.each(['openui-lang', 'mermaid'])(
+    'does not height-limit an actual %s reply body',
+    async (language) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const body = `Report\n\`\`\`${language}\n${language === 'mermaid' ? 'graph TD; A-->B;' : 'root = Stack([Card([TextContent("Result")])]);'}\n\`\`\``;
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      try {
+        for (const appearance of ['compact', 'wide-chat'] as const) {
+          await act(async () =>
+            root.render(
+              React.createElement(ActivityItem, {
+                message: {
+                  from: 'alice',
+                  to: 'user',
+                  text: buildReplyBlock('bob', 'Quoted original', body),
+                  timestamp: '2026-10-13T10:00:00.000Z',
+                  read: true,
+                },
+                teamName: 'sandbox',
+                appearance,
+                collapseMode: 'managed',
+                isCollapsed: true,
+              })
+            )
+          );
+          const replyBody = host.querySelector('[data-markdown-renderer="full"]');
+          expect(replyBody?.textContent).toBe(body);
+          expect(replyBody?.getAttribute('data-max-height')).toBe('max-h-none');
+          expect(host.querySelector('[data-markdown-renderer="compact"]')?.textContent).toBe(
+            'Quoted original'
+          );
+        }
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+  it('projects cross-team visualization fences before flattening a collapsed preview', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const quoted = '```openui-lang\nroot = Stack([Card([TextContent("privateDSL")])]);\n```';
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to: 'user',
+              source: 'cross_team',
+              text: `${quoted}\n${buildReplyBlock('bob', 'Quoted original', 'Ordinary reply')}`,
+              timestamp: '2026-10-13T10:00:00.000Z',
+              read: true,
+            },
+            teamName: 'sandbox',
+            collapseMode: 'managed',
+            isCollapsed: true,
+            compactHeader: true,
+          })
+        )
+      );
+      const preview = host.querySelector('[data-markdown-renderer="compact"]');
+      expect(preview?.textContent).toContain('Visualization');
+      expect(preview?.textContent).toContain('Ordinary reply');
+      expect(preview?.textContent).not.toContain('privateDSL');
+      expect(preview?.textContent).not.toContain('Stack');
       expect(host.querySelector('[data-markdown-renderer="full"]')).toBeNull();
     } finally {
       await act(async () => root.unmount());

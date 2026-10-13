@@ -5,7 +5,7 @@ export function buildLeadChatVisualizationProtocol(): string {
 }
 
 /** Reserve the protocol as one unit; never truncate a component signature. */
-export function buildNativeChatVisualizationBriefing(briefing: string, maxChars: number): string {
+export function buildChatVisualizationBriefing(briefing: string, maxChars: number): string {
   const protocol = protocols.buildChatVisualizationProtocolText();
   const suffix =
     protocol.length + 2 <= maxChars

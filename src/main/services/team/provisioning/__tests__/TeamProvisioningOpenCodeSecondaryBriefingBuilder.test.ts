@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { protocols } from 'agent-teams-controller';
 
 import {
   buildOpenCodeSecondaryAppManagedLaunchPromptWithPorts,
@@ -55,6 +56,7 @@ describe('TeamProvisioningOpenCodeSecondaryBriefingBuilder', () => {
     expect(memberBriefing).toHaveBeenCalledWith('Builder', {
       runtimeProvider: 'opencode',
       includeActiveProcesses: false,
+      includeChatVisualizationProtocol: false,
     });
     expect(prompt).toBe(
       [
@@ -62,6 +64,8 @@ describe('TeamProvisioningOpenCodeSecondaryBriefingBuilder', () => {
         'This briefing was loaded by the desktop app via member_briefing with includeActiveProcesses=false.',
         'Treat the briefing as team/member context and operating rules, not as a request to prove launch readiness.',
         'Builder briefing\nBearer [redacted]',
+        '',
+        protocols.buildChatVisualizationProtocolText(),
         '</agent_teams_app_managed_briefing_source>',
       ].join('\n')
     );

@@ -811,9 +811,7 @@ export const ActivityItem = memo(
       (isWideAgent && (wideContent || (!senderHideAvatar && !continuesNextAuthor)));
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
-      const oneLine = strippedText.replace(/\n+/g, ' ').trim();
-      if (!oneLine) return '';
-      return oneLine;
+      return summarizeVisualizationFences(strippedText).replace(/\n+/g, ' ').trim();
     }, [isCrossTeamAny, strippedText]);
     const summarySource = useMemo(() => {
       if (idleSemantic?.hasPeerSummary && idleSemantic.peerSummary) {
@@ -889,13 +887,10 @@ export const ActivityItem = memo(
     const compactPreviewMarkdown = summarizeVisualizationFences(
       stripAgentBlocks(compactPreviewSource)
     );
-    const hasVisualization = compactPreviewMarkdown !== stripAgentBlocks(compactPreviewSource);
+    const visualizationText = parsedReply?.replyText ?? displayText ?? '';
+    const hasVisualization = summarizeVisualizationFences(visualizationText) !== visualizationText;
     const isExpanded = !isManaged || !isCollapsed || hasVisualization;
-    const bodyHeight = hasVisualization
-      ? Number.POSITIVE_INFINITY
-      : isWideOrdinary
-        ? 400
-        : undefined;
+    const bodyCap = hasVisualization ? Number.POSITIVE_INFINITY : isWideOrdinary ? 400 : undefined;
     const compactPreviewTooltipText = useMemo(() => {
       const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown)
         .replace(/\n+/g, ' ')
@@ -1584,6 +1579,7 @@ export const ActivityItem = memo(
                 teamName={teamName}
                 memberColor={memberColorMap?.get(parsedReply.agentName)}
                 replyTaskRefs={message.taskRefs}
+                bodyMaxHeight={hasVisualization ? 'max-h-none' : undefined}
               />
             ) : displayText ? (
               <div
@@ -1591,7 +1587,7 @@ export const ActivityItem = memo(
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
                 <ExpandableContent
-                  collapsedHeight={bodyHeight}
+                  collapsedHeight={bodyCap}
                   fadeLengthPercent={isWideOrdinary ? 20 : undefined}
                   onExpand={onExpandContent}
                 >

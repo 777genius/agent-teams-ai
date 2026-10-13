@@ -3,7 +3,7 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { createHash } from 'crypto';
 
-import { buildNativeChatVisualizationBriefing } from '../provisioning/TeamProvisioningVisualizationPrompt';
+import { buildChatVisualizationBriefing } from '../provisioning/TeamProvisioningVisualizationPrompt';
 
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
@@ -112,7 +112,7 @@ function buildContextText(params: {
     ].join('\n') + '\n';
   const suffix = '\n</member_briefing_context_data>\n</agent_teams_native_bootstrap_context>';
   const maxChars = params.maxContextChars ?? MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS;
-  const briefing = buildNativeChatVisualizationBriefing(
+  const briefing = buildChatVisualizationBriefing(
     boundText(
       redactNativeBootstrapContextText(params.briefing),
       MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS
