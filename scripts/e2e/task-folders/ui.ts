@@ -260,13 +260,18 @@ export class UI {
       Home: 36,
       F2: 113,
       a: 65,
+      ' ': 32,
+      Spacebar: 32,
     };
-    for (const type of ['rawKeyDown', 'keyUp'])
+    const isNativeActivation = key === 'Enter' || key === ' ' || key === 'Spacebar';
+    const text = key === 'Enter' ? '\r' : key === ' ' || key === 'Spacebar' ? ' ' : undefined;
+    for (const type of [isNativeActivation ? 'keyDown' : 'rawKeyDown', 'keyUp'])
       await this.cdp.send('Input.dispatchKeyEvent', {
         type,
         key,
-        code,
+        code: key === 'Spacebar' ? 'Space' : code,
         modifiers,
+        ...(text ? { text, unmodifiedText: text } : {}),
         windowsVirtualKeyCode: vk[key] ?? 0,
         nativeVirtualKeyCode: vk[key] ?? 0,
       });
