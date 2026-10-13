@@ -6,7 +6,8 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { access, lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -28,6 +29,9 @@ async function main() {
     'Explicit SDK path or bundled selection required'
   );
   const desktop = await prepareNativeDesktop();
+  const commandNode = await realpath(process.execPath);
+  await access(commandNode, constants.X_OK);
+  const quotedNode = "'" + commandNode.replaceAll("'", "'\\''") + "'";
   if (sdk !== 'bundled') {
     desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
   }
@@ -150,7 +154,7 @@ async function main() {
       subject: 'Verify a native command through Electron',
       owner: 'alice',
       startImmediately: true,
-      prompt: `Run this command exactly: node -e ${JSON.stringify(code)}\nThen complete this board task with the team task_complete tool. Do not edit other files.`,
+      prompt: `Run this command exactly: ${quotedNode} -e ${JSON.stringify(code)}\nThen complete this board task with the team task_complete tool. Do not edit other files.`,
     });
     proof.taskId = task.id;
     await checkpoint();
@@ -175,7 +179,7 @@ async function main() {
         subject: 'Hold a native command until team stop',
         owner: 'alice',
         startImmediately: true,
-        prompt: `Run node ${JSON.stringify(program)} in the foreground. Do not edit it, delegate, detach or complete this task. The test host will stop the team.`,
+        prompt: `Run ${quotedNode} ${JSON.stringify(program)} in the foreground. Do not edit it, delegate, detach or complete this task. The test host will stop the team.`,
       });
       const started = await waitFor(
         async () => {
