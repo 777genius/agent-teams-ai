@@ -13,6 +13,8 @@ import {
 } from '@renderer/components/ui/dialog';
 import { useTheme } from '@renderer/hooks/useTheme';
 
+import { useChatVisualizationPresentation } from '../composition';
+
 import { VisualizationErrorBoundary } from './VisualizationErrorBoundary';
 
 import type { VisualizationKind, VisualizationPresentation } from '../../contracts';
@@ -26,10 +28,12 @@ interface Props {
 }
 
 function useMeasuredPresentation(
-  ref: React.RefObject<HTMLElement | null>
+  ref: React.RefObject<HTMLElement | null>,
+  override: VisualizationPresentation | null
 ): VisualizationPresentation {
   const [width, setWidth] = React.useState<number | null>(null);
   React.useLayoutEffect(() => {
+    if (override) return;
     const element = ref.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver((entries) =>
@@ -38,7 +42,8 @@ function useMeasuredPresentation(
     observer.observe(element);
     setWidth(element.getBoundingClientRect().width);
     return () => observer.disconnect();
-  }, [ref]);
+  }, [ref, override]);
+  if (override) return override;
   return width !== null && width >= CHAT_VISUALIZATION_INLINE_THRESHOLD_PX ? 'inline' : 'card';
 }
 const StatusText = ({
@@ -75,8 +80,12 @@ export const VisualizationShell = ({
   const { t } = useAppTranslation('team');
   const { resolvedTheme } = useTheme();
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const presentation = useMeasuredPresentation(containerRef);
+  const forcedPresentation = useChatVisualizationPresentation();
+  const presentation = useMeasuredPresentation(containerRef, forcedPresentation);
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  React.useLayoutEffect(() => {
+    if (forcedPresentation === 'inline') setDialogOpen(false);
+  }, [forcedPresentation]);
   const title = kind === 'mermaid' ? 'Diagram' : 'Visualization';
   // Keep the trigger and the sole active renderer in place while the modal is open.
   const activePresentation = dialogOpen ? 'card' : presentation;

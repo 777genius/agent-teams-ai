@@ -11,5 +11,10 @@ export {
 } from './chatVisualizationInstructions';
 export { chatVisualizationLibrary } from './chatVisualizationLibrary';
 export type { MermaidVisualizationAdapter, MermaidVisualizationProps } from './composition';
-export { ChatVisualizationProvider, useChatVisualizationComposition } from './composition';
+export {
+  ChatVisualizationPresentationProvider,
+  ChatVisualizationProvider,
+  useChatVisualizationComposition,
+  useChatVisualizationPresentation,
+} from './composition';
 export { VisualizationBlock } from './ui/VisualizationBlock';

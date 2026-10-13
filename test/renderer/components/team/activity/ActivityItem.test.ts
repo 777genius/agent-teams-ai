@@ -23,9 +23,10 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ theme: 'dark', resolvedTheme: 'dark', isDark: true, isLight: false }),
 }));
 vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({
-  MarkdownViewer: ({ content }: { content: string }) => React.createElement('div', null, content),
+  MarkdownViewer: ({ content }: { content: string }) =>
+    React.createElement('div', { 'data-markdown-renderer': 'full' }, content),
   CompactMarkdownPreview: ({ content, className }: { content: string; className?: string }) =>
-    React.createElement('div', { className }, content),
+    React.createElement('div', { className, 'data-markdown-renderer': 'compact' }, content),
 }));
 vi.mock('@renderer/components/common/CopyButton', () => ({
   CopyButton: () => null,
@@ -1694,5 +1695,80 @@ describe('message task action and dialog ownership', () => {
     expect(taskNavigate).not.toHaveBeenCalled();
     expect(teamNavigate).not.toHaveBeenCalled();
     await act(() => Promise.resolve(root.unmount()));
+  });
+});
+
+describe('collapsed message visualization access', () => {
+  it.each(['openui-lang', 'mermaid'])(
+    'keeps %s on the rich rendering path instead of a label-only preview',
+    async (language) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      const text = `Report\n\n\`\`\`${language}\n${language === 'mermaid' ? 'graph TD; A-->B;' : 'root = Stack([Card([TextContent("Result")])]);'}\n\`\`\``;
+      try {
+        await act(async () =>
+          root.render(
+            React.createElement(ActivityItem, {
+              message: {
+                from: 'alice',
+                to: 'user',
+                text,
+                timestamp: '2026-10-13T10:00:00.000Z',
+                read: true,
+              },
+              teamName: 'sandbox',
+              collapseMode: 'managed',
+              isCollapsed: true,
+              canToggleCollapse: true,
+            })
+          )
+        );
+        expect(host.querySelector('[data-markdown-renderer="full"]')?.textContent).toBe(text);
+        expect(host.querySelector('[data-markdown-renderer="compact"]')).toBeNull();
+        const heightBudget = host
+          .querySelector('[data-expandable-content="true"]')
+          ?.getAttribute('data-collapsed-height');
+        // Both visualization controls must remain reachable without Show more,
+        // even when their combined message body is taller than the normal preview.
+        expect(Number(heightBudget)).toBeGreaterThan(2000);
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+  it('retains ordinary collapsed message previews', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to: 'user',
+              text: 'Ordinary short reply',
+              timestamp: '2026-10-13T10:00:00.000Z',
+              read: true,
+            },
+            teamName: 'sandbox',
+            collapseMode: 'managed',
+            isCollapsed: true,
+            canToggleCollapse: true,
+          })
+        )
+      );
+      expect(host.querySelector('[data-markdown-renderer="compact"]')?.textContent).toBe(
+        'Ordinary short reply'
+      );
+      expect(host.querySelector('[data-markdown-renderer="full"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 });

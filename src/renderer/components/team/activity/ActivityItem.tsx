@@ -709,7 +709,6 @@ export const ActivityItem = memo(
     const idleSemantic = classifyIdleNotificationCached(message);
     const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
     const isManaged = collapseMode === 'managed';
-    const isExpanded = isManaged ? !isCollapsed : true;
     const messagePresentation = classifyActivityMessagePresentation(
       message,
       teamName,
@@ -890,6 +889,13 @@ export const ActivityItem = memo(
     const compactPreviewMarkdown = summarizeVisualizationFences(
       stripAgentBlocks(compactPreviewSource)
     );
+    const hasVisualization = compactPreviewMarkdown !== stripAgentBlocks(compactPreviewSource);
+    const isExpanded = !isManaged || !isCollapsed || hasVisualization;
+    const bodyHeight = hasVisualization
+      ? Number.POSITIVE_INFINITY
+      : isWideOrdinary
+        ? 400
+        : undefined;
     const compactPreviewTooltipText = useMemo(() => {
       const normalized = extractMarkdownPlainTextCached(compactPreviewMarkdown)
         .replace(/\n+/g, ' ')
@@ -1585,7 +1591,7 @@ export const ActivityItem = memo(
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
                 <ExpandableContent
-                  collapsedHeight={isWideOrdinary ? 400 : undefined}
+                  collapsedHeight={bodyHeight}
                   fadeLengthPercent={isWideOrdinary ? 20 : undefined}
                   onExpand={onExpandContent}
                 >

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import type { FenceState } from '../contracts';
+import type { FenceState, VisualizationPresentation } from '../contracts';
 
 export interface MermaidVisualizationProps {
   source: string;
@@ -34,4 +34,24 @@ export const ChatVisualizationProvider = ({
 
 export function useChatVisualizationComposition(): ChatVisualizationCompositionValue {
   return React.useContext(ChatVisualizationCompositionContext);
+}
+
+const ChatVisualizationPresentationContext = React.createContext<VisualizationPresentation | null>(
+  null
+);
+
+export const ChatVisualizationPresentationProvider = ({
+  presentation,
+  children,
+}: Readonly<{
+  presentation: VisualizationPresentation;
+  children: React.ReactNode;
+}>): React.JSX.Element => (
+  <ChatVisualizationPresentationContext.Provider value={presentation}>
+    {children}
+  </ChatVisualizationPresentationContext.Provider>
+);
+
+export function useChatVisualizationPresentation(): VisualizationPresentation | null {
+  return React.useContext(ChatVisualizationPresentationContext);
 }
