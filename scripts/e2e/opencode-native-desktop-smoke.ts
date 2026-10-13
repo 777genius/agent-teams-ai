@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { access, lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { access, lstat, mkdir, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -32,6 +32,7 @@ async function main() {
   const commandNode = await realpath(process.execPath);
   await access(commandNode, constants.X_OK);
   const quotedNode = "'" + commandNode.replaceAll("'", "'\\''") + "'";
+  const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
   if (sdk !== 'bundled') {
     desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
   }
@@ -148,13 +149,17 @@ async function main() {
     assert.equal(runtime.members.alice?.alive, true);
     const nonce = randomUUID();
     const code = `const a=require('node:assert/strict');a.equal(process.platform,${JSON.stringify(process.platform)});require('node:fs').writeFileSync('electron-result.txt',${JSON.stringify(nonce + '\n')});`;
+    const taskCommand =
+      process.platform === 'linux'
+        ? `/bin/sh -c ${quote(`test "$(/usr/bin/uname -s)" = Linux && printf '%s\\n' ${quote(nonce)} > electron-result.txt`)}`
+        : `${quotedNode} -e ${JSON.stringify(code)}`;
     proof.stage = 'task';
     await checkpoint();
     const task = await app.call('createTask', {
       subject: 'Verify a native command through Electron',
       owner: 'alice',
       startImmediately: true,
-      prompt: `Run this command exactly: ${quotedNode} -e ${JSON.stringify(code)}\nThen complete this board task with the team task_complete tool. Do not edit other files.`,
+      prompt: `Run this command exactly: ${taskCommand}\nThen complete this board task with the team task_complete tool. Do not edit other files.`,
     });
     proof.taskId = task.id;
     await checkpoint();
@@ -170,16 +175,22 @@ async function main() {
     assert.equal(await readFile(result, 'utf8'), nonce + '\n');
     proof.independentFile = true;
     if (stopProbe === '--held-stop') {
-      const program = path.join(desktop.projectPath, 'held-command.cjs');
+      const program = path.join(
+        desktop.projectPath,
+        process.platform === 'linux' ? 'held-command.sh' : 'held-command.cjs'
+      );
       const marker = path.join(desktop.projectPath, 'held-started.json');
       const temporary = marker + '.tmp';
-      const script = `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(temporary)},JSON.stringify({pid:process.pid,nonce:${JSON.stringify(nonce)}}));fs.renameSync(${JSON.stringify(temporary)},${JSON.stringify(marker)});setInterval(()=>{},1000);\n`;
+      const script =
+        process.platform === 'linux'
+          ? `printf '{"pid":%s,"nonce":"${nonce}"}' "$$" > ${quote(temporary)}\n/bin/mv ${quote(temporary)} ${quote(marker)}\nwhile :; do /bin/sleep 1; done\n`
+          : `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(temporary)},JSON.stringify({pid:process.pid,nonce:${JSON.stringify(nonce)}}));fs.renameSync(${JSON.stringify(temporary)},${JSON.stringify(marker)});setInterval(()=>{},1000);\n`;
       await writeFile(program, script, { mode: 0o600 });
       const held = await app.call('createTask', {
         subject: 'Hold a native command until team stop',
         owner: 'alice',
         startImmediately: true,
-        prompt: `Run ${quotedNode} ${JSON.stringify(program)} in the foreground. Do not edit it, delegate, detach or complete this task. The test host will stop the team.`,
+        prompt: `Run ${process.platform === 'linux' ? '/bin/sh' : quotedNode} ${quote(program)} in the foreground. Do not edit it, delegate, detach or complete this task. The test host will stop the team.`,
       });
       const started = await waitFor(
         async () => {
@@ -196,9 +207,11 @@ async function main() {
       );
       assert.equal(started.nonce, nonce);
       assert(Number.isSafeInteger(started.pid) && started.pid > 1);
-      const identity = await processIdentity(started.pid);
+      const hostPid =
+        process.platform === 'linux' ? await linuxHeldHostPid(program, started.pid) : started.pid;
+      const identity = await processIdentity(hostPid);
       assert(identity && identity.includes(program), 'Held PID is not the TEST command');
-      heldProcess = { pid: started.pid, identity, taskId: held.id };
+      heldProcess = { pid: hostPid, identity, taskId: held.id };
       const activeTask = await app.call('getTask', held.id);
       assert(activeTask && activeTask.status === 'in_progress');
       assert.equal(await readFile(program, 'utf8'), script);
@@ -312,6 +325,25 @@ async function main() {
       }
     }
   }
+}
+
+async function linuxHeldHostPid(program: string, namespacePid: number): Promise<number> {
+  const matches: number[] = [];
+  for (const entry of await readdir('/proc')) {
+    if (!/^\d+$/.test(entry)) continue;
+    try {
+      const args = (await readFile(`/proc/${entry}/cmdline`, 'utf8')).split('\0');
+      if (!args.includes(program)) continue;
+      const status = await readFile(`/proc/${entry}/status`, 'utf8');
+      const ids = /^NSpid:\s+(.+)$/m.exec(status)?.[1].trim().split(/\s+/).map(Number);
+      if (ids?.at(-1) === namespacePid && ids[0] === Number(entry)) matches.push(Number(entry));
+    } catch (error) {
+      if (!['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? ''))
+        throw error;
+    }
+  }
+  assert.equal(matches.length, 1, 'Exactly one owned held command must match its namespace PID');
+  return matches[0];
 }
 
 async function processIdentity(pid: number): Promise<string | null> {
