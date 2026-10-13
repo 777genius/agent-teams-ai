@@ -51,8 +51,8 @@ export function isTaskDetailTokenCurrent(
 export function readTeamSnapshotResource<T>(
   teamName: string,
   scope: TaskDetailReadScope,
-  read: (token: TaskDetailReadToken) => Promise<T>,
-  options?: { forceNew?: boolean }
+  read: (token: TaskDetailReadToken, markPhysicalStart: () => void) => Promise<T>,
+  options?: { forceNew?: boolean; mode?: 'full' | 'thin'; deferPhysicalStart?: boolean }
 ): TaskDetailReadHandle<T> {
   return teamTaskDetailReadAuthority.readSnapshot(teamName, scope, read, options);
 }

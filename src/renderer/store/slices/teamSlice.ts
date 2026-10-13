@@ -842,10 +842,20 @@ function fetchTeamDataDeduped(
   requestScope: TeamRequestScope,
   options?: TeamGetDataOptions
 ): TaskDetailReadHandle<TeamViewSnapshot> {
-  return readTeamSnapshotResource(teamName, toTaskDetailScope(teamName, requestScope), () =>
-    teamDataReadWork.join(teamName, getTeamDataSnapshotMode(options), requestScope, () =>
-      fetchTeamDataPhysical(teamName, options)
-    )
+  return readTeamSnapshotResource(
+    teamName,
+    toTaskDetailScope(teamName, requestScope),
+    (_token, markPhysicalStart) => {
+      const joined = teamDataReadWork.joinOwned(
+        teamName,
+        getTeamDataSnapshotMode(options),
+        requestScope,
+        () => fetchTeamDataPhysical(teamName, options)
+      );
+      if (joined.started) markPhysicalStart();
+      return joined.promise;
+    },
+    { mode: getTeamDataSnapshotMode(options), deferPhysicalStart: true }
   );
 }
 

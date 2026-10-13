@@ -1,5 +1,10 @@
+import {
+  isTaskDetailReadTokenForResource,
+  taskDetailFullResourceKey,
+  type TaskDetailReadToken,
+} from './taskDetailReadProvenance';
+
 import type { TaskDetailIdentity, TaskDetailReadPhase } from '../../contracts';
-import type { TaskDetailReadToken } from './taskDetailReadAuthority';
 import type { TeamTaskWithKanban } from '@shared/types';
 
 export interface TaskDetailReadEntry {
@@ -47,12 +52,15 @@ export function canCommitTaskDetailFullRead(
   token: TaskReadCommitToken
 ): boolean {
   return (
+    token.resource === 'full' &&
+    token.key === taskDetailFullResourceKey(entry.identity) &&
     (entry.fullToken === null ||
       (entry.fullToken.key === token.key &&
         entry.fullToken.sourceEpoch === token.sourceEpoch &&
         entry.fullToken.serial === token.serial)) &&
     entry.identity.contextId === token.scope.contextId &&
-    entry.identity.teamName === token.scope.teamName
+    entry.identity.teamName === token.scope.teamName &&
+    isTaskDetailReadTokenForResource(token, entry.identity)
   );
 }
 
@@ -126,7 +134,18 @@ export function applyTaskDetailCompact(
   token: TaskDetailReadToken
 ): TaskDetailReadEntry {
   if (!compact) return entry;
-  if (entry.fullToken && token.serial < entry.fullToken.serial) return entry;
+  if (token.resource !== 'snapshot') return entry;
+  if (entry.compactToken && token.physicalStartOrder < entry.compactToken.physicalStartOrder) {
+    return entry;
+  }
+  if (
+    entry.fullToken &&
+    token.physicalStartOrder > 0 &&
+    entry.fullToken.physicalStartOrder > 0 &&
+    token.physicalStartOrder < entry.fullToken.physicalStartOrder
+  ) {
+    return entry;
+  }
   const nextCompact = compact;
   if (!entry.full) {
     return entry.compact === nextCompact && entry.compactToken?.serial === token.serial

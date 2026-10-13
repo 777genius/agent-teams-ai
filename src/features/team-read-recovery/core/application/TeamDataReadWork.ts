@@ -9,21 +9,35 @@ interface TeamDataOwner<T> {
   queuedFull: boolean;
 }
 
+export interface TeamDataJoin<T> {
+  readonly promise: Promise<T>;
+  readonly started: boolean;
+}
+
 /** Live data-read ownership; completed snapshots remain in the store, never here. */
 export class TeamDataReadWork<T> {
   private readonly owners = new Map<string, TeamDataOwner<T>>();
 
   join(team: string, mode: SnapshotMode, scope: TeamReadScope, read: () => Promise<T>): Promise<T> {
+    return this.joinOwned(team, mode, scope, read).promise;
+  }
+
+  joinOwned(
+    team: string,
+    mode: SnapshotMode,
+    scope: TeamReadScope,
+    read: () => Promise<T>
+  ): TeamDataJoin<T> {
     const owner = this.ensure(team, scope);
     const existing = owner.active[mode];
-    if (existing) return existing;
+    if (existing) return { promise: existing, started: false };
     const request = read().finally(() => {
       if (this.owners.get(team) !== owner || owner.active[mode] !== request) return;
       delete owner.active[mode];
       this.prune(team, owner);
     });
     owner.active[mode] = request;
-    return request;
+    return { promise: request, started: true };
   }
 
   hasRead(team: string, mode: SnapshotMode, scope: TeamReadScope): boolean {

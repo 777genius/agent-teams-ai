@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createTaskDetailReadAuthority } from '../../../../src/features/team-task-detail/core/application/taskDetailReadAuthority';
 import {
   applyTaskDetailCompact,
   beginTaskDetailSave,
@@ -7,7 +8,6 @@ import {
   commitTaskDetailFull,
   completeTaskDetailSave,
   completeTaskDetailSubmit,
-  createTaskDetailReadAuthority,
   createTaskDetailReadEntry,
   type TaskDetailReadToken,
   updateTaskDetailPart,
@@ -119,6 +119,7 @@ describe('task detail critical read policies', () => {
       key: 'full:["local","shared-team","X"]',
       sourceEpoch: 1,
       serial: 20,
+      physicalStartOrder: 2,
       scope,
     };
     const compactToken: TaskDetailReadToken = {
@@ -126,6 +127,7 @@ describe('task detail critical read policies', () => {
       resource: 'snapshot',
       key: 'snapshot:["local","shared-team"]',
       serial: 10,
+      physicalStartOrder: 1,
     };
     let entry = createTaskDetailReadEntry(identity);
     entry = commitTaskDetailFull(entry, fullToken, fullTask('X', 'S1'));
