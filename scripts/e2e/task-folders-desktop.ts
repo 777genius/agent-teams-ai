@@ -480,10 +480,10 @@ async function main() {
       const point = await ui.value<{ x: number; y: number }>(
         `(() => {const r=${el(selectors.tree)}.getBoundingClientRect();return {x:r.x+r.width/2,y:r.bottom-4};})()`
       );
-      const before = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
       await ui.dragOver(data, point, true);
       await ui.dragOver(data, point);
-      await ui.assertNativeDragPair(point, 'native edge center');
+      await ui.assertNativeDragPair(point, 'native edge center', data);
+      const before = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
       // Stationary pointer: RAF edge scroll must continue without repeated dragover events.
       await delay(1600);
       const after = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
@@ -497,13 +497,13 @@ async function main() {
       );
       await ui.dragOver(data, center, true);
       await ui.dragOver(data, center);
-      await ui.assertNativeDragPair(center, 'native tree center');
+      await ui.assertNativeDragPair(center, 'native tree center', data);
       const centerScrollTop = await ui.waitForStableScroll();
       const selected = await ui.visibleFolderCenter(f.parent);
       const target = selected.folderId;
       await ui.dragOver(data, selected, true);
       await ui.dragOver(data, selected);
-      const selectedPair = await ui.assertNativeDragPair(selected, 'selected native drop target');
+      const selectedPair = await ui.assertNativeDragPair(selected, 'selected native drop target', data);
       const dropTarget = await ui.folderPoint(target, true);
       assert.equal(dropTarget.hitFolderId, target, 'Drop target identity changed after reacquire');
       assert.equal(selectedPair.over.folderId, target, 'Observed dragover folder identity changed');

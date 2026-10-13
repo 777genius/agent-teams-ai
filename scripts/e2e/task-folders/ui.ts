@@ -59,6 +59,9 @@ interface PointSample extends Partial<FolderPoint> {
 }
 const TARGET_PRESENCE_TIMEOUT_MS = 5000;
 const TREE_NAVIGATION_TIMEOUT_MS = 30_000;
+const NATIVE_DRAGOVER_RETRY_DEADLINE_MS = 2000;
+const NATIVE_DRAGOVER_MAX_RETRIES = 8;
+const NATIVE_DRAGOVER_FRAME_LIMIT_MS = 500;
 const boundedPresence = async (probe: () => Promise<boolean>, timeout: number) => {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -474,13 +477,26 @@ export class UI {
   async nativeDragEvents(): Promise<DragEventObservation[]> {
     return await this.syncDragEvents();
   }
-  async assertNativeDragPair(point: Point, name: string) {
-    const events = await this.syncDragEvents();
+  async assertNativeDragPair(point: Point, name: string, data: Record<string, unknown>) {
     const near = (event: DragEventObservation) =>
       event.isTrusted &&
       Math.abs(event.clientX - point.x) <= 1 &&
       Math.abs(event.clientY - point.y) <= 1;
-    const over = events.filter((event) => event.type === 'dragover' && near(event));
+    let events = await this.syncDragEvents();
+    let over = events.filter((event) => event.type === 'dragover' && near(event));
+    const deadline = Date.now() + NATIVE_DRAGOVER_RETRY_DEADLINE_MS;
+    for (let attempt = 0; !over.length && attempt < NATIVE_DRAGOVER_MAX_RETRIES && Date.now() < deadline; attempt++) {
+      // Re-send only the missing native receive readiness signal. This is deliberately
+      // same-point and direct, so it never becomes a pointer movement or generic dragOver.
+      await this.cdp.send('Input.dispatchDragEvent', { type: 'dragOver', ...point, data });
+      await this.boundedValue(
+        `new Promise(resolve=>{const done=()=>resolve(true);requestAnimationFrame(done);setTimeout(done,${NATIVE_DRAGOVER_FRAME_LIMIT_MS});})`,
+        NATIVE_DRAGOVER_FRAME_LIMIT_MS + 100,
+        'native dragover readiness frame'
+      );
+      events = await this.syncDragEvents();
+      over = events.filter((event) => event.type === 'dragover' && near(event));
+    }
     assert(over.length, `Trusted native dragover missing at ${name}: ${JSON.stringify(events)}`);
     const enter = events.filter((event) => event.type === 'dragenter' && near(event));
     // Chromium can omit dragenter when the hit target does not change; retain it when emitted.
