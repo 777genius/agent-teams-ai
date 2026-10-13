@@ -55,6 +55,12 @@ For new features:
 - Reference implementation: `src/features/recent-projects`
 - Feature-local guidance for work inside `src/features`: [src/features/CLAUDE.md](src/features/CLAUDE.md)
 
+## Git delivery
+
+Follow [docs/GIT_DELIVERY_POLICY.md](docs/GIT_DELIVERY_POLICY.md) for PR/CI
+delivery and the one-time exception for an explicit personal owner request
+to push directly to main. Read that policy before committing or pushing.
+
 ## Review guidelines
 
 - Treat regressions in agent team messaging, task lifecycle, session parsing, code review UI, and provider/runtime detection as high priority.
