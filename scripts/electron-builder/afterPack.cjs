@@ -248,7 +248,7 @@ function findNodeModulesSequence(segments, sequence) {
 }
 
 async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
-  if (targetPlatform !== 'win32') {
+  if (targetPlatform !== 'win32' && !(targetPlatform === 'linux' && targetArch === 'x64')) {
     return null;
   }
 
@@ -263,7 +263,11 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   ]);
   const conptyArchIndex = conptyIndex + 5;
   const conptyArchDir = conptyIndex >= 0 ? segments[conptyArchIndex] : null;
-  if (conptyArchDir?.startsWith('win10-') && conptyArchDir !== `win10-${targetArch}`) {
+  if (
+    targetPlatform === 'win32' &&
+    conptyArchDir?.startsWith('win10-') &&
+    conptyArchDir !== `win10-${targetArch}`
+  ) {
     return path.join(appOutDir, ...segments.slice(0, conptyArchIndex + 1));
   }
 
@@ -286,13 +290,13 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       !extra &&
       filename === 'tree-sitter-bash.node' &&
       /^(darwin|linux|win32)-(arm64|x64)$/.test(variant) &&
-      variant !== `win32-${targetArch}`
+      variant !== `${targetPlatform}-${targetArch}`
     ) {
       rootToRemove = path.join(runtimeRoot, ...prebuildRoot.split('/'), variant);
       targetSibling = path.join(
         runtimeRoot,
         ...prebuildRoot.split('/'),
-        `win32-${targetArch}`,
+        `${targetPlatform}-${targetArch}`,
         filename
       );
     }
@@ -301,7 +305,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   const ffiMatch = runtimePath.match(
     /^@yuuang\/ffi-rs-win32-(ia32|x64|arm64)-msvc\/ffi-rs\.win32-\1-msvc\.node$/
   );
-  if (ffiMatch && ffiMatch[1] !== targetArch) {
+  if (targetPlatform === 'win32' && ffiMatch && ffiMatch[1] !== targetArch) {
     rootToRemove = path.join(runtimeRoot, '@yuuang', `ffi-rs-win32-${ffiMatch[1]}-msvc`);
     targetSibling = path.join(
       runtimeRoot,
@@ -317,10 +321,16 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     'librust_pty.so',
     'librust_pty_arm64.dylib',
     'librust_pty_arm64.so',
+    'rust_pty.dll',
   ];
-  if (foreignBunPtyFiles.some((filename) => runtimePath === `${bunPtyRelease}/${filename}`)) {
+  const targetBunPtyFile = targetPlatform === 'linux' ? 'librust_pty.so' : 'rust_pty.dll';
+  if (
+    foreignBunPtyFiles.some(
+      (filename) => filename !== targetBunPtyFile && runtimePath === `${bunPtyRelease}/${filename}`
+    )
+  ) {
     rootToRemove = filePath;
-    targetSibling = path.join(runtimeRoot, ...bunPtyRelease.split('/'), 'rust_pty.dll');
+    targetSibling = path.join(runtimeRoot, ...bunPtyRelease.split('/'), targetBunPtyFile);
   }
 
   if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;
