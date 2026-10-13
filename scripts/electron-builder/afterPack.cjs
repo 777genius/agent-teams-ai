@@ -251,7 +251,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   if (
     targetPlatform !== 'win32' &&
     !(targetPlatform === 'linux' && targetArch === 'x64') &&
-    !(targetPlatform === 'darwin' && targetArch === 'arm64')
+    !(targetPlatform === 'darwin' && (targetArch === 'arm64' || targetArch === 'x64'))
   ) {
     return null;
   }
@@ -333,7 +333,9 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   ];
   const targetBunPtyFile =
     targetPlatform === 'darwin'
-      ? 'librust_pty_arm64.dylib'
+      ? targetArch === 'arm64'
+        ? 'librust_pty_arm64.dylib'
+        : 'librust_pty.dylib'
       : targetPlatform === 'linux'
         ? 'librust_pty.so'
         : 'rust_pty.dll';
