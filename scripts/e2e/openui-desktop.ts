@@ -313,7 +313,16 @@ async function main() {
       groupRecipientRunKeys: { alice: 'offline-alice', bob: 'offline-bob', lead: 'offline-lead' },
     };
     let history: Record<string, unknown>[] = [message];
-    const writeHistory = () => json(path.join(f.teamDir, 'inboxes', 'user.json'), history);
+    const writeHistory = async () => {
+      await json(path.join(f.teamDir, 'inboxes', 'user.json'), history);
+      await waitFor(
+        `(() => {
+          const messages = window.__agentTeamsDevStore.getState().teamMessagesByName[${JSON.stringify(f.teamName)}]?.canonicalMessages ?? [];
+          return ${JSON.stringify(history.map((message) => ({ messageId: message.messageId, text: message.text })))}.every(expected => messages.some(message => message.messageId === expected.messageId && message.text === expected.text));
+        })()`,
+        'exact inbox revision reached the existing message cache'
+      );
+    };
     await writeHistory();
     await waitFor(shell('openui'), 'group OpenUI');
 
