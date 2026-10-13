@@ -50,6 +50,7 @@ export async function prepareNativeDesktop() {
     'WINDIR',
     'COMSPEC',
     'DISPLAY',
+    'XAUTHORITY',
     'LANG',
   ]) {
     if (process.env[key]) env[key] = process.env[key];
@@ -118,8 +119,23 @@ export async function prepareNativeDesktop() {
           '--remote-debugging-address=127.0.0.1',
           `--user-data-dir=${env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR}`,
         ],
-        { env, cwd: root, stdio: 'ignore' }
+        { env, cwd: root, stdio: ['ignore', 'ignore', 'pipe'] }
       );
+      // Retain only static OS startup classifications, never application or
+      // provider log text. This diagnoses exits before the normal IPC boundary.
+      let startupFailure = '';
+      child.stderr?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString();
+        const classifications = [
+          'No usable sandbox',
+          'SUID sandbox helper',
+          'Failed to move to new namespace',
+          'error while loading shared libraries',
+          'Missing X server',
+          'Running as root',
+        ];
+        startupFailure ||= classifications.find((reason) => text.includes(reason)) ?? '';
+      });
       let spawnFailure: Error | undefined;
       child.once('error', (error) => {
         spawnFailure = error;
@@ -128,7 +144,10 @@ export async function prepareNativeDesktop() {
       try {
         const renderer = await waitFor(async () => {
           if (spawnFailure) throw new Error('Owned Electron spawn failed');
-          assert(child.exitCode === null && child.signalCode === null, 'Owned Electron exited');
+          assert(
+            child.exitCode === null && child.signalCode === null,
+            `Owned Electron exited (${startupFailure || child.signalCode || child.exitCode})`
+          );
           assert(child.pid, 'Owned Electron PID required');
           if (!(await ownsListener(child.pid, port))) return null;
           let targets: Target[];
@@ -302,9 +321,13 @@ async function ownsListener(pid: number, port: number): Promise<boolean> {
         contents = await readFile(`/proc/net/${table}`, 'utf8');
       } catch (error) {
         if (
-          table === 'tcp6' && error && typeof error === 'object' &&
-          'code' in error && error.code === 'ENOENT'
-        ) continue;
+          table === 'tcp6' &&
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        )
+          continue;
         throw error;
       }
       const rows = contents.trim().split('\n').slice(1);

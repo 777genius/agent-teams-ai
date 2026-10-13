@@ -14,13 +14,19 @@ import { prepareNativeDesktop } from './opencode-native-desktop-host';
 import { waitFor } from './release-updater/cdp.mts';
 
 async function main() {
-  assert(['darwin', 'linux'].includes(process.platform), 'Windows requires its full native scenario');
+  assert(
+    ['darwin', 'linux'].includes(process.platform),
+    'Windows requires its full native scenario'
+  );
   const [executable, sdk, binary, model, authFile, stopProbe] = process.argv.slice(2);
   assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model), 'Explicit provider/model required');
   for (const file of [executable, binary, authFile]) assert(path.isAbsolute(file));
-  assert(sdk === 'bundled' || path.isAbsolute(sdk), 'Explicit SDK path or bundled selection required');
+  assert(
+    sdk === 'bundled' || path.isAbsolute(sdk),
+    'Explicit SDK path or bundled selection required'
+  );
   const desktop = await prepareNativeDesktop();
   if (sdk !== 'bundled') {
     desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
@@ -71,7 +77,27 @@ async function main() {
   const checkpoint = () =>
     writeFile(proofFile, JSON.stringify(proof, null, 2) + '\n', { mode: 0o600 });
   await checkpoint();
-  let app = await desktop.launch(executable);
+  let app: Awaited<ReturnType<typeof desktop.launch>>;
+  try {
+    app = await desktop.launch(executable);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const known = [
+      'Owned Electron exited',
+      'Owned Electron spawn failed',
+      'Foreign inspector listener',
+      'Inspector must bind IPv4 loopback',
+      'normal preload API',
+      'owned packaged Electron renderer',
+    ];
+    proof.status = 'failed';
+    proof.failure =
+      known.find((reason) => message.includes(reason)) ?? 'unclassified app launch failure';
+    await checkpoint();
+    throw new Error(
+      `Short Electron integration failed before provider submission: ${proof.failure}`
+    );
+  }
   let submitted = false;
   let heldProcess: { pid: number; identity: string; taskId: string } | undefined;
   try {
@@ -205,7 +231,9 @@ async function main() {
       await checkpoint();
       assert(/^[a-zA-Z0-9_-]+$/.test(heldProcess.taskId), 'Safe owned task ID required');
       const retainedPath = path.join(
-        desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!, 'tasks', desktop.teamName,
+        desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!,
+        'tasks',
+        desktop.teamName,
         `${heldProcess.taskId}.json`
       );
       await app.close();
@@ -213,19 +241,29 @@ async function main() {
       const retainedStat = await lstat(retainedPath);
       assert(retainedStat.isFile() && !retainedStat.isSymbolicLink() && retainedStat.nlink === 1);
       const before = JSON.parse(await readFile(retainedPath, 'utf8')) as {
-        id: string; owner?: string; status: string;
+        id: string;
+        owner?: string;
+        status: string;
       };
       assert.equal(before.id, heldProcess.taskId);
       assert(['pending', 'in_progress'].includes(before.status));
       const markerPath = path.join(desktop.projectPath, 'held-started.json');
       const markerBefore = await readFile(markerPath, 'utf8');
       app = await desktop.launch(executable);
-      await waitFor(async () => {
-        const startup = await app.call('getStartupStatus');
-        assert(!startup.error, 'Owned application restart failed');
-        return startup.ready ? true : null;
-      }, 'owned app restart ready', 180_000);
-      assert.equal(await app.call('processAlive'), false, 'Restart must not auto-launch stopped team');
+      await waitFor(
+        async () => {
+          const startup = await app.call('getStartupStatus');
+          assert(!startup.error, 'Owned application restart failed');
+          return startup.ready ? true : null;
+        },
+        'owned app restart ready',
+        180_000
+      );
+      assert.equal(
+        await app.call('processAlive'),
+        false,
+        'Restart must not auto-launch stopped team'
+      );
       const restored = await app.call('getRuntime');
       assert(Object.values(restored.members).every((member) => !member.alive));
       const data = await app.call('getData');
@@ -292,7 +330,8 @@ async function processIdentity(pid: number): Promise<string | null> {
     );
     return stdout.trim() || null;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+      return null;
     if (error && typeof error === 'object' && 'code' in error && error.code === 1) return null;
     throw error;
   }
