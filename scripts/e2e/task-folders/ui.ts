@@ -19,7 +19,8 @@ export const label = (
   roles = 'button,[role="button"],[role="menuitem"],[role="option"]'
 ) =>
   `Array.from(${root}.querySelectorAll(${JSON.stringify(roles)})).find(e=>e.getAttribute('aria-label')===${JSON.stringify(text)} || e.textContent?.trim()===${JSON.stringify(text)})`;
-export const folderRow = (id: string) => el(`${selectors.tree} [data-folder-id="${id}"]`);
+export const folderRow = (id: string) =>
+  `Array.from(${el(selectors.tree)}?.querySelectorAll('[data-folder-id]') ?? []).find(e=>e.getAttribute('data-folder-id')===${JSON.stringify(id)})`;
 export const taskRow = (team: string, id: string, root = selectors.tree) =>
   `Array.from(${el(root)}.querySelectorAll('[data-task-key]')).find(e=>e.getAttribute('data-task-key')===${JSON.stringify(JSON.stringify([team, id]))})`;
 // Helper expressions embed the selector through JSON.stringify, so the raw
@@ -36,6 +37,22 @@ export interface FolderPoint extends Point {
   hitFolderId: string | null;
   dragTargetHighlighted: boolean;
 }
+export interface DragEventObservation {
+  type: 'dragenter' | 'dragover';
+  isTrusted: boolean;
+  clientX: number;
+  clientY: number;
+  folderId: string | null;
+  insideTree: boolean;
+}
+export interface NativeDragEvidence {
+  source: string;
+  nativeInput: boolean;
+  intercepted: Record<string, unknown>;
+  observedDragStarts: { trusted: boolean; handle: string }[];
+  at: string;
+  dragEvents: DragEventObservation[];
+}
 interface PointSample extends Partial<FolderPoint> {
   point?: Point;
   reason: string;
@@ -51,7 +68,7 @@ const boundedPresence = async (probe: () => Promise<boolean>, timeout: number) =
   return probe();
 };
 export class UI {
-  dragEvidence: unknown[] = [];
+  dragEvidence: NativeDragEvidence[] = [];
   constructor(readonly desktop: Desktop) {}
   get cdp() {
     assert(this.desktop.cdp);
@@ -60,8 +77,42 @@ export class UI {
   async value<T>(expression: string): Promise<T> {
     return (await this.cdp.evaluate(expression)) as T;
   }
+  private async boundedValue<T>(expression: string, timeout: number, name: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${name} exceeded ${timeout}ms browser deadline`)), timeout);
+    });
+    try {
+      return await Promise.race([this.value<T>(expression), deadline]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  private async awaitBrowserFrame(name: string) {
+    await this.boundedValue(
+      `new Promise(resolve=>{const done=()=>resolve(true);requestAnimationFrame(done);setTimeout(done,250);})`,
+      500,
+      name
+    );
+  }
   async wait(expression: string, name: string, timeout?: number) {
-    await until(() => this.value(`(async()=>Boolean(await (${expression})))()`), name, timeout);
+    const limit = timeout ?? 30_000;
+    await until(
+      async () => {
+        try {
+          return await this.boundedValue<boolean>(
+            `(async()=>Boolean(await (${expression})))()`,
+            Math.min(1000, Math.max(50, limit)),
+            name
+          );
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('browser deadline')) return false;
+          throw error;
+        }
+      },
+      name,
+      limit
+    );
   }
   async locate(expression: string) {
     const exists = () =>
@@ -80,7 +131,7 @@ export class UI {
     );
     // Navigate the real virtual scroll container, including during an intercepted native drag.
     await this.cdp.evaluate(`${el(selectors.tree)}.scrollTop=0`);
-    await this.cdp.evaluate('new Promise(resolve => requestAnimationFrame(() => resolve()))');
+    await this.awaitBrowserFrame('virtual tree navigation frame');
     if (await exists()) return;
     const steps = await this.value<number>(
       `Math.ceil(${el(selectors.tree)}.scrollHeight / Math.max(100,${el(selectors.tree)}.clientHeight/2))+2`
@@ -90,7 +141,7 @@ export class UI {
       await this.cdp.evaluate(
         `${el(selectors.tree)}.scrollTop+=Math.max(100,${el(selectors.tree)}.clientHeight/2)`
       );
-      await this.cdp.evaluate('new Promise(resolve => requestAnimationFrame(() => resolve()))');
+      await this.awaitBrowserFrame('virtual tree navigation frame');
       if (await exists()) return;
     }
     throw new Error('Missing selector after virtual tree navigation: ' + expression);
@@ -131,6 +182,14 @@ export class UI {
     throw new Error(`${reason} after 5000ms hit readiness wait: ${expression}`);
   }
   async folderPoint(id: string, requireDragTarget = false): Promise<FolderPoint> {
+    if (requireDragTarget) {
+      await this.wait(
+        `${folderRow(id)}?.classList.contains('bg-blue-500/20')`,
+        `same-ID vendor drag-target highlight for ${id}`,
+        TARGET_PRESENCE_TIMEOUT_MS
+      );
+    }
+    // Geometry, hit identity, and vendor highlight must come from one fresh DOM sample.
     const sample = await this.pointSample(folderRow(id));
     assert.equal(sample.folderId, id, 'Folder point changed identity');
     assert.equal(sample.hitFolderId, id, 'Folder center was not the real hit target');
@@ -236,8 +295,13 @@ export class UI {
   }
   async waitDropFocusRestored() {
     await this.wait(
-      `(() => {const active=document.activeElement;return !!active && active.matches('[role="treeitem"]') && active.getAttribute('tabindex')==='0' && ${el(selectors.tree)}?.contains(active);})()`,
-      'vendor drop completion restored tree focus',
+      `(async()=>{const tree=${el(selectors.tree)};const active=document.activeElement;
+        if(!tree || !active || !active.matches('[role="treeitem"]') || active.getAttribute('tabindex')!=='0' || !tree.contains(active))return false;
+        const frames=new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))));
+        const deadline=new Promise(resolve=>setTimeout(()=>resolve(false),${TARGET_PRESENCE_TIMEOUT_MS}));
+        if(!await Promise.race([frames,deadline]))return false;
+        return document.activeElement===active && active.matches('[role="treeitem"]') && active.getAttribute('tabindex')==='0' && tree.contains(active);})()`,
+      'vendor drop completion restored stable tree focus across consecutive RAFs',
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
@@ -323,8 +387,14 @@ export class UI {
         clickCount: 1,
       });
     await this.wait(
-      `!${el(selectors.panel)}?.contains(document.activeElement)`,
-      'focus transferred outside folder panel'
+      `(async()=>{const panel=${el(selectors.panel)};const active=document.activeElement;
+        if(panel?.contains(active))return false;
+        const frames=new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))));
+        const deadline=new Promise(resolve=>setTimeout(()=>resolve(false),${TARGET_PRESENCE_TIMEOUT_MS}));
+        if(!await Promise.race([frames,deadline]))return false;
+        return document.activeElement===active && !panel?.contains(document.activeElement);})()`,
+      'trusted outside focus remained outside folder panel across consecutive RAFs',
+      TARGET_PRESENCE_TIMEOUT_MS
     );
   }
   async beginDrag(
@@ -333,9 +403,14 @@ export class UI {
     expectPanel = true
   ) {
     this.desktop.takeDrag();
-    await this.cdp.evaluate(`(() => {window.__taskFoldersE2EDragStarts=[];
+    await this.cdp.evaluate(`(() => {window.__taskFoldersE2EDragStarts=[];window.__taskFoldersE2EDragEvents=[];
       if(!window.__taskFoldersE2EObserving){window.__taskFoldersE2EObserving=true;
-        document.addEventListener('dragstart',e=>window.__taskFoldersE2EDragStarts.push({trusted:e.isTrusted,handle:e.target?.getAttribute('data-testid')}),true);}})()`);
+        document.addEventListener('dragstart',e=>window.__taskFoldersE2EDragStarts.push({trusted:e.isTrusted,handle:e.target?.getAttribute('data-testid')}),true);
+        const observeDrag=e=>{const target=e.target;const folder=target instanceof Element?target.closest('[data-folder-id]'):null;
+          const tree=document.querySelector(${JSON.stringify(selectors.tree)});
+          window.__taskFoldersE2EDragEvents.push({type:e.type,isTrusted:e.isTrusted,clientX:e.clientX,clientY:e.clientY,
+            folderId:folder?.getAttribute('data-folder-id')??null,insideTree:!!tree&&(tree===target||tree.contains(target))});};
+        document.addEventListener('dragenter',observeDrag,true);document.addEventListener('dragover',observeDrag,true);}})()`);
     const start = await this.point(source);
     await this.move(start);
     await this.cdp.send('Input.dispatchMouseEvent', {
@@ -383,9 +458,38 @@ export class UI {
       intercepted: data,
       observedDragStarts: observed,
       at: new Date().toISOString(),
+      dragEvents: [],
     });
     if (expectPanel) await this.wait(el(selectors.panel), 'native drag opened panel');
     return data;
+  }
+  private async syncDragEvents(): Promise<DragEventObservation[]> {
+    const events = await this.value<DragEventObservation[]>(
+      'window.__taskFoldersE2EDragEvents ?? []'
+    );
+    const evidence = this.dragEvidence.at(-1);
+    if (evidence) evidence.dragEvents = events;
+    return events;
+  }
+  async nativeDragEvents(): Promise<DragEventObservation[]> {
+    return await this.syncDragEvents();
+  }
+  async assertNativeDragPair(point: Point, name: string) {
+    const events = await this.syncDragEvents();
+    const near = (event: DragEventObservation) =>
+      event.isTrusted &&
+      Math.abs(event.clientX - point.x) <= 1 &&
+      Math.abs(event.clientY - point.y) <= 1;
+    const over = events.filter((event) => event.type === 'dragover' && near(event));
+    assert(over.length, `Trusted native dragover missing at ${name}: ${JSON.stringify(events)}`);
+    const enter = events.filter((event) => event.type === 'dragenter' && near(event));
+    // Chromium can omit dragenter when the hit target does not change; retain it when emitted.
+    if (enter.length)
+      assert(
+        enter.some((candidate) => events.indexOf(candidate) < events.indexOf(over.at(-1)!)),
+        `Native dragenter was not paired before dragover at ${name}: ${JSON.stringify(events)}`
+      );
+    return { over: over.at(-1)!, enter: enter.at(-1) ?? null };
   }
   async dragOver(data: Record<string, unknown>, point: Point, enter = false) {
     await this.move(point, 1);
@@ -394,6 +498,7 @@ export class UI {
       ...point,
       data,
     });
+    await this.syncDragEvents();
   }
   async finishDrag(data: Record<string, unknown>, point: Point, cancel = false) {
     if (cancel) {
@@ -412,6 +517,7 @@ export class UI {
       clickCount: 1,
     });
     await this.cdp.send('Input.cancelDragging');
+    await this.syncDragEvents();
   }
   async drag(
     source: string,

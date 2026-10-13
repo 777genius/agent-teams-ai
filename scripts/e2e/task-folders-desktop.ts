@@ -418,10 +418,10 @@ async function main() {
     await check('release-grace', async () => {
       await ui.close();
       await ui.drag(taskSource('b'), folderRow(f.parent), 0.5, { teamName: f.team, taskId: 'b' });
-        await ui.persisted(
-          (s) => children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
-          'release drop'
-        );
+      await ui.persisted(
+        (s) => children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
+        'release drop'
+      );
       await ui.waitDropFocusRestored();
       return await grace();
     });
@@ -483,6 +483,7 @@ async function main() {
       const before = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
       await ui.dragOver(data, point, true);
       await ui.dragOver(data, point);
+      await ui.assertNativeDragPair(point, 'native edge center');
       // Stationary pointer: RAF edge scroll must continue without repeated dragover events.
       await delay(1600);
       const after = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
@@ -496,13 +497,19 @@ async function main() {
       );
       await ui.dragOver(data, center, true);
       await ui.dragOver(data, center);
+      await ui.assertNativeDragPair(center, 'native tree center');
       const centerScrollTop = await ui.waitForStableScroll();
       const selected = await ui.visibleFolderCenter(f.parent);
       const target = selected.folderId;
       await ui.dragOver(data, selected, true);
       await ui.dragOver(data, selected);
+      const selectedPair = await ui.assertNativeDragPair(selected, 'selected native drop target');
       const dropTarget = await ui.folderPoint(target, true);
       assert.equal(dropTarget.hitFolderId, target, 'Drop target identity changed after reacquire');
+      assert.equal(selectedPair.over.folderId, target, 'Observed dragover folder identity changed');
+      assert.equal(selectedPair.over.insideTree, true, 'Observed selected dragover was outside the tree');
+      if (selectedPair.enter)
+        assert.equal(selectedPair.enter.folderId, target, 'Observed dragenter folder identity changed');
       await ui.finishDrag(data, dropTarget);
       await ui.persisted(
         (s) => children(s, target).some((c) => c.kind === 'folder' && c.id === f.parent),
@@ -612,6 +619,11 @@ async function main() {
           taskHashes[id],
           'UI organization changed task file ' + id
         );
+      assert.equal(
+        ui.dragEvidence.length,
+        12,
+        'Expected exactly 12 genuine beginDrag evidence entries'
+      );
       assert.deepEqual(desktop.faults, [], 'Renderer exceptions or console errors');
       return { runtimeAudit: audit };
     });
