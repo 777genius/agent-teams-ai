@@ -81,6 +81,18 @@ jobs:
           $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
+      - name: Select Windows release compiler Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - name: Build and stage the verified runtime candidate
+        working-directory: .test-sdk
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+          CANDIDATE_PLATFORM: win32-x64
+        run: |
+          $ErrorActionPreference = 'Stop'
           bun scripts/package-runtime.ts --platform win32-x64
           if ($LASTEXITCODE -ne 0) { throw 'Runtime candidate build failed' }
           New-Item -ItemType Directory -Force candidate/runtime | Out-Null
