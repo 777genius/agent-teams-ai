@@ -1,6 +1,6 @@
 import { buildOpenCodeSecondaryAppManagedLaunchPromptWithPorts } from '@main/services/team/provisioning/TeamProvisioningOpenCodeSecondaryBriefingBuilder';
 import { createController, protocols } from 'agent-teams-controller';
-import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';

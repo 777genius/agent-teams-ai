@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import { protocols } from 'agent-teams-controller';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildOpenCodeSecondaryAppManagedLaunchPromptWithPorts,
