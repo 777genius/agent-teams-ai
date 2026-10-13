@@ -7,6 +7,7 @@ import {
   getEffectiveMimeType,
   isImageMime,
   isVideoMime,
+  TEXT_FILE_EXTENSIONS,
 } from '@shared/constants/attachments';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
@@ -56,7 +57,14 @@ export function resolveMemberAttachmentCapability(
   return {
     providerId,
     model,
-    capability: resolveAgentAttachmentCapability({ providerId, model }),
+    capability: resolveAgentAttachmentCapability({
+      providerId,
+      model,
+      nativeInboxTextAttachmentsSupported:
+        !isLeadMember(member) &&
+        member.nativeInboxAttachmentsSupported === true &&
+        member.nativeInboxTextAttachmentsSupported === true,
+    }),
   };
 }
 
@@ -93,7 +101,16 @@ export function getAttachmentInputAcceptForMember(
       ...(capability.supportsVideo ? capability.supportedVideoMimeTypes : []),
     ].join(',');
   }
-  return '*/*';
+  if (
+    capability.supportedFileMimeTypes.includes('text/*') ||
+    capability.supportedFileMimeTypes.includes('application/pdf')
+  )
+    return '*/*';
+  return [
+    ...capability.supportedImageMimeTypes,
+    ...capability.supportedFileMimeTypes,
+    ...Array.from(TEXT_FILE_EXTENSIONS, (extension) => `.${extension}`),
+  ].join(',');
 }
 
 export function validateAttachmentFilesForMember(input: {

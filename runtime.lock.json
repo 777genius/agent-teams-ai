@@ -1,40 +1,40 @@
 {
-  "version": "0.0.114",
+  "version": "0.0.115",
   "cliVersion": "2.777.777",
-  "sourceRef": "v0.0.114",
+  "sourceRef": "v0.0.115",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/agent_teams_orchestrator_binaries",
-  "releaseTag": "runtime-v0.0.114",
+  "releaseTag": "runtime-v0.0.115",
   "assets": {
     "darwin-arm64": {
-      "file": "agent-teams-runtime-darwin-arm64-v0.0.114.tar.gz",
+      "file": "agent-teams-runtime-darwin-arm64-v0.0.115.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "b8108f730892d5fa368ff3860ae0c7621f967b20faa87ba361d44b73887afc7a"
+      "sha256": "e45d36b7190edda30e236958a4acb51e249d0ac02c868c02888ef52b551cb1d7"
     },
     "darwin-x64": {
-      "file": "agent-teams-runtime-darwin-x64-v0.0.114.tar.gz",
+      "file": "agent-teams-runtime-darwin-x64-v0.0.115.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "29fb7c924a26a74fc1a59ce6406469ce2f5ec1be135b5da8e550631d277b4533"
+      "sha256": "30964d20285bcea207888ffbb708a668128e37f493d7a6055a284e59f4e036cf"
     },
     "linux-x64": {
-      "file": "agent-teams-runtime-linux-x64-v0.0.114.tar.gz",
+      "file": "agent-teams-runtime-linux-x64-v0.0.115.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "f1c7d01891f4954731d7c2faad6795b4493b45abe31772fc46dd501f05f04ebc"
+      "sha256": "b38b047556b7bf379170e8164929650d9cda199754037cbff9b75c66030e279d"
     },
     "win32-arm64": {
-      "file": "agent-teams-runtime-win32-arm64-v0.0.114.zip",
+      "file": "agent-teams-runtime-win32-arm64-v0.0.115.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "7a8344f8d7586da077c6488b55e25596dd176ea479ec65baeb72f2229d21992f"
+      "sha256": "137c64305c35f6100a8f8f030f2b59d3f89d01670ef649fb3170a697d3d25047"
     },
     "win32-x64": {
-      "file": "agent-teams-runtime-win32-x64-v0.0.114.zip",
+      "file": "agent-teams-runtime-win32-x64-v0.0.115.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "59b1ad2d24ec1f7b7bd7a2c531e8684cc25ebd3bfd16817236a46a92341888fa"
+      "sha256": "a69600aebf253f8324018c6a244b09eadd49c773fc2e8034b3c780d73b52eefd"
     }
   }
 }

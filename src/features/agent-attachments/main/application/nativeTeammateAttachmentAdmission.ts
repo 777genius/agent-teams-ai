@@ -94,11 +94,11 @@ export async function admitNativeTeammateAttachmentMessage(
   if (!isNativeAttachmentRecipient({ isLeadRecipient: false, providerId: input.providerId })) {
     throw new Error('Native teammate attachments require a Claude or Codex recipient');
   }
-  validateNativeAttachmentBatch(input.attachments, input.providerId);
 
   let result: SendMessageResult | null = null;
   await deps.runWithLiveRosterMutation(input.teamName, async () => {
     const firstProof = await requireCurrentNativeActor(input, deps);
+    validateNativeAttachmentBatch(input.attachments, input.providerId, firstProof);
     const stored = await deps.attachmentStore.saveNativeAttachments(
       input.teamName,
       input.messageId,
@@ -155,7 +155,13 @@ export async function enrichTeamSnapshotNativeAttachmentSupport(input: {
         isLeadRecipient: false,
         providerId,
       });
-      if (!native || !runtimeSnapshot) return member;
+      if (!native) return member;
+      if (!runtimeSnapshot)
+        return {
+          ...member,
+          nativeInboxAttachmentsSupported: false,
+          nativeInboxTextAttachmentsSupported: false,
+        };
       const expectedProviderId =
         providerId === 'codex' ? ('codex' as const) : ('anthropic' as const);
       const proof = await input.deps.readCapability({
@@ -164,14 +170,17 @@ export async function enrichTeamSnapshotNativeAttachmentSupport(input: {
         memberName: member.name,
         expectedProviderId,
       });
+      const current = isCurrentNativeActor(
+        member.name,
+        proof,
+        runtimeSnapshot,
+        input.deps.isProcessAlive
+      );
       return {
         ...member,
-        nativeInboxAttachmentsSupported: isCurrentNativeActor(
-          member.name,
-          proof,
-          runtimeSnapshot,
-          input.deps.isProcessAlive
-        ),
+        nativeInboxAttachmentsSupported: current,
+        nativeInboxTextAttachmentsSupported:
+          current && providerId === 'codex' && proof?.nativeInboxAttachmentsVersion === 2,
       };
     })
   );
@@ -180,14 +189,18 @@ export async function enrichTeamSnapshotNativeAttachmentSupport(input: {
 
 function validateNativeAttachmentBatch(
   attachments: readonly AttachmentPayload[],
-  providerId: TeamProviderId
+  providerId: TeamProviderId,
+  proof: NativeInboxAttachmentCapabilityProof
 ): void {
   if (attachments.length === 0 || attachments.length > MAX_NATIVE_ATTACHMENTS) {
     throw new Error(
       `Native teammate attachment count must be between 1 and ${MAX_NATIVE_ATTACHMENTS}`
     );
   }
-  const capability = resolveAgentAttachmentCapability({ providerId });
+  const capability = resolveAgentAttachmentCapability({
+    providerId,
+    nativeInboxTextAttachmentsSupported: proof.nativeInboxAttachmentsVersion === 2,
+  });
   const ids = new Set<string>();
   let total = 0;
   for (const attachment of attachments) {
@@ -207,9 +220,9 @@ function validateNativeAttachmentBatch(
     const supportedImage = capability.supportedImageMimeTypes.includes(
       attachment.mimeType as (typeof capability.supportedImageMimeTypes)[number]
     );
-    const supportedFile =
-      providerId === 'anthropic' &&
-      (attachment.mimeType === 'application/pdf' || attachment.mimeType === 'text/plain');
+    const supportedFile = capability.supportedFileMimeTypes.some((mime) =>
+      mime.endsWith('/*') ? attachment.mimeType === 'text/plain' : attachment.mimeType === mime
+    );
     if (!supportedImage && !supportedFile) {
       throw new Error(`Attachment type is not supported by ${providerId}: ${attachment.mimeType}`);
     }
@@ -240,6 +253,13 @@ async function requireCurrentNativeActor(
     throw new Error(
       'Native teammate attachment capability is missing, stale, or belongs to another run'
     );
+  }
+  if (
+    input.providerId === 'codex' &&
+    input.attachments.some((attachment) => attachment.mimeType === 'text/plain') &&
+    proof.nativeInboxAttachmentsVersion !== 2
+  ) {
+    throw new Error('Codex text attachments require a current version 2 native runtime');
   }
   return proof;
 }

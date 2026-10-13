@@ -49,12 +49,55 @@ describe('attachmentRecipientCapabilities', () => {
       'current attachment-capable runtime'
     );
     expect(
-      validateAttachmentFilesForMember({ member: native, files: [file('diagram.png', 'image/png')] })
+      validateAttachmentFilesForMember({
+        member: native,
+        files: [file('diagram.png', 'image/png')],
+      })
     ).toContain('current attachment-capable runtime');
     expect(getMemberAttachmentUnavailableReason(ready)).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({})] })
     ).toBeNull();
+  });
+
+  it('allows normalized text only for a current native Codex teammate', () => {
+    const ready = member({
+      providerId: 'codex',
+      nativeInboxAttachmentsSupported: true,
+      nativeInboxTextAttachmentsSupported: true,
+    });
+    const text = payload({ filename: 'notes.txt', mimeType: 'text/plain' });
+    expect(getAttachmentInputAcceptForMember(ready)).toContain('.json');
+    expect(
+      validateAttachmentFilesForMember({
+        member: ready,
+        files: [
+          file('notes.txt', 'text/plain'),
+          file('data.json', 'application/json'),
+          file('main.ts', 'video/mp2t'),
+        ],
+      })
+    ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: ready,
+        attachments: [text, payload({ id: 'image' })],
+      })
+    ).toBeNull();
+    for (const restricted of [
+      member({ ...ready, nativeInboxTextAttachmentsSupported: false }),
+      member({ ...ready, name: 'team-lead' }),
+      member({ ...ready, providerId: 'opencode', model: 'gpt-5.4-mini' }),
+    ]) {
+      expect(
+        validateAttachmentPayloadsForMember({ member: restricted, attachments: [text] })
+      ).not.toBeNull();
+    }
+    for (const mimeType of ['application/pdf', 'image/gif', 'application/octet-stream']) {
+      expect(
+        validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({ mimeType })] })
+      ).not.toBeNull();
+    }
   });
 
   it('blocks OpenCode non-vision models before file selection or send', () => {
@@ -154,9 +197,9 @@ describe('attachmentRecipientCapabilities', () => {
     expect(validateAttachmentFilesForMember({ member: kimi, files: [videoFile] })).toBe(
       'This provider path does not support video attachments through this delivery path.'
     );
-    expect(
-      validateAttachmentPayloadsForMember({ member: kimi, attachments: [videoPayload] })
-    ).toBe('This provider path does not support video attachments through this delivery path.');
+    expect(validateAttachmentPayloadsForMember({ member: kimi, attachments: [videoPayload] })).toBe(
+      'This provider path does not support video attachments through this delivery path.'
+    );
   });
 
   it('enforces one video and the 8MiB per-video/mixed budget for MiniMax', () => {

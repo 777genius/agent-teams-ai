@@ -7,23 +7,13 @@
  * CDP primitives, and never installs, mocks, or invokes a synthetic model.
  */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Existing owned-renderer CDP transport. No parallel CDP wrapper is introduced.
-// @ts-expect-error Existing JavaScript CDP client has no declaration file.
-import { CdpClient } from './e2e/comment-notification/cdp.mjs';
 import {
   generateArtifacts,
   type GeneratedArtifacts,
@@ -47,6 +37,7 @@ import {
   collectStructuredInput,
   isProcessAlive,
   ownedRuntimeProcesses,
+  startOwnedDesktopApp,
   terminateOwnedApp,
   type CleanupEvidence,
   type HarnessCdp as Cdp,
@@ -143,116 +134,6 @@ async function assertOwnedScratch(root: string): Promise<string> {
   return resolved;
 }
 
-async function startApp(
-  args: Args,
-  runRoot: string,
-  tmpRoot: string
-): Promise<{ child: ChildProcess; logs: string[]; env: NodeJS.ProcessEnv; port: number; cdp: Cdp }> {
-  const runtimeSource = await realpath(args.runtimeSource);
-  const original = { ...process.env };
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: path.join(runRoot, 'user-data'),
-    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtimeSource,
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
-    AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
-    TMPDIR: tmpRoot,
-    npm_config_cache: path.join(runRoot, 'npm-cache'),
-    ELECTRON_CACHE: path.join(runRoot, 'electron-cache'),
-  };
-  await Promise.all(
-    [env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR!, env.TMPDIR!, env.npm_config_cache!, env.ELECTRON_CACHE!].map(
-      (dir) => mkdir(dir, { recursive: true })
-    )
-  );
-  if (process.platform === 'darwin') {
-    for (const key of ['HOME', 'CLAUDE_CONFIG_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT'] as const) {
-      assert.equal(env[key], original[key], `macOS auth root ${key} must remain unchanged`);
-    }
-    assert(!Object.hasOwn(env, 'CLAUDE_CONFIG_DIR') || env.CLAUDE_CONFIG_DIR === original.CLAUDE_CONFIG_DIR);
-  }
-  const child = spawn('pnpm', ['dev:mcp'], {
-    cwd: repoRoot,
-    env,
-    detached: process.platform !== 'win32',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const logs: string[] = [];
-  for (const stream of [child.stdout, child.stderr]) {
-    stream?.on('data', (chunk: Buffer) => {
-      logs.push(chunk.toString());
-      if (logs.length > 400) logs.shift();
-    });
-  }
-  let renderer: { port: number; cdp: Cdp } | null = null;
-  try {
-    renderer = await bounded<{ port: number; cdp: Cdp }>('owned dev:mcp CDP endpoint', async () => {
-      if (child.exitCode !== null) throw new Error(`Owned dev:mcp exited ${child.exitCode}`);
-      const match = logs
-        .join('')
-        .match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\/devtools\/browser\//);
-      if (!match) return null;
-      const targets = (await fetch(`http://127.0.0.1:${match[1]}/json/list`).then((response) =>
-        response.json()
-      )) as Array<{ type: string; url: string; webSocketDebuggerUrl: string }>;
-      for (const target of targets.filter((item) => item.type === 'page')) {
-        const cdp = (await CdpClient.connect(target.webSocketDebuggerUrl)) as Cdp;
-        try {
-          if (await cdp.evaluate<boolean>('Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)')) {
-            return { port: Number(match[1]), cdp };
-          }
-        } finally {
-          if (!(await cdp.evaluate<boolean>('Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)').catch(() => false))) {
-            await cdp.close().catch(() => undefined);
-          }
-        }
-      }
-      return null;
-    });
-    assert(renderer, 'Owned renderer was not selected');
-    await renderer.cdp.send('Runtime.enable');
-    await renderer.cdp.send('Page.enable');
-    await bounded(
-      'desktop API',
-      () =>
-        renderer!.cdp.evaluate<boolean>(
-          'Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)'
-        ),
-      60_000
-    );
-    await bounded(
-      'desktop startup',
-      () =>
-        renderer!.cdp.evaluate<boolean>(
-          '(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()'
-        ),
-      60_000
-    );
-    return { child, logs, env, port: renderer.port, cdp: renderer.cdp };
-  } catch (error) {
-    const cleanupErrors: Error[] = [];
-    await renderer?.cdp.close().catch((cleanupError) => {
-      cleanupErrors.push(new Error(`startup CDP cleanup failed: ${String(cleanupError)}`));
-    });
-    const appCleanup = await terminateOwnedApp(child);
-    if (!appCleanup.terminated) {
-      cleanupErrors.push(
-        new Error(`startup app cleanup failed: ${appCleanup.error ?? 'unknown error'}`)
-      );
-    }
-    await writeFile(path.join(runRoot, 'evidence', 'app.log'), logs.join('')).catch((logError) => {
-      cleanupErrors.push(new Error(`startup app log write failed: ${String(logError)}`));
-    });
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        'Owned desktop startup and cleanup both failed'
-      );
-    }
-    throw error;
-  }
-}
-
 async function click(cdp: Cdp, expression: string): Promise<void> {
   const point = await cdp.evaluate<{ x: number; y: number } | null>(
     `(() => { const element = ${expression}; if (!(element instanceof HTMLElement)) return null; element.scrollIntoView({ block: 'nearest' }); const rect = element.getBoundingClientRect(); const x = rect.x + rect.width / 2; const y = rect.y + rect.height / 2; const hit = document.elementFromPoint(x, y); return hit && element.contains(hit) ? { x, y } : null; })()`
@@ -285,7 +166,9 @@ async function clickSend(cdp: Cdp): Promise<void> {
   );
   await click(cdp, `document.querySelector('textarea[id^="compose-"]')`);
   assert(
-    await cdp.evaluate<boolean>(`document.activeElement?.matches('textarea[id^="compose-"]') ?? false`),
+    await cdp.evaluate<boolean>(
+      `document.activeElement?.matches('textarea[id^="compose-"]') ?? false`
+    ),
     'Composer textarea must be focused before sending'
   );
   for (const type of ['rawKeyDown', 'keyUp']) {
@@ -336,10 +219,7 @@ async function stageFiles(cdp: Cdp, files: readonly string[]): Promise<void> {
   );
 }
 
-async function createTeam(
-  cdp: Cdp,
-  request: TeamCreateRequest
-): Promise<TeamCreateResponse> {
+async function createTeam(cdp: Cdp, request: TeamCreateRequest): Promise<TeamCreateResponse> {
   const key = `nativeAttachmentTeamCreate_${randomUUID().replaceAll('-', '')}`;
   await cdp.evaluate(
     `(() => { const target = window; target[${literal(key)}] = { done: false }; window.electronAPI.teams.createTeam(${literal(request)}).then((value) => { target[${literal(key)}] = { done: true, value }; }, (error) => { target[${literal(key)}] = { done: true, error: String(error) }; }); return true; })()`
@@ -411,13 +291,24 @@ async function main(): Promise<void> {
       tmpRoot = await mkdtemp('/private/tmp/na-e2e-');
       evidence.ownedShortTmpRoot = tmpRoot;
     }
-    const started = await startApp(args, runRoot, tmpRoot);
+    const started = await startOwnedDesktopApp(args, repoRoot, runRoot, tmpRoot, bounded);
     app = started.child;
     appLogs = started.logs;
     cdp = started.cdp;
     artifacts = await generateArtifacts(cdp, runRoot);
     evidence.generatedExpected = artifacts.expected as unknown as Json;
-    evidence.fixtureDigests = artifacts.digests;
+    evidence.fixtureDigests =
+      args.provider === 'claude'
+        ? {
+            image: artifacts.digests.image,
+            text: artifacts.digests.text,
+            pdf: artifacts.digests.pdf,
+          }
+        : {
+            image: artifacts.digests.image,
+            text: artifacts.digests.text,
+            json: artifacts.digests.json,
+          };
     await timeline({ phase: 'start' });
     await timeline({ phase: 'desktop-ready', port: started.port });
     const request: TeamCreateRequest = {
@@ -463,22 +354,32 @@ async function main(): Promise<void> {
       'teams',
       team
     );
-    readyState = await bounded<NativeReadyState>('current native attachment runtime readiness', async () => {
-      const state = await readNativeState(teamDir, team).catch(() => null);
-      const runtime = await cdp!.evaluate<TeamAgentRuntimeSnapshot>(
-        `window.electronAPI.teams.getTeamAgentRuntime(${literal(team)})`
-      );
-      const member = runtime.members[MEMBER_NAME];
-      if (!state || !member?.alive) return null;
-      const pid = member.runtimePid ?? member.pid;
-      if (!pid || state.capability.pid !== pid || state.capability.nativeInboxAttachmentsVersion !== 1) return null;
-      return { state: { ...state, runtimeSnapshot: runtime }, pid };
-    });
+    readyState = await bounded<NativeReadyState>(
+      'current native attachment runtime readiness',
+      async () => {
+        const state = await readNativeState(teamDir, team).catch(() => null);
+        const runtime = await cdp!.evaluate<TeamAgentRuntimeSnapshot>(
+          `window.electronAPI.teams.getTeamAgentRuntime(${literal(team)})`
+        );
+        const member = runtime.members[MEMBER_NAME];
+        if (!state || !member?.alive) return null;
+        const pid = member.runtimePid ?? member.pid;
+        if (
+          !pid ||
+          state.capability.pid !== pid ||
+          (args.provider === 'codex'
+            ? state.capability.nativeInboxAttachmentsVersion !== 2
+            : ![1, 2].includes(Number(state.capability.nativeInboxAttachmentsVersion)))
+        )
+          return null;
+        return { state: { ...state, runtimeSnapshot: runtime }, pid };
+      }
+    );
     evidence.runtimeIdentity = readyState as unknown as Json;
     await timeline({ phase: 'native-ready', pid: readyState.pid });
     await bounded('selected team provisioning ready', () =>
       cdp!.evaluate<boolean>(
-        `(() => { const state = window.__agentTeamsDevStore.getState(); const runId = state.currentProvisioningRunIdByTeam[${literal(team)}]; return state.provisioningRuns[runId]?.state === 'ready'; })()`
+        `(() => { const state = window.__agentTeamsDevStore?.getState(); if (!state) return false; const runId = state.currentProvisioningRunIdByTeam[${literal(team)}]; return state.provisioningRuns[runId]?.state === 'ready'; })()`
       )
     );
     await timeline({ phase: 'team-ui-ready' });
@@ -514,26 +415,24 @@ async function main(): Promise<void> {
       await timeline({ phase: 'busy-observed', admissionStatus });
     }
     const existingIds = new Set<string>(
-      (await rows(teamDir))
-        .map((row) => row.messageId)
-        .filter((id): id is string => Boolean(id))
+      (await rows(teamDir)).map((row) => row.messageId).filter((id): id is string => Boolean(id))
     );
     const attachmentFiles =
       args.provider === 'claude'
         ? [artifacts.files.image, artifacts.files.text, artifacts.files.pdf]
-        : [artifacts.files.image];
+        : [artifacts.files.image, artifacts.files.text, artifacts.files.json];
     await stageFiles(cdp, attachmentFiles);
     await fillComposer(
       cdp,
       args.provider === 'claude'
         ? 'Inspect every attached file directly. Return one JSON object with keys image_token, color_order, layout_code, text_token, and pdf_token. Use only content visible inside the attachments; do not use filenames or tool file reads.'
-        : 'Inspect the attached image directly. Return one JSON object with keys image_token, color_order, and layout_code. Use only content visible inside the image; do not use filenames or tool file reads.'
+        : 'Inspect every attachment directly. Return one JSON object with keys image_token, color_order, layout_code, text_token, json_token, and unicode_value. Use only contents of each attachment; do not use filenames or tool file reads.'
     );
     await clickSend(cdp);
     const digestSet =
       args.provider === 'claude'
-        ? Object.values(artifacts.digests)
-        : [artifacts.digests.image];
+        ? [artifacts.digests.image, artifacts.digests.text, artifacts.digests.pdf]
+        : [artifacts.digests.image, artifacts.digests.text, artifacts.digests.json];
     const original = await waitForAttachmentRow(teamDir, digestSet, existingIds);
     const originalMessageId = original.messageId ?? '';
     const originalReadAtSend = original.read;
@@ -541,7 +440,11 @@ async function main(): Promise<void> {
     await timeline({ phase: 'attachment-admitted', original: original as unknown as Json });
     if (args.provider === 'codex') {
       assert.equal(originalReadAtSend, false, 'busy attachment message must remain unread');
-      assert.equal(admissionStatus, 'running', 'Codex attachment must arrive during an observed active turn');
+      assert.equal(
+        admissionStatus,
+        'running',
+        'Codex attachment must arrive during an observed active turn'
+      );
       await timeline({ phase: 'busy-unread-observed', messageId: originalMessageId });
       await bounded('idle after the active harmless turn', async () => {
         const state = await readNativeState(teamDir, team).catch(() => null);
@@ -562,17 +465,19 @@ async function main(): Promise<void> {
     const reply = await bounded('correlated persisted native reply', async () => {
       const userRows = await rows(teamDir, 'user');
       await json(path.join(evidenceRoot, 'observed-user-inbox.json'), userRows);
-      if (args.provider === 'codex') {
-        const relay = userRows.find((row) => row.from === MEMBER_NAME && row.relayOfMessageId === original.messageId);
-        if (relay) return relay;
-      }
       logs = await cdp!.evaluate<MemberLogSummary[]>(
         `window.electronAPI.teams.getMemberLogs(${literal(team)}, ${literal(MEMBER_NAME)})`
       );
       sourcePaths = collectReturnedProviderPaths(logs, readyState?.state);
       await json(path.join(evidenceRoot, 'returned-provider-paths.json'), sourcePaths);
       if (args.provider === 'codex') {
-        const fallback = await correlateCodexFallback(sourcePaths, readProof, userRows, team, project);
+        const fallback = await correlateCodexFallback(
+          sourcePaths,
+          readProof,
+          userRows,
+          team,
+          project
+        );
         if (!fallback) return null;
         codexCorrelation = fallback.proof;
         codexFileInput = fallback.input;
@@ -583,7 +488,11 @@ async function main(): Promise<void> {
       claudeCorrelation = correlated.proof;
       return correlated.reply;
     });
-    await json(path.join(evidenceRoot, 'correlated-reply.json'), { reply, claudeCorrelation, codexCorrelation });
+    await json(path.join(evidenceRoot, 'correlated-reply.json'), {
+      reply,
+      claudeCorrelation,
+      codexCorrelation,
+    });
     if (args.provider === 'codex') {
       logs = await cdp.evaluate<MemberLogSummary[]>(
         `window.electronAPI.teams.getMemberLogs(${literal(team)}, ${literal(MEMBER_NAME)})`
@@ -591,16 +500,27 @@ async function main(): Promise<void> {
       sourcePaths = collectReturnedProviderPaths(logs, readyState?.state);
     }
     const expectedPaths = new Set(
-      (original.attachments ?? []).map((item) => item.filePath)
-        .filter((item): item is string => Boolean(item)).map((item) => path.resolve(item))
+      (original.attachments ?? [])
+        .map((item) => item.filePath)
+        .filter((item): item is string => Boolean(item))
+        .map((item) => path.resolve(item))
     );
     const expectedDigests = new Set(
-      (original.attachments ?? []).map((item) => item.sha256)
+      (original.attachments ?? [])
+        .map((item) => item.sha256)
         .filter((item): item is string => Boolean(item))
     );
-    const providerInput = await collectStructuredInput(sourcePaths, expectedDigests, expectedPaths, original.messageId!);
+    const providerInput = await collectStructuredInput(
+      sourcePaths,
+      expectedDigests,
+      expectedPaths,
+      original.messageId!
+    );
     if (codexFileInput) providerInput.push(codexFileInput);
-    assert(providerInput.some((item) => item.messageIdObserved), 'provider input was not correlated to the original message ID');
+    assert(
+      providerInput.some((item) => item.messageIdObserved),
+      'provider input was not correlated to the original message ID'
+    );
     if (args.provider === 'claude') {
       assert(
         providerInput.some(
@@ -623,17 +543,36 @@ async function main(): Promise<void> {
     } else {
       const localImage = providerInput.find(
         (item) =>
-          ((item.recordType === 'codex_turn_start_localImage' && item.argumentShape === '{type:localImage,path}') ||
+          ((item.recordType === 'codex_turn_start_localImage' &&
+            item.argumentShape === '{type:localImage,path}') ||
             (item.recordType === 'codex_provider_bound_file_image' && codexCorrelation !== null)) &&
           item.filePath &&
           expectedPaths.has(path.resolve(item.filePath))
       );
-      assert(localImage, 'Codex native localImage or completed provider-bound file-image proof was not observed');
-      assert.equal(localImage.sha256, artifacts.digests.image, 'Codex image bytes changed after admission');
+      assert(
+        localImage,
+        'Codex native localImage or completed provider-bound file-image proof was not observed'
+      );
+      assert.equal(
+        localImage.sha256,
+        artifacts.digests.image,
+        'Codex image bytes changed after admission'
+      );
+      for (const digest of [artifacts.digests.text, artifacts.digests.json]) {
+        assert(
+          providerInput.some(
+            (item) => item.sha256 === digest && item.recordType === 'codex_utf8_text'
+          ),
+          'Codex text content block digest was not observed'
+        );
+      }
     }
     const replyText = reply.text;
     assert(replyText.includes(artifacts.expected.imageToken), 'reply did not identify image token');
-    assert(replyText.includes(artifacts.expected.layoutCode), 'reply did not identify image layout');
+    assert(
+      replyText.includes(artifacts.expected.layoutCode),
+      'reply did not identify image layout'
+    );
     const colorIndexes = artifacts.expected.colorOrder.map((color) => replyText.indexOf(color));
     assert(
       colorIndexes.every((index) => index >= 0) &&
@@ -641,8 +580,19 @@ async function main(): Promise<void> {
       'reply did not preserve visible color order'
     );
     if (args.provider === 'claude') {
-      assert(replyText.includes(artifacts.expected.textToken), 'reply did not identify text marker');
+      assert(
+        replyText.includes(artifacts.expected.textToken),
+        'reply did not identify text marker'
+      );
       assert(replyText.includes(artifacts.expected.pdfToken), 'reply did not identify PDF marker');
+    } else {
+      for (const value of [
+        artifacts.expected.textToken,
+        artifacts.expected.jsonToken,
+        artifacts.expected.unicodeValue,
+      ]) {
+        assert(replyText.includes(value), 'reply did not identify file-specific UTF-8 contents');
+      }
     }
     await cdp.screenshot(path.join(evidenceRoot, 'desktop.png'));
     evidence.result = {
@@ -651,8 +601,16 @@ async function main(): Promise<void> {
       attachmentIds: (original.attachments ?? []).map((item) => item.id),
       persistedAttachments: original.attachments,
       originalReadAtSend,
-      readProof: { messageId: readProof.messageId, read: readProof.read, timestamp: readProof.timestamp },
-      reply: { messageId: reply.messageId, relayOfMessageId: reply.relayOfMessageId, text: replyText },
+      readProof: {
+        messageId: readProof.messageId,
+        read: readProof.read,
+        timestamp: readProof.timestamp,
+      },
+      reply: {
+        messageId: reply.messageId,
+        relayOfMessageId: reply.relayOfMessageId,
+        text: replyText,
+      },
       providerInput,
       claudeCorrelation,
       codexCorrelation,
@@ -705,7 +663,9 @@ async function main(): Promise<void> {
         cleanup.errors.push('owned team runtime terminal proof was not established');
       }
     } else if (cleanup.teamAttempted) {
-      cleanup.errors.push('team cleanup could not run because the owned CDP handle was unavailable');
+      cleanup.errors.push(
+        'team cleanup could not run because the owned CDP handle was unavailable'
+      );
     } else {
       cleanup.ownedRuntimeTerminal = true;
     }
@@ -715,7 +675,9 @@ async function main(): Promise<void> {
     if (app) {
       cleanup.app = await terminateOwnedApp(app);
       if (!cleanup.app.terminated) {
-        cleanup.errors.push(`owned app termination failed: ${cleanup.app.error ?? 'unknown error'}`);
+        cleanup.errors.push(
+          `owned app termination failed: ${cleanup.app.error ?? 'unknown error'}`
+        );
       }
     }
     if (process.platform === 'darwin' && evidence.ownedShortTmpRoot) {
@@ -773,7 +735,12 @@ async function main(): Promise<void> {
   }
 }
 
-(process.argv.includes('--verify-existing-codex') ? verifyExistingCodexRun() : process.argv.includes('--verify-existing') ? verifyExistingClaudeRun() : main()).catch((error: unknown) => {
+(process.argv.includes('--verify-existing-codex')
+  ? verifyExistingCodexRun()
+  : process.argv.includes('--verify-existing')
+    ? verifyExistingClaudeRun()
+    : main()
+).catch((error: unknown) => {
   console.error(error instanceof Error ? error.stack : error);
   process.exitCode = 1;
 });
