@@ -67,9 +67,7 @@ export const FolderDialogs = ({
       operation.current = { source, id: crypto.randomUUID() };
     return operation.current.id;
   };
-  const folderWrite = action
-    ? action.kind !== 'reset' && action.kind !== 'renameTask'
-    : !!move;
+  const folderWrite = action ? action.kind !== 'reset' && action.kind !== 'renameTask' : !!move;
   const canSubmit = !folderWrite || editingReady;
   useEffect(() => {
     if (!editingReady && folderWrite && error === 'invalid-name') setError(null);
@@ -148,9 +146,7 @@ export const FolderDialogs = ({
       setError(null);
     } catch (caught) {
       setError(
-        caught instanceof Error && caught.message === 'read-only'
-          ? 'read-only'
-          : 'save-error'
+        caught instanceof Error && caught.message === 'read-only' ? 'read-only' : 'save-error'
       );
     } finally {
       setBusy(false);

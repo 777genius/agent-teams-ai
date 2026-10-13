@@ -1,10 +1,7 @@
 import { useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  taskFolderMoveRequest,
-  useTaskFolderEditingReady,
-} from '@features/task-folders/renderer';
+import { taskFolderMoveRequest, useTaskFolderEditingReady } from '@features/task-folders/renderer';
 import {
   ContextMenu,
   ContextMenuContent,

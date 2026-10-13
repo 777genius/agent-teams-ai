@@ -56,50 +56,50 @@ export function useTaskFoldersHost(
     )
       panelController.end();
   }, [tasks]);
-  const registerPanel = useCallback((element: HTMLDivElement | null) => {
-    panelRef.current = element;
-    panelObserverCleanup.current?.();
-    panelObserverCleanup.current = null;
-    if (!element) {
-      if (document.activeElement === document.body) panelController.hold('focus', false);
-      return;
-    }
-    let lastFocused: HTMLElement | null = null;
-    const reconcileFocus = (records: MutationRecord[] = []): void => {
-      const descendantUnmounted =
-        records.some((record) => record.removedNodes.length > 0) ||
-        (!!lastFocused && !lastFocused.isConnected);
-      if (
-        descendantUnmounted &&
-        !element.contains(document.activeElement)
-      )
-        panelController.hold('focus', false);
-    };
-    const rememberFocus = (event: FocusEvent): void => {
-      const target = event.target as Node | null;
-      if (target && element.contains(target)) lastFocused = target as HTMLElement;
-      queueMicrotask(() => {
-        const active = document.activeElement;
-        if (active && element.contains(active)) lastFocused = active as HTMLElement;
-        else reconcileFocus();
-      });
-    };
-    const reconcileAfterEvent = (): void => queueMicrotask(() => reconcileFocus());
-    const observer = new MutationObserver(reconcileFocus);
-    observer.observe(element, { childList: true, subtree: true });
-    document.addEventListener('focus', rememberFocus, true);
-    document.addEventListener('focusin', rememberFocus, true);
-    document.addEventListener('focusout', reconcileAfterEvent, true);
-    document.addEventListener('keydown', reconcileAfterEvent, true);
-    panelObserverCleanup.current = () => {
-      observer.disconnect();
-      document.removeEventListener('focus', rememberFocus, true);
-      document.removeEventListener('focusin', rememberFocus, true);
-      document.removeEventListener('focusout', reconcileAfterEvent, true);
-      document.removeEventListener('keydown', reconcileAfterEvent, true);
-    };
-    reconcileFocus();
-  }, [panelRef]);
+  const registerPanel = useCallback(
+    (element: HTMLDivElement | null) => {
+      panelRef.current = element;
+      panelObserverCleanup.current?.();
+      panelObserverCleanup.current = null;
+      if (!element) {
+        if (document.activeElement === document.body) panelController.hold('focus', false);
+        return;
+      }
+      let lastFocused: HTMLElement | null = null;
+      const reconcileFocus = (records: MutationRecord[] = []): void => {
+        const descendantUnmounted =
+          records.some((record) => record.removedNodes.length > 0) ||
+          (!!lastFocused && !lastFocused.isConnected);
+        if (descendantUnmounted && !element.contains(document.activeElement))
+          panelController.hold('focus', false);
+      };
+      const rememberFocus = (event: FocusEvent): void => {
+        const target = event.target as Node | null;
+        if (target && element.contains(target)) lastFocused = target as HTMLElement;
+        queueMicrotask(() => {
+          const active = document.activeElement;
+          if (active && element.contains(active)) lastFocused = active as HTMLElement;
+          else reconcileFocus();
+        });
+      };
+      const reconcileAfterEvent = (): void => queueMicrotask(() => reconcileFocus());
+      const observer = new MutationObserver(reconcileFocus);
+      observer.observe(element, { childList: true, subtree: true });
+      document.addEventListener('focus', rememberFocus, true);
+      document.addEventListener('focusin', rememberFocus, true);
+      document.addEventListener('focusout', reconcileAfterEvent, true);
+      document.addEventListener('keydown', reconcileAfterEvent, true);
+      panelObserverCleanup.current = () => {
+        observer.disconnect();
+        document.removeEventListener('focus', rememberFocus, true);
+        document.removeEventListener('focusin', rememberFocus, true);
+        document.removeEventListener('focusout', reconcileAfterEvent, true);
+        document.removeEventListener('keydown', reconcileAfterEvent, true);
+      };
+      reconcileFocus();
+    },
+    [panelRef]
+  );
   useEffect(() => () => panelObserverCleanup.current?.(), []);
   useEffect(() => {
     if (collapsed) {

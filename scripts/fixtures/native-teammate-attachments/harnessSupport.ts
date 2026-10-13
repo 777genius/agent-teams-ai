@@ -1,12 +1,15 @@
-import type { ChildProcess } from 'node:child_process';
+import assert from 'node:assert/strict';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type {
-  MemberLogSummary,
-  TeamAgentRuntimeSnapshot,
-} from '../../../src/shared/types/team.ts';
+import type { MemberLogSummary, TeamAgentRuntimeSnapshot } from '../../../src/shared/types/team.ts';
+
+// @ts-expect-error Existing JavaScript CDP client has no declaration file.
+import { CdpClient } from '../../e2e/comment-notification/cdp.mjs';
+
+type Cdp = HarnessCdp;
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
@@ -77,8 +80,7 @@ function literal(value: unknown): string {
   return JSON.stringify(value);
 }
 
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function terminateOwnedApp(child: ChildProcess): Promise<AppTerminationProof> {
   if (!child.pid) return { terminated: child.exitCode !== null };
@@ -162,12 +164,7 @@ export async function collectStructuredInput(
         continue;
       }
     }
-    const walk = (
-      value: Json,
-      recordRaw: string,
-      line?: number,
-      keyPath = ''
-    ): void => {
+    const walk = (value: Json, recordRaw: string, line?: number, keyPath = ''): void => {
       if (Array.isArray(value)) {
         value.forEach((item, index) => walk(item, recordRaw, line, `${keyPath}[${index}]`));
         return;
@@ -201,6 +198,30 @@ export async function collectStructuredInput(
           });
         }
       }
+      if (
+        object.type === 'text' &&
+        typeof object.text === 'string' &&
+        object.text.startsWith('Attached file: ') &&
+        recordRaw.includes(messageId)
+      ) {
+        const separator = object.text.indexOf('\n\n');
+        if (separator >= 0) {
+          const sha256 = createHash('sha256')
+            .update(object.text.slice(separator + 2), 'utf8')
+            .digest('hex');
+          if (expectedDigests.has(sha256))
+            observations.push({
+              sourcePath,
+              line,
+              recordType: 'codex_utf8_text',
+              blockType: 'text',
+              encoding: 'utf8',
+              mediaType: 'text/plain',
+              sha256,
+              messageIdObserved: true,
+            });
+        }
+      }
       if (object.type === 'localImage' && typeof object.path === 'string') {
         const filePath = path.resolve(object.path);
         if (expectedPaths.has(filePath)) {
@@ -217,7 +238,9 @@ export async function collectStructuredInput(
     try {
       const info = await stat(candidate.filePath);
       if (!info.isFile() || info.size > 20 * 1024 * 1024) continue;
-      const sha256 = createHash('sha256').update(await readFile(candidate.filePath)).digest('hex');
+      const sha256 = createHash('sha256')
+        .update(await readFile(candidate.filePath))
+        .digest('hex');
       if (!expectedDigests.has(sha256)) continue;
       observations.push({
         sourcePath: candidate.sourcePath,
@@ -269,5 +292,133 @@ export async function callTeamCleanup(
     return value === undefined ? { ok: true } : { ok: true, value };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.stack : String(error) };
+  }
+}
+
+export async function startOwnedDesktopApp(
+  args: { runtimeSource: string },
+  repoRoot: string,
+  runRoot: string,
+  tmpRoot: string,
+  bounded: typeof import('./harnessProof.ts').bounded
+): Promise<{
+  child: ChildProcess;
+  logs: string[];
+  env: NodeJS.ProcessEnv;
+  port: number;
+  cdp: Cdp;
+}> {
+  const runtimeSource = await realpath(args.runtimeSource);
+  const original = { ...process.env };
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: path.join(runRoot, 'user-data'),
+    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtimeSource,
+    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
+    TMPDIR: tmpRoot,
+    npm_config_cache: path.join(runRoot, 'npm-cache'),
+    ELECTRON_CACHE: path.join(runRoot, 'electron-cache'),
+  };
+  await Promise.all(
+    [
+      env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR!,
+      env.TMPDIR!,
+      env.npm_config_cache!,
+      env.ELECTRON_CACHE!,
+    ].map((dir) => mkdir(dir, { recursive: true }))
+  );
+  if (process.platform === 'darwin') {
+    for (const key of ['HOME', 'CLAUDE_CONFIG_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT'] as const) {
+      assert.equal(env[key], original[key], `macOS auth root ${key} must remain unchanged`);
+    }
+    assert(
+      !Object.hasOwn(env, 'CLAUDE_CONFIG_DIR') ||
+        env.CLAUDE_CONFIG_DIR === original.CLAUDE_CONFIG_DIR
+    );
+  }
+  const child = spawn('pnpm', ['dev:mcp'], {
+    cwd: repoRoot,
+    env,
+    detached: process.platform !== 'win32',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const logs: string[] = [];
+  for (const stream of [child.stdout, child.stderr]) {
+    stream?.on('data', (chunk: Buffer) => {
+      logs.push(chunk.toString());
+      if (logs.length > 400) logs.shift();
+    });
+  }
+  let renderer: { port: number; cdp: Cdp } | null = null;
+  try {
+    renderer = await bounded<{ port: number; cdp: Cdp }>('owned dev:mcp CDP endpoint', async () => {
+      if (child.exitCode !== null) throw new Error(`Owned dev:mcp exited ${child.exitCode}`);
+      const match = logs
+        .join('')
+        .match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\/devtools\/browser\//);
+      if (!match) return null;
+      const targets = (await fetch(`http://127.0.0.1:${match[1]}/json/list`).then((response) =>
+        response.json()
+      )) as Array<{ type: string; url: string; webSocketDebuggerUrl: string }>;
+      for (const target of targets.filter((item) => item.type === 'page')) {
+        const cdp = (await CdpClient.connect(target.webSocketDebuggerUrl)) as Cdp;
+        let selected = false;
+        try {
+          if (
+            await cdp.evaluate<boolean>(
+              'Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)'
+            )
+          ) {
+            selected = true;
+            return { port: Number(match[1]), cdp };
+          }
+        } finally {
+          if (!selected) await cdp.close().catch(() => undefined);
+        }
+      }
+      return null;
+    });
+    assert(renderer, 'Owned renderer was not selected');
+    await renderer.cdp.send('Runtime.enable');
+    await renderer.cdp.send('Page.enable');
+    await bounded(
+      'desktop API',
+      () =>
+        renderer!.cdp.evaluate<boolean>(
+          'Boolean(window.electronAPI?.teams && window.__agentTeamsDevStore)'
+        ),
+      60_000
+    );
+    await bounded(
+      'desktop startup',
+      () =>
+        renderer!.cdp.evaluate<boolean>(
+          '(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()'
+        ),
+      60_000
+    );
+    return { child, logs, env, port: renderer.port, cdp: renderer.cdp };
+  } catch (error) {
+    const cleanupErrors: Error[] = [];
+    await renderer?.cdp.close().catch((cleanupError) => {
+      cleanupErrors.push(new Error(`startup CDP cleanup failed: ${String(cleanupError)}`));
+    });
+    const appCleanup = await terminateOwnedApp(child);
+    if (!appCleanup.terminated) {
+      cleanupErrors.push(
+        new Error(`startup app cleanup failed: ${appCleanup.error ?? 'unknown error'}`)
+      );
+    }
+    await writeFile(path.join(runRoot, 'evidence', 'app.log'), logs.join('')).catch((logError) => {
+      cleanupErrors.push(new Error(`startup app log write failed: ${String(logError)}`));
+    });
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        'Owned desktop startup and cleanup both failed'
+      );
+    }
+    throw error;
   }
 }

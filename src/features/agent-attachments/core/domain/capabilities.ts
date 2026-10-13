@@ -161,9 +161,18 @@ export function resolveAgentAttachmentCapability(
   }
 
   if (providerId === 'codex') {
-    return supportedImagesOnly(
+    const images = supportedImagesOnly(
       'Codex can receive image attachments through the native image channel.'
     );
+    if (target.nativeInboxTextAttachmentsSupported !== true) return images;
+    return {
+      ...images,
+      supportsFiles: true,
+      supportedFileMimeTypes: ['text/plain'],
+      maxFiles: 5,
+      maxBytesPerFile: DEFAULT_FILE_BYTES_PER_PROVIDER,
+      filesDisplayText: 'This Codex teammate can receive UTF-8 text file contents in its turn.',
+    };
   }
 
   if (providerId === 'opencode') {

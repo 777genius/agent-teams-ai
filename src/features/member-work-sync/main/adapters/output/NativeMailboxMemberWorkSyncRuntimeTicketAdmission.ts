@@ -22,13 +22,13 @@ export interface NativeWorkSyncAdmissionCapability {
   runtimeInstanceId: string;
   generation: number;
   processorReady: boolean;
-  nativeInboxAttachmentsVersion?: 1;
+  nativeInboxAttachmentsVersion?: 1 | 2;
   pid?: number;
   bootstrapRunId?: string;
 }
 
 export interface NativeInboxAttachmentCapabilityProof extends NativeWorkSyncAdmissionCapability {
-  nativeInboxAttachmentsVersion: 1;
+  nativeInboxAttachmentsVersion: 1 | 2;
   pid: number;
   bootstrapRunId: string;
 }
@@ -227,7 +227,8 @@ export async function readNativeInboxAttachmentCapability(input: {
       capability.memberName !== input.memberName ||
       capability.providerId !== input.expectedProviderId ||
       capability.processorReady !== true ||
-      capability.nativeInboxAttachmentsVersion !== 1 ||
+      (capability.nativeInboxAttachmentsVersion !== 1 &&
+        capability.nativeInboxAttachmentsVersion !== 2) ||
       !Number.isSafeInteger(capability.pid) ||
       (capability.pid ?? 0) <= 0 ||
       typeof capability.bootstrapRunId !== 'string' ||
