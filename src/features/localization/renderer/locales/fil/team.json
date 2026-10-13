@@ -1004,7 +1004,8 @@
       "cancel": "Kanselahin",
       "delete": "Tanggalin",
       "markResolved": "Markahan bilang naayos",
-      "save": "I-save"
+      "save": "I-save",
+      "openInTaskTab": "Buksan sa hiwalay na tab"
     },
     "attachments": {
       "commentAttachment": "Attachment ng komento",

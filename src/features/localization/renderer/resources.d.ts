@@ -3529,6 +3529,13 @@ export default interface Resources {
         "restarting": "Restarting teammate",
         "starting": "Starting teammate"
       },
+      "chatVisualization": {
+        "description": "Full visualization view",
+        "exceedsLimits": "Visualization exceeds display limits",
+        "incomplete": "Visualization incomplete",
+        "open": "Open visualization",
+        "unavailable": "Visualization unavailable"
+      },
       "expandDialog": {
         "description": "Expanded message view"
       },
@@ -6344,6 +6351,7 @@ export default interface Resources {
         "cancel": "Cancel",
         "delete": "Delete",
         "markResolved": "Mark resolved",
+        "openInTaskTab": "Open in a separate tab",
         "save": "Save"
       },
       "attachments": {

@@ -1129,7 +1129,8 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "markResolved": "Mark resolved",
-      "save": "Save"
+      "save": "Save",
+      "openInTaskTab": "Open in a separate tab"
     },
     "attachments": {
       "commentAttachment": "Comment attachment",

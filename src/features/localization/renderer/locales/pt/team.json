@@ -1004,7 +1004,8 @@
       "cancel": "Cancelar",
       "delete": "Apagar",
       "markResolved": "Marcar resolvido",
-      "save": "Gravar"
+      "save": "Gravar",
+      "openInTaskTab": "Abrir em um separador separado"
     },
     "attachments": {
       "commentAttachment": "Anexo de comentários",

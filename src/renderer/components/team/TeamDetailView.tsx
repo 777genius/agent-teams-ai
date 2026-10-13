@@ -19,6 +19,7 @@ import {
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
+import { type TaskDetailIdentity, taskDetailKey } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -246,63 +247,56 @@ const TaskDetailDialogHost = memo(
     },
     ref
   ) {
-    const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
-    const [loadedTask, setLoadedTask] = useState<TeamTaskWithKanban | null>(null);
-    const selectedTaskId = selectedTask?.id ?? null;
-    const selectedTaskSnapshot =
-      selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
-    const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
-    const dialogTaskMap = useMemo(() => {
-      if (!currentTask) {
-        return taskMap;
-      }
-      const next = new Map(taskMap);
-      next.set(currentTask.id, currentTask);
-      return next;
-    }, [currentTask, taskMap]);
+    const contextId = useStore((state) => state.activeContextId);
+    const [selectedIdentity, setSelectedIdentity] = useState<TaskDetailIdentity | null>(null);
+    const selectedKey = selectedIdentity ? taskDetailKey(selectedIdentity) : null;
+    const detailEntry = useStore((state) =>
+      selectedKey ? state.taskDetailById[selectedKey] : undefined
+    );
+    const ensureTaskDetail = useStore((state) => state.ensureTaskDetail);
+    const openTaskDetailTab = useStore((state) => state.openTaskDetailTab);
+    const currentTask = detailEntry?.full ?? null;
 
     useImperativeHandle(
       ref,
       () => ({
         openTask: (task) => {
-          setLoadedTask(null);
-          setSelectedTask(task);
+          const identity = { contextId, teamName, taskId: task.id };
+          setSelectedIdentity(identity);
+          void ensureTaskDetail(identity);
         },
         close: () => {
-          setLoadedTask(null);
-          setSelectedTask(null);
+          setSelectedIdentity(null);
         },
       }),
-      []
+      [contextId, ensureTaskDetail, teamName]
     );
 
     useEffect(() => {
-      if (!selectedTaskId) {
-        setLoadedTask(null);
-        return undefined;
+      if (!selectedIdentity) return;
+      if (selectedIdentity.contextId !== contextId || selectedIdentity.teamName !== teamName) {
+        setSelectedIdentity(null);
+        return;
       }
+      void ensureTaskDetail(selectedIdentity);
+    }, [contextId, ensureTaskDetail, selectedIdentity, teamName]);
 
-      let cancelled = false;
-      setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
-        .then((task) => {
-          if (!cancelled && task?.id === selectedTaskId) {
-            setLoadedTask(task);
-          }
-        })
-        .catch(() => undefined);
-
-      return () => {
-        cancelled = true;
-      };
-    }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
+    const dialogTaskMap = useMemo(() => {
+      const next = new Map<string, TeamTaskWithKanban>(taskMap);
+      for (const entry of Object.values(useStore.getState().taskDetailById)) {
+        if (
+          entry.full &&
+          entry.identity.contextId === contextId &&
+          entry.identity.teamName === teamName
+        ) {
+          next.set(entry.identity.taskId, entry.full);
+        }
+      }
+      return next;
+    }, [contextId, currentTask, detailEntry, taskMap, teamName]);
 
     const handleScrollToTask = useCallback((taskId: string) => {
-      setSelectedTask(null);
-      setLoadedTask(null);
+      setSelectedIdentity(null);
       const el = document.querySelector(`[data-task-id="${taskId}"]`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -328,9 +322,11 @@ const TaskDetailDialogHost = memo(
         kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
         taskMap={dialogTaskMap}
         members={members}
-        onClose={() => {
-          setLoadedTask(null);
-          setSelectedTask(null);
+        onClose={() => setSelectedIdentity(null)}
+        onOpenInTaskTab={() => {
+          if (!selectedIdentity) return;
+          openTaskDetailTab(selectedIdentity);
+          setSelectedIdentity(null);
         }}
         onScrollToTask={handleScrollToTask}
         onOwnerChange={onOwnerChange}

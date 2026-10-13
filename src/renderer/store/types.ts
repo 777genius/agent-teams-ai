@@ -22,6 +22,7 @@ import type { SubagentSlice } from './slices/subagentSlice';
 import type { TabSlice } from './slices/tabSlice';
 import type { TabUISlice } from './slices/tabUISlice';
 import type { TeamSlice } from './slices/teamSlice';
+import type { TeamTaskDetailSlice } from './slices/teamTaskDetailSlice';
 import type { UISlice } from './slices/uiSlice';
 import type { UpdateSlice } from './slices/updateSlice';
 
@@ -88,6 +89,7 @@ export type AppState = ProjectSlice &
   SessionDetailSlice &
   SubagentSlice &
   TeamSlice &
+  TeamTaskDetailSlice &
   ConversationSlice &
   TabSlice &
   TabUISlice &

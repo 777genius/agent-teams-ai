@@ -80,6 +80,7 @@ import {
   ArrowRightFromLine,
   Check,
   Clock,
+  ExternalLink,
   FileDiff,
   GitCompareArrows,
   HelpCircle,
@@ -137,6 +138,7 @@ interface TaskDetailDialogProps {
   onViewChanges?: (taskId: string, filePath?: string) => void;
   onOpenInEditor?: (filePath: string) => void;
   onDeleteTask?: (taskId: string) => void;
+  onOpenInTaskTab?: () => void;
   focusCommentId?: string;
   /** Extra content rendered in the dialog header (e.g. "Open team" button). */
   headerExtra?: React.ReactNode;
@@ -224,6 +226,7 @@ export const TaskDetailDialog = ({
   onViewChanges,
   onOpenInEditor,
   onDeleteTask,
+  onOpenInTaskTab,
   focusCommentId,
   headerExtra,
 }: TaskDetailDialogProps): React.JSX.Element => {
@@ -231,7 +234,7 @@ export const TaskDetailDialog = ({
   const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
-  const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
+  const currentTask = task ? (taskMap.get(task.id) ?? null) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
@@ -854,7 +857,31 @@ export const TaskDetailDialog = ({
                   {REVIEW_STATE_DISPLAY.needsFix.label}
                 </span>
               ) : null}
-              {headerExtra ? <div className="ml-auto mr-4">{headerExtra}</div> : null}
+              {onOpenInTaskTab ? (
+                <div className="ml-auto mr-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        aria-label={t('taskDetail.actions.openInTaskTab')}
+                        onClick={onOpenInTaskTab}
+                      >
+                        <ExternalLink size={13} />
+                        {t('taskDetail.actions.openInTaskTab')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {t('taskDetail.actions.openInTaskTab')}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              ) : null}
+              {headerExtra ? (
+                <div className={onOpenInTaskTab ? 'mr-4' : 'ml-auto mr-4'}>{headerExtra}</div>
+              ) : null}
             </div>
             {editingSubject ? (
               <div className="flex items-center gap-2">

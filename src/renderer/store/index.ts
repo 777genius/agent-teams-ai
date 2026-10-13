@@ -51,6 +51,7 @@ import {
   isTeamDataRefreshPending,
   selectTeamDataForName,
 } from './slices/teamSlice';
+import { createTeamTaskDetailSlice } from './slices/teamTaskDetailSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 import {
@@ -185,6 +186,7 @@ export const useStore = create<AppState>()((...args) => ({
   ...createSessionDetailSlice(...args),
   ...createSubagentSlice(...args),
   ...createTeamSlice(...args),
+  ...createTeamTaskDetailSlice(...args),
   ...createConversationSlice(...args),
   ...createTabSlice(...args),
   ...createTabUISlice(...args),

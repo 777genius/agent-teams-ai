@@ -1004,7 +1004,8 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "markResolved": "Mark aufgelöst",
-      "save": "Speichern"
+      "save": "Speichern",
+      "openInTaskTab": "In separatem Tab öffnen"
     },
     "attachments": {
       "commentAttachment": "Kommentar schreiben",

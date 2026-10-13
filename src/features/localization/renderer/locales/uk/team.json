@@ -1034,7 +1034,8 @@
       "cancel": "Скасувати",
       "delete": "Видалити",
       "markResolved": "Позначити вирішеним",
-      "save": "Зберегти"
+      "save": "Зберегти",
+      "openInTaskTab": "Відкрити в окремій вкладцی"
     },
     "attachments": {
       "commentAttachment": "Вкладення коментаря",

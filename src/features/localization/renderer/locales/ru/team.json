@@ -1084,7 +1084,8 @@
       "cancel": "Отмена",
       "delete": "Удалить",
       "markResolved": "Отметить решённым",
-      "save": "Сохранить"
+      "save": "Сохранить",
+      "openInTaskTab": "Открыть в отдельной вкладке"
     },
     "attachments": {
       "commentAttachment": "Вложение комментария",
