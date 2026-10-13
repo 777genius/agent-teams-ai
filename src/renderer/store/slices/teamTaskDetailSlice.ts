@@ -115,9 +115,8 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       await get().refreshTeamData(identity.teamName, { withDedup: true });
     } catch {
       // Full task state classifies the terminal result below.
-    } finally {
-      if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
     }
+    if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
     const beforeRead = get().taskDetailById[key];
     if (!beforeRead) return;
 
@@ -142,20 +141,19 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     try {
       const result = await handle.result;
       if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
-      if (!isTaskDetailTokenCurrent(handle.token, scope)) return;
+      if (!isTaskDetailTokenCurrent(result.token, scope)) return;
       set((state) => {
         const current = state.taskDetailById[key];
         if (!current) return state;
         return {
           taskDetailById: {
             ...state.taskDetailById,
-            [key]: commitTaskDetailFull(current, handle.token, result.value ?? null, result.error),
+            [key]: commitTaskDetailFull(current, result.token, result.value ?? null, result.error),
           },
         };
       });
     } catch {
       if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
-      if (!isTaskDetailTokenCurrent(handle.token, scope)) return;
     }
   },
 

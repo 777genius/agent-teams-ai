@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { create } from 'zustand';
 
-import {
-  __resetTeamSliceModuleStateForTests,
-  createTeamSlice,
-} from '../../../src/renderer/store/slices/teamSlice';
-import { createTeamTaskDetailSlice } from '../../../src/renderer/store/slices/teamTaskDetailSlice';
+import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
+import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+
+import { createTestStore } from './storeTestUtils';
 
 import type { AppState } from '../../../src/renderer/store/types';
+import type { TeamViewSnapshot } from '../../../src/shared/types';
 
 const apiMock = vi.hoisted(() => ({
   teams: {
@@ -20,6 +19,7 @@ const apiMock = vi.hoisted(() => ({
     getMemberSpawnStatuses: vi.fn(),
     getTeamAgentRuntime: vi.fn(),
     getTaskChangePresence: vi.fn(),
+    updateToolApprovalSettings: vi.fn(async () => undefined),
     showMessageNotification: vi.fn(async () => undefined),
   },
   review: {
@@ -32,39 +32,15 @@ const apiMock = vi.hoisted(() => ({
 
 vi.mock('@renderer/api', () => ({ api: apiMock }));
 
-function snapshot(projectPath: string, taskId = 'X') {
+function snapshot(projectPath: string, taskId = 'X'): TeamViewSnapshot {
   return {
     teamName: 'shared-team',
     config: { name: 'shared-team', projectPath },
-    tasks: [{ id: taskId, changePresence: 'clean' }],
+    tasks: [{ id: taskId, subject: taskId, status: 'in_progress', changePresence: 'no_changes' }],
     members: [],
     kanbanState: { teamName: 'shared-team', reviewers: [], tasks: {} },
     processes: [],
   };
-}
-
-function createStore() {
-  return create<AppState>()((set, get, store) => ({
-    ...createTeamSlice(set as never, get as never, store as never),
-    ...createTeamTaskDetailSlice(set as never, get as never, store as never),
-    activeContextId: 'local',
-    appConfig: null,
-    paneLayout: {
-      focusedPaneId: 'pane-default',
-      panes: [{ id: 'pane-default', widthFraction: 1, tabs: [], activeTabId: null }],
-    },
-    openTab: vi.fn(),
-    setActiveTab: vi.fn(),
-    updateTabLabel: vi.fn(),
-    getAllPaneTabs: vi.fn(() => []),
-    warmTaskChangeSummaries: vi.fn(async () => undefined),
-    invalidateTaskChangePresence: vi.fn(),
-    projects: [],
-    repositoryGroups: [],
-    selectedProjectId: null,
-    selectedWorktreeId: null,
-    fetchSessionsInitial: vi.fn(async () => undefined),
-  }) as unknown as AppState);
 }
 
 describe('task detail origin and loading postconditions', () => {
@@ -73,49 +49,140 @@ describe('task detail origin and loading postconditions', () => {
     vi.clearAllMocks();
   });
 
-  it('rejects A/B/A stale identities before refresh or getTask side effects', async () => {
-    const store = createStore();
-    apiMock.teams.getData.mockResolvedValue(snapshot('/local'));
+  it('keeps inactive old identities side-effect free while B is active', async () => {
+    const store = createTestStore();
+    store.setState({ activeContextId: 'B' } as Partial<AppState>);
+    await store.getState().ensureTaskDetail({
+      contextId: 'A',
+      teamName: 'shared-team',
+      taskId: 'X',
+    });
+    expect(apiMock.teams.getData).not.toHaveBeenCalled();
+    expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+    expect(store.getState().taskDetailById).toEqual({});
+  });
+
+  it('rejects deferred A/B/A stale callbacks after an epoch reset', async () => {
+    const store = createTestStore();
+    const staleData = deferred<TeamViewSnapshot>();
+    const currentData = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData
+      .mockReturnValueOnce(staleData.promise)
+      .mockReturnValueOnce(currentData.promise);
     apiMock.teams.getTask.mockResolvedValue({
       id: 'X',
       subject: 'X',
       status: 'in_progress',
     });
 
-    store.setState({ activeContextId: 'A' });
+    store.setState({ activeContextId: 'A' } as Partial<AppState>);
     const stale = store.getState().ensureTaskDetail({
       contextId: 'A',
       teamName: 'shared-team',
       taskId: 'X',
     });
-    store.setState({ activeContextId: 'B' });
-    await stale;
-    expect(apiMock.teams.getData).not.toHaveBeenCalled();
-    expect(apiMock.teams.getTask).not.toHaveBeenCalled();
-    expect(store.getState().taskDetailById).toEqual({});
-
-    const staleAfterRefresh = store.getState().ensureTaskDetail({
+    store.setState({ activeContextId: 'B' } as Partial<AppState>);
+    invalidateContextScopedRequestEpoch();
+    store.setState({ activeContextId: 'A' } as Partial<AppState>);
+    const current = store.getState().ensureTaskDetail({
       contextId: 'A',
       teamName: 'shared-team',
       taskId: 'X',
     });
-    store.setState({ activeContextId: 'B' });
-    await staleAfterRefresh;
-    expect(apiMock.teams.getData).not.toHaveBeenCalled();
+    expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+    staleData.reject(new Error('stale callback error'));
+    await stale;
+    expect(console.error).toHaveBeenCalledWith(
+      '[Renderer:unwrapIpc]',
+      '[team:getData] stale callback error'
+    );
+    vi.mocked(console.error).mockClear();
     expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+    currentData.resolve(snapshot('/current'));
+    await current;
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+    expect(store.getState().taskDetailById['["A","shared-team","X"]']?.full).toMatchObject({
+      id: 'X',
+      subject: 'X',
+    });
   });
 
-  it('finishes loading when refreshed data is structurally identical', async () => {
-    const store = createStore();
-    apiMock.teams.getData.mockResolvedValue(snapshot('/same'));
-    await store.getState().selectTeam('shared-team');
-    const before = store.getState().selectedTeamData;
-    store.setState({ selectedTeamLoading: true, selectedTeamData: before });
+  it.each(['success', 'error'] as const)(
+    'retires an old thin %s while the newer full snapshot is still pending',
+    async (outcome) => {
+      const store = createTestStore();
+      const thin = deferred<TeamViewSnapshot>();
+      const full = deferred<TeamViewSnapshot>();
+      apiMock.teams.getData.mockReturnValueOnce(thin.promise).mockReturnValueOnce(full.promise);
 
-    await store.getState().refreshTeamData('shared-team', { withDedup: true });
+      const selection = store.getState().selectTeam('shared-team');
+      expect(store.getState().selectedTeamLoading).toBe(true);
+      const refresh = store.getState().refreshTeamData('shared-team', { withDedup: false });
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      if (outcome === 'success') thin.resolve(snapshot('/outdated'));
+      else thin.reject(new Error('outdated select failed'));
+      await selection;
+      if (outcome === 'error') {
+        expect(console.error).toHaveBeenCalledWith(
+          '[Renderer:unwrapIpc]',
+          '[team:getData] outdated select failed'
+        );
+        vi.mocked(console.error).mockClear();
+      }
+      const pendingState = {
+        data: store.getState().selectedTeamData,
+        loading: store.getState().selectedTeamLoading,
+        error: store.getState().selectedTeamError,
+      };
+      full.resolve(snapshot('/current'));
+      await refresh;
 
+      expect(pendingState).toEqual({ data: null, loading: true, error: null });
+      expect(store.getState().selectedTeamData?.config.projectPath).toBe('/current');
+      expect(store.getState().selectedTeamLoading).toBe(false);
+      expect(store.getState().selectedTeamError).toBeNull();
+    }
+  );
+
+  it('lets a newer full refresh finish loading when a pending thin select is structurally identical', async () => {
+    const store = createTestStore();
+    const thin = deferred<TeamViewSnapshot>();
+    const full = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData.mockReturnValueOnce(thin.promise).mockReturnValueOnce(full.promise);
+    const before = snapshot('/same');
+    store.setState({
+      activeContextId: 'local',
+      selectedTeamName: 'shared-team',
+      selectedTeamData: before,
+      selectedTeamLoading: false,
+      teamDataCacheByName: { 'shared-team': before },
+    } as Partial<AppState>);
+
+    const selection = store.getState().selectTeam('shared-team');
+    const refresh = store.getState().refreshTeamData('shared-team', { withDedup: false });
+    full.resolve(snapshot('/same'));
+    await refresh;
+    expect(store.getState().selectedTeamData).toBe(before);
+    expect(store.getState().selectedTeamLoading).toBe(false);
+    thin.resolve(snapshot('/same'));
+    await selection;
+    expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
     expect(store.getState().selectedTeamData).toBe(before);
     expect(store.getState().selectedTeamLoading).toBe(false);
     expect(store.getState().selectedTeamError).toBeNull();
+    expect(apiMock.teams.updateToolApprovalSettings).toHaveBeenCalledWith(
+      'shared-team',
+      expect.objectContaining({ timeoutAction: 'wait', timeoutSeconds: 30 })
+    );
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, resolve, reject };
+}

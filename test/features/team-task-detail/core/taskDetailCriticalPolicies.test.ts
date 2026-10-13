@@ -9,7 +9,7 @@ import {
   completeTaskDetailSave,
   completeTaskDetailSubmit,
   createTaskDetailReadEntry,
-  type TaskDetailReadToken,
+  EMPTY_TASK_DETAIL_SESSION,
   updateTaskDetailPart,
 } from '../../../../src/features/team-task-detail/core/domain';
 
@@ -26,28 +26,37 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-const fullTask = (taskId: string, suffix: string): TeamTaskWithKanban =>
-  ({
-    id: taskId,
-    subject: `subject-${suffix}`,
-    description: `description-${suffix}`,
-    prompt: `prompt-${suffix}`,
-    status: 'in_progress',
-    comments: [{ id: 'comment-1', text: `comment-${suffix}` }],
-    kanbanColumn: 'approved',
-    reviewer: `reviewer-${suffix}`,
-    changePresence: 'has_changes',
-  }) as unknown as TeamTaskWithKanban;
+const fullTask = (taskId: string, suffix: string): TeamTaskWithKanban => ({
+  id: taskId,
+  subject: `subject-${suffix}`,
+  description: `description-${suffix}`,
+  prompt: `prompt-${suffix}`,
+  status: 'in_progress',
+  comments: [
+    {
+      id: 'comment-1',
+      text: `comment-${suffix}`,
+      author: 'lead',
+      createdAt: '2026-10-13T12:00:00Z',
+      type: 'regular',
+    },
+  ],
+  kanbanColumn: 'approved',
+  reviewer: `reviewer-${suffix}`,
+  changePresence: 'has_changes',
+});
 
 describe('task detail critical read policies', () => {
   it('joins only the same origin scope and shares exact physical provenance', async () => {
     const authority = createTaskDetailReadAuthority();
     const first = deferred<string>();
     const second = deferred<string>();
+    const afterSettled = deferred<string>();
     const read = vi
       .fn()
       .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
+      .mockReturnValueOnce(second.promise)
+      .mockReturnValueOnce(afterSettled.promise);
     const base = {
       contextId: 'local',
       teamName: 'shared-team',
@@ -67,6 +76,45 @@ describe('task detail critical read policies', () => {
     second.resolve('X-remote');
     expect((await duplicate.result).token).toBe(joined.token);
     expect((await duplicate.result).value).toBe('X-first');
+    const afterSettledRead = authority.readFull(identity, base, read);
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(afterSettledRead.token).not.toBe(joined.token);
+    afterSettled.resolve('X-after-settled');
+    expect((await afterSettledRead.result).value).toBe('X-after-settled');
+  });
+
+  it('shares one physical provenance across forceNew overlap without extra transport starts', async () => {
+    const authority = createTaskDetailReadAuthority();
+    const transport = deferred<string>();
+    const scope = {
+      contextId: 'local',
+      teamName: 'shared-team',
+      contextEpoch: 1,
+      teamStateEpoch: 1,
+    };
+    let physicalStarts = 0;
+    const read = vi.fn((_token: unknown, markPhysicalStart: () => void) => {
+      if (physicalStarts === 0) {
+        physicalStarts += 1;
+        markPhysicalStart();
+      }
+      return transport.promise;
+    });
+    const first = authority.readSnapshot('shared-team', scope, read, {
+      mode: 'full',
+      deferPhysicalStart: true,
+    });
+    const overlap = authority.readSnapshot('shared-team', scope, read, {
+      mode: 'full',
+      deferPhysicalStart: true,
+      forceNew: true,
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(physicalStarts).toBe(1);
+    expect(overlap.token.physicalStartOrder).toBe(first.token.physicalStartOrder);
+    transport.resolve('shared-current');
+    expect((await first.result).token.physicalStartOrder).toBe(first.token.physicalStartOrder);
+    expect((await overlap.result).token.physicalStartOrder).toBe(first.token.physicalStartOrder);
   });
 
   it('coalesces repeated invalidation to one after-settle successor and keeps X/Y independent', async () => {
@@ -98,12 +146,14 @@ describe('task detail critical read policies', () => {
     expect(readX).toHaveBeenCalledTimes(1);
     expect(readY).toHaveBeenCalledTimes(1);
     expect(successorA.token).toBe(successorB.token);
-    expect(successorA.token.sourceEpoch).toBe(2);
+    expect(successorA.token.sourceEpoch).toBe(3);
     expect(successorA.token.serial).toBeGreaterThan(first.token.serial);
+    expect(successorA.token.physicalStartOrder).toBe(0);
 
     xFirst.resolve('X-stale');
     expect(await first.result).toMatchObject({ value: 'X-stale' });
     expect(readX).toHaveBeenCalledTimes(2);
+    expect(successorA.token.physicalStartOrder).toBeGreaterThan(0);
     xSuccessor.resolve('X-current');
     y.resolve('Y-current');
     expect(await successorA.result).toMatchObject({ token: successorA.token, value: 'X-current' });
@@ -111,49 +161,170 @@ describe('task detail critical read policies', () => {
     expect(await yHandle.result).toMatchObject({ token: yHandle.token, value: 'Y-current' });
   });
 
-  it('does not let a late compact S0 overwrite a newer full S1 or remove full tails', () => {
+  it('does not let a late compact S0 overwrite a newer full S1 or remove full tails', async () => {
     const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
     const scope = { ...identity, contextEpoch: 1, teamStateEpoch: 1 };
-    const fullToken: TaskDetailReadToken = {
-      resource: 'full',
-      key: 'full:["local","shared-team","X"]',
-      sourceEpoch: 1,
-      serial: 20,
-      physicalStartOrder: 2,
+    const authority = createTaskDetailReadAuthority();
+    const compactResult = deferred<TeamTaskWithKanban>();
+    const fullResult = deferred<TeamTaskWithKanban>();
+    const compactRead = authority.readSnapshot(
+      identity.teamName,
       scope,
-    };
-    const compactToken: TaskDetailReadToken = {
-      ...fullToken,
-      resource: 'snapshot',
-      key: 'snapshot:["local","shared-team"]',
-      serial: 10,
-      physicalStartOrder: 1,
-    };
+      async (_token, markPhysicalStart) => {
+        markPhysicalStart();
+        return compactResult.promise;
+      },
+      { mode: 'thin', deferPhysicalStart: true }
+    );
+    const fullRead = authority.readFull(identity, scope, async () => fullResult.promise);
     let entry = createTaskDetailReadEntry(identity);
-    entry = commitTaskDetailFull(entry, fullToken, fullTask('X', 'S1'));
+    fullResult.resolve({
+      ...fullTask('X', 'S1'),
+      description: 'D'.repeat(2_000) + 'description-S1-tail',
+      prompt: 'P'.repeat(2_000) + 'prompt-S1-tail',
+      comments: [
+        {
+          id: 'comment-1',
+          text: 'C'.repeat(120) + 'comment-S1-tail',
+          author: 'lead',
+          createdAt: '2026-10-13T12:00:00Z',
+          type: 'regular',
+        },
+      ],
+      historyEvents: [
+        {
+          id: 'history-1',
+          timestamp: '2026-10-13T12:00:00Z',
+          type: 'review_requested',
+          from: 'none',
+          to: 'review',
+          note: 'H'.repeat(500) + 'history-S1-tail',
+        },
+      ],
+      sourceMessage: {
+        text: 'M'.repeat(1_000) + 'source-S1-tail',
+        from: 'user',
+        timestamp: '2026-10-13T12:00:00Z',
+      },
+    });
+    const completedFull = await fullRead.result;
+    entry = commitTaskDetailFull(
+      entry,
+      completedFull.token,
+      completedFull.value as TeamTaskWithKanban
+    );
     const fullBeforeCompact = entry.full;
 
+    compactResult.resolve({
+      ...fullTask('X', 'S0'),
+      description: 'D'.repeat(2_000),
+      prompt: 'P'.repeat(2_000),
+      comments: [
+        {
+          id: 'comment-1',
+          text: 'C'.repeat(120),
+          author: 'lead',
+          createdAt: '2026-10-13T12:00:00Z',
+          type: 'regular',
+        },
+      ],
+      kanbanColumn: 'review',
+      reviewer: 'reviewer-S0',
+      changePresence: 'no_changes',
+    });
+    const completedCompact = await compactRead.result;
     const lateCompact = applyTaskDetailCompact(
       entry,
-      {
-        ...fullTask('X', 'S0'),
-        kanbanColumn: 'review',
-        reviewer: 'reviewer-S0',
-        changePresence: 'no_changes',
-      },
-      compactToken
+      completedCompact.value as TeamTaskWithKanban,
+      completedCompact.token
     );
 
     expect(lateCompact).toBe(entry);
     expect(lateCompact.full).toBe(fullBeforeCompact);
     expect(lateCompact.full).toMatchObject({
-      description: 'description-S1',
-      prompt: 'prompt-S1',
+      subject: 'subject-S1',
+      description: 'D'.repeat(2_000) + 'description-S1-tail',
+      prompt: 'P'.repeat(2_000) + 'prompt-S1-tail',
+      comments: [{ id: 'comment-1', text: 'C'.repeat(120) + 'comment-S1-tail' }],
+      historyEvents: [{ id: 'history-1', note: 'H'.repeat(500) + 'history-S1-tail' }],
+      sourceMessage: { text: 'M'.repeat(1_000) + 'source-S1-tail' },
       kanbanColumn: 'approved',
       reviewer: 'reviewer-S1',
       changePresence: 'has_changes',
     });
-    expect(applyTaskDetailCompact(entry, undefined, compactToken)).toBe(entry);
+    expect(applyTaskDetailCompact(entry, undefined, completedCompact.token)).toBe(entry);
+    expect(authority.isTokenCurrent(completedFull.token, scope)).toBe(true);
+    authority.invalidateFull(identity);
+    expect(authority.isTokenCurrent(completedFull.token, scope)).toBe(false);
+  });
+
+  it('orders a queued snapshot by physical start, not request metadata', async () => {
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const scope = { ...identity, contextEpoch: 1, teamStateEpoch: 1 };
+    const authority = createTaskDetailReadAuthority();
+    const compactResult = deferred<TeamTaskWithKanban>();
+    const fullResult = deferred<TeamTaskWithKanban>();
+    let markCompactPhysicalStart!: () => void;
+    const compactRead = authority.readSnapshot(
+      identity.teamName,
+      scope,
+      async (_token, markPhysicalStart) => {
+        markCompactPhysicalStart = markPhysicalStart;
+        return compactResult.promise;
+      },
+      { mode: 'thin', deferPhysicalStart: true }
+    );
+    expect(compactRead.token.physicalStartOrder).toBe(0);
+
+    const fullRead = authority.readFull(identity, scope, async () => fullResult.promise);
+    fullResult.resolve(fullTask('X', 'full-later'));
+    const completedFull = await fullRead.result;
+    let entry = commitTaskDetailFull(
+      createTaskDetailReadEntry(identity),
+      completedFull.token,
+      completedFull.value as TeamTaskWithKanban
+    );
+
+    markCompactPhysicalStart();
+    compactResult.resolve({
+      ...fullTask('X', 'compact-later'),
+      kanbanColumn: 'review',
+      reviewer: 'reviewer-later',
+      changePresence: 'no_changes',
+    });
+    const completedCompact = await compactRead.result;
+    expect(completedCompact.token.physicalStartOrder).toBeGreaterThan(
+      completedFull.token.physicalStartOrder
+    );
+    entry = applyTaskDetailCompact(
+      entry,
+      completedCompact.value as TeamTaskWithKanban,
+      completedCompact.token
+    );
+    expect(entry.full).toMatchObject({
+      subject: 'subject-full-later',
+      description: 'description-full-later',
+      prompt: 'prompt-full-later',
+      kanbanColumn: 'review',
+      reviewer: 'reviewer-later',
+      changePresence: 'no_changes',
+    });
+  });
+
+  it('keeps the newer A value through a literal submit A/B/A race', () => {
+    let session = updateTaskDetailPart(EMPTY_TASK_DETAIL_SESSION, 'commentText', 'A');
+    session = beginTaskDetailSubmit(session, {
+      commentText: 'A',
+      commentChips: [],
+      pendingAttachments: [],
+      reply: null,
+    });
+    const submitRevision = session.submitRevision;
+    session = updateTaskDetailPart(session, 'commentText', 'B');
+    session = updateTaskDetailPart(session, 'commentText', 'A');
+    session = completeTaskDetailSubmit(session, submitRevision);
+    expect(session.commentText).toBe('A');
+    expect(session.partRevisions.commentText).toBe(3);
   });
 
   it('clears only submitted parts with per-part revisions and isolates overlapping saves', () => {

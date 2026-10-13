@@ -16,6 +16,10 @@ export type {
 
 export const teamTaskDetailReadAuthority = createTaskDetailReadAuthority();
 
+export function resetTeamTaskDetailReadAuthorityForTests(): void {
+  teamTaskDetailReadAuthority.resetForTests();
+}
+
 export function captureTaskDetailReadScope(
   teamName: string,
   contextId: string

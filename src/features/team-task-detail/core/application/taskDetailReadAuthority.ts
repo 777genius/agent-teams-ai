@@ -17,8 +17,9 @@ interface TaskDetailReadRecord {
   resource: 'snapshot' | 'full';
   sourceEpoch: number;
   latestRequestSerial: number;
-  owner: TaskDetailPendingRead<unknown> | null;
-  active: TaskDetailActiveRead<unknown> | null;
+  current: TaskDetailPendingRead<unknown> | null;
+  latestStartedToken: TaskDetailReadToken | null;
+  active: Set<TaskDetailPendingRead<unknown>>;
   successor: TaskDetailPendingRead<unknown> | null;
 }
 
@@ -29,12 +30,12 @@ interface TaskDetailPendingRead<T> {
   read: ReadCallback<T>;
   requested: boolean;
   started: boolean;
+  settled: boolean;
   superseded: boolean;
 }
 
-interface TaskDetailActiveRead<T> {
-  pending: TaskDetailPendingRead<T>;
-  invalidated: boolean;
+interface PhysicalStartProvenance {
+  order: number;
 }
 
 export interface TaskDetailReadAuthority {
@@ -52,10 +53,12 @@ export interface TaskDetailReadAuthority {
   invalidateSnapshot(teamName: string, contextId: string): void;
   invalidateFull(identity: TaskDetailIdentity): void;
   isTokenCurrent(token: TaskDetailReadToken, scope?: TaskDetailReadScope): boolean;
+  resetForTests(): void;
 }
 
 export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
   const records = new Map<string, TaskDetailReadRecord>();
+  const physicalProvenanceByPromise = new WeakMap<Promise<unknown>, PhysicalStartProvenance>();
   let latestPhysicalStartOrder = 0;
 
   const ensureRecord = (key: string, resource: 'snapshot' | 'full'): TaskDetailReadRecord => {
@@ -66,8 +69,9 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
         resource,
         sourceEpoch: 1,
         latestRequestSerial: 0,
-        owner: null,
-        active: null,
+        current: null,
+        latestStartedToken: null,
+        active: new Set(),
         successor: null,
       };
       records.set(key, record);
@@ -99,8 +103,18 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
       read,
       requested: true,
       started: false,
+      settled: false,
       superseded: false,
     };
+  };
+
+  const resolvePending = <T>(
+    pending: TaskDetailPendingRead<T>,
+    result: TaskDetailReadResult<T>
+  ): void => {
+    if (pending.settled) return;
+    pending.settled = true;
+    pending.resolveResult(result);
   };
 
   const startPending = <T>(
@@ -108,36 +122,45 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
     pending: TaskDetailPendingRead<T>,
     deferPhysicalStart: boolean
   ): TaskDetailReadHandle<T> => {
-    if (pending.started) return pending.handle;
+    if (pending.started || pending.settled) return pending.handle;
     pending.started = true;
-    const active: TaskDetailActiveRead<T> = { pending, invalidated: false };
-    if (!pending.superseded) {
-      record.owner = pending as TaskDetailPendingRead<unknown>;
-      record.active = active as TaskDetailActiveRead<unknown>;
-    }
-    let physicalStartMarked = false;
+    record.latestStartedToken = pending.token;
+    record.active.add(pending as TaskDetailPendingRead<unknown>);
+    let provenance: PhysicalStartProvenance | null = null;
     const markPhysicalStart = (): void => {
-      if (physicalStartMarked) return;
-      physicalStartMarked = true;
-      pending.token.physicalStartOrder = ++latestPhysicalStartOrder;
+      if (!provenance) provenance = { order: ++latestPhysicalStartOrder };
+      pending.token.physicalStartOrder = provenance.order;
     };
     if (!deferPhysicalStart) markPhysicalStart();
 
     void (async () => {
       try {
-        const value = await pending.read(pending.token, markPhysicalStart);
-        pending.resolveResult({ token: pending.token, value });
+        const readPromise = pending.read(pending.token, markPhysicalStart);
+        const sharedProvenance = physicalProvenanceByPromise.get(readPromise);
+        if (sharedProvenance) {
+          provenance = sharedProvenance;
+          pending.token.physicalStartOrder = sharedProvenance.order;
+        } else if (provenance) {
+          physicalProvenanceByPromise.set(readPromise, provenance);
+        }
+        const value = await readPromise;
+        resolvePending(pending, { token: pending.token, value });
       } catch (error) {
-        pending.resolveResult({ token: pending.token, error });
+        resolvePending(pending, { token: pending.token, error });
       } finally {
-        if (record.active === (active as TaskDetailActiveRead<unknown>)) {
-          record.active = null;
+        record.active.delete(pending as TaskDetailPendingRead<unknown>);
+        if (record.current === (pending as TaskDetailPendingRead<unknown>) && !pending.superseded) {
           const successor = record.successor;
-          record.successor = null;
-          if (active.invalidated && successor?.requested) {
-            record.owner = successor as TaskDetailPendingRead<unknown>;
+          if (successor?.requested && !successor.superseded) {
+            record.current = successor as TaskDetailPendingRead<unknown>;
+            record.successor = null;
             void startPending(record, successor as TaskDetailPendingRead<unknown>, false);
+          } else {
+            record.current = null;
+            record.successor = null;
           }
+        } else if (record.successor?.superseded) {
+          record.successor = null;
         }
       }
     })();
@@ -170,44 +193,60 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
       return pending.handle as TaskDetailReadHandle<T>;
     };
 
-    if (!options?.forceNew && record.owner && !record.owner.superseded) {
-      if (isSameTaskDetailReadScope(record.owner.token.scope, scope)) {
-        return join(record.owner);
+    if (
+      !options?.forceNew &&
+      record.current &&
+      !record.current.superseded &&
+      !record.current.settled
+    ) {
+      const currentIsEligible =
+        record.current.token.sourceEpoch === record.sourceEpoch &&
+        isSameTaskDetailReadScope(record.current.token.scope, scope);
+      if (currentIsEligible && record.current.started && record.active.has(record.current)) {
+        return join(record.current);
       }
     }
-    if (!options?.forceNew && record.successor && !record.successor.superseded) {
-      if (isSameTaskDetailReadScope(record.successor.token.scope, scope)) {
+    if (
+      !options?.forceNew &&
+      record.successor &&
+      !record.successor.superseded &&
+      !record.successor.settled
+    ) {
+      if (
+        record.successor.token.sourceEpoch === record.sourceEpoch &&
+        isSameTaskDetailReadScope(record.successor.token.scope, scope)
+      ) {
         return join(record.successor);
       }
     }
 
     const pending = createPending(record, scope, read);
-    if (record.owner?.started && !record.owner.superseded) {
-      record.owner.superseded = true;
+    const obsoleteCurrent = record.current;
+    const obsoleteSuccessor = record.successor;
+    if (obsoleteCurrent && !obsoleteCurrent.settled) obsoleteCurrent.superseded = true;
+    if (obsoleteSuccessor && !obsoleteSuccessor.settled) {
+      obsoleteSuccessor.superseded = true;
+      resolvePending(obsoleteSuccessor, {
+        token: obsoleteSuccessor.token,
+        error: new Error('task detail read superseded'),
+      });
     }
-    record.owner = pending as TaskDetailPendingRead<unknown>;
+    record.successor = null;
+    record.current = pending as TaskDetailPendingRead<unknown>;
     return runPending(record, pending, options?.deferPhysicalStart);
   };
 
   const invalidate = (key: string, resource: 'snapshot' | 'full'): void => {
     const record = ensureRecord(key, resource);
     record.sourceEpoch += 1;
-    const active = record.active;
-    if (!active || active.invalidated) {
-      if (record.successor) {
-        record.successor.token.sourceEpoch = record.sourceEpoch;
-        record.successor.token.serial = ++record.latestRequestSerial;
-      }
-      return;
-    }
-    active.invalidated = true;
+    const current = record.current;
+    if (!current || current.settled || current.superseded || !record.active.has(current)) return;
     if (!record.successor) {
-      record.successor = createPending(record, active.pending.token.scope, active.pending.read);
+      record.successor = createPending(record, current.token.scope, current.read);
       record.successor.requested = false;
-    } else {
-      record.successor.token.sourceEpoch = record.sourceEpoch;
-      record.successor.token.serial = ++record.latestRequestSerial;
     }
+    record.successor.token.sourceEpoch = record.sourceEpoch;
+    record.successor.token.serial = ++record.latestRequestSerial;
   };
 
   return {
@@ -240,9 +279,14 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
       return (
         record !== undefined &&
         record.sourceEpoch === token.sourceEpoch &&
-        record.latestRequestSerial === token.serial &&
+        record.latestStartedToken === token &&
+        token.physicalStartOrder > 0 &&
         (scope === undefined || isSameTaskDetailReadScope(token.scope, scope))
       );
+    },
+    resetForTests: () => {
+      records.clear();
+      latestPhysicalStartOrder = 0;
     },
   };
 }

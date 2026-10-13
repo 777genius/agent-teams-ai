@@ -49,6 +49,7 @@ import {
   isTaskDetailReadScopeCurrent,
   isTaskDetailTokenCurrent,
   readTeamSnapshotResource,
+  resetTeamTaskDetailReadAuthorityForTests,
   type TaskDetailReadHandle,
   type TaskDetailReadToken,
 } from '../team/taskDetailReadAuthority';
@@ -302,7 +303,36 @@ const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const POST_PAINT_TEAM_ENRICHMENT_FALLBACK_MS = 500;
 const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
 const teamDataReadWork = new TeamDataReadWork<TeamViewSnapshot>();
-const selectionSnapshotTokenByTeam = new Map<string, TaskDetailReadToken>();
+const snapshotEligibilityTokenByContextAndTeam = new Map<string, TaskDetailReadToken>();
+
+function snapshotEligibilityKey(teamName: string, requestScope: TeamRequestScope): string {
+  return JSON.stringify([requestScope.contextId, teamName]);
+}
+
+function recordSnapshotEligibility(
+  teamName: string,
+  requestScope: TeamRequestScope,
+  token: TaskDetailReadToken
+): void {
+  if (token.physicalStartOrder <= 0) return;
+  const key = snapshotEligibilityKey(teamName, requestScope);
+  const current = snapshotEligibilityTokenByContextAndTeam.get(key);
+  if (!current || token.physicalStartOrder >= current.physicalStartOrder) {
+    snapshotEligibilityTokenByContextAndTeam.set(key, token);
+  }
+}
+
+function isLatestStartedSnapshotEligibility(
+  teamName: string,
+  requestScope: TeamRequestScope,
+  token: TaskDetailReadToken
+): boolean {
+  if (token.physicalStartOrder <= 0) return false;
+  const current = snapshotEligibilityTokenByContextAndTeam.get(
+    snapshotEligibilityKey(teamName, requestScope)
+  );
+  return current === undefined || token.physicalStartOrder >= current.physicalStartOrder;
+}
 interface PostPaintHandle {
   rafId?: number;
   timerId?: ReturnType<typeof setTimeout>;
@@ -464,6 +494,8 @@ export function __resetTeamSliceModuleStateForTests(): void {
   pendingTeamsRefreshScope = null;
   resetToolApprovalSettingsSync();
   teamDataReadWork.clear();
+  snapshotEligibilityTokenByContextAndTeam.clear();
+  resetTeamTaskDetailReadAuthorityForTests();
   for (const teamName of postPaintTeamEnrichmentTimers.keys()) {
     cancelPostPaintTeamEnrichments(teamName);
   }
@@ -842,21 +874,29 @@ function fetchTeamDataDeduped(
   requestScope: TeamRequestScope,
   options?: TeamGetDataOptions
 ): TaskDetailReadHandle<TeamViewSnapshot> {
-  return readTeamSnapshotResource(
+  const handle = readTeamSnapshotResource(
     teamName,
     toTaskDetailScope(teamName, requestScope),
-    (_token, markPhysicalStart) => {
+    (token, markPhysicalStart) => {
       const joined = teamDataReadWork.joinOwned(
         teamName,
         getTeamDataSnapshotMode(options),
         requestScope,
-        () => fetchTeamDataPhysical(teamName, options)
+        () => {
+          // The transport callback is the physical start boundary; joins share
+          // the same promise and therefore the same provenance through the
+          // read authority.
+          markPhysicalStart();
+          recordSnapshotEligibility(teamName, requestScope, token);
+          return fetchTeamDataPhysical(teamName, options);
+        }
       );
-      if (joined.started) markPhysicalStart();
       return joined.promise;
     },
     { mode: getTeamDataSnapshotMode(options), deferPhysicalStart: true }
   );
+  recordSnapshotEligibility(teamName, requestScope, handle.token);
+  return handle;
 }
 
 function fetchTeamDataFresh(
@@ -867,7 +907,10 @@ function fetchTeamDataFresh(
   return readTeamSnapshotResource(
     teamName,
     toTaskDetailScope(teamName, requestScope),
-    () => fetchTeamDataPhysical(teamName, options),
+    (token) => {
+      recordSnapshotEligibility(teamName, requestScope, token);
+      return fetchTeamDataPhysical(teamName, options);
+    },
     { forceNew: true }
   );
 }
@@ -2946,7 +2989,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       snapshotRead = fetchTeamDataDeduped(teamName, requestScope, {
         includeMemberBranches: false,
       });
-      selectionSnapshotTokenByTeam.set(teamName, snapshotRead.token);
+      recordSnapshotEligibility(teamName, requestScope, snapshotRead.token);
       const dataResult = await snapshotRead.result;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         teamDataReadWork.takeQueuedFull(teamName, requestScope);
@@ -2958,12 +3001,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           requestScope.contextId,
           teamName
         ) ||
-        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+        !isTaskDetailTokenCurrent(dataResult.token, toTaskDetailScope(teamName, requestScope))
       ) {
         return;
       }
       if (dataResult.error) throw dataResult.error;
       const data = dataResult.value as TeamViewSnapshot;
+      recordSnapshotEligibility(teamName, requestScope, dataResult.token);
+      if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
       // Stale check: user may have switched to another team during the async call
       const stateAfterLoad = get();
       if (stateAfterLoad.selectedTeamName !== teamName) {
@@ -3074,9 +3119,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ...(nextGlobalTasks !== state.globalTasks ? { globalTasks: nextGlobalTasks } : {}),
         };
       });
-      if (selectionSnapshotTokenByTeam.get(teamName) === snapshotRead.token) {
-        selectionSnapshotTokenByTeam.delete(teamName);
-      }
       if (projectedGlobalTaskNotifications) {
         processGlobalTaskNotifications(projectedGlobalTaskNotifications);
       }
@@ -3084,7 +3126,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         requestScope.contextId,
         teamName,
         committedTeamData.tasks,
-        snapshotRead.token
+        dataResult.token
       );
       recordLastResolvedTeamDataRefresh(teamName);
 
@@ -3186,7 +3228,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           requestScope.contextId,
           teamName
         ) ||
-        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope)) ||
+        !isLatestStartedSnapshotEligibility(teamName, requestScope, snapshotRead.token)
       ) {
         return;
       }
@@ -3294,12 +3337,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           requestScope.contextId,
           teamName
         ) ||
-        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+        !isTaskDetailTokenCurrent(dataResult.token, toTaskDetailScope(teamName, requestScope))
       ) {
         return;
       }
       if (dataResult.error) throw dataResult.error;
       const data = dataResult.value as TeamViewSnapshot;
+      recordSnapshotEligibility(teamName, requestScope, dataResult.token);
+      if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
       const projectedTeamData = previousData
         ? {
             ...data,
@@ -3308,7 +3353,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         : data;
       const nextTeamData = structurallyShareTeamSnapshot(previousData, projectedTeamData);
       let projectedGlobalTaskNotifications: GlobalTaskNotificationParams | null = null;
-      const snapshotToken = snapshotRead.token;
+      const snapshotToken = dataResult.token;
       set((state) => {
         const nextCache =
           state.teamDataCacheByName[teamName] === nextTeamData
@@ -3318,11 +3363,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                 [teamName]: nextTeamData,
               };
 
-        const selectionToken = selectionSnapshotTokenByTeam.get(teamName);
-        const acceptedSelectionLoad =
-          selectionToken === undefined ||
-          (selectionToken.key === snapshotToken.key &&
-            snapshotToken.serial >= selectionToken.serial);
+        const acceptedSelectionLoad = isLatestStartedSnapshotEligibility(
+          teamName,
+          requestScope,
+          snapshotToken
+        );
         const selectedState =
           state.selectedTeamName === teamName
             ? {
@@ -3369,17 +3414,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         requestScope.contextId,
         teamName,
         nextTeamData.tasks,
-        snapshotRead.token
+        dataResult.token
       );
       recordLastResolvedTeamDataRefresh(teamName);
-      const selectionToken = selectionSnapshotTokenByTeam.get(teamName);
-      if (
-        selectionToken &&
-        selectionToken.key === snapshotRead.token.key &&
-        snapshotRead.token.serial > selectionToken.serial
-      ) {
-        selectionSnapshotTokenByTeam.delete(teamName);
-      }
       const invalidationState = previousData
         ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
         : { cacheKeys: [], taskIds: [] };
@@ -3400,7 +3437,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           requestScope.contextId,
           teamName
         ) ||
-        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope))
+        !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope)) ||
+        !isLatestStartedSnapshotEligibility(teamName, requestScope, snapshotRead.token)
       ) {
         return;
       }
