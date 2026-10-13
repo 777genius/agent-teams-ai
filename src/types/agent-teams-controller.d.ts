@@ -51,6 +51,7 @@ declare module 'agent-teams-controller' {
       options?: {
         runtimeProvider?: 'native' | 'opencode' | 'codex';
         includeActiveProcesses?: boolean;
+        includeChatVisualizationProtocol?: boolean;
       }
     ): Promise<string>;
     leadBriefing(): Promise<string>;
@@ -260,6 +261,8 @@ declare module 'agent-teams-controller' {
 
   /** Context-free protocol text builders, shared across lead and member prompts. */
   export interface ProtocolsApi {
+    buildChatVisualizationProtocolText(): string;
+    buildChatVisualizationRefreshInstruction(): string;
     buildActionModeProtocolText(delegateDescription: string): string;
     MEMBER_DELEGATE_DESCRIPTION: string;
     buildProcessProtocolText(teamName: string): string;

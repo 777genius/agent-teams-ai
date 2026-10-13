@@ -1,4 +1,13 @@
 const { wrapAgentBlock } = require('./agentBlocks.js');
+const {
+    buildChatVisualizationProtocolText,
+} = require('./chatVisualizationProtocol.js');
+
+function appendChatVisualizationProtocol(text, include = true) {
+    return include
+        ? `${text}\n\n${buildChatVisualizationProtocolText()}`
+        : text;
+}
 
 /**
  * Raw action-mode protocol text parameterized by DELEGATE description.
@@ -81,6 +90,7 @@ function buildMemberFormattingProtocol() {
 }
 
 module.exports = {
+    appendChatVisualizationProtocol,
     MEMBER_DELEGATE_DESCRIPTION,
     buildActionModeProtocolText,
     buildMemberActionModeProtocol,

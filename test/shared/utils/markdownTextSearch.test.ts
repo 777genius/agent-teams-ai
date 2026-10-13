@@ -302,3 +302,12 @@ describe('markdownTextSearch', () => {
     });
   });
 });
+
+
+it('searches visible visualization labels and prose without hidden DSL', () => {
+  const markdown = 'Results\n```openui-lang\nroot = Stack([Card([TextContent("privateDSL")])]);\n```\n```mermaid\ngraph TD; secretNode-->B;\n```\nConclusion';
+  expect(collectTextSegments(markdown).join(' ')).toContain('Visualization');
+  expect(countMarkdownSearchMatches(markdown, 'privateDSL')).toBe(0);
+  expect(countMarkdownSearchMatches(markdown, 'secretNode')).toBe(0);
+  expect(countMarkdownSearchMatches(markdown, 'Conclusion')).toBe(1);
+});

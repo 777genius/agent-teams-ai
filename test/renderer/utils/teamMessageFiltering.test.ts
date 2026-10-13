@@ -838,3 +838,29 @@ Messages:
   });
 
 });
+
+
+describe('visualization search projection', () => {
+  const text = 'Visible comparison\n```openui-lang\nroot = Stack([Card([TextContent("secretDSLToken")])]);\n```\nAdjacent evidence';
+  const message = makeMessage({ from: 'chart-specialist', to: 'alice', text });
+  const search = (query: string) => filterTeamMessages([message], {
+    timeWindow: null,
+    filter: { from: new Set(), to: new Set(), showNoise: true },
+    searchQuery: query,
+  });
+  it('omits raw DSL but retains visible prose and participants', () => {
+    expect(search('secretDSLToken')).toEqual([]);
+    expect(search('Stack')).toEqual([]);
+    expect(search('Adjacent evidence')).toEqual([message]);
+    expect(search('chart-specialist')).toEqual([message]);
+    expect(search('alice')).toEqual([message]);
+  });
+  it('preserves ordinary fenced code search', () => {
+    const ordinary = makeMessage({ text: '```ts\nconst ordinaryToken = 1;\n```' });
+    expect(filterTeamMessages([ordinary], {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: 'ordinaryToken',
+    })).toEqual([ordinary]);
+  });
+});
