@@ -28,6 +28,7 @@ export type TaskDetailSubmitPart = Extract<
 export type TaskDetailSavePart = Extract<TaskDetailEditPart, 'subject' | 'description'>;
 
 export type TaskDetailPartRevisions = Record<TaskDetailEditPart, number>;
+export type TaskDetailSaveRevision = Partial<Record<TaskDetailSavePart, number>>;
 
 export interface TaskDetailReplyDraft {
   taskId: string;
@@ -48,8 +49,8 @@ export interface TaskDetailSession {
   partRevisions: TaskDetailPartRevisions;
   submitRevision: number;
   submittedPartRevisions: Partial<Record<TaskDetailSubmitPart, number>> | null;
-  saveRevision: number;
-  savedPartRevisions: Partial<Record<TaskDetailSavePart, number>> | null;
+  saveRevisionByPart: Record<TaskDetailSavePart, number>;
+  savedPartRevisionByPart: Record<TaskDetailSavePart, number | null>;
   inlineEditOwnerSurfaceId: string | null;
   ownerSurfaceId: string | null;
   ownerRevision: number;

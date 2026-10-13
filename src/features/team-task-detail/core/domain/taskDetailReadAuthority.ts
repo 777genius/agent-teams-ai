@@ -11,6 +11,7 @@ export interface TaskDetailReadToken {
   resource: 'snapshot' | 'full';
   key: string;
   sourceEpoch: number;
+  /** Starts are globally ordered so compact/full projections can be provenanced. */
   serial: number;
   scope: TaskDetailReadScope;
 }
@@ -31,13 +32,20 @@ interface TaskDetailReadRecord<T> {
   sourceEpoch: number;
   latestStartedSerial: number;
   active: TaskDetailActiveRead<T> | null;
-  successor: TaskDetailReadHandle<T> | null;
+  successor: TaskDetailPendingSuccessor<T> | null;
 }
 
 interface TaskDetailActiveRead<T> {
   token: TaskDetailReadToken;
   handle: TaskDetailReadHandle<T>;
   invalidated: boolean;
+  read: (token: TaskDetailReadToken) => Promise<T>;
+}
+
+interface TaskDetailPendingSuccessor<T> {
+  token: TaskDetailReadToken;
+  handle: TaskDetailReadHandle<T>;
+  resolveResult: (result: TaskDetailReadResult<T>) => void;
   read: (token: TaskDetailReadToken) => Promise<T>;
 }
 
@@ -53,13 +61,13 @@ export interface TaskDetailReadAuthority {
     scope: TaskDetailReadScope,
     read: (token: TaskDetailReadToken) => Promise<T>
   ): TaskDetailReadHandle<T>;
-  invalidateSnapshot(teamName: string): void;
+  invalidateSnapshot(teamName: string, contextId: string): void;
   invalidateFull(identity: TaskDetailIdentity): void;
   isTokenCurrent(token: TaskDetailReadToken, scope?: TaskDetailReadScope): boolean;
 }
 
-function snapshotKey(teamName: string): string {
-  return `snapshot:${teamName}`;
+function snapshotKey(scope: Pick<TaskDetailReadScope, 'contextId' | 'teamName'>): string {
+  return `snapshot:${JSON.stringify([scope.contextId, scope.teamName])}`;
 }
 
 function fullKey(identity: TaskDetailIdentity): string {
@@ -82,6 +90,7 @@ function sameScope(left: TaskDetailReadScope, right: TaskDetailReadScope): boole
  */
 export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
   const records = new Map<string, TaskDetailReadRecord<unknown>>();
+  let latestGlobalStartSerial = 0;
 
   const ensureRecord = (key: string): TaskDetailReadRecord<unknown> => {
     let record = records.get(key);
@@ -102,23 +111,35 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
     );
   };
 
-  const startRead = <T>(
+  const createSuccessor = <T>(
     record: TaskDetailReadRecord<unknown>,
     scope: TaskDetailReadScope,
     read: (token: TaskDetailReadToken) => Promise<T>
-  ): TaskDetailReadHandle<T> => {
+  ): TaskDetailPendingSuccessor<T> => {
     const token: TaskDetailReadToken = {
       resource: record.key.startsWith('snapshot:') ? 'snapshot' : 'full',
       key: record.key,
       sourceEpoch: record.sourceEpoch,
-      serial: ++record.latestStartedSerial,
+      serial: (record.latestStartedSerial = ++latestGlobalStartSerial),
       scope,
     };
     let resolveResult!: (result: TaskDetailReadResult<T>) => void;
     const result = new Promise<TaskDetailReadResult<T>>((resolve) => {
       resolveResult = resolve;
     });
-    const handle = { token, result };
+    return {
+      token,
+      handle: { token, result },
+      resolveResult,
+      read,
+    };
+  };
+
+  const runRead = <T>(
+    record: TaskDetailReadRecord<unknown>,
+    pending: TaskDetailPendingSuccessor<T>
+  ): TaskDetailReadHandle<T> => {
+    const { token, handle, resolveResult, read } = pending;
     const active: TaskDetailActiveRead<T> = { token, handle, invalidated: false, read };
     record.active = active as TaskDetailActiveRead<unknown>;
 
@@ -130,13 +151,24 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
         resolveResult({ token, error });
       } finally {
         if (record.active === (active as TaskDetailActiveRead<unknown>)) {
-          if (!active.invalidated) record.active = null;
-          if (active.invalidated && record.successor) record.successor = null;
+          record.active = null;
+          const successor = record.successor;
+          record.successor = null;
+          if (active.invalidated && successor) {
+            void runRead(record, successor as TaskDetailPendingSuccessor<unknown>);
+          }
         }
       }
     })();
     return handle;
   };
+
+  const startRead = <T>(
+    record: TaskDetailReadRecord<unknown>,
+    scope: TaskDetailReadScope,
+    read: (token: TaskDetailReadToken) => Promise<T>
+  ): TaskDetailReadHandle<T> =>
+    runRead(record, createSuccessor(record, scope, read) as TaskDetailPendingSuccessor<T>);
 
   const readResource = <T>(
     key: string,
@@ -146,10 +178,16 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
   ): TaskDetailReadHandle<T> => {
     const record = ensureRecord(key);
     if (!forceNew && record.active && !record.active.invalidated) {
+      if (!sameScope(record.active.token.scope, scope)) {
+        return startRead(record, scope, read);
+      }
       return record.active.handle as TaskDetailReadHandle<T>;
     }
     if (!forceNew && record.active?.invalidated && record.successor) {
-      return record.successor as TaskDetailReadHandle<T>;
+      if (!sameScope(record.successor.token.scope, scope)) {
+        return startRead(record, scope, read);
+      }
+      return record.successor.handle as TaskDetailReadHandle<T>;
     }
     return startRead(record as TaskDetailReadRecord<unknown>, scope, read);
   };
@@ -157,18 +195,23 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
   const invalidate = (key: string): void => {
     const record = records.get(key);
     if (!record) return;
-    record.sourceEpoch += 1;
     const active = record.active;
     if (!active || active.invalidated) return;
+    record.sourceEpoch += 1;
     active.invalidated = true;
-    record.successor = startRead(record, active.token.scope, active.read);
+    record.successor = createSuccessor(record, active.token.scope, active.read);
   };
 
   return {
     readSnapshot: (teamName, scope, read, options) =>
-      readResource(snapshotKey(teamName), scope, read, options?.forceNew === true),
+      readResource(
+        snapshotKey({ contextId: scope.contextId, teamName }),
+        scope,
+        read,
+        options?.forceNew === true
+      ),
     readFull: (identity, scope, read) => readResource(fullKey(identity), scope, read),
-    invalidateSnapshot: (teamName) => invalidate(snapshotKey(teamName)),
+    invalidateSnapshot: (teamName, contextId) => invalidate(snapshotKey({ contextId, teamName })),
     invalidateFull: (identity) => invalidate(fullKey(identity)),
     isTokenCurrent,
   };

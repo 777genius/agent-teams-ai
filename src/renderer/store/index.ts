@@ -1634,7 +1634,13 @@ export function initializeNotificationListeners(): () => void {
         (event.type === 'task' ||
           (event.type === 'task-log-change' && event.taskSignalKind !== 'log'))
       ) {
-        useStore.getState().invalidateTaskDetailTeamSource(event.teamName, event.taskId);
+        useStore
+          .getState()
+          .invalidateTaskDetailTeamSource(
+            useStore.getState().activeContextId,
+            event.teamName,
+            event.taskId
+          );
       }
 
       const seedCurrentRunIdIfMissing = (): void => {

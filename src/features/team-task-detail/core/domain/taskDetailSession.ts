@@ -28,8 +28,8 @@ export const EMPTY_TASK_DETAIL_SESSION: TaskDetailSession = {
   partRevisions: zeroPartRevisions(),
   submitRevision: 0,
   submittedPartRevisions: null,
-  saveRevision: 0,
-  savedPartRevisions: null,
+  saveRevisionByPart: { subject: 0, description: 0 },
+  savedPartRevisionByPart: { subject: null, description: null },
   inlineEditOwnerSurfaceId: null,
   ownerSurfaceId: null,
   ownerRevision: 0,
@@ -118,14 +118,16 @@ export function completeTaskDetailSubmit(
   const clearParts = new Set(
     parts.filter((part) => session.partRevisions[part] === submittedPartRevisions[part])
   );
-  if (clearParts.size === 0) return session;
+  const nextPartRevisions = { ...session.partRevisions };
+  for (const part of clearParts) nextPartRevisions[part] += 1;
   return {
     ...session,
     commentText: clearParts.has('commentText') ? '' : session.commentText,
     commentChips: clearParts.has('commentChips') ? [] : session.commentChips,
     pendingAttachments: clearParts.has('pendingAttachments') ? [] : session.pendingAttachments,
     reply: clearParts.has('reply') ? null : session.reply,
-    editRevision: session.editRevision + 1,
+    partRevisions: nextPartRevisions,
+    editRevision: session.editRevision + (clearParts.size > 0 ? 1 : 0),
     submittedPartRevisions: null,
   };
 }
@@ -134,29 +136,50 @@ export function beginTaskDetailSave(
   session: TaskDetailSession,
   parts: readonly TaskDetailSavePart[]
 ): TaskDetailSession {
+  const saveRevisionByPart = { ...session.saveRevisionByPart };
+  const savedPartRevisionByPart = { ...session.savedPartRevisionByPart };
+  for (const part of parts) {
+    saveRevisionByPart[part] += 1;
+    savedPartRevisionByPart[part] = session.partRevisions[part];
+  }
   return {
     ...session,
-    saveRevision: session.saveRevision + 1,
-    savedPartRevisions: revisionsFor(session, parts) as Partial<Record<TaskDetailSavePart, number>>,
+    saveRevisionByPart,
+    savedPartRevisionByPart,
   };
 }
 
 export function completeTaskDetailSave(
   session: TaskDetailSession,
-  savedRevision: number
+  savedRevision: Partial<Record<TaskDetailSavePart, number>>
 ): TaskDetailSession {
-  if (session.saveRevision !== savedRevision || !session.savedPartRevisions) return session;
+  let changed = false;
+  let editingSubject = session.editingSubject;
+  let editingDescription = session.editingDescription;
+  const savedPartRevisionByPart = { ...session.savedPartRevisionByPart };
+  for (const part of ['subject', 'description'] as const) {
+    const revision = savedRevision[part];
+    const savedPartRevision = savedPartRevisionByPart[part];
+    if (
+      revision === undefined ||
+      revision !== session.saveRevisionByPart[part] ||
+      savedPartRevision === null
+    ) {
+      continue;
+    }
+    changed = true;
+    savedPartRevisionByPart[part] = null;
+    if (session.partRevisions[part] === savedPartRevision) {
+      if (part === 'subject') editingSubject = false;
+      else editingDescription = false;
+    }
+  }
+  if (!changed) return session;
   return {
     ...session,
-    savedPartRevisions: null,
-    editingSubject:
-      session.partRevisions.subject === session.savedPartRevisions.subject
-        ? false
-        : session.editingSubject,
-    editingDescription:
-      session.partRevisions.description === session.savedPartRevisions.description
-        ? false
-        : session.editingDescription,
+    savedPartRevisionByPart,
+    editingSubject,
+    editingDescription,
     editRevision: session.editRevision + 1,
   };
 }

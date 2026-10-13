@@ -1,4 +1,5 @@
 import type { TaskDetailIdentity, TaskDetailReadPhase } from '../../contracts';
+import type { TaskDetailReadToken } from './taskDetailReadAuthority';
 import type { TeamTaskWithKanban } from '@shared/types';
 
 export interface TaskDetailReadEntry {
@@ -9,15 +10,11 @@ export interface TaskDetailReadEntry {
   error: string | null;
   loading: boolean;
   refreshPending: boolean;
-  sourceEpoch: number;
-  latestStartedFullSerial: number;
+  fullToken: TaskDetailReadToken | null;
+  compactToken: TaskDetailReadToken | null;
 }
 
-export interface TaskReadCommitToken {
-  identity: TaskDetailIdentity;
-  sourceEpoch: number;
-  serial: number;
-}
+export type TaskReadCommitToken = TaskDetailReadToken;
 
 export function createTaskDetailReadEntry(identity: TaskDetailIdentity): TaskDetailReadEntry {
   return {
@@ -28,17 +25,8 @@ export function createTaskDetailReadEntry(identity: TaskDetailIdentity): TaskDet
     error: null,
     loading: true,
     refreshPending: false,
-    sourceEpoch: 1,
-    latestStartedFullSerial: 0,
-  };
-}
-
-export function beginTaskDetailFullRead(entry: TaskDetailReadEntry): TaskReadCommitToken {
-  const serial = entry.latestStartedFullSerial + 1;
-  return {
-    identity: entry.identity,
-    sourceEpoch: entry.sourceEpoch,
-    serial,
+    fullToken: null,
+    compactToken: null,
   };
 }
 
@@ -50,7 +38,7 @@ export function applyTaskDetailReadStart(
     ...entry,
     loading: true,
     refreshPending: false,
-    latestStartedFullSerial: Math.max(entry.latestStartedFullSerial, token.serial),
+    fullToken: token,
   };
 }
 
@@ -59,18 +47,18 @@ export function canCommitTaskDetailFullRead(
   token: TaskReadCommitToken
 ): boolean {
   return (
-    entry.identity.contextId === token.identity.contextId &&
-    entry.identity.teamName === token.identity.teamName &&
-    entry.identity.taskId === token.identity.taskId &&
-    entry.sourceEpoch === token.sourceEpoch &&
-    entry.latestStartedFullSerial === token.serial
+    (entry.fullToken === null ||
+      (entry.fullToken.key === token.key &&
+        entry.fullToken.sourceEpoch === token.sourceEpoch &&
+        entry.fullToken.serial === token.serial)) &&
+    entry.identity.contextId === token.scope.contextId &&
+    entry.identity.teamName === token.scope.teamName
   );
 }
 
 export function invalidateTaskDetailFull(entry: TaskDetailReadEntry): TaskDetailReadEntry {
   return {
     ...entry,
-    sourceEpoch: entry.sourceEpoch + 1,
     refreshPending: true,
     loading: entry.loading,
   };
@@ -123,6 +111,7 @@ export function commitTaskDetailFull(
     ...entry,
     phase: classified.phase,
     full: keepFull ? entry.full : result,
+    fullToken: token,
     compact: entry.compact,
     error: classified.error,
     loading: false,
@@ -133,12 +122,16 @@ export function commitTaskDetailFull(
 /** Compact snapshots are previews and limited derived state, never full-task authority. */
 export function applyTaskDetailCompact(
   entry: TaskDetailReadEntry,
-  compact: TeamTaskWithKanban | undefined
+  compact: TeamTaskWithKanban | undefined,
+  token: TaskDetailReadToken
 ): TaskDetailReadEntry {
   if (!compact) return entry;
+  if (entry.fullToken && token.serial < entry.fullToken.serial) return entry;
   const nextCompact = compact;
   if (!entry.full) {
-    return entry.compact === nextCompact ? entry : { ...entry, compact: nextCompact };
+    return entry.compact === nextCompact && entry.compactToken?.serial === token.serial
+      ? entry
+      : { ...entry, compact: nextCompact, compactToken: token };
   }
   const full = entry.full;
   const derived: TeamTaskWithKanban = { ...full };
@@ -158,6 +151,7 @@ export function applyTaskDetailCompact(
   return {
     ...entry,
     compact: nextCompact,
+    compactToken: token,
     full: changed ? derived : full,
   };
 }

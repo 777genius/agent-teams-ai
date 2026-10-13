@@ -65,8 +65,8 @@ export function readTeamTaskFullResource<T>(
   return teamTaskDetailReadAuthority.readFull(identity, scope, read);
 }
 
-export function invalidateTeamSnapshotResource(teamName: string): void {
-  teamTaskDetailReadAuthority.invalidateSnapshot(teamName);
+export function invalidateTeamSnapshotResource(contextId: string, teamName: string): void {
+  teamTaskDetailReadAuthority.invalidateSnapshot(teamName, contextId);
 }
 
 export function invalidateTeamTaskFullResource(identity: {

@@ -18,7 +18,9 @@ import {
   type TaskDetailIdentity,
   taskDetailKey,
   type TaskDetailReadEntry,
+  type TaskDetailReadToken,
   type TaskDetailSavePart,
+  type TaskDetailSaveRevision,
   type TaskDetailSession,
   touchTaskDetailPart,
   transferTaskDetailOwner,
@@ -43,9 +45,14 @@ export interface TeamTaskDetailSlice {
   taskDetailById: Record<string, TaskDetailReadEntry>;
   taskDetailSessionById: Record<string, TaskDetailSession>;
   ensureTaskDetail: (identity: TaskDetailIdentity) => Promise<void>;
-  applyTaskDetailSnapshot: (teamName: string, tasks: readonly TeamTaskWithKanban[]) => void;
+  applyTaskDetailSnapshot: (
+    contextId: string,
+    teamName: string,
+    tasks: readonly TeamTaskWithKanban[],
+    snapshotToken: TaskDetailReadToken
+  ) => void;
   invalidateTaskDetailSource: (identity?: TaskDetailIdentity) => void;
-  invalidateTaskDetailTeamSource: (teamName: string, taskId?: string) => void;
+  invalidateTaskDetailTeamSource: (contextId: string, teamName: string, taskId?: string) => void;
   clearTaskDetailTeamWork: (contextId: string, teamName: string) => void;
   updateTaskDetailSession: (
     identity: TaskDetailIdentity,
@@ -61,8 +68,11 @@ export interface TeamTaskDetailSlice {
   beginTaskDetailSaveSession: (
     identity: TaskDetailIdentity,
     parts: readonly TaskDetailSavePart[]
-  ) => number;
-  completeTaskDetailSaveSession: (identity: TaskDetailIdentity, revision: number) => void;
+  ) => TaskDetailSaveRevision;
+  completeTaskDetailSaveSession: (
+    identity: TaskDetailIdentity,
+    revision: TaskDetailSaveRevision
+  ) => void;
   claimTaskDetailOwner: (identity: TaskDetailIdentity, surfaceId: string) => void;
   transferTaskDetailOwner: (
     identity: TaskDetailIdentity,
@@ -88,8 +98,9 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   ensureTaskDetail: async (rawIdentity) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     if (!isValidTaskDetailIdentity(identity)) return;
+    if (identity.contextId !== get().activeContextId) return;
     const key = taskDetailKey(identity);
-    const scope = captureTaskDetailReadScope(identity.teamName, get().activeContextId);
+    const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
     set((state) => {
       const current = state.taskDetailById[key] ?? createTaskDetailReadEntry(identity);
       return {
@@ -104,9 +115,9 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       await get().refreshTeamData(identity.teamName, { withDedup: true });
     } catch {
       // Full task state classifies the terminal result below.
+    } finally {
+      if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
     }
-
-    if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
     const beforeRead = get().taskDetailById[key];
     if (!beforeRead) return;
 
@@ -123,48 +134,40 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
         taskDetailById: {
           ...state.taskDetailById,
           [key]: applyTaskDetailReadStart(current, {
-            identity,
-            sourceEpoch: handle.token.sourceEpoch,
-            serial: handle.token.serial,
+            ...handle.token,
           }),
         },
       };
     });
-    const result = await handle.result;
-    if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
-    if (!isTaskDetailTokenCurrent(handle.token, scope)) {
-      await get().ensureTaskDetail(identity);
-      return;
+    try {
+      const result = await handle.result;
+      if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
+      if (!isTaskDetailTokenCurrent(handle.token, scope)) return;
+      set((state) => {
+        const current = state.taskDetailById[key];
+        if (!current) return state;
+        return {
+          taskDetailById: {
+            ...state.taskDetailById,
+            [key]: commitTaskDetailFull(current, handle.token, result.value ?? null, result.error),
+          },
+        };
+      });
+    } catch {
+      if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
+      if (!isTaskDetailTokenCurrent(handle.token, scope)) return;
     }
-    set((state) => {
-      const current = state.taskDetailById[key];
-      if (!current) return state;
-      return {
-        taskDetailById: {
-          ...state.taskDetailById,
-          [key]: commitTaskDetailFull(
-            current,
-            {
-              identity,
-              sourceEpoch: handle.token.sourceEpoch,
-              serial: handle.token.serial,
-            },
-            result.value ?? null,
-            result.error
-          ),
-        },
-      };
-    });
   },
 
-  applyTaskDetailSnapshot: (teamName, tasks) => {
+  applyTaskDetailSnapshot: (contextId, teamName, tasks, snapshotToken) => {
     set((state) => {
       const next = { ...state.taskDetailById };
       let changed = false;
       for (const [key, entry] of Object.entries(next)) {
+        if (entry.identity.contextId !== contextId) continue;
         if (entry.identity.teamName !== teamName) continue;
         const compact = tasks.find((task) => task.id === entry.identity.taskId);
-        const merged = applyTaskDetailCompact(entry, compact);
+        const merged = applyTaskDetailCompact(entry, compact, snapshotToken);
         if (merged !== entry) {
           next[key] = merged;
           changed = true;
@@ -178,7 +181,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     if (!rawIdentity) return;
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     if (!isValidTaskDetailIdentity(identity)) return;
-    invalidateTeamSnapshotResource(identity.teamName);
+    invalidateTeamSnapshotResource(identity.contextId, identity.teamName);
     invalidateTeamTaskFullResource(identity);
     const key = taskDetailKey(identity);
     set((state) => {
@@ -193,17 +196,20 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
-  invalidateTaskDetailTeamSource: (teamName, taskId) => {
-    invalidateTeamSnapshotResource(teamName);
+  invalidateTaskDetailTeamSource: (contextId, teamName, taskId) => {
+    invalidateTeamSnapshotResource(contextId, teamName);
     const affected = Object.values(get().taskDetailById).filter(
       (entry) =>
-        entry.identity.teamName === teamName && (!taskId || entry.identity.taskId === taskId)
+        entry.identity.contextId === contextId &&
+        entry.identity.teamName === teamName &&
+        (!taskId || entry.identity.taskId === taskId)
     );
     for (const entry of affected) invalidateTeamTaskFullResource(entry.identity);
     set((state) => {
       const next = { ...state.taskDetailById };
       let changed = false;
       for (const [key, entry] of Object.entries(next)) {
+        if (entry.identity.contextId !== contextId) continue;
         if (entry.identity.teamName !== teamName) continue;
         if (taskId && entry.identity.taskId !== taskId) continue;
         next[key] = invalidateTaskDetailFull(entry);
@@ -303,14 +309,14 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   beginTaskDetailSaveSession: (rawIdentity, parts) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
-    let revision = 0;
     set((state) => {
       const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
       const next = beginTaskDetailSave(current, parts);
-      revision = next.saveRevision;
       return { taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next } };
     });
-    return revision;
+    return Object.fromEntries(
+      parts.map((part) => [part, get().taskDetailSessionById[key].saveRevisionByPart[part]])
+    ) as TaskDetailSaveRevision;
   },
 
   completeTaskDetailSaveSession: (rawIdentity, revision) => {
