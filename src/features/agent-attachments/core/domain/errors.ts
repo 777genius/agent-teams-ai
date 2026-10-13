@@ -1,18 +1,23 @@
 import type { AgentAttachmentErrorJson, AttachmentDeliveryFailureCode } from './types';
 
 export class AgentAttachmentError extends Error {
+  readonly code: AttachmentDeliveryFailureCode;
+  readonly options: {
+    providerId?: string;
+    model?: string;
+    attachmentId?: string;
+    retryable?: boolean;
+    safeDetails?: Record<string, string | number | boolean | null>;
+  };
+
   constructor(
-    readonly code: AttachmentDeliveryFailureCode,
+    code: AttachmentDeliveryFailureCode,
     message: string,
-    readonly options: {
-      providerId?: string;
-      model?: string;
-      attachmentId?: string;
-      retryable?: boolean;
-      safeDetails?: Record<string, string | number | boolean | null>;
-    } = {}
+    options: AgentAttachmentError['options'] = {}
   ) {
     super(message);
+    this.code = code;
+    this.options = options;
     this.name = 'AgentAttachmentError';
   }
 

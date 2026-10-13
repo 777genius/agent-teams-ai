@@ -1,6 +1,6 @@
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import { randomUUID } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import type {
@@ -22,6 +22,15 @@ export interface NativeWorkSyncAdmissionCapability {
   runtimeInstanceId: string;
   generation: number;
   processorReady: boolean;
+  nativeInboxAttachmentsVersion?: 1;
+  pid?: number;
+  bootstrapRunId?: string;
+}
+
+export interface NativeInboxAttachmentCapabilityProof extends NativeWorkSyncAdmissionCapability {
+  nativeInboxAttachmentsVersion: 1;
+  pid: number;
+  bootstrapRunId: string;
 }
 
 type NativeCommand =
@@ -195,6 +204,47 @@ export async function readNativeWorkSyncCurrentRuntimeInstanceId(input: {
     return null;
   }
   return null;
+}
+
+/** Read-only proof for the native attachment poller without coupling callers to ticket admission. */
+export async function readNativeInboxAttachmentCapability(input: {
+  teamsBasePath: string;
+  teamName: string;
+  memberName: string;
+  expectedProviderId: NativeWorkSyncAdmissionProviderId;
+}): Promise<NativeInboxAttachmentCapabilityProof | null> {
+  try {
+    const root = buildNativeWorkSyncAdmissionRoot(input);
+    const capabilityPath = join(root, 'capability.json');
+    if ((await stat(capabilityPath)).size > 64 * 1024) return null;
+    const parsed: unknown = JSON.parse(await readFile(capabilityPath, 'utf8'));
+    if (!parsed || typeof parsed !== 'object') return null;
+    const capability = parsed as NativeWorkSyncAdmissionCapability;
+    if (
+      capability.schemaVersion !== 1 ||
+      capability.recoveryProtocolVersion !== 2 ||
+      capability.teamName !== input.teamName ||
+      capability.memberName !== input.memberName ||
+      capability.providerId !== input.expectedProviderId ||
+      capability.processorReady !== true ||
+      capability.nativeInboxAttachmentsVersion !== 1 ||
+      !Number.isSafeInteger(capability.pid) ||
+      (capability.pid ?? 0) <= 0 ||
+      typeof capability.bootstrapRunId !== 'string' ||
+      capability.bootstrapRunId.length === 0 ||
+      typeof capability.runtimeInstanceId !== 'string' ||
+      capability.runtimeInstanceId.length === 0
+    ) {
+      return null;
+    }
+    const control: unknown = JSON.parse(await readFile(join(root, 'control.json'), 'utf8'));
+    if (!control || typeof control !== 'object') return null;
+    const runtimeInstanceId = (control as { runtimeInstanceId?: unknown }).runtimeInstanceId;
+    if (runtimeInstanceId !== capability.runtimeInstanceId) return null;
+    return capability as NativeInboxAttachmentCapabilityProof;
+  } catch {
+    return null;
+  }
 }
 
 async function publishNoReplace(

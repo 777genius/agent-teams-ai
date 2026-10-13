@@ -77,9 +77,12 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     const file = path.join(this.directory, 'feed.json');
     try {
       const cached = JSON.parse(await readBoundedText(file, MAX_CACHED_FEED_BYTES)) as {
+        cacheSchemaVersion?: number;
         feed: unknown;
         etag?: string;
       };
+      // Older clients discarded audience fields before caching. Never reuse their ETag.
+      if (cached.cacheSchemaVersion !== 2) throw new Error('legacy_feed_cache');
       this.feed = normalizeAnnouncementFeed(cached.feed);
       this.etag =
         typeof cached.etag === 'string' && cached.etag.length < 1000 ? cached.etag : undefined;
@@ -222,7 +225,7 @@ export class HttpAnnouncementSource implements AnnouncementSource {
       await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
       await this.write(
         path.join(this.directory, 'feed.json'),
-        JSON.stringify({ feed, etag: this.etag })
+        JSON.stringify({ cacheSchemaVersion: 2, feed, etag: this.etag })
       ).catch(() => undefined);
       await this.cache(async () => {
         const retained = new Set(feed.items.map((item) => `${item.id}-${item.bodySha256}.md`));

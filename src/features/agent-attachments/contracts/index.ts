@@ -23,3 +23,13 @@ export {
   estimateAgentAttachmentSerializedPayloadBytes,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
 } from '../core/domain';
+export type {
+  AttachmentFileData,
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  ImageMimeType,
+  NativeAttachmentDeliveryEnvelope,
+  NativeAttachmentDigest,
+  NativeMemberCapability,
+} from './nativeTeammateAttachment';

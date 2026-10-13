@@ -23,6 +23,7 @@ export interface CreateAnnouncementsOptions {
   sourceUrl?: string;
   firstOpenedAt?: string;
   clock?: AnnouncementClock;
+  runtime?: { platform: string; appVersion: string };
 }
 export type AnnouncementsFeature = AnnouncementsService;
 export type { AnnouncementWindowContext } from '../../core/application/ports';
@@ -81,6 +82,7 @@ export function createAnnouncementsFeature(
     origin: options.origin,
     firstOpenedAt: options.firstOpenedAt,
     networkEnabled,
+    runtime: options.runtime,
     diagnostic: (reason) =>
       createLogger('Feature:Announcements').warn('State transition', { reason }),
   });

@@ -199,6 +199,52 @@ describe('RuntimeProviderManagementPanelView', () => {
     vi.unstubAllGlobals();
   });
 
+  it('renders connection settings when the directory failed and has no provider row', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryError: 'Catalog unavailable',
+            directoryLoaded: true,
+            activeFormProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'api',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+    });
+    await selectOpenCodeTab(host, 'Providers');
+    expect(host.querySelectorAll('input[type="password"]')).toHaveLength(1);
+    expect(host.textContent).toContain('Connect OpenRouter');
+  });
+
   it('renders provider loading without a duplicate OpenCode runtime summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

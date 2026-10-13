@@ -26,6 +26,7 @@ const semanticFields: Record<keyof InboxMessage, true> = {
   relayOfMessageId: true,
   source: true,
   attachments: true,
+  nativeAttachmentDelivery: true,
   leadSessionId: true,
   conversationId: true,
   replyToConversationId: true,
