@@ -3,10 +3,15 @@ import {
   resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/contracts';
 import {
+  admitNativeTeammateAttachmentIpcMessage,
+  assertAttachmentRecipientOnline,
+  enrichTeamSnapshotNativeAttachmentSupport,
+  isNativeAttachmentRecipient,
   MAX_AGENT_IPC_ATTACHMENTS,
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
+import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -25,6 +30,7 @@ import {
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
@@ -1122,8 +1128,7 @@ async function handleGetData(
     return { success: false, error: optionsResult.error };
   }
   const tn = validated.value!;
-  // The UI is fetching this team, so keep its team-root/task artifacts watched
-  // (idle teams the UI never opens are not watched, to scale with team count).
+  // Keep UI-opened team artifacts watched; idle teams stay outside the watch scope.
   markTeamEngaged(tn);
   const getDataOptions = optionsResult.value;
   const startedAt = Date.now();
@@ -1177,7 +1182,7 @@ async function handleGetData(
     ) {
       return { success: false, error: 'TEAM_PROVISIONING' };
     }
-    // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
+    // Draft: team.meta.json exists without config.json.
     if (message === `Team not found: ${tn}`) {
       const meta = await withTimeoutValue(
         teamMetaStore.getMeta(tn).catch(() => null),
@@ -1214,6 +1219,17 @@ async function handleGetData(
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
   const live = messaging.getLiveLeadProcessMessages(tn);
+  data = await enrichTeamSnapshotNativeAttachmentSupport({
+    teamName: tn,
+    snapshot: data,
+    deps: {
+      teamsBasePath: getTeamsBasePath(),
+      readCapability: readNativeInboxAttachmentCapability,
+      readRuntimeSnapshot: (teamName) =>
+        getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
+      isProcessAlive,
+    },
+  });
   const durableMessages = Array.isArray((data as { messages?: unknown }).messages)
     ? ((data as { messages?: typeof live }).messages ?? [])
     : [];
@@ -2142,10 +2158,7 @@ async function handleLaunchTeamUnlocked(
     return { success: false, error: providerBackendValidation.error };
   }
 
-  // Detect draft team: team.meta.json exists but config.json doesn't.
-  // This happens when user created team config without launching (launchTeam=false),
-  // or when provisioning failed before TeamCreate could run.
-  // Redirect to createTeam so TeamCreate runs properly.
+  // Redirect metadata-only drafts through createTeam so TeamCreate can run.
   const tn = validatedTeamName.value!;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
@@ -2337,9 +2350,7 @@ async function handleLaunchTeamUnlocked(
   return wrapTeamHandler('launch', async () => {
     addMainBreadcrumb('team', 'launch', { teamName: validatedTeamName.value! });
     launchIoGovernor?.noteLaunchIntent(validatedTeamName.value!, 'launch');
-    // Keep this team's team-root/task artifacts file-watched for the whole launch (and the
-    // engaged TTL after), so the lead's immediate startup writes are not missed during the
-    // 0-30s window before the periodic watch-scope reconcile would otherwise pick it up.
+    // Keep launch artifacts watched through startup and the engaged TTL.
     markTeamEngaged(validatedTeamName.value!);
     try {
       const response = await getTeamProvisioningStartApi().launchTeam(
@@ -2865,21 +2876,13 @@ async function handleSendMessage(
       }
     }
 
-    // Attachments are routed through explicit provider transports only.
-    // Native Claude/Codex teammates still read inbox files directly, so storing
-    // attachment metadata there would look successful while silently dropping
-    // the image at runtime. Keep those paths fail-closed until they have a
-    // real runtime attachment transport.
     if (validatedAttachments?.length) {
-      const supportedLiveLead = isLeadRecipient && isAlive;
-      const supportedLiveOpenCodeRecipient = !isLeadRecipient && isOpenCodeRecipient && isAlive;
-      if (!supportedLiveLead && !supportedLiveOpenCodeRecipient) {
-        throw new Error(
-          isOpenCodeRecipient
-            ? 'Attachments for OpenCode teammates require the team to be online'
-            : 'Attachments are supported for the online team lead and online OpenCode teammates only'
-        );
-      }
+      assertAttachmentRecipientOnline({
+        isLeadRecipient,
+        isAlive,
+        isOpenCodeRecipient,
+        providerId: recipientProviderId,
+      });
     }
 
     // Smart routing: lead + alive → stdin direct, else → inbox
@@ -2888,11 +2891,9 @@ async function handleSendMessage(
       const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
       const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
       const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
-      // Pre-generate stable messageId so both stdin and persistence use the same identity.
-      // This allows the lead to call task_create_from_message with the exact messageId.
+      // Use one stable messageId for stdin and persistence provenance.
       const preGeneratedMessageId = validatedMessageId?.value ?? crypto.randomUUID();
-      // Separate try blocks: stdin delivery vs persistence
-      // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
+      // Never fall back to the inbox after stdin succeeds; that would duplicate delivery.
       const standaloneSlashCommand = !validatedAttachments?.length
         ? parseStandaloneSlashCommand(payload.text!)
         : null;
@@ -2932,18 +2933,15 @@ async function handleSendMessage(
         );
         stdinSent = true;
       } catch (stdinError: unknown) {
-        // If attachments were requested, fail rather than silently dropping them.
-        // Only report offline when liveness confirms the process is unavailable.
+        // Attachment sends fail instead of silently dropping content.
         if (validatedAttachments?.length) {
           throw new Error(formatAttachmentDeliveryFailure(stdinError, runtime.isTeamAlive(tn)));
         }
         const errMsg = stdinError instanceof Error ? stdinError.message : 'unknown error';
         logger.warn(`stdin fallback for ${tn}: ${errMsg}`);
-        // Fallback to inbox path below
       }
 
       if (stdinSent) {
-        // Save attachment files to disk FIRST to get file paths for metadata
         let attachmentFilePaths: Map<string, string> | undefined;
         if (validatedAttachments?.length) {
           try {
@@ -2968,7 +2966,6 @@ async function handleSendMessage(
           };
         });
 
-        // Persistence is best-effort — stdin already delivered the message
         let result: SendMessageResult;
         try {
           result = await getTeamDataService().sendDirectToLead(
@@ -2985,8 +2982,6 @@ async function handleSendMessage(
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
           result = { deliveredToInbox: false, messageId: preGeneratedMessageId };
         }
-
-        // Attachment files already saved above (before metadata construction)
 
         messaging.pushLiveLeadProcessMessage(tn, {
           from: 'user',
@@ -3034,6 +3029,32 @@ async function handleSendMessage(
       ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
     });
     const inboxText = isOpenCodeRecipient ? baseText : memberDeliveryText;
+    if (
+      validatedAttachments?.length &&
+      isNativeAttachmentRecipient({ isLeadRecipient, providerId: recipientProviderId })
+    ) {
+      return admitNativeTeammateAttachmentIpcMessage(
+        {
+          teamName: tn,
+          memberName,
+          providerId: recipientProviderId!,
+          messageId: inboxMessageId,
+          text: inboxText,
+          summary: payload.summary,
+          from: storedFrom,
+          actionMode,
+          taskRefs: validatedTaskRefs.value,
+          attachments: validatedAttachments,
+        },
+        {
+          readRuntimeSnapshot: (teamName) =>
+            getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
+          attachmentStore,
+          runWithLiveRosterMutation: (teamName, operation) =>
+            getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation),
+        }
+      );
+    }
     if (validatedAttachments?.length && inboxMessageId) {
       try {
         await attachmentStore.saveAttachments(tn, inboxMessageId, validatedAttachments);
@@ -3058,24 +3079,7 @@ async function handleSendMessage(
       ? await teamDataService.sendRuntimeRecipientMessage(tn, messageRequest)
       : await teamDataService.sendMessage(tn, messageRequest);
 
-    // Teammate inbox relay DISABLED (2026-03-23).
-    // Codex/Claude teammates read their own inbox files directly via fs.watch.
-    // Relaying through the lead (relayMemberInboxMessages) caused multiple bugs:
-    //   1. Lead responded to user instead of forwarding to the teammate
-    //   2. Duplicate messages (relay loop: markInboxMessagesRead → FileWatcher → relay again)
-    //   3. Fragile LLM-dependent prompt chain for routing
-    // The message is already persisted in inboxes/{member}.json above.
-    // Teammate responses go to inboxes/user.json and are read by TeamInboxReader.
-    // Lead relay (relayLeadInboxMessages) is still needed because lead reads stdin only, not inbox.
-    // OpenCode secondary lanes do not watch these inbox files, so they need runtime bridge delivery.
-    //
-    // if (!isLeadRecipient && isAlive) {
-    //   try {
-    //     await provisioning.relayMemberInboxMessages(tn, memberName);
-    //   } catch (e: unknown) {
-    //     logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
-    //   }
-    // }
+    // Native teammates consume their inbox directly. Keep member relay disabled.
     if (isOpenCodeRecipient) {
       try {
         const relay = await waitForOpenCodeRuntimeRelayForUi({
@@ -4960,11 +4964,7 @@ export function showTeamNativeNotification(opts: {
     ...(iconPath ? { icon: iconPath } : {}),
   });
 
-  // Hold a strong reference to prevent GC from collecting the notification.
-  // macOS never fires 'close' for toasts the user ignores, so also drop the
-  // reference after a grace window — otherwise ignored toasts accumulate for
-  // the whole session. Late clicks from Notification Center past this window
-  // are best-effort only.
+  // Keep macOS toast references alive briefly; late Notification Center clicks are best-effort.
   activeTeamNotifications.add(notification);
   const releaseTimer = setTimeout(cleanup, 15 * 60_000);
   releaseTimer.unref?.();
