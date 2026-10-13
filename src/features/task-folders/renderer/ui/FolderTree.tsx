@@ -8,6 +8,7 @@ import {
   syncDataLoaderFeature,
 } from '@headless-tree/core';
 import { useTree } from '@headless-tree/react';
+import { Button } from '@renderer/components/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -233,7 +234,7 @@ export const FolderTree = ({
         const container = oldProjection.snapshot.folders.find((f) =>
           f.children.some((c) => c.kind === 'task' && childKey(c) === focused)
         )?.id;
-        if (container) old = `folder:${container}`;
+        old = container ? `folder:${container}` : UNFILED;
       } else if (oldNode?.folderId) {
         const parent = parentOf(oldProjection.snapshot, oldNode.folderId);
         if (parent) old = `folder:${parent}`;
@@ -469,9 +470,11 @@ export const FolderTree = ({
                 }}
               >
                 {n.kind !== 'unfiled' && (
-                  <button
+                  <Button
                     {...drag}
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     tabIndex={-1}
                     disabled={model.state.status !== 'ready'}
                     aria-disabled={model.state.status !== 'ready'}
@@ -500,14 +503,16 @@ export const FolderTree = ({
                       if (n.identity) taskFolderMoveRequest.open(n.identity);
                       else dialog({ kind: 'moveFolder', id: n.folderId! });
                     }}
-                    className={`shrink-0 ${model.state.status === 'ready' ? 'cursor-grab' : 'cursor-default opacity-50'}`}
+                    className={`size-5 shrink-0 p-0 ${model.state.status === 'ready' ? 'cursor-grab' : 'cursor-default opacity-50'}`}
                   >
                     <GripVertical className="size-3" />
-                  </button>
+                  </Button>
                 )}
                 {item.isFolder() ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     aria-label={t(
                       item.isExpanded() ? 'taskFolders.collapse' : 'taskFolders.expand'
                     )}
@@ -516,13 +521,14 @@ export const FolderTree = ({
                       if (item.isExpanded()) item.collapse();
                       else item.expand();
                     }}
+                    className="size-5 shrink-0 p-0"
                   >
                     {item.isExpanded() ? (
                       <ChevronDown className="size-3" />
                     ) : (
                       <ChevronRight className="size-3" />
                     )}
-                  </button>
+                  </Button>
                 ) : n.archived ? (
                   <Archive aria-label={t('taskFolders.archived')} className="size-3 shrink-0" />
                 ) : null}
@@ -590,13 +596,16 @@ export const FolderTree = ({
                     onOpenChange={(open) => panelController.hold(`menu:dropdown:${n.id}`, open)}
                   >
                     <DropdownMenuTrigger asChild>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         aria-label={t('taskFolders.actions')}
                         onClick={(event) => event.stopPropagation()}
+                        className="size-5 shrink-0 p-0"
                       >
                         <MoreHorizontal className="size-3" />
-                      </button>
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       onCloseAutoFocus={onCloseAutoFocus}

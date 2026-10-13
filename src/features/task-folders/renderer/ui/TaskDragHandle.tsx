@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { GripVertical } from 'lucide-react';
 
@@ -11,34 +12,33 @@ import type { TaskIdentity } from '../../core/domain/folders';
 export const TaskDragHandle = ({
   identity,
   subject,
+  className,
+  onFocus,
 }: {
   identity: TaskIdentity;
   subject: string;
+  className?: string;
+  onFocus?: React.FocusEventHandler<HTMLButtonElement>;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const editingReady = useTaskFolderEditingReady();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          role="button"
-          tabIndex={editingReady ? 0 : -1}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           aria-label={t('taskFolders.dragTask')}
-          aria-disabled={!editingReady}
           data-testid="sidebar-task-drag-handle"
+          disabled={!editingReady}
           draggable={editingReady}
-          className={`mr-1 inline-flex align-middle ${editingReady ? 'cursor-grab' : 'cursor-default opacity-50'}`}
+          className={`mr-1 size-5 shrink-0 p-0 align-middle ${editingReady ? 'cursor-grab' : 'cursor-default opacity-50'} ${className ?? ''}`}
+          onFocus={onFocus}
           onClick={(event) => {
             event.stopPropagation();
             if (!editingReady) return;
             taskFolderMoveRequest.open(identity);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              event.stopPropagation();
-              if (editingReady) taskFolderMoveRequest.open(identity);
-            }
           }}
           onDragStart={(event) => {
             if (!editingReady) {
@@ -57,7 +57,7 @@ export const TaskDragHandle = ({
           onDragEnd={() => panelController.end()}
         >
           <GripVertical className="size-3" />
-        </span>
+        </Button>
       </TooltipTrigger>
       <TooltipContent>{t('taskFolders.dragTask')}</TooltipContent>
     </Tooltip>

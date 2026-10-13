@@ -17,7 +17,10 @@ import {
 } from '../../../src/features/task-folders/renderer/composition';
 import { FolderDialogs } from '../../../src/features/task-folders/renderer/ui/FolderDialogs';
 import { FolderTree } from '../../../src/features/task-folders/renderer/ui/FolderTree';
-import { projectFolders } from '../../../src/features/task-folders/renderer/view-models/projection';
+import {
+  projectFolders,
+  UNFILED,
+} from '../../../src/features/task-folders/renderer/view-models/projection';
 
 import type { Snapshot } from '../../../src/features/task-folders/core/domain/folders';
 import type { TaskFoldersHostModel } from '../../../src/features/task-folders/renderer/hooks/useTaskFoldersHost';
@@ -237,13 +240,14 @@ it('keeps a saving confirmation visible and held through Escape until its comman
   expect(document.querySelector('[role="dialog"]')).toBeNull();
 });
 
-function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
+function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot(), showArchived = true) {
   const openTask = vi.fn();
   let update!: (next: {
     tasks?: GlobalTask[];
     snapshot?: Snapshot;
     shown?: boolean;
     status?: TaskFoldersHostModel['state']['status'];
+    showArchived?: boolean;
   }) => void;
   function Harness() {
     const [state, set] = useState({
@@ -251,6 +255,7 @@ function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
       snapshot,
       shown: true,
       status: 'ready' as TaskFoldersHostModel['state']['status'],
+      showArchived,
     });
     update = (next) => set((previous) => ({ ...previous, ...next }));
     const local = useTaskLocalState();
@@ -260,7 +265,7 @@ function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot()) {
         state.tasks,
         local.isArchived,
         local.getRenamedSubject,
-        true
+        state.showArchived
       ),
       local,
       state: { status: state.status, snapshot: state.snapshot },
@@ -403,6 +408,43 @@ it('keeps Enter in the folder rename editor and nested buttons from triggering r
   expect(execute.mock.calls[0][0]).toEqual({ type: 'rename', id: 'a', name: 'A' });
   expect(execute.mock.calls[0][1]).toEqual(expect.any(String));
   expect(fixture.openTask).not.toHaveBeenCalled();
+});
+
+it('uses shared native buttons for tree drag, disclosure and dropdown controls', async () => {
+  const fixture = treeHarness(
+    [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[],
+    applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
+  );
+  await act(async () => root.render(<fixture.Harness />));
+
+  const folderRow = host.querySelector('[data-folder-id="a"]')!;
+  const folderDrag = folderRow.querySelector<HTMLButtonElement>(
+    '[data-testid="task-folder-drag-handle"]'
+  )!;
+  const disclosure = folderRow.querySelector<HTMLButtonElement>(
+    '[aria-label="taskFolders.expand"]'
+  )!;
+  const actions = folderRow.querySelector<HTMLButtonElement>(
+    '[aria-label="taskFolders.actions"]'
+  )!;
+  const taskRow = host.querySelector('[data-task-key]')!;
+  const taskDrag = taskRow.querySelector<HTMLButtonElement>(
+    '[data-testid="sidebar-task-drag-handle"]'
+  )!;
+
+  for (const control of [folderDrag, disclosure, actions, taskDrag]) {
+    expect(control.tagName).toBe('BUTTON');
+    expect(control.type).toBe('button');
+    expect(control.title).toBe('');
+    expect(control.className).toContain('size-5');
+    expect(control.className).toContain('focus-visible:ring-1');
+  }
+  expect(folderDrag.tabIndex).toBe(-1);
+  expect(folderDrag.disabled).toBe(false);
+  expect(folderDrag.getAttribute('draggable')).toBe('true');
+  expect(taskDrag.getAttribute('draggable')).toBe('true');
+  expect(taskRow.contains(taskDrag)).toBe(true);
+  expect(taskRow.querySelector('[role="button"]')).toBeNull();
 });
 
 it.each([
@@ -641,6 +683,33 @@ it('repairs hidden task focus to its still-present containing folder', async () 
 
   await act(async () => fixture.update({ tasks: [] }));
   expect(tree.getState().focusedItem).toBe('folder:a');
+});
+
+it('repairs hidden archived Unfiled task focus to Unfiled when custom roots remain', async () => {
+  localStorage.setItem('taskArchivedIds', JSON.stringify(['t:1']));
+  const identity = { teamName: 't', taskId: '1' };
+  const snapshot = applyCommand(emptySnapshot(), {
+    type: 'create',
+    id: 'custom-root',
+    name: 'Custom Root',
+    parent: null,
+  });
+  const fixture = treeHarness(
+    [{ teamName: identity.teamName, id: identity.taskId, subject: 'Task' }] as GlobalTask[],
+    snapshot,
+    true
+  );
+  await act(async () => root.render(<fixture.Harness />));
+  const tree = vendor.trees.at(-1)!;
+  const task = childKey({ kind: 'task', identity });
+  await act(async () => tree.getItemInstance(task).setFocused());
+  expect(tree.getState().focusedItem).toBe(task);
+
+  await act(async () => fixture.update({ showArchived: false }));
+
+  expect(host.querySelector('[data-folder-id="custom-root"]')).not.toBeNull();
+  expect(host.querySelector('[data-task-key]')).toBeNull();
+  expect(tree.getState().focusedItem).toBe(UNFILED);
 });
 
 it('does not update DOM focus after an already-started repair scroll settles for a stale projection', async () => {
