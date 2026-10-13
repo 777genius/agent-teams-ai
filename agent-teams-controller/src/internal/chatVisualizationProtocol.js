@@ -1,23 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-
-const ARTIFACT_PATH = path.join(__dirname, 'generated', 'chatVisualizationProtocol.json');
+const artifact = require('./generated/chatVisualizationProtocol.json');
 
 function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function readChatVisualizationProtocol() {
-    let artifact;
-    try {
-        artifact = JSON.parse(fs.readFileSync(ARTIFACT_PATH, 'utf8'));
-    } catch (error) {
-        if (error && error.code === 'ENOENT') {
-            throw new Error('Generated chat visualization protocol is missing; run the protocol generator after feature integration');
-        }
-        throw error;
-    }
-
     if (
         !isRecord(artifact) ||
         artifact.protocolVersion !== 1 ||
@@ -56,7 +43,6 @@ function buildChatVisualizationRefreshInstruction() {
 }
 
 module.exports = {
-    ARTIFACT_PATH,
     buildChatVisualizationProtocolText,
     buildChatVisualizationRefreshInstruction,
     formatChatVisualizationProtocolText,
