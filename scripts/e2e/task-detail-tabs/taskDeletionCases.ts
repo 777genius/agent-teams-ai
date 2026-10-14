@@ -77,6 +77,13 @@ export async function runTaskDeletionCases(
     `window.__agentTeamsDevStore.getState().taskDetailSessionById[${keyB}]?.commentText===${JSON.stringify(durableDeleteDraft)}`,
     'B delete-surviving draft typed through UI'
   );
+  const expandAttachments = `(()=>{const p=${pageB};return [...p.querySelectorAll('span')].find(e=>e.textContent?.trim()==='Вложения')?.closest('section')?.querySelector('button[aria-label="Expand section"]');})()`;
+  if (await cdp.evaluate(`Boolean(${expandAttachments})`)) await click(cdp, expandAttachments);
+  await until(
+    cdp,
+    `(()=>{const p=${pageB};return [...p.querySelectorAll('button')].some(b=>b.textContent.trim()==='Прикрепить изображение');})()`,
+    'B attachment section mounted through its UI header'
+  );
   const assetDirB = join(
     fixture.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
     'data',
@@ -85,7 +92,7 @@ export async function runTaskDeletionCases(
     '1'
   );
   await cdp.evaluate(
-    `(()=>{const p=${pageB};const button=[...p.querySelectorAll('button')].find(b=>b.textContent.trim()==='Прикрепить изображение');const input=button?.previousElementSibling;if(!(input instanceof HTMLInputElement)||input.type!=='file')throw Error('Mounted task upload input missing');const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualIQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([bytes],'TEST-before-delete.png',{type:'image/png'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`
+    `(()=>{const p=${pageB};const button=[...p.querySelectorAll('button')].find(b=>b.textContent.trim()==='Прикрепить изображение');const input=button?.previousElementSibling;if(!(input instanceof HTMLInputElement)||input.type!=='file')throw Error('Mounted task upload input missing');const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([bytes],'TEST-before-delete.png',{type:'image/png'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`
   );
   await waitTask(
     teamB.taskFile,
@@ -95,6 +102,12 @@ export async function runTaskDeletionCases(
   assert.equal(
     (await readdir(assetDirB)).filter((name) => name.endsWith('--TEST-before-delete.png')).length,
     1
+  );
+
+  await until(
+    cdp,
+    `(()=>{const image=${pageB}?.querySelector('img[alt="TEST-before-delete.png"]');return image instanceof HTMLImageElement&&image.complete&&image.naturalWidth===1;})()`,
+    'B task attachment preview decoded before deletion'
   );
 
   const beforeCancelA = await readFile(teamA.taskFile, 'utf8');
@@ -179,7 +192,7 @@ export async function runTaskDeletionCases(
   });
   const beforeAttachmentMutation = await snapshotTaskAndAssets(teamB.taskFile, assetDirB);
   const deletedAttachmentRoutes = await cdp.evaluate(
-    `(()=>{const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualIQAAAABJRU5ErkJggg==';const file=(name)=>new File([Uint8Array.from(atob(png),c=>c.charCodeAt(0))],name,{type:'image/png'});const transfer=(name)=>{const dt=new DataTransfer();dt.items.add(file(name));return dt;};const roots=[${pageB},document.querySelector('[role="dialog"]')];const result=[];for(const root of roots){if(!root)throw Error('Deleted attachment surface missing');const img=root.querySelector('img[alt="TEST-before-delete.png"]');if(!img)throw Error('Deleted task preview/download attachment missing');const thumb=img.closest('div.group');const container=thumb?.parentElement?.parentElement;if(!container)throw Error('Task attachment container missing');const input=container.querySelector('input[type=file]');if(!(input instanceof HTMLInputElement))throw Error('Mounted upload input missing');const deleteButtons=[...container.querySelectorAll('button')].filter(b=>b.querySelector('.lucide-trash-2'));const deleteRoutes=deleteButtons.filter(b=>!b.disabled).length;for(const button of deleteButtons){button.disabled=false;button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));button.disabled=true;}input.disabled=false;input.files=transfer('TEST-after-file-input.png').files;input.dispatchEvent(new Event('change',{bubbles:true}));input.disabled=true;container.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:transfer('TEST-after-paste.png')}));container.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer('TEST-after-drop.png')}));result.push({previewRetained:true,deleteRoutes,uploadInputMounted:true});}return result;})()`
+    `(()=>{const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';const file=(name)=>new File([Uint8Array.from(atob(png),c=>c.charCodeAt(0))],name,{type:'image/png'});const transfer=(name)=>{const dt=new DataTransfer();dt.items.add(file(name));return dt;};const roots=[${pageB},document.querySelector('[role="dialog"]')];const result=[];for(const root of roots){if(!root)throw Error('Deleted attachment surface missing');const img=root.querySelector('img[alt="TEST-before-delete.png"]');if(!(img instanceof HTMLImageElement)||!img.complete||img.naturalWidth!==1)throw Error('Deleted task preview/download attachment missing');const thumb=img.closest('div.group');const container=thumb?.parentElement?.parentElement;if(!container)throw Error('Task attachment container missing');const input=container.querySelector('input[type=file]');if(!(input instanceof HTMLInputElement))throw Error('Mounted upload input missing');const deleteButtons=[...container.querySelectorAll('button')].filter(b=>b.querySelector('.lucide-trash-2'));const deleteRoutes=deleteButtons.filter(b=>!b.disabled).length;for(const button of deleteButtons){button.disabled=false;button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));button.disabled=true;}input.disabled=false;input.files=transfer('TEST-after-file-input.png').files;input.dispatchEvent(new Event('change',{bubbles:true}));input.disabled=true;container.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:transfer('TEST-after-paste.png')}));container.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer('TEST-after-drop.png')}));result.push({previewRetained:true,deleteRoutes,uploadInputMounted:true});}return result;})()`
   );
   await new Promise<void>((resolve) => setTimeout(resolve, 250));
   const afterAttachmentMutation = await snapshotTaskAndAssets(teamB.taskFile, assetDirB);
