@@ -187,7 +187,29 @@ function loopbackResponder(releaseRead: Promise<void>) {
         (item) => typeof item.path === 'string' && typeof item.sha256 === 'string'
       );
       if (!descriptor) {
-        emit(response, body, /PONG/i.test(text) ? 'PONG' : 'READY');
+        const challenges = body.messages.flatMap((message) =>
+          [
+            ...textContent(message.content).matchAll(
+              /(?:^|\n)Output only this exact token: (STRICT_LAUNCH_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})(?=\s*$)/g
+            ),
+          ].map((match) => match[1]!)
+        );
+        assert(challenges.length <= 1, 'Ambiguous strict-launch directive');
+        const challenge = challenges[0];
+        const responseClass = challenge
+          ? 'strict-launch-echo'
+          : /PONG/i.test(text)
+            ? 'pong'
+            : 'ready';
+        assert(requests.length < 500, 'Model request observation bound exceeded');
+        requests.push({
+          kind: 'preflight',
+          model: body.model,
+          challengeClass: challenge ? 'strict-launch-uuid' : 'none',
+          responseClass,
+          stream: body.stream === true,
+        });
+        emit(response, body, challenge ?? (/PONG/i.test(text) ? 'PONG' : 'READY'));
         return;
       }
       assert(typeof descriptor.path === 'string');
@@ -214,7 +236,9 @@ function loopbackResponder(releaseRead: Promise<void>) {
       );
       const resultText = textContent(result?.content);
       const nonce = resultText.match(/NONCE ([a-f0-9]{32})/)?.[1];
+      assert(requests.length < 500, 'Model request observation bound exceeded');
       requests.push({
+        kind: 'attachment',
         model: body.model,
         originalMessageId,
         savedPath,
