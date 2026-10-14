@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { realpath, writeFile } from 'node:fs/promises';
+import { mkdir, realpath, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
@@ -144,7 +144,16 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
   const desktop = await prepareNativeDesktopEnvironment();
   // Match the packaged Windows scenario exactly: root protection follows child creation.
   await protectWindowsTestDirectory(desktop.root);
-  const mcpEntry = path.join(desktop.root, 'TEST-never-launch-mcp.mjs');
+  // The read-only receipt requires a named/versioned package for each selected
+  // controller entry. This isolated stub qualifies SDK readiness, not real MCP integration.
+  const mcpRoot = path.join(desktop.root, 'TEST-source-controller');
+  await mkdir(mcpRoot, { mode: 0o700 });
+  await writeFile(
+    path.join(mcpRoot, 'package.json'),
+    JSON.stringify({ name: 'TEST-source-controller', version: '1.0.0' }),
+    { flag: 'wx', mode: 0o600 }
+  );
+  const mcpEntry = path.join(mcpRoot, 'TEST-never-launch-mcp.mjs');
   await writeFile(mcpEntry, "throw new Error('Source gate must not launch MCP');\n", {
     flag: 'wx',
     mode: 0o600,
