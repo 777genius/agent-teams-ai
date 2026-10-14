@@ -178,6 +178,8 @@ async function main() {
     assert.equal(await readFile(result, 'utf8'), nonce + '\n');
     proof.independentFile = true;
     if (stopProbe === '--held-stop') {
+      proof.stage = 'held-command-start';
+      await checkpoint();
       const program = path.join(
         desktop.projectPath,
         process.platform === 'linux' ? 'held-command.sh' : 'held-command.cjs'
@@ -210,15 +212,21 @@ async function main() {
       );
       assert.equal(started.nonce, nonce);
       assert(Number.isSafeInteger(started.pid) && started.pid > 1);
+      proof.stage = 'held-command-identity';
+      await checkpoint();
       const hostPid =
         process.platform === 'linux' ? await linuxHeldHostPid(program, started.pid) : started.pid;
       const identity = await processIdentity(hostPid);
       assert(identity && identity.includes(program), 'Held PID is not the TEST command');
       heldProcess = { pid: hostPid, identity, taskId: held.id };
+      proof.stage = 'held-command-task';
+      await checkpoint();
       const activeTask = await app.call('getTask', held.id);
       assert(activeTask && activeTask.status === 'in_progress');
       assert.equal(await readFile(program, 'utf8'), script);
     }
+    proof.stage = 'stop';
+    await checkpoint();
     if (heldProcess) {
       assert.equal(
         await processIdentity(heldProcess.pid),
@@ -227,6 +235,8 @@ async function main() {
       );
     }
     await app.call('stop');
+    proof.stage = 'stop-retirement';
+    await checkpoint();
     assert.equal(await app.call('processAlive'), false);
     const stopped = await app.call('getRuntime');
     assert(Object.values(stopped.members).every((member) => !member.alive));
@@ -304,6 +314,9 @@ async function main() {
       proof.failureOperation = error.operation;
       proof.failureClassification = error.classification;
       proof.failureDetail = error.detail ?? '';
+    }
+    if (error instanceof Error && error.name === 'AssertionError') {
+      proof.failureClassification = 'assertion';
     }
     proof.failure =
       error instanceof Error &&
