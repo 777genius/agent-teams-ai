@@ -166,7 +166,25 @@ async function provisioned(app: App, runId: string) {
     420_000
   );
 }
-async function completed(app: App, id: string, owner: string, comment: string) {
+type CompletionObservation = {
+  taskId: string;
+  ownerMatches: boolean;
+  exactComment: boolean;
+  exactTextAnyAuthor: boolean;
+  ownerHasComment: boolean;
+  terminalPresent: boolean;
+  commentTimeValid: boolean;
+  terminalTimeValid: boolean;
+  commentBeforeTerminal: boolean;
+};
+type StopObservation = { processAlive: boolean; memberCount: number; aliveMemberCount: number };
+async function completed(
+  app: App,
+  id: string,
+  owner: string,
+  comment: string,
+  observe: (value: CompletionObservation) => Promise<void>
+) {
   await waitFor(
     async () => {
       const task = await app.call('getTask', id);
@@ -176,6 +194,20 @@ async function completed(app: App, id: string, owner: string, comment: string) {
       const terminal = task.historyEvents?.find(
         (event) => event.type === 'status_changed' && event.to === 'completed'
       );
+      await observe({
+        taskId: id,
+        ownerMatches: task.owner === owner,
+        exactComment: !!durable,
+        exactTextAnyAuthor: !!task.comments?.some((row) => row.text === comment),
+        ownerHasComment: !!task.comments?.some((row) => row.author === owner),
+        terminalPresent: !!terminal,
+        commentTimeValid: !!durable && Number.isFinite(Date.parse(durable.createdAt)),
+        terminalTimeValid: !!terminal && Number.isFinite(Date.parse(terminal.timestamp)),
+        commentBeforeTerminal:
+          !!durable &&
+          !!terminal &&
+          Date.parse(durable.createdAt) <= Date.parse(terminal.timestamp),
+      });
       assert(
         durable &&
           terminal &&
@@ -340,10 +372,16 @@ async function exactFile(project: string, name: string, expected?: string) {
   if (expected !== undefined) assert.equal(bytes.toString(), expected);
   return createHash('sha256').update(bytes).digest('hex');
 }
-async function stopped(app: App) {
+async function stopped(app: App, observe: (value: StopObservation) => Promise<void>) {
   await app.call('stop');
-  assert.equal(await app.call('processAlive'), false);
+  const processAlive = await app.call('processAlive');
   const runtime = await app.call('getRuntime');
+  await observe({
+    processAlive,
+    memberCount: Object.values(runtime.members).length,
+    aliveMemberCount: Object.values(runtime.members).filter((member) => member.alive).length,
+  });
+  assert.equal(processAlive, false);
   assert(Object.values(runtime.members).every((member) => !member.alive));
 }
 
@@ -401,6 +439,8 @@ async function main() {
     version,
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
+    completionObservations: [] as CompletionObservation[],
+    stopObservations: [] as StopObservation[],
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
     runIds: [] as string[],
     taskIds: [] as string[],
@@ -418,6 +458,14 @@ async function main() {
   const checkpoint = async (stage: string) => {
     proof.stage = stage;
     await writeFile(proofFile, JSON.stringify(proof, null, 2));
+  };
+  const recordCompletion = async (value: CompletionObservation) => {
+    proof.completionObservations.push(value);
+    await checkpoint(proof.stage);
+  };
+  const recordStop = async (value: StopObservation) => {
+    proof.stopObservations.push(value);
+    await checkpoint(proof.stage);
   };
   preproofStage = 'proof_write';
   await checkpoint('startup');
@@ -521,7 +569,7 @@ async function main() {
       prompt: `${base}\nOwn only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise. Read alice-verify.cjs, create sum.cjs, then run ${command('alice-verify.cjs')}. ${short ? '' : `Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`} Before task_complete add task_add_comment from alice text TASK_COMMENT:${nonce.alice}. Complete only after successful command.`,
     });
     proof.taskIds.push(alice.id);
-    await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`);
+    await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`, recordCompletion);
     const aliceCommandEvidence = await commandEvidence(
       app,
       alice.id,
@@ -549,7 +597,7 @@ async function main() {
         timeout: 20_000,
         maxBuffer: 16_384,
       });
-      await stopped(app);
+      await stopped(app, recordStop);
       teamActive = false;
       await app.close();
       if (sdk === 'bundled')
@@ -573,7 +621,7 @@ async function main() {
       prompt: `${base}\nOwn only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it. Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1']. Run ${command('bob-verify.cjs')}. Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send. Before task_complete add task_add_comment from bob text TASK_COMMENT:${nonce.bob}. Complete only after successful command.`,
     });
     proof.taskIds.push(bob.id);
-    await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`);
+    await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`, recordCompletion);
     const bobCommandEvidence = await commandEvidence(
       app,
       bob.id,
@@ -669,7 +717,7 @@ async function main() {
       assert.equal(await readFile(program, 'utf8'), script);
       assert.equal((await app.call('getTask', task.id))?.status, 'in_progress');
       assert(same(await identity(original.pid), original), 'Held process gone before stop');
-      await stopped(app);
+      await stopped(app, recordStop);
       teamActive = false;
       await waitFor(
         async () => {
@@ -751,7 +799,7 @@ async function main() {
       prompt: `${base}\nRun ${command('new-verify.cjs')}. Add task_add_comment from alice text TASK_COMMENT:${nonce.new}, then task_complete after successful command.`,
     });
     proof.taskIds.push(task.id);
-    await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`);
+    await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`, recordCompletion);
     const freshCommandEvidence = await commandEvidence(
       app,
       task.id,
@@ -832,7 +880,7 @@ async function main() {
     try {
       if (teamActive) {
         try {
-          await stopped(app);
+          await stopped(app, recordStop);
         } catch (error: unknown) {
           proof.status = 'failed';
           proof.cleanupFailures.push(proofFailure(error, 'team_stop'));

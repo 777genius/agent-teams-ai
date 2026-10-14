@@ -405,7 +405,10 @@ async function ownsListener(pid: number, port: number): Promise<boolean> {
 }
 
 async function stopApp(child: ChildProcess) {
-  if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
+  if (child.exitCode !== null || child.signalCode !== null || !child.pid) {
+    child.stderr?.destroy();
+    return;
+  }
   const exited = once(child, 'exit');
   child.kill('SIGTERM');
   let timer: NodeJS.Timeout | undefined;
@@ -421,5 +424,8 @@ async function stopApp(child: ChildProcess) {
     ]);
   } finally {
     clearTimeout(timer);
+    // The app's descendants may retain its inherited stderr writer after exit.
+    // Release only our diagnostic read end; this is not native cleanup proof.
+    child.stderr?.destroy();
   }
 }

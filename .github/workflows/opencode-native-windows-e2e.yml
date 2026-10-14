@@ -213,6 +213,7 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           $env:TMPDIR = $env:RUNNER_TEMP
           $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          $failedPins = @()
           foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
             $version = (& $binary --version).Trim()
@@ -220,8 +221,9 @@ jobs:
             $scenario = @()
             if ($pin[0] -eq 'floor') { $scenario = @('--short') }
             pnpm exec tsx scripts/e2e/opencode-native-windows-full.ts $app bundled $binary $env:SELECTED_MODEL $env:OPENCODE_NATIVE_E2E_AUTH_FILE @scenario
-            if ($LASTEXITCODE -ne 0) { throw 'Real Windows task scenario failed; no automatic replay' }
+            if ($LASTEXITCODE -ne 0) { $failedPins += $pin[0] }
           }
+          if ($failedPins.Count -gt 0) { throw ('Real Windows task scenarios failed: ' + ($failedPins -join ',') + '; no automatic replay') }
       - name: Preserve only sanitized scenario proofs
         if: ${{ always() && !inputs.source_only && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != '' }}
         uses: actions/upload-artifact@v4
