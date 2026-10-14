@@ -28,6 +28,7 @@ import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { categorizeFile, getEffectiveMimeType, isImageMime } from '@shared/constants/attachments';
 import { Mic, Paperclip, Send, Trash2, X } from 'lucide-react';
 
+import type { PendingAttachment } from '@features/team-task-detail/renderer';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CommentAttachmentPayload, ResolvedTeamMember } from '@shared/types';
 
@@ -41,15 +42,6 @@ interface TaskCommentInputProps {
   members: ResolvedTeamMember[];
   replyTo: { author: string; text: string } | null;
   onClearReply: () => void;
-}
-
-interface PendingAttachment {
-  id: string;
-  filename: string;
-  mimeType: string;
-  base64Data: string;
-  previewUrl: string;
-  size: number;
 }
 
 export const TaskCommentInput = ({

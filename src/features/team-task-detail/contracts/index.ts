@@ -1,3 +1,5 @@
+import type { InlineChip } from '@shared/types/inlineChip';
+
 export interface TaskDetailIdentity {
   contextId: string;
   teamName: string;
@@ -36,10 +38,19 @@ export interface TaskDetailReplyDraft {
   text: string;
 }
 
+export interface PendingAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  base64Data: string;
+  previewUrl: string;
+  size: number;
+}
+
 export interface TaskDetailSession {
   commentText: string;
-  commentChips: string[];
-  pendingAttachments: unknown[];
+  commentChips: InlineChip[];
+  pendingAttachments: PendingAttachment[];
   reply: TaskDetailReplyDraft | null;
   subjectDraft: string;
   descriptionDraft: string;
@@ -51,7 +62,6 @@ export interface TaskDetailSession {
   submittedPartRevisions: Partial<Record<TaskDetailSubmitPart, number>> | null;
   saveRevisionByPart: Record<TaskDetailSavePart, number>;
   savedPartRevisionByPart: Record<TaskDetailSavePart, number | null>;
-  inlineEditOwnerSurfaceId: string | null;
   ownerSurfaceId: string | null;
   ownerRevision: number;
 }

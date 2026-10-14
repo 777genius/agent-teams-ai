@@ -5,6 +5,7 @@
 import { api } from '@renderer/api';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { syncRendererTelemetry } from '@renderer/telemetry';
+import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
@@ -973,7 +974,7 @@ export function initializeNotificationListeners(): () => void {
       if (!pane.activeTabId) continue;
       const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
       if (
-        (activeTab?.type === 'team' || activeTab?.type === 'graph') &&
+        ((activeTab && isOrdinaryTeamTab(activeTab)) || activeTab?.type === 'graph') &&
         activeTab.teamName != null
       ) {
         visibleTeamNames.add(activeTab.teamName);

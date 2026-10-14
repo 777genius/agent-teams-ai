@@ -8,6 +8,7 @@
 import { api } from '@renderer/api';
 import { contextStorage } from '@renderer/services/contextStorage';
 import { draftStorage } from '@renderer/services/draftStorage';
+import { isTaskDetailTab } from '@renderer/types/tabs';
 import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 
 import {
@@ -95,9 +96,22 @@ function isContextSwitchRequestCurrent(
   );
 }
 
-function normalizeRestoredTab(tab: Tab): Tab {
+function normalizeRestoredTab(tab: Tab, contextId: string): Tab | null {
   if ((tab as { type?: string }).type !== 'usage') {
-    return tab;
+    if (!isTaskDetailTab(tab)) return tab;
+    if (
+      typeof tab.teamName !== 'string' ||
+      typeof tab.taskDetail?.taskId !== 'string' ||
+      tab.taskDetail.contextId !== contextId ||
+      !tab.teamName.trim() ||
+      !tab.taskDetail.taskId.trim()
+    )
+      return null;
+    return {
+      ...tab,
+      teamName: tab.teamName.trim(),
+      taskDetail: { contextId, taskId: tab.taskDetail.taskId.trim() },
+    };
   }
 
   const { teamName: _teamName, ...rest } = tab;
@@ -134,12 +148,15 @@ function validateSnapshot(
       : null;
 
   // Validate tabs — filter out session tabs referencing invalid projects
-  const validTabs = snapshot.openTabs.map(normalizeRestoredTab).filter((tab) => {
-    if (tab.type === 'session' && tab.projectId) {
-      return validProjectIds.has(tab.projectId) || validWorktreeIds.has(tab.projectId);
-    }
-    return true; // Keep dashboard and non-session tabs
-  });
+  const validTabs = snapshot.openTabs
+    .map((tab) => normalizeRestoredTab(tab, snapshot._metadata.contextId))
+    .filter((tab): tab is Tab => {
+      if (tab === null) return false;
+      if (tab.type === 'session' && tab.projectId) {
+        return validProjectIds.has(tab.projectId) || validWorktreeIds.has(tab.projectId);
+      }
+      return true; // Keep dashboard and non-session tabs
+    });
 
   // Validate activeTabId
   let activeTabId = snapshot.activeTabId;
@@ -150,12 +167,15 @@ function validateSnapshot(
   // Validate pane layout tabs
   const validatedPanes = snapshot.paneLayout.panes
     .map((pane) => {
-      const paneTabs = pane.tabs.map(normalizeRestoredTab).filter((tab) => {
-        if (tab.type === 'session' && tab.projectId) {
-          return validProjectIds.has(tab.projectId) || validWorktreeIds.has(tab.projectId);
-        }
-        return true;
-      });
+      const paneTabs = pane.tabs
+        .map((tab) => normalizeRestoredTab(tab, snapshot._metadata.contextId))
+        .filter((tab): tab is Tab => {
+          if (tab === null) return false;
+          if (tab.type === 'session' && tab.projectId) {
+            return validProjectIds.has(tab.projectId) || validWorktreeIds.has(tab.projectId);
+          }
+          return true;
+        });
       const paneActiveId = paneTabs.find((t) => t.id === pane.activeTabId)
         ? pane.activeTabId
         : (paneTabs[0]?.id ?? null);

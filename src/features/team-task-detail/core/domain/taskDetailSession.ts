@@ -30,7 +30,6 @@ export const EMPTY_TASK_DETAIL_SESSION: TaskDetailSession = {
   submittedPartRevisions: null,
   saveRevisionByPart: { subject: 0, description: 0 },
   savedPartRevisionByPart: { subject: null, description: null },
-  inlineEditOwnerSurfaceId: null,
   ownerSurfaceId: null,
   ownerRevision: 0,
 };

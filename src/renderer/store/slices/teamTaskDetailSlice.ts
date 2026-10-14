@@ -26,7 +26,9 @@ import {
   transferTaskDetailOwner,
 } from '@features/team-task-detail/renderer';
 import { api } from '@renderer/api';
+import { isTaskDetailTab } from '@renderer/types/tabs';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import {
   captureTaskDetailReadScope,
@@ -61,7 +63,13 @@ export interface TeamTaskDetailSlice {
   updateTaskDetailSessionPart: (
     identity: TaskDetailIdentity,
     part: TaskDetailEditPart,
-    value: string | string[] | unknown[] | TaskDetailSession['reply']
+    value: TaskDetailSession[
+      | 'commentText'
+      | 'commentChips'
+      | 'pendingAttachments'
+      | 'reply'
+      | 'subjectDraft'
+      | 'descriptionDraft']
   ) => void;
   beginTaskDetailSubmitSession: (identity: TaskDetailIdentity) => number;
   completeTaskDetailSubmitSession: (identity: TaskDetailIdentity, revision: number) => void;
@@ -265,8 +273,10 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
       const next = { ...touchTaskDetailPart(current, part) };
       if (part === 'commentText') next.commentText = String(value);
-      if (part === 'commentChips') next.commentChips = [...(value as string[])];
-      if (part === 'pendingAttachments') next.pendingAttachments = [...(value as unknown[])];
+      if (part === 'commentChips')
+        next.commentChips = [...(value as TaskDetailSession['commentChips'])];
+      if (part === 'pendingAttachments')
+        next.pendingAttachments = [...(value as TaskDetailSession['pendingAttachments'])];
       if (part === 'reply') next.reply = value as TaskDetailSession['reply'];
       if (part === 'subject') next.subjectDraft = String(value);
       if (part === 'description') next.descriptionDraft = String(value);
@@ -384,7 +394,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find(
       (tab) =>
-        tab.type === 'team' &&
+        isTaskDetailTab(tab) &&
         tab.teamName === identity.teamName &&
         tab.taskDetail?.contextId === identity.contextId &&
         tab.taskDetail.taskId === identity.taskId
@@ -401,14 +411,14 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       type: 'team',
       teamName: identity.teamName,
       taskDetail: { contextId: identity.contextId, taskId: identity.taskId },
-      label: `${identity.teamName} #${identity.taskId}`,
+      label: `${identity.teamName} #${deriveTaskDisplayId(identity.taskId)}`,
     });
 
     const opened = get()
       .getAllPaneTabs()
       .find(
         (tab) =>
-          tab.type === 'team' &&
+          isTaskDetailTab(tab) &&
           tab.teamName === identity.teamName &&
           tab.taskDetail?.contextId === identity.contextId &&
           tab.taskDetail.taskId === identity.taskId

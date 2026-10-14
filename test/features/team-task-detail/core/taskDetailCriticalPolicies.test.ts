@@ -331,7 +331,17 @@ describe('task detail critical read policies', () => {
     let session = beginTaskDetailSubmit(
       {
         commentText: 'stale comment',
-        commentChips: ['stale chip'],
+        commentChips: [
+          {
+            id: 'chip-stale',
+            filePath: '/repo/src/stale.ts',
+            fileName: 'stale.ts',
+            fromLine: 12,
+            toLine: 18,
+            codeText: 'const stale = true;',
+            language: 'typescript',
+          },
+        ],
         pendingAttachments: [],
         reply: { taskId: 'X', author: 'lead', text: 'stale reply' },
         subjectDraft: 'draft subject',
@@ -351,13 +361,22 @@ describe('task detail critical read policies', () => {
         submittedPartRevisions: null,
         saveRevisionByPart: { subject: 0, description: 0 },
         savedPartRevisionByPart: { subject: null, description: null },
-        inlineEditOwnerSurfaceId: null,
         ownerSurfaceId: null,
         ownerRevision: 0,
       },
       {
         commentText: 'stale comment',
-        commentChips: ['stale chip'],
+        commentChips: [
+          {
+            id: 'chip-typed-successor',
+            filePath: '/repo/src/successor.ts',
+            fileName: 'successor.ts',
+            fromLine: 2,
+            toLine: 4,
+            codeText: 'export const successor = true;',
+            language: 'typescript',
+          },
+        ],
         pendingAttachments: [],
         reply: { taskId: 'X', author: 'lead', text: 'stale reply' },
       }

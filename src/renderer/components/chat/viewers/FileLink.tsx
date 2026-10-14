@@ -11,6 +11,7 @@ import React from 'react';
 import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
 import { resolveFilePath } from '@renderer/store/utils/pathResolution';
+import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { Check, FileCode } from 'lucide-react';
 
 import type { AppState } from '@renderer/store/types';
@@ -101,7 +102,9 @@ function selectContextProjectPath(s: AppState): string | null {
 
   switch (activeTab.type) {
     case 'team':
-      return s.selectedTeamData?.config.projectPath ?? null;
+      return isOrdinaryTeamTab(activeTab)
+        ? (s.selectedTeamData?.config.projectPath ?? null)
+        : (s.teamDataCacheByName[activeTab.teamName ?? '']?.config.projectPath ?? null);
     case 'session':
       return s.sessionDetail?.session?.projectPath ?? null;
     default:
@@ -111,7 +114,7 @@ function selectContextProjectPath(s: AppState): string | null {
 
 function selectIsTeamTab(s: AppState): boolean {
   const activeTab = s.openTabs.find((t) => t.id === s.activeTabId);
-  return activeTab?.type === 'team';
+  return activeTab ? isOrdinaryTeamTab(activeTab) : false;
 }
 
 // =============================================================================

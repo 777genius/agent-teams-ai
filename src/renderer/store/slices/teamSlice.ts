@@ -22,6 +22,7 @@ import {
 import * as productAnalytics from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
+import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import {
   buildOpenCodeRuntimeDeliveryDiagnostics,
   isOpenCodeRuntimeDeliveryHardUxFailure,
@@ -1426,6 +1427,7 @@ function buildGlobalTaskProjectionNotification(
 }
 
 export interface GlobalTaskDetailState {
+  contextId: string;
   teamName: string;
   taskId: string;
   commentId?: string;
@@ -2070,7 +2072,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   pendingReviewRequest: null,
   setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
   openGlobalTaskDetail: (teamName: string, taskId: string, commentId?: string) => {
-    set({ globalTaskDetail: { teamName, taskId, commentId } });
+    set({
+      globalTaskDetail: {
+        contextId: get().activeContextId,
+        teamName,
+        taskId,
+        commentId,
+      },
+    });
   },
   closeGlobalTaskDetail: () => set({ globalTaskDetail: null }),
   addingComment: false,
@@ -2416,7 +2425,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
 
     const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);
+    const existing = allTabs.find((tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName);
     if (existing) {
       state.setActiveTab(existing.id);
       // Sync label in case display name changed
@@ -3151,7 +3160,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         const displayName = committedTeamData.config.name || teamName;
         const allTabs = get().getAllPaneTabs();
         const relatedTabs = allTabs.filter(
-          (tab) => (tab.type === 'team' || tab.type === 'graph') && tab.teamName === teamName
+          (tab) => (isOrdinaryTeamTab(tab) || tab.type === 'graph') && tab.teamName === teamName
         );
         for (const tab of relatedTabs) {
           const nextLabel = tab.type === 'graph' ? `${displayName} Graph` : displayName;

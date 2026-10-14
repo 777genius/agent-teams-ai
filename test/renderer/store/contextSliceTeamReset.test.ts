@@ -12,6 +12,8 @@ import {
 
 import { createTestStore } from './storeTestUtils';
 
+import type { Tab } from '../../../src/renderer/types/tabs';
+
 const apiMock = vi.hoisted(() => ({
   context: {
     switch: vi.fn(async () => undefined),
@@ -162,6 +164,74 @@ describe('context slice team/task reset', () => {
     resetContextScopedRequestEpochForTests();
     resetChangeReviewLifecycleCoordinatorForTests();
     vi.restoreAllMocks();
+  });
+
+  it('restores valid task tabs and removes malformed or foreign identities from every pane', async () => {
+    const ordinary: Tab = {
+      id: 'ordinary',
+      type: 'team',
+      teamName: 'alpha',
+      label: 'Alpha',
+      createdAt: 0,
+    };
+    const valid: Tab = {
+      id: 'valid',
+      type: 'team',
+      teamName: ' alpha ',
+      label: 'Task X',
+      createdAt: 0,
+      taskDetail: { contextId: 'ssh-dev', taskId: ' X ' },
+    };
+    const foreign: Tab = {
+      id: 'foreign',
+      type: 'team',
+      teamName: 'alpha',
+      label: 'Foreign',
+      createdAt: 0,
+      taskDetail: { contextId: 'local', taskId: 'X' },
+    };
+    const malformed = {
+      id: 'malformed',
+      type: 'team',
+      teamName: 'alpha',
+      label: 'Malformed',
+      createdAt: 0,
+      taskDetail: { contextId: 'ssh-dev', taskId: 7 },
+    } as unknown as Tab;
+    const tabs = [ordinary, valid, foreign, malformed];
+    const snapshot = targetSnapshot();
+    contextStorageMock.loadSnapshot.mockResolvedValue({
+      ...snapshot,
+      openTabs: tabs,
+      activeTabId: 'foreign',
+      selectedTabIds: tabs.map((tab) => tab.id),
+      paneLayout: {
+        focusedPaneId: 'pane-default',
+        panes: [
+          {
+            ...snapshot.paneLayout.panes[0],
+            tabs,
+            activeTabId: 'malformed',
+            selectedTabIds: tabs.map((tab) => tab.id),
+          },
+        ],
+      },
+    });
+    const store = createTestStore();
+    await store.getState().switchContext('ssh-dev');
+
+    expect(store.getState().openTabs.map((tab) => tab.id)).toEqual(['ordinary', 'valid']);
+    expect(store.getState().activeTabId).toBe('ordinary');
+    expect(store.getState().selectedTabIds).toEqual(['ordinary', 'valid']);
+    expect(store.getState().paneLayout.panes[0]).toMatchObject({
+      activeTabId: 'ordinary',
+      selectedTabIds: ['ordinary', 'valid'],
+      tabs: [
+        ordinary,
+        { ...valid, teamName: 'alpha', taskDetail: { contextId: 'ssh-dev', taskId: 'X' } },
+      ],
+    });
+    expect(store.getState().selectedTeamName).toBeNull();
   });
 
   it('does not switch context when Changes cannot flush durably', async () => {
