@@ -160,6 +160,11 @@ export async function runTaskEditingAndNavigationCases(
     (task) => task.description === savedDescription,
     'B description persisted'
   );
+  await until(
+    cdp,
+    `!${pageB}.querySelector('[contenteditable]')`,
+    'saved B description editor closed without a new user edit'
+  );
 
   await click(cdp, `${pageB}.querySelector('[aria-label="Групповой чат"]')`);
   await until(
