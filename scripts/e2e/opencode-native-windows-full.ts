@@ -377,6 +377,7 @@ async function main() {
     relaunchConfirmed: false,
     finalStopConfirmed: false,
     failure: null as ProofFailure | null,
+    launchFailure: null as Record<string, string | boolean> | null,
     cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
@@ -750,6 +751,39 @@ async function main() {
   } catch (error: unknown) {
     proof.status = 'failed';
     proof.failure ??= proofFailure(error, proof.stage);
+    if (proof.stage === 'create_team') {
+      try {
+        const diagnostics = await app.call('getSafeLaunchFailure');
+        const boundaries = ['not_submitted', 'project_registration', 'team_create', 'created'];
+        const codes = [
+          'workspace_trust_required',
+          'transport_rejected',
+          'stdin_missing',
+          'provider_quota',
+          'provider_auth',
+          'opencode_runtime_readiness_timeout',
+          'process_readiness_timeout',
+          'opencode_protocol',
+          'model_no_bootstrap',
+          'process_exited',
+          'unknown',
+        ];
+        proof.launchFailure = {
+          boundary: boundaries.find((value) => value === diagnostics.boundary) ?? 'unknown',
+        };
+        if ('classification' in diagnostics)
+          proof.launchFailure.classification =
+            codes.find((value) => value === diagnostics.classification) ?? 'unknown';
+        for (const key of [
+          'bootstrapSubmitted',
+          'submitRejected',
+          'diagnosticsUnavailable',
+        ] as const)
+          if (key in diagnostics) proof.launchFailure[key] = diagnostics[key] === true;
+      } catch {
+        proof.launchFailure = { diagnosticsUnavailable: true };
+      }
+    }
     await checkpoint(proof.stage);
     throw new Error(
       'Windows full task qualification failed; preserve its TEST proof and auth custody'

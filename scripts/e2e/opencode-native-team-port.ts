@@ -14,6 +14,8 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
   const progress: TeamProvisioningProgress[] = [];
   let runId: string | undefined;
   let submitted = false;
+  let createBoundary: 'not_submitted' | 'project_registration' | 'team_create' | 'created' =
+    'not_submitted';
   let relaunchAttempted = false;
   let launchPending = false;
   const pendingProgress: TeamProvisioningProgress[] = [];
@@ -49,10 +51,42 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         throw new Error('single owned OpenCode launch required');
       // Never repeat an uncertain createTeam after an IPC timeout.
       submitted = true;
+      createBoundary = 'project_registration';
       await api.config.addCustomProjectPath(projectPath);
+      createBoundary = 'team_create';
       const result = await api.teams.createTeam(request);
       runId = result.runId;
+      createBoundary = 'created';
       return result;
+    },
+    async getSafeLaunchFailure() {
+      check();
+      const codes = [
+        'workspace_trust_required',
+        'transport_rejected',
+        'stdin_missing',
+        'provider_quota',
+        'provider_auth',
+        'opencode_runtime_readiness_timeout',
+        'process_readiness_timeout',
+        'opencode_protocol',
+        'model_no_bootstrap',
+        'process_exited',
+        'unknown',
+      ];
+      if (createBoundary !== 'team_create') return { boundary: createBoundary };
+      try {
+        const diagnostics = await api.teams.getLaunchFailureDiagnostics(teamName, runId);
+        return {
+          boundary: createBoundary,
+          classification:
+            codes.find((code) => code === diagnostics.classification?.code) ?? 'unknown',
+          bootstrapSubmitted: diagnostics.bootstrapTransportBreadcrumb?.bootstrapSubmitted === true,
+          submitRejected: diagnostics.bootstrapTransportBreadcrumb?.submitRejected === true,
+        };
+      } catch {
+        return { boundary: createBoundary, diagnosticsUnavailable: true };
+      }
     },
     async createTask(request: Parameters<ElectronAPI['teams']['createTask']>[1]) {
       check();
