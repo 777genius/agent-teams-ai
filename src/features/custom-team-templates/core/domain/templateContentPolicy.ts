@@ -57,8 +57,9 @@ export type ProjectTemplateContentResult =
  * Only team prompt plus active member name/role/workflow survive. Canonical lead
  * identities are excluded from both the member projection and the removed-member
  * count, and runtime-managed `{name}-provisioner` agents are excluded with the
- * same guard the team roster itself uses, so a provisioning artifact is never
- * projected as a teammate. Removed non-lead entries are dropped and reported
+ * same guard the team roster itself uses *before* teammates are derived, so a
+ * provisioning artifact is never projected as a teammate nor counted among the
+ * removed members. Removed non-lead entries are dropped and reported
  * through a count-based warning derived from the authoritative roster read
  * (never from the filtered active array). Unreadable roster metadata blocks the
  * projection entirely and stays distinct from an absent or valid empty roster.
@@ -77,17 +78,23 @@ export function projectTemplateContent(
   }
 
   const rosterMembers = snapshot.roster.status === 'readable' ? snapshot.roster.members : [];
-  const teammates = rosterMembers.filter((member) => !isCanonicalSettingsLeadMember(member));
+  // Provisioning spawns temporary "{name}-provisioner" agents that are internal
+  // artifacts, never real teammates, so the established roster guard drops them
+  // while teammates are built — before active members and the removed-member
+  // count are derived. They are therefore neither persisted as members nor
+  // reported as removed team members.
+  const keepNonProvisionerName = createCliProvisionerNameGuard(
+    rosterMembers.map((member) => member.name)
+  );
+  const teammates = rosterMembers.filter(
+    (member) => !isCanonicalSettingsLeadMember(member) && keepNonProvisionerName(member.name)
+  );
   const activeMembers = teammates.filter((member) => !member.removed);
   const removedCount = teammates.length - activeMembers.length;
   const rosterNames = activeMembers.map((member) => member.name);
   const keepAutoSuffixedName = createCliAutoSuffixNameGuard(rosterNames);
-  // Provisioning spawns temporary "{name}-provisioner" agents that are internal
-  // artifacts, never real teammates, so the established roster guard removes
-  // them from the projection before any member is persisted.
-  const isRuntimeProvisionerName = createCliProvisionerNameGuard(rosterNames);
   const members = activeMembers
-    .filter((member) => keepAutoSuffixedName(member.name) && isRuntimeProvisionerName(member.name))
+    .filter((member) => keepAutoSuffixedName(member.name))
     .map(projectMember);
   for (const member of members) {
     if (!member.role) {
@@ -139,7 +146,7 @@ export function validateTemplateContent(
 
   const rosterNames = content.members.map((member) => member.name);
   const keepAutoSuffixedName = createCliAutoSuffixNameGuard(rosterNames);
-  const isRuntimeProvisionerName = createCliProvisionerNameGuard(rosterNames);
+  const keepNonProvisionerName = createCliProvisionerNameGuard(rosterNames);
   const seenNames = new Set<string>();
   content.members.forEach((member, index) => {
     const baseField = `members[${index}]`;
@@ -151,7 +158,7 @@ export function validateTemplateContent(
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
         !keepAutoSuffixedName(name) ||
-        !isRuntimeProvisionerName(name)
+        !keepNonProvisionerName(name)
       ) {
         issues.push({ code: 'memberNameInvalid', field: `${baseField}.name` });
       }

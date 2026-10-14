@@ -283,6 +283,28 @@ describe('projectTemplateContent', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it('never counts a removed provisioner artifact as a removed team member', () => {
+    const result = projectTemplateContent({
+      sourceTeamName: 'demo-team',
+      teamPrompt: prompt,
+      roster: {
+        status: 'readable',
+        members: [
+          { name: 'alice', role: 'Developer', workflow: 'Design.' },
+          { name: 'alice-provisioner', role: 'provisioner', workflow: 'Spawn teammates.' },
+          { name: 'bob', role: 'Reviewer', workflow: 'Review.', removed: true },
+        ],
+      },
+    });
+
+    expect(result.status).toBe('ready');
+    if (result.status !== 'ready') return;
+    expect(result.content.members.map((member) => member.name)).toEqual(['alice']);
+    // Only the real removed teammate (bob) is reported; the provisioner was
+    // never a teammate, so it must not inflate the removed-member count.
+    expect(result.warnings).toEqual([{ code: 'removedMembersExcluded', count: 1 }]);
+  });
+
   it('keeps an ordinary member whose name merely resembles the provisioner pattern', () => {
     const result = projectTemplateContent({
       sourceTeamName: 'demo-team',
