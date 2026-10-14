@@ -52,9 +52,26 @@ interface Host {
   pid: number;
   port: number;
   version: string;
+  processStartedAtMs: number;
+  leases: Record<
+    string,
+    {
+      leaseKey: string;
+      teamId: string;
+      laneId: string;
+      memberName: string;
+      runId: string;
+      sessionId: string;
+    }
+  >;
 }
 interface Session {
   teamId: string;
+  runId: string;
+  laneId: string;
+  stoppedAt?: string;
+  providerId: string;
+  opencodeVersion: string;
   memberName: string;
   projectPath: string;
   selectedModel: string;
@@ -449,6 +466,208 @@ async function main() {
     };
     const api = async <T,>(expression: string, label: string) =>
       finish<T>(await begin(expression), label);
+    const registry = path.join(data.home, 'AppData/Local/claude-multimodel-nodejs/Data/opencode');
+    const readManaged = async (
+      name: 'session-store.json' | 'host-registry.json' | 'command-outcomes.json'
+    ) => {
+      const rootReal = await realpath(root);
+      const file = path.join(registry, name),
+        relative = path.relative(root, file);
+      assert(!relative.startsWith('..') && !path.isAbsolute(relative));
+      let current = root;
+      for (const part of ['', ...relative.split(path.sep)]) {
+        if (part) current = path.join(current, part);
+        const info = await lstat(current);
+        assert(
+          !info.isSymbolicLink() &&
+            (current === file ? info.isFile() && info.size <= 2 * 1024 * 1024 : info.isDirectory())
+        );
+      }
+      const canonical = await realpath(file);
+      assert(canonical.startsWith(rootReal + path.sep));
+      const handle = await open(file, 'r');
+      try {
+        const info = await handle.stat(),
+          leaf = await lstat(file);
+        assert(
+          info.isFile() &&
+            info.size <= 2 * 1024 * 1024 &&
+            info.dev === leaf.dev &&
+            info.ino === leaf.ino &&
+            !leaf.isSymbolicLink()
+        );
+        const bytes = Buffer.alloc(2 * 1024 * 1024 + 1);
+        const read = await handle.read(bytes, 0, bytes.length, 0);
+        assert(read.bytesRead <= 2 * 1024 * 1024);
+        const after = await lstat(file);
+        assert(
+          !after.isSymbolicLink() &&
+            after.dev === info.dev &&
+            after.ino === info.ino &&
+            (await realpath(file)) === canonical
+        );
+        return JSON.parse(bytes.subarray(0, read.bytesRead).toString('utf8'));
+      } finally {
+        await handle.close();
+      }
+    };
+    const ownedNativeSession = async () => {
+      assert(launchRun?.runId);
+      const platform = (await import(
+        pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
+      )) as { processes(): Identity[] };
+      const resolve = async () => {
+        const sessions = (await readManaged('session-store.json')) as {
+          schemaVersion: number;
+          records: Record<string, Session>;
+        };
+        assert(
+          sessions.schemaVersion === 1 && Object.keys(sessions.records).length <= 10000,
+          'unknown-session-schema'
+        );
+        const matching = Object.values(sessions.records).filter(
+          (row) =>
+            row.teamId === team &&
+            row.runId === launchRun!.runId &&
+            row.laneId === 'primary' &&
+            row.memberName === member &&
+            row.projectPath === data.project &&
+            !row.stoppedAt
+        );
+        assert(matching.length === 1, 'no-exact-active-session');
+        const session = matching[0]!;
+        assert(
+          session.providerId === 'opencode' &&
+            session.selectedModel === MODEL &&
+            session.opencodeSessionId.length <= 128 &&
+            /^ses_[A-Za-z0-9]+$/.test(session.opencodeSessionId),
+          'session-identity-mismatch'
+        );
+        const registry = (await readManaged('host-registry.json')) as {
+          schemaVersion: number;
+          processIdentityFormat: string;
+          hosts: Record<string, Host>;
+        };
+        assert(
+          registry.schemaVersion === 1 && registry.processIdentityFormat === 'platform-native-v2',
+          'unknown-host-schema'
+        );
+        const host = registry.hosts[session.hostKey];
+        assert(
+          host &&
+            host.hostKey === session.hostKey &&
+            host.profileRootKey === session.profileRootKey &&
+            host.projectPath === data.project &&
+            host.version === '1.19.0',
+          'host-identity-mismatch'
+        );
+        const key = `${team}::${session.laneId}::${member}`,
+          lease = host.leases?.[key];
+        assert(
+          lease &&
+            (!lease.leaseKey || lease.leaseKey === key) &&
+            lease.teamId === team &&
+            lease.laneId === session.laneId &&
+            lease.memberName === member &&
+            lease.runId === launchRun!.runId &&
+            lease.sessionId === session.opencodeSessionId,
+          'no-exact-host-lease'
+        );
+        assert(
+          Number.isSafeInteger(host.pid) &&
+            host.pid > 0 &&
+            Number.isFinite(host.processStartedAtMs) &&
+            host.processStartedAtMs > 0,
+          'unknown-host-birth'
+        );
+        assert(
+          Number.isSafeInteger(host.port) &&
+            host.port > 0 &&
+            host.port <= 65535 &&
+            host.baseUrl === `http://127.0.0.1:${host.port}`,
+          'invalid-host-endpoint'
+        );
+        const identity = platform.processes().find((row) => row.pid === host.pid);
+        assert(identity, 'host-absent');
+        assert(
+          Date.parse(identity.birth) === host.processStartedAtMs,
+          'host-pid-reused-or-birth-unknown'
+        );
+        assert(
+          identity.executable?.toLowerCase() === native.binaryPath.toLowerCase(),
+          'host-executable-mismatch'
+        );
+        return {
+          session,
+          host,
+          identity,
+          binding: JSON.stringify([
+            session.hostKey,
+            session.profileRootKey,
+            session.opencodeSessionId,
+            session.runId,
+            session.laneId,
+            host.pid,
+            host.processStartedAtMs,
+            host.baseUrl,
+            [lease.teamId, lease.laneId, lease.memberName, lease.runId, lease.sessionId],
+          ]),
+        };
+      };
+      const view = await resolve();
+      const recheck = async () => {
+        assert((await resolve()).binding === view.binding, 'session-host-lease-changed');
+      };
+      const read = async <T,>(suffix: string, deadline = Date.now() + 5000) => {
+        assert(
+          suffix === '/agent' ||
+            suffix === '/session/status' ||
+            suffix === `/session/${view.session.opencodeSessionId}/message` ||
+            new RegExp(
+              `^/session/${view.session.opencodeSessionId}/message/msg_[A-Za-z0-9]+$`
+            ).test(suffix)
+        );
+        await recheck();
+        const timeout = deadline - Date.now();
+        assert(timeout > 0, 'native-observation-deadline');
+        const controller = new AbortController(),
+          timer = setTimeout(() => controller.abort(), Math.min(timeout, 5000));
+        let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+        try {
+          const response = await fetch(new URL(suffix, view.host.baseUrl), {
+            redirect: 'error',
+            signal: controller.signal,
+          });
+          if (!response.ok) return { status: response.status, value: null };
+          reader = response.body?.getReader();
+          assert(reader);
+          const chunks: Buffer[] = [];
+          let bytes = 0;
+          for (;;) {
+            const part = await reader.read();
+            if (part.done) break;
+            bytes += part.value.byteLength;
+            assert(bytes <= 2 * 1024 * 1024, 'native-response-byte-cap');
+            chunks.push(Buffer.from(part.value));
+          }
+          return {
+            status: response.status,
+            value: JSON.parse(Buffer.concat(chunks).toString('utf8')) as T,
+          };
+        } finally {
+          clearTimeout(timer);
+          controller.abort();
+          try {
+            await reader?.cancel();
+          } catch {
+            // Cancellation can reject after abort; the identity recheck still runs below.
+          }
+          reader?.releaseLock();
+          await recheck();
+        }
+      };
+      return { ...view, read, recheck };
+    };
     let statusKey: string | undefined,
       statusStartedAt = 0;
     observeDelivery = async () => {
@@ -516,56 +735,6 @@ async function main() {
             'delivery observation',
             5000
           );
-        const registry = path.join(
-          data.home,
-          'AppData/Local/claude-multimodel-nodejs/Data/opencode'
-        );
-        const readManaged = async (
-          name: 'session-store.json' | 'host-registry.json' | 'command-outcomes.json'
-        ) => {
-          const rootReal = await realpath(root);
-          const file = path.join(registry, name),
-            relative = path.relative(root, file);
-          assert(!relative.startsWith('..') && !path.isAbsolute(relative));
-          let current = root;
-          for (const part of ['', ...relative.split(path.sep)]) {
-            if (part) current = path.join(current, part);
-            const info = await lstat(current);
-            assert(
-              !info.isSymbolicLink() &&
-                (current === file
-                  ? info.isFile() && info.size <= 2 * 1024 * 1024
-                  : info.isDirectory())
-            );
-          }
-          const canonical = await realpath(file);
-          assert(canonical.startsWith(rootReal + path.sep));
-          const handle = await open(file, 'r');
-          try {
-            const info = await handle.stat(),
-              leaf = await lstat(file);
-            assert(
-              info.isFile() &&
-                info.size <= 2 * 1024 * 1024 &&
-                info.dev === leaf.dev &&
-                info.ino === leaf.ino &&
-                !leaf.isSymbolicLink()
-            );
-            const bytes = Buffer.alloc(2 * 1024 * 1024 + 1);
-            const read = await handle.read(bytes, 0, bytes.length, 0);
-            assert(read.bytesRead <= 2 * 1024 * 1024);
-            const after = await lstat(file);
-            assert(
-              !after.isSymbolicLink() &&
-                after.dev === info.dev &&
-                after.ino === info.ino &&
-                (await realpath(file)) === canonical
-            );
-            return JSON.parse(bytes.subarray(0, read.bytesRead).toString('utf8'));
-          } finally {
-            await handle.close();
-          }
-        };
         try {
           const outcomes = (await readManaged('command-outcomes.json')) as {
             schemaVersion: number;
@@ -632,78 +801,294 @@ async function main() {
             code,
           };
         }
-        const sessions = (await readManaged('session-store.json')) as {
-          records: Record<string, Session>;
-        };
-        assert(Object.keys(sessions.records).length <= 10000);
-        const matching = Object.values(sessions.records).filter(
-          (row) =>
-            row.teamId === team && row.memberName === member && row.projectPath === data.project
-        );
-        assert(matching.length === 1 && matching[0]!.selectedModel === MODEL);
-        const session = matching[0]!;
-        collected.session = {
-          sessionId: session.opencodeSessionId,
-          hostKey: session.hostKey,
-          profileRootKey: session.profileRootKey,
-          selectedModel: session.selectedModel,
-        };
-        const hosts = (await readManaged('host-registry.json')) as { hosts: Record<string, Host> };
-        const host = hosts.hosts[session.hostKey];
-        assert(
-          host &&
-            host.profileRootKey === session.profileRootKey &&
-            host.projectPath === data.project
-        );
-        const url = new URL(host.baseUrl);
-        assert(
-          url.protocol === 'http:' &&
-            url.hostname === '127.0.0.1' &&
-            Number(url.port) === host.port &&
-            !url.username &&
-            !url.password &&
-            url.pathname === '/' &&
-            !url.search &&
-            !url.hash
-        );
-        const platform = (await import(
-          pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
-        )) as {
-          processes(): Identity[];
-          ownedTree(snapshot: Identity[], launcher: Identity): Identity[];
-          sameIdentity(expected: Identity, current: Identity | undefined): void;
-        };
-        const manifest = JSON.parse(
-          await readFile(path.join(root, 'manifest.json'), 'utf8')
-        ) as Manifest;
-        assert(manifest.launcher);
-        const snapshot = platform.processes(),
-          owned = platform.ownedTree(snapshot, manifest.launcher);
-        const identity = owned.find(
-          (row) =>
-            row.pid === host.pid &&
-            row.executable?.toLowerCase() === native.binaryPath.toLowerCase()
-        );
-        if (identity)
-          platform.sameIdentity(
+        try {
+          const view = await ownedNativeSession(),
+            { session, host, identity } = view;
+          collected.session = {
+            sessionId: session.opencodeSessionId,
+            runId: session.runId,
+            laneId: session.laneId,
+            hostKey: session.hostKey,
+            profileRootKey: session.profileRootKey,
+          };
+          collected.host = {
+            pid: host.pid,
+            birthMs: host.processStartedAtMs,
+            version: host.version,
+            owner: 'exact-lease-and-fresh-native-identity',
             identity,
-            snapshot.find((row) => row.pid === host.pid)
+          };
+          const accepted = (
+            collected.commandOutcomes as
+              | Array<{
+                  sessionId: string;
+                  runtimePromptMessageId: string;
+                  safeToRetry: boolean;
+                  createdAt: string | null;
+                }>
+              | undefined
+          )?.find(
+            (row) =>
+              row.sessionId === session.opencodeSessionId &&
+              row.safeToRetry === false &&
+              /^msg_[A-Za-z0-9]+$/.test(row.runtimePromptMessageId)
           );
-        collected.host = {
-          pid: host.pid,
-          port: host.port,
-          version: host.version,
-          owner: identity?.birth && identity.executable ? 'owned-live-census' : 'unknown',
-          identity: identity
-            ? {
-                pid: identity.pid,
-                parent: identity.parent,
-                birth: identity.birth,
-                executable: identity.executable,
+          const attemptCreatedAt = accepted?.createdAt ? Date.parse(accepted.createdAt) : NaN;
+          collected.nativeAsyncLogObservation = { state: 'unknown' };
+          try {
+            assert(/^[A-Za-z0-9_-]{1,128}$/.test(session.profileRootKey), 'unsafe-profile-key');
+            await view.recheck();
+            const log = path.join(
+              registry,
+              'profiles',
+              session.profileRootKey,
+              'data/opencode/log/opencode.log'
+            );
+            const rootReal = await realpath(root),
+              relative = path.relative(root, log);
+            assert(!relative.startsWith('..') && !path.isAbsolute(relative));
+            let component = root;
+            for (const part of ['', ...relative.split(path.sep)]) {
+              if (part) component = path.join(component, part);
+              const info = await lstat(component);
+              assert(
+                !info.isSymbolicLink() && (component === log ? info.isFile() : info.isDirectory())
+              );
+            }
+            const canonical = await realpath(log);
+            assert(canonical.startsWith(rootReal + path.sep));
+            const handle = await open(log, 'r');
+            try {
+              const before = await handle.stat(),
+                leaf = await lstat(log);
+              assert(
+                Number.isSafeInteger(before.size) &&
+                  before.size >= 0 &&
+                  before.isFile() &&
+                  !leaf.isSymbolicLink() &&
+                  leaf.dev === before.dev &&
+                  leaf.ino === before.ino
+              );
+              const length = Math.min(before.size, 65536),
+                bytes = Buffer.alloc(length);
+              const read = await handle.read(bytes, 0, length, Math.max(0, before.size - length));
+              const after = await lstat(log);
+              assert(
+                !after.isSymbolicLink() &&
+                  after.dev === before.dev &&
+                  after.ino === before.ino &&
+                  (await realpath(log)) === canonical
+              );
+              component = root;
+              for (const part of ['', ...relative.split(path.sep)]) {
+                if (part) component = path.join(component, part);
+                const info = await lstat(component);
+                assert(
+                  !info.isSymbolicLink() && (component === log ? info.isFile() : info.isDirectory())
+                );
               }
-            : null,
-          protocolRead: 'not-attempted',
-        };
+              await view.recheck();
+              const tail = bytes.subarray(0, read.bytesRead).toString('utf8');
+              const complete = tail.split(/\r?\n/),
+                lines = complete.slice(before.size > length ? 1 : 0, -1);
+              const collectedAt = Date.now();
+              let matched = 0,
+                otherSession = 0,
+                malformed = 0,
+                unfenced = 0;
+              const categories = new Set<string>();
+              for (const line of lines) {
+                if (line.length > 8192) {
+                  malformed++;
+                  continue;
+                }
+                const token = /([A-Za-z0-9_.-]+)=("(?:\\.|[^"\\])*"|[^\s="\\]+)(?: +|$)/gy;
+                let offset = 0;
+                const fields = new Map<string, string[]>();
+                try {
+                  while (offset < line.length) {
+                    token.lastIndex = offset;
+                    const part = token.exec(line);
+                    assert(part);
+                    const value = part[2]!.startsWith('"')
+                      ? (JSON.parse(part[2]!) as string)
+                      : part[2]!;
+                    fields.set(part[1]!, [...(fields.get(part[1]!) ?? []), value]);
+                    offset = token.lastIndex;
+                  }
+                  const messages = fields.get('message'),
+                    sessions = fields.get('sessionID');
+                  if (messages?.length !== 1 || (sessions && sessions.length !== 1)) {
+                    malformed++;
+                    continue;
+                  }
+                  if (messages[0] === 'prompt_async failed') {
+                    if (sessions?.[0] === session.opencodeSessionId) {
+                      const timestamps = fields.get('timestamp'),
+                        timestamp = timestamps?.length === 1 ? Date.parse(timestamps[0]!) : NaN;
+                      if (
+                        !Number.isFinite(attemptCreatedAt) ||
+                        !Number.isFinite(timestamp) ||
+                        timestamp < attemptCreatedAt ||
+                        timestamp > collectedAt
+                      ) {
+                        unfenced++;
+                        continue;
+                      }
+                      matched++;
+                      const cause = [...fields]
+                        .filter(([key]) => key === 'cause' || key.startsWith('cause.'))
+                        .flatMap(([, values]) => values)
+                        .join(' ');
+                      for (const match of cause.matchAll(
+                        /\b(ImageDecodeError|ImageInvalidDataUrlError|ImageSizeError|ImageResizerUnavailableError|ENOENT|EACCES|EINVAL)\b/g
+                      ))
+                        categories.add(match[1]!);
+                    } else otherSession++;
+                  }
+                } catch {
+                  malformed++;
+                }
+              }
+              collected.nativeAsyncLogObservation = {
+                state: 'tail-read',
+                bytes: read.bytesRead,
+                truncated: before.size > length,
+                incompleteTrailingRecord: Boolean(complete.at(-1)),
+                matched,
+                otherSession,
+                malformed,
+                unfenced,
+                attemptReceiveTimeFenced: Number.isFinite(attemptCreatedAt),
+                collectionTime: collectedAt,
+                sessionCorrelation: matched
+                  ? 'exact-message-session-and-attempt-time'
+                  : unfenced
+                    ? 'unknown-unfenced-record'
+                    : 'unknown-no-match-in-bounded-tail',
+                causeCategories: categories.size ? [...categories] : ['unknown-cause-format'],
+              };
+            } finally {
+              await handle.close();
+            }
+          } catch (error) {
+            const code =
+              error &&
+              typeof error === 'object' &&
+              'code' in error &&
+              typeof error.code === 'string' &&
+              ['ENOENT', 'EACCES', 'EINVAL'].includes(error.code)
+                ? error.code
+                : null;
+            collected.nativeAsyncLogObservation = {
+              state: code === 'ENOENT' ? 'unavailable' : 'collection-failed',
+              code,
+              sessionCorrelation: 'unknown',
+            };
+          } finally {
+            try {
+              await view.recheck();
+            } catch {
+              collected.nativeAsyncLogObservation = {
+                state: 'unknown-owner-changed',
+                sessionCorrelation: 'unknown',
+              };
+            }
+          }
+          const deadline = Date.now() + 5000;
+          const project = (value: unknown) => {
+            const message = value as {
+              info?: {
+                id?: string;
+                sessionID?: string;
+                role?: string;
+                modelID?: string;
+                providerID?: string;
+                finish?: string;
+                error?: { name?: string };
+              };
+              parts?: unknown[];
+            };
+            const info = message?.info;
+            assert(
+              info && info.sessionID === session.opencodeSessionId && typeof info.id === 'string',
+              'foreign-native-message'
+            );
+            return {
+              id: info?.id?.slice(0, 128),
+              sessionId: info?.sessionID?.slice(0, 128),
+              role: info?.role?.slice(0, 32),
+              model: info?.modelID?.slice(0, 128),
+              provider: info?.providerID?.slice(0, 64),
+              finish: info?.finish?.slice(0, 64),
+              errorClass: info?.error
+                ? /^[A-Za-z0-9_]{1,64}$/.test(info.error.name ?? '')
+                  ? info.error.name
+                  : 'unknown-error'
+                : null,
+              partsCount: Array.isArray(message?.parts) ? message.parts.length : null,
+            };
+          };
+          if (accepted) {
+            const anchor = await view.read<unknown>(
+              `/session/${session.opencodeSessionId}/message/${accepted.runtimePromptMessageId}`,
+              deadline
+            );
+            const metadata = anchor.value ? project(anchor.value) : null;
+            collected.acceptedAnchor = {
+              messageId: accepted.runtimePromptMessageId,
+              status: anchor.status,
+              present:
+                metadata?.id === accepted.runtimePromptMessageId &&
+                metadata.sessionId === session.opencodeSessionId,
+              metadata,
+            };
+          } else collected.acceptedAnchor = { state: 'no-matching-accepted-anchor-receipt' };
+          const status = await view.read<Record<string, { type?: string }>>(
+            '/session/status',
+            deadline
+          );
+          const ownStatus = status.value?.[session.opencodeSessionId]?.type;
+          collected.nativeStatus = {
+            status: status.status,
+            sessionId: session.opencodeSessionId,
+            type: ['idle', 'busy', 'retry'].includes(ownStatus ?? '')
+              ? ownStatus
+              : 'unknown-or-sparse-absent',
+          };
+          const history = await view.read<unknown[]>(
+            `/session/${session.opencodeSessionId}/message`,
+            deadline
+          );
+          assert(history.value === null || Array.isArray(history.value));
+          collected.nativeHistory = {
+            status: history.status,
+            entries: history.value?.slice(-32).map(project),
+            truncated: (history.value?.length ?? 0) > 32,
+          };
+        } catch (error) {
+          const classes = [
+            'unknown-session-schema',
+            'no-exact-active-session',
+            'session-identity-mismatch',
+            'unknown-host-schema',
+            'host-identity-mismatch',
+            'no-exact-host-lease',
+            'unknown-host-birth',
+            'invalid-host-endpoint',
+            'host-absent',
+            'host-pid-reused-or-birth-unknown',
+            'host-executable-mismatch',
+            'session-host-lease-changed',
+          ];
+          collected.nativeSessionObservation = {
+            state: 'unknown',
+            classification:
+              error instanceof Error && classes.includes(error.message)
+                ? error.message
+                : 'collection-failed',
+          };
+        }
       } catch {
         collected.collectionFailed = true;
       }
@@ -973,46 +1358,13 @@ async function main() {
       180000
     );
     receipt.phase = 'effective_native_agent';
-    const registry = path.join(data.home, 'AppData/Local/claude-multimodel-nodejs/Data/opencode');
-    const sessions = JSON.parse(
-      await readFile(path.join(registry, 'session-store.json'), 'utf8')
-    ) as { records: Record<string, Session> };
-    const session = Object.values(sessions.records).find(
-      (row) => row.teamId === team && row.memberName === member && row.projectPath === data.project
+    const nativeView = await ownedNativeSession();
+    const { session, host, identity: hostIdentity } = nativeView;
+    const initialMessages = await nativeView.read<unknown[]>(
+      `/session/${session.opencodeSessionId}/message`
     );
-    assert(session && session.selectedModel === MODEL);
-    const hosts = JSON.parse(await readFile(path.join(registry, 'host-registry.json'), 'utf8')) as {
-      hosts: Record<string, Host>;
-    };
-    const host = hosts.hosts[session.hostKey];
-    assert(
-      host &&
-        host.version === '1.19.0' &&
-        host.profileRootKey === session.profileRootKey &&
-        host.projectPath === data.project
-    );
-    const url = new URL(host.baseUrl);
-    assert(url.hostname === '127.0.0.1' && Number(url.port) === host.port);
-    const platform = (await import(
-      pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
-    )) as {
-      processes(): Identity[];
-      ownedTree(snapshot: Identity[], launcher: Identity): Identity[];
-      sameIdentity(expected: Identity, current: Identity | undefined): void;
-    };
-    const currentManifest = JSON.parse(
-      await readFile(path.join(root, 'manifest.json'), 'utf8')
-    ) as Manifest;
-    assert(currentManifest.launcher);
-    const owned = platform.ownedTree(platform.processes(), currentManifest.launcher);
-    const hostIdentity = owned.find((row) => row.pid === host.pid);
-    assert(hostIdentity, 'Native host must belong to the owned packaged app');
-    let messages = (await fetch(new URL(`/session/${session.opencodeSessionId}/message`, url)).then(
-      (response) => {
-        assert(response.ok);
-        return response.json();
-      }
-    )) as Array<{
+    assert(initialMessages.status === 200 && initialMessages.value);
+    let messages = initialMessages.value as Array<{
       info: { role: string; agent: string; sessionID: string; finish?: string };
       parts: Array<{
         type: string;
@@ -1035,14 +1387,10 @@ async function main() {
         )
     );
     assert(actualRead, 'Actual selected native session must retain completed saved-path Read');
-    platform.sameIdentity(
-      hostIdentity,
-      platform.processes().find((row) => row.pid === host.pid)
-    );
-    const agents = (await fetch(new URL('/agent', url)).then((response) => {
-      assert(response.ok);
-      return response.json();
-    })) as Array<{
+    await nativeView.recheck();
+    const agentResponse = await nativeView.read<unknown[]>('/agent');
+    assert(agentResponse.status === 200 && agentResponse.value);
+    const agents = agentResponse.value as Array<{
       name: string;
       permission: Array<{ permission: string; pattern: string; action: string }>;
     }>;
@@ -1064,16 +1412,11 @@ async function main() {
     };
     await waitFor(
       async () => {
-        platform.sameIdentity(
-          hostIdentity,
-          platform.processes().find((row) => row.pid === host.pid)
+        const current = await nativeView.read<typeof messages>(
+          `/session/${session.opencodeSessionId}/message`
         );
-        messages = (await fetch(new URL(`/session/${session.opencodeSessionId}/message`, url)).then(
-          (response) => {
-            assert(response.ok);
-            return response.json();
-          }
-        )) as typeof messages;
+        assert(current.status === 200 && current.value);
+        messages = current.value;
         return messages.some(
           (message) =>
             message.info.role === 'assistant' &&
@@ -1087,10 +1430,7 @@ async function main() {
       'native completion after successful MCP relay',
       30000
     );
-    platform.sameIdentity(
-      hostIdentity,
-      platform.processes().find((row) => row.pid === host.pid)
-    );
+    await nativeView.recheck();
     receipt.actualRequests = model.requests;
     receipt.passed = true;
   } catch (error) {
