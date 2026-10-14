@@ -16,6 +16,7 @@ import {
   selectTeamDataForName,
   selectTeamMessages,
 } from '../../../src/renderer/store/slices/teamSlice';
+import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import { invalidateTeamLocalStateEpoch } from '../../../src/renderer/store/team/teamLocalStateEpoch';
 import {
   __resetTeamRefreshFanoutDiagnosticsForTests,
@@ -215,6 +216,7 @@ type TeamSliceHarnessState = TeamSlice &
   Pick<
     AppState,
     | 'activeContextId'
+    | 'isContextSwitching'
     | 'getAllPaneTabs'
     | 'invalidateTaskChangePresence'
     | 'openTab'
@@ -298,7 +300,9 @@ function createSliceStore() {
     (set, get, store) =>
       ({
         ...createTeamSlice(set as never, get as never, store as never),
+        ...createTeamTaskDetailStoreSlices(set as never, get as never, store as never),
         activeContextId: 'local',
+        isContextSwitching: false,
         paneLayout: createPaneLayout(),
         selectedProjectId: null,
         openTab: vi.fn(),
@@ -2292,7 +2296,7 @@ describe('teamSlice actions', () => {
     fullRequest.resolve(fullSnapshot);
     await fullPromise;
     expect(store.getState().selectedTeamData).toEqual(fullSnapshot);
-    expect(store.getState().selectedTeamLoading).toBe(true);
+    expect(store.getState().selectedTeamLoading).toBe(false);
 
     thinRequest.reject(new Error('Timeout after 30000ms: team:getData(my-team,mode=thin)'));
     await selectPromise;

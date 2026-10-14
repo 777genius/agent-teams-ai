@@ -597,6 +597,7 @@ describe('notificationSlice', () => {
         store.getState().navigateToError(teamError);
 
         expect(store.getState().globalTaskDetail).toEqual({
+          contextId: 'local',
           teamName: 'delta-team',
           taskId: 'task-123',
           commentId: 'comment-456',
