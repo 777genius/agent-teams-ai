@@ -24,8 +24,16 @@ describe('serialized native IPC failure details', () => {
     }
   });
 
-  it('keeps ordinary contractions and bounds the output', () => {
-    expect(project("couldn't resolve module")).toBe("couldn't resolve module");
+  it.each(['"', "'", '`'])('redacts word-prefixed %s arguments', (quote) => {
+    expect(project(`Rejected argument: b${quote}confidential-value${quote}`)).toBe(
+      'Rejected argument: b[argument]'
+    );
+    expect(project(`Rejected argument: b${quote}confidential-value${' '.repeat(17_000)}`)).toBe(
+      'Rejected argument: b[argument]'
+    );
+  });
+
+  it('bounds the output', () => {
     expect(project('failure '.repeat(3_000)).length).toBeLessThanOrEqual(500);
   });
 

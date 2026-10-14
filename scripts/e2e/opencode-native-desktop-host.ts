@@ -40,7 +40,7 @@ const IPC_FAILURE_CLASSIFICATIONS = [
 // and again on receipt. Never retain raw exception text or quoted arguments.
 export function safeIpcFailureDetail(value: string, redact: (text: string) => string): string {
   return redact(value.slice(0, 16_384))
-    .replace(/(?<![A-Za-z0-9_])(["'`])(?:\\[\s\S]?|(?!\1)[^\\])*(?:\1|$)/g, '[argument]')
+    .replace(/(["'`])(?:\\[\s\S]?|(?!\1)[^\\])*(?:\1|$)/g, '[argument]')
     .replace(/[A-Za-z]:[\\/][^\r\n,;]*/g, '[path]')
     .replace(/\\\\[^\r\n,;]*/g, '[path]')
     .replace(/\/[^\s"'<>]+/g, '[path]')
@@ -323,8 +323,19 @@ export async function prepareNativeDesktop() {
           },
         };
       } catch (error) {
-        cdp?.close();
-        await stopApp(child);
+        const failures: unknown[] = [error];
+        try {
+          cdp?.close();
+        } catch (cleanupError) {
+          failures.push(cleanupError);
+        }
+        try {
+          await stopApp(child);
+        } catch (cleanupError) {
+          failures.push(cleanupError);
+        }
+        if (failures.length > 1)
+          throw new AggregateError(failures, 'Owned Electron startup and cleanup failed');
         throw error;
       }
     },

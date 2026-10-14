@@ -10,7 +10,12 @@ import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { NativeDesktopIpcError, prepareNativeDesktop } from './opencode-native-desktop-host';
+import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
+import {
+  NativeDesktopIpcError,
+  prepareNativeDesktop,
+  safeIpcFailureDetail,
+} from './opencode-native-desktop-host';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
 
@@ -28,8 +33,9 @@ type ProofFailure = {
   operation?: string;
   errno?: string;
   detail?: string;
+  causes?: ProofFailure[];
 };
-function proofFailure(error: unknown, stage: string): ProofFailure {
+function proofFailure(error: unknown, stage: string, depth = 0): ProofFailure {
   if (error instanceof NativeDesktopIpcError)
     return {
       stage,
@@ -38,6 +44,10 @@ function proofFailure(error: unknown, stage: string): ProofFailure {
       detail: error.detail,
     };
   const result: ProofFailure = { stage, classification: 'unclassified' };
+  if (error instanceof Error)
+    result.detail = safeIpcFailureDetail(error.message, redactLaunchFailureArtifactText);
+  if (error instanceof AggregateError && Array.isArray(error.errors) && depth === 0)
+    result.causes = error.errors.slice(0, 3).map((cause: unknown) => proofFailure(cause, stage, 1));
   if (error instanceof assert.AssertionError) result.classification = 'assertion_failed';
   else if (error instanceof Error && error.message.startsWith('Native gate timed out:'))
     result.classification = 'timeout';
@@ -398,7 +408,12 @@ async function main() {
   preproofStage = 'proof_write';
   await checkpoint('startup');
   preproofStage = 'scenario';
-  let app = await desktop.launch(executable);
+  let app = await desktop.launch(executable).catch(async (error: unknown) => {
+    proof.status = 'failed';
+    proof.failure = proofFailure(error, 'startup');
+    await checkpoint('startup');
+    throw new Error('Owned Electron startup failed; preserve its TEST proof');
+  });
   let teamActive = false;
   const heldProcesses: Identity[] = [];
   const closeApp = async () => {
@@ -833,18 +848,9 @@ async function main() {
   console.log(`Windows full proof: ${proofFile}`);
 }
 void main().catch((error: unknown) => {
-  let errno = 'none';
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    /^E[A-Z0-9_]{1,48}$/.test(error.code)
-  )
-    errno = error.code;
   console.error(
     'Windows full qualification failed; preserve TEST state',
-    JSON.stringify({ stage: preproofStage, errno, ...preproofFacts })
+    JSON.stringify({ ...proofFailure(error, preproofStage), ...preproofFacts })
   );
   process.exitCode = 1;
 });
