@@ -77,6 +77,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+      - name: Prove compiled legacy Windows saved-file read and native image on loopback model
+        if: inputs.runtime_candidate_run != ''
+        shell: pwsh
+        run: |
+          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
+          pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Qualify cold and warm packaged starts
         env:
           RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
@@ -89,14 +97,6 @@ jobs:
           $options = @('--packaged-executable', $executable, '--runtime-setup', 'app-install')
           if ($env:RUNTIME_CANDIDATE_RUN) { $options += @('--candidate-evidence', (Resolve-Path 'runtime-candidate-evidence.json').Path) }
           node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Prove compiled legacy Windows saved-file read and native image on loopback model
-        if: inputs.runtime_candidate_run != ''
-        shell: pwsh
-        run: |
-          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
-          pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Archive qualified Windows test build
         shell: pwsh

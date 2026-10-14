@@ -757,6 +757,8 @@ async function main() {
     }
     if (cleanupFailed) cleanup.failure = 'owned_cleanup_unproven';
     await new Promise<void>((resolve) => model.server.close(() => resolve()));
+    receipt.actualRequests = model.requests;
+    receipt.modelObservation = { observationOnly: true, value: model.observation() };
     receipt.cleanup = cleanup;
     await persist();
     assert(
