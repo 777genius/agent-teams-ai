@@ -55,6 +55,63 @@ const fullTask = (taskId: string, suffix: string): TeamTaskWithKanban => ({
 });
 
 describe('task detail critical read policies', () => {
+  it.each(['compact-first', 'full-first'] as const)(
+    'accepts concurrent same-team X/Y full reads without extra starts (%s)',
+    async (order) => {
+      const authority = createTaskDetailReadAuthority();
+      const scope = {
+        contextId: 'local',
+        teamName: 'shared-team',
+        contextEpoch: 1,
+        teamStateEpoch: 1,
+      };
+      const identityX = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+      const identityY = { ...identityX, taskId: 'Y' };
+      const compactResponse = deferred<TeamTaskWithKanban[]>();
+      const xResponse = deferred<TeamTaskWithKanban>();
+      const yResponse = deferred<TeamTaskWithKanban>();
+      const readCompact = vi.fn(() => compactResponse.promise);
+      const readX = vi.fn(() => xResponse.promise);
+      const readY = vi.fn(() => yResponse.promise);
+      const compact = authority.readSnapshot(scope.teamName, scope, readCompact);
+      const x = authority.readFull(identityX, scope, readX);
+      const y = authority.readFull(identityY, scope, readY);
+      let entryX = createTaskDetailReadEntry(identityX);
+      let entryY = createTaskDetailReadEntry(identityY);
+      const applyCompact = async () => {
+        compactResponse.resolve([fullTask('X', 'compact-X'), fullTask('Y', 'compact-Y')]);
+        const result = await compact.result;
+        entryX = applyTaskDetailCompact(entryX, result.value?.[0], result.token);
+        entryY = applyTaskDetailCompact(entryY, result.value?.[1], result.token);
+      };
+      const applyFull = async () => {
+        // Y completes first even though X started first; neither may retire its peer.
+        yResponse.resolve(fullTask('Y', 'full-Y'));
+        const resultY = await y.result;
+        expect(authority.isTokenCurrent(resultY.token, scope)).toBe(true);
+        entryY = commitTaskDetailFull(entryY, resultY.token, resultY.value!);
+        xResponse.resolve(fullTask('X', 'full-X'));
+        const resultX = await x.result;
+        expect(authority.isTokenCurrent(resultX.token, scope)).toBe(true);
+        entryX = commitTaskDetailFull(entryX, resultX.token, resultX.value!);
+      };
+      if (order === 'compact-first') {
+        await applyCompact();
+        await applyFull();
+      } else {
+        await applyFull();
+        await applyCompact();
+      }
+      expect(entryX.full).toMatchObject({ id: 'X', description: 'description-full-X' });
+      expect(entryY.full).toMatchObject({ id: 'Y', description: 'description-full-Y' });
+      expect(authority.isTokenCurrent(x.token, scope)).toBe(true);
+      expect(authority.isTokenCurrent(y.token, scope)).toBe(true);
+      expect(readCompact).toHaveBeenCalledTimes(1);
+      expect(readX).toHaveBeenCalledTimes(1);
+      expect(readY).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('joins only the same origin scope and shares exact physical provenance', async () => {
     const authority = createTaskDetailReadAuthority();
     const first = deferred<string>();
