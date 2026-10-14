@@ -90,6 +90,7 @@ export interface SendInboxMessageOptions {
 type TeamInboxWriteRequest = Omit<SendMessageRequest, 'attachments'> & {
   attachments?: AttachmentMeta[];
   nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
+  fileReferences?: AttachmentMeta[];
 };
 
 export interface SendNativeAttachmentMessageRequest extends Omit<
@@ -97,7 +98,8 @@ export interface SendNativeAttachmentMessageRequest extends Omit<
   'attachments'
 > {
   attachments: AttachmentMeta[];
-  recipientRuntimeInstanceId: string;
+  fileReferences?: AttachmentMeta[];
+  recipientRuntimeInstanceId?: string;
 }
 
 class TeamInboxWriteAbortedError extends Error {
@@ -135,21 +137,14 @@ export class TeamInboxWriter {
     request: SendNativeAttachmentMessageRequest,
     options?: SendInboxMessageOptions
   ): Promise<SendMessageResult> {
-    const {
-      recipientRuntimeInstanceId,
-      nativeAttachmentDelivery: _untrustedEnvelope,
-      ...message
-    } = request as SendNativeAttachmentMessageRequest & {
-      nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
-    };
+    const { recipientRuntimeInstanceId, ...message } = request;
     return this.writeMessage(
       teamName,
       {
         ...message,
-        nativeAttachmentDelivery: {
-          version: 1,
-          recipientRuntimeInstanceId,
-        },
+        nativeAttachmentDelivery: recipientRuntimeInstanceId
+          ? { version: 1, recipientRuntimeInstanceId }
+          : undefined,
       },
       options
     );
@@ -179,6 +174,7 @@ export class TeamInboxWriter {
       messageId,
       ...(request.relayOfMessageId && { relayOfMessageId: request.relayOfMessageId }),
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,
+      fileReferences: request.fileReferences?.length ? request.fileReferences : undefined,
       ...(request.nativeAttachmentDelivery && {
         nativeAttachmentDelivery: request.nativeAttachmentDelivery,
       }),
@@ -378,6 +374,7 @@ export class TeamInboxWriter {
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
       attachments: message.attachments,
+      fileReferences: message.fileReferences,
       nativeAttachmentDelivery: message.nativeAttachmentDelivery,
       source: message.source,
       conversationId: message.conversationId,

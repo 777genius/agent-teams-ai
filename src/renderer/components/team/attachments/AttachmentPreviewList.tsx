@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { isReferenceAttachmentForMember } from '@renderer/utils/attachmentRecipientCapabilities';
 import { isImageMime } from '@renderer/utils/attachmentUtils';
 import { AlertCircle, X } from 'lucide-react';
 
 import { AttachmentPreviewItem } from './AttachmentPreviewItem';
 import { ImageLightbox } from './ImageLightbox';
 
-import type { AttachmentPayload } from '@shared/types';
+import type { AttachmentPayload, ResolvedTeamMember } from '@shared/types';
 
 const ANIMATION_MS = 400;
 
 interface AttachmentPreviewListProps {
   attachments: AttachmentPayload[];
+  member?: ResolvedTeamMember;
+  isFileReference?: (attachment: AttachmentPayload) => boolean;
   onRemove: (id: string) => void;
   error?: string | null;
   onDismissError?: () => void;
@@ -23,12 +26,19 @@ interface AttachmentPreviewListProps {
 
 export const AttachmentPreviewList = ({
   attachments,
+  isFileReference: referenceProjection,
+  member,
   onRemove,
   error,
   onDismissError,
   disabled,
   disabledHint,
 }: AttachmentPreviewListProps): React.JSX.Element | null => {
+  const isFileReference =
+    referenceProjection ??
+    (member
+      ? (attachment: AttachmentPayload) => isReferenceAttachmentForMember(member, attachment)
+      : undefined);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
   // Track IDs known on previous render to detect newly added items
@@ -112,7 +122,7 @@ export const AttachmentPreviewList = ({
   const imageSlides: { src: string; alt: string }[] = [];
   const visualToLightbox = new Map<number, number>();
   visibleAttachments.forEach((att, i) => {
-    if (isImageMime(att.mimeType)) {
+    if (isImageMime(att.mimeType) && !isFileReference?.(att)) {
       visualToLightbox.set(i, imageSlides.length);
       imageSlides.push({
         src: `data:${att.mimeType};base64,${att.data}`,
@@ -143,6 +153,7 @@ export const AttachmentPreviewList = ({
               >
                 <AttachmentPreviewItem
                   attachment={att}
+                  genericFile={isFileReference?.(att)}
                   onRemove={handleRemove}
                   onPreview={
                     visualToLightbox.has(i)

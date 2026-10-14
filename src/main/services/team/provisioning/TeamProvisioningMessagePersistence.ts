@@ -40,6 +40,7 @@ export interface TeamProvisioningPersistedMessagePayload extends Record<string, 
   replyToConversationId: InboxMessage['replyToConversationId'];
   taskRefs: InboxMessage['taskRefs'];
   attachments: InboxMessage['attachments'];
+  fileReferences: InboxMessage['fileReferences'];
   color: InboxMessage['color'];
   toolSummary: InboxMessage['toolSummary'];
   toolCalls: InboxMessage['toolCalls'];
@@ -86,6 +87,7 @@ function mapControllerMessagePayload(
     replyToConversationId: message.replyToConversationId,
     taskRefs: message.taskRefs,
     attachments: message.attachments,
+    fileReferences: message.fileReferences,
     color: message.color,
     toolSummary: message.toolSummary,
     toolCalls: message.toolCalls,
@@ -119,6 +121,7 @@ function mapControllerInboxMessagePayload(
     replyToConversationId: payload.replyToConversationId,
     taskRefs: payload.taskRefs,
     attachments: payload.attachments,
+    fileReferences: payload.fileReferences,
     color: payload.color,
     toolSummary: payload.toolSummary,
     toolCalls: payload.toolCalls,

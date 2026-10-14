@@ -514,7 +514,6 @@ const MemberMessageComposer = ({
   const memberAttachmentUnavailableReason = showAttachmentControl
     ? getMemberAttachmentUnavailableReason(selectedMember)
     : null;
-  const attachmentInputAccept = getAttachmentInputAcceptForMember(selectedMember);
   const hasTeammates = members.length > 1;
   const canDelegate = isCrossTeam ? crossTeamRecipient === null : hasTeammates && isLeadRecipient;
   const shouldAutoDelegate = canDelegate && (isCrossTeam || isLeadRecipient);
@@ -946,7 +945,7 @@ const MemberMessageComposer = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={attachmentInputAccept}
+                  accept={getAttachmentInputAcceptForMember(selectedMember)}
                   multiple
                   className="hidden"
                   onChange={handleFileInputChange}
@@ -1082,6 +1081,7 @@ const MemberMessageComposer = ({
           <div className="px-2 pt-2">
             <AttachmentPreviewList
               attachments={draft.attachments}
+              member={selectedMember}
               onRemove={draft.removeAttachment}
               error={
                 draft.attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason

@@ -1,3 +1,4 @@
+import { mergeMessageAttachments } from '@features/agent-attachments/renderer';
 import {
   GroupMessageReaction,
   isCanonicalGroupReactionMessage,
@@ -17,7 +18,8 @@ export const ActivityMessageFooter = ({
   expanded: boolean;
 }) => {
   const canonical = isCanonicalGroupReactionMessage(message);
-  const showAttachments = expanded && !!message.attachments?.length && !!message.messageId;
+  const attachments = mergeMessageAttachments(message);
+  const showAttachments = expanded && attachments.length > 0 && !!message.messageId;
   if (!canonical && !showAttachments) return null;
   return (
     <div
@@ -28,7 +30,8 @@ export const ActivityMessageFooter = ({
         <AttachmentDisplay
           teamName={teamName}
           messageId={message.messageId!}
-          attachments={message.attachments!}
+          attachments={attachments}
+          referenceIds={new Set(message.fileReferences?.map((item) => item.id))}
         />
       ) : null}
       {canonical ? (

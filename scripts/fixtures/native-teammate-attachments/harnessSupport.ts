@@ -76,7 +76,7 @@ const RETURNED_PROVIDER_PATH_KEYS = new Set([
   'transcriptPath',
 ]);
 
-function literal(value: unknown): string {
+export function literal(value: unknown): string {
   return JSON.stringify(value);
 }
 
@@ -420,5 +420,33 @@ export async function startOwnedDesktopApp(
       );
     }
     throw error;
+  }
+}
+
+/** Observe the actual existing provisioning state without starting or restarting an actor. */
+export async function throwIfNativeLaunchFailed(cdp: HarnessCdp, team: string): Promise<void> {
+  const failed = await cdp.evaluate<{ error?: string } | null>(
+    `(() => { const state = window.__agentTeamsDevStore?.getState(); const runId = state?.currentProvisioningRunIdByTeam[${literal(team)}]; const run = state?.provisioningRuns[runId]; return run?.state === 'failed' ? { error: run.error ?? run.message } : null; })()`
+  );
+  if (failed) throw new Error(`Native launch failed: ${failed.error ?? 'unknown failure'}`);
+}
+
+/** Preserve existing run-owned CLI logs before cleanup closes the app and its retained log map. */
+export async function captureNativeLaunchCliLogs(
+  cdp: HarnessCdp,
+  team: string,
+  evidenceRoot: string,
+  cleanupErrors: string[]
+): Promise<void> {
+  try {
+    const logs = await cdp.evaluate<Json>(
+      `window.electronAPI.teams.getClaudeLogs(${literal(team)}, { limit: 200 })`
+    );
+    await writeFile(
+      path.join(evidenceRoot, 'launch-cli-logs.json'),
+      `${JSON.stringify(logs, null, 2)}\n`
+    );
+  } catch (error) {
+    cleanupErrors.push(`launch CLI diagnostics capture failed: ${String(error)}`);
   }
 }
