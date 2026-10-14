@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import { isDeepStrictEqual } from 'util';
 
-import { atomicWriteAsync } from './atomicWrite';
+import { atomicWriteInboxAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
@@ -160,7 +160,7 @@ export class TeamInboxWriter {
         const writeInboxList = async (list: InboxMessage[]): Promise<'aborted' | 'written'> => {
           try {
             const serialized = serializeInboxRows(list);
-            await atomicWriteAsync(inboxPath, serialized, {
+            await atomicWriteInboxAsync(inboxPath, serialized, {
               beforeCommit: async () => {
                 if (await shouldAbortWrite()) {
                   throw new TeamInboxWriteAbortedError();
@@ -369,7 +369,7 @@ export class TeamInboxWriter {
         if (!changed) {
           return;
         }
-        await atomicWriteAsync(inboxPath, serializeInboxRows(parsed));
+        await atomicWriteInboxAsync(inboxPath, serializeInboxRows(parsed));
       });
     });
 
@@ -405,7 +405,7 @@ export class TeamInboxWriter {
           }
         }
         if (messageIds.length > 0) {
-          await atomicWriteAsync(inboxPath, serializeInboxRows(parsed));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(parsed));
         }
       });
     });
@@ -466,7 +466,7 @@ export class TeamInboxWriter {
           }
 
           list[index] = { ...existing, taskRefs: merged.taskRefs };
-          await atomicWriteAsync(inboxPath, serializeInboxRows(list));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(list));
           const written = await this.readInbox(inboxPath);
           const verified = written.find((message) => {
             if (message == null || typeof message !== 'object') return false;
@@ -554,7 +554,7 @@ export class TeamInboxWriter {
             ...(merged.taskRefs ? { taskRefs: merged.taskRefs } : {}),
           };
           list[index] = nextMessage;
-          await atomicWriteAsync(inboxPath, serializeInboxRows(list));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(list));
           const written = await this.readInbox(inboxPath);
           const verified = written.find((message) => {
             if (message == null || typeof message !== 'object') return false;
