@@ -9,6 +9,10 @@ import { useTaskDetailReviewRoute } from '@features/team-task-detail/renderer/ho
 import { useTaskDetailSession } from '@features/team-task-detail/renderer/hooks/useTaskDetailSession';
 import { useStore } from '@renderer/store';
 import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/teamSlice';
+import {
+  acceptTaskDetailLiveTeamSnapshot,
+  captureTaskDetailReadScope,
+} from '@renderer/store/team/taskDetailReadAuthority';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -62,6 +66,41 @@ const teamSnapshot: TeamViewSnapshot = {
 };
 const roots: ReturnType<typeof createRoot>[] = [];
 
+function acceptLiveTeamSnapshotFixture(
+  teamName: string,
+  snapshot: TeamViewSnapshot = {
+    ...teamSnapshot,
+    teamName,
+    config: { ...teamSnapshot.config, name: teamName },
+  }
+) {
+  const existing = useStore.getState();
+  if (
+    existing.teamByName[teamName]?.deletedAt ||
+    existing.teamDataCacheByName[teamName]?.config.deletedAt
+  ) {
+    return;
+  }
+  acceptTaskDetailLiveTeamSnapshot(
+    captureTaskDetailReadScope(teamName, identity.contextId),
+    snapshot
+  );
+  useStore.setState((state) => ({
+    teamByName: {
+      ...state.teamByName,
+      [teamName]: {
+        ...(state.teamByName[teamName] ?? teamSummary),
+        teamName,
+        displayName: teamName,
+      },
+    },
+    teamDataCacheByName: {
+      ...state.teamDataCacheByName,
+      [teamName]: snapshot,
+    },
+  }));
+}
+
 function mount(surfaceId: string, receive: (controller: TaskDetailSessionController) => void) {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -107,10 +146,13 @@ describe('task session surface and origin integration', () => {
         taskDetailSessionById: {},
         teamByName: { [identity.teamName]: teamSummary },
         teamDataCacheByName: { [identity.teamName]: teamSnapshot },
-        refreshTeamData: vi.fn(async () => {}),
+        refreshTeamData: vi.fn(async (teamName: string) => {
+          acceptLiveTeamSnapshotFixture(teamName);
+        }),
       },
       true
     );
+    acceptLiveTeamSnapshotFixture(identity.teamName);
   });
   afterEach(async () => {
     await act(async () => {
@@ -584,6 +626,7 @@ describe('task session surface and origin integration', () => {
           teamByName: { [identity.teamName]: teamSummary },
           teamDataCacheByName: { [identity.teamName]: teamSnapshot },
         });
+        acceptLiveTeamSnapshotFixture(identity.teamName);
       }),
       fetchTeams: vi.fn(async () => {}),
       fetchAllTasks: vi.fn(async () => {}),
@@ -690,6 +733,7 @@ describe('task session surface and origin integration', () => {
             teamByName: { [identity.teamName]: teamSummary },
             teamDataCacheByName: { [identity.teamName]: teamSnapshot },
           });
+          acceptLiveTeamSnapshotFixture(identity.teamName);
         }),
         fetchTeams: vi.fn(async () => {}),
         fetchAllTasks: vi.fn(async () => {}),

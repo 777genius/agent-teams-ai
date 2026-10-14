@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { selectTaskDetailResourceEntry } from '../../../src/renderer/store/slices/taskDetailResourcesSlice';
 import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
+import {
+  captureTaskDetailReadScope,
+  isTaskDetailTeamUnavailable,
+} from '../../../src/renderer/store/team/taskDetailReadAuthority';
+import { selectTaskDetailReadDemands } from '../../../src/renderer/store/team/taskDetailReadInterest';
 import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
 import { createTestStore } from './storeTestUtils';
@@ -154,6 +159,132 @@ describe('task detail origin and loading postconditions', () => {
     });
   });
 
+  it.each(['cold metadata absent', 'stale metadata after failed refresh'] as const)(
+    'keeps a retained task non-editable when %s until a live snapshot and fresh full read are accepted',
+    async (metadataState) => {
+      const store = createTestStore();
+      const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+      const key = taskDetailKey(identity);
+      const stale = metadataState === 'stale metadata after failed refresh';
+      store.setState({ activeContextId: 'local' });
+      if (stale) {
+        apiMock.teams.getData.mockResolvedValueOnce(snapshot('/TEST-previous-accepted'));
+        apiMock.teams.getTask.mockResolvedValueOnce({
+          id: 'X',
+          subject: 'TEST prior accepted full task',
+          status: 'deleted',
+        });
+        await store.getState().ensureTaskDetail(identity);
+        expect(store.getState().taskDetailById[key].full).toMatchObject({
+          id: 'X',
+          subject: 'TEST prior accepted full task',
+          status: 'deleted',
+        });
+        expect(
+          store
+            .getState()
+            .setTaskDetailDeletionIntent(
+              identity,
+              'restoring',
+              captureTaskDetailReadScope(identity.teamName, identity.contextId)
+            )
+        ).toBe(true);
+      }
+      const retainedFull = store.getState().taskDetailById[key]?.full ?? null;
+      store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'TEST retained draft');
+
+      apiMock.teams.getData.mockRejectedValueOnce(new Error('TEAM_NOT_FOUND'));
+      apiMock.teams.getTask.mockResolvedValue({
+        id: 'X',
+        subject: 'TEST retained full task',
+        status: 'in_progress',
+      });
+      await store.getState().ensureTaskDetail(identity);
+
+      const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
+      vi.mocked(console.error).mockClear();
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(stale ? 1 : 0);
+      expect(store.getState().taskDetailById[key]).toMatchObject({
+        phase: 'unavailable',
+        deletionIntent: stale ? 'restoring' : null,
+      });
+      expect(store.getState().taskDetailById[key].full).toBe(retainedFull);
+      expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(true);
+      expect(store.getState().taskDetailSessionById[key].commentText).toBe('TEST retained draft');
+      vi.mocked(console.error).mockClear();
+
+      apiMock.teams.getData.mockResolvedValueOnce(snapshot('/accepted-live'));
+      await store.getState().ensureTaskDetail(identity);
+
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(stale ? 3 : 2);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(stale ? 2 : 1);
+      expect(store.getState().taskDetailById[key]).toMatchObject({
+        phase: 'ready',
+        deletionIntent: null,
+        full: { id: 'X', subject: 'TEST retained full task' },
+      });
+      expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(false);
+      expect(store.getState().taskDetailSessionById[key].commentText).toBe('TEST retained draft');
+    }
+  );
+
+  it('keeps an unselected provisioning task distinct from another team error', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const key = taskDetailKey(identity);
+    store.setState({
+      activeContextId: 'local',
+      selectedTeamName: 'other-team',
+      selectedTeamError: 'TEST other team failure',
+    });
+    apiMock.teams.getData.mockRejectedValueOnce(new Error('TEAM_PROVISIONING'));
+    await store.getState().ensureTaskDetail(identity);
+    vi.mocked(console.error).mockClear();
+    expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+    expect(store.getState().taskDetailById[key]).toMatchObject({
+      phase: 'provisioning',
+      error: null,
+      full: null,
+    });
+    expect(store.getState().selectedTeamName).toBe('other-team');
+    expect(store.getState().selectedTeamError).toBe('TEST other team failure');
+  });
+
+  it('keeps a newer metadata failure closed after an older thin success', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    apiMock.teams.getData.mockResolvedValueOnce(snapshot('/TEST-first-accepted'));
+    apiMock.teams.getTask.mockResolvedValue({
+      id: 'X',
+      subject: 'TEST current full task',
+      status: 'in_progress',
+    });
+    await store.getState().ensureTaskDetail(identity);
+    const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
+    expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(false);
+    const thin = deferred<TeamViewSnapshot>();
+    const full = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData.mockReturnValueOnce(thin.promise).mockReturnValueOnce(full.promise);
+    const selection = store.getState().selectTeam(identity.teamName);
+    const refresh = store.getState().refreshTeamData(identity.teamName, { withDedup: false });
+    try {
+      full.reject(new Error('TEST newest metadata failed'));
+      await refresh;
+      vi.mocked(console.error).mockClear();
+      vi.mocked(console.warn).mockClear();
+      expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(true);
+      expect.soft(store.getState().selectedTeamLoading).toBe(false);
+      thin.resolve(snapshot('/TEST-older-success'));
+      await selection;
+      expect(store.getState().selectedTeamData?.config.projectPath).toBe('/TEST-first-accepted');
+      expect(isTaskDetailTeamUnavailable(store.getState(), identity.teamName, scope)).toBe(true);
+    } finally {
+      thin.resolve(snapshot('/TEST-older-success'));
+      full.resolve(snapshot('/TEST-unused-cleanup'));
+      await Promise.allSettled([selection, refresh]);
+    }
+  });
+
   it.each(['success', 'error'] as const)(
     'retires an old thin %s while the newer full snapshot is still pending',
     async (outcome) => {
@@ -263,6 +394,56 @@ describe('task detail origin and loading postconditions', () => {
       full.resolve(snapshot('/TEST-accepted-full'));
       await Promise.allSettled([selection, detail]);
       await vi.waitFor(() => expect(store.getState().selectedTeamLoading).toBe(false));
+    }
+  });
+
+  it('retains a visible read demand when metadata is invalidated before it settles', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const first = deferred<TeamViewSnapshot>();
+    const next = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData.mockReturnValueOnce(first.promise).mockReturnValueOnce(next.promise);
+    apiMock.teams.getTask.mockResolvedValue({
+      id: 'X',
+      subject: 'TEST successor full',
+      status: 'in_progress',
+    });
+    store.getState().setTaskDetailSurfaceInterest('TEST-tab', identity);
+    store.getState().setTaskDetailVisibleResourceDemand('TEST-tab', identity, 'detail', true);
+    store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'TEST event draft');
+    const initial = store.getState().ensureTaskDetail(identity);
+    let successor: Promise<void> | undefined;
+    try {
+      store
+        .getState()
+        .invalidateTaskDetailTeamSource(identity.contextId, identity.teamName, identity.taskId);
+      first.resolve(snapshot('/TEST-retired-metadata'));
+      await initial;
+      expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+      expect(selectTaskDetailReadDemands(store.getState())).toContainEqual(
+        expect.objectContaining({
+          teamName: 'shared-team',
+          taskId: 'X',
+          visible: true,
+          needsRead: true,
+        })
+      );
+      successor = store.getState().ensureTaskDetail(identity);
+      next.resolve(snapshot('/TEST-successor-metadata'));
+      await successor;
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+      expect(store.getState().taskDetailById[taskDetailKey(identity)]).toMatchObject({
+        phase: 'ready',
+        full: { subject: 'TEST successor full' },
+      });
+      expect(store.getState().taskDetailSessionById[taskDetailKey(identity)].commentText).toBe(
+        'TEST event draft'
+      );
+    } finally {
+      first.resolve(snapshot('/TEST-retired-metadata'));
+      next.resolve(snapshot('/TEST-successor-metadata'));
+      await Promise.allSettled([initial, successor]);
     }
   });
 

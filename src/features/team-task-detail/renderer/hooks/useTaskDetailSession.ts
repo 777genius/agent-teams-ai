@@ -94,14 +94,17 @@ export function useTaskDetailSession({
     (state) => state.taskDetailSessionById[identityKey] ?? EMPTY_TASK_DETAIL_SESSION
   );
   const live = useStore(
-    useShallow((state) => ({
-      activeContextId: state.activeContextId,
-      switching: state.isContextSwitching,
-      phase: state.taskDetailById[identityKey]?.phase,
-      deletionIntent: state.taskDetailById[identityKey]?.deletionIntent,
-      teamUnavailable: isTaskDetailTeamUnavailable(state, identity.teamName),
-      ...captureTaskDetailReadScope(identity.teamName, identity.contextId),
-    }))
+    useShallow((state) => {
+      const liveScope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
+      return {
+        ...liveScope,
+        activeContextId: state.activeContextId,
+        switching: state.isContextSwitching,
+        phase: state.taskDetailById[identityKey]?.phase,
+        deletionIntent: state.taskDetailById[identityKey]?.deletionIntent,
+        teamUnavailable: isTaskDetailTeamUnavailable(state, identity.teamName, liveScope),
+      };
+    })
   );
   const scope = useMemo(
     () => ({
@@ -222,7 +225,7 @@ export function useTaskDetailSession({
     const currentTaskState = state.taskDetailById[identityKey]?.full;
     return (
       isOriginCurrent() &&
-      !isTaskDetailTeamUnavailable(state, identity.teamName) &&
+      !isTaskDetailTeamUnavailable(state, identity.teamName, scope) &&
       current?.ownerSurfaceId === surfaceId &&
       current.ownerRevision === session.ownerRevision &&
       state.taskDetailById[identityKey]?.phase === 'ready' &&
@@ -231,7 +234,7 @@ export function useTaskDetailSession({
       !currentTaskState.deletedAt &&
       currentTaskState.status !== 'deleted'
     );
-  }, [identity, identityKey, isOriginCurrent, session.ownerRevision, surfaceId]);
+  }, [identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
 
   const persistDraft = useCallback(
     (value: { text?: string; commentChips?: InlineChip[] }) => {

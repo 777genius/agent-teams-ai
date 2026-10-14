@@ -47,12 +47,14 @@ import {
 } from '../team/sidebarLogsHeight';
 import {
   invalidateAcceptedTaskDetailMutation,
+  isLatestStartedSnapshotEligibility,
   isTaskDetailReadScopeCurrent,
   isTaskDetailTokenCurrent,
   readTeamSnapshotResource,
+  recordSnapshotEligibility,
+  rejectLiveTeamSnapshot,
   resetTeamTaskDetailReadAuthorityForTests,
   type TaskDetailReadHandle,
-  type TaskDetailReadToken,
   unwrapTaskDetailReadResult,
 } from '../team/taskDetailReadAuthority';
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
@@ -310,36 +312,6 @@ const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const POST_PAINT_TEAM_ENRICHMENT_FALLBACK_MS = 500;
 const GLOBAL_TASKS_FOLLOW_UP_REFRESH_DELAY_MS = 1_500;
 const teamDataReadWork = new TeamDataReadWork<TeamViewSnapshot>();
-const snapshotEligibilityTokenByContextAndTeam = new Map<string, TaskDetailReadToken>();
-
-function snapshotEligibilityKey(teamName: string, requestScope: TeamRequestScope): string {
-  return JSON.stringify([requestScope.contextId, teamName]);
-}
-
-function recordSnapshotEligibility(
-  teamName: string,
-  requestScope: TeamRequestScope,
-  token: TaskDetailReadToken
-): void {
-  if (token.physicalStartOrder <= 0) return;
-  const key = snapshotEligibilityKey(teamName, requestScope);
-  const current = snapshotEligibilityTokenByContextAndTeam.get(key);
-  if (!current || token.physicalStartOrder >= current.physicalStartOrder) {
-    snapshotEligibilityTokenByContextAndTeam.set(key, token);
-  }
-}
-
-function isLatestStartedSnapshotEligibility(
-  teamName: string,
-  requestScope: TeamRequestScope,
-  token: TaskDetailReadToken
-): boolean {
-  if (token.physicalStartOrder <= 0) return false;
-  const current = snapshotEligibilityTokenByContextAndTeam.get(
-    snapshotEligibilityKey(teamName, requestScope)
-  );
-  return current === undefined || token.physicalStartOrder >= current.physicalStartOrder;
-}
 interface PostPaintHandle {
   rafId?: number;
   timerId?: ReturnType<typeof setTimeout>;
@@ -503,7 +475,6 @@ export function __resetTeamSliceModuleStateForTests(): void {
   pendingTeamsRefreshScope = null;
   resetToolApprovalSettingsSync();
   teamDataReadWork.clear();
-  snapshotEligibilityTokenByContextAndTeam.clear();
   resetTeamTaskDetailReadAuthorityForTests();
   for (const teamName of postPaintTeamEnrichmentTimers.keys()) {
     cancelPostPaintTeamEnrichments(teamName);
@@ -901,7 +872,7 @@ function fetchTeamDataDeduped(
           // the same promise and therefore the same provenance through the
           // read authority.
           markPhysicalStart();
-          recordSnapshotEligibility(teamName, requestScope, token);
+          recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), token);
           return fetchTeamDataPhysical(teamName, options);
         },
         isCurrent
@@ -910,7 +881,7 @@ function fetchTeamDataDeduped(
     },
     { mode: getTeamDataSnapshotMode(options), deferPhysicalStart: true }
   );
-  recordSnapshotEligibility(teamName, requestScope, handle.token);
+  recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), handle.token);
   return handle;
 }
 
@@ -925,7 +896,7 @@ function fetchTeamDataFresh(
     toTaskDetailScope(teamName, requestScope),
     (token) => {
       if (!isCurrent()) return Promise.reject(new Error('team data read scope superseded'));
-      recordSnapshotEligibility(teamName, requestScope, token);
+      recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), token);
       return fetchTeamDataPhysical(teamName, options);
     },
     { forceNew: true }
@@ -2933,7 +2904,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         () => isTeamRequestScopeCurrent(get, teamName, requestScope),
         { includeMemberBranches: false }
       );
-      recordSnapshotEligibility(teamName, requestScope, snapshotRead.token);
+      recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), snapshotRead.token);
       const dataResult = await snapshotRead.result;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         teamDataReadWork.takeQueuedFull(teamName, requestScope);
@@ -2950,8 +2921,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
       const data = unwrapTaskDetailReadResult(dataResult);
-      recordSnapshotEligibility(teamName, requestScope, dataResult.token);
-      if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
+      recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), dataResult.token, data);
+      if (
+        !isLatestStartedSnapshotEligibility(
+          toTaskDetailScope(teamName, requestScope),
+          dataResult.token
+        )
+      )
+        return;
       // Stale check: user may have switched to another team during the async call
       const stateAfterLoad = get();
       if (stateAfterLoad.selectedTeamName !== teamName) {
@@ -3172,10 +3149,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamName
         ) ||
         !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope)) ||
-        !isLatestStartedSnapshotEligibility(teamName, requestScope, snapshotRead.token)
+        !isLatestStartedSnapshotEligibility(
+          toTaskDetailScope(teamName, requestScope),
+          snapshotRead.token
+        )
       ) {
         return;
       }
+      const msg = error instanceof Error ? error.message : String(error);
+      rejectLiveTeamSnapshot(toTaskDetailScope(teamName, requestScope), snapshotRead.token, msg);
       // If provisioning is in progress for this team, stay in loading state;
       // file watcher / progress callback will refresh once config is written.
       const currentState = get();
@@ -3191,7 +3173,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const existingSelectedTeamData =
         currentState.selectedTeamData?.teamName === teamName ? currentState.selectedTeamData : null;
 
-      const msg = error instanceof Error ? error.message : String(error);
       // IPC can report provisioning state explicitly.
       if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
         if (existingSelectedTeamData) {
@@ -3302,8 +3283,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
       const data = unwrapTaskDetailReadResult(dataResult);
-      recordSnapshotEligibility(teamName, requestScope, dataResult.token);
-      if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
+      recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), dataResult.token, data);
+      if (
+        !isLatestStartedSnapshotEligibility(
+          toTaskDetailScope(teamName, requestScope),
+          dataResult.token
+        )
+      )
+        return;
       const projectedTeamData = previousData
         ? {
             ...data,
@@ -3323,8 +3310,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
               };
 
         const acceptedSelectionLoad = isLatestStartedSnapshotEligibility(
-          teamName,
-          requestScope,
+          toTaskDetailScope(teamName, requestScope),
           snapshotToken
         );
         const selectedState =
@@ -3397,7 +3383,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamName
         ) ||
         !isTaskDetailTokenCurrent(snapshotRead.token, toTaskDetailScope(teamName, requestScope)) ||
-        !isLatestStartedSnapshotEligibility(teamName, requestScope, snapshotRead.token)
+        !isLatestStartedSnapshotEligibility(
+          toTaskDetailScope(teamName, requestScope),
+          snapshotRead.token
+        )
       ) {
         return;
       }
@@ -3407,6 +3396,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to refresh team data';
+      rejectLiveTeamSnapshot(toTaskDetailScope(teamName, requestScope), snapshotRead.token, msg);
 
       // During provisioning, team:getData may not be readable yet.
       // Preserve existing data instead of showing a fatal error.
@@ -3454,10 +3444,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Only set error when there's nothing to show.
       if (get().selectedTeamData) {
         logger.debug(`refreshTeamData(${teamName}) preserving existing data after transient error`);
-        set({ selectedTeamError: null });
+        set({ selectedTeamLoading: false, selectedTeamError: null });
         return;
       }
-      set({ selectedTeamError: msg });
+      set({ selectedTeamLoading: false, selectedTeamError: msg });
     } finally {
       teamDataReadWork.endRefresh(teamName, requestScope, refreshHandle);
       if (

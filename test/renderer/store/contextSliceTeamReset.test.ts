@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  acceptTaskDetailLiveTeamSnapshot,
+  captureTaskDetailReadScope,
+} from '../../../src/renderer/store/team/taskDetailReadAuthority';
 import { selectTaskDetailReadDemands } from '../../../src/renderer/store/team/taskDetailReadInterest';
 import {
   invalidateContextScopedRequestEpoch,
@@ -14,7 +18,7 @@ import {
 import { createTestStore } from './storeTestUtils';
 
 import type { Tab } from '../../../src/renderer/types/tabs';
-import type { TeamTaskWithKanban } from '../../../src/shared/types';
+import type { TeamTaskWithKanban, TeamViewSnapshot } from '../../../src/shared/types';
 
 const apiMock = vi.hoisted(() => ({
   context: {
@@ -419,6 +423,20 @@ describe('context slice team/task reset', () => {
       selectedTabIds: [tab.id],
       widthFraction: 1,
     };
+    const oldFullTask: TeamTaskWithKanban = {
+      id: 'task-a',
+      subject: 'old full subject',
+      status: 'pending',
+      comments: [],
+    };
+    const liveTeamSnapshot: TeamViewSnapshot = {
+      teamName: identity.teamName,
+      config: { name: identity.teamName },
+      tasks: [oldFullTask],
+      members: [],
+      kanbanState: { teamName: identity.teamName, reviewers: [], tasks: {} },
+      processes: [],
+    };
     const store = createTestStore();
     store.setState({
       activeContextId: 'local',
@@ -426,17 +444,21 @@ describe('context slice team/task reset', () => {
       activeTabId: tab.id,
       selectedTabIds: [tab.id],
       paneLayout: { focusedPaneId: 'pane-default', panes: [pane] },
-      refreshTeamData: vi.fn(async () => undefined),
+      refreshTeamData: vi.fn(async () => {
+        acceptTaskDetailLiveTeamSnapshot(
+          captureTaskDetailReadScope(identity.teamName, identity.contextId),
+          liveTeamSnapshot
+        );
+        store.setState({
+          selectedTeamName: identity.teamName,
+          selectedTeamData: liveTeamSnapshot,
+          teamDataCacheByName: { [identity.teamName]: liveTeamSnapshot },
+        });
+      }),
       fetchTeams: vi.fn(async () => undefined),
       fetchAllTasks: vi.fn(async () => undefined),
     });
 
-    const oldFullTask: TeamTaskWithKanban = {
-      id: 'task-a',
-      subject: 'old full subject',
-      status: 'pending',
-      comments: [],
-    };
     apiMock.teams.getTask.mockResolvedValueOnce(oldFullTask);
     await store.getState().ensureTaskDetail(identity);
 
