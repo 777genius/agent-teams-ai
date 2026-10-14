@@ -63,6 +63,11 @@ interface DedupEvidence {
 
 const page = visiblePageExpression;
 
+async function expandComment(cdp: Cdp, surface: string, commentId: string): Promise<void> {
+  const button = `[...${surface}.querySelectorAll(${JSON.stringify(`[data-task-comment-id="${commentId}"] button`)})].find(b=>b.textContent.trim()==='Показать больше')`;
+  if (await cdp.evaluate(`!!(${button})`)) await click(cdp, button);
+}
+
 async function waitFile(
   path: string,
   predicate: (value: Record<string, unknown>) => boolean,
@@ -112,6 +117,8 @@ export async function runTaskEditingAndNavigationCases(
     comments: { id: string; text: string }[];
     historyEvents: { actor: string }[];
   };
+  const latestACommentId = persistedABefore.comments.at(-1)!.id;
+  await expandComment(cdp, page(teamA.teamName), latestACommentId);
   const beforeB = await readJson(teamB.taskFile);
   const beforeBKanban = await readJson(teamB.kanbanFile);
   const pageB = page(teamB.teamName);
@@ -223,6 +230,7 @@ export async function runTaskEditingAndNavigationCases(
     'dialog claimed the single writable owner'
   );
   await addReadmeChip(cdp, `document.querySelector('[role="dialog"]')`, keyA);
+  await expandComment(cdp, `document.querySelector('[role="dialog"]')`, latestACommentId);
   await cdp.evaluate(
     `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(aNavigation)})`
   );
