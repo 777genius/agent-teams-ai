@@ -2951,7 +2951,8 @@ async function handleSendMessage(
             attachmentMeta,
             validatedTaskRefs.value,
             preGeneratedMessageId,
-            actionMode
+            actionMode,
+            preparedAttachments?.fileReferences
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
@@ -2968,6 +2969,7 @@ async function handleSendMessage(
           messageId: result.messageId,
           source: 'user_sent',
           attachments: attachmentMeta,
+          fileReferences: preparedAttachments?.fileReferences,
           taskRefs: validatedTaskRefs.value,
           ...(slashCommandMeta
             ? {

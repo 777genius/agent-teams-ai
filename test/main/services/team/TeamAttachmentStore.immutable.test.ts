@@ -194,6 +194,95 @@ describe('TeamAttachmentStore immutable native bundles', () => {
     const index = JSON.parse(await fs.readFile(path.join(dir, '_index.json'), 'utf8')) as unknown[];
     expect(index).toHaveLength(2);
   });
+  it.each(['leaf symlink', 'ancestor symlink', 'regular replacement'] as const)(
+    'rejects a %s swapped after descriptor bytes are read',
+    async (swap) => {
+      const store = new TeamAttachmentStore();
+      const messageDir = path.join(getAppDataPath(), 'attachments', 'team', 'race-message');
+      const artifact = path.join(messageDir, 'att-1--image.png');
+      await fs.mkdir(getAppDataPath(), { recursive: true });
+      const canonicalArtifact = path.join(
+        await fs.realpath(getAppDataPath()),
+        'attachments',
+        'team',
+        'race-message',
+        'att-1--image.png'
+      );
+      const outside = path.join(root, 'outside');
+      const outsideArtifact = path.join(outside, 'att-1--image.png');
+      await fs.mkdir(outside);
+      await fs.writeFile(outsideArtifact, 'outside untouched');
+      const open = nodeFs.promises.open.bind(nodeFs.promises);
+      const readFile = nodeFs.promises.readFile.bind(nodeFs.promises);
+      let swapped = false;
+      const swapAfterRead = async (bytes: Buffer | string) => {
+        if (swapped) return;
+        swapped = true;
+        if (swap === 'ancestor symlink') {
+          await fs.rename(messageDir, path.join(root, 'original-message'));
+          await fs.symlink(outside, messageDir, 'dir');
+        } else {
+          await fs.rename(artifact, `${artifact}.original`);
+          if (swap === 'leaf symlink') await fs.symlink(outsideArtifact, artifact);
+          else await fs.writeFile(artifact, bytes); // Same digest, different artifact identity.
+        }
+      };
+      const isArtifact = (file: unknown) => file === artifact || file === canonicalArtifact;
+      // Both baseline pathname reads and candidate descriptor reads trigger the same OS swap.
+      const pathRead = vi
+        .spyOn(nodeFs.promises, 'readFile')
+        .mockImplementation(async (file, options) => {
+          const bytes = await readFile(file, options);
+          if (isArtifact(file)) await swapAfterRead(bytes);
+          return bytes;
+        });
+      const intercepted = vi
+        .spyOn(nodeFs.promises, 'open')
+        .mockImplementation(async (file, flags, mode) => {
+          const handle = await open(file, flags, mode);
+          if (isArtifact(file) && !swapped) {
+            const read = handle.readFile.bind(handle);
+            vi.spyOn(handle, 'readFile').mockImplementationOnce(async () => {
+              const bytes = await read();
+              await swapAfterRead(bytes);
+              return bytes;
+            });
+          }
+          return handle;
+        });
+      try {
+        const outcome = await store
+          .saveNativeAttachments('team', 'race-message', [payload('original')])
+          .then(
+            (descriptor) => ({ descriptor, error: undefined }),
+            (error: Error) => ({ descriptor: undefined, error })
+          );
+        expect(swapped).toBe(true);
+        expect(await fs.readFile(outsideArtifact, 'utf8')).toBe('outside untouched');
+        expect(await fs.readdir(outside)).toEqual(['att-1--image.png']);
+        expect(outcome.descriptor).toBeUndefined();
+        expect(outcome.error).toBeInstanceOf(Error);
+        expect(outcome.error?.message).toMatch(/changed/);
+      } finally {
+        intercepted.mockRestore();
+        pathRead.mockRestore();
+      }
+    }
+  );
+
+  it('returns a verified canonical managed path through a configured parent alias', async () => {
+    const actual = path.join(root, 'actual');
+    const alias = path.join(root, 'alias');
+    await fs.mkdir(actual);
+    await fs.symlink(actual, alias, 'dir');
+    setAppDataBasePath(alias);
+    const saved = await new TeamAttachmentStore().saveNativeAttachments('team', 'message', [
+      payload('bytes'),
+    ]);
+    expect(saved[0].filePath.startsWith(`${await fs.realpath(actual)}${path.sep}`)).toBe(true);
+    expect(await fs.readFile(saved[0].filePath, 'utf8')).toBe('bytes');
+  });
+
   it('rejects managed descendant and artifact symlinks without touching their targets', async () => {
     const store = new TeamAttachmentStore();
     const outside = path.join(root, 'outside');

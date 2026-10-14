@@ -1415,13 +1415,21 @@ describe('ipc teams handlers', () => {
       setAppDataBasePath(root);
       setClaudeBasePathOverride(root);
       const messageId = 'reference-message';
+      const mixedCodexLead = providerId === 'codex' && member === 'team-lead';
       const attachment = {
         id: 'binary',
-        filename: 'data.bin',
-        mimeType: 'application/octet-stream',
+        filename: mixedCodexLead ? 'data.gif' : 'data.bin',
+        mimeType: mixedCodexLead ? 'image/gif' : 'application/octet-stream',
         size: 3,
         data: Buffer.from([0, 255, 1]).toString('base64'),
       };
+      const nativePng = {
+        ...attachment,
+        id: 'native-png',
+        filename: 'native.png',
+        mimeType: 'image/png',
+      };
+      const attachments = mixedCodexLead ? [nativePng, attachment] : [attachment];
       const save = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
       teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(providerId);
       teamHandlerMocks.getTeamAgentRuntimeSnapshot.mockResolvedValue({
@@ -1450,7 +1458,7 @@ describe('ipc teams handlers', () => {
       teamHandlerMocks.sendMessageToTeam.mockImplementation(async (...args: unknown[]) => {
         const [, text, native] = args;
         expect(fs.existsSync(index)).toBe(true);
-        expect(native).toEqual([]);
+        expect(native).toEqual(mixedCodexLead ? [nativePng] : []);
         expect(text).toContain('"sha256":');
       });
       try {
@@ -1458,12 +1466,14 @@ describe('ipc teams handlers', () => {
           member,
           messageId,
           text: 'Read the file',
-          attachments: [attachment],
+          attachments,
         });
         expect(result).toMatchObject({ success: true });
         expect(save).toHaveBeenCalledTimes(1);
         const bundle = JSON.parse(fs.readFileSync(index, 'utf8'));
-        expect(bundle.map((item: { id: string }) => item.id)).toEqual(['binary']);
+        expect(bundle.map((item: { id: string }) => item.id)).toEqual(
+          mixedCodexLead ? ['native-png', 'binary'] : ['binary']
+        );
         if (member !== 'team-lead' || providerId === 'opencode') {
           const inbox = JSON.parse(
             fs.readFileSync(
@@ -1484,11 +1494,20 @@ describe('ipc teams handlers', () => {
             member,
             'Read the file',
             undefined,
-            expect.arrayContaining([expect.objectContaining({ id: 'binary', order: 0 })]),
+            expect.arrayContaining(
+              attachments.map((item, order) => expect.objectContaining({ id: item.id, order }))
+            ),
             undefined,
             messageId,
-            'do'
+            'do',
+            [expect.objectContaining({ id: 'binary', order: mixedCodexLead ? 1 : 0 })]
           );
+          const live = teamHandlerMocks.pushLiveLeadProcessMessage.mock.calls[0][1] as InboxMessage;
+          expect(live.text).toBe('Read the file');
+          expect(live.attachments?.map((item) => item.id)).toEqual(
+            attachments.map((item) => item.id)
+          );
+          expect(live.fileReferences?.map((item) => item.id)).toEqual(['binary']);
         }
       } finally {
         save.mockRestore();
@@ -2380,7 +2399,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       expect.any(String),
-      'ask'
+      'ask',
+      undefined
     );
   });
 
@@ -2407,7 +2427,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       'attempt-lead-1',
-      'do'
+      'do',
+      undefined
     );
   });
 
@@ -2557,7 +2578,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       expect.any(String),
-      'do'
+      'do',
+      undefined
     );
   });
 
@@ -2593,7 +2615,8 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       expect.any(String),
-      'do'
+      'do',
+      undefined
     );
   });
 

@@ -235,18 +235,89 @@ export class TeamAttachmentStore {
       }
       await this.completeNativeOwnedBundle(teamName, messageId, stored, attachments);
       for (const attachment of stored) {
-        await this.assertRegularArtifact(attachment.filePath);
-        const bytes = await fs.promises.readFile(attachment.filePath);
-        if (
-          bytes.length !== attachment.size ||
-          createHash('sha256').update(bytes).digest('hex') !== attachment.sha256
-        ) {
-          throw new Error(`Attachment artifact changed: ${attachment.id}`);
-        }
-        attachment.filePath = await fs.promises.realpath(attachment.filePath);
+        attachment.filePath = await this.verifyNativeArtifact(teamName, messageId, attachment);
       }
       return stored;
     });
+  }
+
+  /** Pin the bytes and managed pathname to the same artifact before returning a descriptor. */
+  private async verifyNativeArtifact(
+    teamName: string,
+    messageId: string,
+    attachment: NativeStoredAttachmentMeta
+  ): Promise<string> {
+    // Only the configured app-data parent may be aliased. Managed descendants must be real dirs.
+    const canonicalBase = await fs.promises.realpath(getAppDataPath());
+    const directories = [
+      canonicalBase,
+      path.join(canonicalBase, 'attachments'),
+      path.join(canonicalBase, 'attachments', teamName),
+      path.join(canonicalBase, 'attachments', teamName, messageId),
+    ];
+    const sameIdentity = (left: fs.Stats, right: fs.Stats): boolean =>
+      left.dev === right.dev && left.ino === right.ino;
+    const directoryStats: fs.Stats[] = [];
+    for (const directory of directories) {
+      const stat = await fs.promises.lstat(directory);
+      if (!stat.isDirectory() || stat.isSymbolicLink())
+        throw new Error('Attachment directory must not be a symlink');
+      directoryStats.push(stat);
+    }
+    const canonicalPath = path.join(directories[3], path.basename(attachment.filePath));
+    const leaf = await fs.promises.lstat(canonicalPath);
+    if (!leaf.isFile() || leaf.isSymbolicLink())
+      throw new Error('Attachment artifact must be a regular file');
+    const handle = await fs.promises.open(
+      canonicalPath,
+      fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
+    );
+    try {
+      const opened = await handle.stat();
+      if (!opened.isFile() || !sameIdentity(leaf, opened))
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      const bytes = await handle.readFile();
+      if (
+        bytes.length !== attachment.size ||
+        createHash('sha256').update(bytes).digest('hex') !== attachment.sha256
+      ) {
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      }
+      const verified = await handle.stat();
+      if (
+        !sameIdentity(opened, verified) ||
+        opened.size !== verified.size ||
+        opened.mtimeMs !== verified.mtimeMs ||
+        opened.ctimeMs !== verified.ctimeMs
+      )
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      // Identity checks remain mandatory when O_NOFOLLOW is unavailable (including Windows).
+      if ((await fs.promises.realpath(getAppDataPath())) !== canonicalBase)
+        throw new Error('Attachment managed parent changed');
+      for (let index = 0; index < directories.length; index += 1) {
+        const current = await fs.promises.lstat(directories[index]);
+        if (
+          !current.isDirectory() ||
+          current.isSymbolicLink() ||
+          !sameIdentity(directoryStats[index], current)
+        )
+          throw new Error('Attachment managed directory changed');
+      }
+      const current = await fs.promises.lstat(canonicalPath);
+      if (
+        !current.isFile() ||
+        current.isSymbolicLink() ||
+        !sameIdentity(verified, current) ||
+        current.size !== verified.size ||
+        current.mtimeMs !== verified.mtimeMs ||
+        current.ctimeMs !== verified.ctimeMs
+      )
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      // Never resolve the leaf after its read: that lookup could select an unchecked outside target.
+      return canonicalPath;
+    } finally {
+      await handle.close();
+    }
   }
 
   private async completeNativeOwnedBundle(
