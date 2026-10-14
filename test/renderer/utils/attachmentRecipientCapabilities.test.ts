@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canMemberShowAttachmentControl,
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
+  isReferenceAttachmentForMember,
   validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '../../../src/renderer/utils/attachmentRecipientCapabilities';
@@ -37,7 +39,7 @@ function payload(overrides: Partial<AttachmentPayload>): AttachmentPayload {
 }
 
 describe('attachmentRecipientCapabilities', () => {
-  it('requires current native capability before showing or accepting native attachments', () => {
+  it('keeps references available while native attachments require current capability', () => {
     const native = member({ providerId: 'codex', model: 'gpt-5.5' });
     const ready = member({
       providerId: 'codex',
@@ -45,9 +47,13 @@ describe('attachmentRecipientCapabilities', () => {
       nativeInboxAttachmentsSupported: true,
     });
 
-    expect(getMemberAttachmentUnavailableReason(native)).toContain(
-      'current attachment-capable runtime'
-    );
+    expect(getMemberAttachmentUnavailableReason(native)).toBeNull();
+    expect(canMemberShowAttachmentControl(native)).toBe(true);
+    const binary = payload({ mimeType: 'application/octet-stream' });
+    expect(isReferenceAttachmentForMember(native, binary)).toBe(true);
+    expect(
+      validateAttachmentPayloadsForMember({ member: native, attachments: [binary] })
+    ).toBeNull();
     expect(
       validateAttachmentFilesForMember({
         member: native,
@@ -60,7 +66,7 @@ describe('attachmentRecipientCapabilities', () => {
     ).toBeNull();
   });
 
-  it('allows normalized text only for a current native Codex teammate', () => {
+  it('keeps Codex text native-only for teammates and references for lead/OpenCode', () => {
     const ready = member({
       providerId: 'codex',
       nativeInboxAttachmentsSupported: true,
@@ -89,31 +95,41 @@ describe('attachmentRecipientCapabilities', () => {
         validateAttachmentFilesForMember({ member: ready, files: [file(filename, '')] })
       ).toBeNull();
     }
-    for (const restricted of [
-      member({ ...ready, nativeInboxTextAttachmentsSupported: false }),
+    const withoutTextCapability = member({ ...ready, nativeInboxTextAttachmentsSupported: false });
+    expect(isReferenceAttachmentForMember(withoutTextCapability, text)).toBe(false);
+    expect(
+      validateAttachmentPayloadsForMember({ member: withoutTextCapability, attachments: [text] })
+    ).not.toBeNull();
+    for (const referenceRecipient of [
       member({ ...ready, name: 'team-lead' }),
       member({ ...ready, providerId: 'opencode', model: 'gpt-5.4-mini' }),
     ]) {
+      expect(isReferenceAttachmentForMember(referenceRecipient, text)).toBe(true);
       expect(
-        validateAttachmentPayloadsForMember({ member: restricted, attachments: [text] })
-      ).not.toBeNull();
+        validateAttachmentPayloadsForMember({ member: referenceRecipient, attachments: [text] })
+      ).toBeNull();
     }
     for (const mimeType of ['application/pdf', 'image/gif', 'application/octet-stream']) {
       expect(
         validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({ mimeType })] })
-      ).not.toBeNull();
+      ).toBeNull();
+      expect(isReferenceAttachmentForMember(ready, payload({ mimeType }))).toBe(true);
     }
   });
 
-  it('blocks OpenCode non-vision models before file selection or send', () => {
+  it('allows references but blocks native images for OpenCode non-vision models', () => {
     const bob = member({
       providerId: 'opencode',
       model: 'openrouter/z-ai/glm-5.1',
     });
 
-    expect(getMemberAttachmentUnavailableReason(bob)).toBe(
-      'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
-    );
+    expect(getMemberAttachmentUnavailableReason(bob)).toBeNull();
+    expect(canMemberShowAttachmentControl(bob)).toBe(true);
+    expect(getAttachmentInputAcceptForMember(bob)).toBe('*/*');
+    expect(isReferenceAttachmentForMember(bob, payload({}))).toBe(false);
+    const binary = payload({ mimeType: 'application/octet-stream' });
+    expect(isReferenceAttachmentForMember(bob, binary)).toBe(true);
+    expect(validateAttachmentPayloadsForMember({ member: bob, attachments: [binary] })).toBeNull();
     expect(
       validateAttachmentFilesForMember({ member: bob, files: [file('diagram.png', 'image/png')] })
     ).toBe(
@@ -167,7 +183,8 @@ describe('attachmentRecipientCapabilities', () => {
     });
 
     expect(getMemberAttachmentUnavailableReason(bob)).toBeNull();
-    expect(getAttachmentInputAcceptForMember(bob)).toBe('image/png,image/jpeg,image/webp');
+    expect(getAttachmentInputAcceptForMember(bob)).toBe('*/*');
+    expect(isReferenceAttachmentForMember(bob, payload({}))).toBe(false);
     expect(
       validateAttachmentFilesForMember({ member: bob, files: [file('diagram.png', 'image/png')] })
     ).toBeNull();
@@ -192,9 +209,9 @@ describe('attachmentRecipientCapabilities', () => {
     const videoFile = file(filename, mimeType);
     const videoPayload = payload({ filename, mimeType });
 
-    expect(getAttachmentInputAcceptForMember(miniMax)).toBe(
-      'image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime'
-    );
+    expect(getAttachmentInputAcceptForMember(miniMax)).toBe('*/*');
+    expect(isReferenceAttachmentForMember(miniMax, videoPayload)).toBe(false);
+    expect(isReferenceAttachmentForMember(kimi, videoPayload)).toBe(false);
     expect(validateAttachmentFilesForMember({ member: miniMax, files: [videoFile] })).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({ member: miniMax, attachments: [videoPayload] })
@@ -266,12 +283,17 @@ describe('attachmentRecipientCapabilities', () => {
     expect(
       validateAttachmentFilesForMember({ member: anthropicLead, files: [typeScriptFile] })
     ).toBeNull();
-    expect(validateAttachmentFilesForMember({ member: miniMax, files: [typeScriptFile] })).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
-    );
+    expect(
+      validateAttachmentFilesForMember({ member: miniMax, files: [typeScriptFile] })
+    ).toBeNull();
+    const textPayload = payload({ filename: 'worker.ts', mimeType: 'text/plain' });
+    expect(isReferenceAttachmentForMember(miniMax, textPayload)).toBe(true);
+    expect(
+      validateAttachmentPayloadsForMember({ member: miniMax, attachments: [textPayload] })
+    ).toBeNull();
   });
 
-  it('blocks image MIME types not supported by an otherwise image-capable provider', () => {
+  it('routes unsupported Codex GIF images as references rather than native images', () => {
     const codexLead = member({
       name: 'lead',
       agentType: 'team-lead',
@@ -284,13 +306,19 @@ describe('attachmentRecipientCapabilities', () => {
         member: codexLead,
         files: [file('animation.gif', 'image/gif')],
       })
-    ).toBe('This image type is not supported by the selected model.');
+    ).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({
         member: codexLead,
         attachments: [payload({ filename: 'animation.gif', mimeType: 'image/gif' })],
       })
-    ).toBe('This image type is not supported by the selected model.');
+    ).toBeNull();
+    expect(
+      isReferenceAttachmentForMember(
+        codexLead,
+        payload({ filename: 'animation.gif', mimeType: 'image/gif' })
+      )
+    ).toBe(true);
   });
 
   it('allows Claude GIF and WebP image payloads', () => {
@@ -315,7 +343,7 @@ describe('attachmentRecipientCapabilities', () => {
     ).toBeNull();
   });
 
-  it('blocks non-image files for image-only providers', () => {
+  it('routes Codex lead text files as references without enabling native text', () => {
     const codexLead = member({
       name: 'lead',
       agentType: 'team-lead',
@@ -328,17 +356,36 @@ describe('attachmentRecipientCapabilities', () => {
         member: codexLead,
         files: [file('notes.md', 'text/markdown')],
       })
-    ).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
-    );
+    ).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({
         member: codexLead,
         attachments: [payload({ filename: 'notes.md', mimeType: 'text/plain' })],
       })
-    ).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
+    ).toBeNull();
+    expect(
+      isReferenceAttachmentForMember(
+        codexLead,
+        payload({ filename: 'notes.md', mimeType: 'text/plain' })
+      )
+    ).toBe(true);
+  });
+
+  it('keeps unsupported recipients unavailable for both references and native files', () => {
+    const unsupported = member({ model: 'custom' });
+    expect(canMemberShowAttachmentControl(unsupported)).toBe(false);
+    expect(getMemberAttachmentUnavailableReason(unsupported)).toBe(
+      'Attachments require a supported recipient provider.'
     );
+    for (const mimeType of ['image/png', 'application/octet-stream']) {
+      expect(isReferenceAttachmentForMember(unsupported, payload({ mimeType }))).toBe(false);
+      expect(
+        validateAttachmentPayloadsForMember({
+          member: unsupported,
+          attachments: [payload({ mimeType })],
+        })
+      ).toBe('Attachments require a supported recipient provider.');
+    }
   });
 
   it('allows text/PDF files for Anthropic lead recipients', () => {

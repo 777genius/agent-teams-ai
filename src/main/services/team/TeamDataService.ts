@@ -3248,7 +3248,8 @@ export class TeamDataService {
     attachments?: AttachmentMeta[],
     taskRefs?: TaskRef[],
     messageId?: string,
-    actionMode: AgentActionMode = 'do'
+    actionMode: AgentActionMode = 'do',
+    fileReferences?: AttachmentMeta[]
   ): Promise<SendMessageResult> {
     let leadSessionId: string | undefined;
     try {
@@ -3268,6 +3269,7 @@ export class TeamDataService {
       source: 'user_sent',
       actionMode,
       attachments: attachments?.length ? attachments : undefined,
+      fileReferences: fileReferences?.length ? fileReferences : undefined,
       leadSessionId,
       ...(slashCommandMeta
         ? {

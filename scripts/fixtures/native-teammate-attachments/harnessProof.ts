@@ -82,7 +82,11 @@ export async function waitForAttachmentRow(
         (row) =>
           row.messageId &&
           !existingIds.has(row.messageId) &&
-          digests.every((sha256) => row.attachments?.some((item) => item.sha256 === sha256))
+          digests.every((sha256) =>
+            [...(row.attachments ?? []), ...(row.fileReferences ?? [])].some(
+              (item) => item.sha256 === sha256
+            )
+          )
       ) ?? null
     );
   });

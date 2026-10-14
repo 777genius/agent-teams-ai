@@ -59,6 +59,9 @@ function cloneMessage(message: InboxMessage): InboxMessage {
   return {
     ...message,
     ...(message.taskRefs ? { taskRefs: message.taskRefs.map((taskRef) => ({ ...taskRef })) } : {}),
+    ...(message.fileReferences
+      ? { fileReferences: message.fileReferences.map((item) => ({ ...item })) }
+      : {}),
     ...(message.attachments
       ? { attachments: message.attachments.map((attachment) => ({ ...attachment })) }
       : {}),
