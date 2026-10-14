@@ -40,7 +40,7 @@ const IPC_FAILURE_CLASSIFICATIONS = [
 // and again on receipt. Never retain raw exception text or quoted arguments.
 export function safeIpcFailureDetail(value: string, redact: (text: string) => string): string {
   return redact(value.slice(0, 16_384))
-    .replace(/(["'`])(?:\\[\s\S]?|(?!\1)[^\\])*(?:\1|$)/g, '[argument]')
+    .replace(/["'`][\s\S]*/g, '[argument]')
     .replace(/[A-Za-z]:[\\/][^\r\n,;]*/g, '[path]')
     .replace(/\\\\[^\r\n,;]*/g, '[path]')
     .replace(/\/[^\s"'<>]+/g, '[path]')

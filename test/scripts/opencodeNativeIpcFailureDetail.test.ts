@@ -37,6 +37,12 @@ describe('serialized native IPC failure details', () => {
     expect(project('failure '.repeat(3_000)).length).toBeLessThanOrEqual(500);
   });
 
+  it('does not expose quoted arguments after contractions', () => {
+    const detail = project("couldn't resolve module 'confidential-value'");
+    expect(detail).not.toContain('confidential-value');
+    expect(project(detail)).toBe(detail);
+  });
+
   it('redacts provider keys and absolute paths before transport', () => {
     const detail = project(
       `ENOENT: open "C:\\PRIVATE-TEST\\private.txt" OPENROUTER_API_KEY=sk-or-v1-${'a'.repeat(64)}`
