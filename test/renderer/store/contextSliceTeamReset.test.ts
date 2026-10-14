@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { selectTaskDetailReadDemands } from '../../../src/renderer/store/team/taskDetailReadInterest';
 import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
@@ -13,6 +14,7 @@ import {
 import { createTestStore } from './storeTestUtils';
 
 import type { Tab } from '../../../src/renderer/types/tabs';
+import type { TeamTaskWithKanban } from '../../../src/shared/types';
 
 const apiMock = vi.hoisted(() => ({
   context: {
@@ -35,6 +37,7 @@ const apiMock = vi.hoisted(() => ({
   teams: {
     list: vi.fn(async () => []),
     getAllTasks: vi.fn(async () => []),
+    getTask: vi.fn(async (): Promise<unknown> => null),
     showMessageNotification: vi.fn(async () => undefined),
   },
   ssh: {
@@ -45,7 +48,7 @@ const apiMock = vi.hoisted(() => ({
 }));
 
 const contextStorageMock = vi.hoisted(() => ({
-  saveSnapshot: vi.fn(async () => undefined),
+  saveSnapshot: vi.fn(async (_contextId: string, _snapshot: unknown) => undefined),
   loadSnapshot: vi.fn(),
   cleanupExpired: vi.fn(async () => undefined),
   isAvailable: vi.fn(async () => true),
@@ -389,6 +392,157 @@ describe('context slice team/task reset', () => {
     expect(store.getState().teamDataCacheByName).toEqual({});
     expect(apiMock.teams.list).toHaveBeenCalledTimes(1);
     expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires a fresh full read after A/B/A while preserving the A draft and pending file registration', async () => {
+    const snapshots = new Map<string, unknown>();
+    contextStorageMock.saveSnapshot.mockImplementation(async (contextId, snapshot) => {
+      snapshots.set(contextId, snapshot);
+    });
+    contextStorageMock.loadSnapshot.mockImplementation(async (contextId) => {
+      return snapshots.get(contextId) ?? (contextId === 'ssh-dev' ? targetSnapshot() : null);
+    });
+
+    const identity = { contextId: 'local', teamName: 'alpha', taskId: 'task-a' };
+    const tab: Tab = {
+      id: 'task-a-tab',
+      type: 'team',
+      teamName: 'alpha',
+      label: 'Task A',
+      createdAt: 0,
+      taskDetail: { contextId: 'local', taskId: 'task-a' },
+    };
+    const pane = {
+      id: 'pane-default',
+      tabs: [tab],
+      activeTabId: tab.id,
+      selectedTabIds: [tab.id],
+      widthFraction: 1,
+    };
+    const store = createTestStore();
+    store.setState({
+      activeContextId: 'local',
+      openTabs: [tab],
+      activeTabId: tab.id,
+      selectedTabIds: [tab.id],
+      paneLayout: { focusedPaneId: 'pane-default', panes: [pane] },
+      refreshTeamData: vi.fn(async () => undefined),
+      fetchTeams: vi.fn(async () => undefined),
+      fetchAllTasks: vi.fn(async () => undefined),
+    });
+
+    const oldFullTask: TeamTaskWithKanban = {
+      id: 'task-a',
+      subject: 'old full subject',
+      status: 'pending',
+      comments: [],
+    };
+    apiMock.teams.getTask.mockResolvedValueOnce(oldFullTask);
+    await store.getState().ensureTaskDetail(identity);
+
+    const oldEntry = Object.values(store.getState().taskDetailById).find(
+      (entry) =>
+        entry.identity.contextId === 'local' &&
+        entry.identity.teamName === 'alpha' &&
+        entry.identity.taskId === 'task-a'
+    );
+    expect(oldEntry?.phase).toBe('ready');
+    expect(oldEntry?.full).toMatchObject({
+      id: 'task-a',
+      subject: 'old full subject',
+      status: 'pending',
+    });
+    expect(oldEntry?.fullToken?.scope.contextId).toBe('local');
+    const oldFullToken = oldEntry?.fullToken;
+
+    store.setState({
+      taskDetailResourcesById: {
+        'old-resource': {
+          identity,
+          kind: 'activity',
+          signature: 'old-exact-log',
+          data: [],
+          error: null,
+          loading: false,
+          loaded: true,
+          refreshPending: false,
+          sourceRevision: 1,
+          scope: {
+            contextId: 'local',
+            teamName: 'alpha',
+            contextEpoch: 1,
+            teamStateEpoch: 1,
+          },
+        },
+      },
+    });
+
+    const pendingFileId = 'pending-file-a';
+    store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'preserved A draft');
+    store.getState().beginTaskDetailPendingAttachmentSession(identity, {
+      id: pendingFileId,
+      filename: 'pending-a.txt',
+      mimeType: 'text/plain',
+      base64Data: '',
+      previewUrl: '',
+      size: 5,
+    });
+
+    await store.getState().switchContext('ssh-dev');
+    expect(store.getState().activeContextId).toBe('ssh-dev');
+    expect(store.getState().taskDetailById).toEqual({});
+    expect(store.getState().taskDetailResourcesById).toEqual({});
+
+    await store.getState().switchContext('local');
+    expect(store.getState().activeContextId).toBe('local');
+    const restoredEntry = Object.values(store.getState().taskDetailById).find(
+      (entry) =>
+        entry.identity.contextId === 'local' &&
+        entry.identity.teamName === 'alpha' &&
+        entry.identity.taskId === 'task-a'
+    );
+    expect(restoredEntry).toBeUndefined();
+
+    const demand = selectTaskDetailReadDemands(store.getState()).find(
+      (candidate) =>
+        candidate.contextId === 'local' &&
+        candidate.teamName === 'alpha' &&
+        candidate.taskId === 'task-a'
+    );
+    expect(demand).toMatchObject({ needsRead: true, visible: false });
+
+    const restoredSession = Object.values(store.getState().taskDetailSessionById).find(
+      (session) => session.commentText === 'preserved A draft'
+    );
+    expect(restoredSession?.commentText).toBe('preserved A draft');
+    expect(restoredSession?.pendingAttachmentPreparationIds).toEqual([pendingFileId]);
+    expect(restoredSession?.pendingAttachments).toMatchObject([
+      { id: pendingFileId, filename: 'pending-a.txt' },
+    ]);
+
+    apiMock.teams.getTask.mockResolvedValueOnce({
+      id: 'task-a',
+      subject: 'fresh full subject',
+      status: 'in_progress',
+      comments: [],
+    });
+    await store.getState().ensureTaskDetail(identity);
+    const freshEntry = Object.values(store.getState().taskDetailById).find(
+      (entry) =>
+        entry.identity.contextId === 'local' &&
+        entry.identity.teamName === 'alpha' &&
+        entry.identity.taskId === 'task-a'
+    );
+    expect(freshEntry?.phase).toBe('ready');
+    expect(freshEntry?.full).toMatchObject({
+      id: 'task-a',
+      subject: 'fresh full subject',
+      status: 'in_progress',
+    });
+    expect(freshEntry?.fullToken?.scope.contextId).toBe('local');
+    expect(freshEntry?.fullToken?.scope.contextEpoch).not.toBe(oldFullToken?.scope.contextEpoch);
+    expect(freshEntry?.fullToken).not.toBe(oldFullToken);
+    expect(Object.values(store.getState().taskDetailResourcesById)).toEqual([]);
   });
 
   it('updates the active context before slow first-visit project scans can trigger team refreshes', async () => {
