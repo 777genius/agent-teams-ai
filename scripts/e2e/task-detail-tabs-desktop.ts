@@ -1,7 +1,7 @@
 /** Fresh Linux desktop/CDP task-tab regression, with all non-version runtime calls denied.
  * TASK_TABS_E2E_SCRATCH=/srv/workers/<owned-scratch> node scripts/e2e/task-detail-tabs-desktop.ts <exact-sha>
  * Supply an isolated DISPLAY; TASK_TABS_E2E_PNPM optionally points to a pinned pnpm JS entrypoint.
- * The receipt lists proven cases. Full task-tab E2E remains false until all planned cases exist.
+ * The receipt reports full task-tab E2E only after every case and owned shutdown pass.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
@@ -13,12 +13,19 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { prepareTaskTabsFixture } from './task-detail-tabs/fixture.ts';
 import { runSessionAndPaneCases } from './task-detail-tabs/sessionCases.ts';
 import { prepareRichTaskDraft } from './task-detail-tabs/richDraftInput.ts';
+import { runAddressedRoutingCases } from './task-detail-tabs/addressedRoutingCases.ts';
+import { runTaskDeletionCases } from './task-detail-tabs/taskDeletionCases.ts';
+import { runTaskEditingAndNavigationCases } from './task-detail-tabs/taskEditingCases.ts';
 
 interface Team {
   teamName: string;
   taskId: string;
   taskFile: string;
+  kanbanFile: string;
   project: string;
+  groupChatId: string;
+  groupName: string;
+  secondOwner: string;
   markers: {
     description: string;
     prompt: string;
@@ -125,7 +132,9 @@ async function receipt() {
       {
         kind: 'task-detail-tabs-desktop-v1',
         testedSourceCommit: sha,
-        fullTaskTabsE2E: false,
+        fullTaskTabsE2E: passed,
+        remainingFocusedCasesImplemented: true,
+        controlledRacesRemainUnitCovered: true,
         passed,
         root,
         rendererPort,
@@ -452,6 +461,9 @@ try {
   );
   reads.push({ kind: 'inactive-tab-resources-remain-dirty', hidden });
   await runSessionAndPaneCases(cdp, fixture, (value) => reads.push(value));
+  await runTaskEditingAndNavigationCases(cdp, fixture, (value) => reads.push(value));
+  await runAddressedRoutingCases(cdp, fixture, (value) => reads.push(value));
+  await runTaskDeletionCases(cdp, fixture, (value) => reads.push(value));
   await cdp.evaluate('window.__taskTabsColdPageUnsubscribe?.()');
   await cdp.screenshot(join(root, 'electron-cold-page-v3.png'));
   const audit = (await readFile(join(root, 'runtime-audit.ndjson'), 'utf8')).trim();
@@ -518,5 +530,5 @@ try {
   }
   await writeFile(join(root, 'electron-cold-page-v3.log'), logs, { mode: 0o600 });
   await receipt();
-  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: false }));
+  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed }));
 }

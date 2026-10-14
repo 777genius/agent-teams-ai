@@ -101,6 +101,7 @@ export function prepareTaskTabsFixture(
     mkdirSync(project, { recursive: true, mode: 0o700 });
     write(join(project, 'README.md'), '# Disposable task tabs TEST ' + side + '\n');
     execFileSync('git', ['init', '--quiet', '--initial-branch=main', project], { stdio: 'pipe' });
+    const secondOwner = 'task-owner';
     const members = [
       {
         name: 'team-lead',
@@ -109,6 +110,15 @@ export function prepareTaskTabsFixture(
         cwd: project,
         joinedAt: epoch,
         color: side === 'A' ? 'blue' : 'green',
+        subscriptions: [],
+      },
+      {
+        name: secondOwner,
+        agentId: secondOwner + '@' + teamName,
+        agentType: 'general-purpose',
+        cwd: project,
+        joinedAt: epoch,
+        color: side === 'A' ? 'cyan' : 'orange',
         subscriptions: [],
       },
     ];
@@ -129,7 +139,23 @@ export function prepareTaskTabsFixture(
       createdAt: epoch,
       prompt: 'Test only. Never launch.',
     });
+    const groupChatId = randomUUID();
+    const groupName = 'TEST group ' + side;
+    json(join(claude, 'teams', teamName, 'group-chats.json'), {
+      version: 1,
+      groups: [
+        {
+          id: groupChatId,
+          name: groupName,
+          createdAt: timestamp,
+          membership: { kind: 'fixed', memberNames: ['team-lead', secondOwner] },
+          archivedAt: null,
+        },
+      ],
+    });
     const taskFile = join(claude, 'tasks', teamName, taskId + '.json');
+    const kanbanFile = join(claude, 'teams', teamName, 'kanban-state.json');
+    json(kanbanFile, { teamName, reviewers: [], tasks: {} });
     const markers = {
       description: 'DESC_TAIL_' + side,
       prompt: 'PROMPT_TAIL_' + side,
@@ -146,7 +172,8 @@ export function prepareTaskTabsFixture(
       createdBy: 'user',
       createdAt: timestamp,
       projectPath: project,
-      description: 'description prefix '.repeat(160) + markers.description,
+      description:
+        'description prefix '.repeat(160) + '\n\n[README](README.md)\n\n' + markers.description,
       prompt: 'prompt prefix '.repeat(80) + markers.prompt,
       sourceMessageId: 'test-source-' + side,
       sourceMessage: {
@@ -175,7 +202,18 @@ export function prepareTaskTabsFixture(
         to: 'team-lead',
       })),
     });
-    return { side, teamName, project, taskId, taskFile, markers };
+    return {
+      side,
+      teamName,
+      project,
+      taskId,
+      taskFile,
+      kanbanFile,
+      groupChatId,
+      groupName,
+      secondOwner,
+      markers,
+    };
   });
   for (const file of files)
     assert.equal(createHash('sha256').update(readFileSync(file.path)).digest('hex'), file.sha256);

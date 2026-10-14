@@ -233,6 +233,9 @@ const LoadedTaskDetailDialog = ({
         }}
       >
         <LightboxLockProvider value={setLightboxLocked}>
+          {presentation.model.editingSubject ? (
+            <DialogTitle className="sr-only">{task.subject}</DialogTitle>
+          ) : null}
           <TaskDetailReviewActivationFeedback
             identity={sessionController.identity}
             active={open}

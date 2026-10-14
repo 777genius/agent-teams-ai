@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { TaskGroupChatField } from '@renderer/components/team/dialogs/TaskGroupChatField';
 
 import {
@@ -46,6 +47,7 @@ export const TaskDetailContent = ({
   sessionController,
   showTeamIO = true,
 }: TaskDetailContentProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const header = (
     <TaskDetailHeader
       actions={actions}
@@ -72,6 +74,11 @@ export const TaskDetailContent = ({
         data-task-detail-content
         data-task-detail-surface={model.focusCommentId ? 'focused' : 'shared'}
       >
+        {model.currentTask.status === 'deleted' || model.currentTask.deletedAt ? (
+          <p role="status" className="rounded-md border border-border px-3 py-2 text-sm">
+            {t('taskDetail.page.deleted')}
+          </p>
+        ) : null}
         {renderHeader ? renderHeader(header) : header}
         <TaskGroupChatField
           key={model.currentTask.id}

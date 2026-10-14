@@ -184,11 +184,14 @@ export const TaskDetailPage = ({
       ref={presentation.actions.setRootElement}
       className="min-h-0 flex-1 overflow-y-auto bg-surface px-6 py-5"
       data-task-detail-page
+      data-task-detail-context={identity.contextId}
+      data-task-detail-team={identity.teamName}
+      data-task-detail-task-id={identity.taskId}
       data-origin-current={sessionController.isOriginCurrent() ? 'true' : 'false'}
     >
       <TaskDetailReviewActivationFeedback identity={sessionController.identity} active={isActive} />
       <TaskDetailEditorActivationFeedback identity={sessionController.identity} active={isActive} />
-      {phase === 'deleted' || phase === 'unavailable' || phase === 'provisioning' ? (
+      {phase === 'unavailable' || phase === 'provisioning' ? (
         <PageStateBanner
           phase={phase}
           error={entry?.error ?? null}
