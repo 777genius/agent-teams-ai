@@ -217,6 +217,10 @@ function makeTask(id: string): TeamTaskWithKanban {
   } as unknown as TeamTaskWithKanban;
 }
 
+function readyTaskMap(...tasks: TeamTaskWithKanban[]): Map<string, TeamTaskWithKanban> {
+  return new Map(tasks.map((task) => [task.id, task]));
+}
+
 function makeSummary(taskId: string): TaskChangeSetV2 {
   return {
     teamName: 'team-a',
@@ -279,14 +283,15 @@ describe('TaskDetailDialog changes summary loading', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    const task = { ...makeTask('task-empty-attachments'), workIntervals: [] };
     await act(async () => {
       root.render(
         React.createElement(TaskDetailDialog, {
           open: true,
           variant: 'team',
           teamName: 'team-a',
-          task: { ...makeTask('task-empty-attachments'), workIntervals: [] },
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          task,
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
@@ -309,20 +314,21 @@ describe('TaskDetailDialog changes summary loading', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    const task = { ...makeTask('task-review'), workIntervals: [] };
     await act(async () => {
       root.render(
         React.createElement(TaskDetailDialog, {
           open: true,
           variant: 'team',
           teamName: 'team-a',
-          task: { ...makeTask('task-review'), workIntervals: [] },
+          task,
           kanbanTaskState: {
             column: 'review',
             reviewer: 'reviewer',
             errorDescription: 'Review failed',
             movedAt: '2026-04-20T10:00:00.000Z',
           },
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })
@@ -356,7 +362,7 @@ describe('TaskDetailDialog changes summary loading', () => {
       open: true,
       variant: 'team' as const,
       teamName: 'team-a',
-      taskMap: new Map<string, TeamTaskWithKanban>(),
+      taskMap: readyTaskMap(taskA, taskB),
       members: [],
       onClose: vi.fn(),
       onViewChanges: vi.fn(),
@@ -450,7 +456,7 @@ describe('TaskDetailDialog changes summary loading', () => {
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
@@ -508,7 +514,7 @@ describe('TaskDetailDialog changes summary loading', () => {
             variant: 'team',
             teamName: 'team-a',
             task,
-            taskMap: new Map<string, TeamTaskWithKanban>(),
+            taskMap: readyTaskMap(task),
             members: [],
             onClose: vi.fn(),
           })
@@ -574,7 +580,7 @@ describe('TaskDetailDialog changes summary loading', () => {
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
@@ -655,7 +661,7 @@ describe('TaskDetailDialog changes summary loading', () => {
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })
@@ -745,7 +751,7 @@ describe('TaskDetailDialog changes summary loading', () => {
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })

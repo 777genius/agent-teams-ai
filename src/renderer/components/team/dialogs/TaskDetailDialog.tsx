@@ -1,13 +1,16 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  type TaskDetailCommentImage,
+  TaskDetailCommentImages,
+  TaskImplementationDurationBadge,
+  WorkflowTimelineWithDuration,
+} from '@features/team-task-detail/renderer';
 import { api } from '@renderer/api';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { OngoingIndicator } from '@renderer/components/common/OngoingIndicator';
-import {
-  ImageLightbox,
-  LightboxLockProvider,
-} from '@renderer/components/team/attachments/ImageLightbox';
+import { LightboxLockProvider } from '@renderer/components/team/attachments/ImageLightbox';
 import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
@@ -63,11 +66,6 @@ import {
   taskMatchesRef,
 } from '@shared/utils/taskIdentity';
 import {
-  calculateTaskImplementationDuration,
-  formatTaskImplementationDuration,
-  shouldShowTaskImplementationDuration,
-} from '@shared/utils/taskWorkDuration';
-import {
   getTeamTaskWorkflowColumn,
   isTeamTaskFinishedForDependency,
   isTeamTaskNeedsFixActionable,
@@ -101,7 +99,6 @@ import {
 
 import { SourceMessageAttachments } from '../attachments/SourceMessageAttachments';
 
-import { WorkflowTimeline } from './StatusHistoryTimeline';
 import { TaskAttachments } from './TaskAttachments';
 import { TaskCommentAwaitingReply } from './TaskCommentAwaitingReply';
 import { TaskCommentInput } from './TaskCommentInput';
@@ -113,7 +110,6 @@ import type {
   FileChangeSummary,
   KanbanTaskState,
   ResolvedTeamMember,
-  TaskAttachmentMeta,
   TaskChangeReviewability,
   TaskChangeSetV2,
   TeamTaskWithKanban,
@@ -123,7 +119,7 @@ const TASK_CHANGES_AUTO_REFRESH_MS = 20_000;
 const TASK_CHANGES_INITIAL_LOAD_DELAY_MS = 1_500;
 const TASK_SECTION_HEADER_CLASS = '-mx-[calc(1.5rem-5px)] w-[calc(100%+3rem-10px)]';
 
-interface TaskDetailDialogProps {
+export interface TaskDetailDialogProps {
   open: boolean;
   loading?: boolean;
   variant?: 'team' | 'global';
@@ -143,73 +139,6 @@ interface TaskDetailDialogProps {
   /** Extra content rendered in the dialog header (e.g. "Open team" button). */
   headerExtra?: React.ReactNode;
 }
-
-function useTaskImplementationDurationClock(task: TeamTaskWithKanban): {
-  duration: ReturnType<typeof calculateTaskImplementationDuration>;
-  nowMs: number;
-} {
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  const duration = useMemo(() => calculateTaskImplementationDuration(task, nowMs), [task, nowMs]);
-
-  useEffect(() => {
-    if (!duration.hasRunningInterval) return;
-
-    setNowMs(Date.now());
-    const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [duration.hasRunningInterval, task.id]);
-
-  return { duration, nowMs };
-}
-
-const TaskImplementationDurationBadge = memo(function TaskImplementationDurationBadge({
-  task,
-}: {
-  task: TeamTaskWithKanban;
-}): React.JSX.Element | null {
-  const { t } = useAppTranslation('team');
-  const { duration } = useTaskImplementationDurationClock(task);
-  if (!shouldShowTaskImplementationDuration(duration)) {
-    return null;
-  }
-
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md bg-[var(--color-bg-secondary)] px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
-      title={t('taskDetail.workflow.implementationTimeTitle')}
-    >
-      <Clock size={10} />
-      <span>
-        {t('taskDetail.workflow.inProgressTime', {
-          duration: formatTaskImplementationDuration(duration.elapsedMs),
-        })}
-      </span>
-    </span>
-  );
-});
-
-const WorkflowTimelineWithDuration = memo(function WorkflowTimelineWithDuration({
-  task,
-  events,
-  memberColorMap,
-}: {
-  task: TeamTaskWithKanban;
-  events: NonNullable<TeamTaskWithKanban['historyEvents']>;
-  memberColorMap: Map<string, string>;
-}): React.JSX.Element {
-  const { nowMs } = useTaskImplementationDurationClock(task);
-  return (
-    <WorkflowTimeline
-      events={events}
-      memberColorMap={memberColorMap}
-      implementationDurationTask={task}
-      nowMs={nowMs}
-    />
-  );
-});
 
 export const TaskDetailDialog = ({
   open,
@@ -236,6 +165,7 @@ export const TaskDetailDialog = ({
   const { t } = useAppTranslation('team');
   const currentTask = task ? (taskMap.get(task.id) ?? null) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
+  const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
 
@@ -403,8 +333,7 @@ export const TaskDetailDialog = ({
   // Collect image attachments from comments for the Attachments section
   const commentImageAttachments = useMemo(() => {
     const comments = currentTask?.comments ?? [];
-    const result: { attachment: TaskAttachmentMeta; commentText: string; commentAuthor: string }[] =
-      [];
+    const result: TaskDetailCommentImage[] = [];
     for (const c of comments) {
       if (!c.attachments) continue;
       for (const att of c.attachments) {
@@ -1293,10 +1222,11 @@ export const TaskDetailDialog = ({
                 attachments={currentTask.attachments ?? []}
               />
               {commentImageAttachments.length > 0 ? (
-                <CommentImagesGrid
+                <TaskDetailCommentImages
                   items={commentImageAttachments}
                   teamName={teamName}
                   taskId={currentTask.id}
+                  loadAttachmentData={getTaskAttachmentData}
                 />
               ) : null}
             </CollapsibleTeamSection>
@@ -1613,124 +1543,5 @@ export const TaskDetailDialog = ({
         </LightboxLockProvider>
       </DialogContent>
     </Dialog>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Comment images grid — accumulated images from task comments
-// ---------------------------------------------------------------------------
-
-interface CommentImageItem {
-  attachment: TaskAttachmentMeta;
-  commentText: string;
-  commentAuthor: string;
-}
-
-const CommentImagesGrid = ({
-  items,
-  teamName,
-  taskId,
-}: {
-  items: CommentImageItem[];
-  teamName: string;
-  taskId: string;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  return (
-    <div className="mt-3 space-y-1">
-      <div className="flex items-center gap-1.5">
-        <MessageSquare size={12} className="text-[var(--color-text-muted)]" />
-        <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
-          {t('taskDetail.attachments.fromComments')}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <CommentImageThumbnail
-            key={item.attachment.id}
-            item={item}
-            teamName={teamName}
-            taskId={taskId}
-            onPreview={setPreviewUrl}
-          />
-        ))}
-      </div>
-      {previewUrl ? (
-        <ImageLightbox
-          open
-          onClose={() => setPreviewUrl(null)}
-          src={previewUrl}
-          alt={t('taskDetail.attachments.commentAttachment')}
-        />
-      ) : null}
-    </div>
-  );
-};
-
-const CommentImageThumbnail = ({
-  item,
-  teamName,
-  taskId,
-  onPreview,
-}: {
-  item: CommentImageItem;
-  teamName: string;
-  taskId: string;
-  onPreview: (dataUrl: string) => void;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const base64 = await getTaskAttachmentData(
-          teamName,
-          taskId,
-          item.attachment.id,
-          item.attachment.mimeType
-        );
-        if (!cancelled && base64) {
-          setThumbUrl(`data:${item.attachment.mimeType};base64,${base64}`);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [teamName, taskId, item.attachment.id, item.attachment.mimeType, getTaskAttachmentData]);
-
-  // Truncate comment text for tooltip
-  const tooltipText = `${item.commentAuthor}: ${item.commentText.length > 200 ? item.commentText.slice(0, 200) + '...' : item.commentText}`;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className="group relative flex size-16 cursor-pointer items-center justify-center overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]"
-          onClick={() => thumbUrl && onPreview(thumbUrl)}
-          aria-label={t('taskDetail.attachments.preview', { filename: item.attachment.filename })}
-        >
-          {thumbUrl ? (
-            <img src={thumbUrl} alt={item.attachment.filename} className="size-full object-cover" />
-          ) : (
-            <Loader2 size={12} className="animate-spin text-[var(--color-text-muted)]" />
-          )}
-          <div className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-0.5 py-px text-center text-[7px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-            {item.attachment.filename}
-          </div>
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[300px] text-xs">
-        {tooltipText}
-      </TooltipContent>
-    </Tooltip>
   );
 };
