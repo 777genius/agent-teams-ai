@@ -11,7 +11,7 @@ import { constants } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { prepareNativeDesktop } from './opencode-native-desktop-host';
+import { NativeDesktopIpcError, prepareNativeDesktop } from './opencode-native-desktop-host';
 import { waitFor } from './release-updater/cdp.mts';
 
 async function main() {
@@ -66,6 +66,9 @@ async function main() {
     status: 'running',
     stage: 'launch',
     failure: '',
+    failureOperation: '',
+    failureClassification: '',
+    failureDetail: '',
     teamName: desktop.teamName,
     projectPath: desktop.projectPath,
     model,
@@ -297,6 +300,11 @@ async function main() {
     await checkpoint();
     console.log(`Short Electron integration proof: ${proofFile}`);
   } catch (error) {
+    if (error instanceof NativeDesktopIpcError) {
+      proof.failureOperation = error.operation;
+      proof.failureClassification = error.classification;
+      proof.failureDetail = error.detail ?? '';
+    }
     proof.failure =
       error instanceof Error &&
       /^Owned (createTeam|createTask|stop) IPC failed \([a-zA-Z0-9 _-]+\); preserve TEST state$/.test(
