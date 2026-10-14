@@ -65,13 +65,25 @@ export async function prepareRichTaskDraft(cdp: Cdp, teamName: string): Promise<
     `!!document.querySelector('[role="dialog"] [contenteditable="true"]')`,
     'real description editor'
   );
-  await cdp.evaluate(
-    `(()=>{const e=document.querySelector('[role="dialog"] [contenteditable="true"]');e.focus();document.execCommand('selectAll');})()`
-  );
-  await cdp.send('Input.insertText', { text: 'TEST_DIRTY_DESCRIPTION_HANDOFF' });
+  await click(cdp, `document.querySelector('[role="dialog"] [contenteditable="true"]')`);
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 2,
+    windowsVirtualKeyCode: 65,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    modifiers: 2,
+    windowsVirtualKeyCode: 65,
+  });
+  await cdp.send('Input.insertText', { text: 'TESTDIRTYDESCRIPTIONHANDOFF' });
   await wait(
     cdp,
-    `window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(key)}]?.descriptionDraft.includes('TEST_DIRTY_DESCRIPTION_HANDOFF')`,
+    `window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(key)}]?.descriptionDraft.includes('TESTDIRTYDESCRIPTIONHANDOFF')`,
     'typed description draft'
   );
   await click(

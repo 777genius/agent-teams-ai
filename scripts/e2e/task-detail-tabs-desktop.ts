@@ -199,6 +199,7 @@ try {
   });
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
+  await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await until(async () => {
     try {
       return await cdp!.evaluate(
@@ -377,7 +378,7 @@ try {
   await until(
     () =>
       cdp!.evaluate(
-        `(()=>{const s=window.__agentTeamsDevStore.getState();const d=s.taskDetailSessionById[JSON.stringify([${JSON.stringify(identityA.contextId)},${JSON.stringify(identityA.teamName)},'1'])];const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===p.activeTabId&&t.teamName===${JSON.stringify(teamA.teamName)}&&t.taskDetail));return !s.globalTaskDetail&&p&&d?.ownerSurfaceId===p.activeTabId&&d.commentText.startsWith('TEST_HANDOFF_DRAFT_V7')&&d.commentChips.length===1&&d.reply?.text.includes('COMMENT_TAIL_A')&&d.descriptionDraft.includes('TEST_DIRTY_DESCRIPTION_HANDOFF')&&d.subjectDraft==='TEST_DIRTY_SUBJECT_HANDOFF'&&d.editingSubject&&d.pendingAttachments.length===1;})()`
+        `(()=>{const s=window.__agentTeamsDevStore.getState();const d=s.taskDetailSessionById[JSON.stringify([${JSON.stringify(identityA.contextId)},${JSON.stringify(identityA.teamName)},'1'])];const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===p.activeTabId&&t.teamName===${JSON.stringify(teamA.teamName)}&&t.taskDetail));return !s.globalTaskDetail&&p&&d?.ownerSurfaceId===p.activeTabId&&d.commentText.startsWith('TEST_HANDOFF_DRAFT_V7')&&d.commentChips.length===1&&d.reply?.text.includes('COMMENT_TAIL_A')&&d.descriptionDraft.includes('TESTDIRTYDESCRIPTIONHANDOFF')&&d.subjectDraft==='TEST_DIRTY_SUBJECT_HANDOFF'&&d.editingSubject&&d.pendingAttachments.length===1;})()`
       ),
     'task-tab handoff preserves draft and file with one owner',
     12000
@@ -401,12 +402,19 @@ try {
   );
   const afterHandoffTask = JSON.parse(await readFile(teamA.taskFile, 'utf8')) as {
     subject: string;
+    description: string;
+    comments: unknown[];
   };
   assert.equal(
     afterHandoffTask.subject,
     'TEST A same ID task',
     'Handoff blur submitted dirty subject'
   );
+  assert(
+    afterHandoffTask.description.endsWith(watcherMarkers[0].description),
+    'Handoff submitted dirty description'
+  );
+  assert.equal(afterHandoffTask.comments.length, 125, 'Handoff auto-sent a comment');
   reads.push({
     kind: 'actual-dialog-tab-handoff',
     label,
@@ -478,6 +486,19 @@ try {
   closeEvidence = await shutdown.gracefulClose(cdp, port, app.pid);
   passed = true;
 } catch (error) {
+  if (cdp) {
+    try {
+      diagnostics.push({
+        kind: 'failure-ui',
+        evidence: await cdp.evaluate(
+          `(()=>{const s=window.__agentTeamsDevStore.getState();return {focused:document.hasFocus(),active:document.activeElement?.outerHTML?.slice(0,500),editable:[...document.querySelectorAll('[contenteditable=true]')].map(e=>e.innerHTML.slice(0,1000)),sessions:Object.values(s.taskDetailSessionById).map(d=>({owner:d.ownerSurfaceId,subject:d.subjectDraft,description:d.descriptionDraft.slice(-150),comment:d.commentText,reply:!!d.reply,chips:d.commentChips.length}))};})()`
+        ),
+      });
+      await cdp.screenshot(join(root, 'failed.png'));
+    } catch {
+      /* Retain the original failure even if the renderer retired. */
+    }
+  }
   failure = error instanceof Error ? error.stack : String(error);
   process.exitCode = 1;
 } finally {
