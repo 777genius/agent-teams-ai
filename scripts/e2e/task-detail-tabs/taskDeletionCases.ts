@@ -213,6 +213,23 @@ export async function runTaskDeletionCases(
     previewRetained: true,
   });
 
+  // A forced click on a React-disabled button can bubble to its preview parent.
+  // Close any resulting lightbox through its real control before navigating.
+  for (let i = 0; i < 2; i++) {
+    const count = Number(await cdp.evaluate(`document.querySelectorAll('.yarl__root').length`));
+    if (count === 0) break;
+    await click(
+      cdp,
+      `[...document.querySelectorAll('.yarl__root button.yarl__button[aria-label="Close"]')].at(-1)`
+    );
+    await until(
+      cdp,
+      `document.querySelectorAll('.yarl__root').length<${count}`,
+      'attachment preview closed'
+    );
+  }
+  assert.equal(await cdp.evaluate(`document.querySelectorAll('.yarl__root').length`), 0);
+
   await cdp.evaluate(`window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()`);
   await cdp.evaluate(
     `(()=>{const s=window.__agentTeamsDevStore.getState();s.openTeamTab(${JSON.stringify(teamB.teamName)});const tab=s.getAllPaneTabs().find(t=>t.type==='team'&&!t.taskDetail&&t.teamName===${JSON.stringify(teamB.teamName)});const pane=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===tab.id));s.focusPane(pane.id);s.resizePanes(pane.id,0.8);})()`
