@@ -38,6 +38,7 @@ export class TeamDataReadWork<T> {
       return { promise: retired, started: false };
     }
     let request: Promise<T>;
+    // eslint-disable-next-line sonarjs/no-try-promise -- Catch synchronous throws before a promise exists.
     try {
       request = read();
     } catch (error) {

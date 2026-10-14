@@ -53,6 +53,7 @@ import {
   resetTeamTaskDetailReadAuthorityForTests,
   type TaskDetailReadHandle,
   type TaskDetailReadToken,
+  unwrapTaskDetailReadResult,
 } from '../team/taskDetailReadAuthority';
 import { areTeamAgentRuntimeSnapshotsEqual } from '../team/teamAgentRuntimeSnapshotEquality';
 import { stabilizeTeamAgentRuntimeSnapshot } from '../team/teamAgentRuntimeSnapshotStabilizer';
@@ -3018,8 +3019,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       ) {
         return;
       }
-      if (dataResult.error) throw dataResult.error;
-      const data = dataResult.value as TeamViewSnapshot;
+      const data = unwrapTaskDetailReadResult(dataResult);
       recordSnapshotEligibility(teamName, requestScope, dataResult.token);
       if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
       // Stale check: user may have switched to another team during the async call
@@ -3358,8 +3358,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       ) {
         return;
       }
-      if (dataResult.error) throw dataResult.error;
-      const data = dataResult.value as TeamViewSnapshot;
+      const data = unwrapTaskDetailReadResult(dataResult);
       recordSnapshotEligibility(teamName, requestScope, dataResult.token);
       if (!isLatestStartedSnapshotEligibility(teamName, requestScope, dataResult.token)) return;
       const projectedTeamData = previousData

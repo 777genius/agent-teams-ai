@@ -296,7 +296,6 @@ const TaskDetailDialogHost = memo(
       if (!selectedIdentity) return;
       if (selectedIdentity.contextId !== contextId || selectedIdentity.teamName !== teamName) {
         setSelectedIdentity(null);
-        return;
       }
     }, [contextId, selectedIdentity, teamName]);
 

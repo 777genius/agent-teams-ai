@@ -1,6 +1,7 @@
 import {
   createTaskDetailReadAuthority,
   type TaskDetailReadHandle,
+  type TaskDetailReadResult,
   type TaskDetailReadScope,
   type TaskDetailReadToken,
 } from '@features/team-task-detail/core';
@@ -137,4 +138,17 @@ export function invalidateTaskDetailForTeamChange(
   )
     return;
   state.invalidateTaskDetailTeamSource(state.activeContextId, event.teamName, event.taskId);
+}
+
+/** Normalize transport failures after the caller has checked its captured read scope. */
+export function unwrapTaskDetailReadResult<T>(result: TaskDetailReadResult<T>): T {
+  if (result.error) {
+    throw result.error instanceof Error
+      ? result.error
+      : new Error(typeof result.error === 'string' ? result.error : 'Failed to load team data', {
+          cause: result.error,
+        });
+  }
+  if (result.value === undefined) throw new Error('Task data read returned no value');
+  return result.value;
 }

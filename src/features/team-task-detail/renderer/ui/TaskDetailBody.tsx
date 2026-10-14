@@ -331,7 +331,7 @@ export const TaskDetailBody = ({
                       }}
                     >
                       <FileIcon
-                        fileName={file.relativePath.split(/[\\\\/]/).pop() ?? file.relativePath}
+                        fileName={file.relativePath.split(/[\\/]/).pop() ?? file.relativePath}
                         className="size-3.5"
                       />
                       <span className="min-w-0 flex-1 truncate text-left font-mono text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text)]">

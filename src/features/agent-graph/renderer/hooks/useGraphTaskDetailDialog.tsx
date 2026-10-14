@@ -83,7 +83,6 @@ export function useGraphTaskDetailDialog(
       (selectedIdentity.contextId !== activeContextId || selectedIdentity.teamName !== teamName)
     ) {
       setSelectedIdentity(null);
-      return;
     }
   }, [activeContextId, selectedIdentity, teamName]);
 

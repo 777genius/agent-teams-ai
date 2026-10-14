@@ -86,7 +86,7 @@ export interface TaskDetailPresentationActions {
   setExecutionPreviewOnline: (online: boolean) => void;
   setLogsRefreshing: (refreshing: boolean) => void;
   setLogsSectionOpen: (open: boolean) => void;
-  updateGroupChat: (groupChatId: string | null) => void;
+  updateGroupChat: (groupChatId: string | null) => void | Promise<void>;
 }
 
 export interface TaskDetailPresentationInput {

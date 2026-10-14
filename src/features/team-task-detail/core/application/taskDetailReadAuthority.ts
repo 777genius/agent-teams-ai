@@ -152,9 +152,9 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
         if (record.current === (pending as TaskDetailPendingRead<unknown>) && !pending.superseded) {
           const successor = record.successor;
           if (successor?.requested && !successor.superseded) {
-            record.current = successor as TaskDetailPendingRead<unknown>;
+            record.current = successor;
             record.successor = null;
-            void startPending(record, successor as TaskDetailPendingRead<unknown>, false);
+            void startPending(record, successor, false);
           } else {
             record.current = null;
             record.successor = null;
@@ -187,10 +187,7 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
     const join = (pending: TaskDetailPendingRead<unknown>): TaskDetailReadHandle<T> => {
       pending.requested = true;
       if (pending.started) return pending.handle as TaskDetailReadHandle<T>;
-      if (
-        record.current === (pending as TaskDetailPendingRead<unknown>) &&
-        !record.active.has(pending as TaskDetailPendingRead<unknown>)
-      ) {
+      if (record.current === pending && !record.active.has(pending)) {
         return runPending(record, pending as TaskDetailPendingRead<T>, options?.deferPhysicalStart);
       }
       return pending.handle as TaskDetailReadHandle<T>;
@@ -280,8 +277,7 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
     isTokenCurrent: (token, scope) => {
       const record = records.get(token.key);
       return (
-        record !== undefined &&
-        record.sourceEpoch === token.sourceEpoch &&
+        record?.sourceEpoch === token.sourceEpoch &&
         record.latestStartedToken === token &&
         token.physicalStartOrder > 0 &&
         (scope === undefined || isSameTaskDetailReadScope(token.scope, scope))
