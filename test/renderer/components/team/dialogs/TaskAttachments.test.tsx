@@ -25,6 +25,8 @@ describe('TaskAttachments mutation gate', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('rechecks mutability after the real FileReader continuation', async () => {
@@ -48,10 +50,17 @@ describe('TaskAttachments mutation gate', () => {
     transfer.items.add(new File(['fresh TEST image'], 'after-race.png', { type: 'image/png' }));
     if (input) input.files = transfer.files;
 
+    let finishRead!: () => void;
+    const readFinished = new Promise<void>((resolve) => { finishRead = resolve; });
+    const readAsDataURL = FileReader.prototype.readAsDataURL;
+    vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (file) {
+      this.addEventListener('loadend', finishRead, { once: true });
+      readAsDataURL.call(this, file);
+    });
     await act(async () => {
       input?.dispatchEvent(new Event('change', { bubbles: true }));
       mutable = false;
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await readFinished;
     });
 
     expect(saveTaskAttachment).not.toHaveBeenCalled();

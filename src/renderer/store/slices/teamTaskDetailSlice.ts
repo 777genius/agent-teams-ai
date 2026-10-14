@@ -324,7 +324,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       set((state) => ({
         taskDetailById: {
           ...state.taskDetailById,
-          [key]: markTaskDetailTeamUnavailable(state.taskDetailById[key]!),
+          [key]: markTaskDetailTeamUnavailable(state.taskDetailById[key]),
         },
       }));
       return;
