@@ -1080,6 +1080,9 @@
     "explicitChoice": "Выбрано явно - {{model}}"
   },
   "taskDetail": {
+    "navigation": {
+      "reviewRefused": "Не удалось открыть просмотр изменений. Запрос сохранён."
+    },
     "actions": {
       "cancel": "Отмена",
       "delete": "Удалить",

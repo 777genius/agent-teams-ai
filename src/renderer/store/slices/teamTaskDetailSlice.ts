@@ -46,12 +46,27 @@ import {
   readTeamTaskFullResource,
 } from '../team/taskDetailReadAuthority';
 import { hasTaskDetailReadInterest } from '../team/taskDetailReadInterest';
+import { queueTaskDetailReview } from '../team/taskDetailReviewRoute';
 
+import type { TaskDetailReviewRequest } from '../team/taskDetailReviewRoute';
 import type { AppState } from '../types';
 import type { TeamTaskWithKanban } from '@shared/types';
 import type { StateCreator } from 'zustand';
 
 export interface TeamTaskDetailSlice {
+  taskDetailReviewActivationFailure: {
+    nonce: string;
+    identity: TaskDetailIdentity;
+    options: Pick<TaskDetailReviewRequest, 'filePath' | 'requestOptions'>;
+  } | null;
+  closeTaskDetailReviewActivationFailure: (nonce: string) => void;
+  retryTaskDetailReviewActivationFailure: (nonce: string) => boolean;
+  retryPendingTaskDetailReview: (nonce: string) => boolean;
+  closePendingTaskDetailReview: (nonce: string) => void;
+  openTaskDetailReview: (
+    identity: TaskDetailIdentity,
+    options: Pick<TaskDetailReviewRequest, 'filePath' | 'requestOptions'>
+  ) => boolean;
   taskDetailById: Record<string, TaskDetailReadEntry>;
   taskDetailSessionById: Record<string, TaskDetailSession>;
   taskDetailSurfaceInterests: Record<string, TaskDetailIdentity | null>;
@@ -136,6 +151,49 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   get
 ) => ({
   taskDetailById: {},
+  taskDetailReviewActivationFailure: null,
+  retryTaskDetailReviewActivationFailure: (nonce) => {
+    const state = get();
+    const failure = state.taskDetailReviewActivationFailure;
+    return failure?.nonce === nonce
+      ? state.openTaskDetailReview(failure.identity, failure.options)
+      : false;
+  },
+  closeTaskDetailReviewActivationFailure: (nonce) => {
+    const failure = get().taskDetailReviewActivationFailure;
+    if (failure?.nonce === nonce) set({ taskDetailReviewActivationFailure: null });
+  },
+  retryPendingTaskDetailReview: (nonce) => {
+    const request = get().pendingReviewRequest;
+    if (!request || request.nonce !== nonce) return false;
+    return queueTaskDetailReview(
+      get,
+      { contextId: request.contextId, teamName: request.teamName, taskId: request.taskId },
+      { filePath: request.filePath, requestOptions: request.requestOptions }
+    );
+  },
+  closePendingTaskDetailReview: (nonce) => {
+    const state = get();
+    const request = state.pendingReviewRequest;
+    if (
+      request?.nonce === nonce &&
+      request.contextId === state.activeContextId &&
+      !state.isContextSwitching
+    )
+      state.setPendingReviewRequest(null);
+  },
+  openTaskDetailReview: (rawIdentity, options) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const accepted = queueTaskDetailReview(get, identity, options);
+    if (accepted) set({ taskDetailReviewActivationFailure: null });
+    else if (
+      isValidTaskDetailIdentity(identity) &&
+      !get().isContextSwitching &&
+      get().activeContextId === identity.contextId
+    )
+      set({ taskDetailReviewActivationFailure: { identity, options, nonce: crypto.randomUUID() } });
+    return accepted;
+  },
   taskDetailSessionById: {},
   taskDetailSurfaceInterests: {},
 

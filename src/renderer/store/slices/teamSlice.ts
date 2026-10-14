@@ -32,7 +32,6 @@ import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
   canDisplayTaskChangesForOptions,
-  type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
@@ -1499,13 +1498,9 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   focusTeamSection: (teamName: string, section: TeamSectionTarget) => void;
   clearTeamSectionFocus: () => void;
   /** Set by GlobalTaskDetailDialog to signal TeamDetailView to open ChangeReviewDialog */
-  pendingReviewRequest: {
-    taskId: string;
-    filePath?: string;
-    requestOptions: TaskChangeRequestOptions;
-  } | null;
+  pendingReviewRequest: import('../team/taskDetailReviewRoute').TaskDetailReviewRequest | null;
   setPendingReviewRequest: (
-    req: { taskId: string; filePath?: string; requestOptions: TaskChangeRequestOptions } | null
+    req: import('../team/taskDetailReviewRoute').TaskDetailReviewRequest | null
   ) => void;
   selectedTeamName: string | null;
   selectedTeamData: TeamViewSnapshot | null;

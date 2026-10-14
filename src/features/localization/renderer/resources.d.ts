@@ -6483,6 +6483,9 @@ export default interface Resources {
       "logs": {
         "newArriving": "New task logs arriving"
       },
+      "navigation": {
+        "reviewRefused": "Changes could not be opened. The request is saved."
+      },
       "notFound": "Task not found",
       "page": {
         "deleted": "Task deleted",

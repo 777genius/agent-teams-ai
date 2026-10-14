@@ -1,12 +1,16 @@
 export * from '../core';
 export * from './adapters/TaskDetailPage';
 export * from './adapters/TaskDetailReadCoordinator';
+export * from './adapters/TaskDetailReviewActivationFeedback';
+export * from './adapters/TaskDetailReviewRouteFeedback';
 export * from './adapters/TaskDetailTab';
 export * from './adapters/taskDraftStorage';
 export * from './hooks/useTaskDetailPresentation';
+export * from './hooks/useTaskDetailReviewRoute';
 export * from './hooks/useTaskDetailSession';
 export * from './hooks/useTaskDetailTabLabel';
 export * from './ui/TaskDetailCommentImages';
 export * from './ui/TaskDetailContent';
 export type { TaskDetailHeadingProps } from './ui/TaskDetailHeader';
+export * from './ui/TaskDetailReviewRouteBanner';
 export * from './ui/TaskDetailWorkflow';

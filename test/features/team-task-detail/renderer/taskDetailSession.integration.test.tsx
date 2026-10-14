@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
 import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
+import { useTaskDetailReviewRoute } from '@features/team-task-detail/renderer/hooks/useTaskDetailReviewRoute';
 import { useTaskDetailSession } from '@features/team-task-detail/renderer/hooks/useTaskDetailSession';
 import { useStore } from '@renderer/store';
 import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/teamSlice';
@@ -127,6 +128,100 @@ describe('task session surface and origin integration', () => {
     });
     expect(useStore.getState().taskDetailSurfaceInterests).not.toHaveProperty('duplicate-dialog');
     expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps refused reviews and ignores a late confirmation for an older nonce', async () => {
+    let first!: (accepted: boolean) => void;
+    let second!: (accepted: boolean) => void;
+    const openReview = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            first = resolve;
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            second = resolve;
+          })
+      )
+      .mockResolvedValue(true);
+    useStore.setState({
+      selectTeam: vi.fn(async (teamName: string) => {
+        useStore.setState({ selectedTeamName: teamName });
+      }),
+    });
+    useStore.getState().updateTaskDetailSessionPart(identity, 'commentText', 'keep route draft');
+    expect(useStore.getState().openTaskDetailReview(identity, { requestOptions: {} })).toBe(true);
+    const targetId = useStore.getState().pendingReviewRequest!.targetTeamTabId;
+    const firstNonce = useStore.getState().pendingReviewRequest!.nonce;
+    const Target = ({ teamName }: { teamName: string }) => {
+      useTaskDetailReviewRoute({
+        teamName,
+        tabId: targetId,
+        active: true,
+        ready: true,
+        openReview,
+      });
+      return null;
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => {
+      // TeamDetailView consumes only after its target team data is selected.
+      useStore.setState({ selectedTeamName: identity.teamName });
+      root.render(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(Target, { teamName: 'TEST-wrong-team' }),
+          React.createElement(Target, { teamName: identity.teamName })
+        )
+      );
+    });
+    expect(openReview).toHaveBeenCalledTimes(1);
+    expect(useStore.getState().pendingReviewRequest?.status).toBe('opening');
+    await act(async () => {
+      useStore
+        .getState()
+        .openTaskDetailReview(identity, { filePath: 'next.ts', requestOptions: {} });
+    });
+    const secondNonce = useStore.getState().pendingReviewRequest!.nonce;
+    expect(secondNonce).not.toBe(firstNonce);
+    await act(async () => {
+      first(true);
+    });
+    expect(useStore.getState().pendingReviewRequest?.nonce).toBe(secondNonce);
+    await act(async () => {
+      second(false);
+    });
+    expect(useStore.getState().pendingReviewRequest?.status).toBe('blocked');
+    expect(useStore.getState().pendingReviewRequest?.nonce).toBe(secondNonce);
+    await act(async () => {
+      useStore.getState().retryPendingTaskDetailReview(secondNonce);
+    });
+    expect(openReview).toHaveBeenCalledTimes(3);
+    expect(useStore.getState().pendingReviewRequest).toBeNull();
+    expect(useStore.getState().taskDetailSessionById[key].commentText).toBe('keep route draft');
+    await act(async () => {
+      useStore.getState().openTaskDetailTab(identity);
+      useStore.setState({ setActiveTab: vi.fn() });
+      expect(useStore.getState().openTaskDetailReview(identity, { requestOptions: {} })).toBe(
+        false
+      );
+    });
+    expect(useStore.getState().pendingReviewRequest).toBeNull();
+    expect(useStore.getState().taskDetailReviewActivationFailure?.identity).toEqual(identity);
+    useStore
+      .getState()
+      .closeTaskDetailReviewActivationFailure(
+        useStore.getState().taskDetailReviewActivationFailure!.nonce
+      );
+    expect(useStore.getState().taskDetailReviewActivationFailure).toBeNull();
   });
 
   it('continues a FileReader after dialog unmount and does not read a removed queued file', async () => {

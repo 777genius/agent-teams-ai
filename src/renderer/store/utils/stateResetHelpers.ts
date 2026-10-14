@@ -75,6 +75,7 @@ export function getContextScopedTeamResetState(): Partial<AppState> {
     pendingMemberProfile: null,
     pendingTeamSectionFocus: null,
     pendingReviewRequest: null,
+    taskDetailReviewActivationFailure: null,
     selectedTeamName: null,
     selectedTeamData: null,
     teamsProjectNavigationIntent: null,

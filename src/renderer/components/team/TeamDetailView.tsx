@@ -22,6 +22,7 @@ import {
 import {
   type TaskDetailIdentity,
   taskDetailKey,
+  useTaskDetailReviewRoute,
   useTaskDetailSession,
 } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
@@ -1499,8 +1500,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSidebarLogsHeight,
     applyDefaultSidebarLogsHeight,
     selectReviewFile,
-    pendingReviewRequest,
-    setPendingReviewRequest,
     summaryKnownTeammateCount,
     isTeamKnownOffline,
     teamSummaryColor,
@@ -1563,8 +1562,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       setSidebarLogsHeight: s.setSidebarLogsHeight,
       applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       selectReviewFile: s.selectReviewFile,
-      pendingReviewRequest: s.pendingReviewRequest,
-      setPendingReviewRequest: s.setPendingReviewRequest,
     }))
   );
 
@@ -1573,14 +1570,20 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (tabId) useStore.getState().setActiveTab(tabId);
   }, [tabId]);
   const requestOpenChangeReview = useCallback(
-    async (next: Omit<TeamReviewDialogState, 'open'>): Promise<boolean> => {
+    async (
+      next: Omit<TeamReviewDialogState, 'open'>,
+      isCurrent: () => boolean = () => true
+    ): Promise<boolean> => {
       const sessionId = buildChangeReviewLifecycleSessionId({ teamName, ...next });
-      const reserved = await requestChangeReviewLifecycleReservation({
-        hostId: reviewLifecycleHostId,
-        sessionId,
-        tabId: tabId ?? undefined,
-      });
-      if (!reserved) return false;
+      const reserved = await requestChangeReviewLifecycleReservation(
+        {
+          hostId: reviewLifecycleHostId,
+          sessionId,
+          tabId: tabId ?? undefined,
+        },
+        isCurrent
+      );
+      if (!reserved || !isCurrent()) return false;
       setReviewDialogState({ ...next, open: true });
       if (next.initialFilePath) selectReviewFile(next.initialFilePath);
       return true;
@@ -2334,19 +2337,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     });
   }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData, teamStopControl]);
 
-  // Pick up pending review request from GlobalTaskDetailDialog
-  useEffect(() => {
-    if (!isThisTabActive) return;
-    if (!pendingReviewRequest) return;
-    const request = pendingReviewRequest;
-    setPendingReviewRequest(null);
-    void requestOpenChangeReview({
-      mode: 'task',
-      taskId: request.taskId,
-      initialFilePath: request.filePath,
-      taskChangeRequestOptions: request.requestOptions,
-    });
-  }, [isThisTabActive, pendingReviewRequest, requestOpenChangeReview, setPendingReviewRequest]);
+  useTaskDetailReviewRoute({
+    teamName,
+    tabId,
+    active: isThisTabActive,
+    ready: data?.teamName === teamName,
+    openReview: requestOpenChangeReview,
+  });
 
   const pendingTeamSectionFocus = useStore((s) => s.pendingTeamSectionFocus);
   const clearTeamSectionFocus = useStore((s) => s.clearTeamSectionFocus);

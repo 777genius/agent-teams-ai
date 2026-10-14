@@ -18,6 +18,8 @@ import { useTaskDetailPresentation } from '../hooks/useTaskDetailPresentation';
 import { useTaskDetailSession } from '../hooks/useTaskDetailSession';
 import { TaskDetailContent } from '../ui/TaskDetailContent';
 
+import { TaskDetailReviewActivationFeedback } from './TaskDetailReviewActivationFeedback';
+
 import type { TaskDetailIdentity, TaskDetailReadPhase } from '../../contracts';
 import type { TeamTaskWithKanban } from '@shared/types';
 
@@ -48,8 +50,7 @@ export const TaskDetailPage = ({
     ensureTaskDetail,
     entry,
     openTaskDetailTab,
-    openTeamTab,
-    setPendingReviewRequest,
+    openTaskDetailReview,
     softDeleteTask,
     teamData,
     updateTaskOwner,
@@ -59,8 +60,7 @@ export const TaskDetailPage = ({
       ensureTaskDetail: state.ensureTaskDetail,
       entry: state.taskDetailById[taskDetailKey(identity)],
       openTaskDetailTab: state.openTaskDetailTab,
-      openTeamTab: state.openTeamTab,
-      setPendingReviewRequest: state.setPendingReviewRequest,
+      openTaskDetailReview: state.openTaskDetailReview,
       softDeleteTask: state.softDeleteTask,
       teamData: selectTeamDataForName(state, identity.teamName),
       updateTaskOwner: state.updateTaskOwner,
@@ -102,14 +102,15 @@ export const TaskDetailPage = ({
       if (!sessionController.isOriginCurrent()) return;
       const task = taskMap.get(taskId);
       if (!task) return;
-      setPendingReviewRequest({
-        taskId,
-        filePath,
-        requestOptions: buildTaskChangeRequestOptions(task),
-      });
-      openTeamTab(identity.teamName);
+      openTaskDetailReview(
+        { ...identityRef.current, taskId },
+        {
+          filePath,
+          requestOptions: buildTaskChangeRequestOptions(task),
+        }
+      );
     },
-    [identity.teamName, openTeamTab, sessionController, setPendingReviewRequest, taskMap]
+    [openTaskDetailReview, sessionController, taskMap]
   );
   const handleDeleteTask = useCallback(
     (taskId: string) => {
@@ -167,6 +168,7 @@ export const TaskDetailPage = ({
       data-task-detail-page
       data-origin-current={sessionController.isOriginCurrent() ? 'true' : 'false'}
     >
+      <TaskDetailReviewActivationFeedback identity={sessionController.identity} active={isActive} />
       {phase === 'deleted' || phase === 'unavailable' || phase === 'provisioning' ? (
         <PageStateBanner
           phase={phase}

@@ -79,14 +79,17 @@ async function closeActiveOwnerForTransition(): Promise<boolean> {
 }
 
 export function requestChangeReviewLifecycleReservation(
-  next: ChangeReviewLifecycleReservation
+  next: ChangeReviewLifecycleReservation,
+  isCurrent: () => boolean = () => true
 ): Promise<boolean> {
   return enqueueLifecycleOperation(async () => {
+    if (!isCurrent()) return false;
     if (activeOwner?.hostId === next.hostId && activeOwner.sessionId === next.sessionId) {
       reservation = next;
       return true;
     }
     if (!(await closeActiveOwnerForTransition())) return false;
+    if (!isCurrent()) return false;
     reservation = next;
     return true;
   });

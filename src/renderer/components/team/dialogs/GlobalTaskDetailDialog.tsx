@@ -33,7 +33,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     setTaskDetailSurfaceInterest,
     taskDetailEntry,
     openTeamTab,
-    setPendingReviewRequest,
+    openTaskDetailReview,
   } = useStore(
     useShallow((s) => {
       const detail =
@@ -48,7 +48,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
         setTaskDetailSurfaceInterest: s.setTaskDetailSurfaceInterest,
         taskDetailEntry: detail ? s.taskDetailById[taskDetailKey(detail)] : undefined,
         openTeamTab: s.openTeamTab,
-        setPendingReviewRequest: s.setPendingReviewRequest,
+        openTaskDetailReview: s.openTaskDetailReview,
       };
     })
   );
@@ -110,15 +110,18 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
       const targetTask = taskMap.get(viewTaskId);
       if (!targetTask) return;
-      setPendingReviewRequest({
-        taskId: viewTaskId,
-        filePath,
-        requestOptions: buildTaskChangeRequestOptions(targetTask),
-      });
-      closeGlobalTaskDetail();
-      openTeamTab(teamName);
+      if (
+        openTaskDetailReview(
+          { ...identity, taskId: viewTaskId },
+          {
+            filePath,
+            requestOptions: buildTaskChangeRequestOptions(targetTask),
+          }
+        )
+      )
+        closeGlobalTaskDetail();
     },
-    [closeGlobalTaskDetail, identity, openTeamTab, setPendingReviewRequest, taskMap, teamName]
+    [closeGlobalTaskDetail, identity, openTaskDetailReview, taskMap]
   );
 
   if (!globalTaskDetail) return null;

@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   TaskDetailContent,
   taskDetailKey,
+  TaskDetailReviewActivationFeedback,
   type TaskDetailSessionController,
   useTaskDetailPresentation,
 } from '@features/team-task-detail/renderer';
@@ -187,6 +188,11 @@ const LoadedTaskDetailDialog = ({
         }}
       >
         <LightboxLockProvider value={setLightboxLocked}>
+          <TaskDetailReviewActivationFeedback
+            identity={sessionController.identity}
+            active={open}
+            onAccepted={presentationClose}
+          />
           <TaskDetailContent
             key={taskDetailKey(sessionController.identity)}
             actions={presentation.actions}

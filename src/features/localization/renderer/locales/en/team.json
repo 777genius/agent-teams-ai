@@ -1125,6 +1125,9 @@
     "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
+    "navigation": {
+      "reviewRefused": "Changes could not be opened. The request is saved."
+    },
     "actions": {
       "cancel": "Cancel",
       "delete": "Delete",
