@@ -148,6 +148,7 @@ function createTestProviderStatus(
     statusMessage: null,
     detailMessage: null,
     models: [defaultModel],
+    defaultModel: null,
     modelAvailability: [],
     runtimeCapabilities: null,
     subscriptionRateLimits: null,

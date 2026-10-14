@@ -87,6 +87,7 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
     statusCheckErrorCode: undefined,
     modelCatalogRefreshState: 'ready',
     models: [defaultModel],
+    defaultModel: null,
     modelAvailability: [],
     modelCatalog: {
       schemaVersion: 1,
