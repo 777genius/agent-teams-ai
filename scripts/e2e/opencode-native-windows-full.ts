@@ -140,6 +140,20 @@ async function ready(app: App) {
     'owned application ready',
     180_000
   );
+  // Renderer readiness precedes Windows cleanup drainage. Observe the normal
+  // startup owner before submitting once; never retry cleanup or a launch.
+  await waitFor(
+    async () => {
+      const state = await app.call('getStartupCleanupState');
+      assert(
+        state === 'pending' || state === 'complete' || state === 'partial',
+        `Owned startup cleanup unavailable: ${state}`
+      );
+      return state === 'pending' ? null : true;
+    },
+    'owned startup cleanup drained',
+    180_000
+  );
 }
 async function provisioned(app: App, runId: string) {
   await waitFor(
