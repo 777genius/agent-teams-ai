@@ -1460,12 +1460,12 @@ function isVisibleInActiveTeamSurface(
     return false;
   }
   return state.paneLayout.panes.some((pane) => {
-    if (!pane.activeTabId) {
-      return false;
-    }
+    if (!pane.activeTabId) return false;
     const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
     return (
-      (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
+      activeTab !== undefined &&
+      (isOrdinaryTeamTab(activeTab) || activeTab.type === 'graph') &&
+      activeTab.teamName === teamName
     );
   });
 }

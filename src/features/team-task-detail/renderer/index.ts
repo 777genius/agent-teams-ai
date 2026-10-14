@@ -13,6 +13,7 @@ export * from './hooks/useTaskDetailPresentation';
 export * from './hooks/useTaskDetailReviewRoute';
 export * from './hooks/useTaskDetailSession';
 export * from './hooks/useTaskDetailTabLabel';
+export * from './hooks/useTeamTaskReferenceNavigation';
 export * from './ui/TaskDetailCommentImages';
 export * from './ui/TaskDetailContent';
 export type { TaskDetailHeadingProps } from './ui/TaskDetailHeader';

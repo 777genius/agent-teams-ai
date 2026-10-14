@@ -1,5 +1,7 @@
+import { getTaskDisplayId } from '@shared/utils/taskIdentity';
+
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { TaskRef } from '@shared/types';
+import type { TaskRef, TeamTask } from '@shared/types';
 
 const TASK_REF_REGEX = /#([A-Za-z0-9-]+)\b/g;
 const EXACT_TASK_REF_REGEX = /^#([A-Za-z0-9-]+)$/;
@@ -45,6 +47,25 @@ function resolveTaskSuggestion(candidates: MentionSuggestion[]): MentionSuggesti
   if (candidates.length === 1) return candidates[0];
 
   return null;
+}
+
+export type TaskReferenceClickKind = 'canonical' | 'display';
+export type TaskIdClickHandler = (
+  taskId: string,
+  targetTeamName?: string,
+  referenceKind?: TaskReferenceClickKind
+) => void;
+
+/** Callers supply only the originating or explicitly addressed team's tasks. */
+export function resolveTaskReferenceCandidate<T extends Pick<TeamTask, 'id' | 'displayId'>>(
+  tasks: readonly T[],
+  taskId: string,
+  kind?: TaskReferenceClickKind
+): T | undefined {
+  const canonical = tasks.find((task) => task.id === taskId);
+  if (kind === 'canonical') return canonical;
+  const display = tasks.find((task) => getTaskDisplayId(task) === taskId.trim());
+  return kind === 'display' ? (display ?? canonical) : (canonical ?? display);
 }
 
 export interface TaskReferenceMatch {
@@ -205,8 +226,8 @@ export function parseTaskLinkHref(href: string): ParsedTaskLinkHref | null {
     const displayId = search.get('display');
     return {
       taskId: decodeURIComponent(taskIdPart),
-      teamName: teamName ? decodeURIComponent(teamName) : undefined,
-      displayId: displayId ? decodeURIComponent(displayId) : undefined,
+      teamName: teamName ?? undefined,
+      displayId: displayId ?? undefined,
     };
   } catch {
     return null;

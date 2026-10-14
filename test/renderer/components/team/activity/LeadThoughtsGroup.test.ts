@@ -227,6 +227,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           memberColor: 'green',
           collapseMode: 'managed',
@@ -267,14 +268,23 @@ System-level bootstrap rules:
   it('reports only the concrete visible thought and observes a newly prepended thought independently', async () => {
     const observerCallbacks: IntersectionObserverCallback[] = [];
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({
-      x: 0, y: 0, width: 100, height: 100, top: 0, right: 100, bottom: 100, left: 0,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      left: 0,
       toJSON: () => ({}),
     }));
     vi.stubGlobal(
       'IntersectionObserver',
       class {
         constructor(callback: IntersectionObserverCallback) {
-          observerCallbacks.push((entries) => callback(entries, this as unknown as IntersectionObserver));
+          observerCallbacks.push((entries) =>
+            callback(entries, this as unknown as IntersectionObserver)
+          );
         }
         observe = vi.fn();
         disconnect = vi.fn();
@@ -291,6 +301,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [newer, older] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -302,7 +313,12 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
+        [
+          {
+            isIntersecting: true,
+            intersectionRect: { width: 100, height: 100 },
+          } as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
     });
@@ -312,6 +328,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [newest, newer, older] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -323,7 +340,12 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
+        [
+          {
+            isIntersecting: true,
+            intersectionRect: { width: 100, height: 100 },
+          } as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
     });
@@ -355,6 +377,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -392,6 +415,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -429,6 +453,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -462,6 +487,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -500,6 +526,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -510,12 +537,10 @@ System-level bootstrap rules:
     });
 
     expect(host.textContent).toContain('lead');
-    expect(
-      [...host.querySelectorAll('span')].map((node) => node.textContent)
-    ).toContain('lead');
-    expect(
-      [...host.querySelectorAll('span')].some((node) => node.textContent === 'max')
-    ).toBe(false);
+    expect([...host.querySelectorAll('span')].map((node) => node.textContent)).toContain('lead');
+    expect([...host.querySelectorAll('span')].some((node) => node.textContent === 'max')).toBe(
+      false
+    );
 
     await act(async () => {
       root.unmount();

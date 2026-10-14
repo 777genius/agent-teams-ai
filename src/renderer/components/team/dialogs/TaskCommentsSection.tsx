@@ -17,7 +17,11 @@ import { parseMessageReply } from '@renderer/utils/agentMessageFormatting';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
+import {
+  linkifyTaskIdsInMarkdown,
+  parseTaskLinkHref,
+  type TaskIdClickHandler,
+} from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
 import { CheckCircle2, Eye, File, Loader2, MessageSquare, Reply } from 'lucide-react';
@@ -54,7 +58,7 @@ interface TaskCommentsSectionProps {
   /** Called when the user clicks Reply on a comment (used when input is rendered externally). */
   onReply?: (author: string, text: string) => void;
   /** Called when a task ID link (e.g. #10) is clicked in comment text. */
-  onTaskIdClick?: (taskId: string, teamName?: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   /** Extra className on the outer comments container (e.g. negative margins for edge-to-edge). */
   containerClassName?: string;
   /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
@@ -302,7 +306,11 @@ export const TaskCommentsSection = ({
                                       const href = link.getAttribute('href');
                                       const parsed = href ? parseTaskLinkHref(href) : null;
                                       if (parsed?.taskId)
-                                        onTaskIdClick(parsed.taskId, parsed.teamName);
+                                        onTaskIdClick(
+                                          parsed.taskId,
+                                          parsed.teamName ?? teamName,
+                                          parsed.teamName ? 'canonical' : 'display'
+                                        );
                                     }
                                   }
                                 : undefined
@@ -321,6 +329,7 @@ export const TaskCommentsSection = ({
                               })()}
                               maxHeight="max-h-none"
                               bare
+                              taskOriginTeamName={teamName}
                             />
                           </span>
                         )}

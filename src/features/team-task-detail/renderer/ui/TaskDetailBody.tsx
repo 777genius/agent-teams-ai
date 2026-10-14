@@ -153,7 +153,12 @@ export const TaskDetailBody = ({
               event.stopPropagation();
               const href = link.getAttribute('href');
               const parsed = href ? parseTaskLinkHref(href) : null;
-              if (parsed?.taskId) actions.handleDependencyClick(parsed.taskId, parsed.teamName);
+              if (parsed?.taskId)
+                actions.handleDependencyClick(
+                  parsed.taskId,
+                  parsed.teamName,
+                  parsed.teamName ? 'canonical' : 'display'
+                );
             }}
           >
             <ExpandableContent collapsedHeight={200}>
@@ -164,6 +169,7 @@ export const TaskDetailBody = ({
                 )}
                 maxHeight="max-h-none"
                 bare
+                taskOriginTeamName={teamName}
               />
             </ExpandableContent>
             <Tooltip>
@@ -210,6 +216,7 @@ export const TaskDetailBody = ({
           teamName={teamName}
           taskId={currentTask.id}
           attachments={currentTask.attachments ?? []}
+          canMutate={sessionController.canEditNow}
         />
         {commentImageAttachments.length > 0 ? (
           <TaskDetailCommentImages
@@ -460,13 +467,16 @@ export const TaskDetailBody = ({
           badge={currentTask.historyEvents.length}
           contentClassName="pl-2.5"
           headerClassName={TASK_SECTION_HEADER_CLASS}
-          headerExtra={<TaskImplementationDurationBadge task={currentTask} />}
+          headerExtra={
+            <TaskImplementationDurationBadge task={currentTask} active={model.commentReadEnabled} />
+          }
           defaultOpen={false}
         >
           <WorkflowTimelineWithDuration
             task={currentTask}
             events={currentTask.historyEvents}
             memberColorMap={colorMap}
+            active={model.commentReadEnabled}
           />
         </CollapsibleTeamSection>
       ) : null}

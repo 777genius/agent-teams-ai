@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
+import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import {
   __getTeamScopedTransientStateForTests,
   __resetTeamSliceModuleStateForTests,
@@ -16,7 +17,6 @@ import {
   selectTeamDataForName,
   selectTeamMessages,
 } from '../../../src/renderer/store/slices/teamSlice';
-import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import { invalidateTeamLocalStateEpoch } from '../../../src/renderer/store/team/teamLocalStateEpoch';
 import {
   __resetTeamRefreshFanoutDiagnosticsForTests,
@@ -907,6 +907,50 @@ describe('teamSlice actions', () => {
         'provisioning-progress:provisioning:terminal-ready:fetchTeamAgentRuntime:scheduled'
       ]
     ).toBe(1);
+  });
+
+  it('does not demand team-wide provisioning refreshes from a visible task-detail tab', () => {
+    const store = createSliceStore();
+    const fetchTeams = vi.fn(async () => undefined);
+    const selectTeam = vi.fn(async () => undefined);
+    const refreshTeamData = vi.fn(async () => undefined);
+    const fetchMemberSpawnStatuses = vi.fn(async () => undefined);
+    const fetchTeamAgentRuntime = vi.fn(async () => undefined);
+    store.setState({
+      fetchTeams,
+      selectTeam,
+      refreshTeamData,
+      fetchMemberSpawnStatuses,
+      fetchTeamAgentRuntime,
+      selectedTeamName: 'my-team',
+      selectedTeamData: null,
+      paneLayout: createPaneLayout([
+        {
+          id: 'task-detail-my-team',
+          type: 'team',
+          teamName: 'my-team',
+          label: 'Task 1',
+          taskDetail: { contextId: 'local', taskId: '1' },
+        },
+      ]),
+    });
+
+    store.getState().onProvisioningProgress({
+      runId: 'run-task-only-ready',
+      teamName: 'my-team',
+      state: 'ready',
+      message: 'Ready',
+      startedAt: '2026-10-14T10:00:00.000Z',
+      updatedAt: '2026-10-14T10:00:01.000Z',
+    } as never);
+
+    expect(fetchTeams).toHaveBeenCalledTimes(1);
+    expect(selectTeam).not.toHaveBeenCalled();
+    expect(refreshTeamData).not.toHaveBeenCalled();
+    expect(fetchMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(fetchTeamAgentRuntime).not.toHaveBeenCalled();
+    expect(hoisted.getMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(hoisted.getTeamAgentRuntime).not.toHaveBeenCalled();
   });
 
   it('maps inbox verify failure to user-friendly text', async () => {

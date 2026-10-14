@@ -26,6 +26,7 @@ import {
   useTaskDetailEditorHost,
   useTaskDetailReviewRoute,
   useTaskDetailSession,
+  useTeamTaskReferenceNavigation,
 } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -2253,13 +2254,10 @@ export const TeamDetailView = memo(function TeamDetailView({
     [handleOpenTaskById]
   );
 
-  const handleTaskIdClick = useCallback(
-    (taskId: string) => {
-      const task =
-        taskMap.get(taskId) ?? data?.tasks.find((candidate) => candidate.displayId === taskId);
-      if (task) openTaskDetailDialog(task);
-    },
-    [data?.tasks, openTaskDetailDialog, taskMap]
+  const handleTaskIdClick = useTeamTaskReferenceNavigation(
+    teamName,
+    data?.tasks ?? [],
+    openTaskDetailDialog
   );
 
   const handleTaskOwnerChange = useCallback(

@@ -13,8 +13,11 @@ import {
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
 } from '@renderer/utils/memberHelpers';
+import {
+  resolveTaskReferenceCandidate,
+  type TaskIdClickHandler,
+} from '@renderer/utils/taskReferenceUtils';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { taskMatchesRef } from '@shared/utils/taskIdentity';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 
 import { useTaskDetailChanges } from './useTaskDetailChanges';
@@ -71,7 +74,7 @@ export interface TaskDetailPresentationActions {
     attachmentId: string,
     mimeType: string
   ) => Promise<string | null>;
-  handleDependencyClick: (taskId: string, teamName?: string) => void;
+  handleDependencyClick: TaskIdClickHandler;
   handleReply: (author: string, text: string) => void;
   markClarificationResolved: () => void;
   refreshChanges: () => void;
@@ -219,17 +222,14 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
     scrollContainer: rootElement,
   });
 
-  const handleDependencyClick = useCallback(
-    (taskId: string, referencedTeamName?: string): void => {
+  const handleDependencyClick = useCallback<TaskIdClickHandler>(
+    (taskId, referencedTeamName, kind = 'canonical'): void => {
       const targetTeamName = referencedTeamName?.trim() || teamName;
       let resolvedId = taskId;
-      if (targetTeamName === teamName && !taskMap.has(taskId)) {
-        for (const [fullId, candidate] of taskMap) {
-          if (taskMatchesRef(candidate, taskId)) {
-            resolvedId = fullId;
-            break;
-          }
-        }
+      if (targetTeamName === teamName) {
+        const candidate = resolveTaskReferenceCandidate([...taskMap.values()], taskId, kind);
+        if (!candidate && kind === 'display') return;
+        resolvedId = candidate?.id ?? taskId;
       }
       onTaskNavigate(resolvedId, targetTeamName);
     },

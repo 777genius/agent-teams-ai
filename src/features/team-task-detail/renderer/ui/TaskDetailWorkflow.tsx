@@ -12,7 +12,10 @@ import { Clock } from 'lucide-react';
 
 import type { TeamTaskWithKanban } from '@shared/types';
 
-function useTaskImplementationDurationClock(task: TeamTaskWithKanban): {
+function useTaskImplementationDurationClock(
+  task: TeamTaskWithKanban,
+  active: boolean
+): {
   duration: ReturnType<typeof calculateTaskImplementationDuration>;
   nowMs: number;
 } {
@@ -20,22 +23,24 @@ function useTaskImplementationDurationClock(task: TeamTaskWithKanban): {
   const duration = useMemo(() => calculateTaskImplementationDuration(task, nowMs), [task, nowMs]);
 
   useEffect(() => {
-    if (!duration.hasRunningInterval) return;
+    if (!active || !duration.hasRunningInterval) return;
     setNowMs(Date.now());
     const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
-  }, [duration.hasRunningInterval, task.id]);
+  }, [active, duration.hasRunningInterval, task.id]);
 
   return { duration, nowMs };
 }
 
 export const TaskImplementationDurationBadge = memo(function TaskImplementationDurationBadge({
   task,
+  active,
 }: {
   task: TeamTaskWithKanban;
+  active: boolean;
 }): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
-  const { duration } = useTaskImplementationDurationClock(task);
+  const { duration } = useTaskImplementationDurationClock(task, active);
   if (!shouldShowTaskImplementationDuration(duration)) return null;
 
   return (
@@ -57,12 +62,14 @@ export const WorkflowTimelineWithDuration = memo(function WorkflowTimelineWithDu
   task,
   events,
   memberColorMap,
+  active,
 }: {
   task: TeamTaskWithKanban;
   events: NonNullable<TeamTaskWithKanban['historyEvents']>;
   memberColorMap: Map<string, string>;
+  active: boolean;
 }): React.JSX.Element {
-  const { nowMs } = useTaskImplementationDurationClock(task);
+  const { nowMs } = useTaskImplementationDurationClock(task, active);
   return (
     <WorkflowTimeline
       events={events}

@@ -210,17 +210,19 @@ export function useTaskDetailSession({
   }, [identity, identityKey, isOriginCurrent, setIsDraftSaved]);
 
   const requireOwner = useCallback((): boolean => {
-    const current = useStore.getState().taskDetailSessionById[identityKey];
+    const state = useStore.getState();
+    const current = state.taskDetailSessionById[identityKey];
+    const currentTaskState = state.taskDetailById[identityKey]?.full;
     return (
       isOriginCurrent() &&
       current?.ownerSurfaceId === surfaceId &&
       current.ownerRevision === session.ownerRevision &&
-      useStore.getState().taskDetailById[identityKey]?.phase === 'ready' &&
-      currentTask?.id === identity.taskId &&
-      !currentTask.deletedAt &&
-      currentTask.status !== 'deleted'
+      state.taskDetailById[identityKey]?.phase === 'ready' &&
+      currentTaskState?.id === identity.taskId &&
+      !currentTaskState.deletedAt &&
+      currentTaskState.status !== 'deleted'
     );
-  }, [currentTask, identity, identityKey, isOriginCurrent, session.ownerRevision, surfaceId]);
+  }, [identity, identityKey, isOriginCurrent, session.ownerRevision, surfaceId]);
 
   const persistDraft = useCallback(
     (value: { text?: string; commentChips?: InlineChip[] }) => {

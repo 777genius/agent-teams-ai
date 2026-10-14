@@ -148,6 +148,7 @@ export const TaskCommentInput = ({
             <MarkdownViewer
               content={replyTo.text}
               bare
+              taskOriginTeamName={teamName}
               maxHeight={quoteExpanded ? 'max-h-48' : 'max-h-[3.75rem]'}
             />
           </div>

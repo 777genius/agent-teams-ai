@@ -3,12 +3,22 @@ import {
   createEncodedTaskReference,
   linkifyTaskIdsInMarkdown,
   parseTaskLinkHref,
+  resolveTaskReferenceCandidate,
 } from '@renderer/utils/taskReferenceUtils';
 import { describe, expect, it } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
 describe('taskReferenceUtils', () => {
+  it('never resolves a canonical ID through another task display ID', () => {
+    const tasks = [
+      { id: 'other', displayId: '1' },
+      { id: '1', displayId: '2' },
+    ];
+    expect(resolveTaskReferenceCandidate(tasks, '1', 'canonical')?.id).toBe('1');
+    expect(resolveTaskReferenceCandidate(tasks, '1', 'display')?.id).toBe('other');
+    expect(resolveTaskReferenceCandidate(tasks, '2', 'canonical')).toBeUndefined();
+  });
   it('consumes the stored reference paired with encoded metadata before a legacy duplicate', () => {
     const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
     const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
@@ -73,6 +83,23 @@ describe('taskReferenceUtils', () => {
   });
 
   describe('buildTaskLinkHref and parseTaskLinkHref', () => {
+    it('roundtrips literal percent, plus, and escape-like identity text exactly once', () => {
+      const ref: TaskRef = {
+        taskId: 'canonical%25+escape',
+        displayId: 'display%25+100%',
+        teamName: 'team%25+literal',
+      };
+
+      expect(buildTaskLinkHref(ref)).toBe(
+        'task://canonical%2525%2Bescape?team=team%2525%2Bliteral&display=display%2525%2B100%25'
+      );
+      expect(parseTaskLinkHref(buildTaskLinkHref(ref))).toEqual({
+        taskId: 'canonical%25+escape',
+        teamName: 'team%25+literal',
+        displayId: 'display%25+100%',
+      });
+    });
+
     it('roundtrips task ref', () => {
       const ref: TaskRef = {
         taskId: 'tid-1',

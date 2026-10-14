@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import {
   click,
@@ -17,6 +18,7 @@ interface Team {
 }
 interface Fixture {
   teams: Team[];
+  env: Record<string, string>;
 }
 
 async function waitTask(
@@ -32,6 +34,24 @@ async function waitTask(
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
   throw new Error('Timed out: ' + label + ' ' + JSON.stringify(task));
+}
+
+async function snapshotTaskAndAssets(
+  taskFile: string,
+  assetDir: string
+): Promise<{ task: string; assets: [string, string][] }> {
+  const task = await readFile(taskFile, 'utf8');
+  const names = await readdir(assetDir).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return [] as string[];
+    throw error;
+  });
+  const assets = await Promise.all(
+    names.sort().map(async (name) => {
+      const bytes = await readFile(join(assetDir, name));
+      return [name, bytes.toString('base64')] as [string, string];
+    })
+  );
+  return { task, assets };
 }
 
 /** Delete confirmation and existing Trash recovery are driven by their mounted controls. */
@@ -56,6 +76,25 @@ export async function runTaskDeletionCases(
     cdp,
     `window.__agentTeamsDevStore.getState().taskDetailSessionById[${keyB}]?.commentText===${JSON.stringify(durableDeleteDraft)}`,
     'B delete-surviving draft typed through UI'
+  );
+  const assetDirB = join(
+    fixture.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    'data',
+    'task-attachments',
+    teamB.teamName,
+    '1'
+  );
+  await cdp.evaluate(
+    `(()=>{const p=${pageB};const button=[...p.querySelectorAll('button')].find(b=>b.textContent.trim()==='Прикрепить изображение');const input=button?.previousElementSibling;if(!(input instanceof HTMLInputElement)||input.type!=='file')throw Error('Mounted task upload input missing');const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualIQAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([bytes],'TEST-before-delete.png',{type:'image/png'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`
+  );
+  await waitTask(
+    teamB.taskFile,
+    (task) => Array.isArray(task.attachments) && task.attachments.length === 1,
+    'B live task attachment persisted through mounted FileReader route'
+  );
+  assert.equal(
+    (await readdir(assetDirB)).filter((name) => name.endsWith('--TEST-before-delete.png')).length,
+    1
   );
 
   const beforeCancelA = await readFile(teamA.taskFile, 'utf8');
@@ -137,6 +176,28 @@ export async function runTaskDeletionCases(
     kind: 'confirm-delete-b-persisted-readonly-surfaces-and-draft',
     deletedB,
     deletedSurfaces,
+  });
+  const beforeAttachmentMutation = await snapshotTaskAndAssets(teamB.taskFile, assetDirB);
+  const deletedAttachmentRoutes = await cdp.evaluate(
+    `(()=>{const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualIQAAAABJRU5ErkJggg==';const file=(name)=>new File([Uint8Array.from(atob(png),c=>c.charCodeAt(0))],name,{type:'image/png'});const transfer=(name)=>{const dt=new DataTransfer();dt.items.add(file(name));return dt;};const roots=[${pageB},document.querySelector('[role="dialog"]')];const result=[];for(const root of roots){if(!root)throw Error('Deleted attachment surface missing');const img=root.querySelector('img[alt="TEST-before-delete.png"]');if(!img)throw Error('Deleted task preview/download attachment missing');const thumb=img.closest('div.group');const container=thumb?.parentElement?.parentElement;if(!container)throw Error('Task attachment container missing');const input=container.querySelector('input[type=file]');if(!(input instanceof HTMLInputElement))throw Error('Mounted upload input missing');const deleteButtons=[...container.querySelectorAll('button')].filter(b=>b.querySelector('.lucide-trash-2'));const deleteRoutes=deleteButtons.filter(b=>!b.disabled).length;for(const button of deleteButtons){button.disabled=false;button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));button.disabled=true;}input.disabled=false;input.files=transfer('TEST-after-file-input.png').files;input.dispatchEvent(new Event('change',{bubbles:true}));input.disabled=true;container.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:transfer('TEST-after-paste.png')}));container.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer('TEST-after-drop.png')}));result.push({previewRetained:true,deleteRoutes,uploadInputMounted:true});}return result;})()`
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 250));
+  const afterAttachmentMutation = await snapshotTaskAndAssets(teamB.taskFile, assetDirB);
+  assert.deepEqual(
+    afterAttachmentMutation,
+    beforeAttachmentMutation,
+    'Deleted B upload/paste/drop/delete routes changed task or asset state'
+  );
+  assert.deepEqual(deletedAttachmentRoutes, [
+    { previewRetained: true, deleteRoutes: 0, uploadInputMounted: true },
+    { previewRetained: true, deleteRoutes: 0, uploadInputMounted: true },
+  ]);
+  record({
+    kind: 'confirmed-delete-b-attachment-mutations-rejected',
+    routes: deletedAttachmentRoutes,
+    taskAndAssetStateUnchanged: true,
+    mountedUploadInputAndFileReaderGuarded: true,
+    previewRetained: true,
   });
 
   await cdp.evaluate(`window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()`);

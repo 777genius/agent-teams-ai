@@ -69,7 +69,10 @@ export const ReplyQuoteBlock = memo(
               className="relative mt-0.5 h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4"
               data-wide-reply-preview="true"
             >
-              <CompactMarkdownPreview content={linkifyTaskIdsInMarkdown(reply.originalText)} />
+              <CompactMarkdownPreview
+                content={linkifyTaskIdsInMarkdown(reply.originalText)}
+                taskOriginTeamName={teamName}
+              />
             </div>
           </div>
           <div className="pt-2" data-wide-reply-body="true">
@@ -78,6 +81,7 @@ export const ReplyQuoteBlock = memo(
               maxHeight={bodyMaxHeight}
               copyable
               bare
+              taskOriginTeamName={teamName}
             />
           </div>
         </div>
@@ -108,9 +112,13 @@ export const ReplyQuoteBlock = memo(
                 content={linkifyTaskIdsInMarkdown(reply.originalText)}
                 bare
                 maxHeight={quoteMaxHeight}
+                taskOriginTeamName={teamName}
               />
             ) : (
-              <CompactMarkdownPreview content={linkifyTaskIdsInMarkdown(reply.originalText)} />
+              <CompactMarkdownPreview
+                content={linkifyTaskIdsInMarkdown(reply.originalText)}
+                taskOriginTeamName={teamName}
+              />
             )}
           </div>
 
@@ -132,6 +140,7 @@ export const ReplyQuoteBlock = memo(
           maxHeight={bodyMaxHeight}
           copyable
           bare
+          taskOriginTeamName={teamName}
         />
       </div>
     );
