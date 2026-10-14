@@ -325,16 +325,6 @@ export async function runFullTeamSmoke({
     fs.mkdirSync(projectPath, { recursive: true, mode: 0o700 });
     projectPath = fs.realpathSync(projectPath);
     ownedProject = projectPath;
-    const projectConfigFile = sourceEnv.OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH;
-    if (projectConfigFile) {
-      if (!path.isAbsolute(projectConfigFile)) throw new Error('TEST project config must be absolute');
-      const config = JSON.parse(fs.readFileSync(projectConfigFile, 'utf8'));
-      if (!config || typeof config !== 'object' || Array.isArray(config))
-        throw new Error('TEST project config must be a JSON object');
-      fs.writeFileSync(path.join(projectPath, 'opencode.json'), JSON.stringify(config), {
-        flag: 'wx', mode: 0o600,
-      });
-    }
     const env = {
       ...Object.fromEntries(
         Object.entries(sourceEnv).filter(([key]) =>
@@ -381,6 +371,16 @@ export async function runFullTeamSmoke({
       repoRoot,
     });
     writeSmokeOwnership(env, 'FULL');
+    const projectConfigFile = sourceEnv.OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH;
+    if (projectConfigFile) {
+      if (!path.isAbsolute(projectConfigFile)) throw new Error('TEST project config must be absolute');
+      const config = JSON.parse(fs.readFileSync(projectConfigFile, 'utf8'));
+      if (!config || typeof config !== 'object' || Array.isArray(config))
+        throw new Error('TEST project config must be a JSON object');
+      fs.writeFileSync(path.join(projectPath, 'opencode.json'), JSON.stringify(config), {
+        flag: 'wx', mode: 0o600,
+      });
+    }
     assertOwnedSmokeEnvironment(env, 'FULL');
     log(
       `OpenCode full team proof: ${model}, project ${projectPath}, CLI ${env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH}`
