@@ -187,6 +187,17 @@ type StopObservation = {
 type PeerObservation = {
   matched: boolean[];
   routes: { from: string; to: string }[];
+  challengeDeliveries: {
+    member: 'alice' | 'bob';
+    state: 'message_absent' | 'status_unavailable' | 'ledger_absent' | 'observed';
+    attempted?: boolean;
+    accepted?: boolean | null;
+    delivered?: boolean;
+    acceptanceUnknown?: boolean | null;
+    responsePending?: boolean | null;
+    ledgerStatus?: string | null;
+    responseState?: string | null;
+  }[];
 };
 async function completed(
   app: App,
@@ -696,7 +707,7 @@ async function main() {
     await waitFor(
       async () => {
         let cursor: string | undefined;
-        const rows: { from: string; to?: string; text: string }[] = [];
+        const rows: { from: string; to?: string; text: string; messageId?: string }[] = [];
         const seen = new Set<string>();
         for (let page = 0; page < 20; page++) {
           const result = await app.call('getMessagesPage', { cursor, limit: 100 });
@@ -723,7 +734,66 @@ async function main() {
             const [from, to] = route.split(':');
             return { from, to };
           });
-        const observation = { matched, routes };
+        // Read only existing public delivery state for the two real challenges.
+        // Never relay, wake, resend or retain diagnostic text/provider data here.
+        const challengeDeliveries = await Promise.all(
+          (['alice', 'bob'] as const).map(async (member) => {
+            const recipient = member === 'alice' ? 'bob' : 'alice';
+            const original = rows.find(
+              (row) =>
+                row.from === member &&
+                row.to === recipient &&
+                row.text === `CHALLENGE:${nonce[member]}`
+            );
+            if (!original?.messageId) return { member, state: 'message_absent' as const };
+            try {
+              const status = await app.call('getOpenCodeRuntimeDeliveryStatus', original.messageId);
+              if (!status) return { member, state: 'ledger_absent' as const };
+              const ledgerStatus =
+                [
+                  'pending',
+                  'accepted',
+                  'responded',
+                  'unanswered',
+                  'retry_scheduled',
+                  'retried',
+                  'failed_retryable',
+                  'failed_terminal',
+                ].find((value) => value === status.ledgerStatus) ?? null;
+              const responseState =
+                [
+                  'not_observed',
+                  'pending',
+                  'prompt_not_indexed',
+                  'responded_tool_call',
+                  'responded_visible_message',
+                  'responded_non_visible_tool',
+                  'responded_plain_text',
+                  'permission_blocked',
+                  'tool_error',
+                  'empty_assistant_turn',
+                  'prompt_delivered_no_assistant_message',
+                  'session_stale',
+                  'session_error',
+                  'reconcile_failed',
+                ].find((value) => value === status.responseState) ?? null;
+              return {
+                member,
+                state: 'observed' as const,
+                attempted: status.attempted === true,
+                accepted: status.accepted ?? null,
+                delivered: status.delivered === true,
+                acceptanceUnknown: status.acceptanceUnknown ?? null,
+                responsePending: status.responsePending ?? null,
+                ledgerStatus,
+                responseState,
+              };
+            } catch {
+              return { member, state: 'status_unavailable' as const };
+            }
+          })
+        );
+        const observation = { matched, routes, challengeDeliveries };
         const encoded = JSON.stringify(observation);
         if (encoded !== previousPeerObservation) {
           proof.peerObservation = observation;

@@ -284,6 +284,32 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('informational system notice');
   });
 
+  it('preserves explicit and previously agreed peer responses without requiring unsolicited receipts', () => {
+    for (const inbound of [
+      'Please confirm this hand-off with the exact text READY:step-3.',
+      'The previously agreed review hand-off has arrived: review-step-3.',
+    ]) {
+      const text = buildOpenCodeRuntimeMessageText({
+        teamName: 'team-a',
+        laneId: 'primary',
+        memberName: 'bob',
+        cwd: '/repo',
+        from: 'alice',
+        replyRecipient: 'alice',
+        messageId: 'peer-original',
+        text: inbound,
+      });
+      expect(text).toContain(inbound);
+      expect(text).toContain('Never send unsolicited acknowledgement');
+      expect(text).toContain('explicitly requests a response');
+      expect(text).toContain('previously agreed response protocol applies');
+      expect(text).toContain('"to":"alice"');
+      expect(text).toContain('"relayOfMessageId":"peer-original"');
+      expect(text).not.toContain('Never send acknowledgement, confirmation');
+      expect(text).not.toContain('Required message_send argument envelope');
+    }
+  });
+
   it('adds the automated-notice rule to informational envelopes (no owner nudges)', async () => {
     const text = await deliveredPromptText('system');
 

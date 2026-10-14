@@ -140,6 +140,10 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       check();
       return api.teams.getMessagesPage(teamName, request);
     },
+    async getOpenCodeRuntimeDeliveryStatus(messageId: string) {
+      check();
+      return api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
+    },
     async sendMessage(request: Parameters<ElectronAPI['teams']['sendMessage']>[1]) {
       check();
       return api.teams.sendMessage(teamName, request);
