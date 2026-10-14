@@ -15,7 +15,7 @@ vi.mock('@main/utils/atomicWrite', async (importOriginal) => {
   return {
     ...original,
     atomicWriteAsync: async (...args: Parameters<typeof original.atomicWriteAsync>) => {
-      await writeGate();
+      await writeGate(...args);
       return original.atomicWriteAsync(...args);
     },
   };
@@ -38,6 +38,8 @@ import {
   writeTeamControlApiState,
 } from '@main/services/team/TeamControlApiState';
 
+const AUTH_TOKEN = 'sandbox-control-token-0123456789abcdef';
+
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {
@@ -52,14 +54,17 @@ function statePath() {
 
 async function expectPublished(baseUrl: string) {
   expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe(baseUrl);
+  expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBe(AUTH_TOKEN);
   expect(JSON.parse(await readFile(statePath(), 'utf8'))).toMatchObject({
     baseUrl,
+    authToken: AUTH_TOKEN,
     pid: process.pid,
   });
 }
 
 async function expectCleared() {
   expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+  expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBeUndefined();
   await expect(readFile(statePath(), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
 }
 
@@ -75,28 +80,40 @@ describe('Host control endpoint publication', () => {
     await removeDirectory(context.root, { recursive: true, force: true });
   });
 
+  it('rejects missing or malformed control credentials before publication', async () => {
+    await expect(writeTeamControlApiState('http://127.0.0.1:4568', 'short')).rejects.toThrow(
+      '32 to 512'
+    );
+    expect(writeGate).not.toHaveBeenCalled();
+  });
+
   it('publishes the actual listening endpoint only after disk publication succeeds', async () => {
     const gate = deferred();
     writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState(buildTeamControlApiBaseUrl(4569));
+    const pending = writeTeamControlApiState(buildTeamControlApiBaseUrl(4569), AUTH_TOKEN);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
     gate.resolve();
     await pending;
     await expectPublished('http://127.0.0.1:4569');
+    expect(writeGate).toHaveBeenLastCalledWith(
+      statePath(),
+      expect.any(String),
+      expect.objectContaining({ mode: 0o600, directoryMode: 0o700 })
+    );
   });
 
   it('revokes stale publication on failure and can subsequently restart on another port', async () => {
     writeGate.mockRejectedValueOnce(new Error('disk unavailable'));
-    await expect(writeTeamControlApiState('http://127.0.0.1:4570')).rejects.toThrow(
+    await expect(writeTeamControlApiState('http://127.0.0.1:4570', AUTH_TOKEN)).rejects.toThrow(
       'disk unavailable'
     );
     await expectCleared();
-    await writeTeamControlApiState('http://127.0.0.1:4571');
+    await writeTeamControlApiState('http://127.0.0.1:4571', AUTH_TOKEN);
     await expectPublished('http://127.0.0.1:4571');
   });
 
   it('revokes synchronously on stop, tolerates cleanup failure and repeated stop, and republishes on reopen', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4572');
+    await writeTeamControlApiState('http://127.0.0.1:4572', AUTH_TOKEN);
     removeGate.mockRejectedValueOnce(new Error('file inaccessible'));
     const stopping = clearTeamControlApiState();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
@@ -105,14 +122,14 @@ describe('Host control endpoint publication', () => {
     expect(JSON.parse(await readFile(statePath(), 'utf8')).baseUrl).toBe('http://127.0.0.1:4572');
     await clearTeamControlApiState();
     await expectCleared();
-    await writeTeamControlApiState('http://127.0.0.1:4573');
+    await writeTeamControlApiState('http://127.0.0.1:4573', AUTH_TOKEN);
     await expectPublished('http://127.0.0.1:4573');
   });
 
   it('orders write then clear so a late atomic write cannot restore the stopped file or env', async () => {
     const gate = deferred();
     writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState('http://127.0.0.1:4574');
+    const pending = writeTeamControlApiState('http://127.0.0.1:4574', AUTH_TOKEN);
     await vi.waitFor(() => expect(writeGate).toHaveBeenCalledOnce());
     const stopping = clearTeamControlApiState();
     // Give an incorrectly unqueued remove time to finish before releasing the write.
@@ -124,12 +141,12 @@ describe('Host control endpoint publication', () => {
   });
 
   it('orders clear then write so a late remove cannot delete the restarted endpoint file', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4575');
+    await writeTeamControlApiState('http://127.0.0.1:4575', AUTH_TOKEN);
     const gate = deferred();
     removeGate.mockReturnValueOnce(gate.promise);
     const stopping = clearTeamControlApiState();
     await vi.waitFor(() => expect(removeGate).toHaveBeenCalledOnce());
-    const restarting = writeTeamControlApiState('http://127.0.0.1:4576');
+    const restarting = writeTeamControlApiState('http://127.0.0.1:4576', AUTH_TOKEN);
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     gate.resolve();
     await Promise.all([stopping, restarting]);
@@ -141,11 +158,11 @@ describe('Host control endpoint publication', () => {
     const oldPath = statePath();
     const gate = deferred();
     writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState('http://127.0.0.1:4577');
+    const pending = writeTeamControlApiState('http://127.0.0.1:4577', AUTH_TOKEN);
     await vi.waitFor(() => expect(writeGate).toHaveBeenCalledOnce());
     const clearingOldRoot = clearTeamControlApiState();
     context.root = path.join(originalRoot, 'alternate-root');
-    const publishingNewRoot = writeTeamControlApiState('http://127.0.0.1:4578');
+    const publishingNewRoot = writeTeamControlApiState('http://127.0.0.1:4578', AUTH_TOKEN);
     try {
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
     } finally {

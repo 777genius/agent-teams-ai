@@ -32,7 +32,8 @@ function assertConnectionContext(value) {
 function readBinding() {
   const controlUrl = process.env.AGENT_TEAMS_BOUND_CONTROL_URL;
   const rawContext = process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON;
-  if (controlUrl === undefined && rawContext === undefined) return null;
+  const authToken = process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN;
+  if (controlUrl === undefined && rawContext === undefined && authToken === undefined) return null;
   try {
     const url = new URL(controlUrl);
     const claudeDir = process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
@@ -46,6 +47,8 @@ function readBinding() {
       url.search ||
       url.hash ||
       controlUrl !== url.origin ||
+      typeof authToken !== 'string' ||
+      !/^\S{32,512}$/.test(authToken) ||
       !claudeDir ||
       !path.isAbsolute(claudeDir)
     ) {
@@ -54,9 +57,13 @@ function readBinding() {
     const context = assertConnectionContext(JSON.parse(rawContext));
     return Object.freeze({
       controlUrl,
+      authToken,
       claudeDir: path.resolve(claudeDir),
       context,
-      headers: Object.freeze({ 'x-agent-teams-app-context': JSON.stringify(context) }),
+      headers: Object.freeze({
+        authorization: `Bearer ${authToken}`,
+        'x-agent-teams-app-context': JSON.stringify(context),
+      }),
     });
   } catch (error) {
     if (error.code === 'APP_CONTEXT_MISMATCH') throw error;
@@ -86,7 +93,7 @@ function boundControlBaseUrls(context, flags = {}) {
       throw mismatch('controlUrl differs from desktop binding');
     }
   }
-  return [binding.controlUrl];
+  return [{ baseUrl: binding.controlUrl, authToken: binding.authToken }];
 }
 
 function boundRequestOptions(baseUrl) {

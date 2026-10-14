@@ -25,14 +25,20 @@ function readControlApiState(context) {
     const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
     return typeof parsed?.baseUrl === 'string' && parsed.baseUrl.trim()
-      ? parsed.baseUrl.trim()
-      : '';
+      ? {
+          baseUrl: parsed.baseUrl.trim(),
+          authToken:
+            typeof parsed.authToken === 'string' && parsed.authToken.trim()
+              ? parsed.authToken.trim()
+              : '',
+        }
+      : null;
   } catch {
-    return '';
+    return null;
   }
 }
 
-function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
+function describeControlApiLookup(context, flags, stateFileTarget, envUrl) {
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
@@ -40,7 +46,9 @@ function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
   return [
     `explicit=${explicit ? 'set' : 'missing'}`,
     `stateFile=${
-      stateFileUrl ? 'set' : `missing:${path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE)}`
+      stateFileTarget
+        ? 'set'
+        : `missing:${path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE)}`
     }`,
     `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
   ].join(', ');
@@ -53,18 +61,38 @@ function resolveControlBaseUrls(context, flags = {}) {
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
     '';
-  const stateFileUrl = readControlApiState(context);
+  const stateFileTarget = readControlApiState(context);
   const envUrl =
     typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string'
       ? process.env.CLAUDE_TEAM_CONTROL_URL.trim()
       : '';
-  const candidates = [...new Set([explicit, stateFileUrl, envUrl].filter(Boolean))];
+  const explicitAuthToken =
+    (typeof flags.controlAuthToken === 'string' && flags.controlAuthToken.trim()) ||
+    (typeof flags['control-auth-token'] === 'string' && flags['control-auth-token'].trim()) ||
+    '';
+  const envAuthToken =
+    typeof process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN === 'string'
+      ? process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN.trim()
+      : '';
+  const candidates = [];
+  const seen = new Set();
+  for (const target of [
+    explicit ? { baseUrl: explicit, authToken: explicitAuthToken || envAuthToken } : null,
+    stateFileTarget,
+    envUrl ? { baseUrl: envUrl, authToken: envAuthToken } : null,
+  ]) {
+    if (!target) continue;
+    const key = `${target.baseUrl}\0${target.authToken}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push(target);
+  }
   if (candidates.length === 0) {
     throw new Error(
       `Team control API is unavailable. Start the desktop app team runtime first so it can validate member work sync reports. Lookup: ${describeControlApiLookup(
         context,
         flags,
-        stateFileUrl,
+        stateFileTarget,
         envUrl
       )}.`
     );
@@ -72,7 +100,8 @@ function resolveControlBaseUrls(context, flags = {}) {
   return candidates;
 }
 
-async function requestJson(baseUrl, pathname, options = {}) {
+async function requestJson(target, pathname, options = {}) {
+  const { baseUrl, authToken } = target;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), normalizeTimeoutMs(options.timeoutMs));
   try {
@@ -82,6 +111,7 @@ async function requestJson(baseUrl, pathname, options = {}) {
       method: options.method || 'GET',
       headers: {
         accept: 'application/json',
+        ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
         ...boundOptions.headers,
         ...(options.body ? { 'content-type': 'application/json' } : {}),
       },

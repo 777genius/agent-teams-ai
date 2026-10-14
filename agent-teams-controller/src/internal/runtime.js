@@ -54,9 +54,14 @@ function readControlApiState(context) {
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim()) {
-      return parsed.baseUrl.trim();
-    }
+    if (parsed && typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim())
+      return {
+        baseUrl: parsed.baseUrl.trim(),
+        authToken:
+          typeof parsed.authToken === 'string' && parsed.authToken.trim()
+            ? parsed.authToken.trim()
+            : '',
+      };
     return null;
   } catch (error) {
     if (error && error.code === 'ENOENT') {
@@ -70,14 +75,14 @@ function uniqueNonEmpty(items) {
   return [...new Set(items.filter((item) => typeof item === 'string' && item.trim()))];
 }
 
-function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
+function describeControlApiLookup(context, flags, stateFileTarget, envUrl) {
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
     '';
   return [
     `explicit=${explicit ? 'set' : 'missing'}`,
-    `stateFile=${stateFileUrl ? 'set' : `missing:${getControlApiStatePath(context)}`}`,
+    `stateFile=${stateFileTarget ? 'set' : `missing:${getControlApiStatePath(context)}`}`,
     `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
   ].join(', ');
 }
@@ -89,19 +94,39 @@ function resolveControlBaseUrls(context, flags = {}) {
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
     '';
-  const stateFileUrl = readControlApiState(context) || '';
+  const stateFileTarget = readControlApiState(context);
   const envUrl =
     (typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string' &&
       process.env.CLAUDE_TEAM_CONTROL_URL.trim()) ||
     '';
-  const candidates = uniqueNonEmpty([explicit, stateFileUrl, envUrl]);
+  const explicitAuthToken =
+    (typeof flags.controlAuthToken === 'string' && flags.controlAuthToken.trim()) ||
+    (typeof flags['control-auth-token'] === 'string' && flags['control-auth-token'].trim()) ||
+    '';
+  const envAuthToken =
+    (typeof process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN === 'string' &&
+      process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN.trim()) ||
+    '';
+  const candidates = [];
+  const seen = new Set();
+  for (const target of [
+    explicit ? { baseUrl: explicit, authToken: explicitAuthToken || envAuthToken } : null,
+    stateFileTarget,
+    envUrl ? { baseUrl: envUrl, authToken: envAuthToken } : null,
+  ]) {
+    if (!target) continue;
+    const key = `${target.baseUrl}\0${target.authToken}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push(target);
+  }
 
   if (candidates.length === 0) {
     throw new Error(
       `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
         context,
         flags,
-        stateFileUrl,
+        stateFileTarget,
         envUrl
       )}.`
     );
@@ -133,7 +158,8 @@ function isRetryableStatusCode(statusCode) {
   return statusCode === 404 || statusCode === 408 || statusCode === 429 || statusCode >= 500;
 }
 
-async function requestJson(baseUrl, pathname, options = {}) {
+async function requestJson(target, pathname, options = {}) {
+  const { baseUrl, authToken } = target;
   const controller = new AbortController();
   const timeoutMs = normalizeTimeoutMs(options.timeoutMs || 10000);
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -145,6 +171,7 @@ async function requestJson(baseUrl, pathname, options = {}) {
       method: options.method || 'GET',
       headers: {
         accept: 'application/json',
+        ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
         ...boundOptions.headers,
         ...(options.body ? { 'content-type': 'application/json' } : {}),
       },

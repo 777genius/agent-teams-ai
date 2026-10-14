@@ -26,6 +26,9 @@ services:
       - CLAUDE_ROOT=/data/.claude
       - HOST=0.0.0.0
       - PORT=3456
+      # Optional stable bearer token (minimum 32 characters). If omitted, the
+      # authenticated URL is generated at startup and printed in container logs.
+      - AGENT_TEAMS_HTTP_AUTH_TOKEN=${AGENT_TEAMS_HTTP_AUTH_TOKEN:-}
     restart: unless-stopped
     # Uncomment for maximum network isolation (no outbound connections):
     # network_mode: "none"

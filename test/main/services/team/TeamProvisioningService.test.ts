@@ -1426,6 +1426,7 @@ describe('TeamProvisioningService', () => {
         getAppVersion: () => 'test',
         isLocalContext: () => true,
         getControlUrl: () => 'http://127.0.0.1:41000',
+        getControlAuthToken: () => 'sandbox-control-token-0123456789abcdef',
         startControl: async () => undefined,
         reconfigureRoot: async () => undefined,
         httpEnabled: true,
