@@ -53,7 +53,7 @@ describe('TaskAttachments mutation gate', () => {
     let finishRead!: () => void;
     const readFinished = new Promise<void>((resolve) => { finishRead = resolve; });
     const readAsDataURL = FileReader.prototype.readAsDataURL;
-    vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (file) {
+    vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (this: FileReader, file) {
       this.addEventListener('loadend', finishRead, { once: true });
       readAsDataURL.call(this, file);
     });
