@@ -15,6 +15,11 @@ import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
 
 const execute = promisify(execFile);
+// The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
+const BUNDLED_MANIFEST_MAX_BYTES = 32 * 1024 * 1024;
+const BUNDLED_MANIFEST_MAX_ENTRIES = 131_072;
+let preproofStage = 'arguments';
+const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
 type Identity = { pid: number; birth: string; executable: string; command: string };
 const ps = async (script: string) =>
@@ -57,10 +62,12 @@ const same = (a: Identity | null, b: Identity) =>
 
 async function seedSelectedAuth(file: string, provider: string, directory: string) {
   // Read only the explicitly supplied local file; never emit its content/errors.
+  preproofStage = 'auth_directory';
   await mkdir(directory, { recursive: true });
   await protectWindowsTestDirectory(directory);
   let selected: unknown;
   try {
+    preproofStage = 'auth_read';
     assert(/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(file), 'Explicit TEST auth custody required');
     const stat = await lstat(file);
     assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
@@ -77,6 +84,7 @@ async function seedSelectedAuth(file: string, provider: string, directory: strin
   } catch {
     throw new Error('Selected local TEST auth is invalid');
   }
+  preproofStage = 'auth_write';
   await writeFile(path.join(directory, 'auth.json'), JSON.stringify({ [provider]: selected }), {
     flag: 'wx',
   });
@@ -212,33 +220,42 @@ async function commandEvidence(
   );
 }
 async function bundledRuntime(executable: string, manifestFile: string) {
+  preproofStage = 'manifest_path';
   assert(
     manifestFile && path.isAbsolute(manifestFile),
     'Qualified bundled runtime manifest required'
   );
+  preproofStage = 'manifest_stat';
   const stat = await lstat(manifestFile);
-  assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
+  preproofFacts.manifestBytes = stat.size;
+  assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= BUNDLED_MANIFEST_MAX_BYTES);
+  preproofStage = 'manifest_read';
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as {
     sdkSha: string;
     files: Record<string, string>;
   };
+  preproofStage = 'manifest_schema';
   assert(
     /^[a-f0-9]{40}$/.test(manifest.sdkSha) &&
       manifest.files &&
       typeof manifest.files === 'object' &&
       !Array.isArray(manifest.files)
   );
+  preproofStage = 'runtime_path';
   const base = path.join(path.dirname(await realpath(executable)), 'resources', 'runtime');
   assert.equal((await realpath(base)).toLowerCase(), base.toLowerCase());
   const entries = Object.entries(manifest.files);
+  preproofStage = 'manifest_entries';
+  preproofFacts.manifestEntries = entries.length;
   assert(
     entries.length > 0 &&
-      entries.length <= 4096 &&
+      entries.length <= BUNDLED_MANIFEST_MAX_ENTRIES &&
       manifest.files['COMMIT_SHA'] &&
       manifest.files['claude-multimodel.exe'],
     'Complete bundled executable provenance required'
   );
   const digests: Record<string, string> = {};
+  preproofStage = 'runtime_hashes';
   for (const [relative, expected] of entries) {
     assert(
       relative &&
@@ -258,6 +275,7 @@ async function bundledRuntime(executable: string, manifestFile: string) {
     assert.equal(observed, expected, 'Bundled runtime byte mismatch');
     digests[relative] = observed;
   }
+  preproofStage = 'runtime_commit';
   assert.equal((await readFile(path.join(base, 'COMMIT_SHA'), 'utf8')).trim(), manifest.sdkSha);
   return { bundledSdkSha: manifest.sdkSha, runtimeDigests: digests };
 }
@@ -288,8 +306,11 @@ async function main() {
   for (const file of [executable, binary, authFile]) assert(path.isAbsolute(file));
   assert(sdk === 'bundled' || path.isAbsolute(sdk));
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model));
+  preproofStage = 'desktop_prepare';
   const desktop = await prepareNativeDesktop();
+  preproofStage = 'desktop_private_acl';
   await protectWindowsTestDirectory(desktop.root);
+  preproofStage = 'selected_paths';
   if (sdk !== 'bundled') desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
   desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = await realpath(binary);
   await seedSelectedAuth(
@@ -297,12 +318,14 @@ async function main() {
     model.split('/')[0],
     path.join(desktop.env.XDG_DATA_HOME!, 'opencode')
   );
+  preproofStage = 'version_read';
   const measured = await execute(desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH!, ['--version'], {
     env: desktop.env,
     cwd: desktop.root,
     timeout: 20_000,
     maxBuffer: 4096,
   });
+  preproofStage = 'version_validate';
   const version = /^(?:opencode v)?(\d+\.\d+\.\d+)$/.exec(measured.stdout.trim())?.[1];
   assert(
     version && (/^1\./.test(version) || ['2.0.0', '2.0.21'].includes(version)),
@@ -340,7 +363,9 @@ async function main() {
     proof.stage = stage;
     await writeFile(proofFile, JSON.stringify(proof, null, 2));
   };
+  preproofStage = 'proof_write';
   await checkpoint('startup');
+  preproofStage = 'scenario';
   let app = await desktop.launch(executable);
   let teamActive = false;
   const heldProcesses: Identity[] = [];
@@ -722,7 +747,19 @@ async function main() {
   await checkpoint('complete');
   console.log(`Windows full proof: ${proofFile}`);
 }
-void main().catch(() => {
-  console.error('Windows full qualification failed; preserve TEST state');
+void main().catch((error: unknown) => {
+  let errno = 'none';
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    /^E[A-Z0-9_]{1,48}$/.test(error.code)
+  )
+    errno = error.code;
+  console.error(
+    'Windows full qualification failed; preserve TEST state',
+    JSON.stringify({ stage: preproofStage, errno, ...preproofFacts })
+  );
   process.exitCode = 1;
 });
