@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
@@ -9,32 +9,19 @@ import { useNewItemKeys } from '@renderer/components/team/activity/useNewItemKey
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
-import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
-import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
-import { serializeChipsWithText } from '@renderer/types/inlineChip';
-import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessageFormatting';
+import { parseMessageReply } from '@renderer/utils/agentMessageFormatting';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
-import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import {
-  extractTaskRefsFromText,
-  linkifyTaskIdsInMarkdown,
-  parseTaskLinkHref,
-  stripEncodedTaskReferenceMetadata,
-} from '@renderer/utils/taskReferenceUtils';
-import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, Eye, File, Loader2, MessageSquare, Reply, Send, X } from 'lucide-react';
+import { CheckCircle2, Eye, File, Loader2, MessageSquare, Reply } from 'lucide-react';
 
-import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskAttachmentMeta, TaskComment } from '@shared/types';
 
 /**
@@ -61,8 +48,6 @@ interface TaskCommentsSectionProps {
   members: ResolvedTeamMember[];
   /** When true, the "Comments" header is not rendered (e.g. inside a collapsible section). */
   hideHeader?: boolean;
-  /** When true, the comment input area is not rendered (useful when input is rendered externally). */
-  hideInput?: boolean;
   /** Called when the user clicks Reply on a comment (used when input is rendered externally). */
   onReply?: (author: string, text: string) => void;
   /** Called when a task ID link (e.g. #10) is clicked in comment text. */
@@ -86,7 +71,6 @@ export const TaskCommentsSection = ({
   comments,
   members,
   hideHeader = false,
-  hideInput = false,
   onReply,
   onTaskIdClick,
   containerClassName,
@@ -95,12 +79,8 @@ export const TaskCommentsSection = ({
   registerCommentForViewport,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const addTaskComment = useStore((s) => s.addTaskComment);
-  const addingComment = useStore((s) => s.addingComment);
-  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const commentsRef = useMarkCommentsRead(teamName, taskId, comments);
 
-  const [replyTo, setReplyTo] = useState<{ author: string; text: string } | null>(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COMMENTS);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
@@ -112,15 +92,11 @@ export const TaskCommentsSection = ({
   if (resetKey !== prevResetKey) {
     setPrevResetKey(resetKey);
     setVisibleCount(INITIAL_VISIBLE_COMMENTS);
-    setReplyTo(null);
     setPreviewImageUrl(null);
   }
 
-  const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
-  const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
-  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const teamNamesForLinkify = useMemo(
     () => teamMentionSuggestions.map((t) => t.name),
     [teamMentionSuggestions]
@@ -160,24 +136,6 @@ export const TaskCommentsSection = ({
     resetKey: `${teamName}:${taskId}`,
   });
 
-  const mentionSuggestions = useMemo<MentionSuggestion[]>(
-    () =>
-      members.map((m) => ({
-        id: m.name,
-        name: m.name,
-        subtitle: formatAgentRole(m.role) ?? formatAgentRole(m.agentType) ?? undefined,
-        color: colorMap.get(m.name),
-      })),
-    [members, colorMap]
-  );
-
-  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
-  const remaining = MAX_TEXT_LENGTH - trimmed.length;
-  const canSubmit =
-    (trimmed.length > 0 || chipDraft.chips.length > 0) &&
-    trimmed.length <= MAX_TEXT_LENGTH &&
-    !addingComment;
-
   useEffect(() => {
     if (!focusCommentId) return;
     const target = document.getElementById(getTaskCommentElementId(taskId, focusCommentId));
@@ -193,31 +151,6 @@ export const TaskCommentsSection = ({
       { once: true }
     );
   }, [focusCommentId, taskId, visibleComments]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
-    try {
-      const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
-      const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, serialized) : serialized;
-      const taskRefs = extractTaskRefsFromText(draft.value, taskSuggestions);
-      await addTaskComment(teamName, taskId, { text, taskRefs });
-      draft.clearDraft();
-      chipDraft.clearChipDraft();
-      setReplyTo(null);
-    } catch {
-      // Error is stored in addCommentError via store
-    }
-  }, [
-    canSubmit,
-    addTaskComment,
-    teamName,
-    taskId,
-    trimmed,
-    draft,
-    chipDraft,
-    replyTo,
-    taskSuggestions,
-  ]);
 
   return (
     <div ref={commentsRef}>
@@ -314,11 +247,7 @@ export const TaskCommentsSection = ({
                             const replyText = stripAgentBlocks(
                               parseMessageReply(comment.text)?.replyText ?? comment.text
                             );
-                            if (onReply) {
-                              onReply(comment.author, replyText);
-                            } else {
-                              setReplyTo({ author: comment.author, text: replyText });
-                            }
+                            onReply?.(comment.author, replyText);
                           }}
                         >
                           <Reply size={11} />
@@ -430,86 +359,6 @@ export const TaskCommentsSection = ({
           alt={t('taskDetail.comments.attachments.previewAlt')}
         />
       ) : null}
-
-      {!hideInput && (
-        <>
-          {replyTo ? (
-            <div className="mb-2 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2">
-              <div className="min-w-0 flex-1">
-                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-medium text-[var(--color-text-muted)]">
-                  {t('taskDetail.comments.replyingTo')}
-                  <MemberBadge name={replyTo.author} color={colorMap.get(replyTo.author)} />
-                </div>
-                <div className="line-clamp-3 text-[11px] text-[var(--color-text-muted)]">
-                  {replyTo.text}
-                </div>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
-                    onClick={() => setReplyTo(null)}
-                  >
-                    <X size={12} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {t('taskDetail.comments.actions.cancelReply')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          ) : null}
-
-          <div className="relative">
-            <MentionableTextarea
-              id={`task-comment-${taskId}`}
-              placeholder={t('taskDetail.comments.input.placeholder')}
-              value={draft.value}
-              onValueChange={draft.setValue}
-              suggestions={mentionSuggestions}
-              teamSuggestions={teamMentionSuggestions}
-              taskSuggestions={taskSuggestions}
-              projectPath={projectPath}
-              chips={chipDraft.chips}
-              onFileChipInsert={chipDraft.addChip}
-              onChipRemove={chipDraft.removeChip}
-              onModEnter={() => void handleSubmit()}
-              minRows={2}
-              maxRows={8}
-              maxLength={MAX_TEXT_LENGTH}
-              disabled={addingComment}
-              cornerAction={
-                <button
-                  type="button"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={!canSubmit}
-                  onClick={() => void handleSubmit()}
-                >
-                  <Send size={12} />
-                  {t('taskDetail.comments.actions.comment')}
-                </button>
-              }
-              footerRight={
-                <div className="flex items-center gap-2">
-                  {remaining < 200 ? (
-                    <span
-                      className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-                    >
-                      {t('taskDetail.comments.input.charsLeft', { count: remaining })}
-                    </span>
-                  ) : null}
-                  {draft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">
-                      {t('tasks.createTask.saved')}
-                    </span>
-                  ) : null}
-                </div>
-              }
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 };

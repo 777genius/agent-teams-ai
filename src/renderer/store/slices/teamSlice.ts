@@ -3900,17 +3900,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:updateTaskOwner', () =>
       api.teams.updateTaskOwner(teamName, taskId, owner)
     );
-    await get().refreshTeamData(teamName);
+    if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+    }
   },
 
   updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:updateTaskFields', () =>
       api.teams.updateTaskFields(teamName, taskId, fields)
     );
-    await get().refreshTeamData(teamName);
+    if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+    }
   },
 
   addTaskRelationship: async (teamName, taskId, targetId, type) => {
@@ -3928,11 +3936,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   setTaskNeedsClarification: async (teamName, taskId, value) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:setTaskClarification', () =>
       api.teams.setTaskClarification(teamName, taskId, value)
     );
-    await get().refreshTeamData(teamName);
-    await get().fetchAllTasks();
+    if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      if (isTeamRequestScopeCurrent(get, teamName, requestScope)) await get().fetchAllTasks();
+    }
   },
 
   saveTaskAttachment: async (teamName, taskId, file) => {
@@ -3977,6 +3989,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   addTaskComment: async (teamName, taskId, request) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     set({ addingComment: true, addCommentError: null });
     try {
       const comment = await unwrapIpc('team:addTaskComment', () =>
@@ -3992,8 +4006,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           errorClass: 'none',
         });
       }
-      set({ addingComment: false });
-      await get().refreshTeamData(teamName);
+      if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+        set({ addingComment: false, addCommentError: null });
+        await get().refreshTeamData(teamName);
+      }
       return comment;
     } catch (error) {
       if (request.attachments?.length) {
@@ -4007,7 +4023,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         });
       }
       const msg = error instanceof Error ? error.message : 'Failed to add comment';
-      set({ addingComment: false, addCommentError: msg });
+      if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+        set({ addingComment: false, addCommentError: msg });
+      }
       throw error;
     }
   },
@@ -4079,9 +4097,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   softDeleteTask: async (teamName: string, taskId: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:softDeleteTask', () => api.teams.softDeleteTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    await get().fetchDeletedTasks(teamName);
+    if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+        await get().fetchDeletedTasks(teamName);
+    }
   },
 
   restoreTask: async (teamName: string, taskId: string) => {

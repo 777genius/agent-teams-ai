@@ -321,6 +321,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
         }
       }
       if (contextChanged) {
+        get().retireTaskDetailSessionWork();
         invalidateContextScopedRequestEpoch();
       }
 
@@ -390,6 +391,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
     state = get();
     if (targetContextId === state.activeContextId || state.isContextSwitching) return;
 
+    get().retireTaskDetailSessionWork();
     set({
       isContextSwitching: true,
       targetContextId,

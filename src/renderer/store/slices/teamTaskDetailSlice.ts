@@ -1,19 +1,26 @@
 import {
   applyTaskDetailCompact,
   applyTaskDetailReadStart,
+  beginTaskDetailPendingAttachment,
   beginTaskDetailSave,
   beginTaskDetailSubmit,
   claimTaskDetailOwner,
   commitTaskDetailFull,
+  completeTaskDetailPendingAttachment,
   completeTaskDetailSave,
   completeTaskDetailSubmit,
   createTaskDetailReadEntry,
   EMPTY_TASK_DETAIL_SESSION,
+  failTaskDetailSave,
+  failTaskDetailSubmit,
+  hydrateTaskDetailDraft,
+  ignoreTaskDetailPendingAttachment,
   invalidateTaskDetailFull,
   isValidTaskDetailIdentity,
   normalizeTaskDetailIdentity,
   type OpenTaskDetailTabResult,
   releaseTaskDetailOwner,
+  retireTaskDetailSessionWork,
   type TaskDetailEditPart,
   type TaskDetailIdentity,
   taskDetailKey,
@@ -24,7 +31,7 @@ import {
   type TaskDetailSession,
   touchTaskDetailPart,
   transferTaskDetailOwner,
-} from '@features/team-task-detail/renderer';
+} from '@features/team-task-detail/core';
 import { api } from '@renderer/api';
 import { isTaskDetailTab } from '@renderer/types/tabs';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
@@ -56,6 +63,11 @@ export interface TeamTaskDetailSlice {
   invalidateTaskDetailSource: (identity?: TaskDetailIdentity) => void;
   invalidateTaskDetailTeamSource: (contextId: string, teamName: string, taskId?: string) => void;
   clearTaskDetailTeamWork: (contextId: string, teamName: string) => void;
+  retireTaskDetailSessionWork: () => void;
+  hydrateTaskDetailSessionDraft: (
+    identity: TaskDetailIdentity,
+    draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
+  ) => void;
   updateTaskDetailSession: (
     identity: TaskDetailIdentity,
     update: Partial<TaskDetailSession>
@@ -73,6 +85,11 @@ export interface TeamTaskDetailSlice {
   ) => void;
   beginTaskDetailSubmitSession: (identity: TaskDetailIdentity) => number;
   completeTaskDetailSubmitSession: (identity: TaskDetailIdentity, revision: number) => void;
+  failTaskDetailSubmitSession: (
+    identity: TaskDetailIdentity,
+    revision: number,
+    error: string
+  ) => void;
   beginTaskDetailSaveSession: (
     identity: TaskDetailIdentity,
     parts: readonly TaskDetailSavePart[]
@@ -81,6 +98,21 @@ export interface TeamTaskDetailSlice {
     identity: TaskDetailIdentity,
     revision: TaskDetailSaveRevision
   ) => void;
+  failTaskDetailSaveSession: (
+    identity: TaskDetailIdentity,
+    revision: TaskDetailSaveRevision,
+    error: string
+  ) => void;
+  beginTaskDetailPendingAttachmentSession: (
+    identity: TaskDetailIdentity,
+    attachment: TaskDetailSession['pendingAttachments'][number]
+  ) => void;
+  completeTaskDetailPendingAttachmentSession: (
+    identity: TaskDetailIdentity,
+    id: string,
+    attachment: TaskDetailSession['pendingAttachments'][number]
+  ) => void;
+  ignoreTaskDetailPendingAttachmentSession: (identity: TaskDetailIdentity, id: string) => void;
   claimTaskDetailOwner: (identity: TaskDetailIdentity, surfaceId: string) => void;
   transferTaskDetailOwner: (
     identity: TaskDetailIdentity,
@@ -239,6 +271,33 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
+  retireTaskDetailSessionWork: () => {
+    set((state) => ({
+      taskDetailSessionById: Object.fromEntries(
+        Object.entries(state.taskDetailSessionById).map(([key, session]) => [
+          key,
+          retireTaskDetailSessionWork(session),
+        ])
+      ),
+    }));
+  },
+
+  hydrateTaskDetailSessionDraft: (rawIdentity, draft) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    if (!isValidTaskDetailIdentity(identity) || identity.contextId !== get().activeContextId)
+      return;
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
+      const next = hydrateTaskDetailDraft(current, draft);
+      return next === current
+        ? state
+        : {
+            taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next },
+          };
+    });
+  },
+
   updateTaskDetailSession: (rawIdentity, update) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
@@ -314,6 +373,21 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
+  failTaskDetailSubmitSession: (rawIdentity, revision, error) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailSessionById[key];
+      if (!current) return state;
+      return {
+        taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: failTaskDetailSubmit(current, revision, error),
+        },
+      };
+    });
+  },
+
   beginTaskDetailSaveSession: (rawIdentity, parts) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
@@ -337,6 +411,65 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
         taskDetailSessionById: {
           ...state.taskDetailSessionById,
           [key]: completeTaskDetailSave(current, revision),
+        },
+      };
+    });
+  },
+
+  failTaskDetailSaveSession: (rawIdentity, revision, error) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailSessionById[key];
+      if (!current) return state;
+      return {
+        taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: failTaskDetailSave(current, revision, error),
+        },
+      };
+    });
+  },
+
+  beginTaskDetailPendingAttachmentSession: (rawIdentity, attachment) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const key = taskDetailKey(identity);
+    set((state) => ({
+      taskDetailSessionById: {
+        ...state.taskDetailSessionById,
+        [key]: beginTaskDetailPendingAttachment(
+          state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION,
+          attachment
+        ),
+      },
+    }));
+  },
+
+  completeTaskDetailPendingAttachmentSession: (rawIdentity, id, attachment) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailSessionById[key];
+      if (!current) return state;
+      return {
+        taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: completeTaskDetailPendingAttachment(current, id, attachment),
+        },
+      };
+    });
+  },
+
+  ignoreTaskDetailPendingAttachmentSession: (rawIdentity, id) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailSessionById[key];
+      if (!current) return state;
+      return {
+        taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: ignoreTaskDetailPendingAttachment(current, id),
         },
       };
     });
@@ -390,6 +523,22 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   openTaskDetailTab: (rawIdentity) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     if (!isValidTaskDetailIdentity(identity)) return null;
+    if (identity.contextId !== get().activeContextId) return null;
+    const confirmActivation = (tabId: string, created: boolean): OpenTaskDetailTabResult | null => {
+      const current = get();
+      const pane = current.paneLayout.panes.find((candidate) =>
+        candidate.tabs.some((tab) => tab.id === tabId)
+      );
+      if (
+        !pane ||
+        pane.activeTabId !== tabId ||
+        current.paneLayout.focusedPaneId !== pane.id ||
+        current.activeTabId !== tabId
+      ) {
+        return null;
+      }
+      return { tabId, paneId: pane.id, created };
+    };
     const state = get();
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find(
@@ -401,10 +550,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     );
     if (existing) {
       state.setActiveTab(existing.id);
-      const paneId =
-        state.paneLayout.panes.find((pane) => pane.tabs.some((tab) => tab.id === existing.id))
-          ?.id ?? state.paneLayout.focusedPaneId;
-      return { tabId: existing.id, paneId, created: false };
+      return confirmActivation(existing.id, false);
     }
 
     state.openTab({
@@ -424,9 +570,6 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
           tab.taskDetail.taskId === identity.taskId
       );
     if (!opened) return null;
-    const paneId =
-      get().paneLayout.panes.find((pane) => pane.tabs.some((tab) => tab.id === opened.id))?.id ??
-      get().paneLayout.focusedPaneId;
-    return { tabId: opened.id, paneId, created: true };
+    return confirmActivation(opened.id, true);
   },
 });

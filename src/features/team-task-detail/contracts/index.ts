@@ -64,6 +64,10 @@ export interface TaskDetailSession {
   savedPartRevisionByPart: Record<TaskDetailSavePart, number | null>;
   ownerSurfaceId: string | null;
   ownerRevision: number;
+  submitPending: boolean;
+  submitError: string | null;
+  saveErrorByPart: Record<TaskDetailSavePart, string | null>;
+  pendingAttachmentPreparationIds: string[];
 }
 
 export interface OpenTaskDetailTabResult {

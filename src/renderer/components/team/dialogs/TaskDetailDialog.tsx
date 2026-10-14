@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   type TaskDetailCommentImage,
   TaskDetailCommentImages,
+  type TaskDetailSessionController,
   TaskImplementationDurationBadge,
   WorkflowTimelineWithDuration,
 } from '@features/team-task-detail/renderer';
@@ -125,6 +126,8 @@ export interface TaskDetailDialogProps {
   variant?: 'team' | 'global';
   task: TeamTaskWithKanban | null;
   teamName: string;
+  sessionController: TaskDetailSessionController;
+  projectPath: string | null;
   kanbanTaskState?: KanbanTaskState;
   taskMap: Map<string, TeamTaskWithKanban>;
   members: ResolvedTeamMember[];
@@ -134,7 +137,7 @@ export interface TaskDetailDialogProps {
   onViewChanges?: (taskId: string, filePath?: string) => void;
   onOpenInEditor?: (filePath: string) => void;
   onDeleteTask?: (taskId: string) => void;
-  onOpenInTaskTab?: () => void;
+  onOpenInTaskTab?: () => void | Promise<void>;
   focusCommentId?: string;
   /** Extra content rendered in the dialog header (e.g. "Open team" button). */
   headerExtra?: React.ReactNode;
@@ -146,6 +149,8 @@ export const TaskDetailDialog = ({
   variant = 'team',
   task,
   teamName,
+  sessionController,
+  projectPath,
   kanbanTaskState,
   taskMap,
   members,
@@ -163,7 +168,7 @@ export const TaskDetailDialog = ({
   const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
-  const currentTask = task ? (taskMap.get(task.id) ?? null) : null;
+  const currentTask = task;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
   const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
@@ -185,65 +190,23 @@ export const TaskDetailDialog = ({
   const taskChangesLoadInFlightKeysRef = useRef<Set<string>>(new Set());
   const currentTaskChangeSummaryKeyRef = useRef<string | null>(null);
 
-  // Inline editing: subject
-  const [editingSubject, setEditingSubject] = useState(false);
-  const [subjectDraft, setSubjectDraft] = useState('');
-  const [savingSubject, setSavingSubject] = useState(false);
-
-  // Inline editing: description
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState('');
-  const [savingDescription, setSavingDescription] = useState(false);
-
-  const startEditSubject = useCallback(() => {
-    if (!currentTask) return;
-    setSubjectDraft(currentTask.subject);
-    setEditingSubject(true);
-  }, [currentTask]);
+  const editingSubject = sessionController.session.editingSubject;
+  const subjectDraft = sessionController.session.subjectDraft;
+  const savingSubject = sessionController.session.savedPartRevisionByPart.subject !== null;
+  const editingDescription = sessionController.session.editingDescription;
+  const descriptionDraft = sessionController.session.descriptionDraft;
+  const savingDescription = sessionController.session.savedPartRevisionByPart.description !== null;
+  const handoffIntentRef = useRef(false);
 
   const saveSubject = useCallback(async () => {
-    if (!currentTask || savingSubject) return;
-    const trimmed = subjectDraft.trim();
-    if (!trimmed || trimmed === currentTask.subject) {
-      setEditingSubject(false);
-      return;
-    }
-    setSavingSubject(true);
-    try {
-      await updateTaskFields(teamName, currentTask.id, { subject: trimmed });
-      setEditingSubject(false);
-    } finally {
-      setSavingSubject(false);
-    }
-  }, [currentTask, subjectDraft, savingSubject, teamName, updateTaskFields]);
-
-  const startEditDescription = useCallback(() => {
-    if (!currentTask) return;
-    setDescriptionDraft(currentTask.description ?? '');
-    setEditingDescription(true);
-  }, [currentTask]);
+    if (handoffIntentRef.current) return;
+    await sessionController.saveSubject();
+  }, [sessionController]);
 
   const saveDescription = useCallback(async () => {
-    if (!currentTask || savingDescription) return;
-    const newDesc = descriptionDraft.trim();
-    if (newDesc === (currentTask.description ?? '')) {
-      setEditingDescription(false);
-      return;
-    }
-    setSavingDescription(true);
-    try {
-      await updateTaskFields(teamName, currentTask.id, { description: newDesc });
-      setEditingDescription(false);
-    } finally {
-      setSavingDescription(false);
-    }
-  }, [currentTask, descriptionDraft, savingDescription, teamName, updateTaskFields]);
-
-  // Reset editing state on dialog close or task change
-  useEffect(() => {
-    setEditingSubject(false);
-    setEditingDescription(false);
-  }, [open, currentTask?.id]);
+    if (handoffIntentRef.current) return;
+    await sessionController.saveDescription();
+  }, [sessionController]);
 
   useEffect(() => {
     setChangesSectionOpen(false);
@@ -258,12 +221,6 @@ export const TaskDetailDialog = ({
     setTaskLogActivityActive(false);
     setTaskLogStreamCount(undefined);
   }, [open, currentTask?.id]);
-
-  const [replyTo, setReplyTo] = useState<{
-    taskId: string;
-    author: string;
-    text: string;
-  } | null>(null);
 
   // Track whether a lightbox is open to block Dialog dismiss events.
   // Using a ref for synchronous reads (no render cycle delay) + a stable
@@ -280,16 +237,10 @@ export const TaskDetailDialog = ({
   const [dialogContentEl, setDialogContentEl] = useState<HTMLDivElement | null>(null);
   const handleReply = useCallback(
     (author: string, text: string) => {
-      if (currentTask) setReplyTo({ taskId: currentTask.id, author, text });
+      if (currentTask) sessionController.setReply({ taskId: currentTask.id, author, text });
     },
-    [currentTask]
+    [currentTask, sessionController]
   );
-  const clearReply = useCallback(() => setReplyTo(null), []);
-
-  const effectiveReplyTo =
-    replyTo && replyTo.taskId === currentTask?.id
-      ? { author: replyTo.author, text: replyTo.text }
-      : null;
 
   // Snapshot unread comment IDs when dialog opens — these will show blue dots.
   // Dots persist for the duration of the dialog session; markAsRead happens
@@ -326,7 +277,6 @@ export const TaskDetailDialog = ({
 
   const handleClose = useCallback(() => {
     flushCommentRead();
-    setReplyTo(null);
     onClose();
   }, [onClose, flushCommentRead]);
 
@@ -676,7 +626,7 @@ export const TaskDetailDialog = ({
     )
     .map((t) => t.id);
   const isTodo = status === 'pending' && !kanbanColumn;
-  const canReassign = isTodo && onOwnerChange;
+  const canReassign = isTodo && sessionController.isOwner && onOwnerChange;
   const leadName = members.find((m) => isLeadMember(m))?.name ?? 'team-lead';
   const isLeadOwnedTask =
     (currentTask.owner ?? '').trim().toLowerCase() === leadName.trim().toLowerCase() ||
@@ -791,12 +741,32 @@ export const TaskDetailDialog = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
+                        data-task-detail-open-tab
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="h-7 gap-1.5 text-xs"
                         aria-label={t('taskDetail.actions.openInTaskTab')}
-                        onClick={onOpenInTaskTab}
+                        onPointerDown={() => {
+                          handoffIntentRef.current = true;
+                        }}
+                        onPointerUp={() => {
+                          handoffIntentRef.current = false;
+                        }}
+                        onPointerCancel={() => {
+                          handoffIntentRef.current = false;
+                        }}
+                        onPointerLeave={() => {
+                          handoffIntentRef.current = false;
+                        }}
+                        onClick={async () => {
+                          handoffIntentRef.current = true;
+                          try {
+                            await onOpenInTaskTab();
+                          } finally {
+                            handoffIntentRef.current = false;
+                          }
+                        }}
                       >
                         <ExternalLink size={13} />
                         {t('taskDetail.actions.openInTaskTab')}
@@ -817,16 +787,23 @@ export const TaskDetailDialog = ({
                 <Input
                   autoFocus
                   value={subjectDraft}
-                  onChange={(e) => setSubjectDraft(e.target.value)}
+                  onChange={(e) => sessionController.setSubjectDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (!isImeComposing(e) && e.key === 'Enter') {
                       e.stopPropagation();
                       void saveSubject();
                     }
-                    if (e.key === 'Escape') setEditingSubject(false);
+                    if (e.key === 'Escape') sessionController.cancelEditSubject();
                   }}
-                  onBlur={() => void saveSubject()}
-                  disabled={savingSubject}
+                  onBlur={(event) => {
+                    if (
+                      event.relatedTarget instanceof Element &&
+                      event.relatedTarget.closest('[data-task-detail-open-tab]')
+                    )
+                      return;
+                    void saveSubject();
+                  }}
+                  disabled={savingSubject || !sessionController.isOwner}
                   className="h-8 text-base"
                 />
                 {savingSubject ? <Loader2 size={14} className="animate-spin" /> : null}
@@ -834,7 +811,7 @@ export const TaskDetailDialog = ({
             ) : (
               <DialogTitle
                 className="group flex cursor-pointer items-center gap-1.5 text-base hover:text-[var(--color-text)]"
-                onClick={startEditSubject}
+                onClick={sessionController.startEditSubject}
               >
                 {currentTask.subject}
                 <Pencil
@@ -846,13 +823,22 @@ export const TaskDetailDialog = ({
             {currentTask.activeForm ? (
               <DialogDescription>{currentTask.activeForm}</DialogDescription>
             ) : null}
+            {editingSubject && sessionController.session.saveErrorByPart.subject ? (
+              <p role="alert" className="text-xs text-red-400">
+                {sessionController.session.saveErrorByPart.subject}
+              </p>
+            ) : null}
           </DialogHeader>
 
           <TaskGroupChatField
             key={currentTask.id}
             teamName={teamName}
             value={currentTask.groupChatId ?? null}
-            onChange={(groupChatId) => updateTaskFields(teamName, currentTask.id, { groupChatId })}
+            disabled={!sessionController.isOwner}
+            onChange={(groupChatId) => {
+              if (sessionController.canEditNow())
+                return updateTaskFields(teamName, currentTask.id, { groupChatId });
+            }}
           />
           {/* Metadata */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
@@ -902,7 +888,9 @@ export const TaskDetailDialog = ({
                 variant="ghost"
                 size="sm"
                 className="ml-auto h-6 gap-1 text-xs text-[var(--color-text-muted)] hover:text-red-400"
+                disabled={!sessionController.isOwner}
                 onClick={() => {
+                  if (!sessionController.canEditNow()) return;
                   onDeleteTask(currentTask.id);
                   handleClose();
                 }}
@@ -932,8 +920,10 @@ export const TaskDetailDialog = ({
                 variant="ghost"
                 size="sm"
                 className="h-6 text-xs"
+                disabled={!sessionController.isOwner}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!sessionController.canEditNow()) return;
                   void setTaskNeedsClarification(teamName, currentTask.id, null);
                 }}
               >
@@ -1111,19 +1101,24 @@ export const TaskDetailDialog = ({
                 <div className="space-y-2">
                   <TiptapEditor
                     content={descriptionDraft}
-                    onChange={setDescriptionDraft}
+                    onChange={sessionController.setDescriptionDraft}
                     placeholder={t('taskDetail.description.placeholder')}
                     autoFocus
                     minHeight="120px"
                     maxHeight="200px"
                     toolbar
-                    disabled={savingDescription}
+                    disabled={savingDescription || !sessionController.isOwner}
                   />
+                  {sessionController.session.saveErrorByPart.description ? (
+                    <p role="alert" className="text-xs text-red-400">
+                      {sessionController.session.saveErrorByPart.description}
+                    </p>
+                  ) : null}
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       className="h-7 text-xs"
-                      disabled={savingDescription}
+                      disabled={savingDescription || !sessionController.isOwner}
                       onClick={() => void saveDescription()}
                     >
                       {savingDescription ? (
@@ -1137,8 +1132,8 @@ export const TaskDetailDialog = ({
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs"
-                      disabled={savingDescription}
-                      onClick={() => setEditingDescription(false)}
+                      disabled={savingDescription || !sessionController.isOwner}
+                      onClick={sessionController.cancelEditDescription}
                     >
                       <X size={12} className="mr-1" />
                       {t('taskDetail.actions.cancel')}
@@ -1180,7 +1175,7 @@ export const TaskDetailDialog = ({
                       <button
                         type="button"
                         className="absolute right-0 top-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] group-hover:opacity-100"
-                        onClick={startEditDescription}
+                        onClick={sessionController.startEditDescription}
                       >
                         <Pencil size={12} />
                       </button>
@@ -1192,7 +1187,7 @@ export const TaskDetailDialog = ({
                 <button
                   type="button"
                   className="text-xs text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-                  onClick={startEditDescription}
+                  onClick={sessionController.startEditDescription}
                 >
                   {t('taskDetail.description.add')}
                 </button>
@@ -1511,9 +1506,9 @@ export const TaskDetailDialog = ({
                 <TaskCommentInput
                   teamName={teamName}
                   taskId={currentTask.id}
+                  projectPath={projectPath}
                   members={members}
-                  replyTo={effectiveReplyTo}
-                  onClearReply={clearReply}
+                  controller={sessionController}
                 />
               </div>
               <TaskCommentAwaitingReply
@@ -1528,7 +1523,6 @@ export const TaskDetailDialog = ({
                 comments={currentTask.comments ?? []}
                 members={members}
                 hideHeader
-                hideInput
                 onReply={handleReply}
                 onTaskIdClick={
                   onScrollToTask ? (taskId) => handleDependencyClick(taskId) : undefined

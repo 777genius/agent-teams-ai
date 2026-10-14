@@ -3,16 +3,13 @@ import {
   type TaskDetailReadHandle,
   type TaskDetailReadScope,
   type TaskDetailReadToken,
-} from '@features/team-task-detail/renderer';
+} from '@features/team-task-detail/core';
 
 import { captureContextScopedRequestEpoch } from '../utils/contextScopedRequestEpoch';
 
 import { captureTeamLocalStateEpoch } from './teamLocalStateEpoch';
 
-export type {
-  TaskDetailReadHandle,
-  TaskDetailReadToken,
-} from '@features/team-task-detail/renderer';
+export type { TaskDetailReadHandle, TaskDetailReadToken } from '@features/team-task-detail/core';
 
 export const teamTaskDetailReadAuthority = createTaskDetailReadAuthority();
 

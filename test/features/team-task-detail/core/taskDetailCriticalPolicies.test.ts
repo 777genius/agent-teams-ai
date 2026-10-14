@@ -3,13 +3,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { createTaskDetailReadAuthority } from '../../../../src/features/team-task-detail/core/application/taskDetailReadAuthority';
 import {
   applyTaskDetailCompact,
+  beginTaskDetailPendingAttachment,
   beginTaskDetailSave,
   beginTaskDetailSubmit,
+  claimTaskDetailOwner,
   commitTaskDetailFull,
+  completeTaskDetailPendingAttachment,
   completeTaskDetailSave,
   completeTaskDetailSubmit,
   createTaskDetailReadEntry,
   EMPTY_TASK_DETAIL_SESSION,
+  failTaskDetailSave,
+  ignoreTaskDetailPendingAttachment,
+  releaseTaskDetailOwner,
+  retireTaskDetailSessionWork,
+  transferTaskDetailOwner,
   updateTaskDetailPart,
 } from '../../../../src/features/team-task-detail/core/domain';
 
@@ -327,9 +335,73 @@ describe('task detail critical read policies', () => {
     expect(session.partRevisions.commentText).toBe(3);
   });
 
+  it('keeps a preparing file across ownership transfer and rejects removed late files', () => {
+    const file = {
+      id: 'file-1',
+      filename: 'TEST.txt',
+      mimeType: 'text/plain',
+      base64Data: '',
+      previewUrl: '',
+      size: 5,
+    };
+    let session = claimTaskDetailOwner(EMPTY_TASK_DETAIL_SESSION, 'dialog');
+    const ownerRevision = session.ownerRevision;
+    session = beginTaskDetailPendingAttachment(session, file);
+    session = transferTaskDetailOwner(session, 'dialog', 'tab', ownerRevision);
+    session = releaseTaskDetailOwner(session, 'dialog', ownerRevision);
+    expect(session.ownerSurfaceId).toBe('tab');
+    expect(session.pendingAttachments).toEqual([file]);
+    session = completeTaskDetailPendingAttachment(session, file.id, {
+      ...file,
+      base64Data: 'aGVsbG8=',
+      previewUrl: 'data:text/plain;base64,aGVsbG8=',
+    });
+    expect(session.pendingAttachments[0].base64Data).toBe('aGVsbG8=');
+    expect(session.pendingAttachmentPreparationIds).toEqual([]);
+    const second = { ...file, id: 'file-2' };
+    session = beginTaskDetailPendingAttachment(session, second);
+    session = ignoreTaskDetailPendingAttachment(session, second.id);
+    expect(completeTaskDetailPendingAttachment(session, second.id, second)).toBe(session);
+    expect(session.pendingAttachments.map((attachment) => attachment.id)).toEqual(['file-1']);
+  });
+
+  it('retires request state while retaining dirty drafts and rejects old completions', () => {
+    let session = claimTaskDetailOwner(EMPTY_TASK_DETAIL_SESSION, 'dialog');
+    session = updateTaskDetailPart(session, 'commentText', 'keep this draft');
+    session = updateTaskDetailPart(session, 'subject', 'dirty subject');
+    session = beginTaskDetailSubmit(session, session);
+    const submitRevision = session.submitRevision;
+    session = beginTaskDetailSave(session, ['subject']);
+    const saveRevision = { subject: session.saveRevisionByPart.subject };
+    session = retireTaskDetailSessionWork(session);
+    expect(session.commentText).toBe('keep this draft');
+    expect(session.subjectDraft).toBe('dirty subject');
+    expect(session.editingSubject).toBe(true);
+    expect(session.ownerSurfaceId).toBeNull();
+    expect(session.submitPending).toBe(false);
+    expect(session.savedPartRevisionByPart.subject).toBeNull();
+    expect(completeTaskDetailSubmit(session, submitRevision)).toBe(session);
+    expect(completeTaskDetailSave(session, saveRevision)).toBe(session);
+  });
+
+  it('preserves a newer save error when a mixed completion contains a stale part', () => {
+    let session = beginTaskDetailSave(EMPTY_TASK_DETAIL_SESSION, ['subject', 'description']);
+    const first = { ...session.saveRevisionByPart };
+    session = beginTaskDetailSave(session, ['subject']);
+    session = failTaskDetailSave(
+      session,
+      { subject: session.saveRevisionByPart.subject },
+      'new failure'
+    );
+    session = completeTaskDetailSave(session, first);
+    expect(session.saveErrorByPart.subject).toBe('new failure');
+    expect(session.savedPartRevisionByPart.description).toBeNull();
+  });
+
   it('clears only submitted parts with per-part revisions and isolates overlapping saves', () => {
     let session = beginTaskDetailSubmit(
       {
+        ...EMPTY_TASK_DETAIL_SESSION,
         commentText: 'stale comment',
         commentChips: [
           {
@@ -365,6 +437,7 @@ describe('task detail critical read policies', () => {
         ownerRevision: 0,
       },
       {
+        ...EMPTY_TASK_DETAIL_SESSION,
         commentText: 'stale comment',
         commentChips: [
           {

@@ -184,6 +184,18 @@ vi.mock('@renderer/components/team/taskLogs/TaskLogsPanel', () => ({
 
 import { TaskDetailDialog } from '@renderer/components/team/dialogs/TaskDetailDialog';
 
+import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
+
+import type { TaskDetailDialogProps } from '@renderer/components/team/dialogs/TaskDetailDialog';
+
+function renderDialog(props: Omit<TaskDetailDialogProps, 'sessionController' | 'projectPath'>) {
+  return React.createElement(TaskDetailDialog, {
+    ...props,
+    projectPath: '/TEST/project',
+    sessionController: createTaskDetailSessionFixture(props.task?.id ?? 'missing'),
+  });
+}
+
 import type { TaskChangeSetV2, TeamTaskWithKanban } from '@shared/types';
 
 function deferred<T>() {
@@ -286,7 +298,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     const task = { ...makeTask('task-empty-attachments'), workIntervals: [] };
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
@@ -317,7 +329,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     const task = { ...makeTask('task-review'), workIntervals: [] };
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
@@ -369,7 +381,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     };
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskA }));
+      root.render(renderDialog({ ...baseProps, task: taskA }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -384,7 +396,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     );
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskB }));
+      root.render(renderDialog({ ...baseProps, task: taskB }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -400,7 +412,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     );
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskA }));
+      root.render(renderDialog({ ...baseProps, task: taskA }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -451,7 +463,7 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
@@ -509,7 +521,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     try {
       await act(async () => {
         root.render(
-          React.createElement(TaskDetailDialog, {
+          renderDialog({
             open: true,
             variant: 'team',
             teamName: 'team-a',
@@ -575,7 +587,7 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
@@ -656,7 +668,7 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
@@ -746,7 +758,7 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',

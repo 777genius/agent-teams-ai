@@ -19,7 +19,11 @@ import {
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
-import { type TaskDetailIdentity, taskDetailKey } from '@features/team-task-detail/renderer';
+import {
+  type TaskDetailIdentity,
+  taskDetailKey,
+  useTaskDetailSession,
+} from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -48,6 +52,7 @@ import {
   isTeamProvisioningActive,
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
+  selectTeamDataForName,
   selectTeamMemberSnapshotsForName,
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
@@ -254,8 +259,21 @@ const TaskDetailDialogHost = memo(
       selectedKey ? state.taskDetailById[selectedKey] : undefined
     );
     const ensureTaskDetail = useStore((state) => state.ensureTaskDetail);
-    const openTaskDetailTab = useStore((state) => state.openTaskDetailTab);
+    const projectPath = useStore(
+      (state) => selectTeamDataForName(state, teamName)?.config.projectPath ?? null
+    );
     const currentTask = detailEntry?.full ?? null;
+    const surfaceIdRef = useRef(crypto.randomUUID());
+    const sessionIdentity = useMemo(
+      () => selectedIdentity ?? { contextId, teamName, taskId: '' },
+      [contextId, selectedIdentity, teamName]
+    );
+    const sessionController = useTaskDetailSession({
+      identity: sessionIdentity,
+      surfaceId: surfaceIdRef.current,
+      currentTask,
+      enabled: Boolean(selectedIdentity),
+    });
 
     useImperativeHandle(
       ref,
@@ -283,17 +301,9 @@ const TaskDetailDialogHost = memo(
 
     const dialogTaskMap = useMemo(() => {
       const next = new Map<string, TeamTaskWithKanban>(taskMap);
-      for (const entry of Object.values(useStore.getState().taskDetailById)) {
-        if (
-          entry.full &&
-          entry.identity.contextId === contextId &&
-          entry.identity.teamName === teamName
-        ) {
-          next.set(entry.identity.taskId, entry.full);
-        }
-      }
+      if (currentTask) next.set(currentTask.id, currentTask);
       return next;
-    }, [contextId, currentTask, detailEntry, taskMap, teamName]);
+    }, [currentTask, taskMap]);
 
     const handleScrollToTask = useCallback((taskId: string) => {
       setSelectedIdentity(null);
@@ -309,7 +319,12 @@ const TaskDetailDialogHost = memo(
       }
     }, []);
 
-    if (currentTask === null) {
+    if (
+      currentTask === null ||
+      !selectedIdentity ||
+      selectedIdentity.contextId !== contextId ||
+      selectedIdentity.teamName !== teamName
+    ) {
       return null;
     }
 
@@ -324,15 +339,23 @@ const TaskDetailDialogHost = memo(
         members={members}
         onClose={() => setSelectedIdentity(null)}
         onOpenInTaskTab={() => {
-          if (!selectedIdentity) return;
-          openTaskDetailTab(selectedIdentity);
-          setSelectedIdentity(null);
+          if (sessionController.openInTaskTab()) setSelectedIdentity(null);
         }}
+        projectPath={projectPath}
+        sessionController={sessionController}
         onScrollToTask={handleScrollToTask}
-        onOwnerChange={onOwnerChange}
-        onViewChanges={onViewChanges}
-        onOpenInEditor={onOpenInEditor}
-        onDeleteTask={onDeleteTask}
+        onOwnerChange={(...args) => {
+          if (sessionController.canEditNow()) onOwnerChange(...args);
+        }}
+        onViewChanges={(...args) => {
+          if (sessionController.isOriginCurrent()) onViewChanges(...args);
+        }}
+        onOpenInEditor={(...args) => {
+          if (sessionController.isOriginCurrent()) onOpenInEditor(...args);
+        }}
+        onDeleteTask={(...args) => {
+          if (sessionController.canEditNow()) onDeleteTask(...args);
+        }}
       />
     );
 

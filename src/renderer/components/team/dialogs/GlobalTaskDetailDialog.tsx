@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { taskDetailKey } from '@features/team-task-detail/renderer';
+import { taskDetailKey, useTaskDetailSession } from '@features/team-task-detail/renderer';
 import { useStore } from '@renderer/store';
 import {
   selectResolvedMembersForTeamName,
@@ -33,7 +33,6 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     ensureTaskDetail,
     taskDetailEntry,
     openTeamTab,
-    openTaskDetailTab,
     setPendingReviewRequest,
   } = useStore(
     useShallow((s) => {
@@ -49,7 +48,6 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
         ensureTaskDetail: s.ensureTaskDetail,
         taskDetailEntry: detail ? s.taskDetailById[taskDetailKey(detail)] : undefined,
         openTeamTab: s.openTeamTab,
-        openTaskDetailTab: s.openTaskDetailTab,
         setPendingReviewRequest: s.setPendingReviewRequest,
       };
     })
@@ -70,6 +68,14 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
         : null,
     [globalTaskDetail]
   );
+  const fallbackIdentity = useMemo(() => ({ contextId: '', teamName: '', taskId: '' }), []);
+  const surfaceIdRef = useRef(crypto.randomUUID());
+  const sessionController = useTaskDetailSession({
+    identity: identity ?? fallbackIdentity,
+    surfaceId: surfaceIdRef.current,
+    currentTask: taskDetailEntry?.full ?? null,
+    enabled: Boolean(identity),
+  });
 
   useEffect(() => {
     if (identity) void ensureTaskDetail(identity);
@@ -94,10 +100,8 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   }, [closeGlobalTaskDetail, identity, openTeamTab]);
 
   const handleOpenTaskTab = useCallback((): void => {
-    if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
-    const result = openTaskDetailTab(identity);
-    if (result) closeGlobalTaskDetail();
-  }, [closeGlobalTaskDetail, identity, openTaskDetailTab]);
+    if (sessionController.openInTaskTab()) closeGlobalTaskDetail();
+  }, [closeGlobalTaskDetail, sessionController]);
 
   const handleViewChanges = useCallback(
     (viewTaskId: string, filePath?: string) => {
@@ -136,6 +140,8 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       loading={!isFullTeamLoaded && loading}
       task={task}
       teamName={teamName}
+      projectPath={targetTeamData?.config.projectPath ?? null}
+      sessionController={sessionController}
       kanbanTaskState={kanbanTaskState}
       taskMap={taskMap}
       members={activeMembers}

@@ -1,5 +1,10 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  type TaskDetailIdentity,
+  taskDetailKey,
+  useTaskDetailSession,
+} from '@features/team-task-detail/renderer';
 import { useStore } from '@renderer/store';
 import {
   selectResolvedMembersForTeamName,
@@ -27,12 +32,25 @@ export function useGraphTaskDetailDialog(
   teamName: string,
   { onDeleteTask, onViewChanges }: UseGraphTaskDetailDialogInput
 ): UseGraphTaskDetailDialogResult {
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const { activeMembers, teamData, updateTaskOwner } = useStore(
+  const [selectedIdentity, setSelectedIdentity] = useState<TaskDetailIdentity | null>(null);
+  const selectedTaskId = selectedIdentity?.taskId ?? null;
+  const {
+    activeContextId,
+    activeMembers,
+    detailEntry,
+    ensureTaskDetail,
+    teamData,
+    updateTaskOwner,
+  } = useStore(
     useShallow((state) => ({
+      activeContextId: state.activeContextId,
       activeMembers: selectResolvedMembersForTeamName(state, teamName).filter(
         (member) => !member.removedAt
       ),
+      detailEntry: selectedTaskId
+        ? state.taskDetailById[taskDetailKey(selectedIdentity!)]
+        : undefined,
+      ensureTaskDetail: state.ensureTaskDetail,
       teamData: selectTeamDataForName(state, teamName),
       updateTaskOwner: state.updateTaskOwner,
     }))
@@ -42,35 +60,92 @@ export function useGraphTaskDetailDialog(
     () => new Map((teamData?.tasks ?? []).map((task) => [task.id, task])),
     [teamData?.tasks]
   );
-  const selectedTask = selectedTaskId ? (taskMap.get(selectedTaskId) ?? null) : null;
+  const identity = useMemo(
+    () => selectedIdentity ?? { contextId: activeContextId, teamName, taskId: '' },
+    [activeContextId, selectedIdentity, teamName]
+  );
+  const identityKey = selectedTaskId ? taskDetailKey(identity) : null;
+  const selectedTask = detailEntry?.full ?? null;
+  const surfaceIdRef = useRef(crypto.randomUUID());
+  const sessionController = useTaskDetailSession({
+    identity,
+    surfaceId: surfaceIdRef.current,
+    currentTask: selectedTask,
+    enabled: Boolean(
+      selectedIdentity &&
+      selectedIdentity.contextId === activeContextId &&
+      selectedIdentity.teamName === teamName
+    ),
+  });
 
-  const openTaskDetail = useCallback((taskId: string): void => {
-    setSelectedTaskId(taskId);
-  }, []);
+  useEffect(() => {
+    if (
+      selectedIdentity &&
+      (selectedIdentity.contextId !== activeContextId || selectedIdentity.teamName !== teamName)
+    ) {
+      setSelectedIdentity(null);
+      return;
+    }
+    if (selectedTaskId && identityKey) void ensureTaskDetail(identity);
+  }, [
+    activeContextId,
+    ensureTaskDetail,
+    identity,
+    identityKey,
+    selectedIdentity,
+    selectedTaskId,
+    teamName,
+  ]);
+
+  const openTaskDetail = useCallback(
+    (taskId: string): void => {
+      if (
+        activeContextId !== useStore.getState().activeContextId ||
+        useStore.getState().isContextSwitching
+      )
+        return;
+      setSelectedIdentity({ contextId: activeContextId, teamName, taskId });
+    },
+    [activeContextId, teamName]
+  );
 
   const closeTaskDetail = useCallback((): void => {
-    setSelectedTaskId(null);
+    setSelectedIdentity(null);
   }, []);
+
+  const handleOpenTaskTab = useCallback((): void => {
+    if (sessionController.openInTaskTab()) setSelectedIdentity(null);
+  }, [sessionController]);
 
   return {
     openTaskDetail,
     dialog:
-      selectedTaskId && teamData ? (
+      selectedIdentity?.contextId === activeContextId &&
+      selectedIdentity.teamName === teamName &&
+      selectedTaskId ? (
         <Suspense fallback={null}>
           <TaskDetailDialog
             open
             task={selectedTask}
             teamName={teamName}
-            kanbanTaskState={teamData.kanbanState.tasks[selectedTaskId]}
+            projectPath={teamData?.config.projectPath ?? null}
+            sessionController={sessionController}
+            kanbanTaskState={teamData?.kanbanState.tasks[selectedTaskId]}
             taskMap={taskMap}
             members={activeMembers}
             onClose={closeTaskDetail}
             onScrollToTask={openTaskDetail}
             onOwnerChange={(taskId, owner) => {
-              void updateTaskOwner(teamName, taskId, owner).catch(() => undefined);
+              if (sessionController.canEditNow())
+                void updateTaskOwner(teamName, taskId, owner).catch(() => undefined);
             }}
-            onViewChanges={onViewChanges}
-            onDeleteTask={onDeleteTask}
+            onViewChanges={(...args) => {
+              if (sessionController.isOriginCurrent()) onViewChanges?.(...args);
+            }}
+            onDeleteTask={(...args) => {
+              if (sessionController.canEditNow()) onDeleteTask?.(...args);
+            }}
+            onOpenInTaskTab={handleOpenTaskTab}
           />
         </Suspense>
       ) : null,

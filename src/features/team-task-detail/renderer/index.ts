@@ -1,5 +1,5 @@
-export * from '../contracts';
-export { createTaskDetailReadAuthority } from '../core/application/taskDetailReadAuthority';
-export * from '../core/domain';
+export * from '../core';
+export * from './adapters/taskDraftStorage';
+export * from './hooks/useTaskDetailSession';
 export * from './ui/TaskDetailCommentImages';
 export * from './ui/TaskDetailWorkflow';
