@@ -191,6 +191,7 @@ import {
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
 } from '../team/teamToolApprovalSettingsSync';
+import { getVisibleTeamNamesInAnyPane } from '../team/teamViewVisibility';
 import { noteTeamRefreshFanout } from '../teamRefreshFanoutDiagnostics';
 import {
   captureContextScopedRequestEpoch,
@@ -540,7 +541,8 @@ function clearTeamScopedSelectorCaches(teamName: string): void {
   clearTeamMessageSelectorCachesForTeam(teamName);
 }
 
-function clearTeamScopedTransientState(teamName: string): void {
+function clearTeamScopedTransientState(teamName: string, get: () => AppState): void {
+  get().retireTaskDetailSessionWork({ contextId: get().activeContextId, teamName });
   teamProvisioningAttemptTracker.clear(teamName);
   teamDataReadWork.delete(teamName);
   cancelPostPaintTeamEnrichments(teamName);
@@ -1456,18 +1458,7 @@ function isVisibleInActiveTeamSurface(
   state: Pick<AppState, 'paneLayout'>,
   teamName: string | null | undefined
 ): boolean {
-  if (!teamName) {
-    return false;
-  }
-  return state.paneLayout.panes.some((pane) => {
-    if (!pane.activeTabId) return false;
-    const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-    return (
-      activeTab !== undefined &&
-      (isOrdinaryTeamTab(activeTab) || activeTab.type === 'graph') &&
-      activeTab.teamName === teamName
-    );
-  });
+  return Boolean(teamName && getVisibleTeamNamesInAnyPane(state).has(teamName));
 }
 
 export interface TeamSlice extends SidebarLogsHeightSlice {
@@ -2138,7 +2129,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearTaskFirstOutputTrackingForTeam(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
+    clearTeamScopedTransientState(teamName, get);
     set((state) => {
       const clearedState = collectTeamScopedStateRemovals(state, teamName);
       const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
@@ -4213,7 +4204,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
+    clearTeamScopedTransientState(teamName, get);
     set((state) => {
       const clearedState = collectTeamScopedStateRemovals(state, teamName);
       const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
@@ -4247,7 +4238,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
-    clearTeamScopedTransientState(teamName);
+    clearTeamScopedTransientState(teamName, get);
     const state = get();
     const clearedState = collectTeamScopedStateRemovals(state, teamName);
     const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
@@ -4282,7 +4273,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     invalidateTeamLocalStateEpoch(request.teamName);
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
-    clearTeamScopedTransientState(request.teamName);
+    clearTeamScopedTransientState(request.teamName, get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
@@ -4504,7 +4495,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     invalidateTeamLocalStateEpoch(request.teamName);
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
-    clearTeamScopedTransientState(request.teamName);
+    clearTeamScopedTransientState(request.teamName, get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();

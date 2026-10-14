@@ -237,7 +237,9 @@ export const TaskCommentInput = ({
               title: att.filename,
             }))}
           index={lightboxIndex}
-          showCounter={pendingAttachments.filter((a) => isImageMime(a.mimeType)).length > 1}
+          showCounter={
+            pendingAttachments.filter((a) => isImageMime(a.mimeType) && a.previewUrl).length > 1
+          }
         />
       ) : null}
 

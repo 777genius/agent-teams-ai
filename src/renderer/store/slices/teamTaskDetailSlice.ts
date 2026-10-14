@@ -98,7 +98,7 @@ export interface TeamTaskDetailSlice {
   invalidateTaskDetailSource: (identity?: TaskDetailIdentity) => void;
   invalidateTaskDetailTeamSource: (contextId: string, teamName: string, taskId?: string) => void;
   clearTaskDetailTeamWork: (contextId: string, teamName: string) => void;
-  retireTaskDetailSessionWork: () => void;
+  retireTaskDetailSessionWork: (scope?: Pick<TaskDetailIdentity, 'contextId' | 'teamName'>) => void;
   hydrateTaskDetailSessionDraft: (
     identity: TaskDetailIdentity,
     draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
@@ -428,13 +428,16 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
-  retireTaskDetailSessionWork: () => {
+  retireTaskDetailSessionWork: (scope) => {
     set((state) => ({
       taskDetailSessionById: Object.fromEntries(
-        Object.entries(state.taskDetailSessionById).map(([key, session]) => [
-          key,
-          retireTaskDetailSessionWork(session),
-        ])
+        Object.entries(state.taskDetailSessionById).map(([key, session]) => {
+          const identity = state.taskDetailById[key]?.identity;
+          const inScope =
+            !scope ||
+            (identity?.contextId === scope.contextId && identity?.teamName === scope.teamName);
+          return [key, inScope ? retireTaskDetailSessionWork(session) : session];
+        })
       ),
     }));
   },
