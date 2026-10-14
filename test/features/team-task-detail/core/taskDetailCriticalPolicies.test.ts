@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createTaskDetailReadAuthority } from '../../../../src/features/team-task-detail/core/application/taskDetailReadAuthority';
 import {
   applyTaskDetailCompact,
+  applyTaskDetailReadStart,
   beginTaskDetailPendingAttachment,
   beginTaskDetailSave,
   beginTaskDetailSubmit,
@@ -17,6 +18,7 @@ import {
   ignoreTaskDetailPendingAttachment,
   releaseTaskDetailOwner,
   retireTaskDetailSessionWork,
+  setTaskDetailDeletionIntent,
   transferTaskDetailOwner,
   updateTaskDetailPart,
 } from '../../../../src/features/team-task-detail/core/domain';
@@ -55,6 +57,35 @@ const fullTask = (taskId: string, suffix: string): TeamTaskWithKanban => ({
 });
 
 describe('task detail critical read policies', () => {
+  it.each([
+    { intent: 'deleting', staleStatus: 'in_progress', confirmedStatus: 'deleted' },
+    { intent: 'restoring', staleStatus: 'deleted', confirmedStatus: 'in_progress' },
+  ] as const)('keeps $intent intent until its matching full result', async ({ intent, staleStatus, confirmedStatus }) => {
+    const authority = createTaskDetailReadAuthority();
+    const identity = { contextId: 'local', teamName: 'TEST-team', taskId: 'X' };
+    const scope = { ...identity, contextEpoch: 1, teamStateEpoch: 1 };
+    let entry = setTaskDetailDeletionIntent(createTaskDetailReadEntry(identity), intent);
+    const stale = authority.readFull(identity, scope, async () => ({
+      ...fullTask('X', 'stale'),
+      status: staleStatus,
+    }));
+    entry = applyTaskDetailReadStart(entry, stale.token);
+    const staleResult = await stale.result;
+    entry = commitTaskDetailFull(entry, staleResult.token, staleResult.value!);
+    expect(entry.deletionIntent).toBe(intent);
+
+    const confirmed = authority.readFull(identity, scope, async () => ({
+      ...fullTask('X', 'confirmed'),
+      status: confirmedStatus,
+    }));
+    entry = applyTaskDetailReadStart(entry, confirmed.token);
+    const confirmedResult = await confirmed.result;
+    entry = commitTaskDetailFull(entry, confirmedResult.token, confirmedResult.value!);
+    expect(entry.deletionIntent).toBeNull();
+    expect(entry.full?.status).toBe(confirmedStatus);
+    expect(entry.phase).toBe(intent === 'deleting' ? 'deleted' : 'ready');
+  });
+
   it.each(['compact-first', 'full-first'] as const)(
     'accepts concurrent same-team X/Y full reads without extra starts (%s)',
     async (order) => {
