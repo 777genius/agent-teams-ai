@@ -24,7 +24,20 @@ describe('taskReferenceUtils', () => {
     const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
     const text = `${createEncodedTaskReference('1', first.taskId, first.teamName)} then #1`;
     expect(linkifyTaskIdsInMarkdown(text, [first, second])).toBe(
-      `[#1](${buildTaskLinkHref(first)}) then [#1](${buildTaskLinkHref(second)})`
+      '[#1](task://canonical-a?team=team-a&display=1) then [#1](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
+  it('keeps paired cross-team targets in legacy Markdown links without rewriting explicit links', () => {
+    const target = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    expect(linkifyTaskIdsInMarkdown('[#1](task://1)', [target])).toBe(
+      '[#1](task://canonical-b?team=team-b&display=1)'
+    );
+    expect(
+      linkifyTaskIdsInMarkdown('[#1](task://canonical-a?team=team-a&display=1)', [target])
+    ).toBe('[#1](task://canonical-a?team=team-a&display=1)');
+    expect(linkifyTaskIdsInMarkdown('[#1](https://example.test/task/1)', [target])).toBe(
+      '[#1](https://example.test/task/1)'
     );
   });
 

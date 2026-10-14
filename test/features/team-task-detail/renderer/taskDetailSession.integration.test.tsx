@@ -16,7 +16,9 @@ import type { TaskDetailIdentity } from '@features/team-task-detail/contracts';
 import type { TaskDetailSessionController } from '@features/team-task-detail/renderer';
 import type { TaskComment, TeamTaskWithKanban } from '@shared/types';
 
-const apiMock = vi.hoisted(() => ({ teams: { addTaskComment: vi.fn(), getTask: vi.fn() } }));
+const apiMock = vi.hoisted(() => ({
+  teams: { addTaskComment: vi.fn(), getTask: vi.fn(), softDeleteTask: vi.fn() },
+}));
 vi.mock('@renderer/api', () => ({ api: apiMock }));
 vi.mock('@renderer/services/draftStorage', () => ({
   draftStorage: {
@@ -411,6 +413,89 @@ describe('task session surface and origin integration', () => {
       roots.splice(roots.indexOf(targetRoot), 1);
     });
     expect(successor.isOwner).toBe(true);
+  });
+
+  it('rejects edits after delete acceptance while the successor refresh is pending', async () => {
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('dialog', (value) => {
+        controller = value;
+      });
+    });
+    await act(async () => controller.setCommentText('TEST preserved deletion draft'));
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    apiMock.teams.softDeleteTask.mockResolvedValue(undefined);
+    await act(async () => {
+      useStore.setState({
+        refreshTeamData: vi.fn(() => refresh),
+        fetchDeletedTasks: vi.fn(async () => {}),
+      });
+    });
+    let deleting!: Promise<void>;
+    await act(async () => {
+      deleting = useStore.getState().softDeleteTask(identity.teamName, identity.taskId);
+    });
+    expect(useStore.getState().refreshTeamData).toHaveBeenCalledTimes(1);
+    expect(useStore.getState().taskDetailById[key].full?.status).toBe('pending');
+    const canEditAfterDeleteAcceptance = controller.canEditNow();
+    await act(async () => {
+      finishRefresh();
+      await deleting;
+    });
+    expect(controller.session.commentText).toBe('TEST preserved deletion draft');
+    expect(canEditAfterDeleteAcceptance).toBe(false);
+  });
+
+  it('finishes a selected file in its own draft across context changes and honors removal', async () => {
+    const readers: { result: string | null; onload: (() => void) | null }[] = [];
+    class DeferredReader {
+      result: string | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL() {
+        readers.push(this);
+      }
+    }
+    vi.stubGlobal('FileReader', DeferredReader);
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('dialog', (value) => {
+        controller = value;
+      });
+    });
+    let reading!: Promise<void>;
+    await act(async () => {
+      reading = controller.addPendingFiles([
+        new File(['hello'], 'keep.txt', { type: 'text/plain' }),
+        new File(['world'], 'remove.txt', { type: 'text/plain' }),
+      ]);
+    });
+    await act(async () => {
+      controller.removePendingAttachment(controller.session.pendingAttachments[1].id);
+      useStore.getState().retireTaskDetailSessionWork();
+      invalidateContextScopedRequestEpoch();
+      useStore.setState({ activeContextId: 'TEST-context-B' });
+    });
+    await act(async () => {
+      readers[0].result = 'data:text/plain;base64,aGVsbG8=';
+      readers[0].onload?.();
+      await reading;
+      invalidateContextScopedRequestEpoch();
+      useStore.setState({ activeContextId: identity.contextId });
+    });
+    expect(controller.session.pendingAttachments).toMatchObject([
+      {
+        filename: 'keep.txt',
+        base64Data: 'aGVsbG8=',
+        previewUrl: 'data:text/plain;base64,aGVsbG8=',
+      },
+    ]);
+    expect(controller.session.pendingAttachmentPreparationIds).toEqual([]);
+    expect(readers).toHaveLength(1);
+    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
   });
 
   it.each(['success', 'failure'] as const)(
