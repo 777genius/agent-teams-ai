@@ -85,6 +85,11 @@ jobs:
           $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
+      - name: Preflight SDK discovery with exact desktop TEST directories
+        shell: pwsh
+        run: |
+          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk
+          if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Select Windows release compiler Bun
         uses: oven-sh/setup-bun@v2
         with:
