@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +14,11 @@ const apiState = {
   getTaskActivity: vi.fn<(teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>>(),
   getTaskActivityDetail:
     vi.fn<
-      (teamName: string, taskId: string, activityId: string) => Promise<BoardTaskActivityDetailResult>
+      (
+        teamName: string,
+        taskId: string,
+        activityId: string
+      ) => Promise<BoardTaskActivityDetailResult>
     >(),
 };
 
@@ -32,11 +39,7 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@renderer/components/chat/DisplayItemList', () => ({
-  DisplayItemList: ({
-    items,
-  }: {
-    items: Array<{ type: string; tool?: { name?: string } }>;
-  }) =>
+  DisplayItemList: ({ items }: { items: Array<{ type: string; tool?: { name?: string } }> }) =>
     React.createElement(
       'div',
       { 'data-testid': 'linked-tool-card' },
@@ -196,7 +199,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -227,7 +240,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -250,10 +273,14 @@ describe('TaskActivitySection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskActivitySection, {
-          teamName: 'demo',
-          taskId: 'task-a',
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
           enabled: false,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: false,
+          }),
         })
       );
       await flushMicrotasks();
@@ -308,10 +335,14 @@ describe('TaskActivitySection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskActivitySection, {
-          teamName: 'demo',
-          taskId: 'task-a',
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
           enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
         })
       );
       await flushMicrotasks();
@@ -322,10 +353,14 @@ describe('TaskActivitySection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskActivitySection, {
-          teamName: 'demo',
-          taskId: 'task-a',
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
           enabled: false,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: false,
+          }),
         })
       );
       await flushMicrotasks();
@@ -336,10 +371,14 @@ describe('TaskActivitySection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskActivitySection, {
-          teamName: 'demo',
-          taskId: 'task-a',
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
           enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
         })
       );
       await flushMicrotasks();
@@ -419,7 +458,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -495,7 +544,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -563,7 +622,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -635,7 +704,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -697,7 +776,17 @@ describe('TaskActivitySection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'activity',
+          enabled: true,
+          children: React.createElement(TaskActivitySection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 

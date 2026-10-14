@@ -78,6 +78,7 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
 
   return {
     providerId,
+    teamLaunchAuthorityRestriction: undefined,
     displayName: providerId,
     supported: true,
     authenticated: true,

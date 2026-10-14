@@ -1,5 +1,7 @@
 export function normalizeProviderModelListModels(
-  provider: { defaultModel?: string | null; models?: (string | { id?: string; label?: string })[] } | undefined
+  provider:
+    | { defaultModel?: string | null; models?: (string | { id?: string; label?: string })[] }
+    | undefined
 ): Set<string> {
   const models = new Set<string>();
   const defaultModel = provider?.defaultModel?.trim();

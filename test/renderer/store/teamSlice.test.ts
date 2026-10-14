@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
+import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import {
   __getTeamScopedTransientStateForTests,
   __resetTeamSliceModuleStateForTests,
@@ -215,6 +216,7 @@ type TeamSliceHarnessState = TeamSlice &
   Pick<
     AppState,
     | 'activeContextId'
+    | 'isContextSwitching'
     | 'getAllPaneTabs'
     | 'invalidateTaskChangePresence'
     | 'openTab'
@@ -298,7 +300,9 @@ function createSliceStore() {
     (set, get, store) =>
       ({
         ...createTeamSlice(set as never, get as never, store as never),
+        ...createTeamTaskDetailStoreSlices(set as never, get as never, store as never),
         activeContextId: 'local',
+        isContextSwitching: false,
         paneLayout: createPaneLayout(),
         selectedProjectId: null,
         openTab: vi.fn(),
@@ -903,6 +907,50 @@ describe('teamSlice actions', () => {
         'provisioning-progress:provisioning:terminal-ready:fetchTeamAgentRuntime:scheduled'
       ]
     ).toBe(1);
+  });
+
+  it('does not demand team-wide provisioning refreshes from a visible task-detail tab', () => {
+    const store = createSliceStore();
+    const fetchTeams = vi.fn(async () => undefined);
+    const selectTeam = vi.fn(async () => undefined);
+    const refreshTeamData = vi.fn(async () => undefined);
+    const fetchMemberSpawnStatuses = vi.fn(async () => undefined);
+    const fetchTeamAgentRuntime = vi.fn(async () => undefined);
+    store.setState({
+      fetchTeams,
+      selectTeam,
+      refreshTeamData,
+      fetchMemberSpawnStatuses,
+      fetchTeamAgentRuntime,
+      selectedTeamName: 'my-team',
+      selectedTeamData: null,
+      paneLayout: createPaneLayout([
+        {
+          id: 'task-detail-my-team',
+          type: 'team',
+          teamName: 'my-team',
+          label: 'Task 1',
+          taskDetail: { contextId: 'local', taskId: '1' },
+        },
+      ]),
+    });
+
+    store.getState().onProvisioningProgress({
+      runId: 'run-task-only-ready',
+      teamName: 'my-team',
+      state: 'ready',
+      message: 'Ready',
+      startedAt: '2026-10-14T10:00:00.000Z',
+      updatedAt: '2026-10-14T10:00:01.000Z',
+    } as never);
+
+    expect(fetchTeams).toHaveBeenCalledTimes(1);
+    expect(selectTeam).not.toHaveBeenCalled();
+    expect(refreshTeamData).not.toHaveBeenCalled();
+    expect(fetchMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(fetchTeamAgentRuntime).not.toHaveBeenCalled();
+    expect(hoisted.getMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(hoisted.getTeamAgentRuntime).not.toHaveBeenCalled();
   });
 
   it('maps inbox verify failure to user-friendly text', async () => {
@@ -2292,7 +2340,7 @@ describe('teamSlice actions', () => {
     fullRequest.resolve(fullSnapshot);
     await fullPromise;
     expect(store.getState().selectedTeamData).toEqual(fullSnapshot);
-    expect(store.getState().selectedTeamLoading).toBe(true);
+    expect(store.getState().selectedTeamLoading).toBe(false);
 
     thinRequest.reject(new Error('Timeout after 30000ms: team:getData(my-team,mode=thin)'));
     await selectPromise;

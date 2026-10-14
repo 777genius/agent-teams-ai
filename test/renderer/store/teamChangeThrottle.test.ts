@@ -1241,10 +1241,14 @@ describe('team change throttling', () => {
 
   it('keeps task and config events on the existing global task refresh path', async () => {
     const fetchAllTasksSpy = vi.fn(async () => undefined);
-    useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
+    const invalidateTaskDetailTeamSource = vi.fn();
+    useStore.setState({ fetchAllTasks: fetchAllTasksSpy, invalidateTaskDetailTeamSource });
 
     hoisted.onTeamChangeCb?.({}, { type: 'task', teamName: 'my-team' });
+    expect(invalidateTaskDetailTeamSource).toHaveBeenCalledWith('local', 'my-team', undefined);
+    invalidateTaskDetailTeamSource.mockClear();
     hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team' });
+    expect(invalidateTaskDetailTeamSource).toHaveBeenCalledWith('local', 'my-team', undefined);
     hoisted.onTeamChangeCb?.(
       {},
       { type: 'config', teamName: 'my-team', management: committedChange('created') }

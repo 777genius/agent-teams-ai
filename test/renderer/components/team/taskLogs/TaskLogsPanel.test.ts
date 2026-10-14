@@ -1,6 +1,10 @@
+import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
+import { useStore } from '@renderer/store';
+import { resetTaskResourceTestState, emitTaskResourceChange } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskLogsPanel } from '../../../../../src/renderer/components/team/taskLogs/TaskLogsPanel';
 
@@ -9,9 +13,8 @@ import type { TeamTaskWithKanban } from '../../../../../src/shared/types';
 
 const apiState = {
   onTeamChange: vi.fn<(callback: (event: unknown, data: TeamChangeEvent) => void) => () => void>(),
-  getTaskLogStreamSummary: vi.fn<
-    (teamName: string, taskId: string) => Promise<{ segmentCount: number }>
-  >(),
+  getTaskLogStreamSummary:
+    vi.fn<(teamName: string, taskId: string) => Promise<{ segmentCount: number }>>(),
   setTaskLogStreamTracking: vi.fn<(teamName: string, enabled: boolean) => Promise<void>>(),
 };
 
@@ -95,13 +98,7 @@ vi.mock('../../../../../src/renderer/components/ui/tabs', async () => {
       ),
     TabsList: ({ children }: { children: React.ReactNode }) =>
       ReactModule.createElement('div', null, children),
-    TabsTrigger: ({
-      value,
-      children,
-    }: {
-      value: string;
-      children: React.ReactNode;
-    }) => {
+    TabsTrigger: ({ value, children }: { value: string; children: React.ReactNode }) => {
       const context = ReactModule.useContext(TabsContext);
       return ReactModule.createElement(
         'button',
@@ -135,10 +132,9 @@ function flushMicrotasks(): Promise<void> {
 }
 
 function findTabButton(host: HTMLElement, label: string): HTMLButtonElement | null {
-  return (
-    Array.from(host.querySelectorAll('button')).find((button) => button.textContent?.includes(label)) ??
-    null
-  ) as HTMLButtonElement | null;
+  return (Array.from(host.querySelectorAll('button')).find((button) =>
+    button.textContent?.includes(label)
+  ) ?? null) as HTMLButtonElement | null;
 }
 
 function makeTask(overrides: Partial<TeamTaskWithKanban> = {}): TeamTaskWithKanban {
@@ -164,6 +160,21 @@ function makeTask(overrides: Partial<TeamTaskWithKanban> = {}): TeamTaskWithKanb
   } as TeamTaskWithKanban;
 }
 
+function renderPanel(props: React.ComponentProps<typeof TaskLogsPanel>): React.ReactElement {
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(TaskDetailReadCoordinator),
+    React.createElement(TaskLogsPanel, props)
+  );
+}
+
+function visibleKinds(): string[] {
+  return Object.values(useStore.getState().taskDetailVisibleDemandById)
+    .flatMap((demand) => Object.keys(demand.resources))
+    .sort();
+}
+
 describe('TaskLogsPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -187,7 +198,15 @@ describe('TaskLogsPanel', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      root.render(
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
+          teamName: 'demo',
+          task: makeTask(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -197,10 +216,7 @@ describe('TaskLogsPanel', () => {
     expect(findTabButton(host, 'Task Log Stream')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="task-log-stream"]')).not.toBeNull();
     expect(taskLogStreamProps.calls.at(-1)).toMatchObject({
-      teamName: 'demo',
-      taskId: 'task-1',
-      taskStatus: 'in_progress',
-      liveEnabled: true,
+      identity: { contextId: 'local', teamName: 'demo', taskId: 'task-1' },
     });
 
     const activityTab = findTabButton(host, 'Task Activity');
@@ -214,8 +230,7 @@ describe('TaskLogsPanel', () => {
     expect(findTabButton(host, 'Task Activity')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="task-activity"]')).not.toBeNull();
     expect(taskActivityProps.calls.at(-1)).toMatchObject({
-      teamName: 'demo',
-      taskId: 'task-1',
+      identity: { contextId: 'local', teamName: 'demo', taskId: 'task-1' },
       enabled: true,
     });
 
@@ -249,7 +264,15 @@ describe('TaskLogsPanel', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      root.render(
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
+          teamName: 'demo',
+          task: makeTask(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -276,7 +299,10 @@ describe('TaskLogsPanel', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogsPanel, {
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
           teamName: 'demo',
           task: makeTask(),
           isOpen: false,
@@ -297,202 +323,61 @@ describe('TaskLogsPanel', () => {
     });
   });
 
-  it('keeps task-log tracking active across tab switches and pulses on matching live updates', async () => {
+  it('registers only the visible log resources without creating another event listener', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-
-    const activityStates: boolean[] = [];
-    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
-    apiState.onTeamChange.mockImplementation((callback) => {
-      handler = callback;
-      return () => {
-        handler = null;
-      };
-    });
-
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-
     await act(async () => {
       root.render(
-        React.createElement(TaskLogsPanel, {
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
           teamName: 'demo',
           task: makeTask(),
-          onTaskLogActivityChange: (isActive: boolean) => activityStates.push(isActive),
         })
       );
-      await flushMicrotasks();
     });
-
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledTimes(1);
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledWith('demo', true);
-    expect(handler).toBeTypeOf('function');
-    expect(activityStates).toEqual([false]);
-
-    const activityTab = findTabButton(host, 'Task Activity');
-    expect(activityTab).not.toBeNull();
-
+    expect(visibleKinds()).toEqual(['log-stream', 'log-summary']);
+    expect(apiState.onTeamChange).not.toHaveBeenCalled();
+    expect(apiState.setTaskLogStreamTracking).not.toHaveBeenCalled();
     await act(async () => {
-      activityTab?.click();
-      await flushMicrotasks();
+      findTabButton(host, 'Task Activity')?.click();
     });
-
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      handler?.(null, {
-        teamName: 'other-team',
-        type: 'task-log-change',
-        taskId: 'task-1',
-        taskSignalKind: 'log',
-      });
-      handler?.(null, {
-        teamName: 'demo',
-        type: 'task-log-change',
-        taskId: 'task-2',
-        taskSignalKind: 'log',
-      });
-      handler?.(null, {
-        teamName: 'demo',
-        type: 'task-log-change',
-        taskId: 'task-1',
-        taskSignalKind: 'change',
-      });
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false]);
-
-    await act(async () => {
-      handler?.(null, {
-        teamName: 'demo',
-        type: 'task-log-change',
-        taskId: 'task-1',
-        taskSignalKind: 'log',
-      });
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false, true]);
-
-    await act(async () => {
-      vi.advanceTimersByTime(1800);
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false, true, false]);
-
+    expect(visibleKinds()).toEqual(['activity', 'log-summary']);
     await act(async () => {
       root.unmount();
-      await flushMicrotasks();
     });
-
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenLastCalledWith('demo', false);
+    expect(visibleKinds()).toEqual([]);
   });
 
-  it('tracks header activity while collapsed but defers Task Log Stream content until first open', async () => {
+  it('defers collapsed log IO and loads the header summary on first open', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-
-    const activityStates: boolean[] = [];
-    const onTaskLogActivityChange = (isActive: boolean): void => {
-      activityStates.push(isActive);
-    };
-    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
-    apiState.onTeamChange.mockImplementation((callback) => {
-      handler = callback;
-      return () => {
-        handler = null;
-      };
-    });
-
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-
+    const props = {
+      contextId: 'local',
+      surfaceId: 'test-panel',
+      visible: true,
+      teamName: 'demo',
+      task: makeTask(),
+    };
     await act(async () => {
-      root.render(
-        React.createElement(TaskLogsPanel, {
-          teamName: 'demo',
-          task: makeTask(),
-          isOpen: false,
-          onTaskLogActivityChange,
-        })
-      );
-      await flushMicrotasks();
+      root.render(renderPanel({ ...props, isOpen: false }));
     });
-
+    expect(visibleKinds()).toEqual([]);
     expect(host.querySelector('[data-testid="task-log-stream"]')).toBeNull();
-    expect(taskLogStreamProps.calls).toHaveLength(0);
     expect(apiState.getTaskLogStreamSummary).not.toHaveBeenCalled();
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledWith('demo', true);
-    expect(apiState.onTeamChange).toHaveBeenCalledTimes(1);
-    expect(handler).toBeTypeOf('function');
-    expect(activityStates).toEqual([false]);
-
     await act(async () => {
-      handler?.(null, {
-        teamName: 'demo',
-        type: 'task-log-change',
-        taskId: 'task-1',
-        taskSignalKind: 'log',
-      });
-      await flushMicrotasks();
+      root.render(renderPanel({ ...props, isOpen: true }));
     });
-
-    expect(activityStates).toEqual([false, true]);
-    expect(apiState.getTaskLogStreamSummary).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1800);
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false, true, false]);
-
-    await act(async () => {
-      root.render(
-        React.createElement(TaskLogsPanel, {
-          teamName: 'demo',
-          task: makeTask(),
-          isOpen: true,
-          onTaskLogActivityChange,
-        })
-      );
-      await flushMicrotasks();
-      await flushMicrotasks();
-    });
-
     expect(host.querySelector('[data-testid="task-log-stream"]')).not.toBeNull();
     expect(apiState.getTaskLogStreamSummary).toHaveBeenCalledWith('demo', 'task-1');
-    expect(handler).toBeTypeOf('function');
-
-    await act(async () => {
-      handler?.(null, {
-        teamName: 'demo',
-        type: 'task-log-change',
-        taskId: 'task-1',
-        taskSignalKind: 'log',
-      });
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false, true, false, true]);
-
-    await act(async () => {
-      vi.advanceTimersByTime(1800);
-      await flushMicrotasks();
-    });
-
-    expect(activityStates).toEqual([false, true, false, true, false]);
-
     await act(async () => {
       root.unmount();
-      await flushMicrotasks();
     });
-
-    expect(apiState.setTaskLogStreamTracking).toHaveBeenLastCalledWith('demo', false);
   });
 
   it('pauses mounted activity and sessions tabs when the section collapses', async () => {
@@ -503,7 +388,15 @@ describe('TaskLogsPanel', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      root.render(
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
+          teamName: 'demo',
+          task: makeTask(),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -519,7 +412,10 @@ describe('TaskLogsPanel', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogsPanel, {
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
           teamName: 'demo',
           task: makeTask(),
           isOpen: false,
@@ -534,7 +430,15 @@ describe('TaskLogsPanel', () => {
     expect(sessionsTab).not.toBeNull();
 
     await act(async () => {
-      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      root.render(
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
+          teamName: 'demo',
+          task: makeTask(),
+        })
+      );
       sessionsTab?.click();
       await flushMicrotasks();
     });
@@ -543,7 +447,10 @@ describe('TaskLogsPanel', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogsPanel, {
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
           teamName: 'demo',
           task: makeTask(),
           isOpen: false,
@@ -565,13 +472,7 @@ describe('TaskLogsPanel', () => {
     vi.useFakeTimers();
 
     const counts: Array<number | undefined> = [];
-    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
-    apiState.onTeamChange.mockImplementation((callback) => {
-      handler = callback;
-      return () => {
-        handler = null;
-      };
-    });
+    const handler = emitTaskResourceChange;
     apiState.getTaskLogStreamSummary
       .mockResolvedValueOnce({ segmentCount: 4 })
       .mockResolvedValueOnce({ segmentCount: 5 });
@@ -582,7 +483,10 @@ describe('TaskLogsPanel', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogsPanel, {
+        renderPanel({
+          contextId: 'local',
+          surfaceId: 'test-panel',
+          visible: true,
           teamName: 'demo',
           task: makeTask(),
           onTaskLogCountChange: (count) => counts.push(count),

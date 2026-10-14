@@ -111,6 +111,7 @@ function saveSortMode(mode: TaskSortMode): void {
 function applySortMode(
   tasks: GlobalTask[],
   mode: TaskSortMode,
+  contextId: string,
   readState?: ReturnType<typeof useReadStateSnapshot>
 ): GlobalTask[] {
   const sorted = [...tasks];
@@ -119,8 +120,20 @@ function applySortMode(
       return sortTasksByFreshness(sorted);
     case 'unread':
       return sorted.sort((a, b) => {
-        const ua = readState ? getTaskUnreadCount(readState, a.teamName, a.id, a.comments) : 0;
-        const ub = readState ? getTaskUnreadCount(readState, b.teamName, b.id, b.comments) : 0;
+        const ua = readState
+          ? getTaskUnreadCount(
+              readState,
+              { contextId, teamName: a.teamName, taskId: a.id },
+              a.comments
+            )
+          : 0;
+        const ub = readState
+          ? getTaskUnreadCount(
+              readState,
+              { contextId, teamName: b.teamName, taskId: b.id },
+              b.comments
+            )
+          : 0;
         if (ub !== ua) return ub - ua;
         return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
       });
@@ -144,6 +157,7 @@ function applySortMode(
 }
 
 export interface GlobalTaskListProps {
+  contextId: string;
   /** When true, do not render the header row (Tasks + Filters); parent renders tabs and filters. */
   hideHeader?: boolean;
   /** External filters state when used with sidebar tabs. */
@@ -391,6 +405,7 @@ function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsD
 }
 
 interface GlobalTaskRowProps {
+  contextId: string;
   task: GlobalTask;
   taskLocalKey: string;
   isPinned: boolean;
@@ -455,6 +470,7 @@ function effectiveRenamingKey(taskLocalKey: string, renamingKey: string | null):
 
 const GlobalTaskRow = memo(
   function GlobalTaskRow({
+    contextId,
     task,
     taskLocalKey,
     isPinned,
@@ -513,6 +529,7 @@ const GlobalTaskRow = memo(
         <AnimatedHeightReveal animate={isNew}>
           <SidebarTaskItem
             task={task}
+            contextId={contextId}
             hideTeamName={hideTeamName}
             hideProjectName={hideProjectName}
             showTeamName={showTeamName}
@@ -538,6 +555,7 @@ const GlobalTaskRow = memo(
     prev.teamOffline === next.teamOffline &&
     effectiveRenamingKey(prev.taskLocalKey, prev.renamingKey) ===
       effectiveRenamingKey(next.taskLocalKey, next.renamingKey) &&
+    prev.contextId === next.contextId &&
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
@@ -555,6 +573,7 @@ const GlobalTaskRow = memo(
 );
 
 interface TaskRowsProps {
+  contextId: string;
   tasks: GlobalTask[];
   visibleCount?: number;
   keyPrefix?: string;
@@ -637,6 +656,7 @@ function areTaskRowsDerivedValuesEqual(
 }
 
 const TaskRows = memo(function TaskRows({
+  contextId,
   tasks,
   visibleCount,
   keyPrefix = '',
@@ -672,6 +692,7 @@ const TaskRows = memo(function TaskRows({
         const taskKey = `${keyPrefix}${task.teamName}-${task.id}`;
         const row = (
           <GlobalTaskRow
+            contextId={contextId}
             key={taskKey}
             task={task}
             taskLocalKey={taskLocalPresentation.key}
@@ -720,9 +741,11 @@ const TaskRows = memo(function TaskRows({
 }, areTaskRowsPropsEqual);
 
 function areTaskRowsPropsEqual(prev: TaskRowsProps, next: TaskRowsProps): boolean {
+  if (prev.contextId !== next.contextId) return false;
   return (
     prev.visibleCount === next.visibleCount &&
     prev.keyPrefix === next.keyPrefix &&
+    prev.contextId === next.contextId &&
     prev.hideTeamName === next.hideTeamName &&
     prev.hideProjectName === next.hideProjectName &&
     prev.showTeamName === next.showTeamName &&
@@ -759,12 +782,13 @@ function areTaskSidebarArraysEqual(
 }
 
 export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList({
+  contextId,
   hideHeader = false,
   filters: externalFilters,
   onFiltersChange: externalOnFiltersChange,
   filtersPopoverOpen: externalFiltersPopoverOpen,
   onFiltersPopoverOpenChange: externalOnFiltersPopoverOpenChange,
-}: GlobalTaskListProps = {}): React.JSX.Element {
+}: GlobalTaskListProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
   const { isLight } = useTheme();
   const {
@@ -1065,9 +1089,12 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     setRenamingTaskKey(null);
   }, []);
 
-  const handleMarkTaskUnread = useCallback((teamName: string, taskId: string): void => {
-    markTaskUnread(teamName, taskId);
-  }, []);
+  const handleMarkTaskUnread = useCallback(
+    (teamName: string, taskId: string): void => {
+      markTaskUnread({ contextId, teamName, taskId });
+    },
+    [contextId]
+  );
 
   const handleToggleTaskPin = useCallback(
     (teamName: string, taskId: string): void => {
@@ -1191,11 +1218,21 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     }
     if (filters.readFilter === 'unread') {
       result = result.filter(
-        (t) => getTaskUnreadCount(readState, t.teamName, t.id, t.comments) > 0
+        (t) =>
+          getTaskUnreadCount(
+            readState,
+            { contextId, teamName: t.teamName, taskId: t.id },
+            t.comments
+          ) > 0
       );
     } else if (filters.readFilter === 'read') {
       result = result.filter(
-        (t) => getTaskUnreadCount(readState, t.teamName, t.id, t.comments) === 0
+        (t) =>
+          getTaskUnreadCount(
+            readState,
+            { contextId, teamName: t.teamName, taskId: t.id },
+            t.comments
+          ) === 0
       );
     }
     result = applySearch(result, searchQuery);
@@ -1207,6 +1244,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     }
     return result;
   }, [
+    contextId,
     globalTasks,
     selectedProjectPath,
     filters.statusIds,
@@ -1230,8 +1268,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const sortedPinnedTasks = useMemo(() => sortTasksByFreshness(pinnedTasks), [pinnedTasks]);
 
   const sortedFlat = useMemo(
-    () => (groupingMode === 'none' ? applySortMode(normalTasks, sortMode, readState) : EMPTY_TASKS),
-    [groupingMode, normalTasks, sortMode, readState]
+    () =>
+      groupingMode === 'none'
+        ? applySortMode(normalTasks, sortMode, contextId, readState)
+        : EMPTY_TASKS,
+    [contextId, groupingMode, normalTasks, sortMode, readState]
   );
   const grouped = useMemo(
     () => (groupingMode === 'time' ? groupTasksByDate(normalTasks) : EMPTY_DATE_GROUPS),
@@ -1511,6 +1552,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             <span className="text-[11px] text-text-muted">{t('tasksPanel.pinned')}</span>
           </div>
           <TaskRows
+            contextId={contextId}
             tasks={sortedPinnedTasks}
             keyPrefix="pinned-"
             getTaskLocalPresentation={getTaskLocalPresentation}
@@ -1556,6 +1598,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
         {groupingMode === 'none' && (
           <TaskRows
+            contextId={contextId}
             tasks={sortedFlat}
             getTaskLocalPresentation={getTaskLocalPresentation}
             isNewTask={isNewTask}
@@ -1597,6 +1640,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                 onToggleProjectPin={handleToggleProjectPin}
               >
                 <TaskRows
+                  contextId={contextId}
                   tasks={group.tasks}
                   visibleCount={visibleCount}
                   getTaskLocalPresentation={getTaskLocalPresentation}
@@ -1647,6 +1691,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
                 {!isGroupCollapsed && (
                   <TaskRows
+                    contextId={contextId}
                     tasks={tasks}
                     getTaskLocalPresentation={getTaskLocalPresentation}
                     isNewTask={isNewTask}

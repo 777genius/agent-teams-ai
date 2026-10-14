@@ -1,14 +1,12 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
+import { useStore } from '@renderer/store';
+import { selectTaskDetailResourceEntry } from '@renderer/store/slices/taskDetailResourcesSlice';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
-import {
-  describeBoardTaskActivityLabel,
-  formatBoardTaskActivityTaskLabel,
-} from '@shared/utils/boardTaskActivityLabels';
+import { describeBoardTaskActivityLabel } from '@shared/utils/boardTaskActivityLabels';
 import {
   describeBoardTaskActivityActorLabel,
   describeBoardTaskActivityContextLines,
@@ -17,16 +15,16 @@ import { AlertCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 
 import { TaskActivityLinkedToolCard } from './TaskActivityLinkedToolCard';
 
+import type { TaskDetailIdentity } from '@features/team-task-detail/core';
 import type { AIGroupDisplayItem, LinkedToolItem } from '@renderer/types/groups';
 import type {
   BoardTaskActivityDetail,
+  BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
-  BoardTaskActivityTaskRef,
 } from '@shared/types';
 
 interface TaskActivitySectionProps {
-  teamName: string;
-  taskId: string;
+  identity: TaskDetailIdentity;
   enabled?: boolean;
 }
 
@@ -64,10 +62,6 @@ function formatEntryTime(timestamp: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function formatTaskLabel(task: BoardTaskActivityTaskRef | undefined): string | null {
-  return formatBoardTaskActivityTaskLabel(task);
 }
 
 function describeCollapsedContext(entry: BoardTaskActivityEntry): string | null {
@@ -264,47 +258,63 @@ const Row = ({
 };
 
 export const TaskActivitySection = ({
-  teamName,
-  taskId,
+  identity,
   enabled = true,
 }: TaskActivitySectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const [detailStates, setDetailStates] = useState<Record<string, ActivityDetailState>>({});
-  const [entries, setEntries] = useState<BoardTaskActivityEntry[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false);
+  const activityEntry = useStore((state) =>
+    selectTaskDetailResourceEntry(state, identity, 'activity')
+  );
+  const resourceRevision = useStore((state) => state.taskDetailResourcesRevision);
+  const ensureTaskDetailActivityDetail = useStore((state) => state.ensureTaskDetailActivityDetail);
+  const entries = useMemo(
+    () => (activityEntry?.data as BoardTaskActivityEntry[] | null | undefined) ?? [],
+    [activityEntry?.data]
+  );
+  const loading = Boolean(activityEntry?.loading && !activityEntry.loaded);
+  const error = activityEntry?.error ?? null;
 
   const fetchDetail = useCallback(
     async (entry: BoardTaskActivityEntry): Promise<void> => {
-      setDetailStates((prev) => ({
-        ...prev,
-        [entry.id]: { status: 'loading' },
-      }));
-
-      try {
-        const result = await api.teams.getTaskActivityDetail(teamName, taskId, entry.id);
-        setDetailStates((prev) => ({
-          ...prev,
-          [entry.id]:
-            result.status === 'ok'
-              ? { status: 'ok', detail: normalizeDetail(result.detail) }
-              : { status: 'missing' },
-        }));
-      } catch (detailError) {
-        setDetailStates((prev) => ({
-          ...prev,
-          [entry.id]: {
-            status: 'error',
-            error:
-              detailError instanceof Error ? detailError.message : 'Failed to load activity detail',
-          },
-        }));
-      }
+      if (!enabled) return;
+      await ensureTaskDetailActivityDetail(identity, entry.id);
     },
-    [taskId, teamName]
+    [enabled, ensureTaskDetailActivityDetail, identity]
   );
+
+  const getDetailState = useCallback(
+    (activityId: string): ActivityDetailState => {
+      void resourceRevision;
+      const entry = selectTaskDetailResourceEntry(
+        useStore.getState(),
+        identity,
+        'activity-detail',
+        activityId
+      );
+      if (!entry) return { status: 'idle' };
+      if (entry.loading && !entry.loaded) return { status: 'loading' };
+      if (entry.error) return { status: 'error', error: entry.error };
+      const result = entry.data as BoardTaskActivityDetailResult | null;
+      if (!result) return { status: 'idle' };
+      return result.status === 'ok'
+        ? { status: 'ok', detail: normalizeDetail(result.detail) }
+        : { status: 'missing' };
+    },
+    [identity, resourceRevision]
+  );
+
+  useEffect(() => {
+    if (!enabled || !expandedId) return;
+    const entry = selectTaskDetailResourceEntry(
+      useStore.getState(),
+      identity,
+      'activity-detail',
+      expandedId
+    );
+    if (entry?.refreshPending && !entry.loading)
+      void ensureTaskDetailActivityDetail(identity, expandedId);
+  }, [enabled, expandedId, identity, resourceRevision, ensureTaskDetailActivityDetail]);
 
   const handleToggle = useCallback(
     async (entry: BoardTaskActivityEntry): Promise<void> => {
@@ -314,81 +324,16 @@ export const TaskActivitySection = ({
       }
 
       setExpandedId(entry.id);
-      const existing = detailStates[entry.id];
-      if (
-        existing &&
-        existing.status !== 'idle' &&
-        existing.status !== 'error' &&
-        existing.status !== 'loading'
-      ) {
-        return;
-      }
-      if (existing?.status === 'loading') {
-        return;
-      }
+      const existing = getDetailState(entry.id);
+      if (existing.status !== 'idle' && existing.status !== 'error') return;
       await fetchDetail(entry);
     },
-    [detailStates, expandedId, fetchDetail]
+    [expandedId, fetchDetail, getDetailState]
   );
 
   useEffect(() => {
-    setEntries([]);
     setExpandedId(null);
-    setDetailStates({});
-    setError(null);
-    setLoading(enabled);
-    hasLoadedRef.current = false;
-  }, [taskId, teamName]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-    }
-  }, [enabled]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!enabled) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const load = async (showSpinner: boolean): Promise<void> => {
-      try {
-        if (!cancelled && showSpinner) {
-          setLoading(true);
-        }
-        if (!cancelled) {
-          setError(null);
-        }
-        const result = await api.teams.getTaskActivity(teamName, taskId);
-        if (!cancelled) {
-          setEntries(result);
-          hasLoadedRef.current = true;
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Failed to load task activity');
-          setEntries([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load(!hasLoadedRef.current);
-    const intervalId = window.setInterval(() => {
-      void load(false);
-    }, 8000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [enabled, teamName, taskId]);
+  }, [identity.taskId, identity.teamName]);
 
   const visibleEntries = useMemo(
     () =>
@@ -431,7 +376,7 @@ export const TaskActivitySection = ({
         {visibleEntries.map((entry) => (
           <Row
             key={entry.id}
-            detailState={detailStates[entry.id] ?? { status: 'idle' }}
+            detailState={getDetailState(entry.id)}
             entry={entry}
             expanded={expandedId === entry.id}
             onToggle={() => void handleToggle(entry)}
@@ -440,13 +385,14 @@ export const TaskActivitySection = ({
       </div>
     );
   }, [
-    detailStates,
     error,
     expandedId,
+    getDetailState,
     handleToggle,
     hasOnlyLowSignalExecution,
     loading,
     visibleEntries,
+    t,
   ]);
 
   return (

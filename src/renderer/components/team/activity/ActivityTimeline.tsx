@@ -62,6 +62,7 @@ import type { ChatAppearance } from './activityMessagePresentation';
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
 import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 export type { TimelineViewport } from './useConversationViewport';
@@ -82,7 +83,7 @@ interface ActivityTimelineProps {
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onMessageVisible?: (message: InboxMessage) => void;
   observationEnabled?: boolean;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onRestartTeam?: () => void;
   allCollapsed?: boolean;
   expandOverrides?: Set<string>;
@@ -631,6 +632,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           <LeadThoughtsGroupRow
             key={key}
             group={group}
+            teamName={teamName}
             memberColor={info?.color}
             canBeLive={pinnedCanBeLive}
             isTeamAlive={pinnedCanBeLive ? isTeamAlive : undefined}

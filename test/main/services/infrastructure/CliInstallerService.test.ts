@@ -137,6 +137,7 @@ function createTestProviderStatus(
 
   return {
     providerId,
+    teamLaunchAuthorityRestriction: undefined,
     displayName: providerId,
     supported: true,
     authenticated,
