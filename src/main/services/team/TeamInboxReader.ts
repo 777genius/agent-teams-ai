@@ -1,4 +1,7 @@
-import { assertValidGroupInboxRows, copyGroupChatEnvelope } from '@features/team-group-chats/contracts';
+import {
+  assertValidGroupInboxRows,
+  copyGroupChatEnvelope,
+} from '@features/team-group-chats/contracts';
 import {
   readInboxWindow,
   TeamHistoryError,
@@ -124,6 +127,7 @@ function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
     replyToConversationId:
       typeof row.replyToConversationId === 'string' ? row.replyToConversationId : undefined,
     attachments: Array.isArray(row.attachments) ? row.attachments : undefined,
+    fileReferences: Array.isArray(row.fileReferences) ? row.fileReferences : undefined,
     toolSummary: typeof row.toolSummary === 'string' ? row.toolSummary : undefined,
     toolCalls: Array.isArray(row.toolCalls)
       ? (row.toolCalls as unknown[])

@@ -1,3 +1,4 @@
+import { mergeMessageAttachments } from '@features/agent-attachments/renderer';
 import { parseStructuredAgentMessage } from '@renderer/utils/agentMessageFormatting';
 import {
   getBootstrapAcknowledgementDisplay,
@@ -255,7 +256,9 @@ export function classifyActivityMessagePresentation(
 
   const summary = getSanitizedInboxMessageSummary(message).trim();
   const hasRenderableBody = Boolean(
-    strippedText?.trim() || summary || (message.attachments?.length && message.messageId)
+    strippedText?.trim() ||
+    summary ||
+    (mergeMessageAttachments(message).length && message.messageId)
   );
   return {
     kind: special ? 'special' : message.from === 'user' ? 'ordinary-user' : 'ordinary-agent',

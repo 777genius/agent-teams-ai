@@ -15,6 +15,10 @@ import type { AttachmentPayload } from '@shared/types';
 interface UseAttachmentsOptions {
   /** When provided, attachments are persisted to IndexedDB under this key. */
   persistenceKey?: string;
+  /** Message-only admission of ordinary file references. */
+  allowFileReferences?: boolean;
+  /** Invalidates an unfinished add on recipient change without discarding cards. */
+  operationKey?: string;
   /** Called with unsupported files so the consumer can handle them (e.g. insert paths into text). */
   onUnsupportedFiles?: (files: File[]) => void;
 }
@@ -51,6 +55,7 @@ function isValidAttachmentArray(data: unknown): data is AttachmentPayload[] {
 
 export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsReturn {
   const persistenceKey = options?.persistenceKey;
+  const allowFileReferences = options?.allowFileReferences === true;
 
   const [attachments, setAttachments] = useState<AttachmentPayload[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +64,17 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: AttachmentPayload[] } | null>(null);
   const keyRef = useRef(persistenceKey);
+  const generationRef = useRef(0);
+  const editRef = useRef(0);
+  const restoreRef = useRef<Promise<void>>(Promise.resolve());
+  const operationKeyRef = useRef(options?.operationKey);
+  // eslint-disable-next-line react-hooks/refs -- invalidate pending reads synchronously on recipient changes
+  if (operationKeyRef.current !== options?.operationKey) {
+    // eslint-disable-next-line react-hooks/refs -- generation protects asynchronous byte reads
+    generationRef.current++;
+    // eslint-disable-next-line react-hooks/refs -- keeps the operation identity current
+    operationKeyRef.current = options?.operationKey;
+  }
   // eslint-disable-next-line react-hooks/refs -- synchronous ref sync during render is intentional to avoid stale key in callbacks
   keyRef.current = persistenceKey;
   const onUnsupportedRef = useRef(options?.onUnsupportedFiles);
@@ -114,7 +130,10 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
   // Load persisted attachments on mount
   useEffect(() => {
+    generationRef.current++;
+    const initialEdit = editRef.current;
     if (!persistenceKey) {
+      restoreRef.current = Promise.resolve();
       // Transitioning to non-persistent context: flush pending save and clear stale state
       flushPending();
       attachmentsRef.current = [];
@@ -128,9 +147,15 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
     // Clear stale attachments from previous persistenceKey before loading
     attachmentsRef.current = [];
     setAttachments([]);
-    void (async () => {
+    restoreRef.current = (async () => {
       const raw = await draftStorage.loadDraft(persistenceKey);
-      if (cancelled || raw == null) return;
+      if (
+        cancelled ||
+        persistenceKey !== keyRef.current ||
+        initialEdit !== editRef.current ||
+        raw == null
+      )
+        return;
       try {
         const parsed: unknown = JSON.parse(raw);
         if (isValidAttachmentArray(parsed)) {
@@ -147,7 +172,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
       } catch {
         // Invalid JSON — ignore
       }
-    })();
+    })().catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -156,6 +181,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
   // Flush on unmount
   useEffect(() => {
     return () => {
+      generationRef.current++;
       flushPending();
     };
   }, [flushPending]);
@@ -165,15 +191,20 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
-      setError(null);
+      const generation = generationRef.current;
+      const key = keyRef.current;
+      // File inputs may clear their live FileList immediately after invoking addFiles.
       const fileArray = Array.from(files);
+      await restoreRef.current;
+      if (generation !== generationRef.current || key !== keyRef.current) return;
+      setError(null);
       if (fileArray.length === 0) return;
 
       // Split: supported → attachments, unsupported → callback or error
       const supported: File[] = [];
       const unsupported: File[] = [];
       for (const f of fileArray) {
-        if (categorizeFile(f) === 'unsupported') {
+        if (categorizeFile(f) === 'unsupported' && !allowFileReferences) {
           unsupported.push(f);
         } else {
           supported.push(f);
@@ -192,7 +223,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
       let valid = true;
       for (const file of supported) {
-        const validation = validateAttachment(file);
+        const validation = validateAttachment(file, allowFileReferences);
         if (!validation.valid) {
           setError(validation.error);
           valid = false;
@@ -204,17 +235,20 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
       const newPayloads: AttachmentPayload[] = [];
       for (const file of supported) {
         try {
-          const payload = await fileToAgentAttachmentPayload(file);
+          const payload = await fileToAgentAttachmentPayload(file, allowFileReferences);
           newPayloads.push(payload);
         } catch (error) {
-          setError(error instanceof Error ? error.message : `Failed to read file: ${file.name}`);
+          if (generation === generationRef.current && key === keyRef.current)
+            setError(error instanceof Error ? error.message : `Failed to read file: ${file.name}`);
           valid = false;
           break;
         }
       }
       if (!valid) return;
 
+      if (generation !== generationRef.current || key !== keyRef.current) return;
       setAttachments((prev) => {
+        if (generation !== generationRef.current || key !== keyRef.current) return prev;
         if (prev.length + newPayloads.length > MAX_FILES) {
           setError(`Maximum ${MAX_FILES} attachments allowed`);
           return prev;
@@ -225,22 +259,27 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
           setError('Total attachment size exceeds 20MB limit');
           return prev;
         }
-        const optimizedImageTotal = validateOptimizedImageTotal([...prev, ...newPayloads]);
+        const optimizedImageTotal = validateOptimizedImageTotal(
+          [...prev, ...newPayloads],
+          allowFileReferences
+        );
         if (!optimizedImageTotal.valid) {
           setError(optimizedImageTotal.error);
           return prev;
         }
+        editRef.current++;
         const next = [...prev, ...newPayloads];
         attachmentsRef.current = next;
         schedulePersist(next);
         return next;
       });
     },
-    [schedulePersist]
+    [schedulePersist, allowFileReferences]
   );
 
   const removeAttachment = useCallback(
     (id: string) => {
+      editRef.current++;
       setAttachments((prev) => {
         const next = prev.filter((a) => a.id !== id);
         attachmentsRef.current = next;
@@ -257,6 +296,8 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
   }, []);
 
   const clearAttachments = useCallback(() => {
+    generationRef.current++;
+    editRef.current++;
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

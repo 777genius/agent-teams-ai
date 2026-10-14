@@ -24,6 +24,8 @@ export interface AttachmentMeta extends NativeAttachmentDigest {
   mimeType: AttachmentMediaType;
   size: number;
   filePath?: string;
+  /** Server-owned position in the immutable message bundle. */
+  order?: number;
 }
 export interface AttachmentPayload extends AttachmentMeta {
   data: string;

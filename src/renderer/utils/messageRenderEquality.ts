@@ -63,6 +63,9 @@ export function areAttachmentsEqual(
       prev[i].id !== next[i].id ||
       prev[i].filename !== next[i].filename ||
       prev[i].mimeType !== next[i].mimeType ||
+      prev[i].filePath !== next[i].filePath ||
+      prev[i].sha256 !== next[i].sha256 ||
+      prev[i].order !== next[i].order ||
       prev[i].size !== next[i].size
     ) {
       return false;
@@ -135,6 +138,7 @@ export function areInboxMessagesEquivalentForRender(
   return (
     areTaskRefsEqual(prev.taskRefs, next.taskRefs) &&
     areAttachmentsEqual(prev.attachments, next.attachments) &&
+    areAttachmentsEqual(prev.fileReferences, next.fileReferences) &&
     areSlashCommandsEqual(prev.slashCommand, next.slashCommand) &&
     areCommandOutputsEqual(prev.commandOutput, next.commandOutput)
   );

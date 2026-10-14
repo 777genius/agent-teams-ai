@@ -2981,6 +2981,53 @@ describe('agent-teams-mcp tools', () => {
       expect(created.sourceMessage.attachments[0].size).toBe(42000);
     });
 
+    it('creates ordered source provenance from separate native/reference metadata through controller lookup', async () => {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'TEST-reference-source';
+      fs.mkdirSync(path.join(claudeDir, 'tasks', teamName), { recursive: true });
+      writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
+      writeInboxMessage(claudeDir, teamName, 'lead', {
+        messageId: 'reference-source',
+        from: 'user',
+        source: 'user_sent',
+        text: 'Read these files',
+        timestamp: '2026-10-13T12:00:00Z',
+        attachments: [
+          { id: 'native', filename: 'native.txt', mimeType: 'text/plain', size: 4, order: 1 },
+        ],
+        fileReferences: [
+          {
+            id: 'ref',
+            filename: 'data.bin',
+            mimeType: 'application/octet-stream',
+            size: 3,
+            order: 0,
+            filePath: '/saved/data.bin',
+            sha256: 'a'.repeat(64),
+            data: 'untrusted blob',
+          },
+        ],
+      });
+      const created = parseJsonToolResult(
+        await getTool('task_create_from_message').execute({
+          claudeDir,
+          teamName,
+          messageId: 'reference-source',
+          subject: 'Inspect files',
+        })
+      );
+      expect(created.sourceMessage.attachments.map((item: { id: string }) => item.id)).toEqual([
+        'ref',
+        'native',
+      ]);
+      expect(created.sourceMessage.attachments[0]).toMatchObject({
+        filePath: '/saved/data.bin',
+        sha256: 'a'.repeat(64),
+        size: 3,
+      });
+      expect(created.sourceMessage.attachments[0]).not.toHaveProperty('data');
+    });
+
     it('produces the same canonical task shape as task_create plus provenance', async () => {
       const claudeDir = makeClaudeDir();
       const teamName = 'parity-check';

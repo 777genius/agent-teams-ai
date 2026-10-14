@@ -11,6 +11,7 @@ interface AttachmentPreviewItemProps {
   onRemove: (id: string) => void;
   onPreview?: () => void;
   disabled?: boolean;
+  genericFile?: boolean;
 }
 
 export const AttachmentPreviewItem = ({
@@ -18,8 +19,9 @@ export const AttachmentPreviewItem = ({
   onRemove,
   onPreview,
   disabled,
+  genericFile,
 }: AttachmentPreviewItemProps): React.JSX.Element => {
-  const isImage = isImageMime(attachment.mimeType);
+  const isImage = !genericFile && isImageMime(attachment.mimeType);
   const dataUrl = isImage ? `data:${attachment.mimeType};base64,${attachment.data}` : undefined;
 
   return (

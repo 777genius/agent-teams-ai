@@ -25,13 +25,20 @@ import {
   persistComposerDraftBeforeHydration,
 } from './persistComposerDraftBeforeHydration';
 import { useComposerDraftApplyWorking } from './useComposerDraftApplyWorking';
-import { useComposerDraftAttachments } from './useComposerDraftAttachments';
-import { type ComposerAttemptRequest, useComposerDraftAttempt } from './useComposerDraftAttempt';
+import {
+  useAttachmentDraftClear,
+  useComposerContentEdit,
+  useComposerDraftAttachments,
+} from './useComposerDraftAttachments';
+import {
+  type ComposerAttemptRequest,
+  type ComposerBeginAttemptResult,
+  useComposerDraftAttempt,
+} from './useComposerDraftAttempt';
 import { useComposerDraftClear } from './useComposerDraftClear';
 import { useComposerDraftTextActions } from './useComposerDraftTextActions';
 
 import type {
-  BeginAttemptResult,
   ComposerDraftAddress,
   ComposerDraftContent,
   ComposerDraftRepository,
@@ -40,19 +47,13 @@ import type {
   ComposerWorkingRecord,
   ComposerWorkingSummary,
   MessageRevisionContext,
-  PreparedComposerAttempt,
   RestoreRecoveryResult,
 } from '@renderer/types/composerDraft';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { AgentActionMode, AttachmentPayload } from '@shared/types';
 
+export type { ComposerBeginAttemptResult } from './useComposerDraftAttempt';
 export type { ComposerDraftContent } from '@renderer/types/composerDraft';
-export interface ComposerBeginAttemptResult {
-  readonly result: BeginAttemptResult;
-  readonly address: ComposerDraftAddress;
-  readonly attempt: PreparedComposerAttempt;
-  readonly localEditCounter: number;
-}
 
 export interface UseComposerDraftResult {
   text: string;
@@ -303,6 +304,7 @@ export function useComposerDraft(
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      loadGenerationRef.current++;
     };
   }, []);
 
@@ -462,11 +464,7 @@ export function useComposerDraft(
   const { content, editorContext } = visibleState;
 
   const { setText, addChip, removeChip, setActionMode } = useComposerDraftTextActions(edit);
-  const editContent = useCallback(
-    (update: (content: ComposerDraftContent) => ComposerDraftContent) =>
-      edit((current) => ({ ...current, content: update(current.content) })),
-    [edit]
-  );
+  const editContent = useComposerContentEdit(edit);
   const { attachmentError, addFiles, clearAttachmentError, handleDrop, handlePaste } =
     useComposerDraftAttachments({
       canMutate: () => !restoringRef.current,
@@ -476,6 +474,7 @@ export function useComposerDraft(
         loadGeneration: loadGenerationRef.current,
       }),
       identityIsCurrent: (identity) =>
+        mountedRef.current &&
         identity.loadGeneration === loadGenerationRef.current &&
         identity.addressKey === addressKeyRef.current &&
         sameComposerDraftAddress(identity.address, addressRef.current),
@@ -494,12 +493,7 @@ export function useComposerDraft(
     },
     [clearAttachmentError, edit]
   );
-  const clearAttachments = useCallback(() => {
-    clearAttachmentError();
-    edit((current) => ({ ...current, content: { ...current.content, attachments: [] } }));
-  }, [clearAttachmentError, edit]);
-
-  const clearDraft = useComposerDraftClear({
+  const clearDraftContent = useComposerDraftClear({
     repository,
     flush,
     addressRef,
@@ -514,6 +508,10 @@ export function useComposerDraft(
     setPersistenceStatus,
     setIsSaved,
   });
+  const { clearDraft, clearAttachments } = useAttachmentDraftClear(
+    { clearDraftContent, clearAttachmentError, editContent },
+    loadGenerationRef
+  );
 
   const beginAttempt = useComposerDraftAttempt({
     repository,

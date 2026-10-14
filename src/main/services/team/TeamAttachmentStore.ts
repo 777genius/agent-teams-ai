@@ -210,6 +210,7 @@ export class TeamAttachmentStore {
     messageId: string,
     attachments: AttachmentPayload[]
   ): Promise<NativeStoredAttachmentMeta[]> {
+    await this.assertManagedBundlePaths(teamName, messageId, attachments);
     return withFileLock(this.getMessageLockPath(teamName, messageId), async () => {
       const stored = this.toNativeStoredAttachments(teamName, messageId, attachments);
       const existingIndex = await this.readStoredIndex(teamName, messageId, true);
@@ -233,6 +234,17 @@ export class TeamAttachmentStore {
         );
       }
       await this.completeNativeOwnedBundle(teamName, messageId, stored, attachments);
+      for (const attachment of stored) {
+        await this.assertRegularArtifact(attachment.filePath);
+        const bytes = await fs.promises.readFile(attachment.filePath);
+        if (
+          bytes.length !== attachment.size ||
+          createHash('sha256').update(bytes).digest('hex') !== attachment.sha256
+        ) {
+          throw new Error(`Attachment artifact changed: ${attachment.id}`);
+        }
+        attachment.filePath = await fs.promises.realpath(attachment.filePath);
+      }
       return stored;
     });
   }
@@ -283,6 +295,54 @@ export class TeamAttachmentStore {
     });
   }
 
+  private async assertRegularArtifact(filePath: string, allowMissing = false): Promise<void> {
+    try {
+      const stat = await fs.promises.lstat(filePath);
+      if (!stat.isFile() || stat.isSymbolicLink())
+        throw new Error('Attachment artifact must be a regular file');
+    } catch (error) {
+      if (allowMissing && (error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+  }
+
+  private async assertManagedBundlePaths(
+    teamName: string,
+    messageId: string,
+    attachments: readonly AttachmentPayload[]
+  ): Promise<void> {
+    await fs.promises.mkdir(getAppDataPath(), { recursive: true, mode: 0o700 });
+    const root = path.join(getAppDataPath(), 'attachments');
+    const directories = [root, this.getTeamDir(teamName), this.getMessageDir(teamName, messageId)];
+    for (const directory of directories) {
+      try {
+        const stat = await fs.promises.lstat(directory);
+        if (!stat.isDirectory() || stat.isSymbolicLink())
+          throw new Error('Attachment directory must not be a symlink');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        await fs.promises
+          .mkdir(directory, { mode: 0o700 })
+          .catch((failure: NodeJS.ErrnoException) => {
+            if (failure.code !== 'EEXIST') throw failure;
+          });
+        const created = await fs.promises.lstat(directory);
+        if (!created.isDirectory() || created.isSymbolicLink())
+          throw new Error('Attachment directory must not be a symlink');
+      }
+    }
+    for (const artifact of [
+      this.getIndexPath(teamName, messageId),
+      this.getPendingNativePath(teamName, messageId),
+      `${this.getMessageLockPath(teamName, messageId)}.lock`,
+      ...attachments.map((item) =>
+        this.getStoredFilePath(teamName, messageId, item.id, item.filename)
+      ),
+    ]) {
+      await this.assertRegularArtifact(artifact, true);
+    }
+  }
+
   private decodeLegacyAttachment(attachment: AttachmentPayload): Buffer {
     return Buffer.from(attachment.data, 'base64');
   }
@@ -292,12 +352,14 @@ export class TeamAttachmentStore {
       if (
         attachment.data.length === 0 ||
         attachment.data.length % 4 !== 0 ||
-        !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(attachment.data)
+        attachment.data.length > Math.ceil(MAX_ATTACHMENT_SIZE / 3) * 4
       ) {
         return null;
       }
       const buffer = Buffer.from(attachment.data, 'base64');
-      return buffer.length <= MAX_ATTACHMENT_SIZE ? buffer : null;
+      return buffer.toString('base64') === attachment.data && buffer.length <= MAX_ATTACHMENT_SIZE
+        ? buffer
+        : null;
     } catch {
       return null;
     }
@@ -420,6 +482,7 @@ export class TeamAttachmentStore {
       ) {
         throw new Error(`Attachment bundle conflict for immutable message ID: ${right.id}`);
       }
+      await this.assertRegularArtifact(right.filePath, true);
       const current = await fs.promises.readFile(right.filePath).catch((error: unknown) => {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw error;
@@ -443,6 +506,7 @@ export class TeamAttachmentStore {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
+    await this.assertRegularArtifact(attachment.filePath);
     const current = await fs.promises.readFile(attachment.filePath);
     if (createHash('sha256').update(current).digest('hex') !== attachment.sha256) {
       throw new Error(`Attachment artifact conflict: ${attachment.id}`);

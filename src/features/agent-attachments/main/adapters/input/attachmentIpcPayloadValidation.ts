@@ -1,30 +1,14 @@
 import {
   estimateAgentAttachmentSerializedPayloadBytes,
-  isAgentVideoMimeType,
   MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
-  MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
 } from '../../../core/domain';
+import { isSafeAttachmentStorageId } from '../../../core/domain/storageIds';
 
 import type { AttachmentPayload } from '@shared/types';
 
-const ALLOWED_ATTACHMENT_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-  'application/pdf',
-  'text/plain',
-]);
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024;
-const MAX_VIDEO_ATTACHMENTS = 1;
-const MAX_VIDEO_ATTACHMENT_BASE64_PAYLOAD_BYTES =
-  Math.ceil(MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL / 3) * 4;
-const utf8Encoder = new TextEncoder();
 
 export const MAX_AGENT_IPC_ATTACHMENTS = 5;
 
@@ -39,7 +23,7 @@ export function validateAgentAttachmentIpcPayload(
   }
 
   let totalSize = 0;
-  let videoCount = 0;
+  const ids = new Set<string>();
   const result: AttachmentPayload[] = [];
   for (const attachment of attachments) {
     if (!attachment || typeof attachment !== 'object') {
@@ -59,29 +43,35 @@ export function validateAgentAttachmentIpcPayload(
     ) {
       return { valid: false, error: 'Attachment must have a positive size' };
     }
-    if (!ALLOWED_ATTACHMENT_TYPES.has(candidate.mimeType)) {
-      return { valid: false, error: `Unsupported attachment type: ${candidate.mimeType}` };
+    if (!isSafeAttachmentStorageId(candidate.id) || ids.has(candidate.id)) {
+      return { valid: false, error: 'Invalid or duplicate attachment ID' };
     }
-
-    const isVideo = isAgentVideoMimeType(candidate.mimeType);
-    const perAttachmentLimit = isVideo ? MAX_AGENT_VIDEO_ATTACHMENT_BYTES : MAX_ATTACHMENT_SIZE;
-    if (candidate.size > perAttachmentLimit) {
-      return {
-        valid: false,
-        error: `Attachment "${candidate.filename}" exceeds ${isVideo ? '8MB' : '10MB'} limit`,
-      };
+    ids.add(candidate.id);
+    if (
+      !candidate.filename.trim() ||
+      candidate.filename.length > 4096 ||
+      candidate.filename.includes('\0')
+    ) {
+      return { valid: false, error: 'Invalid attachment filename' };
     }
-
-    const paddingBytes = candidate.data.endsWith('==') ? 2 : candidate.data.endsWith('=') ? 1 : 0;
-    const estimatedBinarySize = Math.max(0, Math.ceil(candidate.data.length * 0.75) - paddingBytes);
-    if (estimatedBinarySize > perAttachmentLimit * 1.1) {
-      return { valid: false, error: `Attachment "${candidate.filename}" data exceeds size limit` };
+    if (
+      !candidate.mimeType ||
+      candidate.mimeType.length > 255 ||
+      /[\x00-\x1f\x7f-\x9f]/.test(candidate.mimeType)
+    ) {
+      return { valid: false, error: 'Invalid attachment MIME type' };
     }
-    if (isVideo && ++videoCount > MAX_VIDEO_ATTACHMENTS) {
-      return { valid: false, error: `Maximum ${MAX_VIDEO_ATTACHMENTS} video attachment allowed` };
+    if (candidate.size > MAX_ATTACHMENT_SIZE) {
+      return { valid: false, error: `Attachment "${candidate.filename}" exceeds 10MB limit` };
     }
-
-    totalSize += Math.max(candidate.size, estimatedBinarySize);
+    if (candidate.data.length > Math.ceil(MAX_ATTACHMENT_SIZE / 3) * 4) {
+      return { valid: false, error: 'Attachment encoded data exceeds size limit' };
+    }
+    const bytes = Buffer.from(candidate.data, 'base64');
+    if (bytes.toString('base64') !== candidate.data || bytes.length !== candidate.size) {
+      return { valid: false, error: 'Attachment data must be canonical base64 with exact size' };
+    }
+    totalSize += bytes.length;
     result.push({
       id: candidate.id,
       filename: candidate.filename,
@@ -91,9 +81,6 @@ export function validateAgentAttachmentIpcPayload(
     });
   }
 
-  if (videoCount > 0 && totalSize > MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL) {
-    return { valid: false, error: 'Video and other attachments exceed the 8MB total size limit' };
-  }
   if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
     return { valid: false, error: 'Total attachment size exceeds 20MB limit' };
   }
@@ -103,14 +90,13 @@ export function validateAgentAttachmentIpcPayload(
 export function validateAgentAttachmentSerializedIpcPayload(input: {
   text: string;
   attachments: AttachmentPayload[];
+  /** Main confirms the selected native video route, never renderer-controlled. */
+  nativeVideoDelivery?: boolean;
 }): { valid: true } | { valid: false; error: string } {
   const estimatedBytes = estimateAgentAttachmentSerializedPayloadBytes(input);
-  const includesVideo = input.attachments.some((attachment) =>
-    isAgentVideoMimeType(attachment.mimeType)
-  );
-  const serializedLimit = includesVideo
-    ? MAX_VIDEO_ATTACHMENT_BASE64_PAYLOAD_BYTES +
-      utf8Encoder.encode(JSON.stringify(input.text)).byteLength +
+  const serializedLimit = input.nativeVideoDelivery
+    ? Math.ceil(MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL / 3) * 4 +
+      new TextEncoder().encode(JSON.stringify(input.text)).byteLength +
       4096
     : MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES;
   if (estimatedBytes <= serializedLimit) return { valid: true };

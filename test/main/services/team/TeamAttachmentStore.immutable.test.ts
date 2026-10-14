@@ -1,13 +1,11 @@
+import * as nodeFs from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
-import {
-  getAppDataPath,
-  setAppDataBasePath,
-} from '@main/utils/pathDecoder';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { getAppDataPath, setAppDataBasePath } from '@main/utils/pathDecoder';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AttachmentPayload } from '@shared/types';
 
@@ -43,18 +41,16 @@ describe('TeamAttachmentStore immutable native bundles', () => {
     expect(saved).toHaveLength(1);
     expect(saved[0].filePath).toContain('att-1--image.png');
 
-    const indexPath = path.join(
-      getAppDataPath(),
-      'attachments',
-      'team',
-      'message',
-      '_index.json'
-    );
-    const index = JSON.parse(await fs.readFile(indexPath, 'utf8')) as Array<Record<string, unknown>>;
+    const indexPath = path.join(getAppDataPath(), 'attachments', 'team', 'message', '_index.json');
+    const index = JSON.parse(await fs.readFile(indexPath, 'utf8')) as Array<
+      Record<string, unknown>
+    >;
     expect(index[0]).toMatchObject({ nativeAttachmentDeliveryVersion: 1, size: 12 });
 
     await fs.unlink(saved[0].filePath!);
-    await expect(store.saveNativeAttachments('team', 'message', [request])).resolves.toHaveLength(1);
+    await expect(store.saveNativeAttachments('team', 'message', [request])).resolves.toHaveLength(
+      1
+    );
     await expect(fs.readFile(saved[0].filePath!, 'utf8')).resolves.toBe('native-bytes');
 
     await fs.unlink(saved[0].filePath!);
@@ -90,13 +86,34 @@ describe('TeamAttachmentStore immutable native bundles', () => {
     const spacedUnpadded = Buffer.from('spaced').toString('base64').replace(/=+$/, '');
     const spaced = `${spacedUnpadded.slice(0, 2)} \n${spacedUnpadded.slice(2)}`;
     await store.saveAttachments('team', 'legacy-message', [
-      payload('', { id: 'empty', filename: 'empty.txt', mimeType: 'text/plain', size: 0, data: '' }),
-      payload('unpadded', { id: 'unpadded', filename: 'unpadded.txt', mimeType: 'text/plain', data: unpadded }),
-      payload('spaced', { id: 'spaced', filename: 'spaced.txt', mimeType: 'text/plain', data: spaced }),
+      payload('', {
+        id: 'empty',
+        filename: 'empty.txt',
+        mimeType: 'text/plain',
+        size: 0,
+        data: '',
+      }),
+      payload('unpadded', {
+        id: 'unpadded',
+        filename: 'unpadded.txt',
+        mimeType: 'text/plain',
+        data: unpadded,
+      }),
+      payload('spaced', {
+        id: 'spaced',
+        filename: 'spaced.txt',
+        mimeType: 'text/plain',
+        data: spaced,
+      }),
     ]);
 
     const saved = await store.getAttachments('team', 'legacy-message');
-    expect(saved.map((item) => ({ id: item.id, data: Buffer.from(item.data, 'base64').toString('utf8') }))).toEqual([
+    expect(
+      saved.map((item) => ({
+        id: item.id,
+        data: Buffer.from(item.data, 'base64').toString('utf8'),
+      }))
+    ).toEqual([
       { id: 'empty', data: '' },
       { id: 'unpadded', data: 'unpadded' },
       { id: 'spaced', data: 'spaced' },
@@ -105,7 +122,9 @@ describe('TeamAttachmentStore immutable native bundles', () => {
       store.saveNativeAttachments('team', 'native-invalid', [payload('', { data: '' })])
     ).rejects.toThrow(/invalid attachment data/i);
     await expect(
-      store.saveNativeAttachments('team', 'native-unpadded', [payload('unpadded', { data: unpadded })])
+      store.saveNativeAttachments('team', 'native-unpadded', [
+        payload('unpadded', { data: unpadded }),
+      ])
     ).rejects.toThrow(/invalid attachment data/i);
   });
 
@@ -122,13 +141,27 @@ describe('TeamAttachmentStore immutable native bundles', () => {
     const dir = path.join(getAppDataPath(), 'attachments', 'team', 'partial-message');
     const firstPath = path.join(dir, 'att-a--first.png');
     const secondPath = path.join(dir, 'att-b--second.png');
-    await fs.mkdir(path.join(dir, 'att-b--second.png'), { recursive: true });
-
-    await expect(
-      store.saveNativeAttachments('team', 'partial-message', [first, second])
-    ).rejects.toThrow();
+    const link = nodeFs.promises.link.bind(nodeFs.promises);
+    const interrupted = vi
+      .spyOn(nodeFs.promises, 'link')
+      .mockImplementation(async (sourcePath, targetPath) => {
+        if (targetPath === secondPath)
+          throw Object.assign(new Error('No space at second artifact publication'), {
+            code: 'ENOSPC',
+          });
+        return link(sourcePath, targetPath);
+      });
+    try {
+      await expect(
+        store.saveNativeAttachments('team', 'partial-message', [first, second])
+      ).rejects.toMatchObject({ code: 'ENOSPC' });
+    } finally {
+      interrupted.mockRestore();
+    }
     await expect(fs.readFile(firstPath, 'utf8')).resolves.toBe('original-first');
-    await expect(fs.readFile(path.join(dir, '_index.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.readFile(path.join(dir, '_index.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
     const pending = JSON.parse(
       await fs.readFile(path.join(dir, '_pending-native.json'), 'utf8')
     ) as { state: string; attachments: Array<Record<string, unknown>> };
@@ -141,17 +174,18 @@ describe('TeamAttachmentStore immutable native bundles', () => {
       [second, first],
       [first],
     ]) {
-      await expect(
-        store.saveNativeAttachments('team', 'partial-message', changed)
-      ).rejects.toThrow(/conflict/i);
+      await expect(store.saveNativeAttachments('team', 'partial-message', changed)).rejects.toThrow(
+        /conflict/i
+      );
       await expect(fs.readFile(firstPath, 'utf8')).resolves.toBe('original-first');
     }
     await expect(
-      store.saveAttachments('team', 'partial-message', [payload('legacy-replacement', { id: 'att-a', filename: 'first.png' })])
+      store.saveAttachments('team', 'partial-message', [
+        payload('legacy-replacement', { id: 'att-a', filename: 'first.png' }),
+      ])
     ).rejects.toThrow(/conflict/i);
     await expect(fs.readFile(firstPath, 'utf8')).resolves.toBe('original-first');
 
-    await fs.rm(secondPath, { recursive: true, force: true });
     await expect(
       store.saveNativeAttachments('team', 'partial-message', [first, second])
     ).resolves.toHaveLength(2);
@@ -159,5 +193,26 @@ describe('TeamAttachmentStore immutable native bundles', () => {
     await expect(fs.readFile(secondPath, 'utf8')).resolves.toBe('original-second');
     const index = JSON.parse(await fs.readFile(path.join(dir, '_index.json'), 'utf8')) as unknown[];
     expect(index).toHaveLength(2);
+  });
+  it('rejects managed descendant and artifact symlinks without touching their targets', async () => {
+    const store = new TeamAttachmentStore();
+    const outside = path.join(root, 'outside');
+    await fs.mkdir(outside);
+    await fs.mkdir(path.join(getAppDataPath(), 'attachments'), { recursive: true });
+    await fs.symlink(outside, path.join(getAppDataPath(), 'attachments', 'team'), 'dir');
+    await expect(
+      store.saveNativeAttachments('team', 'message', [payload('bytes')])
+    ).rejects.toThrow(/symlink/);
+    expect(await fs.readdir(outside)).toEqual([]);
+    await fs.unlink(path.join(getAppDataPath(), 'attachments', 'team'));
+    const saved = await store.saveNativeAttachments('team', 'message', [payload('bytes')]);
+    const target = path.join(outside, 'target');
+    await fs.writeFile(target, 'bytes');
+    await fs.unlink(saved[0].filePath);
+    await fs.symlink(target, saved[0].filePath);
+    await expect(
+      store.saveNativeAttachments('team', 'message', [payload('bytes')])
+    ).rejects.toThrow(/regular file/);
+    expect(await fs.readFile(target, 'utf8')).toBe('bytes');
   });
 });

@@ -5,6 +5,11 @@ import {
 
 import { resolveAgentAttachmentCapability } from '../../core/domain';
 
+import {
+  prepareMessageAttachments,
+  selectNativeMessageAttachments,
+} from './prepareMessageAttachments';
+
 import type {
   NativeInboxAttachmentCapabilityProof,
   NativeWorkSyncAdmissionProviderId,
@@ -46,11 +51,13 @@ export interface NativeStoredAttachmentMeta {
   size: number;
   filePath: string;
   sha256: string;
+  order?: number;
 }
 
 export interface NativeAttachmentInboxRequest extends Omit<SendMessageRequest, 'attachments'> {
   attachments: NativeStoredAttachmentMeta[];
-  recipientRuntimeInstanceId: string;
+  fileReferences?: NativeStoredAttachmentMeta[];
+  recipientRuntimeInstanceId?: string;
 }
 
 export type NativeAttachmentInboxWriter = (
@@ -91,38 +98,51 @@ export async function admitNativeTeammateAttachmentMessage(
   input: NativeTeammateAttachmentAdmissionInput,
   deps: NativeTeammateAttachmentAdmissionDependencies
 ): Promise<SendMessageResult> {
-  if (!isNativeAttachmentRecipient({ isLeadRecipient: false, providerId: input.providerId })) {
-    throw new Error('Native teammate attachments require a Claude or Codex recipient');
-  }
+  if (!['anthropic', 'codex', 'opencode'].includes(input.providerId))
+    throw new Error('Unsupported attachment recipient');
 
   let result: SendMessageResult | null = null;
   await deps.runWithLiveRosterMutation(input.teamName, async () => {
-    const firstProof = await requireCurrentNativeActor(input, deps);
-    validateNativeAttachmentBatch(input.attachments, input.providerId, firstProof);
-    const stored = await deps.attachmentStore.saveNativeAttachments(
-      input.teamName,
-      input.messageId,
+    const nativeAttachments = selectNativeMessageAttachments(
+      { providerId: input.providerId, isLeadRecipient: false },
       input.attachments
     );
-    if (stored.length !== input.attachments.length) {
-      throw new Error('Attachment storage did not complete the full batch');
-    }
-
-    const secondProof = await requireCurrentNativeActor(input, deps);
-    if (secondProof.runtimeInstanceId !== firstProof.runtimeInstanceId) {
+    const nativeInput = { ...input, attachments: nativeAttachments };
+    const firstProof =
+      nativeAttachments.length && input.providerId !== 'opencode'
+        ? await requireCurrentNativeActor(nativeInput, deps)
+        : null;
+    await requireLiveRecipient(input, deps);
+    if (firstProof) validateNativeAttachmentBatch(nativeAttachments, input.providerId, firstProof);
+    const prepared = await prepareMessageAttachments(
+      {
+        ...input,
+        text: input.request.text,
+        from: input.request.from,
+        isLeadRecipient: false,
+      },
+      deps.attachmentStore
+    );
+    const secondProof = firstProof ? await requireCurrentNativeActor(nativeInput, deps) : null;
+    await requireLiveRecipient(input, deps);
+    if (secondProof?.runtimeInstanceId !== firstProof?.runtimeInstanceId) {
       throw new Error('Native teammate runtime changed during attachment admission');
     }
     const request: NativeAttachmentInboxRequest = {
       ...input.request,
       member: input.memberName,
       messageId: input.messageId,
-      attachments: stored,
-      recipientRuntimeInstanceId: secondProof.runtimeInstanceId,
+      text: prepared.text,
+      attachments: prepared.attachments,
+      fileReferences: prepared.fileReferences,
+      ...(secondProof ? { recipientRuntimeInstanceId: secondProof.runtimeInstanceId } : {}),
     };
     result = await deps.writeInbox(input.teamName, request, {
       shouldStillWrite: async () => {
         try {
-          const proof = await requireCurrentNativeActor(input, deps);
+          await requireLiveRecipient(input, deps);
+          if (!secondProof) return true;
+          const proof = await requireCurrentNativeActor(nativeInput, deps);
           return proof.runtimeInstanceId === secondProof.runtimeInstanceId;
         } catch {
           return false;
@@ -209,11 +229,14 @@ function validateNativeAttachmentBatch(
     if (
       attachment.data.length === 0 ||
       attachment.data.length % 4 !== 0 ||
-      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(attachment.data)
+      attachment.data.length > Math.ceil(MAX_NATIVE_BYTES_PER_FILE / 3) * 4
     ) {
       throw new Error(`Attachment data is not valid base64: ${attachment.filename}`);
     }
     const buffer = Buffer.from(attachment.data, 'base64');
+    if (buffer.toString('base64') !== attachment.data) {
+      throw new Error(`Attachment data is not valid base64: ${attachment.filename}`);
+    }
     if (buffer.length !== attachment.size || buffer.length > MAX_NATIVE_BYTES_PER_FILE) {
       throw new Error(`Attachment size is invalid or too large: ${attachment.filename}`);
     }
@@ -285,4 +308,15 @@ function isCurrentNativeActor(
   return (
     proof.bootstrapRunId === snapshot.runId || proof.bootstrapRunId === member.runtimeSessionId
   );
+}
+
+async function requireLiveRecipient(
+  input: NativeTeammateAttachmentAdmissionInput,
+  deps: NativeTeammateAttachmentAdmissionDependencies
+): Promise<void> {
+  const snapshot = await deps.readRuntimeSnapshot(input.teamName);
+  const member = snapshot.members[input.memberName];
+  const pid = member?.runtimePid ?? member?.pid;
+  if (!member?.alive || (input.providerId !== 'opencode' && (!pid || !deps.isProcessAlive(pid))))
+    throw new Error('Attachment recipient is not online');
 }

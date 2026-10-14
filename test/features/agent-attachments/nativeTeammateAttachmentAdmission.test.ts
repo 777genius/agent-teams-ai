@@ -143,6 +143,7 @@ describe('native teammate attachment admission', () => {
         size: attachment.size,
         filePath: '/tmp/attachments/image.png',
         sha256: 'abc',
+        order: 0,
       },
     ]);
     expect(written?.attachments[0]).not.toHaveProperty('data');
@@ -179,55 +180,60 @@ describe('native teammate attachment admission', () => {
     expect(saved).toBe(false);
   });
 
-  it('rejects malformed Codex UTF-8 before saving any part of a mixed batch', async () => {
-    let saved = false;
-    let published = false;
-    await expect(
-      admitNativeTeammateAttachmentMessage(
-        {
-          teamName: 'TEST-team',
-          memberName: 'worker',
-          providerId: 'codex',
-          messageId: 'invalid-text-message',
-          request: { member: 'worker', text: 'inspect', from: 'user', source: 'user_sent' },
-          attachments: [
-            attachment,
-            {
-              ...attachment,
-              id: 'invalid-text',
-              filename: 'invalid.json',
-              mimeType: 'text/plain',
-              size: 1,
-              data: Buffer.from([0xff]).toString('base64'),
-            },
-          ],
+  it('keeps malformed Codex UTF-8 bytes as a reference while native image admission stays actor-gated', async () => {
+    let saved: AttachmentPayload[] = [];
+    let published: NativeAttachmentInboxRequest | undefined;
+    const result = await admitNativeTeammateAttachmentMessage(
+      {
+        teamName: 'TEST-team',
+        memberName: 'worker',
+        providerId: 'codex',
+        messageId: 'invalid-text-message',
+        request: { member: 'worker', text: 'inspect', from: 'user', source: 'user_sent' },
+        attachments: [
+          attachment,
+          {
+            ...attachment,
+            id: 'invalid-text',
+            filename: 'invalid.json',
+            mimeType: 'text/plain',
+            size: 1,
+            data: Buffer.from([0xff]).toString('base64'),
+          },
+        ],
+      },
+      {
+        teamsBasePath: '/tmp/teams',
+        readCapability: async () =>
+          proof({ providerId: 'codex', nativeInboxAttachmentsVersion: 1 }),
+        readRuntimeSnapshot: async () => snapshot(),
+        attachmentStore: {
+          saveNativeAttachments: async (_team, _message, attachments) => {
+            saved = attachments;
+            return attachments.map(({ data: _data, ...meta }) => ({
+              ...meta,
+              filePath: '/tmp/attachments/' + meta.filename,
+              sha256: 'abc',
+            }));
+          },
         },
-        {
-          teamsBasePath: '/tmp/teams',
-          readCapability: async () =>
-            proof({ providerId: 'codex', nativeInboxAttachmentsVersion: 2 }),
-          readRuntimeSnapshot: async () => snapshot(),
-          attachmentStore: {
-            saveNativeAttachments: async (_team, _message, attachments) => {
-              saved = true;
-              return attachments.map(({ data: _data, ...meta }) => ({
-                ...meta,
-                filePath: '/tmp/attachments/' + meta.filename,
-                sha256: 'abc',
-              }));
-            },
-          },
-          writeInbox: async () => {
-            published = true;
-            return { deliveredToInbox: true, messageId: 'invalid-text-message' };
-          },
-          runWithLiveRosterMutation: async (_team, operation) => operation(),
-          isProcessAlive: () => true,
-        }
-      )
-    ).rejects.toThrow(/not valid UTF-8/i);
-    expect(saved).toBe(false);
-    expect(published).toBe(false);
+        writeInbox: async (_team, request) => {
+          published = request;
+          return { deliveredToInbox: true, messageId: 'invalid-text-message' };
+        },
+        runWithLiveRosterMutation: async (_team, operation) => operation(),
+        isProcessAlive: () => true,
+      }
+    );
+    expect(result.deliveredToInbox).toBe(true);
+    expect(saved.map((item) => item.id)).toEqual(['attachment-1', 'invalid-text']);
+    expect(saved[1].data).toBe('/w==');
+    expect(published?.attachments.map((item) => item.id)).toEqual(['attachment-1']);
+    expect(published?.fileReferences).toEqual([
+      expect.objectContaining({ id: 'invalid-text', mimeType: 'text/plain', size: 1, order: 1 }),
+    ]);
+    expect(published?.recipientRuntimeInstanceId).toBe('instance-1');
+    expect(published?.text).toContain('invalid.json');
   });
 
   it.each([

@@ -71,6 +71,8 @@ function normalizeAttachments(attachments) {
       filename: String(item.filename || '').trim(),
       mimeType: String(item.mimeType || '').trim(),
       size: Number(item.size || 0),
+      ...(typeof item.sha256 === 'string' ? { sha256: item.sha256 } : {}),
+      ...(Number.isSafeInteger(item.order) && item.order >= 0 ? { order: item.order } : {}),
       ...(typeof item.filePath === 'string' && item.filePath.trim()
         ? { filePath: item.filePath.trim() }
         : {}),
@@ -165,6 +167,7 @@ function buildMessage(flags, defaults) {
       ? flags.messageId.trim()
       : crypto.randomUUID();
   const attachments = normalizeAttachments(flags.attachments);
+  const fileReferences = normalizeAttachments(flags.fileReferences);
   const taskRefs = normalizeTaskRefs(flags.taskRefs);
   const messageKind = normalizeMessageKind(flags.messageKind);
   const workSyncIntent = normalizeWorkSyncIntent(flags.workSyncIntent);
@@ -244,6 +247,7 @@ function buildMessage(flags, defaults) {
     ...(slashCommand ? { slashCommand } : {}),
     ...(commandOutput ? { commandOutput } : {}),
     ...(attachments ? { attachments } : {}),
+    ...(fileReferences ? { fileReferences } : {}),
     messageId,
   };
 }

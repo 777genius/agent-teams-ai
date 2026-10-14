@@ -238,13 +238,7 @@ export interface SourceMessageSnapshot {
   /** Message source type (e.g. "user_sent", "inbox"). */
   source?: string;
   /** Attachment metadata references (IDs only, no blobs). filePath present when file is stored on disk. */
-  attachments?: {
-    id: string;
-    filename: string;
-    mimeType: string;
-    size: number;
-    filePath?: string;
-  }[];
+  attachments?: AttachmentMeta[];
 }
 
 export type InboxMessageKind =
@@ -469,6 +463,7 @@ export interface InboxMessage extends GroupChatEnvelope {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
+  fileReferences?: AttachmentMeta[];
   /** Main-generated delivery identity; never accepted from renderer message input. */
   nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
   /** Lead session ID that produced this message (for session boundary detection). */

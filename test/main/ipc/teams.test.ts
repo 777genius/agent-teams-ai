@@ -5,7 +5,7 @@ import {
   OpenCodeStartupCleanupBusyError,
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -805,7 +805,11 @@ describe('ipc teams handlers', () => {
     ),
   };
 
+  let attachmentTestRoot = '';
   beforeEach(() => {
+    attachmentTestRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-team-ipc-storage-'));
+    setAppDataBasePath(attachmentTestRoot);
+    setClaudeBasePathOverride(attachmentTestRoot);
     resetTeamWatchScopeForTests();
     handlers.clear();
     vi.clearAllMocks();
@@ -856,8 +860,41 @@ describe('ipc teams handlers', () => {
     teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage');
     teamHandlerMocks.sendMessageToTeam.mockReset();
     teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReset();
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValue({
+      relayed: 0,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: undefined,
+    });
+    teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockReset();
+    teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValue(null);
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockReset();
-    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue('anthropic');
+    teamHandlerMocks.getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'my-team',
+      runId: 'run-2',
+      updatedAt: new Date().toISOString(),
+      members: {
+        bob: {
+          memberName: 'bob',
+          alive: true,
+          pid: process.pid,
+          runtimePid: process.pid,
+          restartable: true,
+          updatedAt: new Date().toISOString(),
+        },
+        'team-lead': {
+          memberName: 'team-lead',
+          alive: true,
+          pid: process.pid,
+          runtimePid: process.pid,
+          restartable: true,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    } as never);
     teamHandlerMocks.attachLiveRosterMember.mockReset();
     teamHandlerMocks.attachLiveRosterMember.mockResolvedValue(undefined);
     teamHandlerMocks.detachLiveRosterMember.mockReset();
@@ -936,6 +973,8 @@ describe('ipc teams handlers', () => {
     launchIoGovernor.clearForTests();
     vi.useRealTimers();
     setClaudeBasePathOverride(null);
+    setAppDataBasePath(null);
+    fs.rmSync(attachmentTestRoot, { recursive: true, force: true });
   });
 
   it('registers all expected handlers', () => {
@@ -1362,6 +1401,104 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  it.each([
+    ['anthropic', 'team-lead'],
+    ['codex', 'team-lead'],
+    ['opencode', 'team-lead'],
+    ['anthropic', 'bob'],
+    ['codex', 'bob'],
+    ['opencode', 'bob'],
+  ] as const)(
+    'saves one immutable reference bundle before %s/%s dispatch',
+    async (providerId, member) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-reference-ipc-'));
+      setAppDataBasePath(root);
+      setClaudeBasePathOverride(root);
+      const messageId = 'reference-message';
+      const attachment = {
+        id: 'binary',
+        filename: 'data.bin',
+        mimeType: 'application/octet-stream',
+        size: 3,
+        data: Buffer.from([0, 255, 1]).toString('base64'),
+      };
+      const save = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(providerId);
+      teamHandlerMocks.getTeamAgentRuntimeSnapshot.mockResolvedValue({
+        teamName: 'my-team',
+        runId: 'run-2',
+        updatedAt: new Date().toISOString(),
+        members: {
+          [member]: {
+            memberName: member,
+            alive: true,
+            pid: process.pid,
+            runtimePid: process.pid,
+            updatedAt: new Date().toISOString(),
+            restartable: true,
+          },
+        },
+      } as never);
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValue({
+        relayed: 1,
+        attempted: 1,
+        delivered: 1,
+        failed: 0,
+        lastDelivery: { delivered: true, accepted: true },
+      });
+      const index = path.join(getAppDataPath(), 'attachments', 'my-team', messageId, '_index.json');
+      teamHandlerMocks.sendMessageToTeam.mockImplementation(async (...args: unknown[]) => {
+        const [, text, native] = args;
+        expect(fs.existsSync(index)).toBe(true);
+        expect(native).toEqual([]);
+        expect(text).toContain('"sha256":');
+      });
+      try {
+        const result = await handlers.get(TEAM_SEND_MESSAGE)!({} as never, 'my-team', {
+          member,
+          messageId,
+          text: 'Read the file',
+          attachments: [attachment],
+        });
+        expect(result).toMatchObject({ success: true });
+        expect(save).toHaveBeenCalledTimes(1);
+        const bundle = JSON.parse(fs.readFileSync(index, 'utf8'));
+        expect(bundle.map((item: { id: string }) => item.id)).toEqual(['binary']);
+        if (member !== 'team-lead' || providerId === 'opencode') {
+          const inbox = JSON.parse(
+            fs.readFileSync(
+              path.join(root, 'teams', 'my-team', 'inboxes', `${member}.json`),
+              'utf8'
+            )
+          );
+          expect(inbox).toHaveLength(1);
+          expect(inbox[0].attachments).toBeUndefined();
+          expect(inbox[0].nativeAttachmentDelivery).toBeUndefined();
+          expect(inbox[0].fileReferences[0]).toMatchObject({ id: 'binary', order: 0, size: 3 });
+          expect(fs.readFileSync(inbox[0].fileReferences[0].filePath)).toEqual(
+            Buffer.from([0, 255, 1])
+          );
+        } else {
+          expect(service.sendDirectToLead).toHaveBeenCalledWith(
+            'my-team',
+            member,
+            'Read the file',
+            undefined,
+            expect.arrayContaining([expect.objectContaining({ id: 'binary', order: 0 })]),
+            undefined,
+            messageId,
+            'do'
+          );
+        }
+      } finally {
+        save.mockRestore();
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('returns success false on invalid sendMessage args', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -1403,9 +1540,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      const saveSpy = vi
-        .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
-        .mockResolvedValue(new Map());
+      const saveSpy = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
       try {
         const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
         expect(sendHandler).toBeDefined();
@@ -1424,10 +1559,15 @@ describe('ipc teams handlers', () => {
         })) as { success: boolean };
 
         expect(result.success).toBe(true);
-        expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledWith(
-          'my-team',
-          expect.objectContaining({ attachments: [attachment] })
+        const [inbox] = JSON.parse(
+          fs.readFileSync(
+            path.join(attachmentTestRoot, 'teams', 'my-team', 'inboxes', 'bob.json'),
+            'utf8'
+          )
         );
+        expect(inbox.attachments[0]).toMatchObject({ id: 'video-1', mimeType, size: 4, order: 0 });
+        expect(inbox.fileReferences).toBeUndefined();
+        expect(inbox.nativeAttachmentDelivery).toBeUndefined();
       } finally {
         saveSpy.mockRestore();
       }
@@ -1460,9 +1600,7 @@ describe('ipc teams handlers', () => {
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
     });
-    const saveSpy = vi
-      .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
-      .mockResolvedValue(new Map());
+    const saveSpy = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
     try {
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
@@ -1555,60 +1693,67 @@ describe('ipc teams handlers', () => {
     vi.mocked(console.error).mockClear();
   });
 
-  it('enforces one video and the 8MiB per-video/mixed IPC budget', async () => {
-    const eightMiB = 8 * 1024 * 1024;
-    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
-    expect(sendHandler).toBeDefined();
-    const baseVideo = {
-      id: 'video-1',
-      filename: 'clip.mp4',
-      mimeType: 'video/mp4',
-      size: 4,
-      data: Buffer.from('test').toString('base64'),
-    };
+  it('keeps the one-video native OpenCode guard before immutable storage', async () => {
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue('opencode');
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      members: [
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/minimax-m3',
+          currentTaskId: null,
+          taskCount: 0,
+        },
+      ],
+      tasks: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const save = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
+    try {
+      const attachments = ['first', 'second'].map((id) => ({
+        id,
+        filename: `${id}.mp4`,
+        mimeType: 'video/mp4',
+        size: 4,
+        data: Buffer.from('test').toString('base64'),
+      }));
+      const result = await handlers.get(TEAM_SEND_MESSAGE)!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Read clips',
+        attachments,
+      });
+      expect(result).toMatchObject({ success: false, error: 'Maximum 1 video attachment allowed' });
+      expect(save).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      save.mockRestore();
+    }
+  });
 
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Two clips',
-        attachments: [
-          baseVideo,
-          { ...baseVideo, id: 'video-2', filename: 'second.webm', mimeType: 'video/webm' },
-        ],
-      })
-    ).resolves.toMatchObject({
-      success: false,
-      error: 'Maximum 1 video attachment allowed',
+  it('rejects false decoded sizes before native routing or storage', async () => {
+    const handler = handlers.get(TEAM_SEND_MESSAGE)!;
+    const result = await handler({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Read file',
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 8 * 1024 * 1024 + 1,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
     });
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Large clip',
-        attachments: [{ ...baseVideo, size: eightMiB + 1 }],
-      })
-    ).resolves.toMatchObject({
+    expect(result).toMatchObject({
       success: false,
-      error: 'Attachment "clip.mp4" exceeds 8MB limit',
+      error: 'Attachment data must be canonical base64 with exact size',
     });
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Mixed payload',
-        attachments: [
-          { ...baseVideo, size: eightMiB - 4 },
-          {
-            id: 'image-1',
-            filename: 'diagram.png',
-            mimeType: 'image/png',
-            size: 8,
-            data: Buffer.from('image').toString('base64'),
-          },
-        ],
-      })
-    ).resolves.toMatchObject({
-      success: false,
-      error: 'Video and other attachments exceed the 8MB total size limit',
-    });
+    expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
   });
 
   it('keeps the legacy serialized payload cap for non-video attachments', async () => {
