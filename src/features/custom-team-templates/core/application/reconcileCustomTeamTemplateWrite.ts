@@ -2,6 +2,7 @@ import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSe
 import { normalizeTemplateNameKey } from '../domain/templateNamePolicy';
 
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
 
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contracts';
@@ -85,7 +86,10 @@ export async function checkStoredTemplate(
       error instanceof CustomTeamTemplateStorageInterruptedError &&
       error.execution === 'unknown'
     ) {
-      await error.settled;
+      // Bounded wait: a writer that never confirms settlement keeps the outcome
+      // unresolved. A timeout is never reinterpreted as absence, so it can
+      // never become `notFound` or trigger a second write.
+      await waitForStorageSettlement(error.settled);
     }
     return { status: 'unresolved', templateId: identity.templateId };
   }

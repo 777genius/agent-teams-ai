@@ -175,7 +175,14 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
 
     let meta: Awaited<ReturnType<TeamMembersMetaStore['getMeta']>>;
     try {
-      meta = await this.membersStore.getMeta(teamName, { requireCompleteMembers: true });
+      meta = await this.membersStore.getMeta(teamName, {
+        requireCompleteMembers: true,
+        // A generated CLI auto-suffix duplicate (alice-2 above an active
+        // alice) is a known artifact the template projection removes, so it
+        // must not make the whole roster unreadable. Real corruption and
+        // missing required fields still fail the strict read.
+        allowCliAutoSuffixArtifacts: true,
+      });
     } catch {
       return { status: 'unreadable' };
     }

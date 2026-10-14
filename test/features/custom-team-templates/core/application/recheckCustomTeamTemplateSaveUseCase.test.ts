@@ -1,6 +1,7 @@
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
 import { InMemoryCustomTeamTemplatePreviewStore } from '@features/custom-team-templates/core/application/InMemoryCustomTeamTemplatePreviewStore';
 import { RecheckCustomTeamTemplateSaveUseCase } from '@features/custom-team-templates/core/application/RecheckCustomTeamTemplateSaveUseCase';
+import { STORAGE_SETTLEMENT_TIMEOUT_MS } from '@features/custom-team-templates/core/application/waitForStorageSettlement';
 import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { NodeCustomTeamTemplateHasher } from '@features/custom-team-templates/main/adapters/output/NodeCustomTeamTemplateHasher';
 import { describe, expect, it, vi } from 'vitest';
@@ -177,6 +178,33 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
       templateId: TEMPLATE_ID,
     });
     expect(settled).toBe(true);
+  });
+
+  it('bounds the settlement wait and never converts a timeout into notFound', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = operation({
+        read: new CustomTeamTemplateStorageInterruptedError(
+          'worker termination unconfirmed',
+          'unknown',
+          new Promise<void>(() => undefined)
+        ),
+      });
+
+      const pending = fixture.useCase.execute({ previewToken: fixture.token });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+
+      // A re-check that cannot settle stays honestly unresolved; it is never
+      // reinterpreted as confirmed absence.
+      await expect(pending).resolves.toEqual({
+        status: 'unresolved',
+        templateId: TEMPLATE_ID,
+      });
+      expect(fixture.create).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('treats an ordinary read failure as unresolved instead of absent', async () => {

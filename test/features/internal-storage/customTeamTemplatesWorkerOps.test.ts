@@ -121,6 +121,11 @@ function spawnTemplateRacer(dbPath: string, templateId: string, name: string): T
     resolveResult = resolve;
     rejectResult = reject;
   });
+  // The exit/error handlers reject `result` as soon as the racer dies, which
+  // can happen long before the test awaits it; without this inert handler that
+  // window surfaces as an unhandled rejection. The original promise is still
+  // returned and awaited, so the eventual failure stays observable.
+  result.catch(() => undefined);
 
   const fail = (error: Error): void => {
     rejectReady(error);

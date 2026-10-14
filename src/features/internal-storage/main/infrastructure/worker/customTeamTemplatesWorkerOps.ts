@@ -1,5 +1,10 @@
+// The feature's public entry point is bundle-verified for this worker: the
+// renderer HTTP adapter exported beside this rule is tree-shaken out, leaving
+// the internal-storage-worker.cjs output byte-identical to a direct domain
+// import (sha256-compared), so the persisted uniqueness key can share the
+// same source of truth without pulling HTTP or UI code into the worker.
+import { normalizeTemplateNameKey } from '@features/custom-team-templates';
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
-import { normalizeTemplateNameKey } from '@features/custom-team-templates/core/domain/templateNamePolicy';
 import { asc, eq } from 'drizzle-orm';
 
 import {

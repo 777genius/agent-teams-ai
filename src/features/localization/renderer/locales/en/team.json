@@ -3330,7 +3330,10 @@
       "noMembers": "Prompt-only template — no members recorded",
       "storageUnavailable": "The template library is unavailable right now.",
       "title": "My Templates",
-      "unreadableRecords": "{{total}} stored templates could not be read and are missing from this list."
+      "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
+      "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
+      "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",
+      "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list."
     },
     "preview": {
       "membersEmpty": "No members recorded — a prompt-only template",
@@ -3371,7 +3374,10 @@
       "missingMemberWorkflow": "{{member}} has no recorded workflow.",
       "missingTeamPrompt": "The team has no prompt; the saved template keeps an empty prompt.",
       "noRecordedRoster": "No roster was recorded for this team. A prompt-only template is valid.",
-      "removedMembersExcluded": "{{total}} removed team members were excluded."
+      "removedMembersExcluded_few": "{{count}} removed team members were excluded.",
+      "removedMembersExcluded_many": "{{count}} removed team members were excluded.",
+      "removedMembersExcluded_one": "{{count}} removed team member was excluded.",
+      "removedMembersExcluded_other": "{{count}} removed team members were excluded."
     }
   }
 }

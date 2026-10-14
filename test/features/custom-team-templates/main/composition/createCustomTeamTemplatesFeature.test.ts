@@ -42,29 +42,117 @@ describe('createCustomTeamTemplatesFeature', () => {
     expect(feature.saveTemplate).toBeDefined();
   });
 
-  it('classifies worker interruptions at the port boundary', async () => {
+  it('converts a real internal-storage interruption into an unresolved, reconciled save', async () => {
+    // The gateway is the raw Phase 2A backend: it rejects with the internal-
+    // storage feature's own interruption error, exactly as the worker client
+    // does, so only composition can classify it at the port boundary.
+    let settleWriter!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      settleWriter = resolve;
+    });
     const gateway = suppliedGateway();
     gateway.customTeamTemplateCreate = vi
       .fn()
       .mockRejectedValue(
-        new InternalStorageOperationInterruptedError('worker exited', 'unknown', Promise.resolve())
+        new InternalStorageOperationInterruptedError('worker exited', 'unknown', settled)
       );
+    gateway.customTeamTemplateGetById = vi.fn().mockResolvedValue({
+      status: 'unreadable',
+      templateId: 'template-1',
+    });
     const feature = createCustomTeamTemplatesFeature({
       backend: { gateway },
-      previewStoreCapacity: 1,
-      createPreviewToken: () => 'token-1',
-      now: () => 0,
+      snapshotReader: {
+        readSnapshot: () =>
+          Promise.resolve({
+            status: 'available',
+            snapshot: {
+              sourceTeamName: 'alpha-team',
+              teamPrompt: 'Prompt.',
+              roster: { status: 'absent' },
+            },
+            revision: 'revision-1',
+          } as const),
+      },
     });
 
-    const failure = await feature.saveTemplate
-      .execute({ previewToken: 'token-unknown' })
-      .catch((error: unknown) => error);
-    // An unknown token never reaches storage, so nothing is written.
-    expect(failure).toEqual({
-      status: 'validationFailed',
-      issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+    // A real preview is prepared first, so the save below carries a live token
+    // and genuinely reaches storage.
+    const prepared = await feature.preparePreview.execute({
+      sourceTeamName: 'alpha-team',
+      name: 'Template',
     });
-    expect(gateway.customTeamTemplateCreate).not.toHaveBeenCalled();
+    expect(prepared.status).toBe('previewReady');
+    if (prepared.status !== 'previewReady') return;
+
+    const save = feature.saveTemplate.execute({
+      previewToken: prepared.preview.previewToken,
+    });
+    // An unknown interruption must wait for the failed writer to settle before
+    // any reconciliation read; without the classifying gateway the raw error
+    // would skip that wait and reconcile immediately.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(gateway.customTeamTemplateGetById).not.toHaveBeenCalled();
+    settleWriter();
+
+    const create = vi.mocked(gateway.customTeamTemplateCreate);
+    const getById = vi.mocked(gateway.customTeamTemplateGetById);
+    const attemptedTemplateId = create.mock.calls[0][0].template.templateId;
+
+    // The write may have reached the database, so the outcome stays unresolved
+    // and the reconciliation lookup classifies it by the stable template id —
+    // an unreadable record is never reported as success or absence.
+    await expect(save).resolves.toEqual({
+      status: 'unresolvedWriteOutcome',
+      templateId: attemptedTemplateId,
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(getById).toHaveBeenCalledWith({ templateId: attemptedTemplateId });
+  });
+
+  it('retries a not-started interruption without ever consulting reconciliation', async () => {
+    const gateway = suppliedGateway();
+    gateway.customTeamTemplateCreate = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new InternalStorageOperationInterruptedError(
+          'previous worker has not exited',
+          'not_started',
+          Promise.resolve()
+        )
+      )
+      .mockResolvedValue({ status: 'created', template: stored });
+    gateway.customTeamTemplateGetById = vi.fn().mockResolvedValue({ status: 'notFound' });
+    const feature = createCustomTeamTemplatesFeature({
+      backend: { gateway },
+      snapshotReader: {
+        readSnapshot: () =>
+          Promise.resolve({
+            status: 'available',
+            snapshot: {
+              sourceTeamName: 'alpha-team',
+              teamPrompt: 'Prompt.',
+              roster: { status: 'absent' },
+            },
+            revision: 'revision-1',
+          } as const),
+      },
+    });
+    const prepared = await feature.preparePreview.execute({
+      sourceTeamName: 'alpha-team',
+      name: 'Template',
+    });
+    expect(prepared.status).toBe('previewReady');
+    if (prepared.status !== 'previewReady') return;
+
+    // Only the classifying gateway recognizes the interruption as `not_started`
+    // and retries the identical request; without it the raw error would be
+    // reconciled through a lookup that never happens on this path.
+    await expect(
+      feature.saveTemplate.execute({ previewToken: prepared.preview.previewToken })
+    ).resolves.toEqual({ status: 'created', template: stored });
+    expect(gateway.customTeamTemplateCreate).toHaveBeenCalledTimes(2);
+    expect(gateway.customTeamTemplateGetById).not.toHaveBeenCalled();
   });
 
   it('reports a missing worker backend as unavailable storage instead of degrading', async () => {

@@ -430,7 +430,7 @@ export const SaveAsTemplateDialog = ({
                                 });
                               case 'removedMembersExcluded':
                                 return t('customTemplates.warnings.removedMembersExcluded', {
-                                  total: warning.count,
+                                  count: warning.count,
                                 });
                             }
                           })()}

@@ -112,6 +112,9 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     open ? React.createElement('div', null, children) : null,
   DialogContent: ({
     children,
+    // Stripped before the rest-spread so the dialog-only prop never reaches the
+    // DOM element as an unknown attribute.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- retaining the destructuring is the prop-safety behavior under test
     closeDisabled: _closeDisabled,
     ...props
   }: {
@@ -297,7 +300,7 @@ describe('TeamListView custom team template actions', () => {
     // so inner clicks and Enter/Space presses must not reach the row handler.
     const nameField = host.querySelector('#custom-template-name');
     expect(nameField).not.toBeNull();
-    await act(async () => {
+    act(() => {
       nameField?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
       nameField?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       nameField?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -306,7 +309,7 @@ describe('TeamListView custom team template actions', () => {
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 
     // A real row click still opens the team, so the guard is not swallowing it.
-    await act(async () => {
+    act(() => {
       card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
     expect(storeState.openTeamTab).toHaveBeenCalledWith('alpha', '/opt/acme/project');

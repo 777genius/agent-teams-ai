@@ -111,7 +111,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>
                 {t('customTemplates.library.unreadableRecords', {
-                  total: state.unreadableRecords.length,
+                  count: state.unreadableRecords.length,
                 })}
               </p>
             </div>

@@ -3279,7 +3279,10 @@
       "noMembers": "Шаблон только с промптом — участники не записаны",
       "storageUnavailable": "Хранилище шаблонов сейчас недоступно.",
       "title": "Мои шаблоны",
-      "unreadableRecords": "{{total}} сохранённых шаблонов не удалось прочитать, и их нет в этом списке."
+      "unreadableRecords_few": "{{count}} сохранённых шаблона не удалось прочитать, и их нет в этом списке.",
+      "unreadableRecords_many": "{{count}} сохранённых шаблонов не удалось прочитать, и их нет в этом списке.",
+      "unreadableRecords_one": "{{count}} сохранённый шаблон не удалось прочитать, и его нет в этом списке.",
+      "unreadableRecords_other": "{{count}} сохранённого шаблона не удалось прочитать, и его нет в этом списке."
     },
     "preview": {
       "membersEmpty": "Участники не записаны — шаблон только с промптом",
@@ -3320,7 +3323,10 @@
       "missingMemberWorkflow": "У участника {{member}} не записан процесс.",
       "missingTeamPrompt": "У команды нет промпта; в шаблоне он останется пустым.",
       "noRecordedRoster": "Для этой команды состав не записан. Шаблон только с промптом допустим.",
-      "removedMembersExcluded": "Исключено удалённых участников: {{total}}."
+      "removedMembersExcluded_few": "Исключено {{count}} удалённых участника.",
+      "removedMembersExcluded_many": "Исключено {{count}} удалённых участников.",
+      "removedMembersExcluded_one": "Исключён {{count}} удалённый участник.",
+      "removedMembersExcluded_other": "Исключено {{count}} удалённых участников."
     }
   }
 }

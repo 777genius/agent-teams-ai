@@ -161,7 +161,7 @@ describe('MyTemplatesDialog', () => {
     expect(host.querySelector('[data-testid="custom-template-library"]')).not.toBeNull();
     expect(host.textContent).toContain('Alpha');
     expect(host.querySelector('[data-testid="custom-template-unreadable"]')?.textContent).toContain(
-      'customTemplates.library.unreadableRecords|total=1'
+      'customTemplates.library.unreadableRecords|count=1'
     );
     expect(host.querySelector('[data-testid="custom-template-library-error"]')).toBeNull();
     expect(host.textContent).not.toContain('customTemplates.library.empty');

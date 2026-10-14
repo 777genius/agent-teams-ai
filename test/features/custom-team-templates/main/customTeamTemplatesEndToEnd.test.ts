@@ -257,7 +257,7 @@ describe('custom team templates end to end', () => {
     expect(library.rows.size).toBe(0);
   });
 
-  it('re-checks an unresolved save by the same stable operation id', async () => {
+  it('re-checks a refused save by the same stable operation id', async () => {
     await writeTeam([{ name: 'alice', role: 'reviewer', workflow: 'Review.' }]);
     const library = fakeLibrary();
     let failCreate = true;
@@ -291,16 +291,20 @@ describe('custom team templates end to end', () => {
     const token = prepared.preview.previewToken;
 
     const saved = await app.saveTemplate.execute({ previewToken: token });
-    expect(saved.status).toBe('unresolvedWriteOutcome');
-    if (saved.status !== 'unresolvedWriteOutcome') return;
-    const { templateId } = saved;
-    // Nothing reached the store, and the retained operation keeps the same id.
+    // Every attempt settled and the authoritative read proved the id absent,
+    // so the exhausted save reports refused storage — absence was proven, not
+    // left uncertain.
+    expect(saved).toEqual({ status: 'storageUnavailable' });
+    // Nothing reached the store, and the retained operation keeps its identity.
     expect(library.requests).toEqual([]);
 
-    await expect(app.recheckSave.execute({ previewToken: token })).resolves.toEqual({
+    const notSaved = await app.recheckSave.execute({ previewToken: token });
+    expect(notSaved).toEqual({
       status: 'notSaved',
-      templateId,
+      templateId: expect.any(String),
     });
+    if (notSaved.status !== 'notSaved') return;
+    const { templateId } = notSaved;
     // A re-check never writes: the confirmed-absence read is the whole action.
     expect(library.requests).toEqual([]);
 

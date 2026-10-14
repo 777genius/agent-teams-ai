@@ -8,6 +8,7 @@ import {
 
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
 import { checkStoredTemplate } from './reconcileCustomTeamTemplateWrite';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
 
 import type {
   CustomTeamTemplatePreviewState,
@@ -151,7 +152,24 @@ export class SaveCustomTeamTemplateUseCase {
       nameKey: resolved.nameKey,
       ...(resolved.description === undefined ? {} : { description: resolved.description }),
     };
-    this.deps.previewStore.confirmSave(state.token, identity);
+
+    // The preview can expire or be evicted while the authoritative snapshot is
+    // being read, so confirmation is checked rather than assumed: a token that
+    // no longer retains its preview must never produce a database record.
+    const confirmation = this.deps.previewStore.confirmSave(state.token, identity);
+    if (confirmation.status === 'unavailable') {
+      return { status: 'stalePreview', sourceTeamName: state.sourceTeamName };
+    }
+    if (confirmation.status === 'identityMismatch') {
+      // A write for this token may already have been dispatched under its
+      // recorded identity, so the token can never be rebound to a different
+      // template id, name key or description. The original operation stays
+      // reconcilable through re-check; saving the new identity requires a
+      // fresh preview.
+      return validationFailed([{ code: 'previewTokenUnknown', field: 'previewToken' }]);
+    }
+    // `recorded` (first confirmation) and `alreadyRecorded` (exact-identity
+    // retry) both proceed with the identical, idempotent create request.
 
     const request: CreateCustomTeamTemplateRecordRequest = {
       template: {
@@ -293,13 +311,31 @@ export class SaveCustomTeamTemplateUseCase {
     error: unknown
   ): Promise<WriteDecision> {
     if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+      // The settlement promise is bounded: a worker whose termination was never
+      // confirmed can leave it pending forever, and a save request must always
+      // settle within a finite time.
+      const settlement = await waitForStorageSettlement(error.settled);
+      if (settlement === 'timedOut') {
+        // The failed writer never confirmed it stopped, so nothing is retried
+        // on that ambiguity: a `not_started` interruption is reported as
+        // refused storage and an `unknown` one keeps its honest unresolved
+        // outcome. No second write is issued merely because settlement timed
+        // out.
+        return error.execution === 'not_started'
+          ? { retry: false, result: { status: 'storageUnavailable' } }
+          : {
+              retry: false,
+              result: {
+                status: 'unresolvedWriteOutcome',
+                templateId: request.template.templateId,
+              },
+            };
+      }
       if (error.execution === 'not_started') {
-        // Nothing reached the database. Wait for the failed writer to settle so
-        // the retry reaches a live writer, then reuse the identical request.
-        await error.settled;
+        // Nothing reached the database, and the failed writer has settled, so
+        // the retry reaches a live writer; reuse the identical request.
         return { retry: true, result: { status: 'storageUnavailable' } };
       }
-      await error.settled;
     }
     return this.reconcile(gateway, request);
   }
@@ -328,10 +364,12 @@ export class SaveCustomTeamTemplateUseCase {
         };
       case 'absent':
         // Definitive absence while the store is readable: the write did not
-        // persist, so one more identical attempt is allowed before giving up.
+        // persist, so one more identical attempt is allowed, and an attempt
+        // that runs out is honestly reported as refused storage rather than as
+        // an unknown outcome — absence was proven, not left uncertain.
         return {
           retry: true,
-          result: { status: 'unresolvedWriteOutcome', templateId: check.templateId },
+          result: { status: 'storageUnavailable' },
         };
       case 'unresolved':
         return {

@@ -121,7 +121,7 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
         nameKey: 'renamed template',
         description: 'Edited',
       })
-    ).toBe(true);
+    ).toEqual({ status: 'recorded' });
 
     const resolved = store.resolve(state.token);
     expect(resolved.status).toBe('found');
@@ -130,15 +130,91 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(resolved.state.name).toBe('Renamed Template');
     expect(resolved.state.nameKey).toBe('renamed template');
     expect(resolved.state.description).toBe('Edited');
+    expect(resolved.state.confirmedSave).toEqual({
+      templateId: 'tmpl-confirmed',
+      name: 'Renamed Template',
+      nameKey: 'renamed template',
+      description: 'Edited',
+    });
     // The reviewed content and its digest are fixed by the preview itself.
     expect(resolved.state.canonicalContent).toBe(baseInput.canonicalContent);
     expect(resolved.state.contentHash).toBe(baseInput.contentHash);
     expect(resolved.state.sourceTeamName).toBe('alpha');
 
     // A missing, expired or invalidated token is never written against.
-    expect(store.confirmSave('token-unknown', { templateId: 'x', name: 'x', nameKey: 'x' })).toBe(
-      false
+    expect(
+      store.confirmSave('token-unknown', { templateId: 'x', name: 'x', nameKey: 'x' })
+    ).toEqual({ status: 'unavailable' });
+  });
+
+  it('freezes the confirmed operation identity instead of rebinding the token', () => {
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: counterTokens(),
+    });
+    const state = store.issue({ ...baseInput, description: 'Original' });
+    const recorded = {
+      templateId: 'tmpl-confirmed',
+      name: 'Renamed Template',
+      nameKey: 'renamed template',
+      description: 'Edited',
+    };
+    expect(store.confirmSave(state.token, recorded)).toEqual({ status: 'recorded' });
+
+    // The exact identity may be confirmed again: the create is idempotent.
+    expect(store.confirmSave(state.token, { ...recorded })).toEqual({ status: 'alreadyRecorded' });
+    // A different name, name key, stable id or description is rejected, and
+    // the recorded identity survives untouched.
+    expect(store.confirmSave(state.token, { ...recorded, name: 'Other Name' }).status).toBe(
+      'identityMismatch'
     );
+    expect(store.confirmSave(state.token, { ...recorded, nameKey: 'other name' }).status).toBe(
+      'identityMismatch'
+    );
+    expect(store.confirmSave(state.token, { ...recorded, templateId: 'tmpl-other' }).status).toBe(
+      'identityMismatch'
+    );
+    expect(store.confirmSave(state.token, { ...recorded, description: 'Different' }).status).toBe(
+      'identityMismatch'
+    );
+    expect(
+      store.confirmSave(state.token, {
+        templateId: 'tmpl-confirmed',
+        name: 'Renamed Template',
+        nameKey: 'renamed template',
+      }).status
+    ).toBe('identityMismatch');
+
+    const resolved = store.resolve(state.token);
+    expect(resolved.status).toBe('found');
+    if (resolved.status !== 'found') return;
+    expect(resolved.state.confirmedSave).toEqual(recorded);
+    expect(resolved.state.templateId).toBe('tmpl-confirmed');
+    expect(resolved.state.name).toBe('Renamed Template');
+    expect(resolved.state.description).toBe('Edited');
+  });
+
+  it('reports an expired or invalidated token as unavailable for confirmation', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+    });
+    const state = store.issue(baseInput);
+
+    now = 100;
+    expect(store.confirmSave(state.token, { templateId: 'x', name: 'x', nameKey: 'x' })).toEqual({
+      status: 'unavailable',
+    });
+
+    now = 0;
+    const second = store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    store.invalidate(second.token);
+    expect(store.confirmSave(second.token, { templateId: 'x', name: 'x', nameKey: 'x' })).toEqual({
+      status: 'unavailable',
+    });
+    expect(store.resolve(second.token)).toEqual({ status: 'unknown' });
   });
 
   it('clears every retained preview and confirmed operation on disposal', () => {

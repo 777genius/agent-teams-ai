@@ -260,6 +260,50 @@ describe('projectTemplateContent', () => {
     if (result.status !== 'ready') return;
     expect(result.content.members.map((member) => member.name)).toEqual(['dev', 'dev-1']);
   });
+
+  it('never projects a runtime provisioner agent as a template member', () => {
+    const result = projectTemplateContent({
+      sourceTeamName: 'demo-team',
+      teamPrompt: prompt,
+      roster: {
+        status: 'readable',
+        members: [
+          { name: 'alice', role: 'Developer', workflow: 'Design.' },
+          { name: 'alice-provisioner', role: 'provisioner', workflow: 'Spawn teammates.' },
+        ],
+      },
+    });
+
+    expect(result.status).toBe('ready');
+    if (result.status !== 'ready') return;
+    // The runtime-managed provisioner is an internal artifact, so it is never
+    // persisted as a member — and, never having been a teammate, it is not
+    // counted as a removed member either.
+    expect(result.content.members.map((member) => member.name)).toEqual(['alice']);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps an ordinary member whose name merely resembles the provisioner pattern', () => {
+    const result = projectTemplateContent({
+      sourceTeamName: 'demo-team',
+      teamPrompt: prompt,
+      roster: {
+        status: 'readable',
+        members: [
+          { name: 'alice-provisioner-2', role: 'Developer', workflow: 'Design.' },
+          { name: 'provisioning-notes', role: 'Developer', workflow: 'Support.' },
+        ],
+      },
+    });
+
+    expect(result.status).toBe('ready');
+    if (result.status !== 'ready') return;
+    // Only the established guard classifies names as provisioners.
+    expect(result.content.members.map((member) => member.name)).toEqual([
+      'alice-provisioner-2',
+      'provisioning-notes',
+    ]);
+  });
 });
 
 describe('validateTemplateContent', () => {
@@ -284,6 +328,22 @@ describe('validateTemplateContent', () => {
     expect(issues).toContainEqual({ code: 'memberNameInvalid', field: 'members[0].name' });
     expect(issues).toContainEqual({ code: 'memberNameInvalid', field: 'members[1].name' });
     expect(issues).toContainEqual({ code: 'memberNameRequired', field: 'members[2].name' });
+  });
+
+  it('rejects a runtime-managed provisioner name while accepting ordinary lookalikes', () => {
+    const issues = validateTemplateContent(
+      content([
+        { name: 'alice', role: 'Developer', workflow: 'Design.' },
+        { name: 'alice-provisioner', role: 'provisioner', workflow: 'Spawn teammates.' },
+      ])
+    );
+    expect(issues).toEqual([{ code: 'memberNameInvalid', field: 'members[1].name' }]);
+
+    expect(
+      validateTemplateContent(
+        content([{ name: 'alice-provisioner-2', role: 'Developer', workflow: 'Design.' }])
+      )
+    ).toEqual([]);
   });
 
   it('rejects duplicate member names case-insensitively', () => {

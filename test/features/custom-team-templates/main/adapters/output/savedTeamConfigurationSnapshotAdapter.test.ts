@@ -188,6 +188,48 @@ describe('SavedTeamConfigurationSnapshotAdapter', () => {
     expect(outcome.snapshot.roster).toEqual({ status: 'unreadable' });
   });
 
+  it('keeps a recoverable roster readable when it contains a known auto-suffix artifact', async () => {
+    await createTeamDir('artifact-roster');
+    await writeTeamMeta('artifact-roster', 'Deliver the feature.');
+    await writeRoster(
+      'artifact-roster',
+      [],
+      JSON.stringify({
+        version: 1,
+        members: [
+          { name: 'dev', role: 'developer', workflow: 'Build the feature.' },
+          { name: 'dev-2', role: 'developer', workflow: 'Build the feature.' },
+        ],
+      })
+    );
+
+    // The template path may drop the generated duplicate itself, so a known
+    // artifact is not proof that the whole roster is unreadable.
+    const outcome = await adapter.readSnapshot('artifact-roster');
+    expect(outcome.status).toBe('available');
+    if (outcome.status !== 'available') return;
+    expect(outcome.snapshot.roster).toEqual({
+      status: 'readable',
+      members: [{ name: 'dev', role: 'developer', workflow: 'Build the feature.' }],
+    });
+
+    const projection = projectTemplateContent(outcome.snapshot);
+    expect(projection.status).toBe('ready');
+    if (projection.status !== 'ready') return;
+    // The legitimate base member is retained, the artifact is excluded, and a
+    // generated duplicate is not counted as a removed teammate.
+    expect(projection.content.members).toEqual([
+      { name: 'dev', role: 'developer', workflow: 'Build the feature.' },
+    ]);
+    expect(projection.warnings).toEqual([]);
+
+    // Other consumers of the strict read are not weakened: management
+    // replacement still fails closed on the same file.
+    await expect(
+      membersStore.getMeta('artifact-roster', { requireCompleteMembers: true })
+    ).resolves.toBeNull();
+  });
+
   it('refuses a trashed team instead of projecting its saved configuration', async () => {
     await createTeamDir('trashed-team');
     await writeTeamMeta('trashed-team', 'Prompt.');

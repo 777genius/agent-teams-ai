@@ -1,7 +1,9 @@
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
 import { InMemoryCustomTeamTemplatePreviewStore } from '@features/custom-team-templates/core/application/InMemoryCustomTeamTemplatePreviewStore';
 import { PrepareCustomTemplatePreviewUseCase } from '@features/custom-team-templates/core/application/PrepareCustomTemplatePreviewUseCase';
+import { RecheckCustomTeamTemplateSaveUseCase } from '@features/custom-team-templates/core/application/RecheckCustomTeamTemplateSaveUseCase';
 import { SaveCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/SaveCustomTeamTemplateUseCase';
+import { STORAGE_SETTLEMENT_TIMEOUT_MS } from '@features/custom-team-templates/core/application/waitForStorageSettlement';
 import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { NodeCustomTeamTemplateHasher } from '@features/custom-team-templates/main/adapters/output/NodeCustomTeamTemplateHasher';
 import { describe, expect, it, vi } from 'vitest';
@@ -504,7 +506,7 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(fixture.requests[1]).toEqual(fixture.requests[0]);
   });
 
-  it('reports an unresolved write when absence cannot be followed by a successful retry', async () => {
+  it('reports refused storage when a reconciled absence cannot be followed by a successful retry', async () => {
     const fixture = gatewayFixture({
       create: [
         new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
@@ -518,12 +520,12 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     });
     const preview = await preparedPreview({ gateway: fixture.gateway });
 
+    // Every attempt settled and the authoritative read proved the id absent,
+    // so the outcome is confirmed-not-saved, not an unknown one.
     await expect(
       useCase({ gateway: fixture.gateway }, preview.store).execute({ previewToken: preview.token })
-    ).resolves.toEqual({
-      status: 'unresolvedWriteOutcome',
-      templateId: preview.stateTemplateId,
-    });
+    ).resolves.toEqual({ status: 'storageUnavailable' });
+    expect(fixture.getById).toHaveBeenCalledTimes(2);
   });
 
   it('never claims success when the stored record cannot be read back or verified', async () => {
@@ -707,5 +709,316 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(fixture.create).not.toHaveBeenCalled();
     // Only display input was wrong, so the reviewed preview stays confirmable.
     expect(preview.store.resolve(preview.token).status).toBe('found');
+  });
+
+  it('rejects the save when the preview is evicted before its identity is confirmed', async () => {
+    const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
+    // The preview store evicts the oldest entry when a newer preview fills the
+    // bounded capacity; the eviction happens while the snapshot is being read,
+    // i.e. after the token resolved but before confirmation.
+    let issuedTokens = 0;
+    const boundedStore = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: () => `token-${++issuedTokens}`,
+      capacity: 1,
+    });
+    const prepare = new PrepareCustomTemplatePreviewUseCase({
+      gateway: fixture.gateway,
+      reader: reader(),
+      hasher,
+      previewStore: boundedStore,
+    });
+    const prepared = await prepare.execute({ sourceTeamName: TEAM, name: 'Release Pipeline' });
+    expect(prepared.status).toBe('previewReady');
+
+    const evictingReader: CustomTeamTemplateSnapshotReader = {
+      readSnapshot: async () => {
+        boundedStore.issue({
+          sourceTeamName: TEAM,
+          templateId: 'tmpl-newer',
+          name: 'Newer',
+          nameKey: 'newer',
+          canonicalContent: '{}',
+          contentHash: 'sha256:newer',
+        });
+        return reader().readSnapshot(TEAM);
+      },
+    };
+
+    await expect(
+      useCase({ gateway: fixture.gateway, reader: evictingReader }, boundedStore).execute({
+        previewToken: 'token-1',
+      })
+    ).resolves.toEqual({ status: 'stalePreview', sourceTeamName: TEAM });
+    // No create was issued for a preview the store no longer retains.
+    expect(fixture.create).not.toHaveBeenCalled();
+    expect(boundedStore.resolve('token-1')).toEqual({ status: 'unknown' });
+  });
+
+  it('rejects the save when the preview expires before its identity is confirmed', async () => {
+    const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: () => 'token-1',
+      ttlMs: 100,
+    });
+    const prepare = new PrepareCustomTemplatePreviewUseCase({
+      gateway: fixture.gateway,
+      reader: reader(),
+      hasher,
+      previewStore: store,
+    });
+    const prepared = await prepare.execute({ sourceTeamName: TEAM, name: 'Release Pipeline' });
+    expect(prepared.status).toBe('previewReady');
+
+    // The TTL runs out while the authoritative snapshot is being read.
+    const expiringReader: CustomTeamTemplateSnapshotReader = {
+      readSnapshot: async () => {
+        now = 100;
+        return reader().readSnapshot(TEAM);
+      },
+    };
+    await expect(
+      useCase({ gateway: fixture.gateway, reader: expiringReader }, store).execute({
+        previewToken: 'token-1',
+      })
+    ).resolves.toEqual({ status: 'stalePreview', sourceTeamName: TEAM });
+    expect(fixture.create).not.toHaveBeenCalled();
+  });
+
+  it('freezes the confirmed identity so a later request cannot rebind the token', async () => {
+    const fixture = gatewayFixture({
+      create: [
+        new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
+      ],
+      getById: [{ status: 'unreadable', templateId: 'tmpl-1' }],
+    });
+    const preview = await preparedPreview({ gateway: fixture.gateway });
+    const save = useCase({ gateway: fixture.gateway }, preview.store);
+
+    const unresolved = await save.execute({ previewToken: preview.token });
+    expect(unresolved).toEqual({
+      status: 'unresolvedWriteOutcome',
+      templateId: preview.stateTemplateId,
+    });
+
+    // The same token with a different name must not create another template.
+    await expect(
+      save.execute({ previewToken: preview.token, name: 'Different Name' })
+    ).resolves.toEqual({
+      status: 'validationFailed',
+      issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+    });
+    // …and neither may the same token with a different description.
+    await expect(
+      save.execute({ previewToken: preview.token, description: 'Other notes' })
+    ).resolves.toEqual({
+      status: 'validationFailed',
+      issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+    });
+
+    // Exactly one write was ever dispatched, under the original stable id.
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+    expect(
+      fixture.requests.every((request) => request.template.templateId === preview.stateTemplateId)
+    ).toBe(true);
+
+    // Re-check keeps reconciling the original operation, not a fresh one.
+    const read = vi.fn().mockResolvedValue({ status: 'notFound' as const });
+    fixture.getById.mockImplementation(read);
+    await expect(
+      new RecheckCustomTeamTemplateSaveUseCase({
+        gateway: fixture.gateway,
+        hasher,
+        previewStore: preview.store,
+      }).execute({ previewToken: preview.token })
+    ).resolves.toEqual({ status: 'notSaved', templateId: preview.stateTemplateId });
+    expect(read).toHaveBeenCalledWith({ templateId: preview.stateTemplateId });
+  });
+
+  it('allows only the identical request on an exact-identity retry after an uncertain write', async () => {
+    const fixture = gatewayFixture({
+      create: [
+        new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
+        { status: 'alreadySaved', template: storedTemplate(PREVIEW_ID) },
+      ],
+      getById: [{ status: 'notFound' }],
+    });
+    const preview = await preparedPreview({ gateway: fixture.gateway });
+    const save = useCase({ gateway: fixture.gateway }, preview.store);
+
+    // First confirm: reconciled absence proves the write did not persist, so
+    // the identical request is retried once inside the same confirm.
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'alreadySaved',
+      template: storedTemplate(PREVIEW_ID),
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(2);
+
+    // A later confirm with the exact same identity stays the same idempotent
+    // create; it can never introduce a second id.
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'alreadySaved',
+      template: storedTemplate(PREVIEW_ID),
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(3);
+    expect(
+      fixture.requests.every((request) => request.template.templateId === preview.stateTemplateId)
+    ).toBe(true);
+  });
+
+  it('rejects concurrent conflicting identities for one token without a second create', async () => {
+    const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
+    const preview = await preparedPreview({ gateway: fixture.gateway });
+    const save = useCase({ gateway: fixture.gateway }, preview.store);
+
+    const [first, second] = await Promise.all([
+      save.execute({ previewToken: preview.token }),
+      save.execute({ previewToken: preview.token, name: 'Conflicting Name' }),
+    ]);
+
+    // One request wins the frozen identity; the other is rejected outright.
+    expect(first).toEqual({ status: 'created', template: storedTemplate() });
+    expect(second).toEqual({
+      status: 'validationFailed',
+      issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+    expect(fixture.requests[0].template.templateId).toBe(preview.stateTemplateId);
+  });
+
+  it('never issues a second write when an unknown outcome cannot be settled', async () => {
+    vi.useFakeTimers();
+    try {
+      const neverSettled = new CustomTeamTemplateStorageInterruptedError(
+        'worker termination unconfirmed',
+        'unknown',
+        new Promise<void>(() => undefined)
+      );
+      const fixture = gatewayFixture({ create: [neverSettled] });
+      const preview = await preparedPreview({ gateway: fixture.gateway });
+
+      const pending = useCase({ gateway: fixture.gateway }, preview.store).execute({
+        previewToken: preview.token,
+      });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+
+      // The uncertainty is preserved; neither a retry nor a reconciliation
+      // read is issued on a writer that never confirmed it stopped.
+      await expect(pending).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: preview.stateTemplateId,
+      });
+      expect(fixture.create).toHaveBeenCalledTimes(1);
+      expect(fixture.getById).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports unavailable storage when a not-started interruption never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      const neverSettled = new CustomTeamTemplateStorageInterruptedError(
+        'previous worker has not exited',
+        'not_started',
+        new Promise<void>(() => undefined)
+      );
+      const fixture = gatewayFixture({ create: [neverSettled] });
+      const preview = await preparedPreview({ gateway: fixture.gateway });
+
+      const pending = useCase({ gateway: fixture.gateway }, preview.store).execute({
+        previewToken: preview.token,
+      });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+
+      // A settlement timeout alone never triggers a retry.
+      await expect(pending).resolves.toEqual({ status: 'storageUnavailable' });
+      expect(fixture.create).toHaveBeenCalledTimes(1);
+      expect(fixture.getById).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a final-attempt lookup failure or unreadable record unresolved', async () => {
+    vi.useFakeTimers();
+    try {
+      // A lookup that rejects with its own never-settling interruption keeps
+      // the outcome unresolved instead of proving absence.
+      const lookupStuck = gatewayFixture({
+        create: [
+          new CustomTeamTemplateStorageInterruptedError(
+            'worker died',
+            'unknown',
+            Promise.resolve()
+          ),
+        ],
+        getById: [
+          new CustomTeamTemplateStorageInterruptedError(
+            'read interrupted',
+            'unknown',
+            new Promise<void>(() => undefined)
+          ),
+        ],
+      });
+      const stuckPreview = await preparedPreview({ gateway: lookupStuck.gateway });
+      const stuckPending = useCase({ gateway: lookupStuck.gateway }, stuckPreview.store).execute({
+        previewToken: stuckPreview.token,
+      });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await expect(stuckPending).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: stuckPreview.stateTemplateId,
+      });
+      expect(lookupStuck.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    // A record that exists but cannot be reconstructed is equally inconclusive.
+    const unreadable = gatewayFixture({
+      create: [
+        new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
+      ],
+      getById: [{ status: 'unreadable', templateId: 'tmpl-1' }],
+    });
+    const unreadablePreview = await preparedPreview({ gateway: unreadable.gateway });
+    await expect(
+      useCase({ gateway: unreadable.gateway }, unreadablePreview.store).execute({
+        previewToken: unreadablePreview.token,
+      })
+    ).resolves.toEqual({
+      status: 'unresolvedWriteOutcome',
+      templateId: unreadablePreview.stateTemplateId,
+    });
+    expect(unreadable.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports confirmed absence on the final attempt only when the lookup proves it', async () => {
+    const fixture = gatewayFixture({
+      create: [
+        new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
+        new CustomTeamTemplateStorageInterruptedError(
+          'worker died again',
+          'unknown',
+          Promise.resolve()
+        ),
+      ],
+      getById: [{ status: 'notFound' }],
+    });
+    const preview = await preparedPreview({ gateway: fixture.gateway });
+
+    // Both attempts settled and the authoritative lookup proved absence, so
+    // the exhausted final attempt reports refused storage — never an unknown
+    // outcome.
+    await expect(
+      useCase({ gateway: fixture.gateway }, preview.store).execute({ previewToken: preview.token })
+    ).resolves.toEqual({ status: 'storageUnavailable' });
+    expect(fixture.getById).toHaveBeenCalledTimes(2);
   });
 });

@@ -221,6 +221,21 @@ describe('SaveAsTemplateDialog preview', () => {
     expect(saveButton().disabled).toBe(false);
   });
 
+  it('renders the excluded-member warning through a count-based translation', async () => {
+    preparePreview.mockResolvedValue({
+      status: 'previewReady',
+      preview: {
+        ...preview,
+        warnings: [{ code: 'removedMembersExcluded', count: 1 }],
+      },
+    });
+    await render();
+    // The plural form is selected by the i18next `count` option, never by a
+    // plain interpolation value.
+    expect(host.textContent).toContain('customTemplates.warnings.removedMembersExcluded|count=1');
+    expect(host.textContent).not.toContain('total=');
+  });
+
   it('blocks saving for an unreadable roster and recovers through Retry', async () => {
     preparePreview.mockResolvedValueOnce({
       status: 'rosterUnreadable',
