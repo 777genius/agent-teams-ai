@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { verifyCandidatePayload } from './stage-candidate.mjs';
-import { isolatedEnvironment } from './platform.mjs';
+import { isolatedEnvironment, processes, ownedTree, sameIdentity } from './platform.mjs';
 
 export function packagedArguments(args, platform = process.platform) {
   assert.equal(platform, 'win32', 'Packaged harness requires Windows');
@@ -413,4 +413,111 @@ export async function closePackagedBrowser({
   } finally {
     ws.terminate();
   }
+}
+
+// Metadata-only TEST observation; never opens executable bytes or changes installer state.
+export async function installerPublicationSnapshot(data) {
+  assert.equal(process.platform, 'win32');
+  assert(containedPath(data.userData, data.root));
+  const sandbox = await lstat(data.root);
+  assert(sandbox.isDirectory() && !sandbox.isSymbolicLink(), 'Installer sandbox symlink refused');
+  const manifestPath = path.join(data.root, 'manifest.json');
+  const manifestLeaf = await lstat(manifestPath);
+  assert(
+    manifestLeaf.isFile() && !manifestLeaf.isSymbolicLink(),
+    'Installer manifest must be regular'
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  assert.equal(manifest.artifact.app.path, data.artifact.app.path);
+  const snapshot = processes();
+  const owned = ownedTree(snapshot, manifest.launcher);
+  const candidates = (manifest.observedProcesses ?? []).filter(
+    (p) =>
+      p.parent === manifest.launcher.pid &&
+      p.executable?.toLowerCase() === data.artifact.app.path.toLowerCase()
+  );
+  assert.equal(candidates.length, 1, 'Actual owned app identity unavailable or ambiguous');
+  const app = candidates[0];
+  const live = owned.find((p) => p.pid === app.pid);
+  sameIdentity(app, live);
+  assert.equal(live.executable?.toLowerCase(), app.executable.toLowerCase());
+  const runtime = path.join(data.userData, 'data/runtimes/opencode');
+  const metadata = async (relative) => {
+    const parts = relative ? relative.split('/') : [];
+    let file = data.userData,
+      leaf;
+    for (const part of ['', 'data', 'runtimes', 'opencode', ...parts]) {
+      if (part) file = path.join(file, part);
+      try {
+        leaf = await lstat(file);
+      } catch (error) {
+        if (error.code === 'ENOENT') return { state: 'missing' };
+        throw error;
+      }
+      assert(!leaf.isSymbolicLink(), 'Installer diagnostic symlink refused');
+      if (file !== path.join(runtime, relative))
+        assert(leaf.isDirectory(), 'Installer ancestor is not a directory');
+    }
+    return {
+      state: 'present',
+      kind: leaf.isDirectory() ? 'directory' : leaf.isFile() ? 'file' : 'other',
+      size: leaf.size,
+      mtimeMs: leaf.mtimeMs,
+      birthtimeMs: leaf.birthtimeMs,
+      dev: leaf.dev,
+      ino: leaf.ino,
+    };
+  };
+  const runtimeMetadata = await metadata('');
+  const names = runtimeMetadata.state === 'missing' ? [] : await readdir(runtime);
+  assert(names.length <= 128, 'Installer namespace diagnostic bound exceeded');
+  const prefix = new RegExp(
+    `^installing-${app.pid}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`,
+    'i'
+  );
+  const staging = [];
+  const exactExecutables = new Set();
+  for (const name of names.filter((name) => prefix.test(name))) {
+    const directory = await metadata(name);
+    assert(directory.kind === 'directory', 'Installer staging is not a directory');
+    const executable = await metadata(`${name}/opencode.exe`);
+    assert(
+      executable.state === 'missing' || executable.kind === 'file',
+      'Installer leaf is not regular'
+    );
+    staging.push({ name, directory, executable });
+    exactExecutables.add(path.join(runtime, name, 'opencode.exe').toLowerCase());
+  }
+  const target = 'versions/1.19.0/opencode-windows-x64';
+  const targetDirectory = await metadata(target);
+  const targetExecutable = await metadata(`${target}/opencode.exe`);
+  assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
+  assert(targetExecutable.state === 'missing' || targetExecutable.kind === 'file');
+  exactExecutables.add(path.join(runtime, target, 'opencode.exe').toLowerCase());
+  const current = await metadata('current.json');
+  assert(current.state === 'missing' || current.kind === 'file');
+  const matching = snapshot.filter(
+    (p) =>
+      owned.some((o) => o.pid === p.pid && o.birth === p.birth) ||
+      exactExecutables.has(p.executable?.toLowerCase())
+  );
+  return {
+    at: Date.now(),
+    app: { pid: app.pid, parent: app.parent, birth: app.birth, executable: app.executable },
+    runtime: runtimeMetadata,
+    staging,
+    target: { directory: targetDirectory, executable: targetExecutable },
+    current,
+    rejectedStagingNames: names.filter(
+      (name) => name.startsWith('installing-') && !prefix.test(name)
+    ).length,
+    processes: matching.slice(0, 100).map((p) => ({
+      pid: p.pid,
+      parent: p.parent,
+      birth: p.birth,
+      executable: p.executable ?? null,
+    })),
+    processOverflow: matching.length > 100,
+    holder: 'unknown; census is not an open-handle query',
+  };
 }

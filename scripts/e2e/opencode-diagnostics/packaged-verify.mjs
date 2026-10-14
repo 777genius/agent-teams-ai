@@ -3,7 +3,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { clickControl, correlateReport } from './catalog.mjs';
-import { runtimeProvenance, packagedEnvironment, probeOrchestratorVersion } from './packaged.mjs';
+import {
+  runtimeProvenance,
+  packagedEnvironment,
+  probeOrchestratorVersion,
+  installerPublicationSnapshot,
+} from './packaged.mjs';
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const refreshControl = `[...document.querySelectorAll('button')].find(b =>
@@ -510,6 +515,22 @@ export async function verifyPackaged({
     const deadline = Date.now() + timeout;
     do {
       const result = await evaluate('window.__packagedProbe');
+      if (
+        name === 'runtimeSetup' &&
+        evidence.installerPublication.records.length < 120 &&
+        Date.now() - evidence.installerPublication.lastSampleAt >= 1000
+      ) {
+        evidence.installerPublication.lastSampleAt = Date.now();
+        try {
+          evidence.installerPublication.records.push(await installerPublicationSnapshot(data));
+        } catch {
+          evidence.installerPublication.records.push({
+            at: Date.now(),
+            collectionFailed: true,
+            holder: 'unknown',
+          });
+        }
+      }
       if (result.done) {
         Object.assign(outcome, result, { completedAt: new Date().toISOString() });
         assert(!result.error, `${name}: ${result.error}`);
@@ -564,7 +585,37 @@ export async function verifyPackaged({
       data.runtimeSetup === 'app-install' &&
       data.run === 'cold'
     ) {
-      await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+      evidence.installerPublication = {
+        records: [],
+        lastSampleAt: 0,
+        progress: [],
+        holder: 'unknown',
+      };
+      try {
+        try {
+          await evaluate(`window.__packagedInstallObservation = {records:[],overflow:false};
+            window.__packagedInstallUnsubscribe = window.electronAPI.openCodeRuntime.onProgress((_event, status) => {
+              const o = window.__packagedInstallObservation;
+              if (o.records.length >= 120) { o.overflow = true; return; }
+              o.records.push({at:Date.now(), state:String(status.state).slice(0,64),
+                phase:status.progress?.phase ? String(status.progress.phase).slice(0,64) : null,
+                detail:typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0,256) : null});
+            }); void 0`);
+        } catch {
+          evidence.installerPublication.progressSubscriptionFailed = true;
+        }
+        await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+      } finally {
+        try {
+          const progress = await evaluate(`(() => {
+            window.__packagedInstallUnsubscribe?.(); window.__packagedInstallUnsubscribe = null;
+            return window.__packagedInstallObservation; })()`);
+          evidence.installerPublication.progress = progress?.records ?? [];
+          evidence.installerPublication.progressOverflow = progress?.overflow ?? null;
+        } catch {
+          evidence.installerPublication.progressCollectionFailed = true;
+        }
+      }
       await probe(
         'invalidateInstalledVersion',
         'window.electronAPI.openCodeRuntime.invalidateStatus()'
