@@ -141,7 +141,7 @@ export async function runTaskDeletionCases(
 
   await cdp.evaluate(`window.__agentTeamsDevStore.getState().closeGlobalTaskDetail()`);
   await cdp.evaluate(
-    `window.__agentTeamsDevStore.getState().openTeamTab(${JSON.stringify(teamB.teamName)})`
+    `(()=>{const s=window.__agentTeamsDevStore.getState();s.openTeamTab(${JSON.stringify(teamB.teamName)});const tab=s.getAllPaneTabs().find(t=>t.type==='team'&&!t.taskDetail&&t.teamName===${JSON.stringify(teamB.teamName)});const pane=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===tab.id));s.focusPane(pane.id);s.resizePanes(pane.id,0.8);})()`
   );
   await until(
     cdp,
