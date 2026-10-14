@@ -86,7 +86,8 @@ export function useTiptapEditor({
   // === Editable toggle ===
   useEffect(() => {
     if (editor && !editor.isDestroyed) {
-      editor.setEditable(editable);
+      // A readonly toggle must not publish a content edit or advance draft revisions.
+      editor.setEditable(editable, false);
     }
   }, [editor, editable]);
 
