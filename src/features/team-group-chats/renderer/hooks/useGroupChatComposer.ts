@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
+import {
+  captureContextScopedRequestEpoch,
+  isContextScopedRequestEpochCurrent,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
 
 import type { GroupChatSendResult } from '../../contracts';
 import type { ComposerDraftAddress, ComposerDraftContent } from '@renderer/types/composerDraft';
@@ -123,6 +127,7 @@ export function useGroupChatComposer(
   };
   const send = async () => {
     if (!ready || session.sending || pending || !text.trim()) return;
+    const capturedContextEpoch = captureContextScopedRequestEpoch();
     session.sending = true;
     const id = attemptId ?? crypto.randomUUID();
     setSelection(recipientName);
@@ -131,6 +136,7 @@ export function useGroupChatComposer(
     setError(null);
     try {
       await persist(content(text, id));
+      if (!isContextScopedRequestEpochCurrent(capturedContextEpoch)) return;
       const sent = await api.teamGroupChats.send({
         teamName,
         groupChatId,

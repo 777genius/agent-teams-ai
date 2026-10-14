@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { formatCurrentProcessMemorySnapshot } from '../../utils/startupTelemetry';
@@ -325,7 +326,7 @@ export class TeamDataWorkerClient {
       );
     }
 
-    const w = new Worker(this.workerPath);
+    const w = new Worker(this.workerPath, { workerData: getClaudeBasePath() });
     this.worker = w;
     this.recoveryFailure = null;
 
@@ -673,6 +674,9 @@ export class TeamDataWorkerClient {
   dispose(): void {
     this.worker?.terminate().catch(() => undefined);
     this.worker = null;
+    this.fatalRestartCooldownUntilMs = 0;
+    this.lastFatalWorkerError = null;
+    this.recoveryFailure = null;
     this.getTeamDataInFlight.clear();
     this.getMessagesPageInFlight.clear();
     this.getMemberActivityMetaInFlight.clear();
