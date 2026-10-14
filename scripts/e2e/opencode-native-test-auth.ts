@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
+class WindowsTestAclError extends Error {}
+
 /** Fresh Windows TEST directories need an explicit private DACL before auth is
  * written. POSIX mode bits alone do not enforce this boundary on Windows. */
 export async function protectWindowsTestDirectory(directory: string): Promise<void> {
@@ -14,12 +16,17 @@ export async function protectWindowsTestDirectory(directory: string): Promise<vo
   const stat = await lstat(directory);
   assert(stat.isDirectory() && !stat.isSymbolicLink());
   assert.equal(await realpath(directory), directory);
+  const programFiles = process.env.ProgramFiles;
+  assert(programFiles && path.win32.isAbsolute(programFiles));
+  const powershellRoot = path.win32.join(programFiles, 'PowerShell', '7');
   const env: NodeJS.ProcessEnv = { OPENCODE_TEST_AUTH_DIRECTORY: directory };
   for (const key of ['SystemRoot', 'WINDIR', 'PATH', 'Path', 'PATHEXT', 'COMSPEC', 'TMP', 'TEMP']) {
     if (process.env[key]) env[key] = process.env[key];
   }
+  env.PSModulePath = path.win32.join(powershellRoot, 'Modules');
   const script = `
 $ErrorActionPreference = 'Stop'
+[Console]::Out.WriteLine('phase:owner')
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
 $system = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-18')
 $acl = [System.Security.AccessControl.DirectorySecurity]::new()
@@ -29,18 +36,21 @@ $inherit = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -b
 foreach ($principal in @($sid, $system)) {
   $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
 }
+[Console]::Out.WriteLine('phase:set_acl')
 Set-Acl -LiteralPath $env:OPENCODE_TEST_AUTH_DIRECTORY -AclObject $acl
+[Console]::Out.WriteLine('phase:read_acl')
 $observed = Get-Acl -LiteralPath $env:OPENCODE_TEST_AUTH_DIRECTORY
+[Console]::Out.WriteLine('phase:verify_acl')
 if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { throw 'Private TEST ACL missing' }
 $rules = @($observed.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
 if ($rules.Count -ne 2) { throw 'Unexpected TEST access rule' }
 foreach ($rule in $rules) {
-  if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl') { throw 'Unexpected TEST access rule' }
+  if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'Unexpected TEST access rule' }
 }
 `;
   try {
     await promisify(execFile)(
-      'powershell.exe',
+      path.win32.join(powershellRoot, 'pwsh.exe'),
       ['-NoProfile', '-NonInteractive', '-Command', script],
       {
         env,
@@ -48,8 +58,44 @@ foreach ($rule in $rules) {
         maxBuffer: 4096,
       }
     );
-  } catch {
-    throw new Error('Private Windows TEST ACL qualification failed');
+  } catch (error: unknown) {
+    let phase = 'startup';
+    let reason = 'process_failure';
+    let errno = 'none';
+    let exit = 'none';
+    if (typeof error === 'object' && error !== null) {
+      if ('stdout' in error && typeof error.stdout === 'string') {
+        for (const line of error.stdout.split(/\r?\n/)) {
+          if (/^phase:(owner|set_acl|read_acl|verify_acl)$/.test(line)) phase = line.slice(6);
+        }
+      }
+      if ('code' in error) {
+        if (typeof error.code === 'string' && /^E[A-Z0-9_]{1,48}$/.test(error.code)) {
+          errno = error.code;
+          reason =
+            error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ? 'output_limit' : 'spawn_failure';
+        } else if (
+          typeof error.code === 'number' &&
+          Number.isInteger(error.code) &&
+          error.code >= -2147483648 &&
+          error.code <= 2147483647
+        ) {
+          reason = 'process_exit';
+          exit = String(error.code);
+        }
+      }
+      if (
+        reason === 'process_failure' &&
+        'killed' in error &&
+        error.killed === true &&
+        'signal' in error &&
+        error.signal === 'SIGTERM'
+      )
+        reason = 'timeout';
+    }
+    throw new WindowsTestAclError(
+      `Private Windows TEST ACL qualification failed: reason=${reason}; phase=${phase}; errno=${errno}; exit=${exit}`
+    );
   }
 }
 
@@ -78,8 +124,12 @@ async function seedOpenRouter(): Promise<void> {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   assert.deepEqual(process.argv.slice(2), ['--seed-openrouter']);
-  void seedOpenRouter().catch(() => {
-    console.error('Private Windows TEST auth seeding failed');
+  void seedOpenRouter().catch((error: unknown) => {
+    console.error(
+      error instanceof WindowsTestAclError
+        ? error.message
+        : 'Private Windows TEST auth seeding failed'
+    );
     process.exitCode = 1;
   });
 }

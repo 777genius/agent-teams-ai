@@ -59,6 +59,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.3.11'
+      - name: Seed private runner-local TEST provider auth
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
       - name: Qualify exact Windows native producer and candidate runtime
         working-directory: .test-sdk
         shell: pwsh
@@ -173,10 +177,6 @@ jobs:
             npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
-      - name: Seed private runner-local TEST provider auth
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: pnpm exec tsx scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
       - name: Real V1 and V2 tasks through the bundled runtime
         id: real_tasks
         shell: pwsh
