@@ -160,6 +160,7 @@ export function invalidateTaskDetailForTeamChange(
   }
   if (
     event.type !== 'task' &&
+    event.type !== 'config' &&
     !(event.type === 'task-log-change' && event.taskSignalKind !== 'log')
   )
     return;
