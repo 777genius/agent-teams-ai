@@ -10,7 +10,11 @@ import { Cdp, waitFor } from '../release-updater/cdp.mts';
 import type {
   AttachmentPayload,
   InboxMessage,
+  SendMessageResult,
   TeamCreateRequest,
+  TeamCreateResponse,
+  TeamProvisioningProgress,
+  MemberSpawnStatusesSnapshot,
   TeamAgentRuntimeSnapshot,
 } from '../../../src/shared/types/team.ts';
 
@@ -353,6 +357,8 @@ async function main() {
   let cdp: Cdp | undefined;
   let primaryFailure: unknown;
   let teamAttempted = false;
+  let launchRun: TeamCreateResponse | undefined;
+  let retainLaunchDiagnostics: (() => Promise<void>) | undefined;
   const check = () => {
     const failure = model.failure();
     if (failure) throw failure;
@@ -413,6 +419,49 @@ async function main() {
     };
     const api = async <T,>(expression: string, label: string) =>
       finish<T>(await begin(expression), label);
+    retainLaunchDiagnostics = async () => {
+      const runId = launchRun?.runId;
+      if (!runId) {
+        receipt.launchFailureObservation = { observationOnly: true, runBinding: 'unknown' };
+        return;
+      }
+      try {
+        const key = await begin(`Promise.allSettled([
+          window.electronAPI.teams.getProvisioningStatus(${literal(runId)}).then(p => {
+            if (p.runId !== ${literal(runId)} || p.teamName !== ${literal(team)}) throw new Error('Own provisioning binding mismatch');
+            return {runId:p.runId,teamName:p.teamName,state:p.state,configReady:p.configReady,
+              error:p.error?.slice(0,512),launchDiagnostics:p.launchDiagnostics?.slice(0,32).map(d => ({code:d.code,severity:d.severity,memberName:d.memberName?.slice(0,128),label:d.label.slice(0,256),detail:d.detail?.slice(0,512),observedAt:d.observedAt})),cliLogsTail:p.cliLogsTail?.slice(-4096)};
+          }), window.electronAPI.teams.getLaunchFailureDiagnostics(${literal(team)}, ${literal(runId)}).then(p => {
+            if (p.runId !== ${literal(runId)} || p.teamName !== ${literal(team)}) throw new Error('Own diagnostics binding unavailable');
+            return {runId:p.runId,teamName:p.teamName,classification:p.classification ? {code:p.classification.code?.slice(0,128),confidence:p.classification.confidence,evidence:p.classification.evidence?.slice(0,8).map(v => v.slice(0,512))} : null,
+              bootstrapTransportBreadcrumb:p.bootstrapTransportBreadcrumb ? {lastTransportStage:p.bootstrapTransportBreadcrumb.lastTransportStage?.slice(0,128),submitRejected:p.bootstrapTransportBreadcrumb.submitRejected,retryable:p.bootstrapTransportBreadcrumb.retryable,noStdinWarning:p.bootstrapTransportBreadcrumb.noStdinWarning,bootstrapSubmitted:p.bootstrapTransportBreadcrumb.bootstrapSubmitted,evidence:p.bootstrapTransportBreadcrumb.evidence?.slice(0,8).map(v => v.slice(0,512))} : null,
+              files:p.files.slice(0,8).map(f => ({label:f.label.slice(0,128),path:f.path.slice(0,1024),content:f.content?.slice(-4096),issue:f.issue?.slice(0,256)}))};
+          })]).then(results => results.map(r => r.status === 'fulfilled' ? r : {status:r.status,reason:String(r.reason).slice(0,512)}))`);
+        const observed = await waitFor(
+          async () => {
+            const value = await evaluate<{ done: boolean; value?: unknown; error?: string }>(
+              `window[${literal(key)}]`
+            );
+            return value.done ? value : null;
+          },
+          'owned launch failure observation',
+          5000
+        );
+        receipt.launchFailureObservation = {
+          observationOnly: true,
+          runId,
+          teamName: team,
+          ...observed,
+        };
+      } catch {
+        receipt.launchFailureObservation = {
+          observationOnly: true,
+          runId,
+          teamName: team,
+          collectionFailed: true,
+        };
+      }
+    };
     await api('window.electronAPI.openCodeRuntime.install()', 'app managed native install');
     const native = await api<{ installed: boolean; version: string; binaryPath: string }>(
       'window.electronAPI.openCodeRuntime.getStatus()',
@@ -436,23 +485,70 @@ async function main() {
     };
     teamAttempted = true;
     receipt.phase = 'launch';
-    receipt.launch = await api(
+    launchRun = await api<TeamCreateResponse>(
       `window.electronAPI.teams.createTeam(${literal(request)})`,
       'compiled legacy team launch'
     );
-    const runtime = await waitFor(
+    receipt.launch = launchRun;
+    assert(typeof launchRun.runId === 'string' && launchRun.runId.length > 0);
+    await waitFor(
       async () => {
         check();
-        const snapshot = await api<TeamAgentRuntimeSnapshot>(
-          `window.electronAPI.teams.getTeamAgentRuntime(${literal(team)})`,
-          'actual runtime actor'
+        const progress = await api<TeamProvisioningProgress>(
+          `window.electronAPI.teams.getProvisioningStatus(${literal(launchRun!.runId)})`,
+          'own provisioning readiness'
         );
-        return snapshot.members[member]?.alive ? snapshot : null;
+        assert(
+          progress.teamName === team && progress.runId === launchRun!.runId,
+          'Own provisioning run mismatch'
+        );
+        receipt.provisioningReadiness = {
+          runId: progress.runId,
+          teamName: progress.teamName,
+          state: progress.state,
+        };
+        assert(!['failed', 'cancelled'].includes(progress.state), `Provisioning ${progress.state}`);
+        const statuses = await api<MemberSpawnStatusesSnapshot>(
+          `window.electronAPI.teams.getMemberSpawnStatuses(${literal(team)})`,
+          'own bootstrap readiness'
+        );
+        const worker = statuses.statuses[member];
+        receipt.bootstrapReadiness = {
+          runId: statuses.runId,
+          worker: worker
+            ? {
+                status: worker.status,
+                launchState: worker.launchState,
+                bootstrapConfirmed: worker.bootstrapConfirmed,
+                hardFailure: worker.hardFailure,
+                skippedForLaunch: worker.skippedForLaunch,
+                pendingPermissionRequestIds: worker.pendingPermissionRequestIds?.slice(0, 16),
+              }
+            : null,
+        };
+        return progress.state === 'ready' &&
+          statuses.runId === launchRun!.runId &&
+          worker?.launchState === 'confirmed_alive' &&
+          worker.bootstrapConfirmed === true &&
+          !worker.hardFailure &&
+          !worker.pendingPermissionRequestIds?.length &&
+          !worker.skippedForLaunch &&
+          worker.status !== 'skipped'
+          ? true
+          : null;
       },
-      'live native OpenCode worker',
+      'committed own-run native bootstrap',
       180000
     );
-    receipt.runtimeActor = runtime.members[member];
+    try {
+      const runtime = await api<TeamAgentRuntimeSnapshot>(
+        `window.electronAPI.teams.getTeamAgentRuntime(${literal(team)})`,
+        'runtime diagnostic'
+      );
+      receipt.runtimeActor = runtime.members[member];
+    } catch {
+      receipt.runtimeActorObservationFailed = true;
+    }
     const binaryBytes = Buffer.from(
       `TEST arbitrary reference\nNONCE ${randomBytes(16).toString('hex')}\n`
     );
@@ -487,6 +583,41 @@ async function main() {
     const inboxPath = path.join(teamDir, 'inboxes', `${member}.json`);
     const original = await waitFor(
       async () => {
+        const admission = await evaluate<{
+          done: boolean;
+          error?: string;
+          value?: SendMessageResult;
+        }>(`window[${literal(sentKey)}]`);
+        const value = admission.value,
+          delivery = value?.runtimeDelivery;
+        receipt.admission = {
+          at: Date.now(),
+          done: admission.done,
+          error: admission.error?.slice(0, 512),
+          value: value
+            ? {
+                messageId: value.messageId.slice(0, 128),
+                deliveredToInbox: value.deliveredToInbox,
+                runtimeDelivery: delivery
+                  ? {
+                      accepted: delivery.accepted,
+                      delivered: delivery.delivered,
+                      responsePending: delivery.responsePending,
+                      responseState: delivery.responseState,
+                      acceptanceUnknown: delivery.acceptanceUnknown,
+                      reason: delivery.reason?.slice(0, 512),
+                      diagnostics: delivery.diagnostics
+                        ?.slice(0, 16)
+                        .map((item) => item.slice(0, 512)),
+                    }
+                  : null,
+              }
+            : null,
+        };
+        assert(
+          !(admission.done && admission.error),
+          `Attachment admission failed: ${admission.error?.slice(0, 512)}`
+        );
         check();
         const rows = JSON.parse(
           await readFile(inboxPath, 'utf8').catch(() => '[]')
@@ -682,6 +813,7 @@ async function main() {
     release();
     const cleanup: Record<string, unknown> = { passed: false };
     let cleanupFailed = false;
+    if (primaryFailure && cdp && teamAttempted) await retainLaunchDiagnostics?.();
     if (cdp && teamAttempted) {
       for (const method of ['stop', 'deleteTeam']) {
         try {
