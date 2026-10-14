@@ -8,7 +8,13 @@ import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
-import { processes, listeners, sameIdentity, windowsCleanupEvidence } from './platform.mjs';
+import {
+  processes,
+  listeners,
+  sameIdentity,
+  windowsCleanupEvidence,
+  ownedTree,
+} from './platform.mjs';
 
 const args = process.argv.slice(2);
 packagedArguments(args); // Validate before creating a profile or launching anything.
@@ -82,10 +88,65 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
   } catch (error) {
     result.error = String(error);
   } finally {
+    let history;
+    const observeHistory = () => {
+      const current = processes();
+      return history.expected.map((expected) => {
+        const live = current.find((p) => p.pid === expected.pid);
+        return {
+          expected,
+          state: !live
+            ? 'absent-from-census'
+            : !expected.birth || !live.birth
+              ? 'unknown'
+              : expected.birth !== live.birth
+                ? 'pid-reused'
+                : expected.executable &&
+                    live.executable &&
+                    expected.executable.toLowerCase() !== live.executable.toLowerCase()
+                  ? 'executable-changed'
+                  : 'same-birth-present',
+          current: live
+            ? {
+                pid: live.pid,
+                parent: live.parent,
+                birth: live.birth,
+                executable: live.executable ?? null,
+              }
+            : null,
+        };
+      });
+    };
     try {
       // Capture identity set before stop. Never kill by executable name, port, or /T.
       const ownedManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
       await writeFile(path.join(runDir, 'manifest.json'), JSON.stringify(ownedManifest, null, 2));
+      try {
+        const current = ownedTree(processes(), ownedManifest.launcher);
+        const prior = ownedManifest.observedProcesses ?? [];
+        assert(prior.length + current.length <= 500, 'Historical diagnostic bound exceeded');
+        const union = [...prior, ...current].filter(
+          (entry, index, all) =>
+            all.findIndex((p) => p.pid === entry.pid && p.birth === entry.birth) === index
+        );
+        history = {
+          at: Date.now(),
+          observationOnly: true,
+          expected: union.map((p) => ({
+            pid: p.pid,
+            parent: p.parent,
+            birth: p.birth,
+            executable: p.executable ?? null,
+          })),
+        };
+        history.beforeStop = observeHistory();
+        await writeFile(
+          path.join(runDir, 'cleanup-history.json'),
+          JSON.stringify(history, null, 2)
+        );
+      } catch {
+        history = { observationOnly: true, collectionFailed: true };
+      }
       const stopped = command('stop', [root], 60000);
       await writeFile(path.join(runDir, 'stop.txt'), stopped.stdout + stopped.stderr);
       assert.equal(stopped.status, 0, 'Manifest-owned cleanup refused');
@@ -213,6 +274,16 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       cleanupFailed = true;
       result.cleanupError = String(error);
       launcher.unref();
+    } finally {
+      try {
+        if (history?.expected) history.final = { at: Date.now(), records: observeHistory() };
+        await writeFile(
+          path.join(runDir, 'cleanup-history.json'),
+          JSON.stringify(history ?? { observationOnly: true, collectionFailed: true }, null, 2)
+        );
+      } catch {
+        /* Historical observation cannot replace the cleanup result. */
+      }
     }
     await log.close();
     await writeFile(

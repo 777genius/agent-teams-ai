@@ -75,7 +75,7 @@ async function ownedProcesses() {
   return owned;
 }
 
-async function assertOwnedDebugEndpoint() {
+async function assertOwnedDebugEndpoint(receipt) {
   // Retain the existing bounded recheck, without assuming the cause of snapshot differences.
   // Missing/reused launcher or foreign listeners still fail closed.
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -143,6 +143,23 @@ async function assertOwnedDebugEndpoint() {
           data.artifact.app.path.toLowerCase(),
           'CDP owner is not the selected packaged executable'
         );
+      }
+    }
+    if (receipt && data.packaged) {
+      try {
+        receipt.verifiedOwnership = {
+          at: Date.now(),
+          endpointPort: 9222,
+          browser: listenerProcesses.slice(0, 8).map((p) => ({
+            pid: p.pid,
+            parent: p.parent,
+            birth: p.birth,
+            executable: p.executable,
+          })),
+          identitiesTruncated: listenerProcesses.length > 8,
+        };
+      } catch {
+        /* Observation cannot change the validated ownership decision. */
       }
     }
     return;
@@ -218,15 +235,76 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
+  const historicalManifest = await manifest();
   let owned = await ownedProcesses();
   const data = await manifest();
   if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   if (data.packaged) {
-    const graceful = { at: new Date().toISOString() };
+    const graceful = { at: new Date().toISOString(), cdp: {} };
+    let closureHistory = [];
+    try {
+      const prior = historicalManifest.observedProcesses ?? [];
+      assert(prior.length + owned.length <= 500, 'Closure diagnostic bound exceeded');
+      closureHistory = [...prior, ...owned].filter(
+        (p, i, all) =>
+          all.findIndex((entry) => entry.pid === p.pid && entry.birth === p.birth) === i
+      );
+    } catch {
+      graceful.historyUnavailable = true;
+    }
+    const closureCensus = () => {
+      try {
+        const current = processes();
+        const known = closureHistory.map((expected) => {
+          const live = current.find((p) => p.pid === expected.pid);
+          return {
+            expected: {
+              pid: expected.pid,
+              parent: expected.parent,
+              birth: expected.birth,
+              executable: expected.executable ?? null,
+            },
+            state: !live
+              ? 'absent-from-census'
+              : !expected.birth || !live.birth
+                ? 'unknown'
+                : expected.birth !== live.birth
+                  ? 'pid-reused'
+                  : 'same-birth-present',
+            current: live
+              ? {
+                  pid: live.pid,
+                  parent: live.parent,
+                  birth: live.birth,
+                  executable: live.executable ?? null,
+                }
+              : null,
+          };
+        });
+        let descendants;
+        try {
+          descendants = ownedTree(current, data.launcher)
+            .slice(0, 500)
+            .map((p) => ({
+              pid: p.pid,
+              parent: p.parent,
+              birth: p.birth,
+              executable: p.executable ?? null,
+            }));
+        } catch {
+          descendants = null;
+        }
+        return { at: Date.now(), observationOnly: true, known, descendants };
+      } catch {
+        return { at: Date.now(), collectionFailed: true };
+      }
+    };
+    graceful.beforeClose = closureCensus();
     try {
       graceful.outcome = await closePackagedBrowser({
-        assertOwnership: assertOwnedDebugEndpoint,
+        assertOwnership: () => assertOwnedDebugEndpoint(graceful.cdp),
+        receipt: graceful.cdp,
         readVersion: async () =>
           (
             await fetch('http://127.0.0.1:9222/json/version', {
@@ -235,6 +313,7 @@ if (mode === 'seed-packaged') {
           ).json(),
         connect: (endpoint) => new WebSocket(endpoint),
       });
+      graceful.afterClose = closureCensus();
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {
         const snapshot = processes();
@@ -250,6 +329,8 @@ if (mode === 'seed-packaged') {
       }
     } catch (error) {
       graceful.error = String(error); // Identity-checked signals remain the fallback.
+    } finally {
+      if (!graceful.afterClose) graceful.afterClose = closureCensus();
     }
     await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
     const survivors = await ownedProcesses();

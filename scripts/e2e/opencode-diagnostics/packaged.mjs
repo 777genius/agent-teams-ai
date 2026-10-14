@@ -356,6 +356,7 @@ export async function closePackagedBrowser({
   readVersion,
   connect,
   timeoutMs = 5000,
+  receipt,
 }) {
   await assertOwnership();
   const version = await readVersion();
@@ -370,6 +371,7 @@ export async function closePackagedBrowser({
     'Unexpected packaged browser CDP endpoint'
   );
   await assertOwnership();
+  if (receipt) receipt.endpoint = endpoint.href;
   const ws = connect(endpoint);
   try {
     return await new Promise((resolve, reject) => {
@@ -385,15 +387,21 @@ export async function closePackagedBrowser({
         clearTimeout(timer);
         error ? reject(error) : resolve(outcome);
       };
-      ws.once('error', (error) => finish(error));
-      ws.once('close', () =>
-        finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed')
-      );
+      ws.once('error', (error) => {
+        if (receipt) receipt.socketError = true;
+        finish(error);
+      });
+      ws.once('close', () => {
+        if (receipt) receipt.socketClosed = { at: Date.now(), afterSend: sent };
+        finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed');
+      });
       ws.on('message', (raw) => {
         try {
           const response = JSON.parse(String(raw));
-          if (response.id === 1)
+          if (response.id === 1) {
+            if (receipt) receipt.ack = { at: Date.now(), id: 1, error: Boolean(response.error) };
             finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
+          }
         } catch (error) {
           finish(error);
         }
@@ -405,6 +413,7 @@ export async function closePackagedBrowser({
           if (ws.readyState !== 1) throw new Error('CDP closed during ownership check');
           ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
           sent = true;
+          if (receipt) receipt.command = { at: Date.now(), id: 1, method: 'Browser.close' };
         } catch (error) {
           finish(error);
         }
