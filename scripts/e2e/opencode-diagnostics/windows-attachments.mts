@@ -325,6 +325,7 @@ async function main() {
   assert(address && typeof address !== 'string');
   const baseURL = `http://127.0.0.1:${address.port}/v1`;
   const config = {
+    $schema: 'https://opencode.ai/config.json',
     provider: {
       openrouter: {
         npm: '@ai-sdk/openai-compatible',
@@ -892,6 +893,16 @@ async function main() {
     receipt.actualRequests = model.requests;
     receipt.modelObservation = { observationOnly: true, value: model.observation() };
     receipt.cleanup = cleanup;
+    try {
+      const actualConfig = await readFile(path.join(data.project, 'opencode.json'));
+      receipt.postConfigObservation = {
+        observationOnly: true,
+        sha256: hash(actualConfig),
+        schemaPresent: typeof JSON.parse(actualConfig.toString('utf8')).$schema === 'string',
+      };
+    } catch {
+      receipt.postConfigObservation = { observationOnly: true, collectionFailed: true };
+    }
     await persist();
     assert(
       !primaryFailure && receipt.passed === true && cleanup.passed === true,
