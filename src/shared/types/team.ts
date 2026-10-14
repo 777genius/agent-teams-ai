@@ -239,6 +239,8 @@ export interface SourceMessageSnapshot {
   source?: string;
   /** Attachment metadata references (IDs only, no blobs). filePath present when file is stored on disk. */
   attachments?: AttachmentMeta[];
+  /** IDs classified as generic file references in the original message. */
+  fileReferenceIds?: string[];
 }
 
 export type InboxMessageKind =

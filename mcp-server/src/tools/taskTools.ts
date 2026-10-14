@@ -270,6 +270,10 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
 
       const attachments = sourceMessageAttachments(message);
       if (attachments.length) sourceMessage.attachments = attachments;
+      const fileReferenceIds = sourceMessageAttachments({
+        fileReferences: message.fileReferences,
+      }).map((item) => item.id);
+      if (fileReferenceIds.length) sourceMessage.fileReferenceIds = fileReferenceIds;
 
       // 5. Forward into canonical create-task path
       const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy });
