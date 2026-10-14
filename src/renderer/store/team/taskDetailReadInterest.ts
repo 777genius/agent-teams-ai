@@ -13,6 +13,9 @@ export interface TaskDetailReadInterestSources {
   isContextSwitching?: boolean;
   paneLayout: { panes: readonly Pane[] };
   taskDetailSurfaceInterests: Readonly<Record<string, TaskDetailIdentity | null>>;
+  taskDetailVisibleDemandById: Readonly<
+    Record<string, { identity: TaskDetailIdentity; resources: Readonly<Record<string, string>> }>
+  >;
 }
 
 export interface TaskDetailReadDemand {
@@ -21,6 +24,7 @@ export interface TaskDetailReadDemand {
   teamName: string;
   taskId: string;
   needsRead: boolean;
+  visible: boolean;
 }
 
 function addIdentity(
@@ -83,12 +87,16 @@ export function selectTaskDetailReadDemands(
   return selectTaskDetailReadIdentities(state).map((identity) => {
     const key = taskDetailKey(identity);
     const entry = state.taskDetailById[key];
+    const visible = Object.values(state.taskDetailVisibleDemandById).some(
+      (demand) => demand.resources.detail !== undefined && taskDetailKey(demand.identity) === key
+    );
     return {
       key,
       contextId: identity.contextId,
       teamName: identity.teamName,
       taskId: identity.taskId,
       needsRead: !entry || (entry.refreshPending && !entry.loading),
+      visible,
     };
   });
 }

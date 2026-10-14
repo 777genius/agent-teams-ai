@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { selectTaskDetailResourceEntry } from '../../../src/renderer/store/slices/taskDetailResourcesSlice';
 import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
 import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
@@ -14,6 +15,7 @@ const apiMock = vi.hoisted(() => ({
     getAllTasks: vi.fn(),
     getData: vi.fn(),
     getTask: vi.fn(),
+    getTaskActivity: vi.fn(),
     getMessagesPage: vi.fn(),
     getMemberActivityMeta: vi.fn(),
     getMemberSpawnStatuses: vi.fn(),
@@ -174,6 +176,85 @@ describe('task detail origin and loading postconditions', () => {
       'shared-team',
       expect.objectContaining({ timeoutAction: 'wait', timeoutSeconds: 30 })
     );
+  });
+  it('shares one physical resource read across surfaces and keeps other teams independent', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'team-a', taskId: '1' };
+    const other = { ...identity, teamName: 'team-b' };
+    const response = deferred<[]>();
+    apiMock.teams.getTaskActivity.mockReturnValue(response.promise);
+    for (const surface of ['dialog', 'tab'])
+      store.getState().setTaskDetailVisibleResourceDemand(surface, identity, 'activity', true);
+    store.getState().setTaskDetailVisibleResourceDemand('other', other, 'activity', true);
+    const revision = store.getState().taskDetailResourcesRevision;
+    store.getState().setTaskDetailVisibleResourceDemand('tab', identity, 'activity', true);
+    expect(store.getState().taskDetailResourcesRevision).toBe(revision);
+    const first = store.getState().ensureTaskDetailActivity(identity);
+    const joined = store.getState().ensureTaskDetailActivity(identity);
+    const independent = store.getState().ensureTaskDetailActivity(other);
+    await Promise.resolve();
+    expect(first).toBe(joined);
+    expect(apiMock.teams.getTaskActivity).toHaveBeenCalledTimes(2);
+    store.getState().setTaskDetailVisibleResourceDemand('dialog', identity, 'activity', false);
+    response.resolve([]);
+    await Promise.all([first, joined, independent]);
+    expect(selectTaskDetailResourceEntry(store.getState(), identity, 'activity')?.loaded).toBe(
+      true
+    );
+    expect(selectTaskDetailResourceEntry(store.getState(), other, 'activity')?.loaded).toBe(true);
+  });
+
+  it('retires a dirty pending read before starting its one successor', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'team-a', taskId: '1' };
+    const old = deferred<[]>();
+    apiMock.teams.getTaskActivity.mockReturnValueOnce(old.promise).mockResolvedValueOnce([]);
+    store.getState().setTaskDetailVisibleResourceDemand('tab', identity, 'activity', true);
+    const first = store.getState().ensureTaskDetailActivity(identity);
+    await Promise.resolve();
+    store.getState().invalidateTaskDetailResources(identity);
+    const joined = store.getState().ensureTaskDetailActivity(identity);
+    expect(joined).toBe(first);
+    expect(apiMock.teams.getTaskActivity).toHaveBeenCalledTimes(1);
+    old.resolve([]);
+    await first;
+    expect(selectTaskDetailResourceEntry(store.getState(), identity, 'activity')).toMatchObject({
+      loaded: false,
+      loading: false,
+      refreshPending: true,
+    });
+    await store.getState().refreshTaskDetailVisibleResources();
+    expect(apiMock.teams.getTaskActivity).toHaveBeenCalledTimes(2);
+    expect(selectTaskDetailResourceEntry(store.getState(), identity, 'activity')).toMatchObject({
+      loaded: true,
+      refreshPending: false,
+    });
+  });
+
+  it('blocks hidden and foreign reads and ignores A/B/A responses from the retired epoch', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'A', teamName: 'team-a', taskId: '1' };
+    store.getState().setTaskDetailVisibleResourceDemand('tab', identity, 'activity', true);
+    await store.getState().ensureTaskDetailActivity(identity);
+    expect(apiMock.teams.getTaskActivity).not.toHaveBeenCalled();
+    store.setState({ activeContextId: 'A' });
+    const hidden = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    await store.getState().ensureTaskDetailActivity(identity);
+    expect(apiMock.teams.getTaskActivity).not.toHaveBeenCalled();
+    hidden.mockRestore();
+    const old = deferred<[]>();
+    apiMock.teams.getTaskActivity.mockReturnValueOnce(old.promise).mockResolvedValueOnce([]);
+    const pending = store.getState().ensureTaskDetailActivity(identity);
+    await Promise.resolve();
+    store.setState({ activeContextId: 'B' });
+    invalidateContextScopedRequestEpoch();
+    store.setState({ activeContextId: 'A' });
+    expect(selectTaskDetailResourceEntry(store.getState(), identity, 'activity')).toBeUndefined();
+    await store.getState().ensureTaskDetailActivity(identity);
+    const current = selectTaskDetailResourceEntry(store.getState(), identity, 'activity');
+    old.resolve([]);
+    await pending;
+    expect(selectTaskDetailResourceEntry(store.getState(), identity, 'activity')).toBe(current);
   });
 });
 

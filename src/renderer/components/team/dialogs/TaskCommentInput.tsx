@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { taskDetailKey } from '@features/team-task-detail/core';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import {
@@ -28,6 +29,8 @@ const MAX_ATTACHMENTS = 5;
 const LONG_QUOTE_THRESHOLD = 200;
 
 interface TaskCommentInputProps {
+  contextId: string;
+  surfaceId: string;
   teamName: string;
   taskId: string;
   projectPath: string | null;
@@ -36,6 +39,8 @@ interface TaskCommentInputProps {
 }
 
 export const TaskCommentInput = ({
+  contextId,
+  surfaceId,
   teamName,
   taskId,
   projectPath,
@@ -258,7 +263,9 @@ export const TaskCommentInput = ({
           }}
         />
         <ComposerTextarea
-          id={`task-comment-${taskId}`}
+          id={`task-comment-input-${encodeURIComponent(
+            JSON.stringify([surfaceId, taskDetailKey({ contextId, teamName, taskId })])
+          )}`}
           connectedToHeader={replyConnectedToComposer}
           placeholder={t('taskComments.placeholder')}
           value={session.commentText}

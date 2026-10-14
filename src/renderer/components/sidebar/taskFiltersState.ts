@@ -6,6 +6,8 @@ import {
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
 
+import type { TaskDetailIdentity } from '@features/team-task-detail/core';
+
 export type TaskStatusFilterId =
   | 'todo'
   | 'in_progress'
@@ -77,9 +79,8 @@ export function useReadStateSnapshot(): ReturnType<typeof getSnapshot> {
 
 export function getTaskUnreadCount(
   readState: ReturnType<typeof getSnapshot>,
-  teamName: string,
-  taskId: string,
+  identity: TaskDetailIdentity,
   comments: { id?: string; createdAt: string }[] | undefined
 ): number {
-  return getUnreadCount(readState, teamName, taskId, comments ?? []);
+  return getUnreadCount(readState, identity, comments ?? []);
 }

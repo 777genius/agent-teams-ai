@@ -23,7 +23,7 @@ import { createSubagentSlice } from '../../../src/renderer/store/slices/subagent
 import { createTabSlice } from '../../../src/renderer/store/slices/tabSlice';
 import { createTabUISlice } from '../../../src/renderer/store/slices/tabUISlice';
 import { createTeamSlice } from '../../../src/renderer/store/slices/teamSlice';
-import { createTeamTaskDetailSlice } from '../../../src/renderer/store/slices/teamTaskDetailSlice';
+import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import { createUISlice } from '../../../src/renderer/store/slices/uiSlice';
 import { createUpdateSlice } from '../../../src/renderer/store/slices/updateSlice';
 
@@ -41,7 +41,7 @@ export function createTestStore() {
     ...createSessionDetailSlice(...args),
     ...createSubagentSlice(...args),
     ...createTeamSlice(...args),
-    ...createTeamTaskDetailSlice(...args),
+    ...createTeamTaskDetailStoreSlices(...args),
     ...createConversationSlice(...args),
     ...createTabSlice(...args),
     ...createTabUISlice(...args),

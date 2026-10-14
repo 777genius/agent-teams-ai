@@ -312,6 +312,7 @@ describe('GlobalTaskList project grouping', () => {
     await act(async () => {
       root.render(
         React.createElement(GlobalTaskList, {
+          contextId: 'local',
           filtersPopoverOpen: true,
           onFiltersPopoverOpenChange: vi.fn(),
         })
@@ -346,6 +347,7 @@ describe('GlobalTaskList project grouping', () => {
     await act(async () => {
       root.render(
         React.createElement(GlobalTaskList, {
+          contextId: 'local',
           filtersPopoverOpen: true,
           onFiltersPopoverOpenChange: vi.fn(),
         })
@@ -374,6 +376,7 @@ describe('GlobalTaskList project grouping', () => {
     await act(async () => {
       root.render(
         React.createElement(GlobalTaskList, {
+          contextId: 'local',
           filtersPopoverOpen: true,
           onFiltersPopoverOpenChange: vi.fn(),
         })
@@ -401,6 +404,7 @@ describe('GlobalTaskList project grouping', () => {
     await act(async () => {
       root.render(
         React.createElement(GlobalTaskList, {
+          contextId: 'local',
           filtersPopoverOpen: true,
           onFiltersPopoverOpenChange: vi.fn(),
         })

@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,17 +11,17 @@ import type {
 } from '../../../../../src/shared/types';
 
 const apiState = {
-  getTaskExactLogSummaries: vi.fn<
-    (teamName: string, taskId: string) => Promise<BoardTaskExactLogSummariesResponse>
-  >(),
-  getTaskExactLogDetail: vi.fn<
-    (
-      teamName: string,
-      taskId: string,
-      exactLogId: string,
-      expectedSourceGeneration: string
-    ) => Promise<BoardTaskExactLogDetailResult>
-  >(),
+  getTaskExactLogSummaries:
+    vi.fn<(teamName: string, taskId: string) => Promise<BoardTaskExactLogSummariesResponse>>(),
+  getTaskExactLogDetail:
+    vi.fn<
+      (
+        teamName: string,
+        taskId: string,
+        exactLogId: string,
+        expectedSourceGeneration: string
+      ) => Promise<BoardTaskExactLogDetailResult>
+    >(),
 };
 
 vi.mock('@renderer/api', () => ({
@@ -60,7 +63,17 @@ describe('ExactTaskLogsSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(ExactTaskLogsSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'exact-summaries',
+          enabled: true,
+          children: React.createElement(ExactTaskLogsSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -88,7 +101,17 @@ describe('ExactTaskLogsSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(ExactTaskLogsSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'exact-summaries',
+          enabled: true,
+          children: React.createElement(ExactTaskLogsSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -114,7 +137,17 @@ describe('ExactTaskLogsSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(ExactTaskLogsSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'exact-summaries',
+          enabled: true,
+          children: React.createElement(ExactTaskLogsSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -201,7 +234,17 @@ describe('ExactTaskLogsSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(ExactTaskLogsSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'exact-summaries',
+          enabled: true,
+          children: React.createElement(ExactTaskLogsSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -230,7 +273,9 @@ describe('ExactTaskLogsSection', () => {
         'tool:/tmp/task.jsonl:tool-1',
         'gen-2'
       );
-      expect(host.querySelector('[data-testid=\"member-execution-log\"]')?.textContent).toBe('alice');
+      expect(host.querySelector('[data-testid=\"member-execution-log\"]')?.textContent).toBe(
+        'alice'
+      );
     });
 
     await act(async () => {
@@ -272,7 +317,17 @@ describe('ExactTaskLogsSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(ExactTaskLogsSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'exact-summaries',
+          enabled: true,
+          children: React.createElement(ExactTaskLogsSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+            enabled: true,
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 

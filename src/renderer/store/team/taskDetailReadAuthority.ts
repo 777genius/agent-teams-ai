@@ -101,11 +101,36 @@ export function invalidateAcceptedTaskDetailMutation(
 
 /** Source invalidation belongs to the same task read authority as physical reads. */
 export function invalidateTaskDetailForTeamChange(
-  state: Pick<AppState, 'activeContextId' | 'invalidateTaskDetailTeamSource'>,
+  state: Pick<
+    AppState,
+    | 'activeContextId'
+    | 'isContextSwitching'
+    | 'invalidateTaskDetailTeamSource'
+    | 'invalidateTaskDetailResources'
+    | 'taskDetailResourcesById'
+  >,
   event: TeamChangeEvent,
   staleRuntimeEvent: boolean
 ): void {
-  if (staleRuntimeEvent) return;
+  if (staleRuntimeEvent || state.isContextSwitching) return;
+  if (
+    event.type === 'log-source-change' ||
+    (event.type === 'task-log-change' && event.taskSignalKind === 'log')
+  ) {
+    const identities = new Map<string, { contextId: string; teamName: string; taskId: string }>();
+    for (const entry of Object.values(state.taskDetailResourcesById)) {
+      const identity = entry.identity;
+      if (
+        identity.contextId !== state.activeContextId ||
+        identity.teamName !== event.teamName ||
+        (event.taskId && identity.taskId !== event.taskId)
+      )
+        continue;
+      identities.set(identity.taskId, identity);
+    }
+    for (const identity of identities.values()) state.invalidateTaskDetailResources(identity);
+    return;
+  }
   if (
     event.type !== 'task' &&
     !(event.type === 'task-log-change' && event.taskSignalKind !== 'log')

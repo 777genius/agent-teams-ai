@@ -37,8 +37,9 @@ const DEFAULT_WIDTH = 280;
 
 export const Sidebar = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
-  const { sidebarCollapsed, toggleSidebar } = useStore(
+  const { activeContextId, sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
+      activeContextId: s.activeContextId,
       sidebarCollapsed: s.sidebarCollapsed,
       toggleSidebar: s.toggleSidebar,
     }))
@@ -141,13 +142,18 @@ export const Sidebar = (): React.JSX.Element => {
           <span className="flex-1 text-[13px] font-semibold text-text">
             {t('tasksPanel.title')}
           </span>
-          <TaskFoldersHost sidebar={sidebarRef} collapsed={sidebarCollapsed} />
+          <TaskFoldersHost
+            contextId={activeContextId}
+            sidebar={sidebarRef}
+            collapsed={sidebarCollapsed}
+          />
         </div>
 
         {/* Content: tasks list. Sessions panel is temporarily hidden with the mode switcher above. */}
         <div id="sidebar-tasks-panel" className="min-w-0 flex-1 overflow-hidden">
           <GlobalTaskList
             hideHeader
+            contextId={activeContextId}
             filters={taskFilters}
             onFiltersChange={setTaskFilters}
             filtersPopoverOpen={taskFiltersPopoverOpen}

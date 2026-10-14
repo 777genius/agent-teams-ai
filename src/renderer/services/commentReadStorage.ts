@@ -1,4 +1,11 @@
+import {
+  isValidTaskDetailIdentity,
+  normalizeTaskDetailIdentity,
+  taskDetailKey,
+} from '@features/team-task-detail/core';
 import { get, set } from 'idb-keyval';
+
+import type { TaskDetailIdentity } from '@features/team-task-detail/core';
 
 const IDB_KEY = 'comment-read-state-v2';
 const LS_KEY = 'comment-read-state-v2';
@@ -17,7 +24,7 @@ interface TaskReadEntry {
   manualUnread?: boolean;
 }
 
-type ReadState = Record<string, TaskReadEntry>; // key = "teamName/taskId"
+type ReadState = Record<string, TaskReadEntry>; // key = taskDetailKey(identity)
 
 // Legacy format for migration (v1 stored a single timestamp per task)
 type LegacyReadState = Record<string, number>;
@@ -70,9 +77,17 @@ function migrateLegacy(legacy: LegacyReadState): ReadState {
   const migrated: ReadState = {};
   for (const [key, timestamp] of Object.entries(legacy)) {
     if (typeof timestamp === 'number' && timestamp > 0) {
+      const separator = key.lastIndexOf('/');
+      if (separator <= 0 || separator === key.length - 1) continue;
+      const identity = normalizeTaskDetailIdentity({
+        contextId: 'local',
+        teamName: key.slice(0, separator),
+        taskId: key.slice(separator + 1),
+      });
+      if (!isValidTaskDetailIdentity(identity)) continue;
       // Store legacy timestamp as a sentinel — getUnreadCount will use it
       // for comments older than migration, and per-ID for newer ones.
-      migrated[key] = {
+      migrated[taskDetailKey(identity)] = {
         readIds: [],
         lastUpdated: timestamp,
       };
@@ -81,11 +96,49 @@ function migrateLegacy(legacy: LegacyReadState): ReadState {
   return migrated;
 }
 
+/** Canonicalize old contextless v2 keys before revision-guarded hydration. */
+function normalizeStoredState(state: ReadState): ReadState {
+  const result: ReadState = {};
+  for (const [key, entry] of Object.entries(state)) {
+    if (!entry || !Array.isArray(entry.readIds) || !Number.isFinite(entry.lastUpdated)) continue;
+    let canonicalKey: string;
+    try {
+      const parts: unknown = JSON.parse(key);
+      if (
+        !Array.isArray(parts) ||
+        parts.length !== 3 ||
+        !parts.every((part) => typeof part === 'string')
+      )
+        continue;
+      const identity = normalizeTaskDetailIdentity({
+        contextId: parts[0],
+        teamName: parts[1],
+        taskId: parts[2],
+      });
+      if (!isValidTaskDetailIdentity(identity)) continue;
+      canonicalKey = taskDetailKey(identity);
+    } catch {
+      const separator = key.lastIndexOf('/');
+      if (separator <= 0 || separator === key.length - 1) continue;
+      const identity = normalizeTaskDetailIdentity({
+        contextId: 'local',
+        teamName: key.slice(0, separator),
+        taskId: key.slice(separator + 1),
+      });
+      if (!isValidTaskDetailIdentity(identity)) continue;
+      canonicalKey = taskDetailKey(identity);
+    }
+    // Explicit canonical entries take precedence over their legacy fallback.
+    if (!result[canonicalKey] || canonicalKey === key) result[canonicalKey] = entry;
+  }
+  return result;
+}
+
 // Synchronous init from localStorage — guarantees first render sees read state
 let cache: ReadState = {};
 const v2Data = lsLoad();
 if (v2Data && Object.keys(v2Data).length > 0) {
-  cache = v2Data;
+  cache = normalizeStoredState(v2Data);
 } else {
   const legacyData = lsLoadLegacy();
   if (legacyData && Object.keys(legacyData).length > 0) {
@@ -97,6 +150,36 @@ let loaded = Object.keys(cache).length > 0;
 let idbAvailable = true; // flips to false on first IndexedDB failure
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
+const mutationRevisionByKey = new Map<string, number>();
+
+function getMutationRevision(key: string): number {
+  return mutationRevisionByKey.get(key) ?? 0;
+}
+
+function noteMutation(key: string): void {
+  mutationRevisionByKey.set(key, getMutationRevision(key) + 1);
+}
+
+function readKey(identity: TaskDetailIdentity): string | null {
+  const normalized = normalizeTaskDetailIdentity(identity);
+  return isValidTaskDetailIdentity(normalized) ? taskDetailKey(normalized) : null;
+}
+
+function localLegacyKey(identity: TaskDetailIdentity): string | null {
+  const normalized = normalizeTaskDetailIdentity(identity);
+  if (normalized.contextId !== 'local') return null;
+  return `${normalized.teamName}/${normalized.taskId}`;
+}
+
+function getEffectiveEntry(
+  state: ReadState,
+  identity: TaskDetailIdentity
+): TaskReadEntry | undefined {
+  const key = readKey(identity);
+  if (!key) return undefined;
+  const legacyKey = localLegacyKey(identity);
+  return state[key] ?? (legacyKey ? state[legacyKey] : undefined);
+}
 
 // --- useSyncExternalStore API ---
 export function subscribe(listener: () => void): () => void {
@@ -116,11 +199,15 @@ export function getSnapshot(): ReadState {
 /**
  * Mark specific comment IDs as read for a given team/task.
  */
-export function markCommentsRead(teamName: string, taskId: string, commentIds: string[]): void {
-  const key = `${teamName}/${taskId}`;
-  const prev = cache[key];
+export function markCommentsRead(
+  identity: TaskDetailIdentity,
+  commentIds: readonly string[]
+): void {
+  const key = readKey(identity);
+  if (!key) return;
+  const prev = getEffectiveEntry(cache, identity);
   if (commentIds.length === 0) {
-    if (prev?.manualUnread) clearTaskManualUnread(teamName, taskId);
+    if (prev?.manualUnread) clearTaskManualUnread(identity);
     return;
   }
   const prevSet = new Set(prev?.readIds ?? []);
@@ -132,6 +219,7 @@ export function markCommentsRead(teamName: string, taskId: string, commentIds: s
     }
   }
   if (!changed && !prev?.manualUnread) return;
+  noteMutation(key);
   cache = {
     ...cache,
     [key]: {
@@ -147,12 +235,14 @@ export function markCommentsRead(teamName: string, taskId: string, commentIds: s
  * @deprecated Use markCommentsRead() instead. Kept for backward compatibility
  * with code that hasn't migrated yet (e.g. flush fallback).
  */
-export function markAsRead(teamName: string, taskId: string, latestTimestamp: number): void {
-  const key = `${teamName}/${taskId}`;
-  const prev = cache[key];
+export function markAsRead(identity: TaskDetailIdentity, latestTimestamp: number): void {
+  const key = readKey(identity);
+  if (!key) return;
+  const prev = getEffectiveEntry(cache, identity);
   // Update lastUpdated to at least this timestamp (for legacy migration support)
   const prevLastUpdated = prev?.lastUpdated ?? 0;
   if (latestTimestamp <= prevLastUpdated && prev && !prev.manualUnread) return;
+  noteMutation(key);
   cache = {
     ...cache,
     [key]: {
@@ -167,10 +257,12 @@ export function markAsRead(teamName: string, taskId: string, latestTimestamp: nu
 /**
  * Manually mark a task as unread even when it has no unread comments.
  */
-export function markTaskUnread(teamName: string, taskId: string): void {
-  const key = `${teamName}/${taskId}`;
-  const prev = cache[key];
+export function markTaskUnread(identity: TaskDetailIdentity): void {
+  const key = readKey(identity);
+  if (!key) return;
+  const prev = getEffectiveEntry(cache, identity);
   if (prev?.manualUnread) return;
+  noteMutation(key);
   cache = {
     ...cache,
     [key]: {
@@ -186,10 +278,12 @@ export function markTaskUnread(teamName: string, taskId: string): void {
 /**
  * Clear only the manual unread marker. Comment read state is preserved.
  */
-export function clearTaskManualUnread(teamName: string, taskId: string): void {
-  const key = `${teamName}/${taskId}`;
-  const prev = cache[key];
+export function clearTaskManualUnread(identity: TaskDetailIdentity): void {
+  const key = readKey(identity);
+  if (!key) return;
+  const prev = getEffectiveEntry(cache, identity);
   if (!prev?.manualUnread) return;
+  noteMutation(key);
   cache = {
     ...cache,
     [key]: {
@@ -214,12 +308,10 @@ export function clearTaskManualUnread(teamName: string, taskId: string): void {
  */
 export function getUnreadCount(
   readState: ReadState,
-  teamName: string,
-  taskId: string,
+  identity: TaskDetailIdentity,
   comments: { id?: string; createdAt: string }[]
 ): number {
-  const key = `${teamName}/${taskId}`;
-  const entry = readState[key];
+  const entry = getEffectiveEntry(readState, identity);
   if (!comments || comments.length === 0) return entry?.manualUnread ? 1 : 0;
   if (!entry) return comments.length;
 
@@ -247,9 +339,8 @@ export function getUnreadCount(
 /**
  * Get the set of read comment IDs for a team/task pair.
  */
-export function getReadCommentIds(teamName: string, taskId: string): Set<string> {
-  const key = `${teamName}/${taskId}`;
-  const entry = cache[key];
+export function getReadCommentIds(identity: TaskDetailIdentity): Set<string> {
+  const entry = getEffectiveEntry(cache, identity);
   return new Set(entry?.readIds ?? []);
 }
 
@@ -260,9 +351,8 @@ export function getReadCommentIds(teamName: string, taskId: string): Set<string>
  * because lastUpdated gets refreshed to Date.now() on every save and
  * would incorrectly mark all comments as read.
  */
-export function getLegacyCutoff(teamName: string, taskId: string): number {
-  const key = `${teamName}/${taskId}`;
-  const entry = cache[key];
+export function getLegacyCutoff(identity: TaskDetailIdentity): number {
+  const entry = getEffectiveEntry(cache, identity);
   if (!entry) return 0;
   // Only honour the timestamp when no per-ID tracking exists (pure legacy data).
   if (entry.readIds.length > 0) return 0;
@@ -270,9 +360,8 @@ export function getLegacyCutoff(teamName: string, taskId: string): number {
 }
 
 /** @deprecated Use getReadCommentIds() + getLegacyCutoff() instead. */
-export function getLastReadTimestamp(teamName: string, taskId: string): number {
-  const key = `${teamName}/${taskId}`;
-  return cache[key]?.lastUpdated ?? 0;
+export function getLastReadTimestamp(identity: TaskDetailIdentity): number {
+  return getEffectiveEntry(cache, identity)?.lastUpdated ?? 0;
 }
 
 // --- Internal ---
@@ -294,6 +383,7 @@ function scheduleSave(): void {
 
 async function load(): Promise<void> {
   if (loaded) return;
+  const loadStartedRevisionByKey = new Map(mutationRevisionByKey);
 
   if (hasIndexedDB() && idbAvailable) {
     try {
@@ -301,8 +391,9 @@ async function load(): Promise<void> {
       const stored = await get<ReadState>(IDB_KEY);
       if (stored && typeof stored === 'object') {
         const merged = { ...cache };
-        for (const [k, v] of Object.entries(stored)) {
+        for (const [k, v] of Object.entries(normalizeStoredState(stored))) {
           if (!v || typeof v !== 'object') continue;
+          if (getMutationRevision(k) !== (loadStartedRevisionByKey.get(k) ?? 0)) continue;
           const entry = v;
           const prev = merged[k];
           if (!prev) {
@@ -313,7 +404,9 @@ async function load(): Promise<void> {
             merged[k] = {
               readIds: Array.from(mergedIds),
               lastUpdated: Math.max(prev.lastUpdated, entry.lastUpdated),
-              ...(prev.manualUnread || entry.manualUnread ? { manualUnread: true } : {}),
+              ...((prev.manualUnread ?? entry.manualUnread)
+                ? { manualUnread: prev.manualUnread ?? entry.manualUnread }
+                : {}),
             };
           }
         }
@@ -326,13 +419,16 @@ async function load(): Promise<void> {
           const migrated = migrateLegacy(legacy);
           const merged = { ...cache };
           for (const [k, v] of Object.entries(migrated)) {
+            if (getMutationRevision(k) !== (loadStartedRevisionByKey.get(k) ?? 0)) continue;
             if (!merged[k]) {
               merged[k] = v;
             } else {
               merged[k] = {
                 readIds: [...new Set([...merged[k].readIds, ...v.readIds])],
                 lastUpdated: Math.max(merged[k].lastUpdated, v.lastUpdated),
-                ...(merged[k].manualUnread || v.manualUnread ? { manualUnread: true } : {}),
+                ...((merged[k].manualUnread ?? v.manualUnread)
+                  ? { manualUnread: merged[k].manualUnread ?? v.manualUnread }
+                  : {}),
               };
             }
           }

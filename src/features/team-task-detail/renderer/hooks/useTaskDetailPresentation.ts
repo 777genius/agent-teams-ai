@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useDocumentVisibility } from '@renderer/hooks/useDocumentVisibility';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useViewportCommentRead } from '@renderer/hooks/useViewportCommentRead';
 import { getLegacyCutoff, getReadCommentIds } from '@renderer/services/commentReadStorage';
@@ -28,6 +29,7 @@ export interface TaskDetailPresentationModel {
   canReassign: boolean;
   colorMap: Map<string, string>;
   commentImageAttachments: TaskDetailCommentImage[];
+  commentReadEnabled: boolean;
   currentTask: TeamTaskWithKanban;
   descriptionDraft: string;
   editingDescription: boolean;
@@ -121,6 +123,15 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
     teamName,
   } = input;
   const { isLight } = useTheme();
+  const documentVisible = useDocumentVisibility();
+  const resourceVisible =
+    active && enabled && documentVisible && sessionController.isOriginCurrent();
+  const setResourceDemand = useStore((state) => state.setTaskDetailVisibleResourceDemand);
+  const { identity: resourceIdentity, surfaceId } = sessionController;
+  useEffect(() => {
+    setResourceDemand(surfaceId, resourceIdentity, 'detail', resourceVisible);
+    return () => setResourceDemand(surfaceId, resourceIdentity, 'detail', false);
+  }, [resourceIdentity, resourceVisible, setResourceDemand, surfaceId]);
   const updateTaskFields = useStore((state) => state.updateTaskFields);
   const getTaskAttachmentData = useStore((state) => state.getTaskAttachmentData);
   const setTaskNeedsClarification = useStore((state) => state.setTaskNeedsClarification);
@@ -136,8 +147,9 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
   const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
   const taskChanges = useTaskDetailChanges({
     contextId: sessionController.identity.contextId,
+    surfaceId: sessionController.surfaceId,
     isOriginCurrent: sessionController.isOriginCurrent,
-    active,
+    active: resourceVisible,
     enabled,
     onOpenFile: onOpenChangeFile,
     task: currentTask,
@@ -172,8 +184,13 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       unreadSnapshotRef.current = new Set();
       return;
     }
-    const readIds = getReadCommentIds(teamName, currentTask.id);
-    const cutoff = getLegacyCutoff(teamName, currentTask.id);
+    const identity = {
+      contextId: sessionController.identity.contextId,
+      teamName,
+      taskId: currentTask.id,
+    };
+    const readIds = getReadCommentIds(identity);
+    const cutoff = getLegacyCutoff(identity);
     const unread = new Set<string>();
     for (const comment of comments) {
       if (readIds.has(comment.id)) continue;
@@ -182,11 +199,23 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       unread.add(comment.id);
     }
     unreadSnapshotRef.current = unread;
-  }, [active, currentTask.comments, currentTask.id, enabled, teamName]);
+  }, [
+    active,
+    currentTask.comments,
+    currentTask.id,
+    enabled,
+    sessionController.identity.contextId,
+    teamName,
+  ]);
 
   const viewport = useViewportCommentRead({
-    teamName,
-    taskId: currentTask.id,
+    identity: {
+      contextId: sessionController.identity.contextId,
+      teamName,
+      taskId: currentTask.id,
+    },
+    enabled: resourceVisible,
+    isOriginCurrent: sessionController.isOriginCurrent,
     scrollContainer: rootElement,
   });
 
@@ -259,6 +288,7 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       canReassign: isTodo && sessionController.isOwner,
       colorMap,
       commentImageAttachments,
+      commentReadEnabled: resourceVisible,
       currentTask,
       descriptionDraft: sessionController.session.descriptionDraft,
       editingDescription: sessionController.session.editingDescription,

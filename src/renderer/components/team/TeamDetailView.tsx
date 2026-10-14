@@ -114,8 +114,8 @@ import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadi
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
-import { KanbanBoard } from './kanban/KanbanBoard';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
+import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
 import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
@@ -558,7 +558,6 @@ type TeamMemberDetailDialogBridgeProps = Omit<
   'leadActivity' | 'spawnEntry' | 'runtimeEntry'
 >;
 type EditTarget = { kind: 'team' } | { kind: 'member'; memberName: string } | null;
-type TeamKanbanBoardBridgeProps = Omit<ComponentProps<typeof KanbanBoard>, 'activeTaskLogActivity'>;
 type TeamSidebarRailBridgeProps = Omit<
   ComponentProps<typeof TeamSidebarRail>,
   'messagesPanelProps'
@@ -1293,17 +1292,6 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       runtimeEntry={runtimeEntry}
       runtimeRunId={runtimeRunId}
     />
-  );
-});
-
-const TeamKanbanBoardBridge = memo(function TeamKanbanBoardBridge({
-  teamName,
-  ...props
-}: TeamKanbanBoardBridgeProps): React.JSX.Element {
-  const activeTaskLogActivity = useStore((s) => s.activeTaskLogActivityByTeam[teamName]);
-
-  return (
-    <KanbanBoard {...props} teamName={teamName} activeTaskLogActivity={activeTaskLogActivity} />
   );
 });
 

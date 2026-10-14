@@ -311,6 +311,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     if (!isValidTaskDetailIdentity(identity)) return;
     invalidateTeamSnapshotResource(identity.contextId, identity.teamName);
     invalidateTeamTaskFullResource(identity);
+    get().invalidateTaskDetailResources(identity);
     const key = taskDetailKey(identity);
     set((state) => {
       const current = state.taskDetailById[key];
@@ -333,6 +334,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
         (!taskId || entry.identity.taskId === taskId)
     );
     for (const entry of affected) invalidateTeamTaskFullResource(entry.identity);
+    for (const entry of affected) get().invalidateTaskDetailResources(entry.identity);
     set((state) => {
       const next = { ...state.taskDetailById };
       let changed = false;
@@ -348,6 +350,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   },
 
   clearTaskDetailTeamWork: (contextId, teamName) => {
+    get().clearTaskDetailResourceWork(contextId, teamName);
     set((state) => {
       const nextDetails = { ...state.taskDetailById };
       const nextSessions = { ...state.taskDetailSessionById };

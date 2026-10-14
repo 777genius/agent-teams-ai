@@ -87,6 +87,8 @@ describe('TaskCommentInput composer layout', () => {
         setError('File "empty.txt" is empty');
       };
       return React.createElement(TaskCommentInput, {
+        surfaceId: 'test-comment',
+        contextId: 'local',
         teamName: 'team-a',
         taskId: 'task-a',
         projectPath: '/TEST/project',

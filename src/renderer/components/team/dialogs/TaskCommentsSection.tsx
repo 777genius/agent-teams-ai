@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { taskDetailKey } from '@features/team-task-detail/core';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AnimatedHeightReveal } from '@renderer/components/team/activity/AnimatedHeightReveal';
@@ -10,7 +11,6 @@ import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightb
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { parseMessageReply } from '@renderer/utils/agentMessageFormatting';
@@ -37,11 +37,14 @@ const INITIAL_VISIBLE_COMMENTS = 30;
 const VISIBLE_COMMENTS_STEP = 50;
 const MAX_COMMENTS_TO_RENDER = 2000;
 
-function getTaskCommentElementId(taskId: string, commentId: string): string {
-  return `task-comment-${taskId}-${commentId}`;
+function getTaskCommentElementId(surfaceKey: string, commentId: string): string {
+  return `task-comment-${encodeURIComponent(surfaceKey)}-${encodeURIComponent(commentId)}`;
 }
 
 interface TaskCommentsSectionProps {
+  contextId: string;
+  surfaceId: string;
+  active: boolean;
   teamName: string;
   taskId: string;
   comments: TaskComment[];
@@ -66,6 +69,9 @@ interface TaskCommentsSectionProps {
 }
 
 export const TaskCommentsSection = ({
+  contextId,
+  surfaceId,
+  active,
   teamName,
   taskId,
   comments,
@@ -79,7 +85,7 @@ export const TaskCommentsSection = ({
   registerCommentForViewport,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const commentsRef = useMarkCommentsRead(teamName, taskId, comments);
+  const commentsRef = useRef<HTMLDivElement | null>(null);
 
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COMMENTS);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -87,7 +93,7 @@ export const TaskCommentsSection = ({
   // Reset local UI state when team/task changes using the
   // "adjust state during render" pattern (no effect needed).
   // See: https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const resetKey = `${teamName}:${taskId}`;
+  const resetKey = JSON.stringify([surfaceId, taskDetailKey({ contextId, teamName, taskId })]);
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (resetKey !== prevResetKey) {
     setPrevResetKey(resetKey);
@@ -133,12 +139,14 @@ export const TaskCommentsSection = ({
   const newCommentIds = useNewItemKeys({
     itemKeys: visibleCommentIds,
     paginationKey: visibleCount,
-    resetKey: `${teamName}:${taskId}`,
+    resetKey,
   });
 
   useEffect(() => {
-    if (!focusCommentId) return;
-    const target = document.getElementById(getTaskCommentElementId(taskId, focusCommentId));
+    if (!active || document.visibilityState === 'hidden' || !focusCommentId) return;
+    const target = Array.from(
+      commentsRef.current?.querySelectorAll<HTMLElement>('[data-task-comment-id]') ?? []
+    ).find((element) => element.dataset.taskCommentId === focusCommentId);
     if (!target) return;
 
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -150,7 +158,7 @@ export const TaskCommentsSection = ({
       () => target.classList.remove('kanban-card-focus-pulse'),
       { once: true }
     );
-  }, [focusCommentId, taskId, visibleComments]);
+  }, [active, focusCommentId, resetKey, visibleComments]);
 
   return (
     <div ref={commentsRef}>
@@ -181,7 +189,7 @@ export const TaskCommentsSection = ({
             {visibleComments.map((comment, index) => (
               <AnimatedHeightReveal key={comment.id} animate={newCommentIds.has(comment.id)}>
                 <div
-                  id={getTaskCommentElementId(taskId, comment.id)}
+                  id={getTaskCommentElementId(resetKey, comment.id)}
                   data-task-comment-id={comment.id}
                   ref={
                     registerCommentForViewport ? registerCommentForViewport(comment.id) : undefined

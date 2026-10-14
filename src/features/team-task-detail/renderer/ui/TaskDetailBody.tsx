@@ -421,6 +421,9 @@ export const TaskDetailBody = ({
         >
           <div className="min-w-0">
             <TaskLogsPanel
+              contextId={sessionController.identity.contextId}
+              surfaceId={sessionController.surfaceId}
+              visible={model.commentReadEnabled}
               teamName={teamName}
               task={currentTask}
               isOpen={model.logsSectionOpen}
@@ -472,6 +475,8 @@ export const TaskDetailBody = ({
       >
         <div className="pl-2.5">
           <TaskCommentInput
+            contextId={sessionController.identity.contextId}
+            surfaceId={sessionController.surfaceId}
             teamName={teamName}
             taskId={currentTask.id}
             projectPath={projectPath}
@@ -486,6 +491,9 @@ export const TaskDetailBody = ({
           members={model.members}
         />
         <TaskCommentsSection
+          contextId={sessionController.identity.contextId}
+          surfaceId={sessionController.surfaceId}
+          active={model.commentReadEnabled}
           teamName={teamName}
           taskId={currentTask.id}
           comments={currentTask.comments ?? []}

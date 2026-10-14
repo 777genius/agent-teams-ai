@@ -31,20 +31,14 @@ vi.mock('../../../../src/renderer/services/commentReadStorage', () => ({
   clearTaskManualUnread: moduleMocks.clearTaskManualUnread,
 }));
 
-vi.mock(
-  '../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot',
-  () => ({
-    preloadGlobalTaskDetailDialog: moduleMocks.preloadGlobalTaskDetailDialog,
-  })
-);
+vi.mock('../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot', () => ({
+  preloadGlobalTaskDetailDialog: moduleMocks.preloadGlobalTaskDetailDialog,
+}));
 
-vi.mock(
-  '../../../../src/features/task-folders/renderer/adapters/taskFolderEditing',
-  () => ({
-    useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
-    taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
-  })
-);
+vi.mock('../../../../src/features/task-folders/renderer/adapters/taskFolderEditing', () => ({
+  useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
+  taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
+}));
 
 vi.mock('../../../../src/renderer/hooks/useTheme', () => ({
   useTheme: () => ({
@@ -182,7 +176,12 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
@@ -204,15 +203,18 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
     const row = host.querySelector<HTMLElement>('[data-task-key]')!;
     const detail = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-detail"]')!;
-    const move = host.querySelector<HTMLButtonElement>(
-      '[data-testid="sidebar-task-drag-handle"]'
-    )!;
+    const move = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!;
 
     expect(row.tagName).toBe('DIV');
     expect(row.getAttribute('role')).toBeNull();
@@ -250,14 +252,12 @@ describe('SidebarTaskItem unread styling', () => {
     );
     expect(storeState.openGlobalTaskDetail).not.toHaveBeenCalled();
     await act(async () => detail.click());
-    expect(storeState.openGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith(
-      'alpha-team',
-      'task-1'
-    );
-    expect(moduleMocks.clearTaskManualUnread).toHaveBeenCalledExactlyOnceWith(
-      'alpha-team',
-      'task-1'
-    );
+    expect(storeState.openGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith('alpha-team', 'task-1');
+    expect(moduleMocks.clearTaskManualUnread).toHaveBeenCalledExactlyOnceWith({
+      contextId: 'local',
+      teamName: 'alpha-team',
+      taskId: 'task-1',
+    });
     expect(moduleMocks.openTaskFolderMove).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -275,13 +275,16 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
-    const move = host.querySelector<HTMLButtonElement>(
-      '[data-testid="sidebar-task-drag-handle"]'
-    )!;
+    const move = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!;
     expect(move.disabled).toBe(true);
     expect(move.getAttribute('draggable')).toBe('false');
     await act(async () => move.click());
@@ -305,6 +308,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask(),
           renamingKey: 'alpha-team:task-1',
           onRenameComplete,
@@ -366,7 +370,12 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
@@ -386,7 +395,13 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask(), teamOffline: true }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+          teamOffline: true,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -407,7 +422,11 @@ describe('SidebarTaskItem unread styling', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(SidebarTaskItem, { task: makeTask(), hideProjectName: true })
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+          hideProjectName: true,
+        })
       );
       await Promise.resolve();
     });
@@ -434,6 +453,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({
             createdAt: createdAt.toISOString(),
             reviewState: 'needsFix',
@@ -470,6 +490,7 @@ describe('SidebarTaskItem unread styling', () => {
           React.Fragment,
           null,
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'minutes',
               createdAt: '2026-04-17T00:00:00.000Z',
@@ -477,6 +498,7 @@ describe('SidebarTaskItem unread styling', () => {
             }),
           }),
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'hours',
               createdAt: '2026-04-17T00:00:00.000Z',
@@ -484,6 +506,7 @@ describe('SidebarTaskItem unread styling', () => {
             }),
           }),
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'days',
               createdAt: '2026-04-01T00:00:00.000Z',
@@ -530,6 +553,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({
             createdAt: new Date(2026, 3, 17, 12, 0, 0).toISOString(),
             updatedAt: updatedAt.toISOString(),
@@ -580,6 +604,7 @@ describe('SidebarTaskItem unread styling', () => {
         act(() => {
           root.render(
             React.createElement(SidebarTaskItem, {
+              contextId: 'local',
               task: makeTask({ createdAt: createdAt.toISOString(), updatedAt }),
             })
           );
@@ -620,6 +645,7 @@ describe('SidebarTaskItem unread styling', () => {
     act(() => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({ createdAt: date, updatedAt: date }),
         })
       );
@@ -646,6 +672,7 @@ describe('SidebarTaskItem unread styling', () => {
       await act(async () => {
         root.render(
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               createdAt:
                 source === 'creation' ? '2026-04-18T11:59:30.000Z' : '2026-04-18T11:00:00.000Z',
