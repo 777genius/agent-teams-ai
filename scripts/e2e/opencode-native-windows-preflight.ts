@@ -28,9 +28,28 @@ const profileModuleUrl = pathToFileURL(
 const authModuleUrl = pathToFileURL(
   path.join(sdk, 'src/services/opencode/OpenCodeAuthStore.ts')
 ).href;
+const handlerModuleUrl = pathToFileURL(
+  path.join(sdk, 'src/services/opencode/OpenCodeBridgeCommandHandler.ts')
+).href;
+const selectedBridgeModuleUrl = pathToFileURL(
+  path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2TeamBridge.ts')
+).href;
 const script = `
-let stage='seed-sdk-auth';
+let stage='startup-cleanup';
 try {
+ const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
+ const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
+ const cleanup = await executeSelectedOpenCodeBridgeCommandEnvelope({
+   schemaVersion:1, requestId:'TEST-source-startup-cleanup',
+   command:'opencode.cleanupStartupHosts', cwd:${JSON.stringify(desktop.projectPath)},
+   startedAt:new Date().toISOString(), timeoutMs:20_000,
+   body:{deadlineUnixMs:Date.now()+20_000,mode:'stale',reason:'TEST-source-preflight'}
+ }, executeOpenCodeBridgeCommandEnvelope);
+ if (cleanup?.ok !== true) throw new Error(typeof cleanup?.error?.message === 'string'
+   ? cleanup.error.message : 'TEST startup cleanup did not complete');
+ if (cleanup.data?.remaining !== 0 || cleanup.data?.startupCleanup?.completion !== 'drained')
+   throw new Error('TEST startup cleanup did not drain its empty registry');
+ stage='seed-sdk-auth';
  const { OpenCodeProfileManager, resolveOpenCodeProfileScope } = await import(${JSON.stringify(profileModuleUrl)});
  const manager = new OpenCodeProfileManager();
  const { upsertOpenCodeApiAuthCredential } = await import(${JSON.stringify(authModuleUrl)});
