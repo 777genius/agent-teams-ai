@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createServer, type ServerResponse } from 'node:http';
-import { readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { readFile, realpath, rm, writeFile, lstat, open } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Cdp, waitFor } from '../release-updater/cdp.mts';
@@ -11,6 +11,7 @@ import type {
   AttachmentPayload,
   InboxMessage,
   SendMessageResult,
+  OpenCodeRuntimeDeliveryStatus,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamProvisioningProgress,
@@ -28,6 +29,7 @@ interface Identity {
   pid: number;
   birth: string;
   parent?: number;
+  executable?: string;
 }
 interface Manifest {
   packaged: boolean;
@@ -383,6 +385,9 @@ async function main() {
   let primaryFailure: unknown;
   let teamAttempted = false;
   let launchRun: TeamCreateResponse | undefined;
+  let retainDispatchDiagnostics: (() => Promise<void>) | undefined;
+  let observeDelivery: (() => Promise<void>) | undefined;
+  let deliveryMessageId: string | undefined;
   let retainLaunchDiagnostics: (() => Promise<void>) | undefined;
   const check = () => {
     const failure = model.failure();
@@ -444,6 +449,266 @@ async function main() {
     };
     const api = async <T,>(expression: string, label: string) =>
       finish<T>(await begin(expression), label);
+    let statusKey: string | undefined,
+      statusStartedAt = 0;
+    observeDelivery = async () => {
+      if (!deliveryMessageId) return;
+      try {
+        if (!statusKey && Date.now() - statusStartedAt >= 1000) {
+          statusStartedAt = Date.now();
+          statusKey = await begin(
+            `window.electronAPI.teams.getOpenCodeRuntimeDeliveryStatus(${literal(team)}, ${literal(deliveryMessageId)})`
+          );
+        }
+        if (!statusKey) return;
+        const state = await evaluate<{
+          done: boolean;
+          error?: string;
+          value?: OpenCodeRuntimeDeliveryStatus | null;
+        }>(`window[${literal(statusKey)}]`);
+        if (!state.done) return;
+        const value = state.value;
+        if (value) assert(value.messageId === deliveryMessageId);
+        receipt.deliveryObservation = {
+          observationOnly: true,
+          at: Date.now(),
+          messageId: deliveryMessageId,
+          collectionFailed: Boolean(state.error),
+          value: value
+            ? {
+                messageId: value.messageId,
+                accepted: value.accepted,
+                delivered: value.delivered,
+                responsePending: value.responsePending,
+                responseState: value.responseState,
+                acceptanceUnknown: value.acceptanceUnknown,
+                ledgerStatus: value.ledgerStatus,
+                laneId: value.laneId,
+                ledgerRecordId: value.ledgerRecordId,
+                reason: value.reason?.slice(0, 512),
+                diagnostics: value.diagnostics?.slice(0, 16).map((v) => v.slice(0, 512)),
+              }
+            : null,
+        };
+        statusKey = undefined;
+      } catch {
+        statusKey = undefined;
+        receipt.deliveryObservation = { observationOnly: true, collectionFailed: true };
+      }
+    };
+    retainDispatchDiagnostics = async () => {
+      if (!deliveryMessageId || !launchRun) return;
+      const collected: Record<string, unknown> = {
+        observationOnly: true,
+        messageId: deliveryMessageId,
+        runId: launchRun.runId,
+        member,
+        at: Date.now(),
+      };
+      try {
+        await observeDelivery!();
+        if (statusKey)
+          await waitFor(
+            async () => {
+              await observeDelivery!();
+              return !statusKey ? true : null;
+            },
+            'delivery observation',
+            5000
+          );
+        const registry = path.join(
+          data.home,
+          'AppData/Local/claude-multimodel-nodejs/Data/opencode'
+        );
+        const readManaged = async (
+          name: 'session-store.json' | 'host-registry.json' | 'command-outcomes.json'
+        ) => {
+          const rootReal = await realpath(root);
+          const file = path.join(registry, name),
+            relative = path.relative(root, file);
+          assert(!relative.startsWith('..') && !path.isAbsolute(relative));
+          let current = root;
+          for (const part of ['', ...relative.split(path.sep)]) {
+            if (part) current = path.join(current, part);
+            const info = await lstat(current);
+            assert(
+              !info.isSymbolicLink() &&
+                (current === file
+                  ? info.isFile() && info.size <= 2 * 1024 * 1024
+                  : info.isDirectory())
+            );
+          }
+          const canonical = await realpath(file);
+          assert(canonical.startsWith(rootReal + path.sep));
+          const handle = await open(file, 'r');
+          try {
+            const info = await handle.stat(),
+              leaf = await lstat(file);
+            assert(
+              info.isFile() &&
+                info.size <= 2 * 1024 * 1024 &&
+                info.dev === leaf.dev &&
+                info.ino === leaf.ino &&
+                !leaf.isSymbolicLink()
+            );
+            const bytes = Buffer.alloc(2 * 1024 * 1024 + 1);
+            const read = await handle.read(bytes, 0, bytes.length, 0);
+            assert(read.bytesRead <= 2 * 1024 * 1024);
+            const after = await lstat(file);
+            assert(
+              !after.isSymbolicLink() &&
+                after.dev === info.dev &&
+                after.ino === info.ino &&
+                (await realpath(file)) === canonical
+            );
+            return JSON.parse(bytes.subarray(0, read.bytesRead).toString('utf8'));
+          } finally {
+            await handle.close();
+          }
+        };
+        try {
+          const outcomes = (await readManaged('command-outcomes.json')) as {
+            schemaVersion: number;
+            records: Record<string, Record<string, unknown>>;
+          };
+          assert(outcomes.schemaVersion === 1 && Object.keys(outcomes.records).length <= 10000);
+          const records = Object.values(outcomes.records).filter(
+            (row) =>
+              row.schemaVersion === 1 &&
+              row.command === 'opencode.sendMessage' &&
+              row.teamName === team &&
+              row.teamId === team &&
+              row.runId === launchRun!.runId &&
+              row.memberName === member &&
+              row.messageId === deliveryMessageId &&
+              row.projectPath === data.project
+          );
+          const stages = [
+            'received',
+            'preconditions_checked',
+            'session_resolved',
+            'mcp_ready',
+            'prompt_submitting',
+            'prompt_accepted',
+            'turn_observed',
+            'reconciled',
+            'failed_before_accept',
+            'failed_after_accept',
+          ];
+          const safe = (value: unknown) =>
+            typeof value === 'string' && value.length <= 256 ? value : null;
+          collected.commandOutcomes = records.slice(0, 16).map((row) => ({
+            requestId: safe(row.requestId),
+            deliveryAttemptId: safe(row.deliveryAttemptId),
+            runId: safe(row.runId),
+            messageId: safe(row.messageId),
+            sessionId: safe(row.sessionId),
+            status: stages.includes(String(row.status)) ? row.status : 'unknown',
+            runtimePid:
+              typeof row.runtimePid === 'number' && Number.isSafeInteger(row.runtimePid)
+                ? row.runtimePid
+                : null,
+            safeToRetry: typeof row.safeToRetry === 'boolean' ? row.safeToRetry : null,
+            prePromptCursor: safe(row.prePromptCursor),
+            runtimePromptMessageId: safe(row.runtimePromptMessageId),
+            acceptedAt: safe(row.acceptedAt),
+            turnObservedAt: safe(row.turnObservedAt),
+            completedAt: safe(row.completedAt),
+            createdAt: safe(row.createdAt),
+            updatedAt: safe(row.updatedAt),
+          }));
+          collected.commandOutcomeOverflow = records.length > 16;
+        } catch (error) {
+          const code =
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            typeof error.code === 'string' &&
+            /^[A-Z0-9_]{1,64}$/.test(error.code)
+              ? error.code
+              : null;
+          collected.commandOutcomeObservation = {
+            state: code === 'ENOENT' ? 'missing-unknown' : 'collection-failed',
+            code,
+          };
+        }
+        const sessions = (await readManaged('session-store.json')) as {
+          records: Record<string, Session>;
+        };
+        assert(Object.keys(sessions.records).length <= 10000);
+        const matching = Object.values(sessions.records).filter(
+          (row) =>
+            row.teamId === team && row.memberName === member && row.projectPath === data.project
+        );
+        assert(matching.length === 1 && matching[0]!.selectedModel === MODEL);
+        const session = matching[0]!;
+        collected.session = {
+          sessionId: session.opencodeSessionId,
+          hostKey: session.hostKey,
+          profileRootKey: session.profileRootKey,
+          selectedModel: session.selectedModel,
+        };
+        const hosts = (await readManaged('host-registry.json')) as { hosts: Record<string, Host> };
+        const host = hosts.hosts[session.hostKey];
+        assert(
+          host &&
+            host.profileRootKey === session.profileRootKey &&
+            host.projectPath === data.project
+        );
+        const url = new URL(host.baseUrl);
+        assert(
+          url.protocol === 'http:' &&
+            url.hostname === '127.0.0.1' &&
+            Number(url.port) === host.port &&
+            !url.username &&
+            !url.password &&
+            url.pathname === '/' &&
+            !url.search &&
+            !url.hash
+        );
+        const platform = (await import(
+          pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
+        )) as {
+          processes(): Identity[];
+          ownedTree(snapshot: Identity[], launcher: Identity): Identity[];
+          sameIdentity(expected: Identity, current: Identity | undefined): void;
+        };
+        const manifest = JSON.parse(
+          await readFile(path.join(root, 'manifest.json'), 'utf8')
+        ) as Manifest;
+        assert(manifest.launcher);
+        const snapshot = platform.processes(),
+          owned = platform.ownedTree(snapshot, manifest.launcher);
+        const identity = owned.find(
+          (row) =>
+            row.pid === host.pid &&
+            row.executable?.toLowerCase() === native.binaryPath.toLowerCase()
+        );
+        if (identity)
+          platform.sameIdentity(
+            identity,
+            snapshot.find((row) => row.pid === host.pid)
+          );
+        collected.host = {
+          pid: host.pid,
+          port: host.port,
+          version: host.version,
+          owner: identity?.birth && identity.executable ? 'owned-live-census' : 'unknown',
+          identity: identity
+            ? {
+                pid: identity.pid,
+                parent: identity.parent,
+                birth: identity.birth,
+                executable: identity.executable,
+              }
+            : null,
+          protocolRead: 'not-attempted',
+        };
+      } catch {
+        collected.collectionFailed = true;
+      }
+      receipt.dispatchFailureObservation = collected;
+    };
     retainLaunchDiagnostics = async () => {
       const runId = launchRun?.runId;
       if (!runId) {
@@ -601,6 +866,7 @@ async function main() {
       },
     ];
     const messageId = randomUUID();
+    deliveryMessageId = messageId;
     receipt.phase = 'attachment_admission';
     const sentKey = await begin(
       `window.electronAPI.teams.sendMessage(${literal(team)}, ${literal({ member, messageId, text: 'Read the saved arbitrary file with the native Read tool, then reply to user via message_send with the NONCE and image SHA. Do not execute or extract either attachment.', attachments: payloads })})`
@@ -838,7 +1104,10 @@ async function main() {
     release();
     const cleanup: Record<string, unknown> = { passed: false };
     let cleanupFailed = false;
-    if (primaryFailure && cdp && teamAttempted) await retainLaunchDiagnostics?.();
+    if (primaryFailure && cdp && teamAttempted) {
+      await retainDispatchDiagnostics?.();
+      await retainLaunchDiagnostics?.();
+    }
     if (cdp && teamAttempted) {
       for (const method of ['stop', 'deleteTeam']) {
         try {
