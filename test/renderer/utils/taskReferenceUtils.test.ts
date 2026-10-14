@@ -57,6 +57,29 @@ describe('taskReferenceUtils', () => {
     );
   });
 
+  it('keeps duplicate, encoded, escaped, fenced, and explicit label references paired correctly', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    const third = { taskId: 'canonical-c', teamName: 'team-c', displayId: '1' };
+    const encoded = createEncodedTaskReference('1', first.taskId, first.teamName);
+
+    expect(linkifyTaskIdsInMarkdown('[#1 #1](task://1) #1', [first, second, third])).toBe(
+      '[#1 #1](task://canonical-a?team=team-a&display=1) [#1](task://canonical-c?team=team-c&display=1)'
+    );
+    expect(
+      linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])
+    ).toBe(`[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`);
+    expect(linkifyTaskIdsInMarkdown('[\\#1](https://example.test) #1', [first])).toBe(
+      '[\\#1](https://example.test) [#1](task://canonical-a?team=team-a&display=1)'
+    );
+    expect(
+      linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])
+    ).toBe('```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)');
+    expect(
+      linkifyTaskIdsInMarkdown('[Task #1](task://canonical-a?team=team-a&display=1)', [first])
+    ).toBe('[Task #1](task://canonical-a?team=team-a&display=1)');
+  });
+
   describe('TASK_REF_REGEX and isAllowedTaskRefBoundary', () => {
     it('linkifies #ref when preceded by boundary (space, start)', () => {
       const taskRef: TaskRef = {

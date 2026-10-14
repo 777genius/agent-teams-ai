@@ -319,7 +319,7 @@ export async function runTaskDeletionCases(
     `(async()=>{const s=window.__agentTeamsDevStore.getState();await s.ensureTaskDetail({contextId:'local',teamName:${JSON.stringify(teamB.teamName)},taskId:'1'});await s.ensureTaskDetail({contextId:'local',teamName:${JSON.stringify(teamB.teamName)},taskId:'1'});})()`
   );
   const deletedTeamState = await cdp.evaluate(
-    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=${pageB};const t=p.querySelector('textarea[id^="task-comment-input-"]');return {phase:s.taskDetailById[${keyB}]?.phase,draft:s.taskDetailSessionById[${keyB}]?.commentText,composerMounted:!!t,composerEnabled:!!t&&!t.disabled,full:s.taskDetailById[${keyB}]?.full};})()`
+    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=${pageB};const t=p?.querySelector('textarea[id^="task-comment-input-"]');return {phase:s.taskDetailById[${keyB}]?.phase,draft:s.taskDetailSessionById[${keyB}]?.commentText,composerMounted:!!t,composerEnabled:!!t&&!t.disabled,full:s.taskDetailById[${keyB}]?.full};})()`
   );
   assert.deepEqual(
     deletedTeamState,

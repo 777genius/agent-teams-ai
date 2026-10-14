@@ -11,7 +11,10 @@ import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { shouldKeepGlobalTaskDialogLoading } from './globalTaskDetailDialogLoading';
+import {
+  hasSelectedTargetTeamData,
+  shouldKeepGlobalTaskDialogLoading,
+} from './globalTaskDetailDialogLoading';
 import { TaskDetailDialog } from './TaskDetailDialog';
 
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -56,7 +59,6 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   const teamName = globalTaskDetail?.teamName ?? '';
   const taskId = globalTaskDetail?.taskId ?? '';
   const commentId = globalTaskDetail?.commentId;
-  const hasTargetTeamData = Boolean(targetTeamData);
   const identity = useMemo(
     () =>
       globalTaskDetail
@@ -67,6 +69,11 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
           }
         : null,
     [globalTaskDetail]
+  );
+  const hasTargetTeamData = hasSelectedTargetTeamData(
+    teamName,
+    globalTaskDetail?.teamName ?? null,
+    targetTeamData?.teamName ?? null
   );
   const fallbackIdentity = useMemo(() => ({ contextId: '', teamName: '', taskId: '' }), []);
   const surfaceIdRef = useRef(crypto.randomUUID());
@@ -129,20 +136,15 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   const task = taskDetailEntry?.full ?? null;
   const kanbanTaskState = targetTeamData?.kanbanState.tasks[taskId];
   const loading = shouldKeepGlobalTaskDialogLoading({
-    teamName,
-    taskId,
-    selectedTeamName: teamName,
-    selectedTeamDataPresent: hasTargetTeamData,
-    selectedTeamLoading: taskDetailEntry?.loading ?? false,
-    selectedTeamError: taskDetailEntry?.error ?? null,
-    hasTaskInMap: Boolean(taskDetailEntry?.full),
+    identity,
+    taskDetail: taskDetailEntry ?? null,
   });
 
   return (
     <TaskDetailDialog
       open
       variant={isFullTeamLoaded ? 'team' : 'global'}
-      loading={!isFullTeamLoaded && loading}
+      loading={loading}
       task={task}
       teamName={teamName}
       projectPath={targetTeamData?.config.projectPath ?? null}

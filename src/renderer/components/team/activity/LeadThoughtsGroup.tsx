@@ -526,9 +526,10 @@ const LiveThoughtStatusBadge = ({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional immediate sync to avoid 1s stale gap
     setIsLive(computeIsLive());
+    if (canBeLive === false || !isTeamAlive) return;
     const id = window.setInterval(() => setIsLive(computeIsLive()), 1000);
     return () => window.clearInterval(id);
-  }, [computeIsLive]);
+  }, [canBeLive, computeIsLive, isTeamAlive]);
 
   if (!isLive) return null;
 
