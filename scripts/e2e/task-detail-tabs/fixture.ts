@@ -167,7 +167,7 @@ export function prepareTaskTabsFixture(
       id: taskId,
       displayId: taskId,
       subject: 'TEST ' + side + ' same ID task',
-      status: 'pending',
+      status: side === 'A' ? 'in_progress' : 'pending',
       owner: 'team-lead',
       createdBy: 'user',
       createdAt: timestamp,
