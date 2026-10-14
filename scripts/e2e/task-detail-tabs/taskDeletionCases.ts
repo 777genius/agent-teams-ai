@@ -148,10 +148,9 @@ export async function runTaskDeletionCases(
     `window.__agentTeamsDevStore.getState().deletedTasks.some(t=>t.id==='1')`,
     'existing Trash catalog loaded deleted B'
   );
-  await click(
-    cdp,
-    `[...document.querySelectorAll('button')].find(b=>b.querySelector('svg.lucide-trash-2')&&b.textContent.trim()==='1')`
-  );
+  const trashButton = `[...document.querySelectorAll('button')].find(b=>{if(!b.querySelector('svg.lucide-trash-2')||b.textContent.trim()!=='1')return false;b.scrollIntoView({block:'center',behavior:'instant'});const r=b.getBoundingClientRect();return r.width>0&&r.height>0&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})`;
+  await until(cdp, `!!(${trashButton})`, 'visible B Trash action after dialog exit');
+  await click(cdp, trashButton);
   await until(
     cdp,
     `(()=>{const d=[...document.querySelectorAll('[role="dialog"]')].find(e=>e.innerText.includes('Корзина'));return !!d&&!!d.querySelector('button[aria-label="Восстановить задачу"]');})()`,
