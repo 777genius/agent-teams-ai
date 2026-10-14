@@ -133,8 +133,6 @@ async function receipt() {
         kind: 'task-detail-tabs-desktop-v1',
         testedSourceCommit: sha,
         fullTaskTabsE2E: passed,
-        remainingFocusedCasesImplemented: true,
-        controlledRacesRemainUnitCovered: true,
         passed,
         root,
         rendererPort,
