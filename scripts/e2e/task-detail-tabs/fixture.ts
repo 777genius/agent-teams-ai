@@ -101,6 +101,41 @@ export function prepareTaskTabsFixture(
     mkdirSync(project, { recursive: true, mode: 0o700 });
     write(join(project, 'README.md'), '# Disposable task tabs TEST ' + side + '\n');
     execFileSync('git', ['init', '--quiet', '--initial-branch=main', project], { stdio: 'pipe' });
+    if (side === 'A') {
+      // A real on-disk diagnostic bundle enables the existing review action without
+      // inventing Git edits, work intervals, or a provider/agent execution.
+      json(join(project, '.board-task-changes', 'bundles', taskId + '.json'), {
+        schemaVersion: 1,
+        source: 'task-change-ledger',
+        taskId,
+        generatedAt: timestamp,
+        eventCount: 0,
+        files: [],
+        totalLinesAdded: 0,
+        totalLinesRemoved: 0,
+        totalFiles: 0,
+        confidence: 'high',
+        warnings: [],
+        events: [],
+        notices: [
+          {
+            schemaVersion: 1,
+            noticeId: 'TEST-review-routing-notice',
+            taskId,
+            taskRef: taskId,
+            taskRefKind: 'canonical',
+            phase: 'work',
+            executionSeq: 1,
+            sessionId: 'TEST-no-agent-execution',
+            toolUseId: 'TEST-no-tool-execution',
+            timestamp,
+            severity: 'warning',
+            message:
+              'TEST review routing fixture: no agent was run and no file edit is attributed.',
+          },
+        ],
+      });
+    }
     const secondOwner = 'task-owner';
     const members = [
       {
