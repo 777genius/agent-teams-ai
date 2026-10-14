@@ -61,7 +61,8 @@ async function verifyModelFreeReadiness(
 
 async function verifySelectedControllerRoot(
   inspect: (input: unknown) => Promise<unknown>,
-  projectPath: string
+  projectPath: string,
+  expectedClaudeRoot: string
 ) {
   const record = (value: unknown): Record<string, unknown> => {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -84,8 +85,9 @@ async function verifySelectedControllerRoot(
     controller.type === 'local'
       ? record(controller.environment).AGENT_TEAMS_MCP_CLAUDE_DIR
       : undefined;
-  if (localClaude !== undefined) {
-    if (typeof localClaude !== 'string') throw new Error('TEST selected controller state invalid');
+  if (controller.type !== 'local' || localClaude !== expectedClaudeRoot)
+    throw new Error('TEST selected controller root differs from desktop context');
+  if (typeof localClaude === 'string') {
     const { lstat, realpath } = await import('node:fs/promises');
     const stat = await lstat(localClaude);
     if (
@@ -162,7 +164,7 @@ try {
    binary
      ? `stage='probe-controller-state';
  const { inspectOpenCodeV2LaunchSelection } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
- await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)});
+ await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)});
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
    executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});`
@@ -186,6 +188,8 @@ try {
         ...desktop.env,
         OPENROUTER_API_KEY: 'TEST-noncredential',
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry,
+        // Desktop's bridge projects getClaudeBasePath() after the Electron override.
+        AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
         ...(binary ? { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binary } : {}),
       },
       timeout: binary ? 150_000 : 45_000,
