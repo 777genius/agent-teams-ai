@@ -38,6 +38,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterTeamFlowPortsFactory', () => {
     'creates fresh team state privately through default ports under umask 002 without repairing existing paths',
     async () => {
       const root = await fs.mkdtemp(path.join(os.tmpdir(), 'test-opencode-private-state-'));
+      // eslint-disable-next-line sonarjs/file-permissions -- TEST-only umask reproduces group-write defaults; restored in finally and confined to this temporary directory.
       const previousUmask = process.umask(0o002);
       try {
         const claudeRoot = path.join(root, 'claude');

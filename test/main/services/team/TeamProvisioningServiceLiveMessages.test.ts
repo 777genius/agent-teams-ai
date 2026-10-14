@@ -69,6 +69,7 @@ vi.mock('fs', async (importOriginal) => {
 
 vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
   atomicWriteAsync: hoisted.atomicWrite,
+  atomicWriteInboxAsync: hoisted.atomicWrite,
 }));
 
 vi.mock('../../../../src/main/services/team/fileLock', () => ({
