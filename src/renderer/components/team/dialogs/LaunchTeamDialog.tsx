@@ -1055,6 +1055,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             },
             selectedModel,
             limitContext: effectiveAnthropicRuntimeLimitContext,
+            defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
           })
         : null,
     [
@@ -1163,6 +1164,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 },
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
+                defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
               }),
             selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,

@@ -157,6 +157,7 @@ interface ProviderStatusPayloadResponse {
   canLoginFromUi?: boolean;
   statusMessage?: string | null;
   detailMessage?: string | null;
+  defaultModel?: string | null;
   capabilities?: {
     teamLaunch?: boolean;
     oneShot?: boolean;
@@ -185,6 +186,7 @@ interface ProviderModelsCommandResponse {
   providers?: Record<
     string,
     {
+      defaultModel?: string | null;
       models?: (string | { id?: string; label?: string; description?: string })[];
     }
   >;
@@ -205,6 +207,7 @@ interface UnifiedRuntimeStatusResponse {
       canLoginFromUi?: boolean;
       statusMessage?: string | null;
       detailMessage?: string | null;
+      defaultModel?: string | null;
       selectedBackendId?: string | null;
       resolvedBackendId?: string | null;
       availableBackends?: {
@@ -871,6 +874,7 @@ export class ClaudeMultimodelBridgeService {
       verificationState: runtimeStatus.verificationState ?? 'unknown',
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
@@ -947,11 +951,19 @@ export class ClaudeMultimodelBridgeService {
 
     if (modelListResult.status === 'fulfilled') {
       const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelListResult.value.stdout);
-      const runtimeModels = extractModelIds(parsed.providers?.[providerId]?.models);
+      const providerModels = parsed.providers?.[providerId];
+      const runtimeDefaultModel = providerModels?.defaultModel?.trim();
+      const runtimeModels = extractModelIds(providerModels?.models);
       if (runtimeModels.length > 0) {
         provider = {
           ...provider,
           models: runtimeModels,
+        };
+      }
+      if (runtimeDefaultModel) {
+        provider = {
+          ...provider,
+          defaultModel: runtimeDefaultModel,
         };
       }
       fulfilledProbeCount += 1;
@@ -1038,6 +1050,7 @@ export class ClaudeMultimodelBridgeService {
       ...statusCheck,
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,

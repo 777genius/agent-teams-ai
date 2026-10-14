@@ -107,6 +107,7 @@ export function getTeamEffortOptions(params: {
       },
       selectedModel: params.model,
       limitContext: params.limitContext === true,
+      defaultLaunchModel: params.providerStatus?.defaultModel,
     });
     const defaultLabel = selection.defaultEffort
       ? `Default (${TEAM_EFFORT_LABELS[selection.defaultEffort]})`
@@ -210,6 +211,7 @@ export function getTeamEffortSelectorPresentation(params: {
     },
     selectedModel: params.model,
     limitContext: params.limitContext === true,
+    defaultLaunchModel: params.providerStatus?.defaultModel,
   });
   const hasExactCatalogTruth = selection.catalogModel !== null;
   const supportsConfigurableEffort = selection.supportedEfforts.length > 0;

@@ -643,6 +643,66 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     ]);
   });
 
+  it.each([false, true])(
+    'preserves the concrete Anthropic runtime default through default resolution (limitContext=%s)',
+    async (limitContext) => {
+      const execCli = vi.fn().mockResolvedValue({
+        stdout: JSON.stringify({
+          providers: {
+            anthropic: {
+              defaultModel: 'claude-opus-5-5',
+              models: ['opus'],
+            },
+          },
+        }),
+      });
+      const coordinator = createCoordinator({ execCli });
+
+      await expect(
+        coordinator.resolveProviderDefaultModel(
+          '/fake/claude',
+          '/workspace/default-model',
+          'anthropic',
+          { PATH: '/bin' },
+          [],
+          limitContext
+        )
+      ).resolves.toBe('claude-opus-5-5');
+    }
+  );
+
+  it('uses runtime status default identity when the model-list probe is unavailable', async () => {
+    const execCli = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes('model')) throw new Error('model list unavailable');
+      return {
+        stdout: JSON.stringify({
+          providers: {
+            anthropic: {
+              defaultModel: 'claude-opus-5-5',
+              modelCatalog: {
+                providerId: 'anthropic',
+                defaultLaunchModel: 'opus',
+                models: [{ id: 'opus', launchModel: 'opus' }],
+              },
+            },
+          },
+        }),
+      };
+    });
+    const coordinator = createCoordinator({ execCli });
+
+    await expect(
+      coordinator.resolveProviderDefaultModel(
+        '/fake/claude',
+        '/workspace/default-model',
+        'anthropic',
+        { PATH: '/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('claude-opus-5-5');
+  });
+
   it('resolves an OpenCode teammate default for a mixed-provider team', async () => {
     const resolveProviderDefaultModel = vi.fn().mockResolvedValue(' opencode/big-pickle ');
     const buildProvisioningEnv = vi.fn().mockResolvedValue({

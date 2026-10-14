@@ -24,6 +24,10 @@ function isAnthropicOpusModel(model: string): boolean {
   return baseModel === 'opus' || baseModel.startsWith('claude-opus-');
 }
 
+function isAnthropicFamilyAlias(model: string): boolean {
+  return ['opus', 'sonnet', 'haiku'].includes(stripOneMillionSuffix(model));
+}
+
 function normalizeStandardOnlyAnthropicModel(model: string): string {
   const baseModel = stripOneMillionSuffix(model);
   return isAnthropicHaikuModel(baseModel) || isAnthropicSonnetModel(baseModel) ? baseModel : model;
@@ -59,6 +63,15 @@ function chooseAvailableModel(
   return null;
 }
 
+export function isAnthropicContextPolicyLaunchModelAvailable(
+  modelIds: ReadonlySet<string>,
+  resolvedLaunchModel: string
+): boolean {
+  if (modelIds.has(resolvedLaunchModel)) return true;
+  const baseModel = stripOneMillionSuffix(resolvedLaunchModel);
+  return baseModel !== resolvedLaunchModel && modelIds.has(baseModel);
+}
+
 export function resolveAnthropicLaunchModel(params: {
   selectedModel?: string | null;
   limitContext: boolean;
@@ -75,12 +88,9 @@ export function resolveAnthropicLaunchModel(params: {
     const preferredDefault = params.limitContext
       ? stripOneMillionSuffix(rawPreferredDefault) || staticDefault
       : normalizeStandardOnlyAnthropicModel(rawPreferredDefault) || staticDefault;
-    // A context limit must not replace a concrete runtime default with a family alias.
-    if (
-      params.limitContext &&
-      runtimeDefault &&
-      !['opus', 'sonnet', 'haiku'].includes(preferredDefault)
-    ) {
+    // A context policy may add/remove [1m], but catalog aliases and static
+    // fallbacks must never replace the runtime's concrete default identity.
+    if (runtimeDefault && !isAnthropicFamilyAlias(runtimeDefault)) {
       return preferredDefault;
     }
     if (availableModels.size === 0) {
