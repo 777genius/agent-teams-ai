@@ -18,8 +18,14 @@ await protectWindowsTestDirectory(desktop.root);
 const moduleUrl = pathToFileURL(
   path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunControl.ts')
 ).href;
+const profileModuleUrl = pathToFileURL(
+  path.join(sdk, 'src/services/opencode/OpenCodeProfileManager.ts')
+).href;
 const script = `
 try {
+ const { OpenCodeProfileManager } = await import(${JSON.stringify(profileModuleUrl)});
+ await new OpenCodeProfileManager().prepareProfile(${JSON.stringify(desktop.projectPath)},
+   {includeManagedSubscriptionPlugins:false});
  const { discoverOpenCodeV2Run } = await import(${JSON.stringify(moduleUrl)});
  const owner = await discoverOpenCodeV2Run(process.env.CLAUDE_MULTIMODEL_DATA_HOME,
    ${JSON.stringify(desktop.teamName)}, 'TEST-source-preflight');

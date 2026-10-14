@@ -42,7 +42,13 @@ const IPC_FAILURE_CLASSIFICATIONS = [
 // Self-contained so the same projection runs before the renderer/CDP boundary
 // and again on receipt. Never retain raw exception text or quoted arguments.
 export function safeIpcFailureDetail(value: string, redact: (text: string) => string): string {
-  return redact(value.slice(0, 16_384))
+  const bounded = value.slice(0, 16_384);
+  const role =
+    /execution_owner_not_private:private_acl_owner_run_(data_root|opencode|v2|runs|leaf):[0-9]{1,10}(?![0-9])/.exec(
+      bounded
+    )?.[1];
+  const label = role ? `[owner role: ${role === 'data_root' ? 'data' : role}] ` : '';
+  const detail = redact(bounded)
     .replace(/["'`][\s\S]*/g, '[argument]')
     .replace(/[A-Za-z]:[\\/][^\r\n,;]*/g, '[path]')
     .replace(/\\\\[^\r\n,;]*/g, '[path]')
@@ -51,6 +57,7 @@ export function safeIpcFailureDetail(value: string, redact: (text: string) => st
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 500);
+  return (label + detail).slice(0, 500);
 }
 export class NativeDesktopIpcError extends Error {
   readonly operation: Operation;

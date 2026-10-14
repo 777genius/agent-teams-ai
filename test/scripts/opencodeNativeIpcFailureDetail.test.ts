@@ -12,6 +12,20 @@ const project = (value: string): string =>
   ) as string;
 
 describe('serialized native IPC failure details', () => {
+  it.each(['data_root', 'opencode', 'v2', 'runs', 'leaf'])(
+    'preserves only the closed native owner role %s',
+    (role) => {
+      const detail = project(
+        `execution_owner_not_private:private_acl_owner_run_${role}:0 /PRIVATE-TEST/path`
+      );
+      expect(detail).toContain(`[owner role: ${role === 'data_root' ? 'data' : role}]`);
+      expect(detail).not.toContain('PRIVATE-TEST');
+      expect(project(detail)).toBe(detail);
+      expect(project('execution_owner_not_private:private_acl_owner_run_secret:0')).not.toContain(
+        '[owner role:'
+      );
+    }
+  );
   it.each(['"', "'", '`'])('redacts truncated and escaped %s arguments', (quote) => {
     for (const tail of [
       ' '.repeat(17_000) + quote,
