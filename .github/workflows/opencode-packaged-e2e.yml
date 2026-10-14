@@ -3,6 +3,10 @@ name: OpenCode packaged Windows E2E
 on:
   workflow_dispatch:
     inputs:
+      diagnostic_only:
+        description: 'Collect model-free runtime 117 selected-identity evidence only'
+        type: boolean
+        default: false
       runtime_candidate_run:
         description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
@@ -27,6 +31,7 @@ permissions:
 
 jobs:
   packaged-windows:
+    if: ${{ !inputs.diagnostic_only }}
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -134,3 +139,79 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.txt
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.ndjson
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/desktop.log
+
+  selected-identity-diagnostic:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.diagnostic_only }}
+    env:
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.autocrlf
+      GIT_CONFIG_VALUE_0: 'false'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Initialize bounded diagnostic receipt
+        shell: pwsh
+        run: |
+          @{ schemaVersion = 1; diagnosticOnly = $true; outcome = 'NOT_RUN'; phase = 'setup'; qualification = 'NOT_ASSESSED'; physicalRetirement = 'unproven'; appHead = $env:GITHUB_SHA; sdkHead = '7e0e4e6b330d376a654f189ac90aaa49912e7463' } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM (Join-Path $env:RUNNER_TEMP 'selected-identity-windows.json')
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: 7e0e4e6b330d376a654f189ac90aaa49912e7463
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          path: .diagnostic-sdk
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install pinned typecheck dependencies without build scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck diagnostic with pinned native TypeScript 7
+        run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-windows.tsconfig.json
+      - name: Stage current published runtime with existing checksum validation
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Build existing console wrapper
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Acquire exact public native OpenCode into TEST-owned root
+        shell: pwsh
+        run: |
+          $nativeRoot = Join-Path $env:RUNNER_TEMP "TEST-opencode-native-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $nativeRoot -ErrorAction Stop | Out-Null
+          npm install --prefix $nativeRoot --ignore-scripts --no-audit --no-fund --no-save opencode-windows-x64@1.19.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $native = Join-Path $nativeRoot 'node_modules/opencode-windows-x64/bin/opencode.exe'
+          if ((Get-FileHash $native -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'bb731f311416df16691fa16763eb87657c4a5f5f3bcff5202718c416e8f7ab1a') { throw 'Pinned native SHA mismatch' }
+          "DIAGNOSTIC_NATIVE_PATH=$native" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Observe self birth and exact runtime 117 selected identity without models
+        shell: pwsh
+        run: |
+          $sdk = (Resolve-Path '.diagnostic-sdk').Path
+          $output = Join-Path $env:RUNNER_TEMP 'selected-identity-windows.json'
+          & '.\resources\runtime\Bun\bun.exe' scripts/e2e/opencode-diagnostics/selected-identity-windows.mts $sdk $env:DIAGNOSTIC_NATIVE_PATH $output
+          exit $LASTEXITCODE
+      - name: Preserve bounded receipt and exact diagnostic/source binding
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-windows-identity-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/selected-identity-windows.json
+            scripts/e2e/opencode-diagnostics/selected-identity-windows.mts
+            scripts/e2e/opencode-diagnostics/selected-identity-windows.tsconfig.json
+            .github/workflows/opencode-packaged-e2e.yml
+            runtime.lock.json
+            .diagnostic-sdk/src/services/opencode/compatibility/OpenCodeNativeIdentity.ts
+            .diagnostic-sdk/src/services/opencode/compatibility/OpenCodeVersionProbe.ts
+            .diagnostic-sdk/src/services/opencode/OpenCodeCursorAgentTreeKill.ts
+            .diagnostic-sdk/src/utils/portableCli.ts
+            .diagnostic-sdk/src/utils/processKill.ts

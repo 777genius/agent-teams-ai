@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig/e2e-base.json",
+  "compilerOptions": { "types": ["node"], "strict": true },
+  "include": ["./selected-identity-windows.mts"]
+}
