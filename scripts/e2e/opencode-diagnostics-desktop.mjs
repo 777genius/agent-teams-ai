@@ -2,6 +2,7 @@
 // Disposable Electron profile and CLI only. No agent/team launch commands.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -411,6 +412,24 @@ if (mode === 'seed-packaged') {
     shell: false,
     env,
   });
+  if (data.packaged) {
+    const createdAt = Date.now(),
+      events = [];
+    const receiptPath = path.join(root, `child-lifecycle-${data.launcher.pid}-${createdAt}.json`);
+    for (const event of ['exit', 'close'])
+      child.once(event, (code, signal) => {
+        try {
+          events.push({ event, pid: child.pid ?? null, at: Date.now(), code, signal });
+          // Synchronous bounded snapshot survives foreground exit and existing root JSON artifact collection.
+          writeFileSync(
+            receiptPath,
+            JSON.stringify({ run: data.run ?? null, createdAt, events: events.slice(0, 2) }) + '\n'
+          );
+        } catch {
+          /* A missing receipt is unknown; never change child lifetime or process.exitCode. */
+        }
+      });
+  }
   await new Promise((resolve, reject) => {
     child.once('spawn', resolve);
     child.once('error', reject);
