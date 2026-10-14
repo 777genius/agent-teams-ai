@@ -78,7 +78,6 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
 
   return {
     providerId,
-    defaultModel: null,
     teamLaunchAuthorityRestriction: undefined,
     displayName: providerId,
     supported: true,
@@ -89,6 +88,7 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
     statusCheckErrorCode: undefined,
     modelCatalogRefreshState: 'ready',
     models: [defaultModel],
+    defaultModel: null,
     modelAvailability: [],
     modelCatalog: {
       schemaVersion: 1,

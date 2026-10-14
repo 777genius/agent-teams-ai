@@ -137,7 +137,6 @@ function createTestProviderStatus(
 
   return {
     providerId,
-    defaultModel: null,
     teamLaunchAuthorityRestriction: undefined,
     displayName: providerId,
     supported: true,
@@ -150,6 +149,7 @@ function createTestProviderStatus(
     statusMessage: null,
     detailMessage: null,
     models: [defaultModel],
+    defaultModel: null,
     modelAvailability: [],
     runtimeCapabilities: null,
     subscriptionRateLimits: null,
