@@ -48,6 +48,7 @@ export const TaskDetailContent = ({
   showTeamIO = true,
 }: TaskDetailContentProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const projectPath = model.currentTask.projectPath ?? model.projectPath ?? '';
   const header = (
     <TaskDetailHeader
       actions={actions}
@@ -66,7 +67,7 @@ export const TaskDetailContent = ({
       contextId={sessionController.identity.contextId}
       taskId={sessionController.identity.taskId}
       teamName={model.teamName}
-      projectPath={model.projectPath ?? ''}
+      projectPath={projectPath}
       onOpenFile={(intent) => onOpenInEditor?.(intent)}
     >
       <div
@@ -93,7 +94,7 @@ export const TaskDetailContent = ({
           onOpenInEditor={(filePath) =>
             onOpenInEditor?.({
               ...sessionController.identity,
-              projectPath: model.projectPath ?? '',
+              projectPath,
               filePath,
               line: null,
             })

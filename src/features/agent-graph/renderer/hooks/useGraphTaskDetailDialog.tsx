@@ -38,12 +38,14 @@ export function useGraphTaskDetailDialog(
     activeContextId,
     activeMembers,
     detailEntry,
+    ensureTaskDetail,
     setTaskDetailSurfaceInterest,
     teamData,
     updateTaskOwner,
   } = useStore(
     useShallow((state) => ({
       activeContextId: state.activeContextId,
+      ensureTaskDetail: state.ensureTaskDetail,
       activeMembers: selectResolvedMembersForTeamName(state, teamName).filter(
         (member) => !member.removedAt
       ),
@@ -108,6 +110,13 @@ export function useGraphTaskDetailDialog(
     setSelectedIdentity(null);
   }, []);
 
+  const retryTaskDetailRead = useCallback(
+    (identity: TaskDetailIdentity) => {
+      if (sessionController.isOriginCurrent()) void ensureTaskDetail(identity);
+    },
+    [ensureTaskDetail, sessionController]
+  );
+
   const handleOpenTaskTab = useCallback((): void => {
     if (sessionController.openInTaskTab()) setSelectedIdentity(null);
   }, [sessionController]);
@@ -121,11 +130,10 @@ export function useGraphTaskDetailDialog(
         <Suspense fallback={null}>
           <TaskDetailDialog
             open
-            loading={
-              !selectedTask &&
-              ['hydrating', 'provisioning'].includes(detailEntry?.phase ?? 'hydrating')
-            }
+            loading={!selectedTask && (detailEntry?.phase ?? 'hydrating') === 'hydrating'}
             task={selectedTask}
+            readPhase={detailEntry?.phase}
+            readError={detailEntry?.error ?? null}
             teamName={teamName}
             projectPath={teamData?.config.projectPath ?? null}
             sessionController={sessionController}
@@ -145,6 +153,7 @@ export function useGraphTaskDetailDialog(
               if (sessionController.canEditNow()) onDeleteTask?.(...args);
             }}
             onOpenInTaskTab={handleOpenTaskTab}
+            onRetryRead={retryTaskDetailRead}
           />
         </Suspense>
       ) : null,

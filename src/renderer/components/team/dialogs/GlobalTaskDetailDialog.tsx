@@ -17,6 +17,7 @@ import {
 } from './globalTaskDetailDialogLoading';
 import { TaskDetailDialog } from './TaskDetailDialog';
 
+import type { TaskDetailIdentity } from '@features/team-task-detail/renderer';
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 const EMPTY_TARGET_MEMBERS: readonly ResolvedTeamMember[] = [];
@@ -35,6 +36,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     targetMembers,
     setTaskDetailSurfaceInterest,
     taskDetailEntry,
+    ensureTaskDetail,
     openTeamTab,
     openTaskDetailReview,
   } = useStore(
@@ -44,6 +46,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       return {
         globalTaskDetail: detail,
         closeGlobalTaskDetail: s.closeGlobalTaskDetail,
+        ensureTaskDetail: s.ensureTaskDetail,
         targetTeamData: detail ? selectTeamDataForName(s, detail.teamName) : null,
         targetMembers: detail
           ? selectResolvedMembersForTeamName(s, detail.teamName)
@@ -112,6 +115,13 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     if (sessionController.openInTaskTab()) closeGlobalTaskDetail();
   }, [closeGlobalTaskDetail, sessionController]);
 
+  const retryTaskDetailRead = useCallback(
+    (identity: TaskDetailIdentity) => {
+      if (sessionController.isOriginCurrent()) void ensureTaskDetail(identity);
+    },
+    [ensureTaskDetail, sessionController]
+  );
+
   const handleViewChanges = useCallback(
     (viewTaskId: string, filePath?: string) => {
       if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
@@ -146,6 +156,8 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       variant={isFullTeamLoaded ? 'team' : 'global'}
       loading={loading}
       task={task}
+      readPhase={taskDetailEntry?.phase}
+      readError={taskDetailEntry?.error ?? null}
       teamName={teamName}
       projectPath={targetTeamData?.config.projectPath ?? null}
       sessionController={sessionController}
@@ -156,6 +168,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       onOwnerChange={undefined}
       onViewChanges={isFullTeamLoaded ? handleViewChanges : undefined}
       onOpenInTaskTab={identity ? handleOpenTaskTab : undefined}
+      onRetryRead={retryTaskDetailRead}
       focusCommentId={commentId}
       headerExtra={
         <button

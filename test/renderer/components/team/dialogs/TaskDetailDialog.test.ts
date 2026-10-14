@@ -17,6 +17,8 @@ const hoisted = vi.hoisted(() => ({
   setSelectedTeamTaskChangePresence: vi.fn(),
   setTaskNeedsClarification: vi.fn(),
   getTaskAttachmentData: vi.fn(),
+  lastUnreadCommentIds: undefined as ReadonlySet<string> | undefined,
+  showComments: false,
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -108,7 +110,10 @@ vi.mock('@renderer/components/team/CollapsibleTeamSection', () => ({
           ? React.createElement('span', { 'data-testid': `section-extra-${title}` }, headerExtra)
           : null
       ),
-      (title === 'Changes' || title === 'Workflow History') && open
+      (title === 'Changes' ||
+        title === 'Workflow History' ||
+        (title === 'Comments' && hoisted.showComments)) &&
+        open
         ? React.createElement('div', null, children)
         : null
     );
@@ -201,6 +206,24 @@ vi.mock('@renderer/components/team/attachments/SourceMessageAttachments', () => 
 
 vi.mock('@renderer/components/team/taskLogs/TaskLogsPanel', () => ({
   TaskLogsPanel: () => null,
+}));
+
+vi.mock('@renderer/components/team/dialogs/TaskCommentsSection', () => ({
+  TaskCommentsSection: ({
+    unreadCommentIds,
+  }: {
+    unreadCommentIds?: ReadonlySet<string>;
+  }): React.ReactElement => {
+    hoisted.lastUnreadCommentIds = unreadCommentIds;
+    return React.createElement('div', {
+      'data-testid': 'task-comments',
+      'data-unread-comment-ids': Array.from(unreadCommentIds ?? []).join(','),
+    });
+  },
+}));
+
+vi.mock('@renderer/components/team/dialogs/TaskCommentInput', () => ({
+  TaskCommentInput: () => null,
 }));
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
@@ -328,6 +351,8 @@ function clickChangesSection(host: HTMLElement): void {
 
 describe('TaskDetailDialog changes summary loading', () => {
   beforeEach(() => {
+    hoisted.showComments = false;
+    hoisted.lastUnreadCommentIds = undefined;
     useStore.setState({
       taskDetailById: {},
       taskDetailResourcesById: {},
@@ -344,6 +369,204 @@ describe('TaskDetailDialog changes summary loading', () => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+  });
+
+  it('preserves the authoritative unavailable read state and retries only for the captured current identity', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const controller = createTaskDetailSessionFixture('task-unavailable');
+    controller.session.commentText = 'rich draft';
+    controller.isOriginCurrent = vi.fn(() => false);
+    const retryRead = vi.fn();
+    const task = { ...makeTask('task-unavailable'), projectPath: '/TASK/project' };
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskDetailDialog, {
+          open: true,
+          task: null,
+          readPhase: 'unavailable',
+          readError: 'IPC transient',
+          teamName: 'team-a',
+          projectPath: '/TEAM/project',
+          sessionController: controller,
+          taskMap: new Map(),
+          members: [],
+          onClose: vi.fn(),
+          onRetryRead: retryRead,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Task unavailable');
+    expect(host.textContent).toContain('IPC transient');
+    const retryButton = host.querySelector<HTMLButtonElement>('button');
+    expect(retryButton).not.toBeNull();
+    retryButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(retryRead).not.toHaveBeenCalled();
+
+    controller.isOriginCurrent = vi.fn(() => true);
+    retryButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(retryRead).toHaveBeenCalledWith({
+      contextId: 'local',
+      teamName: 'team-a',
+      taskId: 'task-unavailable',
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskDetailDialog, {
+          open: true,
+          task,
+          readPhase: 'ready',
+          readError: null,
+          teamName: 'team-a',
+          projectPath: '/TEAM/project',
+          sessionController: controller,
+          taskMap: readyTaskMap(task),
+          members: [],
+          onClose: vi.fn(),
+          onRetryRead: retryRead,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-task-detail-content]')).not.toBeNull();
+    expect(controller.session.commentText).toBe('rich draft');
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders a fresh unread comment snapshot when a completed task updates while mounted', async () => {
+    hoisted.showComments = true;
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const firstComment = {
+      id: 'comment-1',
+      author: 'alice',
+      text: 'first',
+      createdAt: '2026-04-20T10:00:00.000Z',
+    };
+    const secondComment = {
+      id: 'comment-2',
+      author: 'alice',
+      text: 'second',
+      createdAt: '2026-04-20T10:01:00.000Z',
+    };
+    const firstTask = {
+      ...makeTask('task-completed-unread'),
+      status: 'completed',
+      comments: [firstComment],
+    } as unknown as TeamTaskWithKanban;
+    const updatedTask = {
+      ...firstTask,
+      comments: [firstComment, secondComment],
+    } as unknown as TeamTaskWithKanban;
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task: firstTask,
+          taskMap: readyTaskMap(firstTask),
+          members: [],
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(hoisted.lastUnreadCommentIds?.has('comment-1')).toBe(true);
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task: updatedTask,
+          taskMap: readyTaskMap(updatedTask),
+          members: [],
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(hoisted.lastUnreadCommentIds?.has('comment-2')).toBe(true);
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the task project path for file editor intents over the team config path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const task = {
+      ...makeTask('task-editor-path'),
+      projectPath: '/TASK/project',
+    } as unknown as TeamTaskWithKanban;
+    const summary = makeSummary(task.id);
+    summary.files[0].filePath = '/TASK/project/src/task-editor-path.ts';
+    summary.files[0].relativePath = 'src/task-editor-path.ts';
+    hoisted.getTaskChanges.mockResolvedValue(summary);
+    const openTaskDetailEditor = vi.fn(() => true);
+    useStore.setState({ openTaskDetailEditor });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task,
+          taskMap: readyTaskMap(task),
+          members: [],
+          onClose: vi.fn(),
+          onViewChanges: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      clickChangesSection(host);
+      await Promise.resolve();
+    });
+    const fileButtons = host.querySelectorAll<HTMLButtonElement>('div[role="button"] button');
+    expect(fileButtons.length).toBeGreaterThan(0);
+    await act(async () => {
+      fileButtons[fileButtons.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(openTaskDetailEditor).toHaveBeenCalledWith(
+      {
+        contextId: 'local',
+        teamName: 'team-a',
+        taskId: 'task-editor-path',
+      },
+      {
+        projectPath: '/TASK/project',
+        filePath: '/TASK/project/src/task-editor-path.ts',
+        line: null,
+      }
+    );
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows a zero attachments count in the attachments section header', async () => {

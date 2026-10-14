@@ -4,12 +4,15 @@ import { useAppTranslation } from '@features/localization/renderer';
 import {
   TaskDetailContent,
   TaskDetailEditorActivationFeedback,
+  type TaskDetailIdentity,
   taskDetailKey,
+  type TaskDetailReadPhase,
   TaskDetailReviewActivationFeedback,
   type TaskDetailSessionController,
   useTaskDetailPresentation,
 } from '@features/team-task-detail/renderer';
 import { LightboxLockProvider } from '@renderer/components/team/attachments/ImageLightbox';
+import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
 import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
+import { RefreshCw } from 'lucide-react';
 
 import { TaskDetailLoadingDialog } from './TaskDetailLoadingDialog';
 
@@ -31,6 +35,8 @@ export interface TaskDetailDialogProps {
   loading?: boolean;
   variant?: 'team' | 'global';
   task: TeamTaskWithKanban | null;
+  readPhase?: TaskDetailReadPhase;
+  readError?: string | null;
   teamName: string;
   sessionController: TaskDetailSessionController;
   projectPath: string | null;
@@ -44,6 +50,7 @@ export interface TaskDetailDialogProps {
   onOpenInEditor?: (intent: TaskDetailFileLinkIntent) => void;
   onDeleteTask?: (taskId: string) => void;
   onOpenInTaskTab?: () => void | Promise<void>;
+  onRetryRead?: (identity: TaskDetailIdentity) => void;
   focusCommentId?: string;
   headerExtra?: React.ReactNode;
 }
@@ -53,6 +60,8 @@ export const TaskDetailDialog = ({
   loading = false,
   variant = 'team',
   task,
+  readPhase,
+  readError,
   teamName,
   sessionController,
   projectPath,
@@ -66,24 +75,36 @@ export const TaskDetailDialog = ({
   onOpenInEditor,
   onDeleteTask,
   onOpenInTaskTab,
+  onRetryRead,
   focusCommentId,
   headerExtra,
 }: TaskDetailDialogProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const readEntry = useStore(
+    (state) => state.taskDetailById[taskDetailKey(sessionController.identity)]
+  );
+  const ensureTaskDetail = useStore((state) => state.ensureTaskDetail);
+  const effectiveReadPhase = readPhase ?? readEntry?.phase ?? (loading ? 'hydrating' : 'missing');
+  const effectiveReadError = readError === undefined ? (readEntry?.error ?? null) : readError;
+  const retryIdentity = sessionController.identity;
+  const retryRead = useCallback(() => {
+    if (!sessionController.isOriginCurrent()) return;
+    if (onRetryRead) onRetryRead(retryIdentity);
+    else void ensureTaskDetail(retryIdentity);
+  }, [ensureTaskDetail, onRetryRead, retryIdentity, sessionController]);
 
-  if (loading) {
+  if (!task && effectiveReadPhase === 'hydrating') {
     return <TaskDetailLoadingDialog open={open} onClose={onClose} />;
   }
 
   if (!task) {
     return (
-      <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{t('taskDetail.notFound')}</DialogTitle>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <TaskDetailReadStateDialog
+        open={open}
+        phase={effectiveReadPhase}
+        error={effectiveReadError}
+        onClose={onClose}
+        onRetry={retryRead}
+      />
     );
   }
 
@@ -92,6 +113,8 @@ export const TaskDetailDialog = ({
       open={open}
       variant={variant}
       task={task}
+      readPhase={effectiveReadPhase}
+      readError={effectiveReadError}
       teamName={teamName}
       sessionController={sessionController}
       projectPath={projectPath}
@@ -105,20 +128,27 @@ export const TaskDetailDialog = ({
       onOpenInEditor={onOpenInEditor}
       onDeleteTask={onDeleteTask}
       onOpenInTaskTab={onOpenInTaskTab}
+      retryRead={retryRead}
       focusCommentId={focusCommentId}
       headerExtra={headerExtra}
     />
   );
 };
 
-type LoadedTaskDetailDialogProps = Omit<TaskDetailDialogProps, 'loading' | 'task'> & {
+type LoadedTaskDetailDialogProps = Omit<
+  TaskDetailDialogProps,
+  'loading' | 'task' | 'onRetryRead'
+> & {
   task: TeamTaskWithKanban;
+  retryRead: () => void;
 };
 
 const LoadedTaskDetailDialog = ({
   open,
   variant,
   task,
+  readPhase,
+  readError,
   teamName,
   sessionController,
   projectPath,
@@ -130,6 +160,7 @@ const LoadedTaskDetailDialog = ({
   onOwnerChange,
   onDeleteTask,
   onOpenInTaskTab,
+  retryRead,
   focusCommentId,
   headerExtra,
 }: LoadedTaskDetailDialogProps): React.JSX.Element => {
@@ -246,6 +277,13 @@ const LoadedTaskDetailDialog = ({
             active={open}
             onAccepted={presentationClose}
           />
+          {readPhase === 'unavailable' || readPhase === 'provisioning' ? (
+            <TaskDetailReadStateBanner
+              phase={readPhase}
+              error={readError ?? null}
+              onRetry={retryRead}
+            />
+          ) : null}
           <TaskDetailContent
             key={taskDetailKey(sessionController.identity)}
             actions={presentation.actions}
@@ -263,6 +301,89 @@ const LoadedTaskDetailDialog = ({
             showTeamIO={variant === 'team'}
           />
         </LightboxLockProvider>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const TASK_DETAIL_STATE_LABEL_KEYS = {
+  deleted: 'taskDetail.page.deleted',
+  hydrating: 'taskDetail.loading.title',
+  missing: 'taskDetail.notFound',
+  provisioning: 'taskDetail.page.provisioning',
+  ready: 'taskDetail.loading.title',
+  unavailable: 'taskDetail.page.unavailable',
+} as const;
+
+const TaskDetailReadStateBanner = ({
+  phase,
+  error,
+  onRetry,
+}: {
+  phase: TaskDetailReadPhase;
+  error: string | null;
+  onRetry?: () => void;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  return (
+    <section
+      className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm"
+      role={phase === 'unavailable' ? 'alert' : 'status'}
+    >
+      <div className="flex items-center gap-2">
+        <strong>{t(TASK_DETAIL_STATE_LABEL_KEYS[phase])}</strong>
+        {error ? <span className="min-w-0 text-xs text-red-400">{error}</span> : null}
+        {onRetry && (phase === 'unavailable' || phase === 'provisioning') ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-7 gap-1 text-xs"
+            onClick={onRetry}
+            aria-label={t('taskDetail.changes.refreshShort')}
+          >
+            <RefreshCw size={12} />
+            {t('taskDetail.changes.refreshShort')}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+};
+
+const TaskDetailReadStateDialog = ({
+  open,
+  phase,
+  error,
+  onClose,
+  onRetry,
+}: {
+  open: boolean;
+  phase: TaskDetailReadPhase;
+  error: string | null;
+  onClose: () => void;
+  onRetry: () => void;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{t(TASK_DETAIL_STATE_LABEL_KEYS[phase])}</DialogTitle>
+          {error ? <DialogDescription>{error}</DialogDescription> : null}
+        </DialogHeader>
+        {phase === 'unavailable' || phase === 'provisioning' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={onRetry}
+            aria-label={t('taskDetail.changes.refreshShort')}
+          >
+            <RefreshCw size={12} />
+            {t('taskDetail.changes.refreshShort')}
+          </Button>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

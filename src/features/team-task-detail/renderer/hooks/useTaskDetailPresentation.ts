@@ -25,6 +25,8 @@ import { useTaskDetailChanges } from './useTaskDetailChanges';
 import type { TaskDetailCommentImage } from '../ui/TaskDetailCommentImages';
 import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
+const EMPTY_UNREAD_COMMENT_IDS: ReadonlySet<string> = new Set();
+
 export interface TaskDetailPresentationModel {
   allowLeadExecutionPreview: boolean;
   attachmentCount: number;
@@ -176,17 +178,10 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
     await sessionController.saveDescription();
   }, [sessionController]);
 
-  const unreadSnapshotRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!enabled || !active) {
-      unreadSnapshotRef.current = new Set();
-      return;
-    }
+  const unreadCommentIds = useMemo(() => {
+    if (!enabled || !active) return EMPTY_UNREAD_COMMENT_IDS;
     const comments = currentTask.comments ?? [];
-    if (comments.length === 0) {
-      unreadSnapshotRef.current = new Set();
-      return;
-    }
+    if (comments.length === 0) return EMPTY_UNREAD_COMMENT_IDS;
     const identity = {
       contextId: sessionController.identity.contextId,
       teamName,
@@ -201,7 +196,7 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       if (cutoff > 0 && timestamp <= cutoff) continue;
       unread.add(comment.id);
     }
-    unreadSnapshotRef.current = unread;
+    return unread;
   }, [
     active,
     currentTask.comments,
@@ -316,7 +311,7 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       taskChanges: taskChanges.state,
       taskMap,
       teamName,
-      unreadCommentIds: unreadSnapshotRef.current,
+      unreadCommentIds,
     },
     actions: {
       beginHandoff: () => {
