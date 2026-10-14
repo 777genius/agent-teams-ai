@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 
-/** Shared, unchanged TEST environment for source preflight and packaged desktop. */
+/** Shared TEST environment for source preflight and packaged desktop. */
 export async function prepareNativeDesktopEnvironment() {
   // Match the live proof wrapper's short Darwin root policy for nested sockets.
   const parent = process.platform === 'darwin' ? '/tmp' : os.tmpdir();
@@ -49,6 +50,11 @@ export async function prepareNativeDesktopEnvironment() {
       mkdir(directory!, { recursive: true, mode: 0o700 })
     )
   );
+  if (process.platform === 'win32') {
+    // Numeric mkdir modes do not set Windows ownership. This TEST-owned root is
+    // precreated here, so give it the same private custody required by the SDK.
+    await protectWindowsTestDirectory(env.CLAUDE_MULTIMODEL_DATA_HOME!);
+  }
   await mkdir(projectPath, { mode: 0o700 });
   await writeFile(path.join(projectPath, '.opencode-e2e-test-project'), teamName + '\n', {
     mode: 0o600,
