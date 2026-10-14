@@ -94,6 +94,8 @@ describe('task session surface and origin integration', () => {
     vi.stubGlobal('FileReader', DeferredReader);
     let source!: TaskDetailSessionController;
     let target!: TaskDetailSessionController;
+    let successor!: TaskDetailSessionController;
+    let targetRoot!: ReturnType<typeof createRoot>;
     let sourceRoot!: ReturnType<typeof createRoot>;
     await act(async () => {
       sourceRoot = mount('dialog', (value) => {
@@ -119,7 +121,7 @@ describe('task session surface and origin integration', () => {
     await act(async () => {
       sourceRoot.unmount();
       roots.splice(roots.indexOf(sourceRoot), 1);
-      mount(tabId, (value) => {
+      targetRoot = mount(tabId, (value) => {
         target = value;
       });
     });
@@ -141,6 +143,17 @@ describe('task session surface and origin integration', () => {
     ]);
     expect(target.session.ownerSurfaceId).toBe(tabId);
     expect(target.session.pendingAttachmentPreparationIds).toEqual([]);
+    await act(async () => {
+      mount('successor', (value) => {
+        successor = value;
+      });
+    });
+    expect(successor.isOwner).toBe(false);
+    await act(async () => {
+      targetRoot.unmount();
+      roots.splice(roots.indexOf(targetRoot), 1);
+    });
+    expect(successor.isOwner).toBe(true);
   });
 
   it('keeps a refused handoff and prevents a late submit from changing another context', async () => {

@@ -156,7 +156,14 @@ export function useTaskDetailSession({
 
   useEffect(() => {
     if (isOriginCurrent()) useStore.getState().claimTaskDetailOwner(identity, surfaceId);
-  }, [identity, isOriginCurrent, live.switching, surfaceId]);
+  }, [
+    identity,
+    isOriginCurrent,
+    live.activeContextId,
+    live.switching,
+    session.ownerSurfaceId,
+    surfaceId,
+  ]);
   const ownedRevision =
     enabled && session.ownerSurfaceId === surfaceId ? session.ownerRevision : null;
   useEffect(
