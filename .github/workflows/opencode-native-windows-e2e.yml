@@ -63,7 +63,7 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
-      - name: Qualify exact Windows native producer and candidate runtime
+      - name: Compile exact Windows native producer
         working-directory: .test-sdk
         shell: pwsh
         env:
@@ -76,6 +76,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
           bun scripts/opencode-v2/compile-windows.ts
           if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }
+      - name: Preflight SDK discovery with exact desktop TEST directories
+        shell: pwsh
+        run: |
+          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk
+          if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
+      - name: Qualify native ownership and command retirement
+        working-directory: .test-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           bun test scripts/opencode-v2/stage-windows.test.ts
           if ($LASTEXITCODE -ne 0) { throw 'Native producer contract failed' }
           $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
@@ -85,11 +95,6 @@ jobs:
           $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
-      - name: Preflight SDK discovery with exact desktop TEST directories
-        shell: pwsh
-        run: |
-          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk
-          if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Select Windows release compiler Bun
         uses: oven-sh/setup-bun@v2
         with:
