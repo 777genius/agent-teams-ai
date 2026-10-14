@@ -81,17 +81,22 @@ export async function runAddressedRoutingCases(
     'real task review loaded'
   );
   const reviewEvidence = (await cdp.evaluate(
-    `(()=>{const s=window.__agentTeamsDevStore.getState();return {taskId:s.changeSet?.scope?.taskId,selectedTeamName:s.selectedTeamName,loading:s.changeSetLoading,fileCount:s.changeSet?.files?.length,title:[...document.querySelectorAll('h2')].find(e=>e.textContent.includes('Changes for task'))?.textContent};})()`
+    `(()=>{const s=window.__agentTeamsDevStore.getState();return {taskId:s.changeSet?.scope?.taskId,selectedTeamName:s.selectedTeamName,loading:s.changeSetLoading,fileCount:s.changeSet?.files?.length,warnings:s.changeSet?.warnings,title:[...document.querySelectorAll('h2')].find(e=>e.textContent.includes('Changes for task'))?.textContent};})()`
   )) as {
     taskId: string;
     selectedTeamName: string;
     loading: boolean;
     fileCount: number;
+    warnings?: string[];
     title?: string;
   };
   assert.equal(reviewEvidence.taskId, '1');
   assert.equal(reviewEvidence.selectedTeamName, teamA.teamName);
   assert.equal(reviewEvidence.loading, false);
+  assert.equal(reviewEvidence.fileCount, 0);
+  assert(
+    reviewEvidence.warnings?.some((warning) => warning.includes('TEST review routing fixture'))
+  );
   assert(reviewEvidence.title?.includes('Changes for task'));
   await click(cdp, `document.querySelector('button[aria-label="Close Changes"]')`);
   await until(
