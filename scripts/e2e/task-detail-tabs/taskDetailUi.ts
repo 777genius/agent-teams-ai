@@ -24,7 +24,7 @@ export async function until(
 
 export async function click(cdp: Cdp, expression: string): Promise<void> {
   const point = (await cdp.evaluate(
-    `(()=>{const e=${expression};if(!e)throw Error('UI target missing');e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height};})()`
+    `(async()=>{const e=${expression};if(!e)throw Error('UI target missing');e.scrollIntoView({block:'center',behavior:'instant'});let last='',stable=0;for(let i=0;i<120;i++){await new Promise(requestAnimationFrame);const r=e.getBoundingClientRect();const p={x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height};const signature=JSON.stringify(p);const hit=document.elementFromPoint(p.x,p.y);stable=signature===last&&e.contains(hit)&&p.width>0&&p.height>0?stable+1:0;last=signature;if(stable>=3)return p;}throw Error('UI target did not become stable and receive pointer input');})()`
   )) as { x: number; y: number; width: number; height: number };
   assert(point.width > 0 && point.height > 0, 'UI target is not visible');
   for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased'])
