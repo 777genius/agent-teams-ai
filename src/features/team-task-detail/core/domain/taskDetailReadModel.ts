@@ -159,8 +159,8 @@ export function commitTaskDetailFull(
     ...entry,
     phase: classified.phase,
     deletionIntent:
-      entry.deletionIntent !== null &&
-      (classified.phase === 'ready' || classified.phase === 'deleted')
+      (entry.deletionIntent === 'deleting' && classified.phase === 'deleted') ||
+      (entry.deletionIntent === 'restoring' && classified.phase === 'ready')
         ? null
         : entry.deletionIntent,
     full: keepFull ? entry.full : result,
