@@ -1,6 +1,8 @@
+### [Boss, watch the video](https://agentteams.live/)
+
 <p align="center">
   <a href="https://agentteams.live/">
-    <img src="docs/assets/github-header-agent-teams-ai.png" alt="Agent Teams AI - Get a lot done by doing very little" width="100%" />
+    <img alt="Agent Teams AI - Get a lot done by doing very little" width="100%" src="docs/assets/agent-teams-overview.webp" />
   </a>
 </p>
 

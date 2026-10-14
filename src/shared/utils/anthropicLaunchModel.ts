@@ -24,20 +24,6 @@ function isAnthropicOpusModel(model: string): boolean {
   return baseModel === 'opus' || baseModel.startsWith('claude-opus-');
 }
 
-function getStandardContextAlias(model: string): string | null {
-  const baseModel = stripOneMillionSuffix(model);
-  if (baseModel === 'opus' || baseModel.startsWith('claude-opus-')) {
-    return 'opus';
-  }
-  if (baseModel === 'sonnet' || baseModel.startsWith('claude-sonnet-')) {
-    return 'sonnet';
-  }
-  if (baseModel === 'haiku' || baseModel.startsWith('claude-haiku-')) {
-    return 'haiku';
-  }
-  return null;
-}
-
 function normalizeStandardOnlyAnthropicModel(model: string): string {
   const baseModel = stripOneMillionSuffix(model);
   return isAnthropicHaikuModel(baseModel) || isAnthropicSonnetModel(baseModel) ? baseModel : model;
@@ -87,10 +73,16 @@ export function resolveAnthropicLaunchModel(params: {
     const runtimeDefault = params.defaultLaunchModel?.trim() || null;
     const rawPreferredDefault = runtimeDefault || staticDefault;
     const preferredDefault = params.limitContext
-      ? (getStandardContextAlias(rawPreferredDefault) ??
-          stripOneMillionSuffix(rawPreferredDefault)) ||
-        staticDefault
+      ? stripOneMillionSuffix(rawPreferredDefault) || staticDefault
       : normalizeStandardOnlyAnthropicModel(rawPreferredDefault) || staticDefault;
+    // A context limit must not replace a concrete runtime default with a family alias.
+    if (
+      params.limitContext &&
+      runtimeDefault &&
+      !['opus', 'sonnet', 'haiku'].includes(preferredDefault)
+    ) {
+      return preferredDefault;
+    }
     if (availableModels.size === 0) {
       return preferredDefault;
     }
@@ -112,14 +104,7 @@ export function resolveAnthropicLaunchModel(params: {
   }
 
   if (params.limitContext) {
-    const standardAlias = getStandardContextAlias(baseModel);
-    if (!standardAlias) {
-      return baseModel;
-    }
-    if (availableModels.size === 0) {
-      return standardAlias;
-    }
-    return chooseAvailableModel(availableModels, [standardAlias, baseModel]) ?? baseModel;
+    return baseModel;
   }
 
   if (isAnthropicHaikuModel(baseModel)) {
