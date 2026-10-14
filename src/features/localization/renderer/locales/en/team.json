@@ -3289,5 +3289,89 @@
       "leadInstructions": "Lead instructions changed",
       "members": "Members changed"
     }
+  },
+  "customTemplates": {
+    "actions": {
+      "myTemplates": "My Templates",
+      "recheck": "Re-check outcome",
+      "retry": "Retry",
+      "save": "Save template",
+      "saveAsTemplate": "Save as Template"
+    },
+    "errors": {
+      "issues": {
+        "invalidContent": "The team content cannot be saved as a template.",
+        "previewTokenExpired": "This preview expired. Review the refreshed preview before saving.",
+        "previewTokenInvalid": "This preview is no longer valid. Review the refreshed preview before saving.",
+        "templateDescriptionTooLong": "The description is too long.",
+        "templateNameInvalidCharacters": "The template name contains unsupported characters.",
+        "templateNameRequired": "A template name is required.",
+        "templateNameTooLong": "The template name is too long."
+      },
+      "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
+      "requestFailed": "The request failed. Try again.",
+      "rosterUnreadable": "Team member information could not be read, so this team cannot be saved as a template.",
+      "saveOutcomeUnknown": "The save request failed, so its outcome is unknown. Re-check before saving again.",
+      "sourceUnavailable": "This team's saved configuration is no longer available.",
+      "storageUnavailable": "The template library is unavailable. Nothing was saved.",
+      "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
+      "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
+      "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten."
+    },
+    "library": {
+      "createdAt": "Saved {{date}}",
+      "description": "Read-only list of the templates saved on this device.",
+      "empty": "No saved templates yet",
+      "emptyDescription": "Open a team and choose Save as Template to create one.",
+      "loadFailed": "The template library could not be loaded.",
+      "loading": "Loading templates…",
+      "memberNames": "Members: {{names}}",
+      "noDescription": "No description",
+      "noMembers": "Prompt-only template — no members recorded",
+      "storageUnavailable": "The template library is unavailable right now.",
+      "title": "My Templates",
+      "unreadableRecords": "{{total}} stored templates could not be read and are missing from this list."
+    },
+    "preview": {
+      "membersEmpty": "No members recorded — a prompt-only template",
+      "membersLabel": "Members",
+      "prompt": "Team prompt",
+      "promptEmpty": "No team prompt recorded — this template keeps an empty prompt",
+      "roleLabel": "Role",
+      "roleMissing": "No role",
+      "sourceTeam": "Source team",
+      "title": "Template preview",
+      "warningsLabel": "Preview warnings",
+      "workflowLabel": "Workflow",
+      "workflowMissing": "No workflow"
+    },
+    "save": {
+      "description": "Review exactly what will be saved. Only the name and description can be changed.",
+      "descriptionLabel": "Description",
+      "nameFieldLabel": "Template name",
+      "title": "Save as Template"
+    },
+    "states": {
+      "loading": "Loading…",
+      "notSaved": "Confirmed: this template was not saved. You can save it again.",
+      "preparing": "Preparing preview…",
+      "previewExpired": "This preview is no longer valid. Review the refreshed preview before saving.",
+      "rechecking": "Re-checking the save outcome…",
+      "saved": "Template saved",
+      "savedAlready": "This template was already saved.",
+      "savedBody": "“{{name}}” is now in My Templates.",
+      "saving": "Saving…",
+      "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
+      "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+      "unresolvedTitle": "Outcome not confirmed"
+    },
+    "warnings": {
+      "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",
+      "missingMemberRole": "{{member}} has no recorded role.",
+      "missingMemberWorkflow": "{{member}} has no recorded workflow.",
+      "missingTeamPrompt": "The team has no prompt; the saved template keeps an empty prompt.",
+      "noRecordedRoster": "No roster was recorded for this team. A prompt-only template is valid.",
+      "removedMembersExcluded": "{{total}} removed team members were excluded."
+    }
   }
 }

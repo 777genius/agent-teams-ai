@@ -169,6 +169,30 @@ const MIGRATIONS: InternalStorageMigration[] = [
     version: 5,
     statements: ['ALTER TABLE member_work_sync_report_intents ADD COLUMN journal_json TEXT'],
   },
+  {
+    // Custom team templates are app-global, so this table has no team_name
+    // column and the unique index is the real uniqueness guarantee. The
+    // create operation inserts first and classifies by read-back, so the
+    // uniqueness invariant is enforced by the index inside one transaction
+    // instead of by a non-atomic caller-side check.
+    version: 6,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS custom_team_templates (
+        id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        name_normalized TEXT NOT NULL,
+        description TEXT,
+        schema_version INTEGER NOT NULL,
+        team_prompt TEXT NOT NULL,
+        members_json TEXT NOT NULL,
+        content_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (id)
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_team_templates_name_normalized
+        ON custom_team_templates (name_normalized)`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
