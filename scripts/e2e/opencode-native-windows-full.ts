@@ -10,7 +10,7 @@ import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { prepareNativeDesktop } from './opencode-native-desktop-host';
+import { NativeDesktopIpcError, prepareNativeDesktop } from './opencode-native-desktop-host';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
 
@@ -22,6 +22,24 @@ let preproofStage = 'arguments';
 const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
 type Identity = { pid: number; birth: string; executable: string; command: string };
+type ProofFailure = { stage: string; classification: string; operation?: string; errno?: string };
+function proofFailure(error: unknown, stage: string): ProofFailure {
+  if (error instanceof NativeDesktopIpcError)
+    return { stage, operation: error.operation, classification: error.classification };
+  const result: ProofFailure = { stage, classification: 'unclassified' };
+  if (error instanceof assert.AssertionError) result.classification = 'assertion_failed';
+  else if (error instanceof Error && error.message.startsWith('Native gate timed out:'))
+    result.classification = 'timeout';
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    /^E[A-Z0-9_]{1,48}$/.test(error.code)
+  )
+    result.errno = error.code;
+  return result;
+}
 const ps = async (script: string) =>
   execute(
     'powershell.exe',
@@ -358,6 +376,8 @@ async function main() {
     heldAssignmentReleasedAfterPersistence: false,
     relaunchConfirmed: false,
     finalStopConfirmed: false,
+    failure: null as ProofFailure | null,
+    cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
     proof.stage = stage;
@@ -374,11 +394,14 @@ async function main() {
       await app.close();
     } catch (error) {
       proof.status = 'failed';
+      proof.cleanupFailures.push(proofFailure(error, 'app_cleanup'));
       await checkpoint('app-cleanup');
-      throw error;
     }
+    if (!proof.failure && proof.cleanupFailures.length)
+      throw new Error('Windows native cleanup failed; preserve its TEST proof');
   };
   try {
+    await checkpoint('scripts');
     const nonce = { alice: randomUUID(), bob: randomUUID(), new: randomUUID() };
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
@@ -419,7 +442,9 @@ async function main() {
           'Host verification program changed'
         );
     };
+    await checkpoint('ready');
     await ready(app);
+    await checkpoint('create_team');
     teamActive = true; // An uncertain admission is still ours to stop, never resubmit.
     const launch = await app.call('createTeam', {
       teamName: desktop.teamName,
@@ -436,7 +461,9 @@ async function main() {
       })),
     });
     proof.runIds.push(launch.runId);
+    await checkpoint('provision');
     await provisioned(app, launch.runId);
+    await checkpoint('runtime');
     const initial = await app.call('getRuntime');
     assert.equal(initial.runId, launch.runId);
     const sessions = members.map((name) => {
@@ -720,15 +747,24 @@ async function main() {
         ),
         bundled
       );
-  } catch {
+  } catch (error: unknown) {
     proof.status = 'failed';
+    proof.failure ??= proofFailure(error, proof.stage);
     await checkpoint(proof.stage);
     throw new Error(
       'Windows full task qualification failed; preserve its TEST proof and auth custody'
     );
   } finally {
     try {
-      if (teamActive) await stopped(app);
+      if (teamActive) {
+        try {
+          await stopped(app);
+        } catch (error: unknown) {
+          proof.status = 'failed';
+          proof.cleanupFailures.push(proofFailure(error, 'team_stop'));
+          await checkpoint(proof.stage);
+        }
+      }
     } finally {
       try {
         for (const original of heldProcesses) {
@@ -738,6 +774,10 @@ async function main() {
             'Owned held process survived normal stop; retain failed TEST state'
           );
         }
+      } catch (error: unknown) {
+        proof.status = 'failed';
+        proof.cleanupFailures.push(proofFailure(error, 'held_process_cleanup'));
+        await checkpoint(proof.stage);
       } finally {
         await closeApp();
       }

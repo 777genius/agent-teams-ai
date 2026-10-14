@@ -18,6 +18,33 @@ type Port = ReturnType<typeof electronTeamPort>;
 type Operation = Exclude<keyof Port, 'progress' | 'dispose'>;
 type Arguments<K extends Operation> = Parameters<Port[K]>;
 type Result<K extends Operation> = Awaited<ReturnType<Port[K]>>;
+const IPC_FAILURE_CLASSIFICATIONS = [
+  'Team launch handlers are not initialized',
+  'No handler registered',
+  'RUNTIME_SELECTION_REQUIRED',
+  'RUNTIME_SELECTION_UNSUPPORTED',
+  'teamName must be kebab-case',
+  'cwd is required',
+  'members must be an array',
+  'single owned OpenCode launch required',
+  'TEST team required',
+  'OpenCode CLI not found',
+  'provider is not configured for runtime use',
+  'provider is not authenticated',
+  'agent-teams MCP preflight failed before team launch',
+  'is not a function',
+  'is not defined',
+] as const;
+export class NativeDesktopIpcError extends Error {
+  readonly operation: Operation;
+  readonly classification: string;
+  constructor(operation: Operation, classification: string | undefined) {
+    super('Owned desktop IPC failed');
+    this.operation = operation;
+    this.classification =
+      IPC_FAILURE_CLASSIFICATIONS.find((reason) => reason === classification) ?? 'unclassified';
+  }
+}
 interface Target {
   type: string;
   url: string;
@@ -192,7 +219,12 @@ export async function prepareNativeDesktop() {
           pid: child.pid!,
           async call<K extends Operation>(operation: K, ...args: Arguments<K>): Promise<Result<K>> {
             const id = randomUUID();
-            const start = (id: string, operation: Operation, args: unknown[]) => {
+            const start = (
+              id: string,
+              operation: Operation,
+              args: unknown[],
+              reasons: readonly string[]
+            ) => {
               const state = (window as unknown as { __opencodeNativeProof: RendererState })
                 .__opencodeNativeProof;
               if (state.calls[id]) throw new Error('single IPC submission required');
@@ -214,23 +246,6 @@ export async function prepareNativeDesktop() {
                       : typeof error === 'string'
                         ? error
                         : '';
-                  const reasons = [
-                    'Team launch handlers are not initialized',
-                    'No handler registered',
-                    'RUNTIME_SELECTION_REQUIRED',
-                    'RUNTIME_SELECTION_UNSUPPORTED',
-                    'teamName must be kebab-case',
-                    'cwd is required',
-                    'members must be an array',
-                    'single owned OpenCode launch required',
-                    'TEST team required',
-                    'OpenCode CLI not found',
-                    'provider is not configured for runtime use',
-                    'provider is not authenticated',
-                    'agent-teams MCP preflight failed before team launch',
-                    'is not a function',
-                    'is not defined',
-                  ];
                   const failure =
                     reasons.find((reason) => message.includes(reason)) ?? 'unclassified';
                   state.calls[id] = { state: 'failed', failure };
@@ -238,7 +253,7 @@ export async function prepareNativeDesktop() {
               return true;
             };
             await cdp!.evaluate(
-              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)})`
+              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)}, ${JSON.stringify(IPC_FAILURE_CLASSIFICATIONS)})`
             );
             const completed = await waitFor(
               async () => {
@@ -247,10 +262,8 @@ export async function prepareNativeDesktop() {
                   result?: Result<K>;
                   failure?: string;
                 }>(`window.__opencodeNativeProof.calls[${JSON.stringify(id)}]`);
-                assert(
-                  entry.state !== 'failed',
-                  `Owned ${operation} IPC failed (${entry.failure}); preserve TEST state`
-                );
+                if (entry.state === 'failed')
+                  throw new NativeDesktopIpcError(operation, entry.failure);
                 return entry.state === 'done' ? { value: entry.result } : null;
               },
               `single ${operation} IPC result`,
