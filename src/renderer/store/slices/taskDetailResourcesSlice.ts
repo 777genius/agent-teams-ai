@@ -352,7 +352,11 @@ export const createTaskDetailResourcesSlice: StateCreator<
         'changes',
         signature,
         () =>
-          api.review.getTaskChanges(identity.teamName, identity.taskId, { ...options, forceFresh }),
+          api.review.getTaskChanges(identity.teamName, identity.taskId, {
+            ...options,
+            forceFresh,
+            retryBackfill: forceFresh || options.retryBackfill,
+          }),
         forceFresh
       ),
 

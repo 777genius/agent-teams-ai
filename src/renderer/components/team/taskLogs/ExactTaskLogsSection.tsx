@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isSameTaskDetailIdentity } from '@features/team-task-detail/core';
 import { useStore } from '@renderer/store';
 import { selectTaskDetailResourceEntry } from '@renderer/store/slices/taskDetailResourcesSlice';
 import {
@@ -59,6 +60,13 @@ export const ExactTaskLogsSection = ({
 }: ExactTaskLogsSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const surfaceId = useId();
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const liveOrigin = useRef({ identity, enabled });
   liveOrigin.current = { identity, enabled };
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -118,8 +126,9 @@ export const ExactTaskLogsSection = ({
     ): Promise<void> => {
       const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
       const current = () =>
+        mounted.current &&
         liveOrigin.current.enabled &&
-        liveOrigin.current.identity === identity &&
+        isSameTaskDetailIdentity(liveOrigin.current.identity, identity) &&
         !useStore.getState().isContextSwitching &&
         isTaskDetailReadScopeCurrent(scope, useStore.getState().activeContextId, identity.teamName);
       if (!enabled || !current()) return;

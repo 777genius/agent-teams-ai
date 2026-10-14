@@ -147,6 +147,7 @@ if (v2Data && Object.keys(v2Data).length > 0) {
 }
 
 let loaded = Object.keys(cache).length > 0;
+let loading = false;
 let idbAvailable = true; // flips to false on first IndexedDB failure
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
@@ -382,7 +383,8 @@ function scheduleSave(): void {
 }
 
 async function load(): Promise<void> {
-  if (loaded) return;
+  if (loaded || loading) return;
+  loading = true;
   const loadStartedRevisionByKey = new Map(mutationRevisionByKey);
 
   if (hasIndexedDB() && idbAvailable) {
@@ -442,6 +444,7 @@ async function load(): Promise<void> {
   }
 
   loaded = true;
+  loading = false;
 }
 
 async function save(): Promise<void> {

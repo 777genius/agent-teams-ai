@@ -112,12 +112,15 @@ describe('context-scoped comment read persistence', () => {
     const pending = new Promise((inner) => {
       resolve = inner;
     });
-    vi.doMock('idb-keyval', () => ({ get: () => pending, set: async () => undefined }));
+    const getStored = vi.fn(() => pending);
+    vi.doMock('idb-keyval', () => ({ get: getStored, set: async () => undefined }));
     vi.stubGlobal('indexedDB', {});
     const storage = await import('../../../src/renderer/services/commentReadStorage');
     const unsubscribe = storage.subscribe(() => undefined);
     const identity = { contextId: 'local', teamName: 'same-team', taskId: '1' };
     storage.markCommentsRead(identity, ['same-comment']);
+    const unsubscribeLaterSurface = storage.subscribe(() => undefined);
+    expect(getStored).toHaveBeenCalledTimes(1);
     resolve({ 'same-team/1': { readIds: [], lastUpdated: 1, manualUnread: true } });
     await pending;
     await Promise.resolve();
@@ -127,6 +130,7 @@ describe('context-scoped comment read persistence', () => {
       ])
     ).toBe(0);
     unsubscribe();
+    unsubscribeLaterSurface();
     vi.doUnmock('idb-keyval');
     vi.unstubAllGlobals();
     localStorage.clear();
