@@ -83,11 +83,11 @@ export async function runAddressedRoutingCases(
   await click(cdp, reviewButton);
   await until(
     cdp,
-    `(()=>{const s=window.__agentTeamsDevStore.getState();return !!document.querySelector('button[aria-label="Close Changes"]')&&!s.changeSetLoading&&s.changeSet?.scope?.taskId==='1';})()`,
+    `(()=>{const s=window.__agentTeamsDevStore.getState();return !!document.querySelector('button[aria-label="Close Changes"]')&&!s.changeSetLoading&&s.activeChangeSet?.scope?.taskId==='1';})()`,
     'real task review loaded'
   );
   const reviewEvidence = (await cdp.evaluate(
-    `(()=>{const s=window.__agentTeamsDevStore.getState();return {taskId:s.changeSet?.scope?.taskId,selectedTeamName:s.selectedTeamName,loading:s.changeSetLoading,fileCount:s.changeSet?.files?.length,warnings:s.changeSet?.warnings,title:[...document.querySelectorAll('h2')].find(e=>e.textContent.includes('Changes for task'))?.textContent};})()`
+    `(()=>{const s=window.__agentTeamsDevStore.getState();return {taskId:s.activeChangeSet?.scope?.taskId,selectedTeamName:s.selectedTeamName,loading:s.changeSetLoading,fileCount:s.activeChangeSet?.files?.length,warnings:s.activeChangeSet?.warnings,title:[...document.querySelectorAll('h2')].find(e=>e.textContent.includes('Changes for task'))?.textContent};})()`
   )) as {
     taskId: string;
     selectedTeamName: string;
