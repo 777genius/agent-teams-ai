@@ -490,8 +490,12 @@ try {
             (provider) =>
               JSON.stringify(args) ===
               JSON.stringify(['runtime', 'status', '--json', '--provider', provider, '--summary'])
-          ),
-        'Unexpected lifecycle attempt; shim blocked all non-version commands'
+          ) ||
+          JSON.stringify(args) ===
+            JSON.stringify(['runtime', 'status', '--json', '--summary', '--provider', 'anthropic']) ||
+          JSON.stringify(args) ===
+            JSON.stringify(['auth', 'status', '--json', '--provider', 'anthropic']),
+        'Unexpected lifecycle attempt; shim blocked all non-version commands: ' + JSON.stringify(args)
       );
     }
   assert.equal(faults.length, 0, 'Renderer faults');
