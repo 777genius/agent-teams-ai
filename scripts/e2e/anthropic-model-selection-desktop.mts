@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Run: pnpm exec node scripts/e2e/anthropic-model-selection-desktop.mts
+// Default/no-catalog: add --default-no-catalog
 // Typecheck: pnpm exec tsc --ignoreConfig --noEmit --strict --skipLibCheck --target ES2023 --module NodeNext --types node scripts/e2e/anthropic-model-selection-desktop.mts
 // Regression: explicit Opus generations must survive context toggles, real
 // main-process preflight, and config-only creation. No provider is launched.
@@ -181,6 +182,7 @@ const json = async (file: string, value: unknown) =>
   writeFile(file, JSON.stringify(value, null, 2) + '\n');
 
 async function fixture() {
+  const defaultNoCatalog = process.argv.includes('--default-no-catalog');
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'anthropic-model-desktop-')));
   const directories = Object.fromEntries(
     [
@@ -257,37 +259,42 @@ async function fixture() {
         ])
       ),
     },
-    models: models.map((model) => model.launchModel),
+    models: defaultNoCatalog ? ['opus'] : models.map((model) => model.launchModel),
+    defaultModel: defaultNoCatalog ? 'claude-opus-5-5' : 'claude-opus-4-8',
     selectedBackendId: null,
     resolvedBackendId: null,
     availableBackends: [],
     externalRuntimeDiagnostics: [],
     backend: null,
     runtimeCapabilities: {
-      modelCatalog: { dynamic: true, source: 'anthropic-models-api' },
+      modelCatalog: defaultNoCatalog
+        ? undefined
+        : { dynamic: true, source: 'anthropic-models-api' },
       reasoningEffort: {
         supported: true,
         values: ['low', 'medium', 'high', 'max'],
         configPassthrough: false,
       },
     },
-    modelCatalog: {
-      schemaVersion: 1,
-      providerId: 'anthropic',
-      source: 'anthropic-models-api',
-      status: 'ready',
-      fetchedAt: new Date().toISOString(),
-      staleAt: '2100-01-01T00:00:00.000Z',
-      defaultModelId: 'claude-opus-4-8',
-      defaultLaunchModel: 'claude-opus-4-8',
-      models,
-      diagnostics: {
-        configReadState: 'ready',
-        appServerState: 'healthy',
-        message: null,
-        code: null,
-      },
-    },
+    modelCatalog: defaultNoCatalog
+      ? null
+      : {
+          schemaVersion: 1,
+          providerId: 'anthropic',
+          source: 'anthropic-models-api',
+          status: 'ready',
+          fetchedAt: new Date().toISOString(),
+          staleAt: '2100-01-01T00:00:00.000Z',
+          defaultModelId: 'claude-opus-4-8',
+          defaultLaunchModel: 'claude-opus-4-8',
+          models,
+          diagnostics: {
+            configReadState: 'ready',
+            appServerState: 'healthy',
+            message: null,
+            code: null,
+          },
+        },
   };
   const runtime = path.join(root, 'deny-runtime.cjs');
   const ledger = path.join(root, 'runtime.ndjson');
@@ -309,8 +316,8 @@ if (!allowed) { console.error('Fixture denies lifecycle/provider commands'); pro
 if (readOnlyDiscovery) { const result = envelope ? {schemaVersion:1,requestId:envelope.requestId,command:envelope.command,ok:false,error:{code:'unsupported',message:'Offline fixture has no OpenCode'}} : {schemaVersion:1,providers:[],directory:{providers:[]},cursor:null}; if(args.includes('--output')) fs.writeFileSync(args[args.indexOf('--output')+1], JSON.stringify(result)); console.log(JSON.stringify(result)); process.exit(0); }
 if (authProbe) { console.log('PONG'); process.exit(0); }
 if (args[0] === '--version') { console.log(${JSON.stringify(version)}); process.exit(0); }
-const status = provider === 'anthropic' ? ${JSON.stringify(status)} : {...${JSON.stringify(status)},providerId:provider,supported:false,authenticated:false,models:[],modelCatalog:null,capabilities:{teamLaunch:false,oneShot:false,extensions:{}}};
-if (args[0] === 'model') console.log(JSON.stringify({schemaVersion:1,providers:{[provider]:{defaultModel:'claude-opus-4-8',models:status.models}}}));
+const status = provider === 'anthropic' ? ${JSON.stringify(status)} : {...${JSON.stringify(status)},providerId:provider,supported:false,authenticated:false,models:[],defaultModel:null,modelCatalog:null,capabilities:{teamLaunch:false,oneShot:false,extensions:{}}};
+if (args[0] === 'model') console.log(JSON.stringify({schemaVersion:1,providers:{[provider]:{defaultModel:status.defaultModel,models:status.models}}}));
 else console.log(JSON.stringify({schemaVersion:1,provider, status, providers:{[provider]:status}}));
 `
   );
@@ -380,7 +387,7 @@ async function main(): Promise<void> {
     });
     app.stdout?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
     app.stderr?.on('data', (chunk: Buffer) => logs.push(chunk.toString()));
-    const deadline = Date.now() + 90_000;
+    const deadline = Date.now() + 180_000;
     let target: Target | undefined;
     while (!target && Date.now() < deadline) {
       if (app.exitCode !== null) throw new Error(`Owned dev:mcp exited (${app.exitCode})`);
@@ -426,23 +433,112 @@ async function main(): Promise<void> {
       'native runtime discovery'
     );
     const provider = await cdp.evaluate<{
-      modelCatalog: { source: string; status: string; models: { launchModel: string }[] };
+      defaultModel: string | null;
+      modelCatalog: { source: string; status: string; models: { launchModel: string }[] } | null;
       modelCatalogRefreshState: string;
     }>("window.electronAPI.cliInstaller.getProviderStatus('anthropic')");
-    assert.equal(provider.modelCatalog?.source, 'anthropic-models-api');
-    assert.equal(provider.modelCatalog?.status, 'ready');
-    assert.equal(provider.modelCatalogRefreshState, 'ready');
+    const defaultNoCatalog = process.argv.includes('--default-no-catalog');
+    if (defaultNoCatalog) {
+      assert.equal(provider.defaultModel, 'claude-opus-5-5');
+      assert.equal(provider.modelCatalog, null);
+    } else {
+      assert.equal(provider.modelCatalog?.source, 'anthropic-models-api');
+      assert.equal(provider.modelCatalog?.status, 'ready');
+      assert.equal(provider.modelCatalogRefreshState, 'ready');
+    }
     // Stage the authoritative native snapshot so background provider discovery
     // does not race this isolated renderer fixture's catalog hydration.
     await cdp.evaluate<void>(
       `(() => { const store=window.__agentTeamsDevStore; const state=store.getState(); const provider=${JSON.stringify(provider)}; store.setState({cliStatus:{...state.cliStatus,providers:[provider,...(state.cliStatus?.providers || []).filter(p=>p.providerId !== 'anthropic')]}}); })()`
     );
-    assert(provider.modelCatalog.models.some((entry) => entry.launchModel === 'claude-opus-5-5'));
+    assert(
+      defaultNoCatalog ||
+        provider.modelCatalog?.models.some((entry) => entry.launchModel === 'claude-opus-5-5')
+    );
     const results: unknown[] = [{ catalog: provider.modelCatalog }];
-    for (const [model, label] of [
-      ['claude-opus-5', 'Opus 5'],
-      ['claude-opus-5-5', 'Opus 5.5'],
-    ]) {
+    if (defaultNoCatalog) {
+      console.log('Checking runtime Default with no catalog off/on');
+      await cdp.waitFor(
+        '!window.__agentTeamsDevStore.getState().teamsLoading',
+        'hydrated Teams view'
+      );
+      await delay(200);
+      await cdp.click(button('Create Team'));
+      await cdp.waitFor(dialog, 'Create dialog');
+      await cdp.fill('#team-name', 'model-e2e-default-no-catalog');
+      if (
+        !(await cdp.evaluate<boolean>(
+          "document.querySelector('#solo-team')?.getAttribute('aria-checked') === 'true'"
+        ))
+      )
+        await cdp.click("document.querySelector('#solo-team')");
+      await cdp.click(
+        `Array.from(${dialog}.querySelectorAll('button')).find(e => /provider,/.test(e.getAttribute('aria-label') || ''))`
+      );
+      await cdp.click(
+        `Array.from(document.querySelectorAll('[data-testid="team-model-selector-model-option"]')).find(e => e.textContent.trim().startsWith('Default'))`
+      );
+      for (const limit of [false, true]) {
+        const selector = "document.querySelector('#lead-limit-context')";
+        if (
+          (await cdp.evaluate<boolean>(`${selector}?.getAttribute('aria-checked') === 'true'`)) !==
+          limit
+        )
+          await cdp.click(selector);
+        await cdp.waitFor(
+          `${selector}?.getAttribute('aria-checked') === '${limit}'`,
+          'context toggle'
+        );
+        const expected = 'claude-opus-5-5';
+        const selected = await cdp.evaluate<string>(
+          "document.querySelector('#lead-model')?.textContent.trim()"
+        );
+        assert.equal(selected, 'Default', 'Default selection must survive context toggle');
+        await cdp.waitFor(
+          `document.querySelector('[role=dialog]').innerText.includes('The verified model catalog is unavailable or stale')`,
+          'missing catalog launch gate'
+        );
+        const preflightPath = path.join(d.tmp, 'claude-team-preflight-debug.log');
+        const preflightDeadline = Date.now() + 30_000;
+        let observed: PreflightEvent | undefined;
+        while (Date.now() < preflightDeadline) {
+          observed = (await readPreflight(preflightPath)).findLast(
+            (event) =>
+              event.event === 'provider_model_catalog_check_complete' &&
+              event.modelIds?.includes('__provider_default__') &&
+              event.details?.includes(
+                'Selected model __provider_default__ is available for launch.'
+              )
+          );
+          if (observed) break;
+          await delay(150);
+        }
+        assert(observed, `Real main preflight must preserve runtime Default ${expected}`);
+        assert.deepEqual(observed.blockingMessages, []);
+        results.push({ selection: 'default', limit, preflight: observed });
+      }
+      await cdp.click("document.querySelector('#launch-team')");
+      await cdp.waitFor(
+        "document.querySelector('#launch-team')?.getAttribute('aria-checked') === 'false'",
+        'config-only create'
+      );
+      await cdp.click(button('Create', dialog));
+      await cdp.waitFor(`!${dialog}`, 'created Default config-only team');
+      const name = 'model-e2e-default-no-catalog';
+      const saved = await cdp.evaluate<SavedRequest>(
+        `window.electronAPI.teams.getSavedRequest(${JSON.stringify(name)})`
+      );
+      assert.equal(saved.model, 'claude-opus-5-5');
+      assert.equal(saved.providerId, 'anthropic');
+      assert.equal(saved.limitContext, true);
+      results.push({ name, saved });
+    }
+    for (const [model, label] of defaultNoCatalog
+      ? []
+      : ([
+          ['claude-opus-5', 'Opus 5'],
+          ['claude-opus-5-5', 'Opus 5.5'],
+        ] as const)) {
       console.log(`Checking ${label} off/on/off`);
       await cdp.waitFor(
         '!window.__agentTeamsDevStore.getState().teamsLoading',

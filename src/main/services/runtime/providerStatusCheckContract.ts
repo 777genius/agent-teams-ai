@@ -160,6 +160,7 @@ export function createDefaultProviderStatus(providerId: CliProviderId): CliProvi
     statusMessage: null,
     detailMessage: null,
     models: [],
+    defaultModel: null,
     modelAvailability: [],
     canLoginFromUi: providerId !== 'opencode',
     capabilities: {
@@ -336,6 +337,7 @@ export function mergeProviderStatusDisplayEvidence(
       ? incoming.resolvedBackendId
       : current.resolvedBackendId,
     ...displayPair,
+    defaultModel: incoming.defaultModel?.trim() || current.defaultModel?.trim() || null,
     availableBackends:
       (incoming.availableBackends?.length ?? 0) > 0
         ? incoming.availableBackends
