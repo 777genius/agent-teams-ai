@@ -6484,6 +6484,7 @@ export default interface Resources {
         "newArriving": "New task logs arriving"
       },
       "navigation": {
+        "editorRefused": "The file could not be opened in the team editor. The request is saved.",
         "reviewRefused": "Changes could not be opened. The request is saved."
       },
       "notFound": "Task not found",

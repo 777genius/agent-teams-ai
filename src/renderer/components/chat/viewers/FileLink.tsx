@@ -8,8 +8,11 @@
 
 import React from 'react';
 
+import { useTaskDetailFileLink } from '@features/team-task-detail/renderer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
+import { selectTeamDataForName } from '@renderer/store/team/teamDataSelectors';
 import { resolveFilePath } from '@renderer/store/utils/pathResolution';
 import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { Check, FileCode } from 'lucide-react';
@@ -102,9 +105,7 @@ function selectContextProjectPath(s: AppState): string | null {
 
   switch (activeTab.type) {
     case 'team':
-      return isOrdinaryTeamTab(activeTab)
-        ? (s.selectedTeamData?.config.projectPath ?? null)
-        : (s.teamDataCacheByName[activeTab.teamName ?? '']?.config.projectPath ?? null);
+      return selectTeamDataForName(s, activeTab.teamName)?.config.projectPath ?? null;
     case 'session':
       return s.sessionDetail?.session?.projectPath ?? null;
     default:
@@ -132,9 +133,11 @@ export const FileLink = React.memo(function FileLink({
 }: FileLinkProps): React.ReactElement {
   const projectPath = useStore(selectContextProjectPath);
   const isTeamTab = useStore(selectIsTeamTab);
+  const taskFileLink = useTaskDetailFileLink();
   const [copied, setCopied] = React.useState(false);
 
-  if (!projectPath) {
+  const effectiveProjectPath = taskFileLink?.projectPath ?? projectPath;
+  if (!effectiveProjectPath) {
     return (
       <span className="font-mono text-xs" style={{ color: PROSE_LINK }}>
         {children}
@@ -143,12 +146,14 @@ export const FileLink = React.memo(function FileLink({
   }
 
   const { filePath, line } = parsePathWithLine(href);
-  const absolutePath = resolveFileLinkPath(filePath, projectPath);
+  const absolutePath = resolveFileLinkPath(filePath, effectiveProjectPath);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    if (isTeamTab) {
+    if (taskFileLink) {
+      taskFileLink.openFile(absolutePath, line);
+    } else if (isTeamTab) {
       const { revealFileInEditor, setPendingGoToLine } = useStore.getState();
       if (line !== null) setPendingGoToLine(line);
       revealFileInEditor(absolutePath);
@@ -166,19 +171,25 @@ export const FileLink = React.memo(function FileLink({
   };
 
   return (
-    <a
-      href={href}
-      onClick={handleClick}
-      className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm px-0.5 no-underline hover:underline"
-      style={{
-        color: PROSE_LINK,
-        backgroundColor: 'var(--path-highlight-bg)',
-      }}
-      title={isTeamTab ? absolutePath : `Click to copy: ${absolutePath}`}
-    >
-      <FileCode size={12} className="shrink-0 opacity-60" />
-      {children}
-      {copied && <Check size={10} className="shrink-0 text-green-400" />}
-    </a>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a
+          href={href}
+          onClick={handleClick}
+          className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm px-0.5 no-underline hover:underline"
+          style={{
+            color: PROSE_LINK,
+            backgroundColor: 'var(--path-highlight-bg)',
+          }}
+        >
+          <FileCode size={12} className="shrink-0 opacity-60" />
+          {children}
+          {copied && <Check size={10} className="shrink-0 text-green-400" />}
+        </a>
+      </TooltipTrigger>
+      <TooltipContent>
+        {taskFileLink || isTeamTab ? absolutePath : `Click to copy: ${absolutePath}`}
+      </TooltipContent>
+    </Tooltip>
   );
 });

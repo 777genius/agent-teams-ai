@@ -1,5 +1,10 @@
 import { TaskGroupChatField } from '@renderer/components/team/dialogs/TaskGroupChatField';
 
+import {
+  type TaskDetailFileLinkIntent,
+  TaskDetailFileLinkProvider,
+} from '../context/TaskDetailFileLinkContext';
+
 import { TaskDetailBody } from './TaskDetailBody';
 import { TaskDetailHeader, type TaskDetailHeadingProps } from './TaskDetailHeader';
 
@@ -15,7 +20,7 @@ export interface TaskDetailContentProps {
   headerExtra?: ReactNode;
   model: TaskDetailPresentationModel;
   onDeleteTask?: (taskId: string) => void;
-  onOpenInEditor?: (filePath: string) => void;
+  onOpenInEditor?: (intent: TaskDetailFileLinkIntent) => void;
   onOpenInTaskTab?: () => void | Promise<void>;
   onOwnerChange?: (taskId: string, owner: string | null) => void;
   onViewChanges?: (taskId: string, filePath?: string) => void;
@@ -55,27 +60,41 @@ export const TaskDetailContent = ({
     />
   );
   return (
-    <div
-      className="flex min-w-0 flex-1 flex-col gap-3"
-      data-task-detail-content
-      data-task-detail-surface={model.focusCommentId ? 'focused' : 'shared'}
+    <TaskDetailFileLinkProvider
+      contextId={sessionController.identity.contextId}
+      teamName={model.teamName}
+      projectPath={model.projectPath ?? ''}
+      onOpenFile={(intent) => onOpenInEditor?.(intent)}
     >
-      {renderHeader ? renderHeader(header) : header}
-      <TaskGroupChatField
-        key={model.currentTask.id}
-        teamName={model.teamName}
-        value={model.currentTask.groupChatId ?? null}
-        disabled={!sessionController.isOwner}
-        onChange={actions.updateGroupChat}
-      />
-      <TaskDetailBody
-        actions={actions}
-        model={model}
-        onOpenInEditor={onOpenInEditor}
-        onViewChanges={onViewChanges}
-        sessionController={sessionController}
-        showTeamIO={showTeamIO}
-      />
-    </div>
+      <div
+        className="flex min-w-0 flex-1 flex-col gap-3"
+        data-task-detail-content
+        data-task-detail-surface={model.focusCommentId ? 'focused' : 'shared'}
+      >
+        {renderHeader ? renderHeader(header) : header}
+        <TaskGroupChatField
+          key={model.currentTask.id}
+          teamName={model.teamName}
+          value={model.currentTask.groupChatId ?? null}
+          disabled={!sessionController.isOwner}
+          onChange={actions.updateGroupChat}
+        />
+        <TaskDetailBody
+          actions={actions}
+          model={model}
+          onOpenInEditor={(filePath) =>
+            onOpenInEditor?.({
+              ...sessionController.identity,
+              projectPath: model.projectPath ?? '',
+              filePath,
+              line: null,
+            })
+          }
+          onViewChanges={onViewChanges}
+          sessionController={sessionController}
+          showTeamIO={showTeamIO}
+        />
+      </div>
+    </TaskDetailFileLinkProvider>
   );
 };

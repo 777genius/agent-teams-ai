@@ -271,8 +271,9 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
     return undefined;
   };
 
-  const buildLink = (raw: string, ref: string): string => {
-    const structuredTaskRef = consumeStructuredTaskRef(ref);
+  const buildLink = (raw: string, ref: string, encodedTaskRef?: EncodedTaskMetadata): string => {
+    const storedTaskRef = consumeStructuredTaskRef(ref);
+    const structuredTaskRef = encodedTaskRef ?? storedTaskRef;
     const href = structuredTaskRef ? buildTaskLinkHref(structuredTaskRef) : `task://${ref}`;
     return `[${raw}](${href})`;
   };
@@ -295,8 +296,9 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
         continue;
       }
 
-      result += buildLink(raw, ref);
-      cursor = start + raw.length;
+      const encoded = extractEncodedTaskMetadata(value, start + raw.length);
+      result += buildLink(raw, ref, encoded?.metadata);
+      cursor = encoded ? encoded.end : start + raw.length;
     }
 
     result += value.slice(cursor);

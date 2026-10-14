@@ -1126,7 +1126,8 @@
   },
   "taskDetail": {
     "navigation": {
-      "reviewRefused": "Changes could not be opened. The request is saved."
+      "reviewRefused": "Changes could not be opened. The request is saved.",
+      "editorRefused": "The file could not be opened in the team editor. The request is saved."
     },
     "actions": {
       "cancel": "Cancel",

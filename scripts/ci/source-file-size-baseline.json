@@ -128,7 +128,7 @@
     "src/renderer/components/team/ProvisioningProgressBlock.tsx": 862,
     "src/renderer/components/team/review/ChangeReviewDialog.tsx": 5441,
     "src/renderer/components/team/review/CodeMirrorDiffView.tsx": 975,
-    "src/renderer/components/team/TeamDetailView.tsx": 3756,
+    "src/renderer/components/team/TeamDetailView.tsx": 3753,
     "src/renderer/components/team/TeamListView.tsx": 1568,
     "src/renderer/components/team/useTeamChangesSummaries.ts": 814,
     "src/renderer/components/ui/MentionableTextarea.tsx": 1431,

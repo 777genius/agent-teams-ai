@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { OngoingIndicator } from '@renderer/components/common/OngoingIndicator';
@@ -64,6 +66,11 @@ export const TaskDetailBody = ({
   showTeamIO,
 }: TaskDetailBodyProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [focusDescriptionOnMount, setFocusDescriptionOnMount] = useState(false);
+  const startEditDescription = () => {
+    setFocusDescriptionOnMount(true);
+    sessionController.startEditDescription();
+  };
   const {
     attachmentCount,
     colorMap,
@@ -97,7 +104,7 @@ export const TaskDetailBody = ({
               content={descriptionDraft}
               onChange={actions.setDescriptionDraft}
               placeholder={t('taskDetail.description.placeholder')}
-              autoFocus
+              autoFocus={focusDescriptionOnMount}
               minHeight="120px"
               maxHeight="200px"
               toolbar
@@ -146,7 +153,7 @@ export const TaskDetailBody = ({
               event.stopPropagation();
               const href = link.getAttribute('href');
               const parsed = href ? parseTaskLinkHref(href) : null;
-              if (parsed?.taskId) actions.handleDependencyClick(parsed.taskId);
+              if (parsed?.taskId) actions.handleDependencyClick(parsed.taskId, parsed.teamName);
             }}
           >
             <ExpandableContent collapsedHeight={200}>
@@ -164,7 +171,7 @@ export const TaskDetailBody = ({
                 <button
                   type="button"
                   className="absolute right-0 top-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] group-hover:opacity-100"
-                  onClick={sessionController.startEditDescription}
+                  onClick={startEditDescription}
                 >
                   <Pencil size={12} />
                 </button>
@@ -176,7 +183,7 @@ export const TaskDetailBody = ({
           <button
             type="button"
             className="text-xs text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-            onClick={sessionController.startEditDescription}
+            onClick={startEditDescription}
           >
             {t('taskDetail.description.add')}
           </button>

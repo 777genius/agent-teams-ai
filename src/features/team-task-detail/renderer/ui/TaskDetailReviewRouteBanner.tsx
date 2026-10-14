@@ -3,10 +3,12 @@ import { Button } from '@renderer/components/ui/button';
 
 export const TaskDetailReviewRouteBanner = ({
   blocked,
+  message,
   retry,
   close,
 }: {
   blocked: boolean;
+  message?: string;
   retry: () => void;
   close: () => void;
 }): React.JSX.Element | null => {
@@ -18,7 +20,7 @@ export const TaskDetailReviewRouteBanner = ({
       role="alert"
       className="flex items-center gap-3 border-b border-[var(--color-border)] bg-surface-raised px-4 py-2 text-sm"
     >
-      <span className="flex-1">{t('taskDetail.navigation.reviewRefused')}</span>
+      <span className="flex-1">{message ?? t('taskDetail.navigation.reviewRefused')}</span>
       <Button variant="outline" size="sm" onClick={retry}>
         {common('actions.retry')}
       </Button>

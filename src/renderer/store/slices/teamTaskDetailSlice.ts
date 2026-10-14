@@ -38,6 +38,11 @@ import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import {
+  queueTaskDetailEditor,
+  type TaskDetailEditorIntent,
+  type TaskDetailEditorRequest,
+} from '../team/taskDetailEditorRoute';
+import {
   captureTaskDetailReadScope,
   invalidateTeamSnapshotResource,
   invalidateTeamTaskFullResource,
@@ -67,6 +72,21 @@ export interface TeamTaskDetailSlice {
     identity: TaskDetailIdentity,
     options: Pick<TaskDetailReviewRequest, 'filePath' | 'requestOptions'>
   ) => boolean;
+  taskDetailEditorActivationFailure: {
+    nonce: string;
+    identity: { contextId: string; teamName: string };
+    intent: TaskDetailEditorIntent;
+  } | null;
+  pendingTaskDetailEditorRequest: TaskDetailEditorRequest | null;
+  setPendingTaskDetailEditorRequest: (request: TaskDetailEditorRequest | null) => void;
+  openTaskDetailEditor: (
+    identity: { contextId: string; teamName: string },
+    intent: TaskDetailEditorIntent
+  ) => boolean;
+  retryPendingTaskDetailEditor: (nonce: string) => boolean;
+  closePendingTaskDetailEditor: (nonce: string) => void;
+  closeTaskDetailEditorActivationFailure: (nonce: string) => void;
+  retryTaskDetailEditorActivationFailure: (nonce: string) => boolean;
   taskDetailById: Record<string, TaskDetailReadEntry>;
   taskDetailSessionById: Record<string, TaskDetailSession>;
   taskDetailSurfaceInterests: Record<string, TaskDetailIdentity | null>;
@@ -152,6 +172,53 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
 ) => ({
   taskDetailById: {},
   taskDetailReviewActivationFailure: null,
+  taskDetailEditorActivationFailure: null,
+  pendingTaskDetailEditorRequest: null,
+  setPendingTaskDetailEditorRequest: (request) => set({ pendingTaskDetailEditorRequest: request }),
+  openTaskDetailEditor: (identity, intent) => {
+    const accepted = queueTaskDetailEditor(get, identity, intent);
+    if (accepted) set({ taskDetailEditorActivationFailure: null });
+    else if (!get().isContextSwitching && get().activeContextId === identity.contextId)
+      set({
+        taskDetailEditorActivationFailure: { identity, intent, nonce: crypto.randomUUID() },
+      });
+    return accepted;
+  },
+  retryPendingTaskDetailEditor: (nonce) => {
+    const request = get().pendingTaskDetailEditorRequest;
+    if (
+      !request ||
+      request.nonce !== nonce ||
+      get().isContextSwitching ||
+      !isTaskDetailReadScopeCurrent(request, get().activeContextId, request.teamName)
+    )
+      return false;
+    return queueTaskDetailEditor(
+      get,
+      { contextId: request.contextId, teamName: request.teamName },
+      {
+        projectPath: request.projectPath,
+        filePath: request.filePath,
+        line: request.line,
+      }
+    );
+  },
+  closePendingTaskDetailEditor: (nonce) => {
+    const state = get();
+    if (state.pendingTaskDetailEditorRequest?.nonce === nonce)
+      state.setPendingTaskDetailEditorRequest(null);
+  },
+  retryTaskDetailEditorActivationFailure: (nonce) => {
+    const state = get();
+    const failure = state.taskDetailEditorActivationFailure;
+    return failure?.nonce === nonce
+      ? state.openTaskDetailEditor(failure.identity, failure.intent)
+      : false;
+  },
+  closeTaskDetailEditorActivationFailure: (nonce) => {
+    const failure = get().taskDetailEditorActivationFailure;
+    if (failure?.nonce === nonce) set({ taskDetailEditorActivationFailure: null });
+  },
   retryTaskDetailReviewActivationFailure: (nonce) => {
     const state = get();
     const failure = state.taskDetailReviewActivationFailure;

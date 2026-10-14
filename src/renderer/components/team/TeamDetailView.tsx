@@ -20,8 +20,10 @@ import {
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
 import {
+  type TaskDetailFileLinkIntent,
   type TaskDetailIdentity,
   taskDetailKey,
+  useTaskDetailEditorHost,
   useTaskDetailReviewRoute,
   useTaskDetailSession,
 } from '@features/team-task-detail/renderer';
@@ -235,7 +237,7 @@ interface TaskDetailDialogHostProps {
   members: ResolvedTeamMember[];
   onOwnerChange: (taskId: string, owner: string | null) => void;
   onViewChanges: (taskId: string, filePath?: string) => void;
-  onOpenInEditor: (filePath: string) => void;
+  onOpenInEditor: (intent: TaskDetailFileLinkIntent) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -1697,14 +1699,14 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const [kanbanSearch, setKanbanSearch] = useState('');
 
-  // Open editor overlay when a file reveal is requested (e.g. from chip click)
-  const pendingRevealFile = useStore((s) => s.editorPendingRevealFile);
-  useEffect(() => {
-    if (!isThisTabActive) return;
-    if (pendingRevealFile && data?.config.projectPath) {
-      setEditorOpen(true);
-    }
-  }, [isThisTabActive, pendingRevealFile, data?.config.projectPath]);
+  const handleOpenTaskFileInEditor = useTaskDetailEditorHost({
+    teamName,
+    tabId,
+    active: isThisTabActive,
+    projectPath: data?.config.projectPath ?? null,
+    metadataUnavailable: Boolean(error) || (!loading && data !== null && !data.config.projectPath),
+    openEditor: () => setEditorOpen(true),
+  });
 
   useEffect(() => {
     if (!isThisTabActive || !isPaneFocused || !teamName) {
@@ -2273,11 +2275,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     },
     [teamName, updateTaskOwner]
   );
-
-  const handleOpenTaskFileInEditor = useCallback((filePath: string) => {
-    const { revealFileInEditor } = useStore.getState();
-    revealFileInEditor(filePath);
-  }, []);
 
   const handleEditorAction = useCallback(
     (action: EditorSelectionAction) => {

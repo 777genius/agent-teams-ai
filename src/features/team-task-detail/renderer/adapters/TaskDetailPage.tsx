@@ -18,9 +18,11 @@ import { useTaskDetailPresentation } from '../hooks/useTaskDetailPresentation';
 import { useTaskDetailSession } from '../hooks/useTaskDetailSession';
 import { TaskDetailContent } from '../ui/TaskDetailContent';
 
+import { TaskDetailEditorActivationFeedback } from './TaskDetailEditorActivationFeedback';
 import { TaskDetailReviewActivationFeedback } from './TaskDetailReviewActivationFeedback';
 
 import type { TaskDetailIdentity, TaskDetailReadPhase } from '../../contracts';
+import type { TaskDetailFileLinkIntent } from '../context/TaskDetailFileLinkContext';
 import type { TeamTaskWithKanban } from '@shared/types';
 
 const FALLBACK_TASK: TeamTaskWithKanban = {
@@ -51,6 +53,7 @@ export const TaskDetailPage = ({
     entry,
     openTaskDetailTab,
     openTaskDetailReview,
+    openTaskDetailEditor,
     softDeleteTask,
     teamData,
     updateTaskOwner,
@@ -61,6 +64,7 @@ export const TaskDetailPage = ({
       entry: state.taskDetailById[taskDetailKey(identity)],
       openTaskDetailTab: state.openTaskDetailTab,
       openTaskDetailReview: state.openTaskDetailReview,
+      openTaskDetailEditor: state.openTaskDetailEditor,
       softDeleteTask: state.softDeleteTask,
       teamData: selectTeamDataForName(state, identity.teamName),
       updateTaskOwner: state.updateTaskOwner,
@@ -91,9 +95,13 @@ export const TaskDetailPage = ({
   const presentationTask = currentTask ?? FALLBACK_TASK;
 
   const handleTaskNavigate = useCallback(
-    (taskId: string) => {
+    (taskId: string, teamName?: string) => {
       if (!sessionController.isOriginCurrent()) return;
-      openTaskDetailTab({ ...identityRef.current, taskId });
+      openTaskDetailTab({
+        ...identityRef.current,
+        teamName: teamName?.trim() || identityRef.current.teamName,
+        taskId,
+      });
     },
     [openTaskDetailTab, sessionController]
   );
@@ -111,6 +119,16 @@ export const TaskDetailPage = ({
       );
     },
     [openTaskDetailReview, sessionController, taskMap]
+  );
+  const handleOpenInEditor = useCallback(
+    (intent: TaskDetailFileLinkIntent) => {
+      if (!sessionController.isOriginCurrent()) return;
+      openTaskDetailEditor(
+        { contextId: intent.contextId, teamName: intent.teamName },
+        { projectPath: intent.projectPath, filePath: intent.filePath, line: intent.line }
+      );
+    },
+    [openTaskDetailEditor, sessionController]
   );
   const handleDeleteTask = useCallback(
     (taskId: string) => {
@@ -169,6 +187,7 @@ export const TaskDetailPage = ({
       data-origin-current={sessionController.isOriginCurrent() ? 'true' : 'false'}
     >
       <TaskDetailReviewActivationFeedback identity={sessionController.identity} active={isActive} />
+      <TaskDetailEditorActivationFeedback identity={sessionController.identity} active={isActive} />
       {phase === 'deleted' || phase === 'unavailable' || phase === 'provisioning' ? (
         <PageStateBanner
           phase={phase}
@@ -181,6 +200,7 @@ export const TaskDetailPage = ({
         actions={presentation.actions}
         model={presentation.model}
         onDeleteTask={handleDeleteTask}
+        onOpenInEditor={handleOpenInEditor}
         onOwnerChange={(taskId, owner) => {
           if (sessionController.canEditNow()) {
             void updateTaskOwner(identity.teamName, taskId, owner).catch(() => undefined);

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Badge } from '@renderer/components/ui/badge';
@@ -72,6 +74,7 @@ export const TaskDetailHeader = ({
   sessionController,
 }: TaskDetailHeaderProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [focusSubjectOnMount, setFocusSubjectOnMount] = useState(false);
   const {
     avatarMap,
     canReassign,
@@ -217,7 +220,7 @@ export const TaskDetailHeader = ({
       {model.editingSubject ? (
         <div className="flex items-center gap-2">
           <Input
-            autoFocus
+            autoFocus={focusSubjectOnMount}
             value={model.subjectDraft}
             onChange={(event) => actions.setSubjectDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -250,7 +253,10 @@ export const TaskDetailHeader = ({
               variant="ghost"
               className="h-auto justify-start gap-1.5 p-0 text-left text-base"
               disabled={!sessionController.isOwner}
-              onClick={sessionController.startEditSubject}
+              onClick={() => {
+                setFocusSubjectOnMount(true);
+                sessionController.startEditSubject();
+              }}
             >
               {currentTask.subject}
               <Pencil

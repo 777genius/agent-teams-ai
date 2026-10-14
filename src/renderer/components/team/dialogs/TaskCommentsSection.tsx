@@ -54,7 +54,7 @@ interface TaskCommentsSectionProps {
   /** Called when the user clicks Reply on a comment (used when input is rendered externally). */
   onReply?: (author: string, text: string) => void;
   /** Called when a task ID link (e.g. #10) is clicked in comment text. */
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: (taskId: string, teamName?: string) => void;
   /** Extra className on the outer comments container (e.g. negative margins for edge-to-edge). */
   containerClassName?: string;
   /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
@@ -301,7 +301,8 @@ export const TaskCommentsSection = ({
                                       e.stopPropagation();
                                       const href = link.getAttribute('href');
                                       const parsed = href ? parseTaskLinkHref(href) : null;
-                                      if (parsed?.taskId) onTaskIdClick(parsed.taskId);
+                                      if (parsed?.taskId)
+                                        onTaskIdClick(parsed.taskId, parsed.teamName);
                                     }
                                   }
                                 : undefined

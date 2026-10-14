@@ -21,6 +21,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import {
+  TaskDetailEditorRouteFeedback,
   TaskDetailReadCoordinator,
   TaskDetailReviewRouteFeedback,
 } from '@features/team-task-detail/renderer';
@@ -195,6 +196,7 @@ export const TabbedLayout = (): React.JSX.Element => {
       </DndContext>
       <TaskDetailReadCoordinator />
       <TaskDetailReviewRouteFeedback />
+      <TaskDetailEditorRouteFeedback />
       <GlobalTaskDetailDialogSlot />
       <UpdateDialog />
       <WorkspaceIndicator />

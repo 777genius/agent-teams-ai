@@ -3,6 +3,7 @@ import { useCallback, useRef } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   TaskDetailContent,
+  TaskDetailEditorActivationFeedback,
   taskDetailKey,
   TaskDetailReviewActivationFeedback,
   type TaskDetailSessionController,
@@ -16,10 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { useStore } from '@renderer/store';
+import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 
 import { TaskDetailLoadingDialog } from './TaskDetailLoadingDialog';
 
 import type { TaskDetailHeadingProps } from '@features/team-task-detail/renderer';
+import type { TaskDetailFileLinkIntent } from '@features/team-task-detail/renderer';
 import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 export interface TaskDetailDialogProps {
@@ -37,7 +41,7 @@ export interface TaskDetailDialogProps {
   onScrollToTask?: (taskId: string) => void;
   onOwnerChange?: (taskId: string, owner: string | null) => void;
   onViewChanges?: (taskId: string, filePath?: string) => void;
-  onOpenInEditor?: (filePath: string) => void;
+  onOpenInEditor?: (intent: TaskDetailFileLinkIntent) => void;
   onDeleteTask?: (taskId: string) => void;
   onOpenInTaskTab?: () => void | Promise<void>;
   focusCommentId?: string;
@@ -124,8 +128,6 @@ const LoadedTaskDetailDialog = ({
   onClose,
   onScrollToTask,
   onOwnerChange,
-  onViewChanges,
-  onOpenInEditor,
   onDeleteTask,
   onOpenInTaskTab,
   focusCommentId,
@@ -140,6 +142,38 @@ const LoadedTaskDetailDialog = ({
     flushCommentReadRef.current();
     onClose();
   }, [onClose]);
+  const handleEditorIntent = useCallback(
+    (intent: TaskDetailFileLinkIntent) => {
+      if (!sessionController.isOriginCurrent()) return;
+      if (
+        useStore
+          .getState()
+          .openTaskDetailEditor(
+            { contextId: intent.contextId, teamName: intent.teamName },
+            { projectPath: intent.projectPath, filePath: intent.filePath, line: intent.line }
+          )
+      )
+        presentationClose();
+    },
+    [presentationClose, sessionController]
+  );
+  const handleReview = useCallback(
+    (taskId: string, filePath?: string) => {
+      if (!sessionController.isOriginCurrent()) return;
+      const target = taskMap.get(taskId);
+      if (!target) return;
+      if (
+        useStore
+          .getState()
+          .openTaskDetailReview(
+            { ...sessionController.identity, taskId },
+            { filePath, requestOptions: buildTaskChangeRequestOptions(target) }
+          )
+      )
+        presentationClose();
+    },
+    [presentationClose, sessionController, taskMap]
+  );
   const presentation = useTaskDetailPresentation({
     active: open,
     currentTask: task,
@@ -148,12 +182,23 @@ const LoadedTaskDetailDialog = ({
     kanbanTaskState,
     members,
     onOpenChangeFile: (filePath) => {
-      presentationClose();
-      onViewChanges?.(task.id, filePath);
+      handleReview(task.id, filePath);
     },
-    onTaskNavigate: (taskId) => {
-      presentationClose();
-      onScrollToTask?.(taskId);
+    onTaskNavigate: (taskId, targetTeamName) => {
+      if (!sessionController.isOriginCurrent()) return;
+      if (targetTeamName && targetTeamName !== teamName) {
+        if (
+          useStore.getState().openTaskDetailTab({
+            ...sessionController.identity,
+            teamName: targetTeamName,
+            taskId,
+          })
+        )
+          presentationClose();
+      } else if (onScrollToTask) {
+        onScrollToTask(taskId);
+        presentationClose();
+      }
     },
     projectPath,
     sessionController,
@@ -193,16 +238,21 @@ const LoadedTaskDetailDialog = ({
             active={open}
             onAccepted={presentationClose}
           />
+          <TaskDetailEditorActivationFeedback
+            identity={sessionController.identity}
+            active={open}
+            onAccepted={presentationClose}
+          />
           <TaskDetailContent
             key={taskDetailKey(sessionController.identity)}
             actions={presentation.actions}
             headerExtra={headerExtra}
             model={presentation.model}
             onDeleteTask={onDeleteTask}
-            onOpenInEditor={onOpenInEditor}
+            onOpenInEditor={handleEditorIntent}
             onOpenInTaskTab={onOpenInTaskTab}
             onOwnerChange={onOwnerChange}
-            onViewChanges={onViewChanges}
+            onViewChanges={handleReview}
             renderDescription={(content) => <DialogDescription>{content}</DialogDescription>}
             renderHeading={renderHeading}
             renderHeader={(children) => <DialogHeader>{children}</DialogHeader>}

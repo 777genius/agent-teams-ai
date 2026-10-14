@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
 import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
+import { useTaskDetailEditorHost } from '@features/team-task-detail/renderer/hooks/useTaskDetailEditorHost';
 import { useTaskDetailReviewRoute } from '@features/team-task-detail/renderer/hooks/useTaskDetailReviewRoute';
 import { useTaskDetailSession } from '@features/team-task-detail/renderer/hooks/useTaskDetailSession';
 import { useStore } from '@renderer/store';
@@ -222,6 +223,77 @@ describe('task session surface and origin integration', () => {
         useStore.getState().taskDetailReviewActivationFailure!.nonce
       );
     expect(useStore.getState().taskDetailReviewActivationFailure).toBeNull();
+  });
+
+  it('addresses editor requests to one host and keeps blocked or retired requests inert', async () => {
+    const projectPath = '/TEST/editor-project';
+    const intent = { projectPath, filePath: `${projectPath}/README.md`, line: 7 };
+    const openEditor = vi.fn();
+    const wrongEditor = vi.fn();
+    const reveal = vi.fn();
+    useStore.setState({
+      selectTeam: vi.fn(async () => {}),
+      editorProjectPath: projectPath,
+      editorFileTree: [],
+      editorFileTreeLoading: true,
+      editorFileTreeError: null,
+      revealFileInEditor: reveal,
+    });
+    expect(useStore.getState().openTaskDetailEditor(identity, intent)).toBe(true);
+    const request = useStore.getState().pendingTaskDetailEditorRequest!;
+    const Host = ({ wrong = false }: { wrong?: boolean }) => {
+      useTaskDetailEditorHost({
+        teamName: wrong ? 'TEST-other-team' : identity.teamName,
+        tabId: wrong ? 'TEST-other-tab' : request.targetTeamTabId,
+        active: true,
+        projectPath,
+        openEditor: wrong ? wrongEditor : openEditor,
+      });
+      return null;
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => {
+      root.render(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(Host),
+          React.createElement(Host, { wrong: true })
+        )
+      );
+    });
+    expect(openEditor).toHaveBeenCalledTimes(1);
+    expect(wrongEditor).not.toHaveBeenCalled();
+    expect(reveal).not.toHaveBeenCalled();
+    await act(async () => {
+      useStore.setState({ editorFileTreeError: 'TEST unavailable' });
+    });
+    expect(useStore.getState().pendingTaskDetailEditorRequest?.status).toBe('blocked');
+    await act(async () => {
+      useStore.setState({ editorFileTreeError: null, editorFileTreeLoading: false });
+    });
+    expect(reveal).not.toHaveBeenCalled();
+    await act(async () => {
+      expect(useStore.getState().retryPendingTaskDetailEditor(request.nonce)).toBe(true);
+    });
+    expect(reveal).toHaveBeenCalledExactlyOnceWith(intent.filePath);
+    expect(useStore.getState().editorPendingGoToLine).toBe(7);
+    expect(useStore.getState().pendingTaskDetailEditorRequest).toBeNull();
+    await act(async () => {
+      useStore.setState({ editorFileTreeLoading: true });
+      useStore.getState().openTaskDetailEditor(identity, intent);
+    });
+    const retired = useStore.getState().pendingTaskDetailEditorRequest!;
+    invalidateContextScopedRequestEpoch();
+    expect(useStore.getState().retryPendingTaskDetailEditor(retired.nonce)).toBe(false);
+    await act(async () => {
+      useStore.setState({ editorFileTreeLoading: false });
+    });
+    expect(reveal).toHaveBeenCalledTimes(1);
+    expect(wrongEditor).not.toHaveBeenCalled();
   });
 
   it('continues a FileReader after dialog unmount and does not read a removed queued file', async () => {

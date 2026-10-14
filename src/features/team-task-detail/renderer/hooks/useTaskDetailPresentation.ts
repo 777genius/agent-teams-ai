@@ -71,7 +71,7 @@ export interface TaskDetailPresentationActions {
     attachmentId: string,
     mimeType: string
   ) => Promise<string | null>;
-  handleDependencyClick: (taskId: string) => void;
+  handleDependencyClick: (taskId: string, teamName?: string) => void;
   handleReply: (author: string, text: string) => void;
   markClarificationResolved: () => void;
   refreshChanges: () => void;
@@ -97,7 +97,7 @@ export interface TaskDetailPresentationInput {
   kanbanTaskState?: KanbanTaskState;
   members: ResolvedTeamMember[];
   onOpenChangeFile: (filePath: string) => void;
-  onTaskNavigate: (taskId: string) => void;
+  onTaskNavigate: (taskId: string, teamName?: string) => void;
   projectPath: string | null;
   sessionController: import('./useTaskDetailSession').TaskDetailSessionController;
   taskMap: Map<string, TeamTaskWithKanban>;
@@ -220,9 +220,10 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
   });
 
   const handleDependencyClick = useCallback(
-    (taskId: string): void => {
+    (taskId: string, referencedTeamName?: string): void => {
+      const targetTeamName = referencedTeamName?.trim() || teamName;
       let resolvedId = taskId;
-      if (!taskMap.has(taskId)) {
+      if (targetTeamName === teamName && !taskMap.has(taskId)) {
         for (const [fullId, candidate] of taskMap) {
           if (taskMatchesRef(candidate, taskId)) {
             resolvedId = fullId;
@@ -230,9 +231,9 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
           }
         }
       }
-      onTaskNavigate(resolvedId);
+      onTaskNavigate(resolvedId, targetTeamName);
     },
-    [onTaskNavigate, taskMap]
+    [onTaskNavigate, taskMap, teamName]
   );
 
   const commentImageAttachments = useMemo(() => {

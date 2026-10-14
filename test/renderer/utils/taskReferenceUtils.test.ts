@@ -1,14 +1,23 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildTaskLinkHref,
+  createEncodedTaskReference,
   linkifyTaskIdsInMarkdown,
   parseTaskLinkHref,
 } from '@renderer/utils/taskReferenceUtils';
+import { describe, expect, it } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
 describe('taskReferenceUtils', () => {
+  it('consumes the stored reference paired with encoded metadata before a legacy duplicate', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    const text = `${createEncodedTaskReference('1', first.taskId, first.teamName)} then #1`;
+    expect(linkifyTaskIdsInMarkdown(text, [first, second])).toBe(
+      `[#1](${buildTaskLinkHref(first)}) then [#1](${buildTaskLinkHref(second)})`
+    );
+  });
+
   describe('TASK_REF_REGEX and isAllowedTaskRefBoundary', () => {
     it('linkifies #ref when preceded by boundary (space, start)', () => {
       const taskRef: TaskRef = {
@@ -43,9 +52,7 @@ describe('taskReferenceUtils', () => {
         teamName: 'my-team',
       };
       const r = linkifyTaskIdsInMarkdown('done `#aa5d608e`', [taskRef]);
-      expect(r).toBe(
-        'done [#aa5d608e](task://task-1?team=my-team&display=aa5d608e)'
-      );
+      expect(r).toBe('done [#aa5d608e](task://task-1?team=my-team&display=aa5d608e)');
     });
 
     it('does not linkify non-task inline code', () => {

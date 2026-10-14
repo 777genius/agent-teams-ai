@@ -1,7 +1,14 @@
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot as createReactRoot, type Root } from 'react-dom/client';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+const roots = new Set<Root>();
+function createRoot(host: HTMLElement): Root {
+  const root = createReactRoot(host);
+  roots.add(root);
+  return root;
+}
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   getTaskChanges: vi.fn(),
@@ -26,16 +33,30 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      updateTaskFields: hoisted.updateTaskFields,
-      recordTaskChangePresence: hoisted.recordTaskChangePresence,
-      setSelectedTeamTaskChangePresence: hoisted.setSelectedTeamTaskChangePresence,
-      setTaskNeedsClarification: hoisted.setTaskNeedsClarification,
-      getTaskAttachmentData: hoisted.getTaskAttachmentData,
-    }),
-}));
+vi.mock('@renderer/store', async () => {
+  const { create } = await import('zustand');
+  const { createTaskDetailResourcesSlice } =
+    await import('@renderer/store/slices/taskDetailResourcesSlice');
+  const useStore = create<AppState>()(
+    (...args) =>
+      ({
+        ...createTaskDetailResourcesSlice(...args),
+        activeContextId: 'local',
+        isContextSwitching: false,
+        paneLayout: { panes: [], focusedPaneId: '' },
+        taskDetailSurfaceInterests: {},
+        taskDetailById: {},
+        taskDetailReviewActivationFailure: null,
+        taskDetailEditorActivationFailure: null,
+        updateTaskFields: hoisted.updateTaskFields,
+        recordTaskChangePresence: hoisted.recordTaskChangePresence,
+        setSelectedTeamTaskChangePresence: hoisted.setSelectedTeamTaskChangePresence,
+        setTaskNeedsClarification: hoisted.setTaskNeedsClarification,
+        getTaskAttachmentData: hoisted.getTaskAttachmentData,
+      }) as unknown as AppState
+  );
+  return { useStore };
+});
 
 vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
@@ -182,18 +203,42 @@ vi.mock('@renderer/components/team/taskLogs/TaskLogsPanel', () => ({
   TaskLogsPanel: () => null,
 }));
 
+import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
+import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
 import { TaskDetailDialog } from '@renderer/components/team/dialogs/TaskDetailDialog';
+import { useStore } from '@renderer/store';
 
 import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
 
 import type { TaskDetailDialogProps } from '@renderer/components/team/dialogs/TaskDetailDialog';
+import type { AppState } from '@renderer/store/types';
 
 function renderDialog(props: Omit<TaskDetailDialogProps, 'sessionController' | 'projectPath'>) {
-  return React.createElement(TaskDetailDialog, {
-    ...props,
-    projectPath: '/TEST/project',
-    sessionController: createTaskDetailSessionFixture(props.task?.id ?? 'missing'),
-  });
+  const controller = createTaskDetailSessionFixture(props.task?.id ?? 'missing');
+  if (props.task) {
+    const key = taskDetailKey(controller.identity);
+    useStore.setState((state) => ({
+      taskDetailById: {
+        ...state.taskDetailById,
+        [key]: {
+          ...createTaskDetailReadEntry(controller.identity),
+          full: props.task,
+          phase: 'ready',
+          loading: false,
+        },
+      },
+    }));
+  }
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(TaskDetailReadCoordinator),
+    React.createElement(TaskDetailDialog, {
+      ...props,
+      projectPath: '/TEST/project',
+      sessionController: controller,
+    })
+  );
 }
 
 import type { TaskChangeSetV2, TeamTaskWithKanban } from '@shared/types';
@@ -282,7 +327,19 @@ function clickChangesSection(host: HTMLElement): void {
 }
 
 describe('TaskDetailDialog changes summary loading', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    useStore.setState({
+      taskDetailById: {},
+      taskDetailResourcesById: {},
+      taskDetailVisibleDemandById: {},
+      taskDetailResourcesRevision: 0,
+    });
+  });
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of roots) root.unmount();
+      roots.clear();
+    });
     document.body.innerHTML = '';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
@@ -478,7 +535,9 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent === 'Changes')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.startsWith('Changes') === true
+      )
     ).toBe(true);
 
     await act(async () => {
@@ -574,7 +633,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     }
   });
 
-  it('preloads the changes summary after 1.5 seconds and shows header loading state', async () => {
+  it('loads the visible changes summary once and shares its header loading state', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const request = deferred<TaskChangeSetV2>();
@@ -598,20 +657,6 @@ describe('TaskDetailDialog changes summary loading', () => {
           onViewChanges: vi.fn(),
         })
       );
-      await Promise.resolve();
-    });
-
-    expect(hoisted.getTaskChanges).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1_499);
-      await Promise.resolve();
-    });
-    expect(hoisted.getTaskChanges).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1);
-      await Promise.resolve();
       await Promise.resolve();
     });
 
@@ -682,7 +727,9 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent === 'Changes')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.startsWith('Changes') === true
+      )
     ).toBe(true);
 
     await act(async () => {
