@@ -81,6 +81,9 @@ jobs:
         if: inputs.runtime_candidate_run != ''
         shell: pwsh
         run: |
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
           pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
