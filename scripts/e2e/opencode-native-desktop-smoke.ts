@@ -19,7 +19,7 @@ async function main() {
     ['darwin', 'linux'].includes(process.platform),
     'Windows requires its full native scenario'
   );
-  const [executable, sdk, binary, model, authFile, stopProbe] = process.argv.slice(2);
+  const [executable, sdk, binary, model, authFile, stopProbe, projectConfigFile] = process.argv.slice(2);
   assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model), 'Explicit provider/model required');
@@ -29,6 +29,15 @@ async function main() {
     'Explicit SDK path or bundled selection required'
   );
   const desktop = await prepareNativeDesktop();
+  if (projectConfigFile) {
+    assert(path.isAbsolute(projectConfigFile), 'Explicit TEST project config must be absolute');
+    const config: unknown = JSON.parse(await readFile(projectConfigFile, 'utf8'));
+    assert(config && typeof config === 'object' && !Array.isArray(config));
+    await writeFile(path.join(desktop.projectPath, 'opencode.json'), JSON.stringify(config), {
+      flag: 'wx',
+      mode: 0o600,
+    });
+  }
   const commandNode = await realpath(process.execPath);
   await access(commandNode, constants.X_OK);
   const quotedNode = "'" + commandNode.replaceAll("'", "'\\''") + "'";
