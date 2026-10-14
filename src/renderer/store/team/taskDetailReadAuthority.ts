@@ -1,5 +1,6 @@
 import {
   createTaskDetailReadAuthority,
+  type TaskDetailDeletionIntent,
   type TaskDetailReadHandle,
   type TaskDetailReadResult,
   type TaskDetailReadScope,
@@ -85,11 +86,15 @@ export function invalidateTeamTaskFullResource(identity: {
 export function invalidateAcceptedTaskDetailMutation(
   get: () => Pick<
     AppState,
-    'activeContextId' | 'isContextSwitching' | 'invalidateTaskDetailSource'
+    | 'activeContextId'
+    | 'isContextSwitching'
+    | 'invalidateTaskDetailSource'
+    | 'setTaskDetailDeletionIntent'
   >,
   teamName: string,
   taskId: string,
-  scope: Omit<TaskDetailReadScope, 'teamName'>
+  scope: Omit<TaskDetailReadScope, 'teamName'>,
+  intent?: Exclude<TaskDetailDeletionIntent, null>
 ): void {
   const state = get();
   if (
@@ -97,7 +102,9 @@ export function invalidateAcceptedTaskDetailMutation(
     !isTaskDetailReadScopeCurrent({ ...scope, teamName }, state.activeContextId, teamName)
   )
     return;
-  state.invalidateTaskDetailSource({ contextId: scope.contextId, teamName, taskId });
+  const identity = { contextId: scope.contextId, teamName, taskId };
+  if (intent && !state.setTaskDetailDeletionIntent(identity, intent, scope)) return;
+  state.invalidateTaskDetailSource(identity);
 }
 
 /** Source invalidation belongs to the same task read authority as physical reads. */

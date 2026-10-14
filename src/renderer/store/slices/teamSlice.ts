@@ -543,6 +543,8 @@ function clearTeamScopedSelectorCaches(teamName: string): void {
 
 function clearTeamScopedTransientState(teamName: string, get: () => AppState): void {
   get().retireTaskDetailSessionWork({ contextId: get().activeContextId, teamName });
+  get().clearTaskDetailTeamWork(get().activeContextId, teamName);
+  get().invalidateTaskDetailTeamSource(get().activeContextId, teamName);
   teamProvisioningAttemptTracker.clear(teamName);
   teamDataReadWork.delete(teamName);
   cancelPostPaintTeamEnrichments(teamName);
@@ -4133,7 +4135,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const requestScope = captureTeamRequestScope(get, teamName);
     if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:softDeleteTask', () => api.teams.softDeleteTask(teamName, taskId));
-    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope, 'deleting');
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
       if (isTeamRequestScopeCurrent(get, teamName, requestScope))
@@ -4143,8 +4145,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   restoreTask: async (teamName: string, taskId: string) => {
     const requestScope = captureTeamRequestScope(get, teamName);
+    if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:restoreTask', () => api.teams.restoreTask(teamName, taskId));
-    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope, 'restoring');
     if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
       await get().fetchDeletedTasks(teamName);
@@ -4174,6 +4177,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   deleteTeam: async (teamName: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     const analyticsContext = getTeamLifecycleAnalyticsContext(
       selectTeamDataForName(get(), teamName)
     );
@@ -4194,13 +4198,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       });
       throw error;
     }
+    if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) return;
     get().clearDeletedTeamLocalState(teamName);
     await get().fetchTeams();
     await get().fetchAllTasks();
   },
 
   restoreTeam: async (teamName: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName));
+    if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) return;
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
@@ -4221,7 +4228,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   permanentlyDeleteTeam: async (teamName: string) => {
-    const deletedContextId = get().activeContextId;
+    const requestScope = captureTeamRequestScope(get, teamName);
+    const deletedContextId = requestScope.contextId;
     const queueNamespace = captureManualQueueNamespace(teamName, get).catch((error) => {
       logger.warn(`Manual queue scope capture failed for ${teamName}`, error);
       return null;
@@ -4235,6 +4243,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       await discardManualMessageQueueNamespace(namespace).catch((error) =>
         logger.warn(`Manual queue cleanup failed for ${teamName}`, error)
       );
+    if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) return;
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);

@@ -332,7 +332,10 @@ export function ignoreTaskDetailPendingAttachment(
   };
 }
 
-export function retireTaskDetailSessionWork(session: TaskDetailSession): TaskDetailSession {
+export function retireTaskDetailSessionWork(
+  session: TaskDetailSession,
+  preservePendingAttachmentPreparation = false
+): TaskDetailSession {
   const savingSubject = session.savedPartRevisionByPart.subject !== null;
   const savingDescription = session.savedPartRevisionByPart.description !== null;
   if (
@@ -355,10 +358,14 @@ export function retireTaskDetailSessionWork(session: TaskDetailSession): TaskDet
       description: session.saveRevisionByPart.description + (savingDescription ? 1 : 0),
     },
     savedPartRevisionByPart: { subject: null, description: null },
-    pendingAttachments: session.pendingAttachments.filter(
-      (attachment) => !session.pendingAttachmentPreparationIds.includes(attachment.id)
-    ),
-    pendingAttachmentPreparationIds: [],
+    pendingAttachments: preservePendingAttachmentPreparation
+      ? session.pendingAttachments
+      : session.pendingAttachments.filter(
+          (attachment) => !session.pendingAttachmentPreparationIds.includes(attachment.id)
+        ),
+    pendingAttachmentPreparationIds: preservePendingAttachmentPreparation
+      ? session.pendingAttachmentPreparationIds
+      : [],
   };
 }
 

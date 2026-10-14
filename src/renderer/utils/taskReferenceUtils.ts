@@ -339,9 +339,26 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
         const label = text.slice(cursor + 1, closeBracket);
         const labelMatch = EXACT_TASK_REF_REGEX.exec(label);
         if (labelMatch) {
-          consumeStructuredTaskRef(labelMatch[1]);
+          const storedTaskRef = consumeStructuredTaskRef(labelMatch[1]);
+          const hrefStart = closeBracket + 2;
+          const href = text.slice(hrefStart, linkEnd - 1);
+          const parsedHref = parseTaskLinkHref(href);
+          const rewriteLegacyHref =
+            storedTaskRef &&
+            parsedHref &&
+            parsedHref.teamName === undefined &&
+            parsedHref.displayId === undefined &&
+            parsedHref.taskId === labelMatch[1];
+          if (rewriteLegacyHref && storedTaskRef) {
+            result += text.slice(cursor, hrefStart);
+            result += buildTaskLinkHref(storedTaskRef);
+            result += text.slice(linkEnd - 1, linkEnd);
+          } else {
+            result += text.slice(cursor, linkEnd);
+          }
+        } else {
+          result += text.slice(cursor, linkEnd);
         }
-        result += text.slice(cursor, linkEnd);
         cursor = linkEnd;
         continue;
       }

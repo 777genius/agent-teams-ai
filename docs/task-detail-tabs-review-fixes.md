@@ -63,6 +63,40 @@ node scripts/e2e/task-detail-tabs-desktop.ts <exact-integrated-40-character-sha>
 entrypoint on its normal command path. The harness uses a synthetic fixture and
 denies non-version runtime calls; it is not a real-team or provider-launch test.
 
+## Current V17 corrective scope
+
+The V19 MiMo source packet targets the four confirmed defects from checkpoint
+`c95f45028d8164de770168b9a6abf7383454f5eb`: legacy Markdown links retain their
+paired cross-team target; successful deletion/restoration sets an identity-scoped
+intent before refresh; context switches preserve locally preparing draft files;
+and team resets make old detail data unavailable without dropping the draft.
+FileReader completion uses the captured session identity and its still-registered
+preparation ID. Backend reads, submits and saves retain their origin/epoch guards.
+
+The worker's sandbox lost its linked-worktree Git index after writing eight
+files. The primary integrated the immutable packet, completed lifecycle wiring in
+the existing mutation/read-authority helper and team slice, and retained the
+existing fresh group-chat gate instead of the packet's redundant callback.
+Late team-delete/restore acknowledgements are also fenced from clearing another
+context's current task and pending draft. The focused test below reproduces that
+failure when those guards are absent. Task-log help uses the shared Radix Tooltip.
+
+The additional current regression command is:
+
+```sh
+pnpm exec vitest run test/renderer/utils/taskReferenceUtils.test.ts test/renderer/store/taskDetailOriginAndLoading.test.ts test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx
+```
+
+The integrated corrective candidate passed 372 focused tests across 15 suites,
+`pnpm typecheck`, touched-file fast lint and the unchanged source-size guard.
+Two additional deferred team-context cases were reproduced failing without the
+late-acknowledgement guards, then passed with the guards restored.
+
+The original critical assertions remain; literal link expectations are independent
+of the production href builder. Current native E2E, independent review and the
+required exact-head CI must still verify the integrated source. Restoring native
+dependencies and loading SQLite/node-pty proves the Electron ABI only.
+
 ## Previous V15 verification (historical only)
 
 The previous V15 corrective candidate passed `pnpm typecheck` and 310 focused tests across

@@ -1,3 +1,4 @@
+import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { selectTaskDetailResourceEntry } from '../../../src/renderer/store/slices/taskDetailResourcesSlice';
@@ -21,6 +22,8 @@ const apiMock = vi.hoisted(() => ({
     getMemberSpawnStatuses: vi.fn(),
     getTeamAgentRuntime: vi.fn(),
     getTaskChangePresence: vi.fn(),
+    deleteTeam: vi.fn(),
+    restoreTeam: vi.fn(),
     updateToolApprovalSettings: vi.fn(async () => undefined),
     showMessageNotification: vi.fn(async () => undefined),
   },
@@ -50,6 +53,48 @@ describe('task detail origin and loading postconditions', () => {
     __resetTeamSliceModuleStateForTests();
     vi.clearAllMocks();
   });
+
+  it.each(['deleteTeam', 'restoreTeam'] as const)(
+    'keeps context B task data and pending draft when context A %s finishes late',
+    async (action) => {
+      const store = createTestStore();
+      const pending = deferred<void>();
+      apiMock.teams[action].mockReturnValue(pending.promise);
+      apiMock.teams.list.mockResolvedValue([]);
+      apiMock.teams.getAllTasks.mockResolvedValue([]);
+      store.setState({ activeContextId: 'A' });
+      const request = store.getState()[action]('shared-team');
+      invalidateContextScopedRequestEpoch();
+      const identity = { contextId: 'B', teamName: 'shared-team', taskId: 'X' };
+      const key = taskDetailKey(identity);
+      const current = snapshot('/TEST-context-B/project');
+      store.setState({
+        activeContextId: 'B',
+        selectedTeamName: 'shared-team',
+        selectedTeamData: current,
+        teamDataCacheByName: { 'shared-team': current },
+        taskDetailById: {
+          [key]: {
+            ...createTaskDetailReadEntry(identity),
+            phase: 'ready',
+            full: { id: 'X', subject: 'TEST current task', status: 'pending' },
+          },
+        },
+      });
+      store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'TEST current draft');
+      store.getState().beginTaskDetailSubmitSession(identity);
+      pending.resolve(undefined);
+      await request;
+      expect(store.getState().selectedTeamData?.config.projectPath).toBe('/TEST-context-B/project');
+      expect(store.getState().taskDetailById[key].phase).toBe('ready');
+      expect(store.getState().taskDetailSessionById[key]).toMatchObject({
+        commentText: 'TEST current draft',
+        submitPending: true,
+      });
+      expect(apiMock.teams.list).not.toHaveBeenCalled();
+      expect(apiMock.teams.getAllTasks).not.toHaveBeenCalled();
+    }
+  );
 
   it('keeps inactive old identities side-effect free while B is active', async () => {
     const store = createTestStore();

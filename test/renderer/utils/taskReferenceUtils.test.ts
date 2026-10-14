@@ -119,10 +119,8 @@ describe('taskReferenceUtils', () => {
         displayId: 'T-1',
         teamName: 'team-a',
       };
-      const href = buildTaskLinkHref(ref);
-      expect(href).toContain('task://');
-      expect(href).toContain('team=');
-      expect(href).toContain('display=');
+      const href = 'task://tid-1?team=team-a&display=T-1';
+      expect(buildTaskLinkHref(ref)).toBe(href);
 
       const parsed = parseTaskLinkHref(href);
       expect(parsed).toEqual({

@@ -97,6 +97,7 @@ export function useTaskDetailSession({
       activeContextId: state.activeContextId,
       switching: state.isContextSwitching,
       phase: state.taskDetailById[identityKey]?.phase,
+      deletionIntent: state.taskDetailById[identityKey]?.deletionIntent,
       ...captureTaskDetailReadScope(identity.teamName, identity.contextId),
     }))
   );
@@ -124,6 +125,7 @@ export function useTaskDetailSession({
     !live.switching &&
     live.activeContextId === identity.contextId &&
     live.phase === 'ready' &&
+    live.deletionIntent === null &&
     currentTask?.id === identity.taskId &&
     !currentTask.deletedAt &&
     currentTask.status !== 'deleted' &&
@@ -218,6 +220,7 @@ export function useTaskDetailSession({
       current?.ownerSurfaceId === surfaceId &&
       current.ownerRevision === session.ownerRevision &&
       state.taskDetailById[identityKey]?.phase === 'ready' &&
+      state.taskDetailById[identityKey]?.deletionIntent === null &&
       currentTaskState?.id === identity.taskId &&
       !currentTaskState.deletedAt &&
       currentTaskState.status !== 'deleted'
@@ -327,11 +330,15 @@ export function useTaskDetailSession({
         prepared.push({ file, attachment });
       }
       for (const { file, attachment } of prepared) {
-        if (!isOriginCurrent()) return;
         const pending = useStore.getState().taskDetailSessionById[identityKey];
         if (!pending?.pendingAttachmentPreparationIds.includes(attachment.id)) continue;
         const result = await readDataUrl(file);
-        if (!isOriginCurrent()) return;
+        const registered = useStore
+          .getState()
+          .taskDetailSessionById[
+            identityKey
+          ]?.pendingAttachmentPreparationIds.includes(attachment.id);
+        if (!registered) continue;
         const base64Data = result?.split(',')[1];
         if (!result || !base64Data) {
           useStore.getState().ignoreTaskDetailPendingAttachmentSession(identity, attachment.id);
@@ -344,7 +351,7 @@ export function useTaskDetailSession({
         });
       }
     },
-    [identity, identityKey, isOriginCurrent, requireOwner, setAttachmentError, setCommentText]
+    [identity, identityKey, requireOwner, setAttachmentError, setCommentText]
   );
 
   const removePendingAttachment = useCallback(

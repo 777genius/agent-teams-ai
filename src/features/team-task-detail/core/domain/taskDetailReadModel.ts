@@ -7,6 +7,8 @@ import {
 import type { TaskDetailIdentity, TaskDetailReadPhase } from '../../contracts';
 import type { TeamTaskWithKanban } from '@shared/types';
 
+export type TaskDetailDeletionIntent = 'deleting' | 'restoring' | null;
+
 export interface TaskDetailReadEntry {
   identity: TaskDetailIdentity;
   phase: TaskDetailReadPhase;
@@ -15,6 +17,7 @@ export interface TaskDetailReadEntry {
   error: string | null;
   loading: boolean;
   refreshPending: boolean;
+  deletionIntent: TaskDetailDeletionIntent;
   fullToken: TaskDetailReadToken | null;
   compactToken: TaskDetailReadToken | null;
 }
@@ -30,6 +33,7 @@ export function createTaskDetailReadEntry(identity: TaskDetailIdentity): TaskDet
     error: null,
     loading: true,
     refreshPending: false,
+    deletionIntent: null,
     fullToken: null,
     compactToken: null,
   };
@@ -69,6 +73,28 @@ export function invalidateTaskDetailFull(entry: TaskDetailReadEntry): TaskDetail
     ...entry,
     refreshPending: true,
     loading: entry.loading,
+  };
+}
+
+export function setTaskDetailDeletionIntent(
+  entry: TaskDetailReadEntry,
+  intent: TaskDetailDeletionIntent
+): TaskDetailReadEntry {
+  return entry.deletionIntent === intent ? entry : { ...entry, deletionIntent: intent };
+}
+
+export function markTaskDetailTeamUnavailable(entry: TaskDetailReadEntry): TaskDetailReadEntry {
+  return {
+    ...entry,
+    phase: 'unavailable',
+    full: null,
+    compact: null,
+    error: null,
+    loading: false,
+    refreshPending: false,
+    deletionIntent: null,
+    fullToken: null,
+    compactToken: null,
   };
 }
 
@@ -130,6 +156,11 @@ export function commitTaskDetailFull(
   return {
     ...entry,
     phase: classified.phase,
+    deletionIntent:
+      entry.deletionIntent !== null &&
+      (classified.phase === 'ready' || classified.phase === 'deleted')
+        ? null
+        : entry.deletionIntent,
     full: keepFull ? entry.full : result,
     fullToken: token,
     compact: entry.compact,

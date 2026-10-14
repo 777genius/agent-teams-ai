@@ -17,14 +17,18 @@ import {
   ignoreTaskDetailPendingAttachment,
   invalidateTaskDetailFull,
   isValidTaskDetailIdentity,
+  markTaskDetailTeamUnavailable,
   normalizeTaskDetailIdentity,
   type OpenTaskDetailTabResult,
   releaseTaskDetailOwner,
   retireTaskDetailSessionWork,
+  setTaskDetailDeletionIntent,
+  type TaskDetailDeletionIntent,
   type TaskDetailEditPart,
   type TaskDetailIdentity,
   taskDetailKey,
   type TaskDetailReadEntry,
+  type TaskDetailReadScope,
   type TaskDetailReadToken,
   type TaskDetailSavePart,
   type TaskDetailSaveRevision,
@@ -86,6 +90,11 @@ export interface TeamTaskDetailSlice {
   retryTaskDetailEditorActivationFailure: (nonce: string) => boolean;
   taskDetailById: Record<string, TaskDetailReadEntry>;
   taskDetailSessionById: Record<string, TaskDetailSession>;
+  setTaskDetailDeletionIntent: (
+    identity: TaskDetailIdentity,
+    intent: TaskDetailDeletionIntent,
+    requestScope: Omit<TaskDetailReadScope, 'teamName'>
+  ) => boolean;
   taskDetailSurfaceInterests: Record<string, TaskDetailIdentity | null>;
   ensureTaskDetail: (identity: TaskDetailIdentity) => Promise<void>;
   setTaskDetailSurfaceInterest: (surfaceId: string, identity: TaskDetailIdentity | null) => void;
@@ -98,7 +107,10 @@ export interface TeamTaskDetailSlice {
   invalidateTaskDetailSource: (identity?: TaskDetailIdentity) => void;
   invalidateTaskDetailTeamSource: (contextId: string, teamName: string, taskId?: string) => void;
   clearTaskDetailTeamWork: (contextId: string, teamName: string) => void;
-  retireTaskDetailSessionWork: (scope?: Pick<TaskDetailIdentity, 'contextId' | 'teamName'>) => void;
+  retireTaskDetailSessionWork: (
+    scope?: Pick<TaskDetailIdentity, 'contextId' | 'teamName'>,
+    preservePendingAttachmentPreparation?: boolean
+  ) => void;
   hydrateTaskDetailSessionDraft: (
     identity: TaskDetailIdentity,
     draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
@@ -369,6 +381,32 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
+  setTaskDetailDeletionIntent: (rawIdentity, intent, requestScope) => {
+    const identity = normalizeTaskDetailIdentity(rawIdentity);
+    if (!isValidTaskDetailIdentity(identity)) return false;
+    if (
+      get().isContextSwitching ||
+      identity.contextId !== requestScope.contextId ||
+      !isTaskDetailReadScopeCurrent(
+        { ...requestScope, teamName: identity.teamName },
+        get().activeContextId,
+        identity.teamName
+      )
+    )
+      return false;
+    const key = taskDetailKey(identity);
+    set((state) => {
+      const current = state.taskDetailById[key] ?? createTaskDetailReadEntry(identity);
+      return {
+        taskDetailById: {
+          ...state.taskDetailById,
+          [key]: setTaskDetailDeletionIntent(current, intent),
+        },
+      };
+    });
+    return true;
+  },
+
   invalidateTaskDetailSource: (rawIdentity) => {
     if (!rawIdentity) return;
     const identity = normalizeTaskDetailIdentity(rawIdentity);
@@ -415,20 +453,28 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
 
   clearTaskDetailTeamWork: (contextId, teamName) => {
     get().clearTaskDetailResourceWork(contextId, teamName);
+    invalidateTeamSnapshotResource(contextId, teamName);
     set((state) => {
       const nextDetails = { ...state.taskDetailById };
       const nextSessions = { ...state.taskDetailSessionById };
       for (const [key, entry] of Object.entries(nextDetails)) {
         if (entry.identity.contextId === contextId && entry.identity.teamName === teamName) {
-          delete nextDetails[key];
-          delete nextSessions[key];
+          invalidateTeamTaskFullResource(entry.identity);
+          nextDetails[key] = markTaskDetailTeamUnavailable(entry);
+          nextSessions[key] = retireTaskDetailSessionWork(
+            nextSessions[key] ?? EMPTY_TASK_DETAIL_SESSION,
+            true
+          );
         }
       }
       return { taskDetailById: nextDetails, taskDetailSessionById: nextSessions };
     });
   },
 
-  retireTaskDetailSessionWork: (scope) => {
+  retireTaskDetailSessionWork: (
+    scope,
+    preservePendingAttachmentPreparation = scope === undefined
+  ) => {
     set((state) => ({
       taskDetailSessionById: Object.fromEntries(
         Object.entries(state.taskDetailSessionById).map(([key, session]) => {
@@ -436,7 +482,12 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
           const inScope =
             !scope ||
             (identity?.contextId === scope.contextId && identity?.teamName === scope.teamName);
-          return [key, inScope ? retireTaskDetailSessionWork(session) : session];
+          return [
+            key,
+            inScope
+              ? retireTaskDetailSessionWork(session, preservePendingAttachmentPreparation)
+              : session,
+          ];
         })
       ),
     }));

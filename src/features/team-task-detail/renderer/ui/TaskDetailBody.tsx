@@ -424,7 +424,15 @@ export const TaskDetailBody = ({
           badge={model.taskLogStreamCount}
           headerExtra={
             model.taskLogActivityActive ? (
-              <OngoingIndicator size="sm" title={t('taskDetail.logs.newArriving')} />
+              <Tooltip>
+                <TooltipTrigger
+                  className="inline-flex"
+                  aria-label={t('taskDetail.logs.newArriving')}
+                >
+                  <OngoingIndicator size="sm" label="" title="" />
+                </TooltipTrigger>
+                <TooltipContent side="top">{t('taskDetail.logs.newArriving')}</TooltipContent>
+              </Tooltip>
             ) : null
           }
           contentClassName="pl-2.5 overflow-visible"
