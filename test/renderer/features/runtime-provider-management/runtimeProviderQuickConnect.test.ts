@@ -226,7 +226,7 @@ describe('RuntimeProviderQuickConnect', () => {
       error: null,
       refresh: vi.fn(),
     };
-    await act(async () => {
+    await act(() => {
       root.render(
         React.createElement(RuntimeProviderQuickConnect, {
           enabled: true,
@@ -245,6 +245,7 @@ describe('RuntimeProviderQuickConnect', () => {
           onBrowseProviders,
         })
       );
+      return Promise.resolve();
     });
     const connect = host.querySelector<HTMLButtonElement>(
       '[data-testid="provider-quick-action-openrouter"]'
@@ -256,9 +257,10 @@ describe('RuntimeProviderQuickConnect', () => {
     );
     expect(browse).toBeDefined();
     expect(browse?.disabled).toBe(false);
-    await act(async () => {
+    await act(() => {
       connect?.click();
       browse?.click();
+      return Promise.resolve();
     });
     expect(onOpenCodeProviderAction).toHaveBeenCalledWith('openrouter', 'settings-connect');
     expect(onBrowseProviders).toHaveBeenCalledTimes(1);

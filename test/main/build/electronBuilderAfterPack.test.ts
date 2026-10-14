@@ -61,6 +61,45 @@ function createPortableExecutableBuffer(arch: 'arm64' | 'ia32' | 'x64'): Buffer 
   return buffer;
 }
 
+function writePortableTreeSitterFixtures(
+  graph: string,
+  platform: 'linux' | 'darwin' | 'win32',
+  arch: 'x64' | 'arm64'
+): { path: string; bytes: Buffer }[] {
+  const binaries = [
+    ['linux', 'x64', createElfBuffer('x64')],
+    ['linux', 'arm64', createElfBuffer('arm64')],
+    ['darwin', 'x64', createMachOBuffer('x64')],
+    ['darwin', 'arm64', createMachOBuffer('arm64')],
+    ['win32', 'x64', createPortableExecutableBuffer('x64')],
+    ['win32', 'arm64', createPortableExecutableBuffer('arm64')],
+  ] as const;
+  const retained: { path: string; bytes: Buffer }[] = [];
+  for (const prefix of ['', '@opencode/server-v2-floor/node_modules/']) {
+    for (const [p, a, bytes] of binaries) {
+      const file = path.join(
+        graph,
+        prefix,
+        '@opencode/core/node_modules/tree-sitter-bash/prebuilds',
+        p + '-' + a,
+        'tree-sitter-bash.node'
+      );
+      writeFile(file, bytes);
+      if (p === platform && a === arch) retained.push({ path: file, bytes });
+    }
+  }
+  return retained;
+}
+
+function createTargetBinaryBuffer(
+  platform: 'linux' | 'darwin' | 'win32',
+  arch: 'x64' | 'arm64'
+): Buffer {
+  if (platform === 'linux') return createElfBuffer(arch);
+  if (platform === 'darwin') return createMachOBuffer(arch);
+  return createPortableExecutableBuffer(arch);
+}
+
 describe('electron-builder afterPack', () => {
   const tempDirs: string[] = [];
   const managedRuntimeTargets = [
@@ -328,22 +367,7 @@ describe('electron-builder afterPack', () => {
     tempDirs.push(tempDir);
     const resources = platform === 'darwin' ? 'Agent Teams AI.app/Contents/Resources' : 'resources';
     const graph = path.join(tempDir, resources, 'runtime', 'local-cli', 'node_modules');
-    const binaries = [
-      ['linux', 'x64', createElfBuffer('x64')],
-      ['linux', 'arm64', createElfBuffer('arm64')],
-      ['darwin', 'x64', createMachOBuffer('x64')],
-      ['darwin', 'arm64', createMachOBuffer('arm64')],
-      ['win32', 'x64', createPortableExecutableBuffer('x64')],
-      ['win32', 'arm64', createPortableExecutableBuffer('arm64')],
-    ] as const;
-    const retained: {path: string; bytes: Buffer}[] = [];
-    for (const prefix of ['', '@opencode/server-v2-floor/node_modules/']) {
-      for (const [p, a, bytes] of binaries) {
-        const file = path.join(graph, prefix, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', p + '-' + a, 'tree-sitter-bash.node');
-        writeFile(file, bytes);
-        if (p === platform && a === arch) retained.push({path: file, bytes});
-      }
-    }
+    const retained = writePortableTreeSitterFixtures(graph, platform, arch);
     const libraries = [
       ['linux', 'x64', 'librust_pty.so', createElfBuffer('x64')],
       ['linux', 'arm64', 'librust_pty_arm64.so', createElfBuffer('arm64')],
@@ -358,8 +382,7 @@ describe('electron-builder afterPack', () => {
     }
     const documentation = path.join(graph, 'bun-pty/rust-pty/target/release', 'README.txt');
     writeFile(documentation, Buffer.from('retain nonnative package data'));
-    const targetBytes = platform === 'linux' ? createElfBuffer('x64')
-      : platform === 'darwin' ? createMachOBuffer(arch) : createPortableExecutableBuffer(arch);
+    const targetBytes = createTargetBinaryBuffer(platform, arch);
     const mixedDirectoryFile = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', platform === 'linux' ? 'darwin-arm64' : 'linux-arm64', 'compatible-extra.node');
     writeFile(mixedDirectoryFile, targetBytes);
     await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
