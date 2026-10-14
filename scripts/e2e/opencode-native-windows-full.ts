@@ -791,7 +791,7 @@ async function main() {
   } catch (error: unknown) {
     proof.status = 'failed';
     proof.failure ??= proofFailure(error, proof.stage);
-    if (proof.stage === 'create_team') {
+    if (proof.stage === 'create_team' || proof.stage === 'provision') {
       try {
         const diagnostics = await app.call('getSafeLaunchFailure');
         const boundaries = ['not_submitted', 'project_registration', 'team_create', 'created'];

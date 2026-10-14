@@ -79,7 +79,8 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         'process_exited',
         'unknown',
       ];
-      if (createBoundary !== 'team_create') return { boundary: createBoundary };
+      if (createBoundary !== 'team_create' && createBoundary !== 'created')
+        return { boundary: createBoundary };
       try {
         const diagnostics = await api.teams.getLaunchFailureDiagnostics(teamName, runId);
         return {
@@ -119,7 +120,10 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     async getProvisioningStatus() {
       check();
       if (!runId) throw new Error('owned launch required');
-      return api.teams.getProvisioningStatus(runId);
+      const status = await api.teams.getProvisioningStatus(runId);
+      // The host's existing IPC catch redacts this error before CDP transport.
+      if (status.state === 'failed') throw new Error(status.error || status.message);
+      return status;
     },
     async getRuntime() {
       check();
