@@ -9,6 +9,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
+import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import { electronTeamPort } from './opencode-native-team-port';
 import { Cdp, waitFor } from './release-updater/cdp.mts';
 import { serializedFunction } from './release-updater/serialized-function.mts';
@@ -35,14 +36,30 @@ const IPC_FAILURE_CLASSIFICATIONS = [
   'is not a function',
   'is not defined',
 ] as const;
+// Self-contained so the same projection runs before the renderer/CDP boundary
+// and again on receipt. Never retain raw exception text or quoted arguments.
+export function safeIpcFailureDetail(value: string, redact: (text: string) => string): string {
+  return redact(value.slice(0, 16_384))
+    .replace(/"(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`/g, '[argument]')
+    .replace(/[A-Za-z]:[\\/][^\r\n,;]*/g, '[path]')
+    .replace(/\\\\[^\r\n,;]*/g, '[path]')
+    .replace(/\/[^\s"'<>]+/g, '[path]')
+    .replace(/[A-Za-z0-9_+./=-]{24,}/g, '[opaque]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500);
+}
 export class NativeDesktopIpcError extends Error {
   readonly operation: Operation;
   readonly classification: string;
-  constructor(operation: Operation, classification: string | undefined) {
+  readonly detail?: string;
+  constructor(operation: Operation, classification: string | undefined, detail?: string) {
     super('Owned desktop IPC failed');
     this.operation = operation;
     this.classification =
       IPC_FAILURE_CLASSIFICATIONS.find((reason) => reason === classification) ?? 'unclassified';
+    if (typeof detail === 'string')
+      this.detail = safeIpcFailureDetail(detail, redactLaunchFailureArtifactText);
   }
 }
 interface Target {
@@ -54,7 +71,7 @@ interface RendererState {
   port: Port;
   calls: Record<
     string,
-    { state: 'pending' | 'done' | 'failed'; result?: unknown; failure?: string }
+    { state: 'pending' | 'done' | 'failed'; result?: unknown; failure?: string; detail?: string }
   >;
 }
 
@@ -223,7 +240,9 @@ export async function prepareNativeDesktop() {
               id: string,
               operation: Operation,
               args: unknown[],
-              reasons: readonly string[]
+              reasons: readonly string[],
+              safeDetail: typeof safeIpcFailureDetail,
+              redact: typeof redactLaunchFailureArtifactText
             ) => {
               const state = (window as unknown as { __opencodeNativeProof: RendererState })
                 .__opencodeNativeProof;
@@ -248,12 +267,16 @@ export async function prepareNativeDesktop() {
                         : '';
                   const failure =
                     reasons.find((reason) => message.includes(reason)) ?? 'unclassified';
-                  state.calls[id] = { state: 'failed', failure };
+                  state.calls[id] = {
+                    state: 'failed',
+                    failure,
+                    detail: safeDetail(message, redact),
+                  };
                 });
               return true;
             };
             await cdp!.evaluate(
-              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)}, ${JSON.stringify(IPC_FAILURE_CLASSIFICATIONS)})`
+              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)}, ${JSON.stringify(IPC_FAILURE_CLASSIFICATIONS)}, ${serializedFunction(safeIpcFailureDetail)}, ${serializedFunction(redactLaunchFailureArtifactText)})`
             );
             const completed = await waitFor(
               async () => {
@@ -261,9 +284,10 @@ export async function prepareNativeDesktop() {
                   state: string;
                   result?: Result<K>;
                   failure?: string;
+                  detail?: string;
                 }>(`window.__opencodeNativeProof.calls[${JSON.stringify(id)}]`);
                 if (entry.state === 'failed')
-                  throw new NativeDesktopIpcError(operation, entry.failure);
+                  throw new NativeDesktopIpcError(operation, entry.failure, entry.detail);
                 return entry.state === 'done' ? { value: entry.result } : null;
               },
               `single ${operation} IPC result`,

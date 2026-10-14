@@ -22,10 +22,21 @@ let preproofStage = 'arguments';
 const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
 type Identity = { pid: number; birth: string; executable: string; command: string };
-type ProofFailure = { stage: string; classification: string; operation?: string; errno?: string };
+type ProofFailure = {
+  stage: string;
+  classification: string;
+  operation?: string;
+  errno?: string;
+  detail?: string;
+};
 function proofFailure(error: unknown, stage: string): ProofFailure {
   if (error instanceof NativeDesktopIpcError)
-    return { stage, operation: error.operation, classification: error.classification };
+    return {
+      stage,
+      operation: error.operation,
+      classification: error.classification,
+      detail: error.detail,
+    };
   const result: ProofFailure = { stage, classification: 'unclassified' };
   if (error instanceof assert.AssertionError) result.classification = 'assertion_failed';
   else if (error instanceof Error && error.message.startsWith('Native gate timed out:'))
