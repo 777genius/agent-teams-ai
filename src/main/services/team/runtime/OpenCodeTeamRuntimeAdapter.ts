@@ -728,7 +728,24 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       prePromptCursor: data.prePromptCursor,
       runtimePromptMessageId: data.runtimePromptMessageId,
       responseObservation: data.responseObservation,
-      diagnostics: data.diagnostics.map(formatOpenCodeBridgeDiagnostic),
+      diagnostics: data.diagnostics.map((diagnostic) =>
+        // Only transport/contract failure kinds need a typed rejection category.
+        // Keep native policy messages unchanged: their text also participates
+        // in session-refresh classification, where a severity prefix is not a failure.
+        [
+          'unsupported_schema',
+          'unsupported_command',
+          'invalid_input',
+          'runtime_not_ready',
+          'provider_error',
+          'timeout',
+          'transport_watchdog_timeout',
+          'contract_violation',
+          'internal_error',
+        ].includes(diagnostic.code)
+          ? formatOpenCodeBridgeDiagnostic(diagnostic)
+          : diagnostic.message
+      ),
     };
   }
 

@@ -88,6 +88,7 @@ describe('team IPC roster mutation and stop concurrency', () => {
         runtime: {
           stopTeam: lifecycleService.stopTeam.bind(lifecycleService),
           isTeamAlive: () => true,
+          getAliveTeams: () => [],
         },
         memberLifecycle: {
           runLiveRosterMutation: lifecycleService.runLiveRosterMutation.bind(lifecycleService),
