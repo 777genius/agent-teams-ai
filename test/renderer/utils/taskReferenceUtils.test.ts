@@ -41,6 +41,22 @@ describe('taskReferenceUtils', () => {
     );
   });
 
+  it('pairs descriptive Markdown labels in occurrence order across external and cross-team links', () => {
+    const refs = [
+      { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' },
+      { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' },
+      { taskId: 'canonical-c', teamName: 'team-c', displayId: '1' },
+    ];
+    expect(
+      linkifyTaskIdsInMarkdown('[source #1](https://example.test) [Task #1](task://1) #1', refs)
+    ).toBe(
+      '[source #1](https://example.test) [Task #1](task://canonical-b?team=team-b&display=1) [#1](task://canonical-c?team=team-c&display=1)'
+    );
+    expect(linkifyTaskIdsInMarkdown('[ #1 ](task://1)', [refs[1]])).toBe(
+      '[ #1 ](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
   describe('TASK_REF_REGEX and isAllowedTaskRefBoundary', () => {
     it('linkifies #ref when preceded by boundary (space, start)', () => {
       const taskRef: TaskRef = {

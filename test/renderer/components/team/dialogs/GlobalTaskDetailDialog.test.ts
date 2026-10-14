@@ -39,6 +39,20 @@ describe('shouldKeepGlobalTaskDialogLoading', () => {
     ).toBe(true);
   });
 
+  it('keeps the full task loading despite an already cached team snapshot', () => {
+    expect(
+      shouldKeepGlobalTaskDialogLoading({
+        teamName: 'alpha',
+        taskId: 'task-1',
+        selectedTeamName: 'alpha',
+        selectedTeamDataPresent: true,
+        selectedTeamLoading: true,
+        selectedTeamError: null,
+        hasTaskInMap: false,
+      })
+    ).toBe(true);
+  });
+
   it('stops loading once a fallback task snapshot is already available', () => {
     expect(
       shouldKeepGlobalTaskDialogLoading({
