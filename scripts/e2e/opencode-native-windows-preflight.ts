@@ -13,6 +13,43 @@ type ReadinessExecutor = (
   executeV1: (input: unknown) => Promise<unknown>
 ) => Promise<unknown>;
 
+function safeSourceGateFailure(error: unknown): { reason: string; errno: string | null } {
+  const row = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
+  const message = typeof row.message === 'string' ? row.message : '';
+  const localReasons: Record<string, string> = {
+    'TEST readiness response invalid': 'readiness_response_invalid',
+    'TEST model-free readiness refused': 'model_free_readiness_refused',
+    'TEST model-free readiness contract changed': 'model_free_readiness_contract_changed',
+    'TEST selected controller invalid': 'selected_controller_invalid',
+    'TEST selected controller state invalid': 'selected_controller_state_invalid',
+    'TEST selected controller root differs from desktop context':
+      'selected_controller_root_changed',
+    'TEST startup cleanup did not complete': 'startup_cleanup_incomplete',
+    'TEST startup cleanup did not drain its empty registry': 'startup_cleanup_not_drained',
+    'TEST unexpected run owner': 'unexpected_run_owner',
+  };
+  // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
+  const reason =
+    message.length <= 120 &&
+    message === message.trim() &&
+    /^[a-z][a-z0-9_]*(?::[a-z0-9_]+){0,3}$/.test(message)
+      ? message
+      : Object.hasOwn(localReasons, message)
+        ? localReasons[message]!
+        : 'unclassified';
+  const errnos = [
+    'ENOENT',
+    'EACCES',
+    'EPERM',
+    'EEXIST',
+    'ENOTDIR',
+    'ELOOP',
+    'ETIMEDOUT',
+    'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+  ];
+  return { reason, errno: errnos.find((value) => value === row.code) ?? null };
+}
+
 // Serialized after TypeScript transpilation; no ambient closure or credentials.
 async function verifyModelFreeReadiness(
   execute: ReadinessExecutor,
@@ -176,7 +213,8 @@ try {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,
-   code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null}));
+   code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
+   ...(${safeSourceGateFailure.toString()})(error)}));
  process.exit(1);
 }`;
   let output = '';
