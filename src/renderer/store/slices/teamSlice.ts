@@ -180,6 +180,10 @@ import {
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
 import {
+  collectTaskChangeInvalidationState,
+  preserveKnownTaskChangePresence,
+} from '../team/teamTaskChangePresenceProjection';
+import {
   loadAllToolApprovalSettingsByTeam,
   loadLegacyToolApprovalSettings,
   loadToolApprovalSettingsForTeam,
@@ -392,6 +396,8 @@ interface TaskFirstOutputAnalyticsContext {
 
 interface RefreshTeamDataOptions {
   withDedup?: boolean;
+  /** Observe already-owned metadata work without requesting another fresh successor. */
+  waitForQueuedFull?: boolean;
 }
 
 function parseRuntimeFreshnessTimestampMs(value: string | undefined): number | null {
@@ -1342,81 +1348,6 @@ async function pollProvisioningStatus(
     await sleep(delayMs);
     delayMs = Math.min(1500, Math.round(delayMs * 1.5));
   }
-}
-
-function collectTaskChangeInvalidationState(
-  teamName: string,
-  prevTasks: TeamViewSnapshot['tasks'],
-  nextTasks: TeamViewSnapshot['tasks']
-): { cacheKeys: string[]; taskIds: string[] } {
-  const nextKeys = new Set(
-    nextTasks.map((task) =>
-      buildTaskChangePresenceKey(teamName, task.id, buildTaskChangeRequestOptions(task))
-    )
-  );
-  const invalidationKeys: string[] = [];
-  const invalidationTaskIds = new Set<string>();
-  for (const task of prevTasks) {
-    const previousKey = buildTaskChangePresenceKey(
-      teamName,
-      task.id,
-      buildTaskChangeRequestOptions(task)
-    );
-    if (!nextKeys.has(previousKey)) {
-      invalidationKeys.push(previousKey);
-      invalidationTaskIds.add(task.id);
-    }
-  }
-  return {
-    cacheKeys: invalidationKeys,
-    taskIds: [...invalidationTaskIds],
-  };
-}
-
-function preserveKnownTaskChangePresence(
-  teamName: string,
-  prevTasks: TeamViewSnapshot['tasks'] | null | undefined,
-  nextTasks: TeamViewSnapshot['tasks']
-): TeamViewSnapshot['tasks'] {
-  if (!Array.isArray(prevTasks) || prevTasks.length === 0 || nextTasks.length === 0) {
-    return nextTasks;
-  }
-
-  const prevTaskById = new Map(prevTasks.map((task) => [task.id, task]));
-  let changed = false;
-
-  const mergedTasks = nextTasks.map((task) => {
-    if (task.changePresence && task.changePresence !== 'unknown') {
-      return task;
-    }
-
-    const previousTask = prevTaskById.get(task.id);
-    if (!previousTask?.changePresence || previousTask.changePresence === 'unknown') {
-      return task;
-    }
-
-    const previousKey = buildTaskChangePresenceKey(
-      teamName,
-      previousTask.id,
-      buildTaskChangeRequestOptions(previousTask)
-    );
-    const nextKey = buildTaskChangePresenceKey(
-      teamName,
-      task.id,
-      buildTaskChangeRequestOptions(task)
-    );
-    if (previousKey !== nextKey) {
-      return task;
-    }
-
-    changed = true;
-    return {
-      ...task,
-      changePresence: previousTask.changePresence,
-    };
-  });
-
-  return changed ? mergedTasks : nextTasks;
 }
 
 function buildGlobalTaskProjectionNotification(
@@ -3323,6 +3254,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (queuedBehindThinRequest) {
       teamDataReadWork.queueFull(teamName, requestScope);
       logger.debug(`refreshTeamData(${teamName}) queued behind thin team:getData`);
+      if (opts?.waitForQueuedFull) {
+        const thin = fetchTeamDataDeduped(
+          teamName,
+          requestScope,
+          () => isTeamRequestScopeCurrent(get, teamName, requestScope),
+          { includeMemberBranches: false }
+        );
+        await thin.result;
+        if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+          teamDataReadWork.takeQueuedFull(teamName, requestScope);
+          await get().refreshTeamData(teamName, opts);
+        }
+      }
       return;
     }
 
@@ -3330,7 +3274,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     noteTeamRefreshBurst(teamName, TEAM_REFRESH_BURST_WINDOW_MS);
-    if (reusedInFlightRequest) {
+    if (reusedInFlightRequest && !opts?.waitForQueuedFull) {
       teamDataReadWork.markFresh(teamName, requestScope);
     }
     let snapshotRead: TaskDetailReadHandle<TeamViewSnapshot> | null = null;

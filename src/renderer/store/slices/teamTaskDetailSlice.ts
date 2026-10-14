@@ -41,6 +41,7 @@ import { isTaskDetailTab } from '@renderer/types/tabs';
 import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 
+import { createTaskDetailActivationFeedbackActions } from '../team/taskDetailActivationFeedbackActions';
 import {
   queueTaskDetailEditor,
   type TaskDetailEditorIntent,
@@ -218,47 +219,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     if (state.pendingTaskDetailEditorRequest?.nonce === nonce)
       state.setPendingTaskDetailEditorRequest(null);
   },
-  retryTaskDetailEditorActivationFailure: (nonce) => {
-    const state = get();
-    const failure = state.taskDetailEditorActivationFailure;
-    return failure?.nonce === nonce
-      ? state.openTaskDetailEditor(failure.identity, failure.intent)
-      : false;
-  },
-  closeTaskDetailEditorActivationFailure: (nonce) => {
-    const failure = get().taskDetailEditorActivationFailure;
-    if (failure?.nonce === nonce) set({ taskDetailEditorActivationFailure: null });
-  },
-  retryTaskDetailReviewActivationFailure: (nonce) => {
-    const state = get();
-    const failure = state.taskDetailReviewActivationFailure;
-    return failure?.nonce === nonce
-      ? state.openTaskDetailReview(failure.identity, failure.options)
-      : false;
-  },
-  closeTaskDetailReviewActivationFailure: (nonce) => {
-    const failure = get().taskDetailReviewActivationFailure;
-    if (failure?.nonce === nonce) set({ taskDetailReviewActivationFailure: null });
-  },
-  retryPendingTaskDetailReview: (nonce) => {
-    const request = get().pendingReviewRequest;
-    if (!request || request.nonce !== nonce) return false;
-    return queueTaskDetailReview(
-      get,
-      { contextId: request.contextId, teamName: request.teamName, taskId: request.taskId },
-      { filePath: request.filePath, requestOptions: request.requestOptions }
-    );
-  },
-  closePendingTaskDetailReview: (nonce) => {
-    const state = get();
-    const request = state.pendingReviewRequest;
-    if (
-      request?.nonce === nonce &&
-      request.contextId === state.activeContextId &&
-      !state.isContextSwitching
-    )
-      state.setPendingReviewRequest(null);
-  },
+  ...createTaskDetailActivationFeedbackActions(set, get),
   openTaskDetailReview: (rawIdentity, options) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const accepted = queueTaskDetailReview(get, identity, options);
@@ -314,7 +275,10 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
 
     try {
-      await get().refreshTeamData(identity.teamName, { withDedup: true });
+      await get().refreshTeamData(identity.teamName, {
+        withDedup: true,
+        waitForQueuedFull: true,
+      });
     } catch {
       // Full task state classifies the terminal result below.
     }
