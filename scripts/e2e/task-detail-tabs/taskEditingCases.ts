@@ -117,8 +117,9 @@ export async function runTaskEditingAndNavigationCases(
     comments: { id: string; text: string }[];
     historyEvents: { actor: string }[];
   };
-  const latestACommentId = persistedABefore.comments.at(-1)!.id;
-  await expandComment(cdp, page(teamA.teamName), latestACommentId);
+  const watcherCommentId = 'comment-shared-124';
+  assert(persistedABefore.comments.some((comment) => comment.id === watcherCommentId));
+  await expandComment(cdp, page(teamA.teamName), watcherCommentId);
   const beforeB = await readJson(teamB.taskFile);
   const beforeBKanban = await readJson(teamB.kanbanFile);
   const pageB = page(teamB.teamName);
@@ -230,7 +231,7 @@ export async function runTaskEditingAndNavigationCases(
     'dialog claimed the single writable owner'
   );
   await addReadmeChip(cdp, `document.querySelector('[role="dialog"]')`, keyA);
-  await expandComment(cdp, `document.querySelector('[role="dialog"]')`, latestACommentId);
+  await expandComment(cdp, `document.querySelector('[role="dialog"]')`, watcherCommentId);
   await cdp.evaluate(
     `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(aNavigation)})`
   );
@@ -265,12 +266,14 @@ export async function runTaskEditingAndNavigationCases(
   );
   await replaceJsonAtomically(teamA.taskFile, (task) => {
     task.description = String(task.description) + 'EXTERNAL_A_SUFFIX_V8';
-    const comments = task.comments as { text: string }[];
-    comments.at(-1)!.text += 'EXTERNAL_A_COMMENT_SUFFIX_V8';
+    const comments = task.comments as { id: string; text: string }[];
+    const comment = comments.find((entry) => entry.id === watcherCommentId);
+    assert(comment, 'Known regular fixture comment must exist');
+    comment.text += 'EXTERNAL_A_COMMENT_SUFFIX_V8';
   });
   await until(
     cdp,
-    `(()=>{const s=window.__agentTeamsDevStore.getState();const f=s.taskDetailById[${keyA}]?.full;const d=document.querySelector('[role="dialog"]');const p=${page(teamA.teamName)};return f?.description?.endsWith('EXTERNAL_A_SUFFIX_V8')&&f?.comments?.at(-1)?.text?.endsWith('EXTERNAL_A_COMMENT_SUFFIX_V8')&&d?.innerText.includes('EXTERNAL_A_COMMENT_SUFFIX_V8')&&p?.innerText.includes('EXTERNAL_A_COMMENT_SUFFIX_V8')&&d?.querySelector('[contenteditable]')?.textContent==='TESTDIRTYDESCRIPTIONHANDOFF'&&p?.querySelector('[contenteditable]')?.textContent==='TESTDIRTYDESCRIPTIONHANDOFF';})()`,
+    `(()=>{const s=window.__agentTeamsDevStore.getState();const f=s.taskDetailById[${keyA}]?.full;const d=document.querySelector('[role="dialog"]');const p=${page(teamA.teamName)};return f?.description?.endsWith('EXTERNAL_A_SUFFIX_V8')&&f?.comments?.find(c=>c.id==='comment-shared-124')?.text?.endsWith('EXTERNAL_A_COMMENT_SUFFIX_V8')&&d?.innerText.includes('EXTERNAL_A_COMMENT_SUFFIX_V8')&&p?.innerText.includes('EXTERNAL_A_COMMENT_SUFFIX_V8')&&d?.querySelector('[contenteditable]')?.textContent==='TESTDIRTYDESCRIPTIONHANDOFF'&&p?.querySelector('[contenteditable]')?.textContent==='TESTDIRTYDESCRIPTIONHANDOFF';})()`,
     'suffix-only watcher updated dialog and passive A page'
   );
   const passiveAfter = await cdp.evaluate(
