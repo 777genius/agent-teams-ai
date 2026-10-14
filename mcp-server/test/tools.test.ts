@@ -2979,6 +2979,83 @@ describe('agent-teams-mcp tools', () => {
       expect(created.sourceMessage.attachments[0].filename).toBe('screenshot.png');
       expect(created.sourceMessage.attachments[0].mimeType).toBe('image/png');
       expect(created.sourceMessage.attachments[0].size).toBe(42000);
+      expect(created.sourceMessage).not.toHaveProperty('fileReferenceIds');
+    });
+
+    it('reloads ordered native PNG/reference GIF source metadata and sanitized unique reference IDs', async () => {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'TEST-reference-source';
+      fs.mkdirSync(path.join(claudeDir, 'tasks', teamName), { recursive: true });
+      writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
+      const native = {
+        id: 'native',
+        filename: 'native.png',
+        mimeType: 'image/png',
+        size: 4,
+        order: 1,
+        filePath: '/saved/native.png',
+        sha256: 'b'.repeat(64),
+        data: 'native blob',
+      };
+      const reference = {
+        id: 'ref',
+        filename: 'reference.gif',
+        mimeType: 'image/gif',
+        size: 3,
+        order: 0,
+        filePath: '/saved/reference.gif',
+        sha256: 'a'.repeat(64),
+        data: 'untrusted blob',
+      };
+      writeInboxMessage(claudeDir, teamName, 'lead', {
+        messageId: 'reference-source',
+        from: 'user',
+        source: 'user_sent',
+        text: 'Read these files',
+        timestamp: '2026-10-13T12:00:00Z',
+        // Lead history retains the full bundle and the overlapping reference subset.
+        attachments: [native, reference],
+        fileReferences: [reference, reference, { id: 'invalid-no-filename' }, null],
+      });
+      const created = parseJsonToolResult(
+        await getTool('task_create_from_message').execute({
+          claudeDir,
+          teamName,
+          messageId: 'reference-source',
+          subject: 'Inspect files',
+        })
+      );
+      const reloaded = parseJsonToolResult(
+        await getTool('task_get').execute({ claudeDir, teamName, taskId: created.id })
+      );
+      for (const task of [created, reloaded]) {
+        expect(task.sourceMessageId).toBe('reference-source');
+        expect(task.sourceMessage.text).toBe('Read these files');
+        expect(task.sourceMessage.fileReferenceIds).toEqual(['ref']);
+        expect(task.sourceMessage.attachments.map((item: { id: string }) => item.id)).toEqual([
+          'ref',
+          'native',
+        ]);
+        expect(task.sourceMessage.attachments[0]).toMatchObject({
+          filename: 'reference.gif',
+          mimeType: 'image/gif',
+          filePath: '/saved/reference.gif',
+          sha256: 'a'.repeat(64),
+          size: 3,
+          order: 0,
+        });
+        expect(task.sourceMessage.attachments[1]).toMatchObject({
+          filename: 'native.png',
+          mimeType: 'image/png',
+          filePath: '/saved/native.png',
+          sha256: 'b'.repeat(64),
+          size: 4,
+          order: 1,
+        });
+        for (const attachment of task.sourceMessage.attachments) {
+          expect(attachment).not.toHaveProperty('data');
+        }
+      }
     });
 
     it('produces the same canonical task shape as task_create plus provenance', async () => {

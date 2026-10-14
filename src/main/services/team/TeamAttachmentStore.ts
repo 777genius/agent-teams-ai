@@ -210,6 +210,7 @@ export class TeamAttachmentStore {
     messageId: string,
     attachments: AttachmentPayload[]
   ): Promise<NativeStoredAttachmentMeta[]> {
+    await this.assertManagedBundlePaths(teamName, messageId, attachments);
     return withFileLock(this.getMessageLockPath(teamName, messageId), async () => {
       const stored = this.toNativeStoredAttachments(teamName, messageId, attachments);
       const existingIndex = await this.readStoredIndex(teamName, messageId, true);
@@ -233,8 +234,90 @@ export class TeamAttachmentStore {
         );
       }
       await this.completeNativeOwnedBundle(teamName, messageId, stored, attachments);
+      for (const attachment of stored) {
+        attachment.filePath = await this.verifyNativeArtifact(teamName, messageId, attachment);
+      }
       return stored;
     });
+  }
+
+  /** Pin the bytes and managed pathname to the same artifact before returning a descriptor. */
+  private async verifyNativeArtifact(
+    teamName: string,
+    messageId: string,
+    attachment: NativeStoredAttachmentMeta
+  ): Promise<string> {
+    // Only the configured app-data parent may be aliased. Managed descendants must be real dirs.
+    const canonicalBase = await fs.promises.realpath(getAppDataPath());
+    const directories = [
+      canonicalBase,
+      path.join(canonicalBase, 'attachments'),
+      path.join(canonicalBase, 'attachments', teamName),
+      path.join(canonicalBase, 'attachments', teamName, messageId),
+    ];
+    const sameIdentity = (left: fs.Stats, right: fs.Stats): boolean =>
+      left.dev === right.dev && left.ino === right.ino;
+    const directoryStats: fs.Stats[] = [];
+    for (const directory of directories) {
+      const stat = await fs.promises.lstat(directory);
+      if (!stat.isDirectory() || stat.isSymbolicLink())
+        throw new Error('Attachment directory must not be a symlink');
+      directoryStats.push(stat);
+    }
+    const canonicalPath = path.join(directories[3], path.basename(attachment.filePath));
+    const leaf = await fs.promises.lstat(canonicalPath);
+    if (!leaf.isFile() || leaf.isSymbolicLink())
+      throw new Error('Attachment artifact must be a regular file');
+    const handle = await fs.promises.open(
+      canonicalPath,
+      fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
+    );
+    try {
+      const opened = await handle.stat();
+      if (!opened.isFile() || !sameIdentity(leaf, opened))
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      const bytes = await handle.readFile();
+      if (
+        bytes.length !== attachment.size ||
+        createHash('sha256').update(bytes).digest('hex') !== attachment.sha256
+      ) {
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      }
+      const verified = await handle.stat();
+      if (
+        !sameIdentity(opened, verified) ||
+        opened.size !== verified.size ||
+        opened.mtimeMs !== verified.mtimeMs ||
+        opened.ctimeMs !== verified.ctimeMs
+      )
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      // Identity checks remain mandatory when O_NOFOLLOW is unavailable (including Windows).
+      if ((await fs.promises.realpath(getAppDataPath())) !== canonicalBase)
+        throw new Error('Attachment managed parent changed');
+      for (let index = 0; index < directories.length; index += 1) {
+        const current = await fs.promises.lstat(directories[index]);
+        if (
+          !current.isDirectory() ||
+          current.isSymbolicLink() ||
+          !sameIdentity(directoryStats[index], current)
+        )
+          throw new Error('Attachment managed directory changed');
+      }
+      const current = await fs.promises.lstat(canonicalPath);
+      if (
+        !current.isFile() ||
+        current.isSymbolicLink() ||
+        !sameIdentity(verified, current) ||
+        current.size !== verified.size ||
+        current.mtimeMs !== verified.mtimeMs ||
+        current.ctimeMs !== verified.ctimeMs
+      )
+        throw new Error(`Attachment artifact changed: ${attachment.id}`);
+      // Never resolve the leaf after its read: that lookup could select an unchecked outside target.
+      return canonicalPath;
+    } finally {
+      await handle.close();
+    }
   }
 
   private async completeNativeOwnedBundle(
@@ -283,6 +366,54 @@ export class TeamAttachmentStore {
     });
   }
 
+  private async assertRegularArtifact(filePath: string, allowMissing = false): Promise<void> {
+    try {
+      const stat = await fs.promises.lstat(filePath);
+      if (!stat.isFile() || stat.isSymbolicLink())
+        throw new Error('Attachment artifact must be a regular file');
+    } catch (error) {
+      if (allowMissing && (error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+  }
+
+  private async assertManagedBundlePaths(
+    teamName: string,
+    messageId: string,
+    attachments: readonly AttachmentPayload[]
+  ): Promise<void> {
+    await fs.promises.mkdir(getAppDataPath(), { recursive: true, mode: 0o700 });
+    const root = path.join(getAppDataPath(), 'attachments');
+    const directories = [root, this.getTeamDir(teamName), this.getMessageDir(teamName, messageId)];
+    for (const directory of directories) {
+      try {
+        const stat = await fs.promises.lstat(directory);
+        if (!stat.isDirectory() || stat.isSymbolicLink())
+          throw new Error('Attachment directory must not be a symlink');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        await fs.promises
+          .mkdir(directory, { mode: 0o700 })
+          .catch((failure: NodeJS.ErrnoException) => {
+            if (failure.code !== 'EEXIST') throw failure;
+          });
+        const created = await fs.promises.lstat(directory);
+        if (!created.isDirectory() || created.isSymbolicLink())
+          throw new Error('Attachment directory must not be a symlink');
+      }
+    }
+    for (const artifact of [
+      this.getIndexPath(teamName, messageId),
+      this.getPendingNativePath(teamName, messageId),
+      `${this.getMessageLockPath(teamName, messageId)}.lock`,
+      ...attachments.map((item) =>
+        this.getStoredFilePath(teamName, messageId, item.id, item.filename)
+      ),
+    ]) {
+      await this.assertRegularArtifact(artifact, true);
+    }
+  }
+
   private decodeLegacyAttachment(attachment: AttachmentPayload): Buffer {
     return Buffer.from(attachment.data, 'base64');
   }
@@ -292,12 +423,14 @@ export class TeamAttachmentStore {
       if (
         attachment.data.length === 0 ||
         attachment.data.length % 4 !== 0 ||
-        !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(attachment.data)
+        attachment.data.length > Math.ceil(MAX_ATTACHMENT_SIZE / 3) * 4
       ) {
         return null;
       }
       const buffer = Buffer.from(attachment.data, 'base64');
-      return buffer.length <= MAX_ATTACHMENT_SIZE ? buffer : null;
+      return buffer.toString('base64') === attachment.data && buffer.length <= MAX_ATTACHMENT_SIZE
+        ? buffer
+        : null;
     } catch {
       return null;
     }
@@ -420,6 +553,7 @@ export class TeamAttachmentStore {
       ) {
         throw new Error(`Attachment bundle conflict for immutable message ID: ${right.id}`);
       }
+      await this.assertRegularArtifact(right.filePath, true);
       const current = await fs.promises.readFile(right.filePath).catch((error: unknown) => {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw error;
@@ -443,6 +577,7 @@ export class TeamAttachmentStore {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
+    await this.assertRegularArtifact(attachment.filePath);
     const current = await fs.promises.readFile(attachment.filePath);
     if (createHash('sha256').update(current).digest('hex') !== attachment.sha256) {
       throw new Error(`Attachment artifact conflict: ${attachment.id}`);

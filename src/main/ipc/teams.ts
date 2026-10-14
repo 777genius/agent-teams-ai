@@ -1,13 +1,11 @@
 import {
-  isAgentVideoMimeType,
-  resolveAgentAttachmentCapability,
-} from '@features/agent-attachments/contracts';
-import {
   admitNativeTeammateAttachmentIpcMessage,
   assertAttachmentRecipientOnline,
   enrichTeamSnapshotNativeAttachmentSupport,
-  isNativeAttachmentRecipient,
+  getNativeAttachmentRecipientRestriction,
   MAX_AGENT_IPC_ATTACHMENTS,
+  prepareMessageAttachments,
+  selectNativeMessageAttachments,
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
@@ -255,7 +253,6 @@ import type {
   AddTaskCommentRequest,
   AgentActionMode,
   AttachmentFileData,
-  AttachmentMeta,
   AttachmentPayload,
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -2680,46 +2677,6 @@ async function handleGetAttachments(
   );
 }
 
-async function getVideoAttachmentRecipientRestriction(input: {
-  teamName: string;
-  memberName: string;
-  providerId: TeamProviderId | undefined;
-  attachments: AttachmentPayload[];
-}): Promise<string | null> {
-  const videoAttachments = input.attachments.filter((attachment) =>
-    isAgentVideoMimeType(attachment.mimeType)
-  );
-  if (videoAttachments.length === 0) {
-    return null;
-  }
-
-  const snapshot = await getTeamDataService().getTeamData(input.teamName, {
-    includeMemberBranches: false,
-  });
-  const normalizedMemberName = input.memberName.trim().toLowerCase();
-  const member =
-    snapshot.members.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    ) ??
-    snapshot.config.members?.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    );
-  const capability = resolveAgentAttachmentCapability({
-    providerId: input.providerId ?? member?.providerId ?? 'unknown',
-    model: member?.model,
-  });
-
-  if (!capability.supportsVideo) {
-    return capability.videoDisplayText;
-  }
-  for (const attachment of videoAttachments) {
-    if (!capability.supportedVideoMimeTypes.some((mimeType) => mimeType === attachment.mimeType)) {
-      return 'This video type is not supported by the selected model.';
-    }
-  }
-  return null;
-}
-
 function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean): string {
   if (!teamStillAlive) {
     return 'Failed to deliver message with attachments: team process became unavailable';
@@ -2806,22 +2763,28 @@ async function handleSendMessage(
     return { success: false, error: validatedMessageId.error ?? 'Invalid messageId' };
 
   let validatedAttachments: AttachmentPayload[] | undefined;
-  if (
-    payload.attachments !== undefined &&
-    Array.isArray(payload.attachments) &&
-    payload.attachments.length > 0
-  ) {
+  if ('fileReferences' in payload || 'nativeAttachmentDelivery' in payload) {
+    return { success: false, error: 'Attachment delivery metadata is main-owned' };
+  }
+  if (payload.attachments !== undefined) {
     const attResult = validateAgentAttachmentIpcPayload(payload.attachments);
     if (!attResult.valid) {
       return { success: false, error: attResult.error };
     }
     validatedAttachments = attResult.value;
-    const serializedResult = validateAgentAttachmentSerializedIpcPayload({
-      text: payload.text,
-      attachments: validatedAttachments,
-    });
-    if (!serializedResult.valid) {
-      return { success: false, error: serializedResult.error };
+    if (
+      validatedAttachments.length &&
+      ((payload.from !== undefined && payload.from.trim().toLowerCase() !== 'user') ||
+        (payload.source !== undefined && payload.source !== 'user_sent'))
+    ) {
+      return { success: false, error: 'Message file attachments require user origin' };
+    }
+    if (!validatedAttachments.some((attachment) => attachment.mimeType.startsWith('video/'))) {
+      const serialized = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text,
+        attachments: validatedAttachments,
+      });
+      if (!serialized.valid) return { success: false, error: serialized.error };
     }
   }
 
@@ -2865,15 +2828,35 @@ async function handleSendMessage(
     const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
     if (validatedAttachments?.length) {
-      const videoRestriction = await getVideoAttachmentRecipientRestriction({
+      const nativeAttachments = selectNativeMessageAttachments(
+        { providerId: recipientProviderId ?? 'unknown', isLeadRecipient },
+        validatedAttachments
+      );
+      const videoRestriction = await getNativeAttachmentRecipientRestriction({
         teamName: tn,
         memberName,
         providerId: recipientProviderId,
-        attachments: validatedAttachments,
+        attachments: nativeAttachments,
+        readTeamData: (teamName) =>
+          getTeamDataService().getTeamData(teamName, { includeMemberBranches: false }),
       });
       if (videoRestriction) {
         throw new Error(videoRestriction);
       }
+      const serializedResult = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text!,
+        attachments: validatedAttachments,
+        nativeVideoDelivery:
+          isOpenCodeRecipient &&
+          nativeAttachments.some((attachment) => attachment.mimeType.startsWith('video/')),
+      });
+      if (!serializedResult.valid) throw new Error(serializedResult.error);
+      const nativeIds = new Set(nativeAttachments.map((attachment) => attachment.id));
+      const referenceBudget = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text!,
+        attachments: validatedAttachments.filter((attachment) => !nativeIds.has(attachment.id)),
+      });
+      if (!referenceBudget.valid) throw new Error(referenceBudget.error);
     }
 
     if (validatedAttachments?.length) {
@@ -2901,6 +2884,20 @@ async function handleSendMessage(
         ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
         : null;
       const rawSlashCommandText = standaloneSlashCommand?.raw;
+      const preparedAttachments = validatedAttachments?.length
+        ? await prepareMessageAttachments(
+            {
+              teamName: tn,
+              messageId: preGeneratedMessageId,
+              text: payload.text!,
+              from: payload.from,
+              providerId: recipientProviderId ?? 'unknown',
+              isLeadRecipient: true,
+              attachments: validatedAttachments,
+            },
+            attachmentStore
+          )
+        : undefined;
       const stdinTextForLead = rawSlashCommandText
         ? rawSlashCommandText
         : [
@@ -2917,7 +2914,7 @@ async function handleSendMessage(
             ),
             ``,
             `Message from user:`,
-            buildMessageDeliveryText(payload.text!, {
+            buildMessageDeliveryText(preparedAttachments?.text ?? payload.text!, {
               actionMode,
               isLeadRecipient: true,
             }),
@@ -2929,7 +2926,7 @@ async function handleSendMessage(
         await messaging.sendMessageToTeam(
           tn,
           stdinTextForLead,
-          rawSlashCommandText ? undefined : validatedAttachments
+          rawSlashCommandText ? undefined : preparedAttachments?.nativePayloads
         );
         stdinSent = true;
       } catch (stdinError: unknown) {
@@ -2942,29 +2939,7 @@ async function handleSendMessage(
       }
 
       if (stdinSent) {
-        let attachmentFilePaths: Map<string, string> | undefined;
-        if (validatedAttachments?.length) {
-          try {
-            attachmentFilePaths = await attachmentStore.saveAttachments(
-              tn,
-              preGeneratedMessageId,
-              validatedAttachments
-            );
-          } catch (e) {
-            logger.warn(`Failed to save attachments: ${e}`);
-          }
-        }
-
-        const attachmentMeta: AttachmentMeta[] | undefined = validatedAttachments?.map((a) => {
-          const fp = attachmentFilePaths?.get(a.id);
-          return {
-            id: a.id,
-            filename: a.filename,
-            mimeType: a.mimeType,
-            size: a.size,
-            ...(fp ? { filePath: fp } : {}),
-          };
-        });
+        const attachmentMeta = preparedAttachments?.stored;
 
         let result: SendMessageResult;
         try {
@@ -2976,7 +2951,8 @@ async function handleSendMessage(
             attachmentMeta,
             validatedTaskRefs.value,
             preGeneratedMessageId,
-            actionMode
+            actionMode,
+            preparedAttachments?.fileReferences
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
@@ -2993,6 +2969,7 @@ async function handleSendMessage(
           messageId: result.messageId,
           source: 'user_sent',
           attachments: attachmentMeta,
+          fileReferences: preparedAttachments?.fileReferences,
           taskRefs: validatedTaskRefs.value,
           ...(slashCommandMeta
             ? {
@@ -3029,55 +3006,49 @@ async function handleSendMessage(
       ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
     });
     const inboxText = isOpenCodeRecipient ? baseText : memberDeliveryText;
-    if (
-      validatedAttachments?.length &&
-      isNativeAttachmentRecipient({ isLeadRecipient, providerId: recipientProviderId })
-    ) {
-      return admitNativeTeammateAttachmentIpcMessage(
-        {
-          teamName: tn,
-          memberName,
-          providerId: recipientProviderId!,
-          messageId: inboxMessageId,
-          text: inboxText,
-          summary: payload.summary,
-          from: storedFrom,
-          actionMode,
-          taskRefs: validatedTaskRefs.value,
-          attachments: validatedAttachments,
-        },
-        {
-          readRuntimeSnapshot: (teamName) =>
-            getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
-          attachmentStore,
-          runWithLiveRosterMutation: (teamName, operation) =>
-            getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation),
-        }
-      );
-    }
-    if (validatedAttachments?.length && inboxMessageId) {
-      try {
-        await attachmentStore.saveAttachments(tn, inboxMessageId, validatedAttachments);
-      } catch (error) {
-        throw new Error(`Failed to save message attachments: ${getErrorMessage(error)}`);
-      }
-    }
-
-    const messageRequest: SendMessageRequest = {
-      member: memberName,
-      text: inboxText,
-      summary: payload.summary,
-      from: storedFrom,
-      actionMode,
-      source: 'user_sent',
-      taskRefs: validatedTaskRefs.value,
-      ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
-      ...(validatedAttachments?.length ? { attachments: validatedAttachments } : {}),
-    };
-    const teamDataService = getTeamDataService();
-    const result = isOpenCodeRecipient
-      ? await teamDataService.sendRuntimeRecipientMessage(tn, messageRequest)
-      : await teamDataService.sendMessage(tn, messageRequest);
+    const result = validatedAttachments?.length
+      ? await admitNativeTeammateAttachmentIpcMessage(
+          {
+            teamName: tn,
+            memberName,
+            providerId: recipientProviderId!,
+            messageId: inboxMessageId,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            taskRefs: validatedTaskRefs.value,
+            attachments: validatedAttachments,
+          },
+          {
+            readRuntimeSnapshot: (teamName) =>
+              getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
+            attachmentStore,
+            runWithLiveRosterMutation: (teamName, operation) =>
+              getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation),
+          }
+        )
+      : isOpenCodeRecipient
+        ? await getTeamDataService().sendRuntimeRecipientMessage(tn, {
+            member: memberName,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            source: 'user_sent',
+            taskRefs: validatedTaskRefs.value,
+            messageId: inboxMessageId,
+          })
+        : await getTeamDataService().sendMessage(tn, {
+            member: memberName,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            source: 'user_sent',
+            taskRefs: validatedTaskRefs.value,
+            messageId: inboxMessageId,
+          });
 
     // Native teammates consume their inbox directly. Keep member relay disabled.
     if (isOpenCodeRecipient) {

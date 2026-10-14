@@ -184,7 +184,8 @@ export function isRevisableUserSentMessage(
   if (message.source !== 'user_sent') return false;
   if (message.from !== 'user') return false;
   if (message.messageKind && message.messageKind !== 'default') return false;
-  if ((message.attachments?.length ?? 0) > 0) return false;
+  if ((message.attachments?.length ?? 0) > 0 || (message.fileReferences?.length ?? 0) > 0)
+    return false;
   if (isRevisionFlowMessage(message)) return false;
   return getRevisableMessageText(message).length > 0;
 }

@@ -67,6 +67,13 @@ export const SourceMessageAttachments = ({
         teamName={teamName}
         messageId={sourceMessageId}
         attachments={attachments}
+        referenceIds={
+          new Set(
+            Array.isArray(sourceMessage.fileReferenceIds)
+              ? sourceMessage.fileReferenceIds.filter((id) => typeof id === 'string')
+              : []
+          )
+        }
       />
     </div>
   );

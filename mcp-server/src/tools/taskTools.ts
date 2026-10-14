@@ -1,3 +1,4 @@
+import { sourceMessageAttachments } from '../types/messageAttachments.js';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
@@ -267,24 +268,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         ...(source ? { source } : {}),
       };
 
-      // Preserve attachment metadata — filePath included when available
-      if (Array.isArray(message.attachments) && message.attachments.length > 0) {
-        sourceMessage.attachments = (message.attachments as Record<string, unknown>[])
-          .filter(
-            (a) =>
-              a &&
-              typeof a === 'object' &&
-              typeof a.id === 'string' &&
-              typeof a.filename === 'string'
-          )
-          .map((a) => ({
-            id: String(a.id),
-            filename: String(a.filename),
-            mimeType: typeof a.mimeType === 'string' ? a.mimeType : '',
-            size: typeof a.size === 'number' ? a.size : 0,
-            ...(typeof a.filePath === 'string' ? { filePath: a.filePath } : {}),
-          }));
-      }
+      const attachments = sourceMessageAttachments(message);
+      if (attachments.length) sourceMessage.attachments = attachments;
+      const fileReferenceIds = sourceMessageAttachments({
+        fileReferences: message.fileReferences,
+      }).map((item) => item.id);
+      if (fileReferenceIds.length) sourceMessage.fileReferenceIds = fileReferenceIds;
 
       // 5. Forward into canonical create-task path
       const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy });

@@ -152,7 +152,7 @@ import {
   resolveOpenCodeRuntimeBinaryForBridgeEnv,
 } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
-import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { createAttachmentBridgeEnvironment } from '@features/agent-attachments/main';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
   computeLiveTeamWatchScope,
@@ -205,7 +205,6 @@ import {
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
-import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
@@ -517,10 +516,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   }
 
   reportProgress('runtime-environment', 'Preparing runtime environment...');
-  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
-    ...process.env,
-    PATH: buildMergedCliPath(binaryPath),
-  });
+  const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
   let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
   const readOpenCodeRuntimeStatus = () => {
     if (explicitOpenCodeBinaryOverride) {

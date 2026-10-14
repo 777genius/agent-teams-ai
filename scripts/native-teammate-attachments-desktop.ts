@@ -7,6 +7,10 @@
  * CDP primitives, and never installs, mocks, or invokes a synthetic model.
  */
 import assert from 'node:assert/strict';
+import {
+  generateReferenceFixture,
+  correlateFileReferenceReply,
+} from './fixtures/native-teammate-attachments/fileReferenceProof.ts';
 import type { ChildProcess } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
@@ -33,9 +37,12 @@ import {
 } from './fixtures/native-teammate-attachments/harnessProof.ts';
 import {
   callTeamCleanup,
+  captureNativeLaunchCliLogs,
+  throwIfNativeLaunchFailed,
   collectReturnedProviderPaths,
   collectStructuredInput,
   isProcessAlive,
+  literal,
   ownedRuntimeProcesses,
   startOwnedDesktopApp,
   terminateOwnedApp,
@@ -60,6 +67,7 @@ interface Args {
   scratchRoot: string;
   model?: string;
   keep: boolean;
+  fileReferences: boolean;
 }
 
 interface NativeReadyState {
@@ -91,11 +99,8 @@ function parseArgs(): Args {
     scratchRoot,
     model: value('--model'),
     keep: args.includes('--keep'),
+    fileReferences: args.includes('--file-references'),
   };
-}
-
-function literal(value: unknown): string {
-  return JSON.stringify(value);
 }
 
 async function json(file: string, value: unknown): Promise<void> {
@@ -236,6 +241,10 @@ async function createTeam(cdp: Cdp, request: TeamCreateRequest): Promise<TeamCre
 
 async function main(): Promise<void> {
   const args = parseArgs();
+  assert(
+    !args.fileReferences || args.provider === 'codex',
+    'File reference scenario requires Codex'
+  );
   const scratch = await assertOwnedScratch(args.scratchRoot);
   const runtimeSource = await realpath(args.runtimeSource);
   const runRoot = await mkdtemp(path.join(scratch, `native-attachments-${args.provider}-TEST-`));
@@ -296,6 +305,7 @@ async function main(): Promise<void> {
     appLogs = started.logs;
     cdp = started.cdp;
     artifacts = await generateArtifacts(cdp, runRoot);
+    const reference = args.fileReferences ? await generateReferenceFixture(runRoot) : undefined;
     evidence.generatedExpected = artifacts.expected as unknown as Json;
     evidence.fixtureDigests =
       args.provider === 'claude'
@@ -317,6 +327,7 @@ async function main(): Promise<void> {
       providerId: args.provider === 'claude' ? 'anthropic' : 'codex',
       ...(args.model ? { model: args.model } : {}),
       syncModelsWithLead: false,
+      extraCliArgs: `--debug=team-bootstrap --debug-file=${path.join(evidenceRoot, 'bootstrap-debug.log')}`,
       skipPermissions: true,
       prompt:
         'Disposable TEST-only run. Remain idle: do not create or inspect files, and do not create or assign tasks. Reply READY, then wait for user direct messages. Work only inside this TEST project; do not inspect other paths.',
@@ -357,6 +368,7 @@ async function main(): Promise<void> {
     readyState = await bounded<NativeReadyState>(
       'current native attachment runtime readiness',
       async () => {
+        await throwIfNativeLaunchFailed(cdp!, team);
         const state = await readNativeState(teamDir, team).catch(() => null);
         const runtime = await cdp!.evaluate<TeamAgentRuntimeSnapshot>(
           `window.electronAPI.teams.getTeamAgentRuntime(${literal(team)})`
@@ -420,19 +432,34 @@ async function main(): Promise<void> {
     const attachmentFiles =
       args.provider === 'claude'
         ? [artifacts.files.image, artifacts.files.text, artifacts.files.pdf]
-        : [artifacts.files.image, artifacts.files.text, artifacts.files.json];
+        : reference
+          ? [artifacts.files.text, artifacts.files.json, reference.file]
+          : [artifacts.files.image, artifacts.files.text, artifacts.files.json];
     await stageFiles(cdp, attachmentFiles);
+    if (reference) {
+      assert.equal(
+        await cdp.evaluate<string>(`document.querySelector('textarea[id^="compose-"]').value`),
+        ''
+      );
+      await writeFile(artifacts.files.text, 'changed original');
+      await rm(reference.file);
+      await rm(artifacts.files.json);
+    }
     await fillComposer(
       cdp,
       args.provider === 'claude'
         ? 'Inspect every attached file directly. Return one JSON object with keys image_token, color_order, layout_code, text_token, and pdf_token. Use only content visible inside the attachments; do not use filenames or tool file reads.'
-        : 'Inspect every attachment directly. Return one JSON object with keys image_token, color_order, layout_code, text_token, json_token, and unicode_value. Use only contents of each attachment; do not use filenames or tool file reads.'
+        : reference
+          ? 'Inspect the native TXT and JSON attachments and read the saved binary path using a tool. Return JSON with text_token, json_token, unicode_value, binary_length, binary_sha256, and the NONCE found only inside its bytes. Do not execute or extract the attached file.'
+          : 'Inspect every attachment directly. Return one JSON object with keys image_token, color_order, layout_code, text_token, json_token, and unicode_value. Use only contents of each attachment; do not use filenames or tool file reads.'
     );
     await clickSend(cdp);
     const digestSet =
       args.provider === 'claude'
         ? [artifacts.digests.image, artifacts.digests.text, artifacts.digests.pdf]
-        : [artifacts.digests.image, artifacts.digests.text, artifacts.digests.json];
+        : reference
+          ? [artifacts.digests.text, artifacts.digests.json, reference.sha256]
+          : [artifacts.digests.image, artifacts.digests.text, artifacts.digests.json];
     const original = await waitForAttachmentRow(teamDir, digestSet, existingIds);
     const originalMessageId = original.messageId ?? '';
     const originalReadAtSend = original.read;
@@ -471,13 +498,9 @@ async function main(): Promise<void> {
       sourcePaths = collectReturnedProviderPaths(logs, readyState?.state);
       await json(path.join(evidenceRoot, 'returned-provider-paths.json'), sourcePaths);
       if (args.provider === 'codex') {
-        const fallback = await correlateCodexFallback(
-          sourcePaths,
-          readProof,
-          userRows,
-          team,
-          project
-        );
+        const fallback = reference
+          ? await correlateFileReferenceReply(sourcePaths, readProof, userRows, team, project)
+          : await correlateCodexFallback(sourcePaths, readProof, userRows, team, project);
         if (!fallback) return null;
         codexCorrelation = fallback.proof;
         codexFileInput = fallback.input;
@@ -541,23 +564,26 @@ async function main(): Promise<void> {
         'Claude UTF8 text input digest was not observed'
       );
     } else {
-      const localImage = providerInput.find(
-        (item) =>
-          ((item.recordType === 'codex_turn_start_localImage' &&
-            item.argumentShape === '{type:localImage,path}') ||
-            (item.recordType === 'codex_provider_bound_file_image' && codexCorrelation !== null)) &&
-          item.filePath &&
-          expectedPaths.has(path.resolve(item.filePath))
-      );
-      assert(
-        localImage,
-        'Codex native localImage or completed provider-bound file-image proof was not observed'
-      );
-      assert.equal(
-        localImage.sha256,
-        artifacts.digests.image,
-        'Codex image bytes changed after admission'
-      );
+      if (!reference) {
+        const localImage = providerInput.find(
+          (item) =>
+            ((item.recordType === 'codex_turn_start_localImage' &&
+              item.argumentShape === '{type:localImage,path}') ||
+              (item.recordType === 'codex_provider_bound_file_image' &&
+                codexCorrelation !== null)) &&
+            item.filePath &&
+            expectedPaths.has(path.resolve(item.filePath))
+        );
+        assert(
+          localImage,
+          'Codex native localImage or completed provider-bound file-image proof was not observed'
+        );
+        assert.equal(
+          localImage.sha256,
+          artifacts.digests.image,
+          'Codex image bytes changed after admission'
+        );
+      }
       for (const digest of [artifacts.digests.text, artifacts.digests.json]) {
         assert(
           providerInput.some(
@@ -568,17 +594,42 @@ async function main(): Promise<void> {
       }
     }
     const replyText = reply.text;
-    assert(replyText.includes(artifacts.expected.imageToken), 'reply did not identify image token');
-    assert(
-      replyText.includes(artifacts.expected.layoutCode),
-      'reply did not identify image layout'
-    );
-    const colorIndexes = artifacts.expected.colorOrder.map((color) => replyText.indexOf(color));
-    assert(
-      colorIndexes.every((index) => index >= 0) &&
-        colorIndexes.every((index, order) => order === 0 || index > colorIndexes[order - 1]),
-      'reply did not preserve visible color order'
-    );
+    if (!reference) {
+      assert(
+        replyText.includes(artifacts.expected.imageToken),
+        'reply did not identify image token'
+      );
+      assert(
+        replyText.includes(artifacts.expected.layoutCode),
+        'reply did not identify image layout'
+      );
+      const colorIndexes = artifacts.expected.colorOrder.map((color) => replyText.indexOf(color));
+      assert(
+        colorIndexes.every((index) => index >= 0) &&
+          colorIndexes.every((index, order) => order === 0 || index > colorIndexes[order - 1]),
+        'reply did not preserve visible color order'
+      );
+    }
+    if (reference) {
+      assert(
+        replyText.includes(reference.nonce),
+        'Reply did not read nonce from saved binary bytes'
+      );
+      assert(replyText.includes(reference.sha256), 'Reply binary digest mismatch');
+      assert(replyText.includes(String(reference.length)), 'Reply binary byte length mismatch');
+      assert.equal((original.fileReferences ?? []).length, 1);
+      assert.equal(
+        (await rows(teamDir)).filter((row) => row.messageId === original.messageId).length,
+        1
+      );
+      await cdp.send('Page.reload');
+      await selectRecipient(cdp, MEMBER_NAME);
+      await bounded('restored binary history card', () =>
+        cdp!.evaluate<boolean>(
+          `document.body.textContent.includes(${literal(path.basename(reference.file))})`
+        )
+      );
+    }
     if (args.provider === 'claude') {
       assert(
         replyText.includes(artifacts.expected.textToken),
@@ -620,6 +671,7 @@ async function main(): Promise<void> {
   } catch (error) {
     hasPrimaryError = true;
     primaryError = error;
+    if (cdp) await captureNativeLaunchCliLogs(cdp, team, evidenceRoot, cleanup.errors);
     await cdp?.screenshot(path.join(evidenceRoot, 'failure.png')).catch(() => undefined);
     evidence.failure = {
       message: error instanceof Error ? error.stack : String(error),
