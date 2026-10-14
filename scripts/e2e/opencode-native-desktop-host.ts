@@ -20,6 +20,11 @@ type Operation = Exclude<keyof Port, 'progress' | 'dispose'>;
 type Arguments<K extends Operation> = Parameters<Port[K]>;
 type Result<K extends Operation> = Awaited<ReturnType<Port[K]>>;
 const IPC_FAILURE_CLASSIFICATIONS = [
+  'team_stop_unconfirmed:stopped',
+  'team_stop_unconfirmed:stop_failed',
+  'team_stop_unconfirmed:timed_out',
+  'team_stop_unconfirmed:runtime_already_down',
+  'team_stop_unconfirmed:unknown',
   'Team launch handlers are not initialized',
   'No handler registered',
   'RUNTIME_SELECTION_REQUIRED',

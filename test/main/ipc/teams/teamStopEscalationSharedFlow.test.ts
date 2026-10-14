@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { TeamForceStopResult } from '@shared/types';
+
 vi.mock('electron', () => ({
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
   Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
@@ -20,17 +22,20 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 }));
 
 const stopFlowMocks = vi.hoisted(() => ({
-  stopTeamWithEscalation: vi.fn(() =>
-    Promise.resolve({
-      stopOutcome: 'stopped' as const,
-      killedRuntimePids: [],
-      clearedPendingDeliveries: 0,
-      diagnostics: [],
-    })
+  stopTeamWithEscalation: vi.fn(
+    (): Promise<TeamForceStopResult> =>
+      Promise.resolve({
+        stopOutcome: 'stopped' as const,
+        cleanupOutcome: 'completed' as const,
+        killedRuntimePids: [],
+        clearedPendingDeliveries: 0,
+        diagnostics: [],
+      })
   ),
   runTeamForceStopFlow: vi.fn(() =>
     Promise.resolve({
       stopOutcome: 'stopped' as const,
+      cleanupOutcome: 'completed' as const,
       killedRuntimePids: [],
       clearedPendingDeliveries: 0,
       diagnostics: [],
@@ -135,6 +140,29 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       success: true,
     });
   }
+
+  it('reports unconfirmed cleanup instead of acknowledging a successful stop', async () => {
+    stopFlowMocks.stopTeamWithEscalation.mockResolvedValueOnce({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'incomplete',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [],
+    });
+    initializeTeamHandlers(
+      { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) } as never,
+      { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => false } } as never
+    );
+    registerTeamHandlers(ipcMain as never);
+    await expect(handlers.get(TEAM_STOP)!({} as never, 'fixteam')).resolves.toMatchObject({
+      success: false,
+      error: 'team_stop_unconfirmed:stopped',
+    });
+    expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain(
+      'team_stop_unconfirmed:stopped'
+    );
+    vi.mocked(console.error).mockClear();
+  });
 
   async function callThroughHttp(): Promise<void> {
     const app = Fastify();

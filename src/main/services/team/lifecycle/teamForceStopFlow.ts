@@ -370,7 +370,11 @@ async function runTeamStopFlow(
         return 'stop_failed' as const;
       }
     );
-    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
+    // Recorded host exit does not acknowledge native lane/session cleanup.
+    // Keep its original stop attempt authoritative until the existing deadline.
+    runtimeHostsGone = ownedLaneIds?.length
+      ? { promise: new Promise<'runtime_already_down'>(() => {}), cancel() {} }
+      : watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
       runtimeHostsGone.promise,

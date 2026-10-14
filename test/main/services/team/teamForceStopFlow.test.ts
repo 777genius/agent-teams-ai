@@ -461,6 +461,37 @@ describe('stopTeamWithEscalation runtime-host evidence', () => {
     }
   }
 
+  it('awaits the original native lane stop even after its recorded hosts disappear', async () => {
+    let finishStop!: () => void;
+    let liveHosts = 2;
+    const ports = createPorts({
+      stopTeam: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishStop = resolve;
+          })
+      ),
+      observeOwnedRuntimeLaneIds: async () => ['primary'],
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      countLiveRuntimeHosts: vi.fn(() => Promise.resolve(liveHosts)),
+    });
+    let resolved = false;
+    const stopping = stopTeamWithEscalation('fixteam', ports).then((result) => {
+      resolved = true;
+      return result;
+    });
+    await advanceThroughSamples(2);
+    liveHosts = 0;
+    await advanceThroughSamples(2);
+    expect(resolved).toBe(false);
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    finishStop();
+    await expect(stopping).resolves.toMatchObject({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'completed',
+    });
+  });
+
   it('finishes the moment the recorded hosts are gone instead of waiting out the budget', async () => {
     let liveHosts = 2;
     const ports = createPorts({

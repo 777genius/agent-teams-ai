@@ -4016,6 +4016,13 @@ async function handleStopTeam(
         `[${tn}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
       );
     }
+    if (result.cleanupOutcome === 'incomplete' || result.stopOutcome !== 'stopped') {
+      const outcome =
+        ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
+          (value) => value === result.stopOutcome
+        ) ?? 'unknown';
+      throw new Error(`team_stop_unconfirmed:${outcome}`);
+    }
   });
 }
 
