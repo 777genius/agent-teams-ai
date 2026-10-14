@@ -503,7 +503,7 @@ try {
       diagnostics.push({
         kind: 'failure-ui',
         evidence: await cdp.evaluate(
-          `(()=>{const s=window.__agentTeamsDevStore.getState();return {focused:document.hasFocus(),active:document.activeElement?.outerHTML?.slice(0,500),editable:[...document.querySelectorAll('[contenteditable=true]')].map(e=>e.innerHTML.slice(0,1000)),sessions:Object.values(s.taskDetailSessionById).map(d=>({owner:d.ownerSurfaceId,subject:d.subjectDraft,description:d.descriptionDraft.slice(-150),comment:d.commentText,reply:!!d.reply,chips:d.commentChips.length}))};})()`
+          `(()=>{const s=window.__agentTeamsDevStore.getState();return {focused:document.hasFocus(),active:document.activeElement?.outerHTML?.slice(0,500),fullTasks:Object.values(s.taskDetailById).map(e=>({team:e.identity.teamName,phase:e.phase,descriptionTail:e.full?.description?.slice(-100),commentTail:e.full?.comments?.at(-1)?.text?.slice(-100)})),surfaces:[...document.querySelectorAll('[data-task-detail-page],[role=dialog]')].map(e=>({team:e.dataset.taskDetailTeam,visible:e.getBoundingClientRect().width>0,commentSuffix:e.innerText.includes('EXTERNAL_A_COMMENT_SUFFIX_V8'),descriptionDraft:e.querySelector('[contenteditable]')?.textContent,commentTail:[...e.querySelectorAll('[data-task-comment-id]')].at(0)?.innerText?.slice(-300)})),editable:[...document.querySelectorAll('[contenteditable=true]')].map(e=>e.innerHTML.slice(0,1000)),sessions:Object.values(s.taskDetailSessionById).map(d=>({owner:d.ownerSurfaceId,subject:d.subjectDraft,description:d.descriptionDraft.slice(-150),comment:d.commentText,reply:!!d.reply,chips:d.commentChips.length}))};})()`
         ),
       });
       await cdp.screenshot(join(root, 'failed.png'));
