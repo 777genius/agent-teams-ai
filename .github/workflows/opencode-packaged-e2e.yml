@@ -11,6 +11,10 @@ on:
         description: 'Explicit openrouter/provider-model for native real tasks'
         type: string
         default: ''
+      native_source_only:
+        description: 'Stop after the native source preflight; no packaging or model tasks'
+        type: boolean
+        default: false
       runtime_candidate_run:
         description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
@@ -42,15 +46,16 @@ permissions:
 
 jobs:
   native-real-tasks:
-    if: github.event_name == 'workflow_dispatch' && inputs.native_sdk_ref != ''
+    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only)
     uses: ./.github/workflows/opencode-native-windows-e2e.yml
     with:
       sdk_ref: ${{ inputs.native_sdk_ref }}
       model: ${{ inputs.native_model }}
+      source_only: ${{ inputs.native_source_only }}
     secrets:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   packaged-windows:
-    if: inputs.native_sdk_ref == ''
+    if: inputs.native_sdk_ref == '' && !inputs.native_source_only
     runs-on: windows-latest
     timeout-minutes: 60
     steps:

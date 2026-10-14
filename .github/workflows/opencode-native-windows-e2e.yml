@@ -9,6 +9,9 @@ on:
       model:
         required: true
         type: string
+      source_only:
+        type: boolean
+        default: false
     secrets:
       OPENROUTER_API_KEY:
         required: true
@@ -22,6 +25,10 @@ on:
         description: Explicit authorized OpenRouter model ID including openrouter/ prefix
         required: true
         type: string
+      source_only:
+        description: Stop after source preflight without packaging or model tasks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,6 +67,7 @@ jobs:
         with:
           bun-version: '1.3.11'
       - name: Seed private runner-local TEST provider auth
+        if: ${{ !inputs.source_only }}
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
@@ -82,6 +90,7 @@ jobs:
           bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
+        if: ${{ !inputs.source_only }}
         working-directory: .test-sdk
         shell: pwsh
         run: |
@@ -96,10 +105,12 @@ jobs:
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Select Windows release compiler Bun
+        if: ${{ !inputs.source_only }}
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
       - name: Build and stage the verified runtime candidate
+        if: ${{ !inputs.source_only }}
         working-directory: .test-sdk
         shell: pwsh
         env:
@@ -128,6 +139,7 @@ jobs:
           New-Item -ItemType Directory -Force ../resources/runtime | Out-Null
           Copy-Item candidate/runtime/* ../resources/runtime -Recurse -Force
       - name: Install and package the desktop app
+        if: ${{ !inputs.source_only }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -146,6 +158,7 @@ jobs:
           node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
           if ($LASTEXITCODE -ne 0) { throw 'Desktop native architecture failed' }
       - name: Verify retained candidate bytes and record post-pack manifest
+        if: ${{ !inputs.source_only }}
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
@@ -180,6 +193,7 @@ jobs:
           @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
           "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
       - name: Install exact official OpenCode CLI pins
+        if: ${{ !inputs.source_only }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -188,6 +202,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
       - name: Real V1 and V2 tasks through the bundled runtime
+        if: ${{ !inputs.source_only }}
         id: real_tasks
         shell: pwsh
         env:
@@ -208,7 +223,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Real Windows task scenario failed; no automatic replay' }
           }
       - name: Preserve only sanitized scenario proofs
-        if: always() && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != ''
+        if: ${{ always() && !inputs.source_only && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: opencode-native-windows-proof-${{ github.sha }}
