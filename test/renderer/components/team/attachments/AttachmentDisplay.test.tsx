@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const storeMocks = vi.hoisted(() => ({
@@ -49,25 +50,29 @@ describe('AttachmentDisplay', () => {
 
     await act(async () => {
       root.render(
-        <AttachmentDisplay
-          teamName="team-a"
-          messageId="msg-1"
-          attachments={[
-            {
-              id: 'att-1',
-              filename: 'verification.md',
-              mimeType: 'text/markdown',
-              size: 12,
-            },
-          ]}
-        />
+        <TooltipProvider>
+          <AttachmentDisplay
+            teamName="team-a"
+            messageId="msg-1"
+            attachments={[
+              {
+                id: 'att-1',
+                filename: 'verification.md',
+                mimeType: 'text/markdown',
+                size: 12,
+              },
+            ]}
+          />
+        </TooltipProvider>
       );
     });
     await act(async () => {
       await Promise.resolve();
     });
 
-    const button = host.querySelector<HTMLButtonElement>('button[aria-label="Open verification.md"]');
+    const button = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open verification.md"]'
+    );
     expect(button).not.toBeNull();
 
     await act(async () => {

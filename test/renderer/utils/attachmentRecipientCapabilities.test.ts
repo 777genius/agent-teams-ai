@@ -372,7 +372,7 @@ describe('attachmentRecipientCapabilities', () => {
   });
 
   it('keeps unsupported recipients unavailable for both references and native files', () => {
-    const unsupported = member({ providerId: 'unknown', model: 'custom' });
+    const unsupported = member({ model: 'custom' });
     expect(canMemberShowAttachmentControl(unsupported)).toBe(false);
     expect(getMemberAttachmentUnavailableReason(unsupported)).toBe(
       'Attachments require a supported recipient provider.'
