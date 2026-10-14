@@ -561,9 +561,9 @@ describe('computeEffectiveTeamModel', () => {
     expect(computeEffectiveTeamModel('opus[1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('opus[1m][1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-opus-4-8[1m]', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-opus-4-7[1m]', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-sonnet-4-6', true, 'anthropic')).toBe('sonnet');
+    expect(computeEffectiveTeamModel('claude-opus-4-8[1m]', true, 'anthropic')).toBe('claude-opus-4-8');
+    expect(computeEffectiveTeamModel('claude-opus-4-7[1m]', true, 'anthropic')).toBe('claude-opus-4-7');
+    expect(computeEffectiveTeamModel('claude-sonnet-4-6', true, 'anthropic')).toBe('claude-sonnet-4-6');
   });
 
   it('returns haiku as-is', () => {
