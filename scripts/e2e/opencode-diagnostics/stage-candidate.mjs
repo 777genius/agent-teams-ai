@@ -98,6 +98,19 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
         Array.isArray(receipt.entries) &&
         receipt.entries.length <= 100000
     );
+    // Pinned builder-util copyDir omits these markers and directories without copied files.
+    const marker = (file) => ['.DS_Store', '.gitkeep'].includes(path.posix.basename(file));
+    const pruned = (file) =>
+      (expected.allowedPrunedRoots ?? []).some(
+        (removed) =>
+          typeof removed === 'string' &&
+          removed.startsWith('local-cli/node_modules/') &&
+          !removed.split(/[\\/]/).includes('..') &&
+          (file === removed || file.startsWith(`${removed}/`))
+      );
+    const retainedFiles = receipt.entries
+      .filter(([file, sha]) => sha !== 'directory' && !marker(file) && !pruned(file))
+      .map(([file]) => file);
     for (const [file, sha] of receipt.entries) {
       assert(
         typeof file === 'string' && !path.isAbsolute(file) && !file.split(/[\\/]/).includes('..')
@@ -106,13 +119,10 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
         if (
           packaged &&
           error.code === 'ENOENT' &&
-          (expected.allowedPrunedRoots ?? []).some(
-            (removed) =>
-              typeof removed === 'string' &&
-              removed.startsWith('local-cli/node_modules/') &&
-              !removed.split(/[\\/]/).includes('..') &&
-              (file === removed || file.startsWith(`${removed}/`))
-          )
+          (pruned(file) ||
+            (sha !== 'directory' && marker(file)) ||
+            (sha === 'directory' &&
+              !retainedFiles.some((retained) => retained.startsWith(`${file}/`))))
         )
           return null;
         throw error;

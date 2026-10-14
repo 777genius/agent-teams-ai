@@ -103,6 +103,10 @@ test('complete candidate publication replaces stale published JS/Bun and detects
   const { default: os } = await import('node:os');
   const { default: path } = await import('node:path');
   const { publishRuntimePayload } = await import('../../lib/runtime-payload-cache.mjs');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const builderRequire = createRequire(require.resolve('electron-builder/package.json'));
+  const { copyDir } = builderRequire('builder-util/out/fs.js');
   const { verifyCandidatePayload } = await import('./stage-candidate.mjs');
   const root = await mkdtemp(path.join(os.tmpdir(), 'TEST-complete-candidate-'));
   const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -111,6 +115,11 @@ test('complete candidate publication replaces stale published JS/Bun and detects
       target = path.join(root, 'staged');
     for (const dir of ['local-cli', 'bun', 'cursor-managed'])
       await mkdir(path.join(source, dir), { recursive: true });
+    for (const dir of ['local-cli/marker-only', 'local-cli/empty', 'local-cli/retained'])
+      await mkdir(path.join(source, dir), { recursive: true });
+    await writeFile(path.join(source, 'local-cli/marker-only/.gitkeep'), 'marker');
+    await writeFile(path.join(source, 'local-cli/retained/.DS_Store'), 'marker');
+    await writeFile(path.join(source, 'local-cli/retained/code.js'), 'ordinary code');
     await mkdir(target);
     await writeFile(path.join(target, 'only-published-117'), 'stale');
     const exe = Buffer.alloc(1025);
@@ -160,6 +169,36 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     );
     Object.assign(expected, verified);
     await verifyCandidatePayload(target, expected);
+    const packaged = path.join(root, 'packaged');
+    await copyDir(target, packaged, { isUseHardLink: () => false });
+    for (const omitted of [
+      'local-cli/marker-only',
+      'local-cli/empty',
+      'local-cli/retained/.DS_Store',
+    ])
+      await assert.rejects(readFile(path.join(packaged, omitted)), { code: 'ENOENT' });
+    await verifyCandidatePayload(packaged, expected, { packaged: true });
+    await assert.rejects(
+      verifyCandidatePayload(packaged, expected),
+      'Source inventory stays strict'
+    );
+    const markerFile = path.join(target, 'local-cli/marker-only/.gitkeep');
+    await rm(markerFile);
+    await assert.rejects(
+      verifyCandidatePayload(target, expected),
+      'Source missing marker is refused'
+    );
+    await writeFile(markerFile, 'marker');
+    const retainedFile = path.join(packaged, 'local-cli/retained/code.js');
+    await writeFile(retainedFile, 'changed');
+    await assert.rejects(verifyCandidatePayload(packaged, expected, { packaged: true }));
+    await rm(retainedFile);
+    await assert.rejects(verifyCandidatePayload(packaged, expected, { packaged: true }));
+    await rm(path.dirname(retainedFile), { recursive: true });
+    await assert.rejects(
+      verifyCandidatePayload(packaged, expected, { packaged: true }),
+      'Directory with an original retained descendant cannot disappear'
+    );
     for (const file of [
       'claude-multimodel.exe',
       'local-cli/cli.js',
