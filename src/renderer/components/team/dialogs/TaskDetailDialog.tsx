@@ -149,7 +149,7 @@ const LoadedTaskDetailDialog = ({
         useStore
           .getState()
           .openTaskDetailEditor(
-            { contextId: intent.contextId, teamName: intent.teamName },
+            { contextId: intent.contextId, teamName: intent.teamName, taskId: intent.taskId },
             { projectPath: intent.projectPath, filePath: intent.filePath, line: intent.line }
           )
       )

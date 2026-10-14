@@ -74,15 +74,12 @@ export interface TeamTaskDetailSlice {
   ) => boolean;
   taskDetailEditorActivationFailure: {
     nonce: string;
-    identity: { contextId: string; teamName: string };
+    identity: TaskDetailIdentity;
     intent: TaskDetailEditorIntent;
   } | null;
   pendingTaskDetailEditorRequest: TaskDetailEditorRequest | null;
   setPendingTaskDetailEditorRequest: (request: TaskDetailEditorRequest | null) => void;
-  openTaskDetailEditor: (
-    identity: { contextId: string; teamName: string },
-    intent: TaskDetailEditorIntent
-  ) => boolean;
+  openTaskDetailEditor: (identity: TaskDetailIdentity, intent: TaskDetailEditorIntent) => boolean;
   retryPendingTaskDetailEditor: (nonce: string) => boolean;
   closePendingTaskDetailEditor: (nonce: string) => void;
   closeTaskDetailEditorActivationFailure: (nonce: string) => void;

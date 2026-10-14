@@ -3,6 +3,7 @@ import { createContext, useContext, useMemo } from 'react';
 export interface TaskDetailFileLinkIntent {
   contextId: string;
   teamName: string;
+  taskId: string;
   projectPath: string;
   filePath: string;
   line: number | null;
@@ -11,6 +12,7 @@ export interface TaskDetailFileLinkIntent {
 interface TaskDetailFileLinkContextValue {
   contextId: string;
   teamName: string;
+  taskId: string;
   projectPath: string;
   openFile: (filePath: string, line: number | null) => void;
 }
@@ -20,12 +22,14 @@ const TaskDetailFileLinkContext = createContext<TaskDetailFileLinkContextValue |
 export const TaskDetailFileLinkProvider = ({
   contextId,
   teamName,
+  taskId,
   projectPath,
   onOpenFile,
   children,
 }: {
   contextId: string;
   teamName: string;
+  taskId: string;
   projectPath: string;
   onOpenFile: (intent: TaskDetailFileLinkIntent) => void;
   children: React.ReactNode;
@@ -34,11 +38,12 @@ export const TaskDetailFileLinkProvider = ({
     () => ({
       contextId,
       teamName,
+      taskId,
       projectPath,
       openFile: (filePath: string, line: number | null) =>
-        onOpenFile({ contextId, teamName, projectPath, filePath, line }),
+        onOpenFile({ contextId, teamName, taskId, projectPath, filePath, line }),
     }),
-    [contextId, onOpenFile, projectPath, teamName]
+    [contextId, onOpenFile, projectPath, taskId, teamName]
   );
   return (
     <TaskDetailFileLinkContext.Provider value={value}>

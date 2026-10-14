@@ -62,6 +62,7 @@ export const TaskDetailContent = ({
   return (
     <TaskDetailFileLinkProvider
       contextId={sessionController.identity.contextId}
+      taskId={sessionController.identity.taskId}
       teamName={model.teamName}
       projectPath={model.projectPath ?? ''}
       onOpenFile={(intent) => onOpenInEditor?.(intent)}

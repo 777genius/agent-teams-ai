@@ -90,7 +90,7 @@ export function useTaskDetailEditorHost({
 
   return useCallback((intent: TaskDetailFileLinkIntent) => {
     return useStore.getState().openTaskDetailEditor(
-      { contextId: intent.contextId, teamName: intent.teamName },
+      { contextId: intent.contextId, teamName: intent.teamName, taskId: intent.taskId },
       {
         projectPath: intent.projectPath,
         filePath: intent.filePath,

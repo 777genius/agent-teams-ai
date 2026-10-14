@@ -24,8 +24,7 @@ export const TaskDetailEditorActivationFeedback = ({
     switching ||
     identity.contextId !== contextId ||
     !failure ||
-    taskDetailKey({ ...failure.identity, taskId: '' }) !==
-      taskDetailKey({ ...identity, taskId: '' })
+    taskDetailKey(failure.identity) !== taskDetailKey(identity)
   )
     return null;
   return (

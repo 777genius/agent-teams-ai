@@ -124,7 +124,7 @@ export const TaskDetailPage = ({
     (intent: TaskDetailFileLinkIntent) => {
       if (!sessionController.isOriginCurrent()) return;
       openTaskDetailEditor(
-        { contextId: intent.contextId, teamName: intent.teamName },
+        { contextId: intent.contextId, teamName: intent.teamName, taskId: intent.taskId },
         { projectPath: intent.projectPath, filePath: intent.filePath, line: intent.line }
       );
     },

@@ -2,6 +2,7 @@ import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
+import { TaskDetailEditorActivationFeedback } from '@features/team-task-detail/renderer/adapters/TaskDetailEditorActivationFeedback';
 import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
 import { useTaskDetailEditorHost } from '@features/team-task-detail/renderer/hooks/useTaskDetailEditorHost';
 import { useTaskDetailReviewRoute } from '@features/team-task-detail/renderer/hooks/useTaskDetailReviewRoute';
@@ -294,6 +295,47 @@ describe('task session surface and origin integration', () => {
     });
     expect(reveal).toHaveBeenCalledTimes(1);
     expect(wrongEditor).not.toHaveBeenCalled();
+  });
+
+  it('shows a refused editor activation only in its originating task', async () => {
+    const other = { ...identity, taskId: '2' };
+    const intent = { projectPath: '/TEST/project', filePath: '/TEST/project/a.ts', line: null };
+    useStore.setState({ openTeamTab: vi.fn() });
+    expect(useStore.getState().openTaskDetailEditor(identity, intent)).toBe(false);
+    const nonce = useStore.getState().taskDetailEditorActivationFailure!.nonce;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => {
+      root.render(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(
+            'div',
+            { 'data-source': '1' },
+            React.createElement(TaskDetailEditorActivationFeedback, { identity, active: true })
+          ),
+          React.createElement(
+            'div',
+            { 'data-source': '2' },
+            React.createElement(TaskDetailEditorActivationFeedback, {
+              identity: other,
+              active: true,
+            })
+          )
+        )
+      );
+    });
+    expect(host.querySelector('[data-source="1"] button')).not.toBeNull();
+    expect(host.querySelector('[data-source="2"]')?.textContent).toBe('');
+    await act(async () => {
+      expect(useStore.getState().openTaskDetailEditor(other, intent)).toBe(false);
+    });
+    expect(useStore.getState().retryTaskDetailEditorActivationFailure(nonce)).toBe(false);
+    expect(host.querySelector('[data-source="1"]')?.textContent).toBe('');
+    expect(host.querySelector('[data-source="2"] button')).not.toBeNull();
   });
 
   it('continues a FileReader after dialog unmount and does not read a removed queued file', async () => {
