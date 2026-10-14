@@ -1,5 +1,10 @@
 export * from '../core';
+export * from './adapters/TaskDetailPage';
+export * from './adapters/TaskDetailTab';
 export * from './adapters/taskDraftStorage';
+export * from './hooks/useTaskDetailPresentation';
 export * from './hooks/useTaskDetailSession';
 export * from './ui/TaskDetailCommentImages';
+export * from './ui/TaskDetailContent';
+export type { TaskDetailHeadingProps } from './ui/TaskDetailHeader';
 export * from './ui/TaskDetailWorkflow';

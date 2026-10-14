@@ -9,6 +9,9 @@ import { captureContextScopedRequestEpoch } from '../utils/contextScopedRequestE
 
 import { captureTeamLocalStateEpoch } from './teamLocalStateEpoch';
 
+import type { AppState } from '../types';
+import type { TeamChangeEvent } from '@shared/types';
+
 export type { TaskDetailReadHandle, TaskDetailReadToken } from '@features/team-task-detail/core';
 
 export const teamTaskDetailReadAuthority = createTaskDetailReadAuthority();
@@ -76,4 +79,19 @@ export function invalidateTeamTaskFullResource(identity: {
   taskId: string;
 }): void {
   teamTaskDetailReadAuthority.invalidateFull(identity);
+}
+
+/** Source invalidation belongs to the same task read authority as physical reads. */
+export function invalidateTaskDetailForTeamChange(
+  state: Pick<AppState, 'activeContextId' | 'invalidateTaskDetailTeamSource'>,
+  event: TeamChangeEvent,
+  staleRuntimeEvent: boolean
+): void {
+  if (staleRuntimeEvent) return;
+  if (
+    event.type !== 'task' &&
+    !(event.type === 'task-log-change' && event.taskSignalKind !== 'log')
+  )
+    return;
+  state.invalidateTaskDetailTeamSource(state.activeContextId, event.teamName, event.taskId);
 }

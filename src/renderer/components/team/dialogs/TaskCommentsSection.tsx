@@ -55,7 +55,7 @@ interface TaskCommentsSectionProps {
   /** Extra className on the outer comments container (e.g. negative margins for edge-to-edge). */
   containerClassName?: string;
   /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
-  unreadCommentIds?: Set<string>;
+  unreadCommentIds?: ReadonlySet<string>;
   /** Comment to reveal when the dialog was opened from a notification. */
   focusCommentId?: string;
   /**

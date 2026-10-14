@@ -6484,6 +6484,11 @@ export default interface Resources {
         "newArriving": "New task logs arriving"
       },
       "notFound": "Task not found",
+      "page": {
+        "deleted": "Task deleted",
+        "provisioning": "Task is temporarily unavailable while the team is provisioning",
+        "unavailable": "Task unavailable"
+      },
       "related": {
         "blockedBy": "Blocked by",
         "blocks": "Blocks",

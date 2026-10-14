@@ -5,7 +5,6 @@
 import { api } from '@renderer/api';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { syncRendererTelemetry } from '@renderer/telemetry';
-import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
@@ -55,12 +54,14 @@ import {
 import { createTeamTaskDetailSlice } from './slices/teamTaskDetailSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
+import { invalidateTaskDetailForTeamChange } from './team/taskDetailReadAuthority';
 import {
   cancelNewlyTrashedTeamRefreshes,
   captureTeamManagementRefreshScope,
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
+import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -967,24 +968,8 @@ export function initializeNotificationListeners(): () => void {
     );
   };
 
-  const getVisibleTeamNamesInAnyPane = (state = useStore.getState()): Set<string> => {
-    const { paneLayout } = state;
-    const visibleTeamNames = new Set<string>();
-    for (const pane of paneLayout.panes) {
-      if (!pane.activeTabId) continue;
-      const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-      if (
-        ((activeTab && isOrdinaryTeamTab(activeTab)) || activeTab?.type === 'graph') &&
-        activeTab.teamName != null
-      ) {
-        visibleTeamNames.add(activeTab.teamName);
-      }
-    }
-    return visibleTeamNames;
-  };
-
   const isTeamVisibleInAnyPane = (teamName: string): boolean => {
-    return getVisibleTeamNamesInAnyPane().has(teamName);
+    return getVisibleTeamNamesInAnyPane(useStore.getState()).has(teamName);
   };
 
   const shouldRefreshTeamMessages = (teamName: string): boolean => {
@@ -992,7 +977,7 @@ export function initializeNotificationListeners(): () => void {
   };
 
   const getTrackedTeamMessageRefreshTeams = (): Set<string> => {
-    const tracked = getVisibleTeamNamesInAnyPane();
+    const tracked = getVisibleTeamNamesInAnyPane(useStore.getState());
     for (const teamName of getActiveTeamPendingReplyWaits()) {
       tracked.add(teamName);
     }
@@ -1011,11 +996,11 @@ export function initializeNotificationListeners(): () => void {
   };
 
   const getTrackedToolActivityTeams = (): Set<string> => {
-    return getVisibleTeamNamesInAnyPane();
+    return getVisibleTeamNamesInAnyPane(useStore.getState());
   };
 
   const getTrackedTaskLogActivityTeams = (): Set<string> => {
-    return getVisibleTeamNamesInAnyPane();
+    return getVisibleTeamNamesInAnyPane(useStore.getState());
   };
 
   const noteRelevantTeamActivity = (teamName: string, timestamp = Date.now()): void => {
@@ -1630,19 +1615,7 @@ export function initializeNotificationListeners(): () => void {
         return currentRunId != null && currentRunId !== event.runId;
       })();
 
-      if (
-        !isStaleRuntimeEvent &&
-        (event.type === 'task' ||
-          (event.type === 'task-log-change' && event.taskSignalKind !== 'log'))
-      ) {
-        useStore
-          .getState()
-          .invalidateTaskDetailTeamSource(
-            useStore.getState().activeContextId,
-            event.teamName,
-            event.taskId
-          );
-      }
+      invalidateTaskDetailForTeamChange(useStore.getState(), event, isStaleRuntimeEvent);
 
       const seedCurrentRunIdIfMissing = (): void => {
         if (!event.runId) return;
