@@ -15,7 +15,6 @@ import {
 interface Team {
   teamName: string;
   taskFile: string;
-  markers: { description: string };
 }
 interface Fixture {
   teams: Team[];
@@ -366,14 +365,14 @@ export async function runTaskDeletionCases(
   assert.deepEqual(
     {
       ...restoredTeamState,
-      description: restoredTeamState.description?.includes(teamB.markers.description),
+      description: restoredTeamState.description,
     },
     {
       phase: 'ready',
       draft: durableDeleteDraft,
       composerValue: durableDeleteDraft,
       composerEnabled: true,
-      description: true,
+      description: (JSON.parse(beforeTeamDelete.task) as { description?: string }).description,
     },
     'Accepted team restoration recovered the authoritative full task'
   );
@@ -384,7 +383,7 @@ export async function runTaskDeletionCases(
   );
   record({
     kind: 'whole-team-restore-full-read-recovery',
-    acceptedFullDescriptionMarker: true,
+    acceptedPersistedFullDescription: true,
     draftPreserved: true,
     composerReauthorized: true,
   });
