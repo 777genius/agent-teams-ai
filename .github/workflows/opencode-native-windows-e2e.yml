@@ -216,8 +216,10 @@ jobs:
           $failedPins = @()
           foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
-            $version = (& $binary --version).Trim()
-            if ($LASTEXITCODE -ne 0 -or $version -ne $pin[2]) { throw 'Selected CLI version mismatch' }
+            $versionOutput = (& $binary --version).Trim()
+            $versionExit = $LASTEXITCODE
+            $version = $versionOutput -replace '^opencode\s*v?\s*', ''
+            if ($versionExit -ne 0 -or $version -ne $pin[2]) { throw 'Selected CLI version mismatch' }
             $scenario = @()
             if ($pin[0] -eq 'floor') { $scenario = @('--short') }
             pnpm exec tsx scripts/e2e/opencode-native-windows-full.ts $app bundled $binary $env:SELECTED_MODEL $env:OPENCODE_NATIVE_E2E_AUTH_FILE @scenario

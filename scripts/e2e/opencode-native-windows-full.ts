@@ -177,7 +177,17 @@ type CompletionObservation = {
   terminalTimeValid: boolean;
   commentBeforeTerminal: boolean;
 };
-type StopObservation = { processAlive: boolean; memberCount: number; aliveMemberCount: number };
+type StopObservation = {
+  processAlive: boolean;
+  memberCount: number;
+  aliveMemberCount: number;
+  runId: string | null;
+  livenessKinds: string[];
+};
+type PeerObservation = {
+  matched: boolean[];
+  routes: { from: string; to: string }[];
+};
 async function completed(
   app: App,
   id: string,
@@ -374,15 +384,47 @@ async function exactFile(project: string, name: string, expected?: string) {
 }
 async function stopped(app: App, observe: (value: StopObservation) => Promise<void>) {
   await app.call('stop');
-  const processAlive = await app.call('processAlive');
-  const runtime = await app.call('getRuntime');
-  await observe({
-    processAlive,
-    memberCount: Object.values(runtime.members).length,
-    aliveMemberCount: Object.values(runtime.members).filter((member) => member.alive).length,
-  });
-  assert.equal(processAlive, false);
-  assert(Object.values(runtime.members).every((member) => !member.alive));
+  let previous = '';
+  const settled = await waitFor(
+    async () => {
+      const processAlive = await app.call('processAlive');
+      const runtime = await app.call('getRuntime');
+      const knownKinds = [
+        'confirmed_bootstrap',
+        'runtime_process',
+        'runtime_process_candidate',
+        'permission_blocked',
+        'shell_only',
+        'registered_only',
+        'stale_metadata',
+        'not_found',
+      ];
+      const observation: StopObservation = {
+        processAlive,
+        memberCount: Object.values(runtime.members).length,
+        aliveMemberCount: Object.values(runtime.members).filter((member) => member.alive).length,
+        runId:
+          typeof runtime.runId === 'string' && /^[a-f0-9-]{36}$/i.test(runtime.runId)
+            ? runtime.runId
+            : null,
+        livenessKinds: Object.values(runtime.members).map(
+          (member) => knownKinds.find((kind) => kind === member.livenessKind) ?? 'unknown'
+        ),
+      };
+      const encoded = JSON.stringify(observation);
+      if (encoded !== previous) {
+        await observe(observation);
+        previous = encoded;
+      }
+      return !processAlive && Object.values(runtime.members).every((member) => !member.alive)
+        ? { processAlive, runtime }
+        : null;
+    },
+    'owned stop runtime projection settled',
+    30_000
+  );
+  assert.equal(settled.processAlive, false);
+  assert(Object.values(settled.runtime.members).every((member) => !member.alive));
 }
 
 async function main() {
@@ -417,7 +459,7 @@ async function main() {
     maxBuffer: 4096,
   });
   preproofStage = 'version_validate';
-  const version = /^(?:opencode v)?(\d+\.\d+\.\d+)$/.exec(measured.stdout.trim())?.[1];
+  const version = /^(?:opencode\s*v?\s*)?(\d+\.\d+\.\d+)$/.exec(measured.stdout.trim())?.[1];
   assert(
     version && (/^1\./.test(version) || ['2.0.0', '2.0.21'].includes(version)),
     'Approved OpenCode version required'
@@ -441,6 +483,7 @@ async function main() {
     ...bundled,
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
+    peerObservation: null as PeerObservation | null,
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
     runIds: [] as string[],
     taskIds: [] as string[],
@@ -649,6 +692,7 @@ async function main() {
       maxBuffer: 16_384,
     });
     // Read the real paginated message API, never construct peer messages on behalf of agents.
+    let previousPeerObservation = '';
     await waitFor(
       async () => {
         let cursor: string | undefined;
@@ -663,16 +707,30 @@ async function main() {
           cursor = result.nextCursor;
           assert(page < 19, 'Message proof truncated');
         }
-        return [
+        const matched = [
           ['alice', 'bob', `CHALLENGE:${nonce.alice}`],
           ['bob', 'alice', `ACK:${nonce.alice}`],
           ['bob', 'alice', `CHALLENGE:${nonce.bob}`],
           ['alice', 'bob', `ACK:${nonce.bob}`],
-        ].every(([from, to, text]) =>
+        ].map(([from, to, text]) =>
           rows.some((row) => row.from === from && row.to === to && row.text === text)
-        )
-          ? true
-          : null;
+        );
+        const member = (value: string | undefined) =>
+          ['alice', 'bob', 'team-lead', 'user'].find((name) => name === value) ?? 'other';
+        const routes = [...new Set(rows.map((row) => `${member(row.from)}:${member(row.to)}`))]
+          .sort()
+          .map((route) => {
+            const [from, to] = route.split(':');
+            return { from, to };
+          });
+        const observation = { matched, routes };
+        const encoded = JSON.stringify(observation);
+        if (encoded !== previousPeerObservation) {
+          proof.peerObservation = observation;
+          await checkpoint(proof.stage);
+          previousPeerObservation = encoded;
+        }
+        return matched.every(Boolean) ? true : null;
       },
       'actual peer challenge and acknowledgements',
       240_000
