@@ -39,6 +39,7 @@ interface Manifest {
   userData: string;
   launcher?: Identity;
   artifact: {
+    app: { path: string; sha256: string };
     renderer: string;
     orchestrator: { path: string; sha256: string };
     candidate: Record<string, unknown>;
@@ -358,6 +359,73 @@ async function main() {
   const persist = () =>
     writeFile(path.join(root, 'windows-attachments.json'), JSON.stringify(receipt, null, 2));
   await persist();
+  const packageRoot = path.dirname(data.artifact.app.path);
+  const binaryIdentity = async (file: string, namespace: string) => {
+    const relative = path.relative(namespace, file);
+    assert(relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+    let current = namespace;
+    for (const part of ['', ...relative.split(path.sep)]) {
+      if (part) current = path.join(current, part);
+      const info = await lstat(current);
+      assert(!info.isSymbolicLink() && (current === file ? info.isFile() : info.isDirectory()));
+    }
+    const canonical = await realpath(file);
+    assert(canonical.startsWith((await realpath(namespace)) + path.sep));
+    const handle = await open(file, 'r');
+    try {
+      const before = await handle.stat(),
+        leaf = await lstat(file);
+      assert(
+        before.isFile() &&
+          before.size <= 512 * 1024 * 1024 &&
+          leaf.dev === before.dev &&
+          leaf.ino === before.ino &&
+          !leaf.isSymbolicLink()
+      );
+      const digest = createHash('sha256'),
+        bytes = Buffer.alloc(65536);
+      let position = 0;
+      while (position < before.size) {
+        const chunk = await handle.read(
+          bytes,
+          0,
+          Math.min(bytes.length, before.size - position),
+          position
+        );
+        assert(chunk.bytesRead > 0);
+        digest.update(bytes.subarray(0, chunk.bytesRead));
+        position += chunk.bytesRead;
+      }
+      const after = await lstat(file),
+        final = await handle.stat();
+      assert(
+        !after.isSymbolicLink() &&
+          after.dev === before.dev &&
+          after.ino === before.ino &&
+          after.size === before.size &&
+          final.size === before.size &&
+          final.mtimeMs === before.mtimeMs &&
+          (await realpath(file)) === canonical
+      );
+      current = namespace;
+      for (const part of ['', ...relative.split(path.sep)]) {
+        if (part) current = path.join(current, part);
+        const info = await lstat(current);
+        assert(!info.isSymbolicLink() && (current === file ? info.isFile() : info.isDirectory()));
+      }
+      return { path: canonical, sha256: digest.digest('hex') };
+    } finally {
+      await handle.close();
+    }
+  };
+  const expectedWrapperPath = path.join(
+    packageRoot,
+    'resources/runtime/opencode-console/opencode.exe'
+  );
+  const wrapper = await binaryIdentity(expectedWrapperPath, packageRoot);
+  assert(wrapper.path.toLowerCase() === expectedWrapperPath.toLowerCase());
+  receipt.consoleWrapper = { ...wrapper, provenance: 'APP-BUILD-wrapper', boundBeforeLaunch: true };
+  await persist();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -587,21 +655,101 @@ async function main() {
             host.baseUrl === `http://127.0.0.1:${host.port}`,
           'invalid-host-endpoint'
         );
-        const identity = platform.processes().find((row) => row.pid === host.pid);
+        const snapshot = platform.processes(),
+          identity = snapshot.find((row) => row.pid === host.pid);
+        const observedBranch =
+          identity?.executable?.toLowerCase() === native.binaryPath.toLowerCase()
+            ? 'direct-native'
+            : identity?.executable?.toLowerCase() === wrapper.path.toLowerCase()
+              ? 'packaged-console-wrapper'
+              : 'unknown-executable';
+        receipt.nativeOwnershipComparison = {
+          at: Date.now(),
+          hostPid: host.pid,
+          storedBirthMs: host.processStartedAtMs,
+          observedBirth: identity?.birth ?? null,
+          branch: observedBranch,
+          executableUnavailable: !identity?.executable,
+          observedExecutable:
+            observedBranch === 'direct-native'
+              ? native.binaryPath
+              : observedBranch === 'packaged-console-wrapper'
+                ? wrapper.path
+                : null,
+          nativePath: native.binaryPath,
+          nativeSha256: NATIVE_SHA,
+          wrapperPath: wrapper.path,
+          wrapperSha256: wrapper.sha256,
+        };
         assert(identity, 'host-absent');
         assert(
           Date.parse(identity.birth) === host.processStartedAtMs,
           'host-pid-reused-or-birth-unknown'
         );
+        assert(observedBranch !== 'unknown-executable', 'host-executable-mismatch');
+        const installed = await binaryIdentity(native.binaryPath, data.userData);
         assert(
-          identity.executable?.toLowerCase() === native.binaryPath.toLowerCase(),
-          'host-executable-mismatch'
+          installed.path.toLowerCase() === native.binaryPath.toLowerCase() &&
+            installed.sha256 === NATIVE_SHA,
+          'native-binary-changed'
         );
+        let child: Identity | undefined;
+        if (observedBranch === 'packaged-console-wrapper') {
+          const currentWrapper = await binaryIdentity(wrapper.path, packageRoot);
+          assert(
+            currentWrapper.sha256 === wrapper.sha256 && currentWrapper.path === wrapper.path,
+            'wrapper-binary-changed'
+          );
+          const children = snapshot.filter(
+            (row) =>
+              row.parent === identity.pid &&
+              row.executable?.toLowerCase() === installed.path.toLowerCase() &&
+              Number.isSafeInteger(row.pid) &&
+              row.pid > 0 &&
+              Number.isFinite(Date.parse(row.birth)) &&
+              Date.parse(row.birth) >= host.processStartedAtMs
+          );
+          receipt.nativeOwnershipComparison = {
+            ...(receipt.nativeOwnershipComparison as Record<string, unknown>),
+            directNativeChildCount: children.length,
+          };
+          assert(children.length === 1, 'no-unique-direct-native-child');
+          child = children[0]!;
+          receipt.nativeOwnershipComparison = {
+            ...(receipt.nativeOwnershipComparison as Record<string, unknown>),
+            child: {
+              pid: child.pid,
+              parent: child.parent,
+              birth: child.birth,
+              executable: installed.path,
+            },
+          };
+        }
+        const current = platform.processes(),
+          liveParent = current.find((row) => row.pid === identity.pid);
+        assert(
+          liveParent?.birth === identity.birth &&
+            liveParent.executable?.toLowerCase() === identity.executable?.toLowerCase(),
+          'registered-host-changed'
+        );
+        if (child) {
+          const liveChild = current.find((row) => row.pid === child!.pid);
+          assert(
+            liveChild?.birth === child.birth &&
+              liveChild.parent === identity.pid &&
+              liveChild.executable?.toLowerCase() === installed.path.toLowerCase(),
+            'native-child-changed'
+          );
+        }
         return {
           session,
           host,
           identity,
+          child,
+          branch: observedBranch,
           binding: JSON.stringify([
+            observedBranch,
+            child ? [child.pid, child.parent, child.birth, child.executable] : null,
             session.hostKey,
             session.profileRootKey,
             session.opencodeSessionId,
@@ -1079,6 +1227,11 @@ async function main() {
             'host-absent',
             'host-pid-reused-or-birth-unknown',
             'host-executable-mismatch',
+            'native-binary-changed',
+            'wrapper-binary-changed',
+            'no-unique-direct-native-child',
+            'registered-host-changed',
+            'native-child-changed',
             'session-host-lease-changed',
           ];
           collected.nativeSessionObservation = {
