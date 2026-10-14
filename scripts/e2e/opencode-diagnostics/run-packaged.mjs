@@ -3,7 +3,7 @@
 // copies credentials, edits runtime manifests or launches agents/teams.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { open, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { open, readFile, writeFile, mkdir, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -150,6 +150,90 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       const stopped = command('stop', [root], 60000);
       await writeFile(path.join(runDir, 'stop.txt'), stopped.stdout + stopped.stderr);
       assert.equal(stopped.status, 0, 'Manifest-owned cleanup refused');
+      try {
+        const receiptPath = path.join(root, 'cleanup-graceful.json');
+        const leaf = await lstat(receiptPath);
+        assert(leaf.isFile() && !leaf.isSymbolicLink() && leaf.size <= 1024 * 1024);
+        const after = JSON.parse(await readFile(receiptPath, 'utf8')).afterClose;
+        assert(
+          history?.expected &&
+            after?.observationOnly === true &&
+            Number.isFinite(after.at) &&
+            after.at >= history.at &&
+            after.at <= Date.now()
+        );
+        assert(
+          Array.isArray(after.known) &&
+            after.known.length <= 500 &&
+            Array.isArray(after.descendants) &&
+            after.descendants.length <= 500
+        );
+        const valid = (p) =>
+          p &&
+          Number.isSafeInteger(p.pid) &&
+          p.pid > 0 &&
+          Number.isSafeInteger(p.parent) &&
+          p.parent >= 0 &&
+          typeof p.birth === 'string' &&
+          p.birth.length <= 64 &&
+          Number.isFinite(Date.parse(p.birth)) &&
+          (p.executable === null ||
+            (typeof p.executable === 'string' && p.executable.length <= 4096));
+        const known = after.known.map((record) => record.expected);
+        assert(
+          known.every(
+            (p) =>
+              valid(p) &&
+              history.expected.some(
+                (previous) =>
+                  previous.pid === p.pid &&
+                  previous.birth === p.birth &&
+                  previous.executable === p.executable
+              )
+          )
+        );
+        assert(after.descendants.every(valid));
+        const lineage = [ownedManifest.launcher];
+        for (let index = 0; index < lineage.length; index++) {
+          for (const p of after.descendants) {
+            if (
+              p.parent === lineage[index].pid &&
+              Date.parse(p.birth) >= Date.parse(lineage[index].birth) &&
+              !lineage.some((parent) => parent.pid === p.pid)
+            )
+              lineage.push(p);
+          }
+        }
+        assert(
+          after.descendants.every((p) =>
+            lineage.some(
+              (parent) =>
+                parent.pid === p.pid &&
+                parent.birth === p.birth &&
+                parent.executable === p.executable
+            )
+          )
+        );
+        const union = [...history.expected, ...known, ...after.descendants].filter(
+          (p, index, all) =>
+            all.findIndex((previous) => previous.pid === p.pid && previous.birth === p.birth) ===
+            index
+        );
+        assert(union.length <= 500);
+        history.expected = union.map((p) => ({
+          pid: p.pid,
+          parent: p.parent,
+          birth: p.birth,
+          executable: p.executable,
+        }));
+        history.afterCloseReceipt = {
+          at: after.at,
+          source: 'cleanup-graceful.json/afterClose',
+          observationOnly: true,
+        };
+      } catch {
+        if (history) history.afterCloseCollectionFailed = true;
+      }
       // stop writes the exact identities it signalled; detect surviving owned children
       // even if Electron exited and they have since been reparented.
       const identities = JSON.parse(
@@ -181,7 +265,11 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         let diagnostic;
         try {
           diagnostic = windowsCleanupEvidence([
-            ...new Set([...identities.map((p) => p.pid), ...drain.listenerPids]),
+            ...new Set([
+              ...identities.map((p) => p.pid),
+              ...drain.listenerPids,
+              ...(history?.expected ?? []).map((p) => p.pid),
+            ]),
           ]);
         } catch (error) {
           diagnostic = { collectionError: String(error) };
