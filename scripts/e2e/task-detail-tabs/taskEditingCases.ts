@@ -138,6 +138,11 @@ export async function runTaskEditingAndNavigationCases(
   );
   await pressKey(cdp, 'Enter', 'Enter', 13);
   await waitFile(teamB.taskFile, (task) => task.subject === savedSubject, 'B subject persisted');
+  await until(
+    cdp,
+    `(()=>{const entry=window.__agentTeamsDevStore.getState().taskDetailById[${taskKeyExpression(teamB.teamName)}];return entry?.phase==='ready'&&!entry.loading&&!entry.refreshPending&&entry.full?.subject===${JSON.stringify(savedSubject)}})()`,
+    'B saved subject accepted by the live read model before the next edit'
+  );
 
   await click(
     cdp,
