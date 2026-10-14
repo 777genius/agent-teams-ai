@@ -334,7 +334,7 @@ export async function runTaskEditingAndNavigationCases(
   assert.equal(dedup.composerEnabled, true);
   record({ kind: 'existing-task-tab-open-dedup-and-dialog-close-reclaim', tabsBeforeDedup, dedup });
 
-  const durableText = 'TEST_DURABLE_DRAFT_REOPEN_V8';
+  const durableText = 'TEST_DURABLE_DRAFT_REOPEN_V8 📄README.md';
   await cdp.evaluate(
     `(()=>{const t=${page(teamA.teamName)}.querySelector('textarea[id^="task-comment-input-"]');t.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(t,${JSON.stringify(durableText)});t.dispatchEvent(new Event('input',{bubbles:true}));})()`
   );
