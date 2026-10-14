@@ -222,6 +222,50 @@ describe('task detail origin and loading postconditions', () => {
       expect.objectContaining({ timeoutAction: 'wait', timeoutSeconds: 30 })
     );
   });
+  it('waits for queued live metadata before reading a cold task behind a thin selection', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const key = taskDetailKey(identity);
+    const thin = deferred<TeamViewSnapshot>();
+    const full = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData.mockReturnValueOnce(thin.promise).mockReturnValueOnce(full.promise);
+    apiMock.teams.getTask.mockResolvedValue({
+      id: 'X',
+      subject: 'TEST accepted full task',
+      status: 'in_progress',
+    });
+    store.getState().updateTaskDetailSessionPart(identity, 'commentText', 'TEST queued draft');
+    const selection = store.getState().selectTeam(identity.teamName);
+    const detail = store.getState().ensureTaskDetail(identity);
+    try {
+      await Promise.resolve();
+      expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+      expect(store.getState().taskDetailById[key]).toMatchObject({
+        phase: 'hydrating',
+        loading: true,
+      });
+      thin.resolve(snapshot('/TEST-thin'));
+      await selection;
+      full.resolve(snapshot('/TEST-accepted-full'));
+      await vi.waitFor(() =>
+        expect(store.getState().selectedTeamData?.config.projectPath).toBe('/TEST-accepted-full')
+      );
+      await detail;
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+      expect(store.getState().taskDetailById[key]).toMatchObject({
+        phase: 'ready',
+        full: { id: 'X', subject: 'TEST accepted full task' },
+      });
+      expect(store.getState().taskDetailSessionById[key].commentText).toBe('TEST queued draft');
+    } finally {
+      thin.resolve(snapshot('/TEST-thin'));
+      full.resolve(snapshot('/TEST-accepted-full'));
+      await Promise.allSettled([selection, detail]);
+      await vi.waitFor(() => expect(store.getState().selectedTeamLoading).toBe(false));
+    }
+  });
+
   it('shares one physical resource read across surfaces and keeps other teams independent', async () => {
     const store = createTestStore();
     const identity = { contextId: 'local', teamName: 'team-a', taskId: '1' };
