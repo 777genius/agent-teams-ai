@@ -152,7 +152,7 @@ async function assertOwnedDebugEndpoint() {
 
 if (mode === 'seed-packaged') {
   const options = packagedArguments(process.argv.slice(3));
-  const artifact = await packagedArtifact(options.executable);
+  const artifact = await packagedArtifact(options.executable, options.candidateEvidence);
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
@@ -164,6 +164,7 @@ if (mode === 'seed-packaged') {
     packaged: true,
     artifact,
     runtimeSetup: options.runtimeSetup,
+    ...(options.candidateEvidence ? { candidateEvidence: options.candidateEvidence } : {}),
   };
   await preparePackagedProfile(data);
   data.projectSentinel = await prepareExistingProject(data);
@@ -226,16 +227,25 @@ if (mode === 'seed-packaged') {
     try {
       graceful.outcome = await closePackagedBrowser({
         assertOwnership: assertOwnedDebugEndpoint,
-        readVersion: async () => (await fetch('http://127.0.0.1:9222/json/version', {
-          signal: AbortSignal.timeout(5000),
-        })).json(),
-        connect: endpoint => new WebSocket(endpoint),
+        readVersion: async () =>
+          (
+            await fetch('http://127.0.0.1:9222/json/version', {
+              signal: AbortSignal.timeout(5000),
+            })
+          ).json(),
+        connect: (endpoint) => new WebSocket(endpoint),
       });
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {
         const snapshot = processes();
-        if (!owned.some(entry => entry.pid !== data.launcher.pid && snapshot.some(current =>
-          entry.pid === current.pid && entry.birth === current.birth))) break;
+        if (
+          !owned.some(
+            (entry) =>
+              entry.pid !== data.launcher.pid &&
+              snapshot.some((current) => entry.pid === current.pid && entry.birth === current.birth)
+          )
+        )
+          break;
         await delay(100);
       }
     } catch (error) {
@@ -244,7 +254,8 @@ if (mode === 'seed-packaged') {
     await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
     const survivors = await ownedProcesses();
     for (const entry of survivors)
-      if (!owned.some(prior => prior.pid === entry.pid && prior.birth === entry.birth)) owned.push(entry);
+      if (!owned.some((prior) => prior.pid === entry.pid && prior.birth === entry.birth))
+        owned.push(entry);
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   }
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
@@ -258,7 +269,10 @@ if (mode === 'seed-packaged') {
       signals.push(record);
       const current = processes().find((p) => p.pid === entry.pid);
       record.current = current ?? null;
-      if (!current) { record.outcome = 'missing-from-identity-snapshot'; continue; }
+      if (!current) {
+        record.outcome = 'missing-from-identity-snapshot';
+        continue;
+      }
       sameIdentity(entry, current);
       try {
         process.kill(entry.pid, 'SIGTERM');
@@ -280,7 +294,7 @@ if (mode === 'seed-packaged') {
   if (data.packaged) {
     assert.equal(process.platform, 'win32');
     assert.deepEqual(
-      await packagedArtifact(data.artifact.app.path),
+      await packagedArtifact(data.artifact.app.path, data.candidateEvidence),
       data.artifact,
       'App artifact changed'
     );
@@ -303,7 +317,10 @@ if (mode === 'seed-packaged') {
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   }
   if (data.packaged) setInterval(() => {}, 1000); // Keep ownership root live until explicit stop.
-  if (!data.packaged && (await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario) {
+  if (
+    !data.packaged &&
+    (await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario
+  ) {
     assert.equal(process.platform, 'win32');
     data.cleanupLaunchStartedAt = Date.now();
   }

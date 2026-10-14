@@ -4,14 +4,12 @@ import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
 import { lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { verifyCandidatePayload } from './stage-candidate.mjs';
 import { isolatedEnvironment } from './platform.mjs';
 
 export function packagedArguments(args, platform = process.platform) {
   assert.equal(platform, 'win32', 'Packaged harness requires Windows');
-  assert(
-    args.length === 2 || args.length === 4,
-    'Usage: --packaged-executable <absolute unpacked exe> [--runtime-setup app-install]'
-  );
+  assert([2, 4, 6].includes(args.length), 'Expected executable and bounded supported options');
   assert.equal(args[0], '--packaged-executable');
   const executable = args[1];
   assert(
@@ -22,11 +20,26 @@ export function packagedArguments(args, platform = process.platform) {
     'Expected a local absolute unpacked .exe path, not an installer, UNC path or command'
   );
   assert(!/(?:setup|uninstall)/i.test(path.win32.basename(executable)), 'Installer refused');
-  if (args.length === 4) {
-    assert.equal(args[2], '--runtime-setup');
-    assert.equal(args[3], 'app-install', 'Only the supported app installer is allowed');
+  const options = new Map();
+  for (let index = 2; index < args.length; index += 2) {
+    assert(
+      !options.has(args[index]) && ['--runtime-setup', '--candidate-evidence'].includes(args[index])
+    );
+    options.set(args[index], args[index + 1]);
   }
-  return { executable, runtimeSetup: args.length === 4 ? 'app-install' : 'none' };
+  if (options.has('--runtime-setup')) assert.equal(options.get('--runtime-setup'), 'app-install');
+  const candidateEvidence = options.get('--candidate-evidence');
+  if (candidateEvidence)
+    assert(
+      /^[a-z]:[\\/]/i.test(candidateEvidence) &&
+        path.win32.basename(candidateEvidence) === 'runtime-candidate-evidence.json' &&
+        !/[\x00-\x1f"<>|*?]/.test(candidateEvidence)
+    );
+  return {
+    executable,
+    runtimeSetup: options.has('--runtime-setup') ? 'app-install' : 'none',
+    ...(candidateEvidence ? { candidateEvidence } : {}),
+  };
 }
 
 export function containedPath(candidate, base, paths = path) {
@@ -47,11 +60,28 @@ export async function fingerprint(file) {
   return { path: resolved, sha256: hash.digest('hex') };
 }
 
-export async function packagedArtifact(executable) {
+export async function packagedArtifact(executable, candidateEvidenceFile) {
   const app = await fingerprint(executable);
   const resources = path.join(path.dirname(app.path), 'resources');
   const archive = await fingerprint(path.join(resources, 'app.asar'));
   const orchestrator = await fingerprint(path.join(resources, 'runtime/claude-multimodel.exe'));
+  let candidate;
+  const candidatePath = path.join(resources, 'runtime/TEST-CANDIDATE.json');
+  assert(candidateEvidenceFile || !existsSync(candidatePath), 'Ambient TEST candidate refused');
+  if (candidateEvidenceFile) {
+    candidate = JSON.parse(await readFile(candidateEvidenceFile, 'utf8'));
+    assert(
+      candidate.schemaVersion === 2 &&
+        candidate.testOnly === true &&
+        candidate.repository === '777genius/agent_teams_orchestrator' &&
+        /^sha256:[a-f0-9]{64}$/.test(candidate.artifactDigest ?? '') &&
+        /^[a-f0-9]{64}$/.test(candidate.payloadReceiptSha256 ?? '')
+    );
+    const { payloadReceiptSha256, allowedPrunedRoots, ...staged } = candidate;
+    assert(payloadReceiptSha256 && Array.isArray(allowedPrunedRoots));
+    assert.deepEqual(JSON.parse(await readFile(candidatePath, 'utf8')), staged);
+    await verifyCandidatePayload(path.join(resources, 'runtime'), candidate, { packaged: true });
+  }
   const renderer = path.join(resources, 'app.asar.unpacked/out/renderer/index.html');
   const rendererArtifact = await fingerprint(renderer);
   for (const item of [archive, orchestrator, rendererArtifact])
@@ -60,6 +90,7 @@ export async function packagedArtifact(executable) {
     app,
     archive,
     orchestrator,
+    ...(candidate ? { candidate } : {}),
     rendererArtifact,
     // Electron loadFile uses the virtual asar path even though renderer files are unpacked.
     renderer: path.join(resources, 'app.asar/out/renderer/index.html'),
@@ -233,6 +264,10 @@ export async function runtimeProvenance(status, data, role) {
       'Non-bundled orchestrator refused'
     );
     assert.equal(binary.sha256, data.artifact.orchestrator.sha256, 'Bundled runtime changed');
+    if (data.artifact.candidate)
+      await verifyCandidatePayload(path.dirname(binary.path), data.artifact.candidate, {
+        packaged: true,
+      });
   } else {
     assert.equal(status.source, 'app-managed', 'Installed developer/PATH OpenCode refused');
     const managedRoot = await realpath(path.join(data.userData, 'data/runtimes/opencode'));
@@ -296,33 +331,52 @@ export function probeOrchestratorVersion(
 
 // Ownership is established before ordering; executable names alone grant no authority.
 export function packagedStopOrder(owned, executable) {
-  const main = owned.filter(entry => entry.parent === owned[0]?.pid
-    && entry.executable?.toLowerCase() === executable.toLowerCase());
+  const main = owned.filter(
+    (entry) =>
+      entry.parent === owned[0]?.pid && entry.executable?.toLowerCase() === executable.toLowerCase()
+  );
   assert(main.length <= 1, 'Ambiguous packaged main identity');
-  return [...main, ...owned.filter(entry => entry !== main[0]).reverse()];
+  return [...main, ...owned.filter((entry) => entry !== main[0]).reverse()];
 }
 
 export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
-  const ownedRemaining = identities.filter(entry => snapshot.some(current =>
-    current.pid === entry.pid && current.birth === entry.birth));
-  return { ownedRemaining, listenerPids,
-    drained: ownedRemaining.length === 0 && listenerPids.length === 0 };
+  const ownedRemaining = identities.filter((entry) =>
+    snapshot.some((current) => current.pid === entry.pid && current.birth === entry.birth)
+  );
+  return {
+    ownedRemaining,
+    listenerPids,
+    drained: ownedRemaining.length === 0 && listenerPids.length === 0,
+  };
 }
 
 // Acknowledgement is diagnostic only; the caller must still prove OS/socket drain.
-export async function closePackagedBrowser({ assertOwnership, readVersion, connect, timeoutMs = 5000 }) {
+export async function closePackagedBrowser({
+  assertOwnership,
+  readVersion,
+  connect,
+  timeoutMs = 5000,
+}) {
   await assertOwnership();
   const version = await readVersion();
   const endpoint = new URL(version.webSocketDebuggerUrl);
-  assert(endpoint.protocol === 'ws:' && endpoint.port === '9222'
-    && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
-    && !endpoint.username && !endpoint.password && endpoint.pathname.startsWith('/devtools/browser/'),
-  'Unexpected packaged browser CDP endpoint');
+  assert(
+    endpoint.protocol === 'ws:' &&
+      endpoint.port === '9222' &&
+      ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) &&
+      !endpoint.username &&
+      !endpoint.password &&
+      endpoint.pathname.startsWith('/devtools/browser/'),
+    'Unexpected packaged browser CDP endpoint'
+  );
   await assertOwnership();
   const ws = connect(endpoint);
   try {
     return await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error('Packaged Browser.close timed out')), timeoutMs);
+      const timer = setTimeout(
+        () => finish(new Error('Packaged Browser.close timed out')),
+        timeoutMs
+      );
       let sent = false;
       let finished = false;
       const finish = (error, outcome) => {
@@ -331,13 +385,18 @@ export async function closePackagedBrowser({ assertOwnership, readVersion, conne
         clearTimeout(timer);
         error ? reject(error) : resolve(outcome);
       };
-      ws.once('error', error => finish(error));
-      ws.once('close', () => finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed'));
-      ws.on('message', raw => {
+      ws.once('error', (error) => finish(error));
+      ws.once('close', () =>
+        finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed')
+      );
+      ws.on('message', (raw) => {
         try {
           const response = JSON.parse(String(raw));
-          if (response.id === 1) finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
-        } catch (error) { finish(error); }
+          if (response.id === 1)
+            finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
+        } catch (error) {
+          finish(error);
+        }
       });
       ws.once('open', async () => {
         try {
@@ -346,7 +405,9 @@ export async function closePackagedBrowser({ assertOwnership, readVersion, conne
           if (ws.readyState !== 1) throw new Error('CDP closed during ownership check');
           ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
           sent = true;
-        } catch (error) { finish(error); }
+        } catch (error) {
+          finish(error);
+        }
       });
     });
   } finally {

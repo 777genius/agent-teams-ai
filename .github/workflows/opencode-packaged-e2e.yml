@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       runtime_candidate_run:
-        description: 'Optional runtime CI run with a successful Windows candidate job'
+        description: 'Optional runtime CI run with a successful complete Windows packaged-delivery job'
         type: string
         default: ''
       runtime_candidate_sha:
@@ -72,18 +72,31 @@ jobs:
         shell: pwsh
         run: |
           $candidate = Get-Content runtime-candidate-evidence.json | ConvertFrom-Json
-          $packagedHash = (Get-FileHash 'release/win-unpacked/resources/runtime/claude-multimodel.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($packagedHash -ne $candidate.binarySha256) { throw 'Packaging replaced the verified runtime candidate' }
+          $env:PACKAGED_CANDIDATE_ROOT = (Resolve-Path 'release/win-unpacked/resources/runtime').Path
+          node --input-type=module -e "import {readFile} from 'node:fs/promises'; import {verifyCandidatePayload} from './scripts/e2e/opencode-diagnostics/stage-candidate.mjs'; await verifyCandidatePayload(process.env.PACKAGED_CANDIDATE_ROOT, JSON.parse(await readFile('runtime-candidate-evidence.json','utf8')), {packaged:true});"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Qualify cold and warm packaged starts
+        env:
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
         shell: pwsh
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install
+          $options = @('--packaged-executable', $executable, '--runtime-setup', 'app-install')
+          if ($env:RUNTIME_CANDIDATE_RUN) { $options += @('--candidate-evidence', (Resolve-Path 'runtime-candidate-evidence.json').Path) }
+          node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Prove compiled legacy Windows saved-file read and native image on loopback model
+        if: inputs.runtime_candidate_run != ''
+        shell: pwsh
+        run: |
+          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
+          pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Archive qualified Windows test build
         shell: pwsh
@@ -124,6 +137,8 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
+            scripts/e2e/opencode-diagnostics/windows-attachments.mts
+            runtime-candidate-evidence.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.txt
