@@ -18,7 +18,7 @@ async function until(cdp: Cdp, expression: string, label: string) {
   throw new Error('Timed out: ' + label);
 }
 
-/** Real renderer events and IPC; only the accepted submit's UI completion is held as a race fixture. */
+/** Real renderer inputs and IPC; store access is navigation/evidence only. */
 export async function runSessionAndPaneCases(
   cdp: Cdp,
   fixture: Fixture,
@@ -33,9 +33,13 @@ export async function runSessionAndPaneCases(
   };
   const originalB = await readFile(teamB.taskFile, 'utf8');
   await cdp.evaluate(
-    `(()=>{const store=window.__agentTeamsDevStore;const original=store.getState().addTaskComment;window.__taskTabsSubmitCalls=0;window.__taskTabsSubmitCommitted=false;window.__taskTabsSubmitOriginal=original;const gate=new Promise(resolve=>{window.__taskTabsReleaseSubmit=resolve;});store.setState({addTaskComment:async(...args)=>{window.__taskTabsSubmitCalls++;await original(...args);window.__taskTabsSubmitCommitted=true;await gate;}});const page=[...document.querySelectorAll('[data-task-detail-page]')].find(p=>p.getBoundingClientRect().width>0&&p.querySelector('textarea')?.value.startsWith('TEST_HANDOFF_DRAFT_V7'));const button=page?.querySelector('button.message-composer-send-button');if(!button||button.disabled)throw Error('Actual send button unavailable');button.click();button.click();})()`
+    `(()=>{const page=[...document.querySelectorAll('[data-task-detail-page]')].find(p=>p.getBoundingClientRect().width>0&&p.querySelector('textarea')?.value.startsWith('TEST_HANDOFF_DRAFT_V7'));const button=page?.querySelector('button.message-composer-send-button');if(!button||button.disabled)throw Error('Actual send button unavailable');button.click();button.click();})()`
   );
-  await until(cdp, 'window.__taskTabsSubmitCommitted===true', 'actual comment IPC accepted');
+  await until(
+    cdp,
+    `(()=>{const d=window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(keyA)}];return d&&!d.submitPending&&d.commentText==='';})()`,
+    'actual comment accepted and composer cleared'
+  );
   const savedA = JSON.parse(await readFile(teamA.taskFile, 'utf8')) as {
     comments: { text: string; attachments?: unknown[] }[];
   };
@@ -45,25 +49,24 @@ export async function runSessionAndPaneCases(
     1
   );
   assert.equal(savedA.comments.at(-1)?.attachments?.length, 1);
-  assert(savedA.comments.at(-1)?.text.includes('TEST_HANDOFF_CHIP_V7'));
-  assert(savedA.comments.at(-1)?.text.includes('TEST_HANDOFF_QUOTE_V7'));
+  assert(savedA.comments.at(-1)?.text.includes('README.md'));
+  assert(savedA.comments.at(-1)?.text.includes('COMMENT_TAIL_A'));
   assert.equal(await readFile(teamB.taskFile, 'utf8'), originalB, 'Submit changed the other team');
   await cdp.evaluate(
-    `(()=>{const store=window.__agentTeamsDevStore;const s=store.getState();if(!s.taskDetailSessionById[${JSON.stringify(keyA)}]?.submitPending)throw Error('Submit race fixture lost pending state');s.updateTaskDetailSessionPart(${JSON.stringify(identityA)},'commentText','TEST_NEWER_DRAFT_DURING_ACCEPTED_REPLY');store.setState({addTaskComment:window.__taskTabsSubmitOriginal});window.__taskTabsReleaseSubmit();})()`
+    `(()=>{const page=[...document.querySelectorAll('[data-task-detail-page]')].find(p=>p.getBoundingClientRect().width>0);const t=page.querySelector('textarea[id^="task-comment-input-"]');if(!t||t.disabled)throw Error('Actual composer unavailable after submit');t.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(t,'TEST_NEWER_DRAFT_AFTER_SUBMIT');t.dispatchEvent(new Event('input',{bubbles:true}));})()`
   );
   await until(
     cdp,
-    `(()=>{const d=window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(keyA)}];return d&&!d.submitPending&&d.commentText==='TEST_NEWER_DRAFT_DURING_ACCEPTED_REPLY'&&d.pendingAttachments.length===0;})()`,
-    'newer draft survives accepted old submit completion'
+    `window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(keyA)}]?.commentText==='TEST_NEWER_DRAFT_AFTER_SUBMIT'`,
+    'new typed draft after accepted submit'
   );
-  assert.equal(await cdp.evaluate('window.__taskTabsSubmitCalls'), 1);
   record({
-    kind: 'one-real-comment-with-attachment-and-newer-revision',
+    kind: 'one-real-comment-with-file-chip-reply-and-attachment',
     physicalCommentCount: savedA.comments.length,
     sourceTask: teamA.teamName,
     otherTeamFileUnchanged: true,
-    completionGate:
-      'actual IPC accepted first; newer part staged through dev test store before UI reply release',
+    newerDraftTypedThroughUI: true,
+    asyncReplyRaces: 'covered by controlled critical tests',
   });
 
   // Read a visible comment in A while B is hidden, despite identical comment IDs.

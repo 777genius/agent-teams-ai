@@ -12,11 +12,13 @@ import { join, dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { prepareTaskTabsFixture } from './task-detail-tabs/fixture.ts';
 import { runSessionAndPaneCases } from './task-detail-tabs/sessionCases.ts';
+import { prepareRichTaskDraft } from './task-detail-tabs/richDraftInput.ts';
 
 interface Team {
   teamName: string;
   taskId: string;
   taskFile: string;
+  project: string;
   markers: {
     description: string;
     prompt: string;
@@ -330,7 +332,7 @@ try {
   const teamA = fixture.teams[0],
     teamB = fixture.teams[1];
   await cdp.evaluate(
-    `(async()=>{const s=window.__agentTeamsDevStore.getState();await s.updateConfig('general',{appLocale:'ru'});s.openGlobalTaskDetail(${JSON.stringify(teamA.teamName)},'1');})()`
+    `(async()=>{const s=window.__agentTeamsDevStore.getState();await s.updateConfig('general',{appLocale:'ru'});const taskA=s.paneLayout.panes.flatMap(p=>p.tabs).find(t=>t.taskDetail&&t.teamName===${JSON.stringify(teamA.teamName)});if(!taskA)throw Error('Task A tab missing before cold handoff');s.closeTab(taskA.id);s.openGlobalTaskDetail(${JSON.stringify(teamA.teamName)},'1');})()`
   );
   await until(
     () => cdp!.evaluate(`!!document.querySelector('[role="dialog"] [data-task-detail-open-tab]')`),
@@ -344,7 +346,6 @@ try {
     `(()=>{const d=document.querySelector('[role="dialog"]');const t=d.querySelector('textarea[id^="task-comment-input-"]');if(!t||t.disabled)throw Error('Editable dialog composer missing');t.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(t,'TEST_HANDOFF_DRAFT_V7');t.dispatchEvent(new Event('input',{bubbles:true}));const f=d.querySelector('input[type=file]');const dt=new DataTransfer();dt.items.add(new File(['TEST pending attachment V7'],'task-tabs-test-draft.txt',{type:'text/plain'}));f.files=dt.files;f.dispatchEvent(new Event('change',{bubbles:true}));})()`
   );
   const identityA = { contextId: 'local', teamName: teamA.teamName, taskId: '1' };
-  const identityB = { contextId: 'local', teamName: teamB.teamName, taskId: '1' };
   await until(
     () =>
       cdp!.evaluate(
@@ -353,19 +354,7 @@ try {
     'real dialog text and pending attachment in shared session',
     12000
   );
-  await cdp.evaluate(
-    `(()=>{const s=window.__agentTeamsDevStore.getState();const identity=${JSON.stringify(identityA)};s.updateTaskDetailSessionPart(identity,'commentChips',[{id:'TEST-chip',filePath:'fixture.ts',fileName:'fixture.ts',fromLine:1,toLine:1,codeText:'TEST_HANDOFF_CHIP_V7',language:'typescript'}]);s.updateTaskDetailSessionPart(identity,'commentText','TEST_HANDOFF_DRAFT_V7 📄fixture.ts:1');s.updateTaskDetailSessionPart(identity,'reply',{taskId:'1',author:'TEST reply author',text:'TEST_HANDOFF_QUOTE_V7'});s.updateTaskDetailSessionPart(identity,'subject','TEST_DIRTY_SUBJECT_HANDOFF');})()`
-  );
-  await until(
-    () =>
-      cdp!.evaluate(
-        `!![...document.querySelectorAll('[role="dialog"] input')].find(e=>e.value==='TEST_DIRTY_SUBJECT_HANDOFF')`
-      ),
-    'shared dirty subject editor'
-  );
-  await cdp.evaluate(
-    `[...document.querySelectorAll('[role="dialog"] input')].find(e=>e.value==='TEST_DIRTY_SUBJECT_HANDOFF').focus()`
-  );
+  await prepareRichTaskDraft(cdp, teamA.teamName);
   const beforeHandoff = await cdp.evaluate(
     `(()=>{const s=window.__agentTeamsDevStore.getState();return {tabs:s.paneLayout.panes.flatMap(p=>p.tabs).filter(t=>t.taskDetail).length,owner:s.taskDetailSessionById[JSON.stringify([${JSON.stringify(identityA.contextId)},${JSON.stringify(identityA.teamName)},'1'])]?.ownerSurfaceId};})()`
   );
@@ -388,7 +377,7 @@ try {
   await until(
     () =>
       cdp!.evaluate(
-        `(()=>{const s=window.__agentTeamsDevStore.getState();const d=s.taskDetailSessionById[JSON.stringify([${JSON.stringify(identityA.contextId)},${JSON.stringify(identityA.teamName)},'1'])];const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===p.activeTabId&&t.teamName===${JSON.stringify(teamA.teamName)}&&t.taskDetail));return !s.globalTaskDetail&&p&&d?.ownerSurfaceId===p.activeTabId&&d.commentText.startsWith('TEST_HANDOFF_DRAFT_V7')&&d.commentChips.length===1&&d.reply?.text==='TEST_HANDOFF_QUOTE_V7'&&d.subjectDraft==='TEST_DIRTY_SUBJECT_HANDOFF'&&d.editingSubject&&d.pendingAttachments.length===1;})()`
+        `(()=>{const s=window.__agentTeamsDevStore.getState();const d=s.taskDetailSessionById[JSON.stringify([${JSON.stringify(identityA.contextId)},${JSON.stringify(identityA.teamName)},'1'])];const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.id===p.activeTabId&&t.teamName===${JSON.stringify(teamA.teamName)}&&t.taskDetail));return !s.globalTaskDetail&&p&&d?.ownerSurfaceId===p.activeTabId&&d.commentText.startsWith('TEST_HANDOFF_DRAFT_V7')&&d.commentChips.length===1&&d.reply?.text.includes('COMMENT_TAIL_A')&&d.descriptionDraft.includes('TEST_DIRTY_DESCRIPTION_HANDOFF')&&d.subjectDraft==='TEST_DIRTY_SUBJECT_HANDOFF'&&d.editingSubject&&d.pendingAttachments.length===1;})()`
       ),
     'task-tab handoff preserves draft and file with one owner',
     12000
@@ -398,10 +387,18 @@ try {
   );
   assert.equal(
     (handoff as { tabs: number }).tabs,
-    (beforeHandoff as { tabs: number }).tabs,
-    'Duplicate task tab on handoff'
+    (beforeHandoff as { tabs: number }).tabs + 1,
+    'Cold handoff did not create exactly one task tab'
   );
   assert((handoff as { uniqueComposerIds: boolean }).uniqueComposerIds, 'Composer IDs collide');
+  const chipPaths = await cdp.evaluate(
+    `window.__agentTeamsDevStore.getState().taskDetailSessionById[JSON.stringify(['local',${JSON.stringify(teamA.teamName)},'1'])]?.commentChips.map(chip=>chip.filePath)`
+  );
+  assert.deepEqual(
+    chipPaths,
+    [join(teamA.project, 'README.md')],
+    'File chip used another task project'
+  );
   const afterHandoffTask = JSON.parse(await readFile(teamA.taskFile, 'utf8')) as {
     subject: string;
   };
@@ -417,8 +414,19 @@ try {
     beforeHandoff,
     handoff,
   });
-  await cdp.evaluate(
-    `window.__agentTeamsDevStore.getState().invalidateTaskDetailResources(${JSON.stringify(identityB)})`
+  const hiddenTask = JSON.parse(await readFile(teamB.taskFile, 'utf8')) as { description: string };
+  hiddenTask.description += 'HIDDEN_RESOURCE_EXTERNAL_WRITE';
+  await writeFile(teamB.taskFile + '.hidden.tmp', JSON.stringify(hiddenTask), {
+    flag: 'wx',
+    mode: 0o600,
+  });
+  await rename(teamB.taskFile + '.hidden.tmp', teamB.taskFile);
+  await until(
+    () =>
+      cdp!.evaluate(
+        `(()=>{const s=window.__agentTeamsDevStore.getState();return s.taskDetailById[JSON.stringify(['local',${JSON.stringify(teamB.teamName)},'1'])]?.full?.description?.endsWith('HIDDEN_RESOURCE_EXTERNAL_WRITE');})()`
+      ),
+    'hidden full task updated by real watcher'
   );
   await pause(500);
   const hidden = await cdp.evaluate(
