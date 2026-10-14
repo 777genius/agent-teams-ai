@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   packagedArguments,
   closePackagedBrowser,
@@ -1040,7 +1040,14 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     new Promise((resolve) => {
       execFile(
         process.execPath,
-        ['--import', preload, '--experimental-loader', loader, fileURLToPath(desktop), ...args],
+        [
+          '--import',
+          pathToFileURL(preload).href,
+          '--experimental-loader',
+          pathToFileURL(loader).href,
+          fileURLToPath(desktop),
+          ...args,
+        ],
         { timeout: 10000, env: { ...process.env, TEMP: root, TMP: root } },
         (error, stdout, stderr) => resolve({ error, stdout, stderr })
       );
