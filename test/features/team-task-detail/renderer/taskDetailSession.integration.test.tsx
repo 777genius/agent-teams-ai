@@ -498,6 +498,32 @@ describe('task session surface and origin integration', () => {
     expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
   });
 
+  it('makes deleted-team task details unavailable while preserving drafts and the other team', async () => {
+    let controller!: TaskDetailSessionController;
+    const other = { ...identity, teamName: 'TEST-independent-team' };
+    const otherKey = taskDetailKey(other);
+    await act(async () => {
+      mount('dialog', (value) => {
+        controller = value;
+      });
+      useStore.setState((state) => ({
+        taskDetailById: {
+          ...state.taskDetailById,
+          [otherKey]: { ...createTaskDetailReadEntry(other), phase: 'ready', full: task },
+        },
+      }));
+    });
+    await act(async () => {
+      controller.setCommentText('TEST draft survives unavailable team');
+      useStore.getState().clearDeletedTeamLocalState(identity.teamName);
+    });
+    expect(controller.session.commentText).toBe('TEST draft survives unavailable team');
+    expect(useStore.getState().taskDetailById[otherKey].phase).toBe('ready');
+    expect(useStore.getState().taskDetailById[key].phase).toBe('unavailable');
+    expect(controller.canEditNow()).toBe(false);
+    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
+  });
+
   it.each(['success', 'failure'] as const)(
     'retires a pending submit after a same-team epoch reset before its late %s',
     async (outcome) => {
@@ -565,13 +591,23 @@ describe('task session surface and origin integration', () => {
         submitPending: false,
         submitError: null,
       });
-      expect(controller.canSubmit).toBe(true);
       expect(useStore.getState().taskDetailSessionById[otherKey]).toMatchObject({
         commentText: 'TEST B independent',
         submitPending: true,
       });
       expect(useStore.getState().refreshTeamData).not.toHaveBeenCalled();
       expect(apiMock.teams.addTaskComment).toHaveBeenCalledTimes(1);
+      // A restored team's accepted full data authorizes retry; the deleted
+      // team's previous ready DTO alone must not grant edit permission.
+      await act(async () => {
+        useStore.setState((state) => ({
+          taskDetailById: {
+            ...state.taskDetailById,
+            [key]: { ...createTaskDetailReadEntry(identity), phase: 'ready', full: task },
+          },
+        }));
+      });
+      expect(controller.canSubmit).toBe(true);
     }
   );
 
