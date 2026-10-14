@@ -33,6 +33,9 @@ const IPC_FAILURE_CLASSIFICATIONS = [
   'provider is not configured for runtime use',
   'provider is not authenticated',
   'agent-teams MCP preflight failed before team launch',
+  'run_control_selection_missing',
+  'run_control_native_pending',
+  'run_state_endpoint_missing',
   'is not a function',
   'is not defined',
 ] as const;
