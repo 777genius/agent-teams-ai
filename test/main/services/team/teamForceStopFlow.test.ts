@@ -27,6 +27,7 @@ vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', ()
   reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
+import { OpenCodeRuntimeStopUnconfirmedError } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
@@ -83,6 +84,22 @@ function launchStateStore(result: TeamLaunchStateReadResult): {
 }
 
 describe('runTeamForceStopFlow', () => {
+  it('retains finite native Stop diagnostics across escalation failure', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(async () => {
+        throw new OpenCodeRuntimeStopUnconfirmedError('private diagnostic', [
+          'warning:opencode_stop_status_unconfirmed: SECRET',
+          'error:unknown: SECRET',
+        ]);
+      }),
+    });
+    const result = await stopTeamWithEscalation('fixteam', ports);
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.diagnostics.filter((row) => row.startsWith('stop_failure_code:'))).toEqual([
+      'stop_failure_code:opencode_stop_status_unconfirmed',
+    ]);
+  });
+
   it.each([stopTeamWithEscalation, runTeamForceStopFlow])(
     'logs failed stopped-state admission while continuing scoped runtime Stop',
     async (runStop) => {

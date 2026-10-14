@@ -4,6 +4,7 @@ import {
   assertOpenCodeRuntimeStopEffective,
   collectOpenCodeLaneRuntimePids,
   describeOpenCodeRuntimeStopResult,
+  OpenCodeRuntimeStopUnconfirmedError,
   resolveOpenCodeRuntimeStopOutcome,
 } from '../TeamProvisioningOpenCodeRuntimeStopOutcome';
 
@@ -92,6 +93,32 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
 
     expect(outcome).toEqual({ kind: 'stopped' });
     expect(isRuntimeProcessAlive).not.toHaveBeenCalled();
+  });
+
+  it('retains only fixed diagnostic codes on a still-unconfirmed Stop', () => {
+    try {
+      assertOpenCodeRuntimeStopEffective({
+        result: {
+          stopped: false,
+          diagnostics: [
+            'warning:opencode_stop_status_unconfirmed: SECRET',
+            'error:provider_error: SECRET',
+            'error:unrecognized_SECRET: SECRET',
+          ],
+        },
+        laneId: 'primary',
+        previousLaunchState: null,
+        message: 'Stop failed',
+        logWarning: vi.fn(),
+      });
+      expect.fail('Unconfirmed Stop must reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(OpenCodeRuntimeStopUnconfirmedError);
+      expect((error as OpenCodeRuntimeStopUnconfirmedError).diagnosticCodes).toEqual([
+        'opencode_stop_status_unconfirmed',
+        'provider_error',
+      ]);
+    }
   });
 
   it('rejects an unconfirmed stop even when recorded hosts are gone', () => {

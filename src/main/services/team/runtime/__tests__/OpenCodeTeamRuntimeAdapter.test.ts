@@ -182,6 +182,38 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 });
 
+describe('OpenCodeTeamRuntimeAdapter delivery failure diagnostics', () => {
+  it('retains the bridge failure category without claiming prompt acceptance', async () => {
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      sendOpenCodeTeamMessage: vi.fn(async () => ({
+        accepted: false,
+        memberName: 'alice',
+        diagnostics: [
+          {
+            code: 'contract_violation',
+            severity: 'error',
+            message: 'OpenCode message bridge failed: Bridge stdout was empty',
+          },
+        ],
+      })),
+    } as unknown as OpenCodeTeamRuntimeBridgePort);
+    const result = await adapter.sendMessageToMember({
+      teamName: 'team-a',
+      laneId: 'primary',
+      memberName: 'alice',
+      cwd: '/repo',
+      text: 'Review hand-off',
+      messageId: 'peer-original',
+      replyRecipient: 'bob',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.runtimePromptMessageId).toBeUndefined();
+    expect(result.diagnostics).toEqual([
+      'error:contract_violation: OpenCode message bridge failed: Bridge stdout was empty',
+    ]);
+  });
+});
+
 describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
   async function deliveredPromptText(
     replyRecipient: string | undefined,

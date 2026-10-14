@@ -142,7 +142,55 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     },
     async getOpenCodeRuntimeDeliveryStatus(messageId: string) {
       check();
-      return api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
+      const status = await api.teams.getOpenCodeRuntimeDeliveryStatus(teamName, messageId);
+      if (!status) return null;
+      // Project before CDP transport: never return provider text, paths, IDs or
+      // arbitrary diagnostic suffixes. These categories come from bridge and
+      // delivery contracts, not from model output.
+      const codes = [
+        'unsupported_schema',
+        'unsupported_command',
+        'invalid_input',
+        'runtime_not_ready',
+        'provider_error',
+        'timeout',
+        'transport_watchdog_timeout',
+        'contract_violation',
+        'internal_error',
+        'opencode_runtime_not_active',
+        'opencode_runtime_message_bridge_unavailable',
+        'opencode_project_path_unavailable',
+        'opencode_primary_lane_bootstrap_missing',
+        'opencode_primary_lane_bootstrap_unrecoverable',
+        'opencode_delivery_response_pending',
+        'opencode_prompt_delivery_failed_terminal',
+        'opencode_message_delivery_exception',
+        'opencode_prompt_acceptance_missing_runtime_prompt_id',
+      ];
+      const classify = (value: string | undefined) => {
+        if (!value) return null;
+        return (
+          codes.find(
+            (code) =>
+              value === code ||
+              value.startsWith(`${code}:`) ||
+              ['info', 'warning', 'error'].some((level) => value.startsWith(`${level}:${code}:`))
+          ) ?? 'unclassified'
+        );
+      };
+      return {
+        attempted: status.attempted,
+        accepted: status.accepted,
+        delivered: status.delivered,
+        acceptanceUnknown: status.acceptanceUnknown,
+        responsePending: status.responsePending,
+        ledgerStatus: status.ledgerStatus,
+        responseState: status.responseState,
+        reasonCode: classify(status.reason),
+        diagnosticCodes: [
+          ...new Set((status.diagnostics ?? []).map(classify).filter((code) => code !== null)),
+        ],
+      };
     },
     async sendMessage(request: Parameters<ElectronAPI['teams']['sendMessage']>[1]) {
       check();

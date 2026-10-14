@@ -728,7 +728,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       prePromptCursor: data.prePromptCursor,
       runtimePromptMessageId: data.runtimePromptMessageId,
       responseObservation: data.responseObservation,
-      diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
+      diagnostics: data.diagnostics.map(formatOpenCodeBridgeDiagnostic),
     };
   }
 

@@ -92,6 +92,8 @@ jobs:
             npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
+      - name: Stage the real desktop console wrapper before binary projection
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
       - name: Preflight SDK discovery with exact desktop TEST directories
         shell: pwsh
         run: |
@@ -159,8 +161,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Desktop install failed' }
           node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
           if ($LASTEXITCODE -ne 0) { throw 'Terminal staging failed' }
-          node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
-          if ($LASTEXITCODE -ne 0) { throw 'Console wrapper staging failed' }
           pnpm build
           if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed' }
           pnpm pack:win:x64 --dir --publish never

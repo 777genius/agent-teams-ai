@@ -183,6 +183,7 @@ import {
   buildOriginalUserRequestBlock,
 } from '../services/team/messageDeliveryText';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import { openCodeStopFailureCodes } from '../services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
@@ -4021,7 +4022,10 @@ async function handleStopTeam(
         ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
           (value) => value === result.stopOutcome
         ) ?? 'unknown';
-      throw new Error(`team_stop_unconfirmed:${outcome}`);
+      const codes = openCodeStopFailureCodes(result.diagnostics);
+      throw new Error(
+        `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}`
+      );
     }
   });
 }

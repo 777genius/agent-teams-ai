@@ -197,6 +197,8 @@ type PeerObservation = {
     responsePending?: boolean | null;
     ledgerStatus?: string | null;
     responseState?: string | null;
+    reasonCode?: string | null;
+    diagnosticCodes?: string[];
   }[];
 };
 async function completed(
@@ -787,6 +789,8 @@ async function main() {
                 responsePending: status.responsePending ?? null,
                 ledgerStatus,
                 responseState,
+                reasonCode: status.reasonCode,
+                diagnosticCodes: status.diagnosticCodes,
               };
             } catch {
               return { member, state: 'status_unavailable' as const };

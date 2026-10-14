@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { mkdir, realpath, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { applyOpenCodeRuntimeBinaryEnv } from '../../src/main/services/runtime/openCodeRuntimeBinaryEnv';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 
@@ -140,8 +141,15 @@ assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.3.11');
 assert.equal(process.argv.length, 5);
 const sdk = await realpath(path.resolve(process.argv[2]!));
+const resourcesPath = await realpath(path.resolve('resources'));
+// The desktop's real wrapper must be present so this gate exercises its binary projection.
+await realpath(path.join(resourcesPath, 'runtime', 'opencode-console', 'opencode.exe'));
 async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') {
   const desktop = await prepareNativeDesktopEnvironment();
+  if (binary) {
+    desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = binary;
+    applyOpenCodeRuntimeBinaryEnv(desktop.env, binary, { platform: 'win32', resourcesPath });
+  }
   // Match the packaged Windows scenario exactly: root protection follows child creation.
   await protectWindowsTestDirectory(desktop.root);
   // The read-only receipt requires a named/versioned package for each selected
@@ -237,7 +245,6 @@ try {
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry,
         // Desktop's bridge projects getClaudeBasePath() after the Electron override.
         AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
-        ...(binary ? { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binary } : {}),
       },
       timeout: binary ? 150_000 : 45_000,
       maxBuffer: 65_536,

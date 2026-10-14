@@ -22,6 +22,40 @@ function stringList(value: unknown): string[] {
     : [];
 }
 
+const STOP_FAILURE_CODES = [
+  'opencode_stop_identity_changed',
+  'opencode_stop_status_unconfirmed',
+  'opencode_stop_abort_rejected',
+  'opencode_stop_deadline',
+  'opencode_stop_compensation_failed',
+  'unsupported_schema',
+  'unsupported_command',
+  'invalid_input',
+  'runtime_not_ready',
+  'provider_error',
+  'timeout',
+  'transport_watchdog_timeout',
+  'contract_violation',
+  'internal_error',
+] as const;
+
+/** Finite diagnostics only: never forward native/provider message text. */
+export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
+  const codes = stringList(diagnostics).flatMap((row) => {
+    const code = /^(?:info:|warning:|error:|stop_failure_code:)([a-z_]+)(?::|$)/.exec(row)?.[1];
+    return STOP_FAILURE_CODES.filter((known) => known === code);
+  });
+  return [...new Set(codes)];
+}
+
+export class OpenCodeRuntimeStopUnconfirmedError extends Error {
+  readonly diagnosticCodes: readonly string[];
+  constructor(message: string, diagnostics: unknown) {
+    super(message);
+    this.diagnosticCodes = Object.freeze(openCodeStopFailureCodes(diagnostics));
+  }
+}
+
 export function describeOpenCodeRuntimeStopResult(
   result: OpenCodeRuntimeStopResultLike | null
 ): string {
@@ -93,7 +127,10 @@ export function assertOpenCodeRuntimeStopEffective(input: {
       outcome.alivePids.length > 0
         ? ` (host process still alive: pid ${outcome.alivePids.join(', ')})`
         : ' (no recorded host pid to verify)';
-    throw new Error(`${input.message}${suffix}${alive}`);
+    throw new OpenCodeRuntimeStopUnconfirmedError(
+      `${input.message}${suffix}${alive}`,
+      input.result?.diagnostics
+    );
   }
   return outcome;
 }
