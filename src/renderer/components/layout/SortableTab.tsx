@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { isOrdinaryTeamTab, isTaskDetailTab } from '@renderer/types/tabs';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
@@ -140,7 +141,7 @@ export const SortableTab = ({
     zIndex: isActive ? 1 : 0,
   };
 
-  const Icon = TAB_ICONS[tab.type];
+  const Icon = isTaskDetailTab(tab) ? FileText : TAB_ICONS[tab.type];
 
   const handleRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -150,7 +151,7 @@ export const SortableTab = ({
     [setNodeRef, setRef, tab.id]
   );
 
-  const isTeamTab = tab.type === 'team' && tab.teamName;
+  const isTeamTab = isOrdinaryTeamTab(tab) && tab.teamName;
 
   return (
     <div
@@ -230,7 +231,7 @@ export const SortableTab = ({
  * DragOverlayTab - Semi-transparent ghost of a tab shown during drag.
  */
 export const DragOverlayTab = ({ tab }: { tab: Tab }): React.JSX.Element => {
-  const Icon = TAB_ICONS[tab.type];
+  const Icon = isTaskDetailTab(tab) ? FileText : TAB_ICONS[tab.type];
 
   return (
     <div
