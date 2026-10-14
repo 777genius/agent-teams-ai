@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { open, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
 import { processes, listeners, sameIdentity, windowsCleanupEvidence } from './platform.mjs';
@@ -117,11 +118,91 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       );
       if (!drain.drained) {
         let diagnostic;
-        try { diagnostic = windowsCleanupEvidence([...new Set([...identities.map(p => p.pid), ...drain.listenerPids])]); }
-        catch (error) { diagnostic = { collectionError: String(error) }; }
+        try {
+          diagnostic = windowsCleanupEvidence([
+            ...new Set([...identities.map((p) => p.pid), ...drain.listenerPids]),
+          ]);
+        } catch (error) {
+          diagnostic = { collectionError: String(error) };
+        }
+        try {
+          const loopback = [];
+          for (const operation of ['connect', 'exclusive-bind']) {
+            loopback.push(
+              ...(await Promise.all(
+                ['127.0.0.1', '::1'].map(
+                  (host) =>
+                    new Promise((resolve) => {
+                      const startedAt = Date.now();
+                      const controller = new AbortController();
+                      let resource,
+                        timer,
+                        finished = false;
+                      const finish = (outcome, code) => {
+                        if (finished) return;
+                        finished = true;
+                        clearTimeout(timer);
+                        controller.abort();
+                        if (operation === 'connect') resource?.destroy();
+                        else {
+                          try {
+                            resource?.close();
+                          } catch {
+                            /* Diagnostic resource cleanup cannot replace the original failed drain. */
+                          }
+                        }
+                        resolve({
+                          host,
+                          port: 9222,
+                          operation,
+                          outcome,
+                          code,
+                          startedAt,
+                          elapsedMs: Date.now() - startedAt,
+                        });
+                      };
+                      timer = setTimeout(() => finish('timeout'), 1000);
+                      try {
+                        if (operation === 'connect') {
+                          resource = connect({ host, port: 9222 });
+                          resource.once('connect', () => finish('connected'));
+                        } else {
+                          resource = createServer((socket) => socket.destroy());
+                          resource.once('listening', () => finish('bound'));
+                          resource.listen({
+                            host,
+                            port: 9222,
+                            exclusive: true,
+                            ipv6Only: host === '::1',
+                            signal: controller.signal,
+                          });
+                        }
+                        resource.once('error', (error) =>
+                          finish(
+                            'error',
+                            typeof error.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(error.code)
+                              ? error.code
+                              : 'UNKNOWN'
+                          )
+                        );
+                      } catch {
+                        finish('collection_failed');
+                      }
+                    })
+                )
+              ))
+            );
+          }
+          diagnostic = { ...diagnostic, loopback };
+        } catch {
+          diagnostic = { ...diagnostic, loopbackCollectionFailed: true };
+        }
         await writeFile(path.join(runDir, 'cleanup-os.json'), JSON.stringify(diagnostic, null, 2));
       }
-      assert(drain.drained, 'Owned processes or CDP listener survived cleanup; refusing warm restart');
+      assert(
+        drain.drained,
+        'Owned processes or CDP listener survived cleanup; refusing warm restart'
+      );
       const current = JSON.parse(await readFile(manifestPath, 'utf8'));
       sameIdentity(ownedManifest.launcher, current.launcher);
       delete current.launcher;
