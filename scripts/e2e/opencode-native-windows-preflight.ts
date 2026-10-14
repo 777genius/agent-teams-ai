@@ -8,33 +8,124 @@ import { pathToFileURL } from 'node:url';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 
+type ReadinessExecutor = (
+  input: unknown,
+  executeV1: (input: unknown) => Promise<unknown>
+) => Promise<unknown>;
+
+// Serialized after TypeScript transpilation; no ambient closure or credentials.
+async function verifyModelFreeReadiness(
+  execute: ReadinessExecutor,
+  executeV1: (input: unknown) => Promise<unknown>,
+  projectPath: string,
+  expectedVersion: string
+) {
+  const record = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('TEST readiness response invalid');
+    return value as Record<string, unknown>;
+  };
+  const readiness = record(
+    await execute(
+      {
+        schemaVersion: 1,
+        requestId: 'TEST-source-readiness',
+        command: 'opencode.readiness',
+        cwd: projectPath,
+        startedAt: new Date().toISOString(),
+        timeoutMs: 120_000,
+        body: { selectedModel: 'openrouter/TEST-model', requireExecutionProbe: false },
+      },
+      executeV1
+    )
+  );
+  if (readiness.ok !== true) {
+    const error = record(readiness.error);
+    throw new Error(
+      typeof error.message === 'string' ? error.message : 'TEST model-free readiness refused'
+    );
+  }
+  const data = record(readiness.data),
+    availability = record(data.sourceAvailability);
+  if (
+    data.opencodeVersion !== expectedVersion ||
+    data.state !== 'model_unavailable' ||
+    data.launchAllowed !== false ||
+    data.executionProof !== null ||
+    availability.sourceOnly !== true ||
+    typeof availability.installedGraphFiles !== 'number' ||
+    availability.installedGraphFiles <= 0
+  )
+    throw new Error('TEST model-free readiness contract changed');
+}
+
+async function verifySelectedControllerRoot(
+  inspect: (input: unknown) => Promise<unknown>,
+  projectPath: string
+) {
+  const record = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('TEST selected controller invalid');
+    return value as Record<string, unknown>;
+  };
+  const selection = record(
+    await inspect({
+      schemaVersion: 1,
+      requestId: 'TEST-source-controller',
+      command: 'opencode.readiness',
+      cwd: projectPath,
+      startedAt: new Date().toISOString(),
+      timeoutMs: 120_000,
+      body: { selectedModel: 'openrouter/TEST-model' },
+    })
+  );
+  const controller = record(selection.controller);
+  const localClaude =
+    controller.type === 'local'
+      ? record(controller.environment).AGENT_TEAMS_MCP_CLAUDE_DIR
+      : undefined;
+  if (localClaude !== undefined) {
+    if (typeof localClaude !== 'string') throw new Error('TEST selected controller state invalid');
+    const { lstat, realpath } = await import('node:fs/promises');
+    const stat = await lstat(localClaude);
+    if (
+      !stat.isDirectory() ||
+      stat.isSymbolicLink() ||
+      (await realpath(localClaude)) !== localClaude
+    )
+      throw new Error('TEST selected controller state invalid');
+  }
+}
+
 assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.3.11');
-assert.equal(process.argv.length, 3);
+assert.equal(process.argv.length, 5);
 const sdk = await realpath(path.resolve(process.argv[2]!));
-const desktop = await prepareNativeDesktopEnvironment();
-// Match the packaged Windows scenario exactly: root protection follows child creation.
-await protectWindowsTestDirectory(desktop.root);
-const mcpEntry = path.join(desktop.root, 'TEST-never-launch-mcp.mjs');
-await writeFile(mcpEntry, "throw new Error('Source gate must not launch MCP');\n", {
-  flag: 'wx', mode: 0o600,
-});
-const moduleUrl = pathToFileURL(
-  path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunControl.ts')
-).href;
-const profileModuleUrl = pathToFileURL(
-  path.join(sdk, 'src/services/opencode/OpenCodeProfileManager.ts')
-).href;
-const authModuleUrl = pathToFileURL(
-  path.join(sdk, 'src/services/opencode/OpenCodeAuthStore.ts')
-).href;
-const handlerModuleUrl = pathToFileURL(
-  path.join(sdk, 'src/services/opencode/OpenCodeBridgeCommandHandler.ts')
-).href;
-const selectedBridgeModuleUrl = pathToFileURL(
-  path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2TeamBridge.ts')
-).href;
-const script = `
+async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') {
+  const desktop = await prepareNativeDesktopEnvironment();
+  // Match the packaged Windows scenario exactly: root protection follows child creation.
+  await protectWindowsTestDirectory(desktop.root);
+  const mcpEntry = path.join(desktop.root, 'TEST-never-launch-mcp.mjs');
+  await writeFile(mcpEntry, "throw new Error('Source gate must not launch MCP');\n", {
+    flag: 'wx',
+    mode: 0o600,
+  });
+  const moduleUrl = pathToFileURL(
+    path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunControl.ts')
+  ).href;
+  const profileModuleUrl = pathToFileURL(
+    path.join(sdk, 'src/services/opencode/OpenCodeProfileManager.ts')
+  ).href;
+  const authModuleUrl = pathToFileURL(
+    path.join(sdk, 'src/services/opencode/OpenCodeAuthStore.ts')
+  ).href;
+  const handlerModuleUrl = pathToFileURL(
+    path.join(sdk, 'src/services/opencode/OpenCodeBridgeCommandHandler.ts')
+  ).href;
+  const selectedBridgeModuleUrl = pathToFileURL(
+    path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2TeamBridge.ts')
+  ).href;
+  const script = `
 let stage='startup-cleanup';
 try {
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
@@ -66,34 +157,57 @@ try {
  const { discoverOpenCodeV2Run } = await import(${JSON.stringify(moduleUrl)});
  const owner = await discoverOpenCodeV2Run(process.env.CLAUDE_MULTIMODEL_DATA_HOME,
    ${JSON.stringify(desktop.teamName)}, 'TEST-source-preflight');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok: owner === null,stage}));
- process.exit(owner === null ? 0 : 1);
+ if (owner !== null) throw new Error('TEST unexpected run owner');
+ ${
+   binary
+     ? `stage='probe-controller-state';
+ const { inspectOpenCodeV2LaunchSelection } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
+ await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)});
+ stage='readiness';
+ await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
+   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});`
+     : ''
+ }
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,version:${JSON.stringify(expectedVersion ?? null)}}));
+ process.exit(0);
 } catch (error) {
+ const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,
-   code:match?'execution_owner_not_private':'source_gate_unknown',role:match?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null}));
+   code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null}));
  process.exit(1);
 }`;
-let output = '';
-let code = 0;
-try {
-  ({ stdout: output } = await promisify(execFile)(process.execPath, ['-e', script], {
-    cwd: sdk,
-    env: { ...desktop.env, OPENROUTER_API_KEY: 'TEST-noncredential',
-      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry },
-    timeout: 45_000,
-    maxBuffer: 65_536,
-  }));
-} catch (error: unknown) {
-  code = 1;
-  if (error && typeof error === 'object' && 'stdout' in error && typeof error.stdout === 'string')
-    output = error.stdout;
+  let output = '';
+  let code = 0;
+  try {
+    ({ stdout: output } = await promisify(execFile)(process.execPath, ['-e', script], {
+      cwd: sdk,
+      env: {
+        ...desktop.env,
+        OPENROUTER_API_KEY: 'TEST-noncredential',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry,
+        ...(binary ? { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binary } : {}),
+      },
+      timeout: binary ? 150_000 : 45_000,
+      maxBuffer: 65_536,
+    }));
+  } catch (error: unknown) {
+    code = 1;
+    if (error && typeof error === 'object' && 'stdout' in error && typeof error.stdout === 'string')
+      output = error.stdout;
+  }
+  const receipts = output.split(/\r?\n/).filter((line) => line.startsWith('TEST_SOURCE_GATE='));
+  assert.equal(receipts.length, 1, 'Source preflight receipt unavailable');
+  const receipt: unknown = JSON.parse(receipts[0]!.slice('TEST_SOURCE_GATE='.length));
+  assert(receipt && typeof receipt === 'object' && 'ok' in receipt);
+  console.log(
+    JSON.stringify({ scope: 'desktop TEST setup -> real SDK native discovery', ...receipt })
+  );
+  assert.equal(code, 0, 'Source discovery gate failed; do not package or submit model tasks');
 }
-const receipts = output.split(/\r?\n/).filter((line) => line.startsWith('TEST_SOURCE_GATE='));
-assert.equal(receipts.length, 1, 'Source preflight receipt unavailable');
-const receipt: unknown = JSON.parse(receipts[0]!.slice('TEST_SOURCE_GATE='.length));
-assert(receipt && typeof receipt === 'object' && 'ok' in receipt);
-console.log(
-  JSON.stringify({ scope: 'desktop TEST setup -> real SDK native discovery', ...receipt })
-);
-assert.equal(code, 0, 'Source discovery gate failed; do not package or submit model tasks');
+await preflight();
+for (const [index, version] of ['2.0.0', '2.0.21'].entries()) {
+  const binary = process.argv[index + 3]!;
+  assert(path.isAbsolute(binary));
+  await preflight(await realpath(binary), version as '2.0.0' | '2.0.21');
+}

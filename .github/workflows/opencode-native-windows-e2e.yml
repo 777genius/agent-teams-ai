@@ -84,10 +84,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
           bun scripts/opencode-v2/compile-windows.ts
           if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }
+      - name: Install exact official OpenCode CLI pins
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.21'))) {
+            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
+          }
       - name: Preflight SDK discovery with exact desktop TEST directories
         shell: pwsh
         run: |
-          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk
+          $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
+          $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
+          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
         if: ${{ !inputs.source_only }}
@@ -192,15 +202,6 @@ jobs:
           $manifest = Join-Path $env:RUNNER_TEMP 'TEST-opencode-runtime-manifest.json'
           @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
           "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Install exact official OpenCode CLI pins
-        if: ${{ !inputs.source_only }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.21'))) {
-            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
-            if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
-          }
       - name: Real V1 and V2 tasks through the bundled runtime
         if: ${{ !inputs.source_only }}
         id: real_tasks
