@@ -25,22 +25,33 @@ const moduleUrl = pathToFileURL(
 const profileModuleUrl = pathToFileURL(
   path.join(sdk, 'src/services/opencode/OpenCodeProfileManager.ts')
 ).href;
+const authModuleUrl = pathToFileURL(
+  path.join(sdk, 'src/services/opencode/OpenCodeAuthStore.ts')
+).href;
 const script = `
+let stage='seed-sdk-auth';
 try {
  const { OpenCodeProfileManager, resolveOpenCodeProfileScope } = await import(${JSON.stringify(profileModuleUrl)});
+ const manager = new OpenCodeProfileManager();
+ const { upsertOpenCodeApiAuthCredential } = await import(${JSON.stringify(authModuleUrl)});
+ await upsertOpenCodeApiAuthCredential({authPath:manager.getGlobalAuthPath(),
+   providerId:'openrouter',apiKey:'TEST-noncredential'});
+ stage='resolve-scope';
  const profileScope = await resolveOpenCodeProfileScope({
    projectPath:${JSON.stringify(desktop.projectPath)}, purpose:'launch_runtime',
    selectedModel:'openrouter/TEST-model', env:process.env});
- await new OpenCodeProfileManager().prepareProfile(${JSON.stringify(desktop.projectPath)},
+ stage='prepare-profile';
+ await manager.prepareProfile(${JSON.stringify(desktop.projectPath)},
    {profileScope,includeAppMcp:false,includeManagedSubscriptionPlugins:false});
+ stage='discover';
  const { discoverOpenCodeV2Run } = await import(${JSON.stringify(moduleUrl)});
  const owner = await discoverOpenCodeV2Run(process.env.CLAUDE_MULTIMODEL_DATA_HOME,
    ${JSON.stringify(desktop.teamName)}, 'TEST-source-preflight');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok: owner === null}));
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok: owner === null,stage}));
  process.exit(owner === null ? 0 : 1);
 } catch (error) {
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,
    code:match?'execution_owner_not_private':'source_gate_unknown',role:match?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null}));
  process.exit(1);
 }`;
