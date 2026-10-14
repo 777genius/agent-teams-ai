@@ -112,6 +112,18 @@ export function commitTaskDetailFull(
   error?: unknown
 ): TaskDetailReadEntry {
   if (!canCommitTaskDetailFullRead(entry, token)) return entry;
+  if (result && result.id !== entry.identity.taskId) {
+    return {
+      ...entry,
+      phase: 'unavailable',
+      full: entry.full,
+      fullToken: token,
+      compact: entry.compact,
+      error: `Task detail DTO id mismatch: expected ${entry.identity.taskId}, received ${result.id}`,
+      loading: false,
+      refreshPending: false,
+    };
+  }
   const classified = classifyTaskDetailResult(entry.identity.taskId, result, error);
   const keepFull =
     classified.phase === 'provisioning' || (classified.phase === 'unavailable' && entry.full);

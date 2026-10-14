@@ -1,5 +1,6 @@
 export * from '../core';
 export * from './adapters/TaskDetailPage';
+export * from './adapters/TaskDetailReadCoordinator';
 export * from './adapters/TaskDetailTab';
 export * from './adapters/taskDraftStorage';
 export * from './hooks/useTaskDetailPresentation';

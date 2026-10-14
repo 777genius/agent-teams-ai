@@ -47,6 +47,7 @@ import {
   type SidebarLogsHeightSlice,
 } from '../team/sidebarLogsHeight';
 import {
+  invalidateAcceptedTaskDetailMutation,
   isTaskDetailReadScopeCurrent,
   isTaskDetailTokenCurrent,
   readTeamSnapshotResource,
@@ -873,12 +874,14 @@ function toTaskDetailScope(teamName: string, requestScope: TeamRequestScope) {
 function fetchTeamDataDeduped(
   teamName: string,
   requestScope: TeamRequestScope,
+  isCurrent: () => boolean,
   options?: TeamGetDataOptions
 ): TaskDetailReadHandle<TeamViewSnapshot> {
   const handle = readTeamSnapshotResource(
     teamName,
     toTaskDetailScope(teamName, requestScope),
     (token, markPhysicalStart) => {
+      if (!isCurrent()) return Promise.reject(new Error('team data read scope superseded'));
       const joined = teamDataReadWork.joinOwned(
         teamName,
         getTeamDataSnapshotMode(options),
@@ -890,7 +893,8 @@ function fetchTeamDataDeduped(
           markPhysicalStart();
           recordSnapshotEligibility(teamName, requestScope, token);
           return fetchTeamDataPhysical(teamName, options);
-        }
+        },
+        isCurrent
       );
       return joined.promise;
     },
@@ -903,12 +907,14 @@ function fetchTeamDataDeduped(
 function fetchTeamDataFresh(
   teamName: string,
   requestScope: TeamRequestScope,
+  isCurrent: () => boolean,
   options?: TeamGetDataOptions
 ): TaskDetailReadHandle<TeamViewSnapshot> {
   return readTeamSnapshotResource(
     teamName,
     toTaskDetailScope(teamName, requestScope),
     (token) => {
+      if (!isCurrent()) return Promise.reject(new Error('team data read scope superseded'));
       recordSnapshotEligibility(teamName, requestScope, token);
       return fetchTeamDataPhysical(teamName, options);
     },
@@ -2995,9 +3001,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     let snapshotRead: TaskDetailReadHandle<TeamViewSnapshot> | null = null;
     try {
-      snapshotRead = fetchTeamDataDeduped(teamName, requestScope, {
-        includeMemberBranches: false,
-      });
+      snapshotRead = fetchTeamDataDeduped(
+        teamName,
+        requestScope,
+        () => isTeamRequestScopeCurrent(get, teamName, requestScope),
+        { includeMemberBranches: false }
+      );
       recordSnapshotEligibility(teamName, requestScope, snapshotRead.token);
       const dataResult = await snapshotRead.result;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
@@ -3334,8 +3343,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       const previousData = selectTeamDataForName(get(), teamName);
       snapshotRead = opts?.withDedup
-        ? fetchTeamDataDeduped(teamName, requestScope)
-        : fetchTeamDataFresh(teamName, requestScope);
+        ? fetchTeamDataDeduped(teamName, requestScope, () =>
+            isTeamRequestScopeCurrent(get, teamName, requestScope)
+          )
+        : fetchTeamDataFresh(teamName, requestScope, () =>
+            isTeamRequestScopeCurrent(get, teamName, requestScope)
+          );
       const dataResult = await snapshotRead.result;
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         return;
@@ -3837,11 +3850,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
   requestReview: async (teamName: string, taskId: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     try {
       set({ reviewActionError: null });
       await unwrapIpc('team:requestReview', () => api.teams.requestReview(teamName, taskId));
-      await get().refreshTeamData(teamName);
-      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+      invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+      if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+        await get().refreshTeamData(teamName);
+        void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+      }
     } catch (error) {
       set({
         reviewActionError: mapReviewError(error),
@@ -3851,8 +3868,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeamTask: async (teamName: string, request: CreateTaskRequest) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     const taskStartedAtMs = Date.now();
     const task = await unwrapIpc('team:createTask', () => api.teams.createTask(teamName, request));
+    invalidateAcceptedTaskDetailMutation(get, teamName, task.id, requestScope);
     const teamData = selectTeamDataForName(get(), teamName);
     const hasTaskRefs = hasCreateTaskRefs(request);
     recordTaskCreate({
@@ -3871,32 +3890,45 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       hasAttachments: false,
       hasTaskRefs,
     });
-    await get().refreshTeamData(teamName);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+      await get().refreshTeamData(teamName);
     return task;
   },
 
   startTask: async (teamName: string, taskId: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     const result = await unwrapIpc('team:startTask', () => api.teams.startTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    }
     return result;
   },
 
   startTaskByUser: async (teamName: string, taskId: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     const result = await unwrapIpc('team:startTaskByUser', () =>
       api.teams.startTaskByUser(teamName, taskId)
     );
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    }
     return result;
   },
 
   updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:updateTaskStatus', () =>
       api.teams.updateTaskStatus(teamName, taskId, status)
     );
-    await get().refreshTeamData(teamName);
-    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    }
   },
 
   updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
@@ -3905,6 +3937,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await unwrapIpc('team:updateTaskOwner', () =>
       api.teams.updateTaskOwner(teamName, taskId, owner)
     );
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
     }
@@ -3916,23 +3949,30 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await unwrapIpc('team:updateTaskFields', () =>
       api.teams.updateTaskFields(teamName, taskId, fields)
     );
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
     }
   },
 
   addTaskRelationship: async (teamName, taskId, targetId, type) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:addTaskRelationship', () =>
       api.teams.addTaskRelationship(teamName, taskId, targetId, type)
     );
-    await get().refreshTeamData(teamName);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+      await get().refreshTeamData(teamName);
   },
 
   removeTaskRelationship: async (teamName, taskId, targetId, type) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:removeTaskRelationship', () =>
       api.teams.removeTaskRelationship(teamName, taskId, targetId, type)
     );
-    await get().refreshTeamData(teamName);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+      await get().refreshTeamData(teamName);
   },
 
   setTaskNeedsClarification: async (teamName, taskId, value) => {
@@ -3941,6 +3981,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await unwrapIpc('team:setTaskClarification', () =>
       api.teams.setTaskClarification(teamName, taskId, value)
     );
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
       if (isTeamRequestScopeCurrent(get, teamName, requestScope)) await get().fetchAllTasks();
@@ -3948,6 +3989,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   saveTaskAttachment: async (teamName, taskId, file) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     const id = crypto.randomUUID();
     try {
       await unwrapIpc('team:saveTaskAttachment', () =>
@@ -3961,7 +4003,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         mimeTypes: getAttachmentMimeTypes([file]),
         errorClass: 'none',
       });
-      await get().refreshTeamData(teamName);
+      invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+      if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+        await get().refreshTeamData(teamName);
     } catch (error) {
       recordAttachmentAttachEnd({
         source: 'task',
@@ -3976,10 +4020,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   deleteTaskAttachment: async (teamName, taskId, attachmentId, mimeType) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:deleteTaskAttachment', () =>
       api.teams.deleteTaskAttachment(teamName, taskId, attachmentId, mimeType)
     );
-    await get().refreshTeamData(teamName);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope))
+      await get().refreshTeamData(teamName);
   },
 
   getTaskAttachmentData: async (teamName, taskId, attachmentId, mimeType) => {
@@ -4007,6 +4054,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         });
       }
       if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+        invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
         set({ addingComment: false, addCommentError: null });
         await get().refreshTeamData(teamName);
       }
@@ -4100,6 +4148,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const requestScope = captureTeamRequestScope(get, teamName);
     if (get().isContextSwitching) throw new Error('Task context is switching');
     await unwrapIpc('team:softDeleteTask', () => api.teams.softDeleteTask(teamName, taskId));
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
       if (isTeamRequestScopeCurrent(get, teamName, requestScope))
@@ -4108,9 +4157,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   restoreTask: async (teamName: string, taskId: string) => {
+    const requestScope = captureTeamRequestScope(get, teamName);
     await unwrapIpc('team:restoreTask', () => api.teams.restoreTask(teamName, taskId));
-    await get().refreshTeamData(teamName);
-    await get().fetchDeletedTasks(teamName);
+    invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope);
+    if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
+      await get().refreshTeamData(teamName);
+      await get().fetchDeletedTasks(teamName);
+    }
   },
 
   fetchDeletedTasks: async (teamName: string) => {

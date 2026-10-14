@@ -258,7 +258,7 @@ const TaskDetailDialogHost = memo(
     const detailEntry = useStore((state) =>
       selectedKey ? state.taskDetailById[selectedKey] : undefined
     );
-    const ensureTaskDetail = useStore((state) => state.ensureTaskDetail);
+    const setTaskDetailSurfaceInterest = useStore((state) => state.setTaskDetailSurfaceInterest);
     const projectPath = useStore(
       (state) => selectTeamDataForName(state, teamName)?.config.projectPath ?? null
     );
@@ -281,13 +281,12 @@ const TaskDetailDialogHost = memo(
         openTask: (task) => {
           const identity = { contextId, teamName, taskId: task.id };
           setSelectedIdentity(identity);
-          void ensureTaskDetail(identity);
         },
         close: () => {
           setSelectedIdentity(null);
         },
       }),
-      [contextId, ensureTaskDetail, teamName]
+      [contextId, teamName]
     );
 
     useEffect(() => {
@@ -296,8 +295,17 @@ const TaskDetailDialogHost = memo(
         setSelectedIdentity(null);
         return;
       }
-      void ensureTaskDetail(selectedIdentity);
-    }, [contextId, ensureTaskDetail, selectedIdentity, teamName]);
+    }, [contextId, selectedIdentity, teamName]);
+
+    const registeredIdentity =
+      selectedIdentity?.contextId === contextId && selectedIdentity.teamName === teamName
+        ? selectedIdentity
+        : null;
+    useEffect(() => {
+      const surfaceId = surfaceIdRef.current;
+      setTaskDetailSurfaceInterest(surfaceId, registeredIdentity);
+      return () => setTaskDetailSurfaceInterest(surfaceId, null);
+    }, [registeredIdentity, setTaskDetailSurfaceInterest]);
 
     const dialogTaskMap = useMemo(() => {
       const next = new Map<string, TeamTaskWithKanban>(taskMap);
@@ -319,12 +327,7 @@ const TaskDetailDialogHost = memo(
       }
     }, []);
 
-    if (
-      currentTask === null ||
-      !selectedIdentity ||
-      selectedIdentity.contextId !== contextId ||
-      selectedIdentity.teamName !== teamName
-    ) {
+    if (!registeredIdentity) {
       return null;
     }
 
@@ -332,9 +335,13 @@ const TaskDetailDialogHost = memo(
     const dialog = (
       <DialogComponent
         open
+        loading={
+          currentTask === null &&
+          ['hydrating', 'provisioning'].includes(detailEntry?.phase ?? 'hydrating')
+        }
         task={currentTask}
         teamName={teamName}
-        kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
+        kanbanTaskState={kanbanTaskStateByTaskId[registeredIdentity.taskId]}
         taskMap={dialogTaskMap}
         members={members}
         onClose={() => setSelectedIdentity(null)}

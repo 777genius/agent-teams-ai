@@ -45,6 +45,7 @@ import {
   isTaskDetailTokenCurrent,
   readTeamTaskFullResource,
 } from '../team/taskDetailReadAuthority';
+import { hasTaskDetailReadInterest } from '../team/taskDetailReadInterest';
 
 import type { AppState } from '../types';
 import type { TeamTaskWithKanban } from '@shared/types';
@@ -53,7 +54,9 @@ import type { StateCreator } from 'zustand';
 export interface TeamTaskDetailSlice {
   taskDetailById: Record<string, TaskDetailReadEntry>;
   taskDetailSessionById: Record<string, TaskDetailSession>;
+  taskDetailSurfaceInterests: Record<string, TaskDetailIdentity | null>;
   ensureTaskDetail: (identity: TaskDetailIdentity) => Promise<void>;
+  setTaskDetailSurfaceInterest: (surfaceId: string, identity: TaskDetailIdentity | null) => void;
   applyTaskDetailSnapshot: (
     contextId: string,
     teamName: string,
@@ -134,6 +137,30 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
 ) => ({
   taskDetailById: {},
   taskDetailSessionById: {},
+  taskDetailSurfaceInterests: {},
+
+  setTaskDetailSurfaceInterest: (surfaceId, rawIdentity) => {
+    const identity = rawIdentity ? normalizeTaskDetailIdentity(rawIdentity) : null;
+    set((state) => {
+      const current = state.taskDetailSurfaceInterests[surfaceId] ?? null;
+      const next = identity && isValidTaskDetailIdentity(identity) ? identity : null;
+      if (
+        current === next ||
+        (current &&
+          next &&
+          current.contextId === next.contextId &&
+          current.teamName === next.teamName &&
+          current.taskId === next.taskId)
+      )
+        return state;
+      const interests = { ...state.taskDetailSurfaceInterests };
+      if (next) interests[surfaceId] = next;
+      else delete interests[surfaceId];
+      return {
+        taskDetailSurfaceInterests: interests,
+      };
+    });
+  },
 
   ensureTaskDetail: async (rawIdentity) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
@@ -181,7 +208,12 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     try {
       const result = await handle.result;
       if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
-      if (!isTaskDetailTokenCurrent(result.token, scope)) return;
+      if (!isTaskDetailTokenCurrent(result.token, scope)) {
+        const current = get().taskDetailById[key];
+        if (current?.refreshPending && hasTaskDetailReadInterest(get(), identity))
+          return get().ensureTaskDetail(identity);
+        return;
+      }
       set((state) => {
         const current = state.taskDetailById[key];
         if (!current) return state;

@@ -30,7 +30,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     closeGlobalTaskDetail,
     targetTeamData,
     targetMembers,
-    ensureTaskDetail,
+    setTaskDetailSurfaceInterest,
     taskDetailEntry,
     openTeamTab,
     setPendingReviewRequest,
@@ -45,7 +45,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
         targetMembers: detail
           ? selectResolvedMembersForTeamName(s, detail.teamName)
           : EMPTY_TARGET_MEMBERS,
-        ensureTaskDetail: s.ensureTaskDetail,
+        setTaskDetailSurfaceInterest: s.setTaskDetailSurfaceInterest,
         taskDetailEntry: detail ? s.taskDetailById[taskDetailKey(detail)] : undefined,
         openTeamTab: s.openTeamTab,
         setPendingReviewRequest: s.setPendingReviewRequest,
@@ -78,8 +78,10 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   });
 
   useEffect(() => {
-    if (identity) void ensureTaskDetail(identity);
-  }, [ensureTaskDetail, identity]);
+    const surfaceId = surfaceIdRef.current;
+    setTaskDetailSurfaceInterest(surfaceId, identity);
+    return () => setTaskDetailSurfaceInterest(surfaceId, null);
+  }, [identity, setTaskDetailSurfaceInterest]);
 
   const isFullTeamLoaded = hasTargetTeamData;
 

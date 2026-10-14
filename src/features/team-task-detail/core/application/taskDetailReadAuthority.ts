@@ -187,7 +187,10 @@ export function createTaskDetailReadAuthority(): TaskDetailReadAuthority {
     const join = (pending: TaskDetailPendingRead<unknown>): TaskDetailReadHandle<T> => {
       pending.requested = true;
       if (pending.started) return pending.handle as TaskDetailReadHandle<T>;
-      if (record.active === null) {
+      if (
+        record.current === (pending as TaskDetailPendingRead<unknown>) &&
+        !record.active.has(pending as TaskDetailPendingRead<unknown>)
+      ) {
         return runPending(record, pending as TaskDetailPendingRead<T>, options?.deferPhysicalStart);
       }
       return pending.handle as TaskDetailReadHandle<T>;

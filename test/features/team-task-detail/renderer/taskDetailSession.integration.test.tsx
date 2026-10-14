@@ -2,6 +2,7 @@ import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
+import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
 import { useTaskDetailSession } from '@features/team-task-detail/renderer/hooks/useTaskDetailSession';
 import { useStore } from '@renderer/store';
 import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/teamSlice';
@@ -12,7 +13,7 @@ import type { TaskDetailIdentity } from '@features/team-task-detail/contracts';
 import type { TaskDetailSessionController } from '@features/team-task-detail/renderer';
 import type { TaskComment, TeamTaskWithKanban } from '@shared/types';
 
-const apiMock = vi.hoisted(() => ({ teams: { addTaskComment: vi.fn() } }));
+const apiMock = vi.hoisted(() => ({ teams: { addTaskComment: vi.fn(), getTask: vi.fn() } }));
 vi.mock('@renderer/api', () => ({ api: apiMock }));
 vi.mock('@renderer/services/draftStorage', () => ({
   draftStorage: {
@@ -83,6 +84,49 @@ describe('task session surface and origin integration', () => {
     });
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('refreshes same-ID tasks across teams once per identity from root interest', async () => {
+    const other = { ...identity, teamName: 'TEST-other-team' };
+    const otherKey = taskDetailKey(other);
+    const tails = new Map([
+      [identity.teamName, 'full tail A'],
+      [other.teamName, 'full tail B'],
+    ]);
+    apiMock.teams.getTask.mockImplementation(async (teamName: string) => ({
+      ...task,
+      description: tails.get(teamName),
+    }));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => {
+      useStore.setState({ taskDetailById: {} });
+      useStore.getState().openTaskDetailTab(identity);
+      useStore.getState().openTaskDetailTab(other);
+      useStore.getState().setTaskDetailSurfaceInterest('duplicate-dialog', identity);
+      root.render(React.createElement(TaskDetailReadCoordinator));
+    });
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(2);
+    expect(useStore.getState().taskDetailById[key].full?.description).toBe('full tail A');
+    expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('full tail B');
+
+    tails.set(identity.teamName, 'changed tail A');
+    tails.set(other.teamName, 'changed tail B');
+    await act(async () => {
+      useStore.getState().invalidateTaskDetailTeamSource('local', identity.teamName, '1');
+      useStore.getState().invalidateTaskDetailTeamSource('local', other.teamName, '1');
+    });
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
+    expect(useStore.getState().taskDetailById[key].full?.description).toBe('changed tail A');
+    expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('changed tail B');
+    await act(async () => {
+      useStore.getState().setTaskDetailSurfaceInterest('duplicate-dialog', null);
+      useStore.setState({ selectedProjectId: 'TEST-unrelated-selection' });
+    });
+    expect(useStore.getState().taskDetailSurfaceInterests).not.toHaveProperty('duplicate-dialog');
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
   });
 
   it('continues a FileReader after dialog unmount and does not read a removed queued file', async () => {

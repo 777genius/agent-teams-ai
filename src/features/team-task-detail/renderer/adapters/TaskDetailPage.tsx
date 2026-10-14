@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -40,7 +40,7 @@ export const TaskDetailPage = ({
   surfaceId,
 }: TaskDetailPageProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { contextId, teamName, taskId } = identity;
+  const { contextId, teamName } = identity;
   const identityRef = useRef(identity);
   identityRef.current = identity;
   const {
@@ -81,11 +81,6 @@ export const TaskDetailPage = ({
       activeContextId === identity.contextId &&
       Boolean(identity.teamName.trim() && identity.taskId.trim()),
   });
-
-  useEffect(() => {
-    if (!isActive || activeContextId !== contextId) return;
-    void ensureTaskDetail({ contextId, teamName, taskId });
-  }, [activeContextId, contextId, ensureTaskDetail, isActive, taskId, teamName]);
 
   const taskMap = useMemo(() => {
     const map = new Map<string, TeamTaskWithKanban>();

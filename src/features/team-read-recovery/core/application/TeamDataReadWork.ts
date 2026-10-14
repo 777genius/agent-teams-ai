@@ -26,12 +26,26 @@ export class TeamDataReadWork<T> {
     team: string,
     mode: SnapshotMode,
     scope: TeamReadScope,
-    read: () => Promise<T>
+    read: () => Promise<T>,
+    isCurrent: () => boolean = () => true
   ): TeamDataJoin<T> {
     const owner = this.ensure(team, scope);
     const existing = owner.active[mode];
     if (existing) return { promise: existing, started: false };
-    const request = read().finally(() => {
+    if (!isCurrent()) {
+      const retired = Promise.reject<T>(new Error('team data read scope superseded'));
+      void retired.catch(() => undefined);
+      return { promise: retired, started: false };
+    }
+    let request: Promise<T>;
+    try {
+      request = read();
+    } catch (error) {
+      const failed = Promise.reject<T>(error);
+      void failed.catch(() => undefined);
+      return { promise: failed, started: false };
+    }
+    request = request.finally(() => {
       if (this.owners.get(team) !== owner || owner.active[mode] !== request) return;
       delete owner.active[mode];
       this.prune(team, owner);

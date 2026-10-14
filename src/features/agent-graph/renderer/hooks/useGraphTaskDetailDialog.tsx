@@ -38,7 +38,7 @@ export function useGraphTaskDetailDialog(
     activeContextId,
     activeMembers,
     detailEntry,
-    ensureTaskDetail,
+    setTaskDetailSurfaceInterest,
     teamData,
     updateTaskOwner,
   } = useStore(
@@ -50,7 +50,7 @@ export function useGraphTaskDetailDialog(
       detailEntry: selectedTaskId
         ? state.taskDetailById[taskDetailKey(selectedIdentity!)]
         : undefined,
-      ensureTaskDetail: state.ensureTaskDetail,
+      setTaskDetailSurfaceInterest: state.setTaskDetailSurfaceInterest,
       teamData: selectTeamDataForName(state, teamName),
       updateTaskOwner: state.updateTaskOwner,
     }))
@@ -64,7 +64,6 @@ export function useGraphTaskDetailDialog(
     () => selectedIdentity ?? { contextId: activeContextId, teamName, taskId: '' },
     [activeContextId, selectedIdentity, teamName]
   );
-  const identityKey = selectedTaskId ? taskDetailKey(identity) : null;
   const selectedTask = detailEntry?.full ?? null;
   const surfaceIdRef = useRef(crypto.randomUUID());
   const sessionController = useTaskDetailSession({
@@ -86,16 +85,13 @@ export function useGraphTaskDetailDialog(
       setSelectedIdentity(null);
       return;
     }
-    if (selectedTaskId && identityKey) void ensureTaskDetail(identity);
-  }, [
-    activeContextId,
-    ensureTaskDetail,
-    identity,
-    identityKey,
-    selectedIdentity,
-    selectedTaskId,
-    teamName,
-  ]);
+  }, [activeContextId, selectedIdentity, teamName]);
+
+  useEffect(() => {
+    const surfaceId = surfaceIdRef.current;
+    setTaskDetailSurfaceInterest(surfaceId, selectedIdentity);
+    return () => setTaskDetailSurfaceInterest(surfaceId, null);
+  }, [selectedIdentity, setTaskDetailSurfaceInterest]);
 
   const openTaskDetail = useCallback(
     (taskId: string): void => {
@@ -126,6 +122,10 @@ export function useGraphTaskDetailDialog(
         <Suspense fallback={null}>
           <TaskDetailDialog
             open
+            loading={
+              !selectedTask &&
+              ['hydrating', 'provisioning'].includes(detailEntry?.phase ?? 'hydrating')
+            }
             task={selectedTask}
             teamName={teamName}
             projectPath={teamData?.config.projectPath ?? null}

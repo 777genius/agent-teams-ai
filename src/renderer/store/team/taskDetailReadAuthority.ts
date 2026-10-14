@@ -81,6 +81,24 @@ export function invalidateTeamTaskFullResource(identity: {
   teamTaskDetailReadAuthority.invalidateFull(identity);
 }
 
+export function invalidateAcceptedTaskDetailMutation(
+  get: () => Pick<
+    AppState,
+    'activeContextId' | 'isContextSwitching' | 'invalidateTaskDetailSource'
+  >,
+  teamName: string,
+  taskId: string,
+  scope: Omit<TaskDetailReadScope, 'teamName'>
+): void {
+  const state = get();
+  if (
+    state.isContextSwitching ||
+    !isTaskDetailReadScopeCurrent({ ...scope, teamName }, state.activeContextId, teamName)
+  )
+    return;
+  state.invalidateTaskDetailSource({ contextId: scope.contextId, teamName, taskId });
+}
+
 /** Source invalidation belongs to the same task read authority as physical reads. */
 export function invalidateTaskDetailForTeamChange(
   state: Pick<AppState, 'activeContextId' | 'invalidateTaskDetailTeamSource'>,

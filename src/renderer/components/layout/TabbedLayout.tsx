@@ -20,6 +20,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer';
 import { isElectronMode } from '@renderer/api';
 import { getTrafficLightPaddingForZoom } from '@renderer/constants/layout';
 import { useFullScreen } from '@renderer/hooks/useFullScreen';
@@ -189,6 +190,7 @@ export const TabbedLayout = (): React.JSX.Element => {
           {activeTab ? <DragOverlayTab tab={activeTab} /> : null}
         </DragOverlay>
       </DndContext>
+      <TaskDetailReadCoordinator />
       <GlobalTaskDetailDialogSlot />
       <UpdateDialog />
       <WorkspaceIndicator />

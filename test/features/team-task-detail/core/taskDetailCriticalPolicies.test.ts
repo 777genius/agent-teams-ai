@@ -319,6 +319,22 @@ describe('task detail critical read policies', () => {
     });
   });
 
+  it('rejects a mismatched full DTO without replacing the last correct task', () => {
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const scope = { ...identity, contextEpoch: 1, teamStateEpoch: 1 };
+    const authority = createTaskDetailReadAuthority();
+    const read = authority.readFull(identity, scope, async () => fullTask('X', 'correct'));
+    const correct = commitTaskDetailFull(
+      createTaskDetailReadEntry(identity),
+      read.token,
+      fullTask('X', 'correct')
+    );
+    const mismatched = commitTaskDetailFull(correct, read.token, fullTask('Y', 'wrong'));
+    expect(mismatched.phase).toBe('unavailable');
+    expect(mismatched.full).toBe(correct.full);
+    expect(mismatched.error).toContain('Task detail DTO id mismatch');
+  });
+
   it('keeps the newer A value through a literal submit A/B/A race', () => {
     let session = updateTaskDetailPart(EMPTY_TASK_DETAIL_SESSION, 'commentText', 'A');
     session = beginTaskDetailSubmit(session, {
