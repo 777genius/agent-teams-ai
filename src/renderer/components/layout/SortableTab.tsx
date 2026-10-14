@@ -8,11 +8,12 @@ import { useCallback, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
+import { useTaskDetailTabLabel } from '@features/team-task-detail/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { isOrdinaryTeamTab, isTaskDetailTab } from '@renderer/types/tabs';
+import { isOrdinaryTeamTab, isTaskDetailTab, truncateLabel } from '@renderer/types/tabs';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
@@ -74,6 +75,7 @@ export const SortableTab = ({
   setRef,
 }: SortableTabProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const label = useTaskDetailTabLabel(tab);
   const [isHovered, setIsHovered] = useState(false);
   const { isLight } = useTheme();
 
@@ -188,11 +190,16 @@ export const SortableTab = ({
           <Pin className="size-3 shrink-0 text-blue-400" />
         </span>
       )}
-      <span
-        className={`${tab.label.length > 20 ? 'max-w-[200px] truncate' : ''} whitespace-nowrap text-sm`}
-      >
-        {tab.label}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`${label.length > 20 ? 'max-w-[200px] truncate' : ''} whitespace-nowrap text-sm`}
+          >
+            {truncateLabel(label)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{label}</TooltipContent>
+      </Tooltip>
       {isTeamTab && (
         <TeamTabSectionNav
           teamName={tab.teamName!}
@@ -231,6 +238,7 @@ export const SortableTab = ({
  * DragOverlayTab - Semi-transparent ghost of a tab shown during drag.
  */
 export const DragOverlayTab = ({ tab }: { tab: Tab }): React.JSX.Element => {
+  const label = useTaskDetailTabLabel(tab);
   const Icon = isTaskDetailTab(tab) ? FileText : TAB_ICONS[tab.type];
 
   return (
@@ -246,9 +254,9 @@ export const DragOverlayTab = ({ tab }: { tab: Tab }): React.JSX.Element => {
     >
       <Icon className="size-4 shrink-0" />
       <span
-        className={`${tab.label.length > 20 ? 'max-w-[200px] truncate' : ''} whitespace-nowrap text-sm`}
+        className={`${label.length > 20 ? 'max-w-[200px] truncate' : ''} whitespace-nowrap text-sm`}
       >
-        {tab.label}
+        {truncateLabel(label)}
       </span>
     </div>
   );
