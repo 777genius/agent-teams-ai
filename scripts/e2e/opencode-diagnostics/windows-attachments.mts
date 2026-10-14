@@ -1382,7 +1382,7 @@ async function main() {
     );
     const expectedNonce = binaryBytes.toString('utf8').match(/NONCE ([a-f0-9]{32})/)![1];
     const png = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jPfoAAAAASUVORK5CYII=',
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
       'base64'
     );
     const source = path.join(root, 'original.unknown');
