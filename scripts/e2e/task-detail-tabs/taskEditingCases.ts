@@ -258,7 +258,7 @@ export async function runTaskEditingAndNavigationCases(
   assert.equal(sharedBefore.uniqueComposerIds, true);
 
   const passivePane = (await cdp.evaluate(
-    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.taskDetail&&t.teamName===${JSON.stringify(teamB.teamName)}));if(!p)throw Error('B pane missing');s.focusPane(p.id);return {focusedPaneId:s.paneLayout.focusedPaneId,tabId:p.activeTabId};})()`
+    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=s.paneLayout.panes.find(p=>p.tabs.some(t=>t.taskDetail&&t.teamName===${JSON.stringify(teamB.teamName)}));if(!p)throw Error('B pane missing');s.focusPane(p.id);return {focusedPaneId:p.id,tabId:p.activeTabId};})()`
   )) as { focusedPaneId: string; tabId: string };
   const rawBBeforeWatcher = await readFile(teamB.taskFile, 'utf8');
   const fullBBeforeWatcher = await cdp.evaluate(
