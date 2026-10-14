@@ -72,7 +72,13 @@ export async function runAddressedRoutingCases(
     wrongVisiblePaneIgnored: true,
   });
 
-  const reviewButton = `[...document.querySelectorAll('[data-task-id="1"]')].find(e=>e.getBoundingClientRect().width>0&&e.innerText.includes('TEST A same ID task')&&e.querySelector('button:has(svg.lucide-file-code)'))?.querySelector('button:has(svg.lucide-file-code)')`;
+  const reviewCard = `[...document.querySelectorAll('[data-task-id="1"]')].find(e=>e.getBoundingClientRect().width>0&&e.innerText.includes('TEST A same ID task'))`;
+  await until(cdp, `!!(${reviewCard})`, 'actual A task card');
+  const hoverPoint = (await cdp.evaluate(
+    `(()=>{const e=${reviewCard};e.scrollIntoView({block:'center',behavior:'instant'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`
+  )) as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...hoverPoint });
+  const reviewButton = `(${reviewCard})?.querySelector('button:has(svg.lucide-file-code)')||[...document.querySelectorAll('[data-kanban-task-toolbar="true"] button:has(svg.lucide-file-code)')].find(e=>e.getBoundingClientRect().width>0)`;
   await until(cdp, `!!(${reviewButton})`, 'actual A task review action');
   await click(cdp, reviewButton);
   await until(
