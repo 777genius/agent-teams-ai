@@ -35,7 +35,11 @@ function mount(surfaceId: string, receive: (controller: TaskDetailSessionControl
   const root = createRoot(host);
   roots.push(root);
   const View = () => {
-    const controller = useTaskDetailSession({ identity, surfaceId, currentTask: task });
+    const controller = useTaskDetailSession({
+      identity: { ...identity },
+      surfaceId,
+      currentTask: task,
+    });
     useEffect(() => {
       receive(controller);
     }, [controller]);

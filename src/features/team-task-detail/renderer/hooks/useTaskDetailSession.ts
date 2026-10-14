@@ -76,7 +76,7 @@ function readDataUrl(file: File): Promise<string | null> {
 }
 
 export function useTaskDetailSession({
-  identity,
+  identity: requestedIdentity,
   surfaceId,
   currentTask,
   enabled = true,
@@ -86,6 +86,8 @@ export function useTaskDetailSession({
   currentTask: TeamTaskWithKanban | null;
   enabled?: boolean;
 }): TaskDetailSessionController {
+  const { contextId, teamName, taskId } = requestedIdentity;
+  const identity = useMemo(() => ({ contextId, teamName, taskId }), [contextId, teamName, taskId]);
   const identityKey = taskDetailKey(identity);
   const session = useStore(
     (state) => state.taskDetailSessionById[identityKey] ?? EMPTY_TASK_DETAIL_SESSION

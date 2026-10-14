@@ -47,7 +47,6 @@ export const TaskDetailPage = ({
     activeContextId,
     ensureTaskDetail,
     entry,
-    members,
     openTaskDetailTab,
     openTeamTab,
     setPendingReviewRequest,
@@ -59,9 +58,6 @@ export const TaskDetailPage = ({
       activeContextId: state.activeContextId,
       ensureTaskDetail: state.ensureTaskDetail,
       entry: state.taskDetailById[taskDetailKey(identity)],
-      members: selectResolvedMembersForTeamName(state, identity.teamName).filter(
-        (member) => !member.removedAt
-      ),
       openTaskDetailTab: state.openTaskDetailTab,
       openTeamTab: state.openTeamTab,
       setPendingReviewRequest: state.setPendingReviewRequest,
@@ -69,6 +65,11 @@ export const TaskDetailPage = ({
       teamData: selectTeamDataForName(state, identity.teamName),
       updateTaskOwner: state.updateTaskOwner,
     }))
+  );
+  const members = useStore(
+    useShallow((state) =>
+      selectResolvedMembersForTeamName(state, teamName).filter((member) => !member.removedAt)
+    )
   );
   const currentTask = activeContextId === contextId ? (entry?.full ?? null) : null;
   const sessionController = useTaskDetailSession({
