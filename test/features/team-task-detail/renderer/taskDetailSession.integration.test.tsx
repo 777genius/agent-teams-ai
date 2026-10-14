@@ -517,6 +517,12 @@ describe('task session surface and origin integration', () => {
       controller.setCommentText('TEST draft survives unavailable team');
       useStore.getState().clearDeletedTeamLocalState(identity.teamName);
     });
+    // Soft-deleting a team retains its physical task JSON. A successor full
+    // read must not turn that retained task back into an editable live task.
+    apiMock.teams.getTask.mockResolvedValue({ ...task });
+    await act(async () => {
+      await useStore.getState().ensureTaskDetail(identity);
+    });
     expect(controller.session.commentText).toBe('TEST draft survives unavailable team');
     expect(useStore.getState().taskDetailById[otherKey].phase).toBe('ready');
     expect(useStore.getState().taskDetailById[key].phase).toBe('unavailable');
