@@ -413,6 +413,83 @@ describe('task session surface and origin integration', () => {
     expect(successor.isOwner).toBe(true);
   });
 
+  it.each(['success', 'failure'] as const)(
+    'retires a pending submit after a same-team epoch reset before its late %s',
+    async (outcome) => {
+      let controller!: TaskDetailSessionController;
+      await act(async () => {
+        mount('dialog', (value) => {
+          controller = value;
+        });
+      });
+      await act(async () => controller.setCommentText('TEST draft survives team reset'));
+      const other = { ...identity, teamName: 'TEST-independent-team' };
+      const otherKey = taskDetailKey(other);
+      await act(async () => {
+        useStore.setState((state) => ({
+          taskDetailById: {
+            ...state.taskDetailById,
+            [otherKey]: {
+              ...createTaskDetailReadEntry(other),
+              phase: 'ready',
+              full: task,
+              loading: false,
+            },
+          },
+        }));
+        useStore.getState().updateTaskDetailSessionPart(other, 'commentText', 'TEST B independent');
+        useStore.getState().beginTaskDetailSubmitSession(other);
+      });
+      let resolve!: (comment: TaskComment) => void;
+      let reject!: (error: Error) => void;
+      apiMock.teams.addTaskComment.mockReturnValue(
+        new Promise<TaskComment>((accept, fail) => {
+          resolve = accept;
+          reject = fail;
+        })
+      );
+      let submitting!: Promise<void>;
+      await act(async () => {
+        submitting = controller.submitComment();
+      });
+      expect(useStore.getState().taskDetailSessionById[key].submitPending).toBe(true);
+      await act(async () => {
+        useStore.getState().clearDeletedTeamLocalState(identity.teamName);
+      });
+      await act(async () => {
+        if (outcome === 'failure') reject(new Error('TEST retired request failure'));
+        else
+          resolve({
+            id: 'retired-comment',
+            author: 'user',
+            text: 'TEST draft survives team reset',
+            createdAt: '2026-10-14T00:00:00Z',
+            type: 'regular',
+          });
+        await submitting;
+      });
+      if (outcome === 'failure') {
+        expect(console.error).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toBe(
+          '[Renderer:unwrapIpc] [team:addTaskComment] TEST retired request failure'
+        );
+        vi.mocked(console.error).mockClear();
+      }
+      expect(useStore.getState().taskDetailSessionById[key]).toMatchObject({
+        commentText: 'TEST draft survives team reset',
+        submitPending: false,
+        submitError: null,
+      });
+      expect(controller.canSubmit).toBe(true);
+      expect(useStore.getState().taskDetailSessionById[otherKey]).toMatchObject({
+        commentText: 'TEST B independent',
+        submitPending: true,
+      });
+      expect(useStore.getState().refreshTeamData).not.toHaveBeenCalled();
+      expect(apiMock.teams.addTaskComment).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('keeps a refused handoff and prevents a late submit from changing another context', async () => {
     let source!: TaskDetailSessionController;
     let peer!: TaskDetailSessionController;
