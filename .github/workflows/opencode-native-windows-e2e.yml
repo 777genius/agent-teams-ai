@@ -153,7 +153,8 @@ jobs:
           $candidateEntries = @(Get-ChildItem $candidateRoot -Recurse -Force)
           if ($candidateEntries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw 'Candidate link forbidden' }
           $digests = [ordered]@{}
-          $candidateEntries | Where-Object { !$_.PSIsContainer } | Sort-Object FullName | ForEach-Object {
+          # builder-util copyDir omits these two metadata names before extraResources copying.
+          $candidateEntries | Where-Object { !$_.PSIsContainer -and $_.Name -cnotin @('.gitkeep', '.DS_Store') } | Sort-Object FullName | ForEach-Object {
             $relative = [System.IO.Path]::GetRelativePath($candidateRoot, $_.FullName).Replace([char]92, [char]47)
             $expectedHash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             $delivered = Join-Path $packagedRoot $relative
