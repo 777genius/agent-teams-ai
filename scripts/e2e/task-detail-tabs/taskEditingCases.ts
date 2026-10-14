@@ -170,6 +170,11 @@ export async function runTaskEditingAndNavigationCases(
     `!${pageB}.querySelector('[contenteditable]')`,
     'saved B description editor closed without a new user edit'
   );
+  await until(
+    cdp,
+    `(()=>{const entry=window.__agentTeamsDevStore.getState().taskDetailById[${taskKeyExpression(teamB.teamName)}];return entry?.phase==='ready'&&!entry.loading&&!entry.refreshPending&&entry.full?.description===${JSON.stringify(savedDescription)}})()`,
+    'B saved description accepted before selecting the group chat'
+  );
 
   await click(cdp, `${pageB}.querySelector('[aria-label="Групповой чат"]')`);
   await until(
@@ -185,6 +190,11 @@ export async function runTaskEditingAndNavigationCases(
     teamB.taskFile,
     (task) => task.groupChatId === teamB.groupChatId,
     'B group-chat association persisted'
+  );
+  await until(
+    cdp,
+    `(()=>{const entry=window.__agentTeamsDevStore.getState().taskDetailById[${taskKeyExpression(teamB.teamName)}];return entry?.phase==='ready'&&!entry.loading&&!entry.refreshPending&&entry.full?.groupChatId===${JSON.stringify(teamB.groupChatId)}})()`,
+    'B saved group chat accepted before selecting the owner'
   );
 
   await click(

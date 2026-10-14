@@ -52,6 +52,11 @@ export async function runSessionAndPaneCases(
   assert(savedA.comments.at(-1)?.text.includes('README.md'));
   assert(savedA.comments.at(-1)?.text.includes('COMMENT_TAIL_A'));
   assert.equal(await readFile(teamB.taskFile, 'utf8'), originalB, 'Submit changed the other team');
+  await until(
+    cdp,
+    `(()=>{const page=[...document.querySelectorAll('[data-task-detail-page]')].find(p=>p.getBoundingClientRect().width>0);const input=page?.querySelector('textarea[id^="task-comment-input-"]');return !!input&&!input.disabled&&!input.readOnly;})()`,
+    'composer writable again after the accepted comment refresh'
+  );
   await cdp.evaluate(
     `(()=>{const page=[...document.querySelectorAll('[data-task-detail-page]')].find(p=>p.getBoundingClientRect().width>0);const t=page.querySelector('textarea[id^="task-comment-input-"]');if(!t||t.disabled)throw Error('Actual composer unavailable after submit');t.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(t,'TEST_NEWER_DRAFT_AFTER_SUBMIT');t.dispatchEvent(new Event('input',{bubbles:true}));})()`
   );
