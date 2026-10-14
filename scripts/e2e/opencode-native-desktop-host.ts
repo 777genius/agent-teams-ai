@@ -353,7 +353,9 @@ async function ownsListener(pid: number, port: number): Promise<boolean> {
         '-NoProfile',
         '-NonInteractive',
         '-Command',
-        `@(Get-NetTCPConnection -State Listen -LocalAddress 127.0.0.1 -LocalPort ${port} -ErrorAction SilentlyContinue).OwningProcess | ConvertTo-Json -Compress`,
+        // Filter after querying listeners: the cmdlet reports no matching port
+        // as an error during startup. Actual query failures must still reject.
+        `@(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { $_.LocalAddress -eq '127.0.0.1' -and $_.LocalPort -eq ${port} }).OwningProcess | ConvertTo-Json -Compress`,
       ],
       { timeout: 5000, maxBuffer: 4096 }
     );
