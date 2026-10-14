@@ -104,37 +104,47 @@ export function prepareTaskTabsFixture(
     if (side === 'A') {
       // A real on-disk diagnostic bundle enables the existing review action without
       // inventing Git edits, work intervals, or a provider/agent execution.
-      json(join(project, '.board-task-changes', 'bundles', taskId + '.json'), {
-        schemaVersion: 1,
-        source: 'task-change-ledger',
-        taskId,
-        generatedAt: timestamp,
-        eventCount: 0,
-        files: [],
-        totalLinesAdded: 0,
-        totalLinesRemoved: 0,
-        totalFiles: 0,
-        confidence: 'high',
-        warnings: [],
-        events: [],
-        notices: [
-          {
-            schemaVersion: 1,
-            noticeId: 'TEST-review-routing-notice',
-            taskId,
-            taskRef: taskId,
-            taskRefKind: 'canonical',
-            phase: 'work',
-            executionSeq: 1,
-            sessionId: 'TEST-no-agent-execution',
-            toolUseId: 'TEST-no-tool-execution',
-            timestamp,
-            severity: 'warning',
-            message:
-              'TEST review routing fixture: no agent was run and no file edit is attributed.',
-          },
-        ],
-      });
+      json(
+        join(
+          claude,
+          'projects',
+          project.replace(/\//g, '-'),
+          '.board-task-changes',
+          'bundles',
+          taskId + '.json'
+        ),
+        {
+          schemaVersion: 1,
+          source: 'task-change-ledger',
+          taskId,
+          generatedAt: timestamp,
+          eventCount: 0,
+          files: [],
+          totalLinesAdded: 0,
+          totalLinesRemoved: 0,
+          totalFiles: 0,
+          confidence: 'high',
+          warnings: [],
+          events: [],
+          notices: [
+            {
+              schemaVersion: 1,
+              noticeId: 'TEST-review-routing-notice',
+              taskId,
+              taskRef: taskId,
+              taskRefKind: 'canonical',
+              phase: 'work',
+              executionSeq: 1,
+              sessionId: 'TEST-no-agent-execution',
+              toolUseId: 'TEST-no-tool-execution',
+              timestamp,
+              severity: 'warning',
+              message:
+                'TEST review routing fixture: no agent was run and no file edit is attributed.',
+            },
+          ],
+        }
+      );
     }
     const secondOwner = 'task-owner';
     const members = [
