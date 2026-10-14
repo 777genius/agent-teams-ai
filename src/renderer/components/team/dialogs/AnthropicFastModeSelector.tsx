@@ -41,8 +41,15 @@ export const AnthropicFastModeSelector: React.FC<AnthropicFastModeSelectorProps>
         },
         selectedModel: model,
         limitContext,
+        defaultLaunchModel: providerStatus?.defaultModel,
       }),
-    [limitContext, model, providerStatus?.modelCatalog, providerStatus?.runtimeCapabilities]
+    [
+      limitContext,
+      model,
+      providerStatus?.defaultModel,
+      providerStatus?.modelCatalog,
+      providerStatus?.runtimeCapabilities,
+    ]
   );
 
   const resolution = useMemo(

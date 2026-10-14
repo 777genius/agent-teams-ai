@@ -162,18 +162,21 @@ export function resolveAnthropicRuntimeSelection(params: {
   selectedModel?: string | null;
   limitContext: boolean;
   availableLaunchModels?: Iterable<string>;
+  defaultLaunchModel?: string | null;
 }): AnthropicRuntimeSelection {
   const catalog = getAnthropicCatalog(params.source);
   const availableLaunchModels =
     catalog !== null
       ? catalog.models.map((model) => model.launchModel)
       : params.availableLaunchModels;
+  const defaultLaunchModel =
+    params.defaultLaunchModel?.trim() || catalog?.defaultLaunchModel?.trim() || null;
   const resolvedLaunchModel =
     resolveAnthropicLaunchModel({
       selectedModel: params.selectedModel,
       limitContext: params.limitContext,
       availableLaunchModels,
-      defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
+      defaultLaunchModel,
     }) ?? null;
 
   const catalogModel =

@@ -58,7 +58,7 @@ export function computeEffectiveTeamModel(
   selectedModel: string,
   limitContext: boolean,
   providerId: TeamProviderId = 'anthropic',
-  providerStatus?: Pick<CliProviderStatus, 'providerId' | 'modelCatalog'> | null
+  providerStatus?: Pick<CliProviderStatus, 'providerId' | 'defaultModel' | 'modelCatalog'> | null
 ): string | undefined {
   if (providerId !== 'anthropic') return selectedModel.trim() || undefined;
   const catalog =
@@ -68,7 +68,10 @@ export function computeEffectiveTeamModel(
       selectedModel,
       limitContext,
       availableLaunchModels: catalog?.models.map((model) => model.launchModel),
-      defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
+      defaultLaunchModel:
+        (providerStatus?.providerId === 'anthropic' ? providerStatus.defaultModel?.trim() : null) ||
+        catalog?.defaultLaunchModel ||
+        null,
     }) ?? getAnthropicDefaultTeamModel(limitContext)
   );
 }
