@@ -5,6 +5,7 @@ import { useStore } from '@renderer/store';
 import {
   captureTaskDetailReadScope,
   isTaskDetailReadScopeCurrent,
+  isTaskDetailTeamUnavailable,
 } from '@renderer/store/team/taskDetailReadAuthority';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
@@ -98,6 +99,7 @@ export function useTaskDetailSession({
       switching: state.isContextSwitching,
       phase: state.taskDetailById[identityKey]?.phase,
       deletionIntent: state.taskDetailById[identityKey]?.deletionIntent,
+      teamUnavailable: isTaskDetailTeamUnavailable(state, identity.teamName),
       ...captureTaskDetailReadScope(identity.teamName, identity.contextId),
     }))
   );
@@ -124,6 +126,7 @@ export function useTaskDetailSession({
     enabled &&
     !live.switching &&
     live.activeContextId === identity.contextId &&
+    !live.teamUnavailable &&
     live.phase === 'ready' &&
     live.deletionIntent === null &&
     currentTask?.id === identity.taskId &&
@@ -164,7 +167,9 @@ export function useTaskDetailSession({
     identity,
     isOriginCurrent,
     live.activeContextId,
+    live.phase,
     live.switching,
+    live.teamUnavailable,
     session.ownerSurfaceId,
     surfaceId,
   ]);
@@ -217,6 +222,7 @@ export function useTaskDetailSession({
     const currentTaskState = state.taskDetailById[identityKey]?.full;
     return (
       isOriginCurrent() &&
+      !isTaskDetailTeamUnavailable(state, identity.teamName) &&
       current?.ownerSurfaceId === surfaceId &&
       current.ownerRevision === session.ownerRevision &&
       state.taskDetailById[identityKey]?.phase === 'ready' &&

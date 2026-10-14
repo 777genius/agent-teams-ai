@@ -135,9 +135,11 @@ export function commitTaskDetailFull(
   entry: TaskDetailReadEntry,
   token: TaskReadCommitToken,
   result: TeamTaskWithKanban | null,
-  error?: unknown
+  error?: unknown,
+  teamUnavailable = false
 ): TaskDetailReadEntry {
   if (!canCommitTaskDetailFullRead(entry, token)) return entry;
+  if (teamUnavailable) return markTaskDetailTeamUnavailable(entry);
   if (result && result.id !== entry.identity.taskId) {
     return {
       ...entry,

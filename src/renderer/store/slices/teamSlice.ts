@@ -2133,21 +2133,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName, get);
     set((state) => {
-      const clearedState = collectTeamScopedStateRemovals(state, teamName);
-      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-      if (state.selectedTeamName === teamName) {
-        return {
-          selectedTeamName: null,
-          selectedTeamData: null,
-          selectedTeamLoading: false,
-          selectedTeamError: null,
-          ...clearedState,
-          ...tombstones,
-        };
-      }
+      const deletedAt = nowIso();
+      const team = state.teamByName[teamName];
       return {
-        ...clearedState,
-        ...tombstones,
+        ...(state.selectedTeamName === teamName
+          ? {
+              selectedTeamName: null,
+              selectedTeamData: null,
+              selectedTeamLoading: false,
+              selectedTeamError: null,
+            }
+          : {}),
+        ...collectTeamScopedStateRemovals(state, teamName),
+        ...buildTeamScopedProgressTombstones(state, teamName, deletedAt),
+        ...(team
+          ? {
+              teamByName: {
+                ...state.teamByName,
+                [teamName]: { ...team, deletedAt: team.deletedAt ?? deletedAt },
+              },
+            }
+          : {}),
       };
     });
   },
@@ -4212,17 +4218,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName, get);
-    set((state) => {
-      const clearedState = collectTeamScopedStateRemovals(state, teamName);
-      const tombstones = buildTeamScopedProgressTombstones(state, teamName, nowIso());
-      if (Object.keys(clearedState).length === 0) {
-        return tombstones;
-      }
-      return {
-        ...clearedState,
-        ...tombstones,
-      };
-    });
+    set((state) => ({
+      ...collectTeamScopedStateRemovals(state, teamName),
+      ...buildTeamScopedProgressTombstones(state, teamName, nowIso()),
+    }));
     await get().fetchTeams();
     await get().fetchAllTasks();
   },

@@ -51,6 +51,7 @@ import {
   invalidateTeamSnapshotResource,
   invalidateTeamTaskFullResource,
   isTaskDetailReadScopeCurrent,
+  isTaskDetailTeamUnavailable,
   isTaskDetailTokenCurrent,
   readTeamTaskFullResource,
 } from '../team/taskDetailReadAuthority';
@@ -318,8 +319,16 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       // Full task state classifies the terminal result below.
     }
     if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) return;
-    const beforeRead = get().taskDetailById[key];
-    if (!beforeRead) return;
+    if (!get().taskDetailById[key]) return;
+    if (isTaskDetailTeamUnavailable(get(), identity.teamName)) {
+      set((state) => ({
+        taskDetailById: {
+          ...state.taskDetailById,
+          [key]: markTaskDetailTeamUnavailable(state.taskDetailById[key]!),
+        },
+      }));
+      return;
+    }
 
     const handle = readTeamTaskFullResource(identity, scope, async () => {
       if (!isTaskDetailReadScopeCurrent(scope, get().activeContextId, identity.teamName)) {
@@ -348,13 +357,15 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
           return get().ensureTaskDetail(identity);
         return;
       }
+      const unavailable = isTaskDetailTeamUnavailable(get(), identity.teamName);
+      const value = result.value ?? null;
       set((state) => {
         const current = state.taskDetailById[key];
         if (!current) return state;
         return {
           taskDetailById: {
             ...state.taskDetailById,
-            [key]: commitTaskDetailFull(current, result.token, result.value ?? null, result.error),
+            [key]: commitTaskDetailFull(current, result.token, value, result.error, unavailable),
           },
         };
       });
@@ -364,6 +375,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   },
 
   applyTaskDetailSnapshot: (contextId, teamName, tasks, snapshotToken) => {
+    const teamUnavailable = isTaskDetailTeamUnavailable(get(), teamName);
     set((state) => {
       const next = { ...state.taskDetailById };
       let changed = false;
@@ -371,7 +383,9 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
         if (entry.identity.contextId !== contextId) continue;
         if (entry.identity.teamName !== teamName) continue;
         const compact = tasks.find((task) => task.id === entry.identity.taskId);
-        const merged = applyTaskDetailCompact(entry, compact, snapshotToken);
+        const merged = teamUnavailable
+          ? markTaskDetailTeamUnavailable(entry)
+          : applyTaskDetailCompact(entry, compact, snapshotToken);
         if (merged !== entry) {
           next[key] = merged;
           changed = true;

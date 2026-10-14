@@ -110,3 +110,21 @@ after deletion and compared persisted task and asset bytes. Those results do not
 prove this bounded follow-up; current final Electron evidence, independent
 review and exact integrated-head CI results belong to this follow-up's hosted
 handoff.
+
+## Deleted-team availability correction
+
+Task `getTask` remains the full-task authority, but it is not a team-availability
+authority. The existing renderer read boundary now derives availability from the
+accepted `TeamViewSnapshot.config.deletedAt` when a canonical snapshot is present.
+Existing team summary and committed management metadata provide the immediate
+deleted state before that snapshot arrives. Unknown metadata and transient read
+failures remain non-deletion, and compact task absence remains non-deletion.
+
+Known deletion clears task work immediately and fences pre-delete completions
+through the existing context/team epochs. Successor, watcher and cold-tab full
+reads stay unavailable while the canonical team is deleted; rich drafts and
+independent team/context state remain intact. Restoration must be accepted by
+the real team restore path or external team lifecycle watcher, then receive a
+fresh live snapshot and successful full-task read before editing is authorized
+again. No backend, schema, controller, tombstone registry or cache platform is
+introduced.

@@ -54,6 +54,25 @@ export function isTaskDetailTokenCurrent(
   return teamTaskDetailReadAuthority.isTokenCurrent(token, scope);
 }
 
+export function isTaskDetailTeamUnavailable(
+  state: Pick<
+    AppState,
+    | 'selectedTeamData'
+    | 'selectedTeamName'
+    | 'teamByName'
+    | 'teamDataCacheByName'
+    | 'teamManagementNoticeByTeam'
+  >,
+  teamName: string
+): boolean {
+  const snapshot =
+    state.teamDataCacheByName[teamName] ??
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null);
+  if (snapshot) return Boolean(snapshot.config.deletedAt);
+  if (state.teamManagementNoticeByTeam[teamName]?.kind === 'trashed') return true;
+  return Boolean(state.teamByName[teamName]?.deletedAt);
+}
+
 export function readTeamSnapshotResource<T>(
   teamName: string,
   scope: TaskDetailReadScope,

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
@@ -15,6 +15,7 @@ import {
 interface Team {
   teamName: string;
   taskFile: string;
+  markers: { description: string };
 }
 interface Fixture {
   teams: Team[];
@@ -52,6 +53,22 @@ async function snapshotTaskAndAssets(
     })
   );
   return { task, assets };
+}
+
+async function writeTeamDeletedMarker(
+  configFile: string,
+  deletedAt: string | undefined
+): Promise<void> {
+  const config = JSON.parse(await readFile(configFile, 'utf8')) as Record<string, unknown>;
+  const next = { ...config };
+  if (deletedAt) next.deletedAt = deletedAt;
+  else delete next.deletedAt;
+  const temporary = configFile + '.task-tabs-TEST.tmp';
+  await writeFile(temporary, JSON.stringify(next, null, 2) + '\n', {
+    flag: 'wx',
+    mode: 0o600,
+  });
+  await rename(temporary, configFile);
 }
 
 /** Delete confirmation and existing Trash recovery are driven by their mounted controls. */
@@ -282,5 +299,93 @@ export async function runTaskDeletionCases(
     restoredB,
     liveRecovery,
     noInventedPageRestoreButton: true,
+  });
+
+  const configB = join(
+    fixture.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
+    'teams',
+    teamB.teamName,
+    'config.json'
+  );
+  const beforeTeamDelete = await snapshotTaskAndAssets(teamB.taskFile, assetDirB);
+  const teamDeletedAt = new Date().toISOString();
+  await writeTeamDeletedMarker(configB, teamDeletedAt);
+  await until(
+    cdp,
+    `window.__agentTeamsDevStore.getState().taskDetailById[${keyB}]?.phase==='unavailable'`,
+    'whole-team config deletion reached the open task tab through the real watcher'
+  );
+  await cdp.evaluate(
+    `(async()=>{const s=window.__agentTeamsDevStore.getState();await s.ensureTaskDetail({contextId:'local',teamName:${JSON.stringify(teamB.teamName)},taskId:'1'});await s.ensureTaskDetail({contextId:'local',teamName:${JSON.stringify(teamB.teamName)},taskId:'1'});})()`
+  );
+  const deletedTeamState = await cdp.evaluate(
+    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=${pageB};const t=p.querySelector('textarea[id^="task-comment-input-"]');return {phase:s.taskDetailById[${keyB}]?.phase,draft:s.taskDetailSessionById[${keyB}]?.commentText,composerMounted:!!t,composerEnabled:!!t&&!t.disabled,full:s.taskDetailById[${keyB}]?.full};})()`
+  );
+  assert.deepEqual(
+    deletedTeamState,
+    {
+      phase: 'unavailable',
+      draft: durableDeleteDraft,
+      composerMounted: false,
+      composerEnabled: false,
+      full: null,
+    },
+    'Whole-team deletion left retained task data unavailable and readonly'
+  );
+  assert.deepEqual(
+    await snapshotTaskAndAssets(teamB.taskFile, assetDirB),
+    beforeTeamDelete,
+    'Whole-team deletion changed retained task or asset bytes'
+  );
+  record({
+    kind: 'whole-team-delete-task-detail-readonly',
+    teamDeletedAt,
+    retainedTaskAndAssets: true,
+    draftPreserved: true,
+    successorFullReadsStayUnavailable: true,
+  });
+
+  await writeTeamDeletedMarker(configB, undefined);
+  await cdp.evaluate(
+    `(async()=>{await window.__agentTeamsDevStore.getState().ensureTaskDetail({contextId:'local',teamName:${JSON.stringify(teamB.teamName)},taskId:'1'});})()`
+  );
+  await until(
+    cdp,
+    `window.__agentTeamsDevStore.getState().taskDetailById[${keyB}]?.phase==='ready'`,
+    'accepted restored team snapshot reauthorized the full task read'
+  );
+  const restoredTeamState = (await cdp.evaluate(
+    `(()=>{const s=window.__agentTeamsDevStore.getState();const p=${pageB};const t=p.querySelector('textarea[id^="task-comment-input-"]');return {phase:s.taskDetailById[${keyB}]?.phase,draft:s.taskDetailSessionById[${keyB}]?.commentText,composerValue:t?.value,composerEnabled:!!t&&!t.disabled,description:s.taskDetailById[${keyB}]?.full?.description};})()`
+  )) as {
+    phase: string;
+    draft: string;
+    composerValue: string;
+    composerEnabled: boolean;
+    description?: string;
+  };
+  assert.deepEqual(
+    {
+      ...restoredTeamState,
+      description: restoredTeamState.description?.includes(teamB.markers.description),
+    },
+    {
+      phase: 'ready',
+      draft: durableDeleteDraft,
+      composerValue: durableDeleteDraft,
+      composerEnabled: true,
+      description: true,
+    },
+    'Accepted team restoration recovered the authoritative full task'
+  );
+  assert.deepEqual(
+    await snapshotTaskAndAssets(teamB.taskFile, assetDirB),
+    beforeTeamDelete,
+    'Whole-team deletion/restoration changed retained task or asset bytes'
+  );
+  record({
+    kind: 'whole-team-restore-full-read-recovery',
+    acceptedFullDescriptionMarker: true,
+    draftPreserved: true,
+    composerReauthorized: true,
   });
 }

@@ -14,10 +14,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskDetailIdentity } from '@features/team-task-detail/contracts';
 import type { TaskDetailSessionController } from '@features/team-task-detail/renderer';
-import type { TaskComment, TeamTaskWithKanban } from '@shared/types';
+import type {
+  TaskComment,
+  TeamSummary,
+  TeamTaskWithKanban,
+  TeamViewSnapshot,
+} from '@shared/types';
 
 const apiMock = vi.hoisted(() => ({
-  teams: { addTaskComment: vi.fn(), getTask: vi.fn(), softDeleteTask: vi.fn() },
+  teams: {
+    addTaskComment: vi.fn(),
+    getTask: vi.fn(),
+    restoreTeam: vi.fn(),
+    softDeleteTask: vi.fn(),
+  },
 }));
 vi.mock('@renderer/api', () => ({ api: apiMock }));
 vi.mock('@renderer/services/draftStorage', () => ({
@@ -33,6 +43,23 @@ const initial = useStore.getState();
 const identity: TaskDetailIdentity = { contextId: 'local', teamName: 'TEST-team', taskId: '1' };
 const key = taskDetailKey(identity);
 const task: TeamTaskWithKanban = { id: '1', subject: 'TEST task', status: 'pending' };
+const teamDeletedAt = '2026-10-14T18:00:00.000Z';
+const teamSummary: TeamSummary = {
+  teamName: identity.teamName,
+  displayName: identity.teamName,
+  description: 'TEST team',
+  memberCount: 0,
+  taskCount: 1,
+  lastActivity: null,
+};
+const teamSnapshot: TeamViewSnapshot = {
+  teamName: identity.teamName,
+  config: { name: identity.teamName },
+  tasks: [task],
+  members: [],
+  kanbanState: { teamName: identity.teamName, reviewers: [], tasks: {} },
+  processes: [],
+};
 const roots: ReturnType<typeof createRoot>[] = [];
 
 function mount(surfaceId: string, receive: (controller: TaskDetailSessionController) => void) {
@@ -78,6 +105,8 @@ describe('task session surface and origin integration', () => {
           },
         },
         taskDetailSessionById: {},
+        teamByName: { [identity.teamName]: teamSummary },
+        teamDataCacheByName: { [identity.teamName]: teamSnapshot },
         refreshTeamData: vi.fn(async () => {}),
       },
       true
@@ -515,6 +544,17 @@ describe('task session surface and origin integration', () => {
     });
     await act(async () => {
       controller.setCommentText('TEST draft survives unavailable team');
+      useStore.setState({
+        teamByName: {
+          [identity.teamName]: { ...teamSummary, deletedAt: teamDeletedAt },
+        },
+        teamDataCacheByName: {
+          [identity.teamName]: {
+            ...teamSnapshot,
+            config: { ...teamSnapshot.config, deletedAt: teamDeletedAt },
+          },
+        },
+      });
       useStore.getState().clearDeletedTeamLocalState(identity.teamName);
     });
     // Soft-deleting a team retains its physical task JSON. A successor full
@@ -528,6 +568,35 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailById[key].phase).toBe('unavailable');
     expect(controller.canEditNow()).toBe(false);
     expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
+
+    await act(async () => {
+      useStore.setState({ taskDetailById: {} });
+      await useStore.getState().ensureTaskDetail(identity);
+    });
+    expect(useStore.getState().taskDetailById[key].phase).toBe('unavailable');
+    expect(controller.canEditNow()).toBe(false);
+    expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+
+    apiMock.teams.restoreTeam.mockResolvedValue(undefined);
+    useStore.setState({
+      refreshTeamData: vi.fn(async () => {
+        useStore.setState({
+          teamByName: { [identity.teamName]: teamSummary },
+          teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+        });
+      }),
+      fetchTeams: vi.fn(async () => {}),
+      fetchAllTasks: vi.fn(async () => {}),
+    });
+    await act(async () => {
+      await useStore.getState().restoreTeam(identity.teamName);
+      await useStore.getState().ensureTaskDetail(identity);
+    });
+    expect(apiMock.teams.restoreTeam).toHaveBeenCalledWith(identity.teamName);
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+    expect(useStore.getState().taskDetailById[key].phase).toBe('ready');
+    expect(controller.session.commentText).toBe('TEST draft survives unavailable team');
+    expect(controller.canEditNow()).toBe(true);
   });
 
   it.each(['success', 'failure'] as const)(
@@ -603,8 +672,7 @@ describe('task session surface and origin integration', () => {
       });
       expect(useStore.getState().refreshTeamData).not.toHaveBeenCalled();
       expect(apiMock.teams.addTaskComment).toHaveBeenCalledTimes(1);
-      // A restored team's accepted full data authorizes retry; the deleted
-      // team's previous ready DTO alone must not grant edit permission.
+      // A retained ready DTO cannot restore a deleted team's permissions.
       await act(async () => {
         useStore.setState((state) => ({
           taskDetailById: {
@@ -613,6 +681,25 @@ describe('task session surface and origin integration', () => {
           },
         }));
       });
+      expect(controller.canSubmit).toBe(false);
+      apiMock.teams.restoreTeam.mockResolvedValue(undefined);
+      apiMock.teams.getTask.mockResolvedValue({ ...task });
+      useStore.setState({
+        refreshTeamData: vi.fn(async () => {
+          useStore.setState({
+            teamByName: { [identity.teamName]: teamSummary },
+            teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+          });
+        }),
+        fetchTeams: vi.fn(async () => {}),
+        fetchAllTasks: vi.fn(async () => {}),
+      });
+      await act(async () => {
+        await useStore.getState().restoreTeam(identity.teamName);
+        await useStore.getState().ensureTaskDetail(identity);
+      });
+      expect(apiMock.teams.restoreTeam).toHaveBeenCalledWith(identity.teamName);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
       expect(controller.canSubmit).toBe(true);
     }
   );
