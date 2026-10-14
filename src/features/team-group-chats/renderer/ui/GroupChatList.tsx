@@ -1,9 +1,14 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  type ChatListDraftPreview,
+  ChatPreviewLine,
   ChatUnreadBadges,
   type ConversationScope,
+  conversationScopeKey,
   countUniqueUnread,
+  getChatMessagePreview,
   GroupChatAvatar,
+  projectChatPreview,
 } from '@features/team-direct-chats/renderer';
 import { formatActivityTimestamp } from '@renderer/components/team/activity/activityTimestamp';
 import {
@@ -22,6 +27,7 @@ export const GroupChatList = ({
   members,
   messages,
   readSet,
+  draftsByScope,
   selectedScope,
   onOpen,
   onCreate,
@@ -31,6 +37,7 @@ export const GroupChatList = ({
   members: readonly ResolvedTeamMember[];
   messages: readonly InboxMessage[];
   readSet: ReadonlySet<string>;
+  draftsByScope?: ReadonlyMap<string, ChatListDraftPreview>;
   selectedScope?: ConversationScope;
   onOpen: (scope: ConversationScope) => void;
   onCreate: () => void;
@@ -50,7 +57,17 @@ export const GroupChatList = ({
         !latest || Date.parse(message.timestamp) > Date.parse(latest.timestamp) ? message : latest,
       undefined
     );
-    const time = latestMessage ? formatActivityTimestamp(latestMessage.timestamp) : '';
+    const draft = draftsByScope?.get(
+      conversationScopeKey({ kind: 'group', groupChatId: group.id })
+    );
+    const preview = projectChatPreview(
+      {
+        ...getChatMessagePreview(latestMessage ?? null, t('messages.chats.emptyPreview')),
+        previewTimestamp: latestMessage?.timestamp ?? null,
+      },
+      draft
+    );
+    const time = preview.previewTimestamp ? formatActivityTimestamp(preview.previewTimestamp) : '';
     return (
       <button
         type="button"
@@ -82,9 +99,21 @@ export const GroupChatList = ({
               />
             ) : null}
           </span>
-          <span className="block truncate text-xs text-[var(--color-text-muted)]">
-            {latestMessage?.text || t('messages.chats.emptyPreview')}
-          </span>
+          <ChatPreviewLine
+            from={preview.previewFrom}
+            text={preview.previewText}
+            avatarUrl={
+              preview.previewFrom
+                ? resolveMemberAvatarUrl(
+                    members.find((member) => member.name === preview.previewFrom) ?? {
+                      name: preview.previewFrom,
+                    },
+                    avatarMap
+                  )
+                : undefined
+            }
+            draft={draft}
+          />
         </span>
         <span className="mt-0.5 flex shrink-0 flex-col items-end gap-1 overflow-visible">
           {time ? (

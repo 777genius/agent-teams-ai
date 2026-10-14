@@ -4,7 +4,7 @@ import { ChatList } from '@features/team-direct-chats/renderer';
 import { CreateGroupChatDialog, GroupChatList } from '@features/team-group-chats/renderer';
 
 import type { useMessagesGroupConversation } from './useMessagesGroupConversation';
-import type { ConversationScope } from '@features/team-direct-chats/renderer';
+import type { ChatListDraftPreview, ConversationScope } from '@features/team-direct-chats/renderer';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /** Owns creation-dialog lifetime independently of the existing DM navigation. */
@@ -14,6 +14,7 @@ const MessagesGroupNavigation = ({
   members,
   messages,
   readSet,
+  draftsByScope,
   selectedScope,
   isTeamAlive,
   onOpen,
@@ -23,6 +24,7 @@ const MessagesGroupNavigation = ({
   members: ResolvedTeamMember[];
   messages: InboxMessage[];
   readSet: Set<string>;
+  draftsByScope: ReadonlyMap<string, ChatListDraftPreview>;
   selectedScope?: ConversationScope;
   isTeamAlive?: boolean;
   onOpen: (scope: ConversationScope) => void;
@@ -44,6 +46,7 @@ const MessagesGroupNavigation = ({
         members={members}
         messages={messages}
         readSet={readSet}
+        draftsByScope={draftsByScope}
         selectedScope={selectedScope}
         onOpen={onOpen}
         onCreate={() => {

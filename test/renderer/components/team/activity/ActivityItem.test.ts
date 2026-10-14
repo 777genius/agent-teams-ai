@@ -9,10 +9,15 @@ import {
   isNoiseMessage,
   isQualifiedExternalRecipient,
 } from '@renderer/components/team/activity/ActivityItem';
+import { MessageExpandDialog } from '@renderer/components/team/activity/MessageExpandDialog';
+import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
+import { useTeamCreateTaskDialog } from '@renderer/components/team/dialogs/useTeamCreateTaskDialog';
+import { useMessagesTimelineActions } from '@renderer/components/team/messages/useMessagesTimelineActions';
+import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { InboxMessage } from '@shared/types';
+import type { CreateTaskRequest, InboxMessage } from '@shared/types';
 
 vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ theme: 'dark', resolvedTheme: 'dark', isDark: true, isLight: false }),
@@ -29,8 +34,24 @@ vi.mock('@renderer/components/team/attachments/AttachmentDisplay', () => ({
   AttachmentDisplay: () => null,
 }));
 vi.mock('@renderer/components/team/MemberBadge', () => ({
-  MemberBadge: ({ name, hideAvatar }: { name: string; hideAvatar?: boolean }) =>
-    React.createElement('span', { 'data-member-avatar-hidden': String(!!hideAvatar) }, name),
+  MemberBadge: ({
+    name,
+    hideAvatar,
+    onClick,
+  }: {
+    name: string;
+    hideAvatar?: boolean;
+    onClick?: (name: string) => void;
+  }) =>
+    React.createElement(
+      'span',
+      {
+        'data-member-avatar-hidden': String(!!hideAvatar),
+        'data-member-interactive': String(!!onClick),
+        onClick: onClick ? () => onClick(name) : undefined,
+      },
+      name
+    ),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
   TaskTooltip: ({ children }: { children: React.ReactNode }) =>
@@ -702,6 +723,34 @@ describe('ActivityItem compact header preview', () => {
     expect(preview?.textContent).not.toContain('info_for_agent');
     expect(preview?.textContent).not.toContain('internal only');
 
+    const directMessage: InboxMessage = {
+      ...message,
+      from: 'alice',
+      to: 'user',
+      source: 'inbox',
+      text: '**Visible direct message**\n<info_for_agent>\ninternal only\n</info_for_agent>\n```info_for_agent\nlegacy internal only\n```',
+    };
+    for (const isCollapsed of [true, false]) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: directMessage,
+            teamName: 'my-team',
+            directParticipant: 'alice',
+            compactHeader: true,
+            collapseMode: 'managed',
+            isCollapsed,
+            canToggleCollapse: true,
+            collapseToggleKey: 'message-key-strip-agent-block',
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Visible direct message');
+      expect(host.textContent).not.toContain('info_for_agent');
+      expect(host.textContent).not.toContain('internal only');
+    }
+
     await act(async () => {
       root.unmount();
       await Promise.resolve();
@@ -1293,5 +1342,357 @@ describe('ActivityItem bootstrap recipient route', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+});
+
+// These UI primitives keep the actual message/action/dialog state boundary under test.
+vi.mock('@renderer/components/ui/dialog', () => {
+  const Container = ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children);
+  return {
+    Dialog: Container,
+    DialogContent: Container,
+    DialogDescription: Container,
+    DialogHeader: Container,
+    DialogTitle: Container,
+    DialogFooter: Container,
+  };
+});
+vi.mock('@renderer/services/draftStorage', () => ({
+  draftStorage: {
+    loadDraft: () => Promise.resolve(null),
+    saveDraft: () => Promise.resolve(),
+    deleteDraft: () => Promise.resolve(),
+  },
+}));
+vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
+  useTaskSuggestions: () => ({ suggestions: [] }),
+}));
+vi.mock('@renderer/components/ui/MemberSelect', () => ({ MemberSelect: () => null }));
+vi.mock('@renderer/components/ui/tiptap', () => ({
+  TiptapEditor: ({ content, onChange }: { content: string; onChange: (value: string) => void }) =>
+    React.createElement('textarea', {
+      'aria-label': 'Description',
+      value: content,
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
+    }),
+}));
+vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
+  MentionableTextarea: ({
+    value,
+    onValueChange,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+  }) =>
+    React.createElement('textarea', {
+      'aria-label': 'Prompt',
+      value,
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+        onValueChange(event.target.value),
+    }),
+}));
+vi.mock('@renderer/components/team/dialogs/TaskGroupChatField', () => ({
+  TaskGroupChatField: ({
+    value,
+    onChange,
+  }: {
+    value: string | null;
+    onChange: (value: string | null) => void;
+  }) =>
+    React.createElement(
+      'select',
+      {
+        'aria-label': 'Group',
+        value: value ?? '',
+        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+          onChange(event.target.value || null),
+      },
+      React.createElement('option', { value: '' }, 'None'),
+      React.createElement('option', { value: 'group-a' }, 'Group A'),
+      React.createElement('option', { value: 'group-b' }, 'Group B')
+    ),
+}));
+
+describe('message task action and dialog ownership', () => {
+  afterEach(() => {
+    useStore.setState({ activeContextId: 'local' });
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+  const message: InboxMessage = {
+    from: 'alice',
+    text: 'Keep the original group\n<info_for_agent>\nprivate task context\n</info_for_agent>',
+    summary: 'Group task',
+    groupChatId: 'group-a',
+    messageId: 'message-a',
+    timestamp: '2026-10-10T12:00:00.000Z',
+    read: true,
+    source: 'inbox',
+  };
+  const taskAction = (host: HTMLElement) =>
+    host.querySelector<HTMLButtonElement>('button[aria-label="Create task from message"]')!;
+  const createButton = (host: HTMLElement) =>
+    [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === 'Create'
+    )!;
+
+  it('preserves source A over filter B and keeps the rejected form and command for explicit retry', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    useStore.setState({ activeContextId: 'root-a' });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const submit = vi
+      .fn<(request: CreateTaskRequest) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Group A is archived'))
+      .mockRejectedValueOnce(new Error('Group A is archived'))
+      .mockResolvedValue(undefined);
+    let dialog!: ReturnType<typeof useTeamCreateTaskDialog>;
+    function Boundary() {
+      dialog = useTeamCreateTaskDialog('demo');
+      const onSubmit = async (request: CreateTaskRequest) => {
+        dialog.assertCreateTaskOriginCurrent();
+        await submit(request);
+        dialog.closeCreateTaskDialog();
+      };
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          onCreateTask: dialog.handleCreateTaskFromMessage,
+        }),
+        dialog.createTaskDialog.open && dialog.isCreateTaskOriginCurrent
+          ? React.createElement(CreateTaskDialog, {
+              open: true,
+              teamName: 'demo',
+              members: [],
+              tasks: [],
+              defaultSubject: dialog.createTaskDialog.defaultSubject,
+              defaultDescription: dialog.createTaskDialog.defaultDescription,
+              defaultGroupChatId: dialog.defaultMessageGroupChatId('group-b'),
+              onClose: dialog.closeCreateTaskDialog,
+              onSubmit,
+            })
+          : null
+      );
+    }
+    await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
+    expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
+    const description = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description"]'
+    )?.value;
+    expect(description).toContain('Keep the original group');
+    expect(description).not.toContain('info_for_agent');
+    expect(description).not.toContain('private task context');
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
+    expect(submit.mock.calls[0][0].groupChatId).toBe('group-a');
+    const command = submit.mock.calls[0][0].command;
+    expect(command?.commandId).toBeTruthy();
+    expect(createButton(host).disabled).toBe(false);
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
+    expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
+    expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Description"]')?.value).toContain(
+      'Keep the original group'
+    );
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[1][0].command).toEqual(command);
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
+    await act(() => {
+      const field = host.querySelector<HTMLSelectElement>('[aria-label="Group"]')!;
+      field.value = '';
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      return Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[2][0].groupChatId).toBeUndefined();
+    expect(submit.mock.calls[2][0].command).not.toEqual(command);
+    expect(host.querySelector('#task-subject')).toBeNull();
+    await act(() => Promise.resolve(dialog.openCreateTaskDialog('Ordinary task')));
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-b');
+    await act(() => {
+      dialog.closeCreateTaskDialog();
+      return Promise.resolve();
+    });
+    await act(() =>
+      Promise.resolve(
+        dialog.handleCreateTaskFromMessage({
+          subject: 'Legacy DM',
+          description: 'No group',
+          source: { teamName: 'demo' },
+        })
+      )
+    );
+    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('');
+    await act(() => Promise.resolve(root.unmount()));
+  });
+
+  it('invalidates same-team root A to B before render or a retained submit/action callback', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    useStore.setState({ activeContextId: 'root-a' });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let dialog!: ReturnType<typeof useTeamCreateTaskDialog>;
+    let actions!: ReturnType<typeof useMessagesTimelineActions>;
+    const submit = vi.fn();
+    const reply = vi.fn();
+    const revise = vi.fn();
+    function Boundary() {
+      dialog = useTeamCreateTaskDialog('demo');
+      const contextId = useStore((state) => state.activeContextId);
+      const [expandedItemKey, setExpandedItemKey] = React.useState<string | null>(null);
+      actions = useMessagesTimelineActions({
+        contextId,
+        teamName: 'demo',
+        scopeKey: 'group-a',
+        scope: { kind: 'group', groupChatId: 'group-a' },
+        members: [],
+        messages: [message],
+        expandedItemKey,
+        setExpandedItemKey,
+        groupId: 'group-a',
+        groupQuote: reply,
+        onRevise: revise,
+        onCreateTask: dialog.handleCreateTaskFromMessage,
+      });
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          onCreateTask: actions.createTask,
+        }),
+        dialog.createTaskDialog.open && dialog.isCreateTaskOriginCurrent
+          ? React.createElement(
+              'div',
+              { role: 'dialog' },
+              dialog.defaultMessageGroupChatId('group-b')
+            )
+          : null
+      );
+    }
+    await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(host.querySelector('[role="dialog"]')?.textContent).toBe('group-a');
+    const oldOpen = actions.createTask!;
+    const oldReply = actions.reply!;
+    const oldSubmit = () => {
+      try {
+        dialog.assertCreateTaskOriginCurrent();
+        submit();
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    };
+    await act(async () => {
+      useStore.setState({ activeContextId: 'root-b' });
+      await expect(oldSubmit()).rejects.toThrow('context has changed');
+      oldOpen({
+        subject: 'Old intent',
+        description: '',
+        source: { teamName: 'demo', groupChatId: 'group-a' },
+      });
+      oldReply(message);
+    });
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(submit).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    expect(dialog.createTaskDialog.defaultSubject).toBe('Group task');
+    await act(() => Promise.resolve(root.unmount()));
+  });
+
+  it('retains expansion text while removing contextual actions for missing or changed owners', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const owner = { contextId: 'root-a', teamName: 'demo', scopeKey: 'group-a' };
+    const create = vi.fn(),
+      reply = vi.fn(),
+      revise = vi.fn();
+    const restart = vi.fn(),
+      memberNavigate = vi.fn(),
+      taskNavigate = vi.fn(),
+      teamNavigate = vi.fn();
+    let displayedMessage = message;
+    const render = async (current = owner, live = true, open = true) => {
+      await act(() =>
+        Promise.resolve(
+          root.render(
+            React.createElement(MessageExpandDialog, {
+              expandedItem: live ? { type: 'message', message: displayedMessage } : null,
+              open,
+              onOpenChange: vi.fn(),
+              teamName: current.teamName,
+              actionOwner: current,
+              expandedOwner: owner,
+              onCreateTaskFromMessage: create,
+              onReplyToMessage: reply,
+              revisionMessageId: message.messageId,
+              onReviseMessage: revise,
+              onRestartTeam: restart,
+              onMemberClick: memberNavigate,
+              onTaskIdClick: taskNavigate,
+              onTeamClick: teamNavigate,
+            })
+          )
+        )
+      );
+    };
+    await render();
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(create.mock.calls[0][0].source).toEqual({ teamName: 'demo', groupChatId: 'group-a' });
+    for (const current of [
+      { ...owner, contextId: 'root-b' },
+      { ...owner, teamName: 'other' },
+      { ...owner, scopeKey: 'group-b' },
+    ]) {
+      await render(current);
+      expect(host.textContent).toContain('Keep the original group');
+      expect(taskAction(host)).toBeNull();
+      expect(host.querySelector('button[aria-label="Reply to message"]')).toBeNull();
+      expect(host.querySelector('button[aria-label="Edit message"]')).toBeNull();
+    }
+    await render(owner, false, false);
+    expect(host.textContent).toContain('Keep the original group');
+    expect(taskAction(host)).toBeNull();
+    expect(host.querySelector('button[aria-label="Copy to clipboard"]')).not.toBeNull();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(reply).not.toHaveBeenCalled();
+    expect(revise).not.toHaveBeenCalled();
+    await act(() => Promise.resolve(root.render(null)));
+    displayedMessage = {
+      ...message,
+      groupChatId: undefined,
+      to: 'other-team',
+      text: 'API Error: 401 authentication_error: token expired',
+      summary: undefined,
+    };
+    await render();
+    const restartAction = () =>
+      Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Restart team')
+      );
+    expect(host.querySelector('[data-member-interactive="true"]')).not.toBeNull();
+    expect(restartAction()).toBeDefined();
+    await act(() => Promise.resolve(restartAction()!.click()));
+    expect(restart).toHaveBeenCalledTimes(1);
+    await render({ ...owner, contextId: 'root-b' });
+    expect(host.textContent).toContain('authentication_error: token expired');
+    expect(restartAction()).toBeUndefined();
+    expect(host.querySelector('[data-member-interactive="true"]')).toBeNull();
+    expect(memberNavigate).not.toHaveBeenCalled();
+    expect(taskNavigate).not.toHaveBeenCalled();
+    expect(teamNavigate).not.toHaveBeenCalled();
+    await act(() => Promise.resolve(root.unmount()));
   });
 });

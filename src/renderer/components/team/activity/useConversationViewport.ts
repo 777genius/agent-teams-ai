@@ -5,6 +5,18 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import type { TimelineRow } from './timelineRows';
 import type { Virtualizer } from '@tanstack/react-virtual';
 
+/** Scroll and observation contract for the conversation timeline. */
+export interface TimelineViewport {
+  /** The element that actually scrolls. */
+  scrollElementRef: RefObject<HTMLElement | null>;
+  scrollElement?: HTMLElement | null;
+  /** Usually the scroll element; defaults to scrollElementRef. */
+  observerRoot?: RefObject<HTMLElement | null>;
+  scrollMargin?: number;
+  virtualizationEnabled?: boolean;
+  virtualizationRowThreshold?: number;
+}
+
 export interface ConversationViewportHandle {
   prepareLayoutChange: () => void;
   revealLatest: () => void;
