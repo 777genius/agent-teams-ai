@@ -392,7 +392,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string } } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[] } } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -414,7 +414,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string } | undefined;
+        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[] } | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
@@ -429,6 +429,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
                   errno: one(event.errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),
                   operation: one(event.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
                   errorName: one(event.errorName, ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'AbortError']),
+                  profileGuard: one(event.profileGuard, ['environment_hash', 'config_hash', 'home_mapping', 'path_containment', 'database_type', 'models_type', 'models_hash', 'process_cwd', 'process_pwd', 'process_environment']),
+                  environmentMismatchKeys: Array.isArray(event.environmentMismatchKeys) ? event.environmentMismatchKeys.slice(0, 25).map(value => one(value, ['HOME', 'USERPROFILE', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'TMPDIR', 'TMP', 'TEMP', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'NO_COLOR', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'PATHEXT', 'HOMEDRIVE', 'HOMEPATH', 'OPENCODE_CONFIG_DIR', 'AGENT_TEAMS_MCP_CLAUDE_DIR', 'OPENSSL_CONF', 'other'])) : [],
                 };
               } catch { /* Only the fixed structured startup event is observed. */ }
             }
