@@ -439,7 +439,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
                 }
                 clean = quoted.replace(/(?:https?:\/\/|[A-Za-z]:[\\/]|\\\\|\.{1,2}[\\/]|\/).*$/g, '[path]')
                   .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\b/g, '[email]')
-                  .replace(/[A-Za-z0-9_+=/-]{20,}/g, '[value]');
+                  .replace(/[A-Za-z0-9_+=/-]{20,}/g, value => value === 'CouldntReadCurrentDirectory' ? value : '[value]');
               }
               errorLine = clean.slice(0, 256);
             }
