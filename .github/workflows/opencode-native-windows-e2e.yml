@@ -107,6 +107,20 @@ jobs:
           node-version-file: TEST-native-source/.node-version
           cache: pnpm
           cache-dependency-path: TEST-native-source/pnpm-lock.yaml
+      - name: Stage the selected Node in a fresh private TEST directory
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = (Get-Command node).Source
+          $expected = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+          $directory = Join-Path (Get-Location).Path 'TEST-controller-node'
+          if (Test-Path -LiteralPath $directory) { throw 'TEST controller Node already exists' }
+          $null = New-Item -ItemType Directory -Path $directory -ErrorAction Stop
+          $target = Join-Path $directory 'node.exe'
+          [IO.File]::Copy($source, $target, $false)
+          if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne $expected -or (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $expected) { throw 'TEST controller Node bytes changed' }
+          "OPENCODE_NATIVE_TEST_NODE_PATH=$target" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
       - uses: actions/setup-python@v6
         if: ${{ !inputs.provider_only }}
         with:
@@ -132,7 +146,7 @@ jobs:
               'S-1-15-2-1' { 'all_application_packages'; break }; default { if ($sid.StartsWith('S-1-15-2-')) { 'app_package' } else { 'other' } }
             }
           }
-          $roots = @(@{kind='sdk'; path=(Resolve-Path .test-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path (Get-Command node).Source)})
+          $roots = @(@{kind='sdk'; path=(Resolve-Path .test-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path $env:OPENCODE_NATIVE_TEST_NODE_PATH)})
           :roots foreach ($root in $roots) {
             $sections = [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access
             $acl = [IO.FileSystemAclExtensions]::GetAccessControl([IO.DirectoryInfo]::new($root.path), $sections)
@@ -253,7 +267,7 @@ jobs:
         run: |
           $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
-          $node = (Get-Command node).Source
+          $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
           bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current $env:SELECTED_MODEL $node
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
