@@ -382,9 +382,7 @@ describe('OpenCodeBridgeCommandClient', () => {
 
   it('reports preparation rejection as terminal pre-mutation failure', async () => {
     const client = createClient({
-      envProvider: async () => {
-        throw new Error('test env unavailable');
-      },
+      envProvider: () => Promise.reject(new Error('test env unavailable')),
     });
     const result = await client.execute(
       'opencode.cleanupStartupHosts',
@@ -404,9 +402,9 @@ describe('OpenCodeBridgeCommandClient', () => {
     async (command) => {
       let allowed = true;
       const client = createClient({
-        envProvider: async () => {
+        envProvider: () => {
           allowed = false;
-          return {};
+          return Promise.resolve({});
         },
       });
       const result = await client.execute(

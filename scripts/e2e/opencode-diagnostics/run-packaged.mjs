@@ -404,7 +404,12 @@ $ErrorActionPreference = 'Stop'
 $t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${input}')) | ConvertFrom-Json
 $start = [DateTime]::Parse($t.birth, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
 $end = [DateTime]::Parse($t.until, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
-$events = @(Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001; StartTime=$start; EndTime=$end} -MaxEvents 64 -ErrorAction Stop)
+try {
+  $events = @(Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001; StartTime=$start; EndTime=$end} -MaxEvents 64 -ErrorAction Stop)
+} catch {
+  if ($_.FullyQualifiedErrorId -ceq 'NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand') { $events = @() }
+  else { throw }
+}
 if ($events.Count -ge 64) { @{observationOnly=$true;state='unknown-truncated';count=64} | ConvertTo-Json -Compress; exit }
 $errors = @(); $reports = @(); $unknown = 0
 foreach ($event in $events) {
