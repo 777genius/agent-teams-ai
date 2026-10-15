@@ -333,7 +333,7 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
   'owner_verification_open', 'private_acl_foreign_allow', 'private_acl_owner',
   'private_acl_owner_run_data_root', 'private_acl_owner_run_leaf', 'private_acl_owner_run_opencode',
   'private_acl_owner_run_runs', 'private_acl_owner_run_v2', 'private_image_open',
-  'private_image_protected_dacl', 'private_owner_acquire', 'private_owner_cohort',
+  'private_image_protected_dacl', 'private_dll_owner', 'private_owner_acquire', 'private_owner_cohort',
   'private_owner_controller_tasks', 'private_owner_controller_teams', 'private_owner_discover_selection',
   'private_owner_reserve_selection', 'private_owner_selected_selection',
       'private_readonly_root', 'private_writable_root', 'private_protected_root',
