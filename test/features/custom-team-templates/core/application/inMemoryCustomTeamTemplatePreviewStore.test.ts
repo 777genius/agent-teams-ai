@@ -246,6 +246,54 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.confirmSave(state.token, identity)).toEqual({ status: 'unavailable' });
   });
 
+  it('drops an expired settled entry on the next issue instead of retaining it', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+    });
+    const state = store.issue(baseInput);
+    const identity = {
+      templateId: 'tmpl-confirmed',
+      name: 'Confirmed',
+      nameKey: 'confirmed',
+    };
+    expect(store.confirmSave(state.token, identity)).toEqual({ status: 'recorded' });
+    // The save outcome settled (no unresolved write), so the expired entry is
+    // dropped on the next issue and stops occupying capacity.
+    now = 100;
+    store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    expect(store.resolve(state.token)).toEqual({ status: 'unknown' });
+  });
+
+  it('retains an expired entry while its write outcome is unresolved', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+    });
+    const state = store.issue(baseInput);
+    const identity = {
+      templateId: 'tmpl-confirmed',
+      name: 'Confirmed',
+      nameKey: 'confirmed',
+    };
+    expect(store.confirmSave(state.token, identity)).toEqual({ status: 'recorded' });
+    store.markUnresolvedWrite(state.token);
+
+    // The unresolved operation survives both expiry reporting and the next
+    // issue, so re-check can still reconcile it.
+    now = 100;
+    store.issue({ ...baseInput, templateId: 'tmpl-2' });
+    const resolved = store.resolve(state.token);
+    expect(resolved.status).toBe('expired');
+    if (resolved.status !== 'expired' || !resolved.state) return;
+    expect(resolved.state.confirmedSave).toEqual(identity);
+    expect(resolved.state.contentHash).toBe(baseInput.contentHash);
+  });
+
   it('preserves a submitted operation for re-check when its preview is invalidated', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,

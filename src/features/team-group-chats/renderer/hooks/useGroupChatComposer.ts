@@ -142,7 +142,6 @@ export function useGroupChatComposer(
   const send = async () => {
     if (!ready || session.sending || session.consuming || pending || !text.trim()) return;
     const capturedContextEpoch = captureContextScopedRequestEpoch();
-    session.sending = true;
     const id = attemptId ?? crypto.randomUUID();
     if (!acquireComposerSubmission(contextId, id)) return;
     session.sending = true;

@@ -12,7 +12,7 @@
 import { normalizeAppLocalePreference } from '@features/localization';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
-import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { applyConfiguredClaudeRoot, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -44,14 +44,7 @@ function getDefaultConfigPath(): string {
 }
 
 function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
-  const next = getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath;
-  // A null outcome means no root is configured anywhere. Resetting the
-  // override to null here would discard a previously established explicit
-  // root (standalone CLAUDE_ROOT applied before services initialize), so an
-  // absent configuration leaves the current base path untouched instead.
-  if (next != null) {
-    setClaudeBasePathOverride(next);
-  }
+  applyConfiguredClaudeRoot(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
 }
 
 function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {

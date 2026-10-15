@@ -258,18 +258,43 @@ describe('standalone custom-team-templates HTTP integration', () => {
     expect(body.templates).toHaveLength(1);
     expect(body.templates[0]).toMatchObject({ templateId, name: 'Release Pipeline' });
 
-    // Saving the same content again is idempotent, not a duplicate row.
+    // The restarted instance still enforces name uniqueness against rows that
+    // were persisted before the restart.
+    const conflicted = await appTwo.inject({
+      method: 'POST',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.preparePreview,
+      payload: { sourceTeamName: TEAM, name: 'Release Pipeline' },
+    });
+    expect(conflicted.json()).toEqual({ status: 'nameConflict', existingTemplateId: templateId });
+
+    // Retrying a save with the same token is idempotent, not a duplicate row.
     const prepared = await appTwo.inject({
       method: 'POST',
       url: CUSTOM_TEAM_TEMPLATE_ROUTES.preparePreview,
       payload: { sourceTeamName: TEAM, name: 'Release Pipeline copy' },
     });
     expect(prepared.json()).toMatchObject({ status: 'previewReady' });
+    const retryToken = prepared.json().preview.previewToken;
+    const firstSave = await appTwo.inject({
+      method: 'POST',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate,
+      payload: { previewToken: retryToken },
+    });
+    expect(firstSave.json()).toMatchObject({ status: 'created' });
+    const retrySave = await appTwo.inject({
+      method: 'POST',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate,
+      payload: { previewToken: retryToken },
+    });
+    expect(retrySave.json()).toMatchObject({
+      status: 'alreadySaved',
+      template: { templateId: firstSave.json().template.templateId },
+    });
     const listedAgain = await appTwo.inject({
       method: 'GET',
       url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
     });
-    expect(listedAgain.json().templates).toHaveLength(1);
+    expect(listedAgain.json().templates).toHaveLength(2);
   });
 
   it('reports unavailable storage instead of false success when the backend is missing', async () => {

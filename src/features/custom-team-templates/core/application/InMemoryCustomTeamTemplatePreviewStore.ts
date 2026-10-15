@@ -292,11 +292,11 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   private dropExpired(nowMs: number): void {
     for (const [token, state] of this.entries) {
       if (state.expiresAtMs <= nowMs) {
-        if (state.confirmedSave) {
-          // Preserve the full submitted-operation state for re-check.
-          // resolve() reports it as expired (blocking new saves) while still
-          // returning the identity re-check needs. Clearing contentHash here
-          // would break reconciliation, so the entry is kept intact.
+        // A submitted operation whose outcome is still unresolved must survive
+        // expiry so re-check can reconcile it. Once the outcome is settled the
+        // entry is dropped, so it stops occupying capacity: re-check already
+        // reported the definitive result and will not be offered again.
+        if (state.confirmedSave && state.hasUnresolvedWrite) {
           continue;
         }
         this.entries.delete(token);
