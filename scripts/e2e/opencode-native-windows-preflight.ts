@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { realpath } from 'node:fs/promises';
+import { realpath, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { applyOpenCodeRuntimeBinaryEnv } from '../../src/main/services/runtime/openCodeRuntimeBinaryEnv';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
@@ -567,10 +567,15 @@ try {
  exitCode = 1;
 } finally { nativeObserver?.mockRestore(); }
 process.exit(exitCode);`;
+  // Windows CreateProcess caps the quoted command line at 32767 UTF-16 units.
+  // Keep the complete generated source in this fresh protected TEST root instead.
+  const childScript = path.join(desktop.root, 'source-preflight-child.mjs');
+  await writeFile(childScript, script, { flag: 'wx', mode: 0o600 });
   let output = '';
   let code = 0;
+  let childFailure = 'unclassified';
   try {
-    ({ stdout: output } = await promisify(execFile)(process.execPath, ['-e', script], {
+    ({ stdout: output } = await promisify(execFile)(process.execPath, [childScript], {
       cwd: sdk,
       env: {
         ...desktop.env,
@@ -587,8 +592,14 @@ process.exit(exitCode);`;
     code = 1;
     if (error && typeof error === 'object' && 'stdout' in error && typeof error.stdout === 'string')
       output = error.stdout;
+    const failure = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+    childFailure = ['E2BIG', 'ENAMETOOLONG', 'ENOENT', 'EACCES', 'EPERM', 'ETIMEDOUT'].find((value) => value === failure.code) ??
+      (typeof failure.stderr === 'string' && /\bSyntaxError:/.test(failure.stderr) ? 'child_syntax_error' :
+        typeof failure.stderr === 'string' && /\bReferenceError:/.test(failure.stderr) ? 'child_reference_error' : 'unclassified');
   }
   const receipts = output.split(/\r?\n/).filter((line) => line.startsWith('TEST_SOURCE_GATE='));
+  if (receipts.length === 0) console.log(JSON.stringify({ scope: 'desktop TEST source child',
+    ok: false, stage: 'child_startup', reason: childFailure }));
   assert.equal(receipts.length, 1, 'Source preflight receipt unavailable');
   const receipt: unknown = JSON.parse(receipts[0]!.slice('TEST_SOURCE_GATE='.length));
   assert(receipt && typeof receipt === 'object' && 'ok' in receipt);
