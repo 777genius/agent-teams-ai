@@ -422,14 +422,17 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             if (!/^(?:error|Error): /.test(message)) continue;
             kind = 'bun_error';
             // Fixed TEST diagnostic roles only: never publish the denied path.
-            if (readTargetKind === undefined && /^error: EPERM reading /.test(message)) {
+            if (readTargetKind === undefined && /^error: (?:EPERM reading |Cannot read file )/.test(message)) {
               const target = /["'`]([^"'`]+)["'`]\s*$/.exec(message)?.[1];
               const leaf = target?.split(/[\\/]/).at(-1);
               const roles: Record<string, string> = { 'package.json': 'package_manifest',
                 'tsconfig.json': 'typescript_config', 'bunfig.toml': 'bun_config',
                 'opencodeV2ExecutionServer.ts': 'execution_entry', 'opencodeV2ExecutionServer.js': 'execution_entry',
                 'opencodeV2RunOwner.ts': 'owner_entry', 'opencodeV2RunOwner.js': 'owner_entry' };
-              readTargetKind = leaf !== undefined && Object.hasOwn(roles, leaf) ? roles[leaf] : 'other';
+              readTargetKind = leaf !== undefined && Object.hasOwn(roles, leaf) ? roles[leaf] :
+                leaf?.endsWith('.json') ? 'json_file' : leaf?.endsWith('.node') ? 'native_module' :
+                leaf?.endsWith('.dll') ? 'native_library' : /\.[cm]?js$/.test(leaf ?? '') ? 'javascript_module' :
+                /\.[cm]?tsx?$/.test(leaf ?? '') ? 'typescript_module' : 'other';
             }
             if (errorLine === undefined) {
               // TEST-only text: sanitize the complete bounded line before truncation.
