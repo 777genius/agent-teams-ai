@@ -14,6 +14,8 @@ import {
 } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
+import { URL } from 'node:url';
 import test from 'node:test';
 import { assertEmptyCleanupState } from '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs';
 const fixture = new URL('../../scripts/e2e/opencode-diagnostics/fixture.cjs', import.meta.url);
@@ -87,6 +89,52 @@ async function setup(t) {
   };
   return { root, input, output, request, args, run, events, waitAccepted, release };
 }
+for (const existing of [false, true])
+  test(`startup-cleanup seed enables its real control listener with existing config=${existing}`, async (t) => {
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-seed-test-')));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const configPath = path.join(root, 'home/.claude/agent-teams-config.json');
+    await mkdir(path.dirname(configPath), { recursive: true });
+    if (existing)
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          theme: 'dark',
+          httpServer: { enabled: false, port: 4567, token: 'TEST-preserved' },
+        })
+      );
+    const seed = new URL(
+      '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs',
+      import.meta.url
+    );
+    const child = spawn(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `const {seedStartupCleanup} = await import(${JSON.stringify(seed.href)}); Object.defineProperty(process,'platform',{value:'win32'}); await seedStartupCleanup(process.argv[1]);`,
+        root,
+      ],
+      { stdio: ['ignore', 'ignore', 'pipe'] }
+    );
+    let stderr = '';
+    child.stderr.on('data', (bytes) => {
+      stderr += bytes;
+    });
+    const code = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', resolve);
+    });
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(
+      JSON.parse(await readFile(configPath, 'utf8')),
+      existing
+        ? { theme: 'dark', httpServer: { enabled: true, port: 3456, token: 'TEST-preserved' } }
+        : { httpServer: { enabled: true, port: 3456 } }
+    );
+    await assertEmptyCleanupState(root);
+  });
+
 test('event reader ignores an incomplete trailing record', async (t) => {
   const f = await setup(t);
   const calls = path.join(f.root, 'calls.ndjson');

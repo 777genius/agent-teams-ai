@@ -74,6 +74,21 @@ export async function seedStartupCleanup(root) {
   assert.equal(process.platform, 'win32', 'Startup cleanup E2E is Windows-only');
   await mkdir(path.join(root, 'cleanup-control'));
   await assertEmptyCleanupState(root);
+  const configPath = path.join(root, 'home/.claude/agent-teams-config.json');
+  const config = await readFile(configPath, 'utf8')
+    .then(JSON.parse)
+    .catch((error) => {
+      if (error.code === 'ENOENT') return {};
+      throw error;
+    });
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      ...config,
+      httpServer: { ...config.httpServer, enabled: true, port: 3456 },
+    })
+  );
 }
 
 export async function verifyStartupCleanup({ root, evaluate, send }) {
