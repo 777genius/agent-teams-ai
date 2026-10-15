@@ -2,16 +2,14 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { isolatedEnvironment } from './platform.mjs';
+import { verifyCandidatePayload } from './stage-candidate.mjs';
+import { isolatedEnvironment, processes, ownedTree, sameIdentity } from './platform.mjs';
 
 export function packagedArguments(args, platform = process.platform) {
   assert.equal(platform, 'win32', 'Packaged harness requires Windows');
-  assert(
-    args.length === 2 || args.length === 4,
-    'Usage: --packaged-executable <absolute unpacked exe> [--runtime-setup app-install]'
-  );
+  assert([2, 4, 6].includes(args.length), 'Expected executable and bounded supported options');
   assert.equal(args[0], '--packaged-executable');
   const executable = args[1];
   assert(
@@ -22,11 +20,26 @@ export function packagedArguments(args, platform = process.platform) {
     'Expected a local absolute unpacked .exe path, not an installer, UNC path or command'
   );
   assert(!/(?:setup|uninstall)/i.test(path.win32.basename(executable)), 'Installer refused');
-  if (args.length === 4) {
-    assert.equal(args[2], '--runtime-setup');
-    assert.equal(args[3], 'app-install', 'Only the supported app installer is allowed');
+  const options = new Map();
+  for (let index = 2; index < args.length; index += 2) {
+    assert(
+      !options.has(args[index]) && ['--runtime-setup', '--candidate-evidence'].includes(args[index])
+    );
+    options.set(args[index], args[index + 1]);
   }
-  return { executable, runtimeSetup: args.length === 4 ? 'app-install' : 'none' };
+  if (options.has('--runtime-setup')) assert.equal(options.get('--runtime-setup'), 'app-install');
+  const candidateEvidence = options.get('--candidate-evidence');
+  if (candidateEvidence)
+    assert(
+      /^[a-z]:[\\/]/i.test(candidateEvidence) &&
+        path.win32.basename(candidateEvidence) === 'runtime-candidate-evidence.json' &&
+        !/[\x00-\x1f"<>|*?]/.test(candidateEvidence)
+    );
+  return {
+    executable,
+    runtimeSetup: options.has('--runtime-setup') ? 'app-install' : 'none',
+    ...(candidateEvidence ? { candidateEvidence } : {}),
+  };
 }
 
 export function containedPath(candidate, base, paths = path) {
@@ -47,11 +60,28 @@ export async function fingerprint(file) {
   return { path: resolved, sha256: hash.digest('hex') };
 }
 
-export async function packagedArtifact(executable) {
+export async function packagedArtifact(executable, candidateEvidenceFile) {
   const app = await fingerprint(executable);
   const resources = path.join(path.dirname(app.path), 'resources');
   const archive = await fingerprint(path.join(resources, 'app.asar'));
   const orchestrator = await fingerprint(path.join(resources, 'runtime/claude-multimodel.exe'));
+  let candidate;
+  const candidatePath = path.join(resources, 'runtime/TEST-CANDIDATE.json');
+  assert(candidateEvidenceFile || !existsSync(candidatePath), 'Ambient TEST candidate refused');
+  if (candidateEvidenceFile) {
+    candidate = JSON.parse(await readFile(candidateEvidenceFile, 'utf8'));
+    assert(
+      candidate.schemaVersion === 2 &&
+        candidate.testOnly === true &&
+        candidate.repository === '777genius/agent_teams_orchestrator' &&
+        /^sha256:[a-f0-9]{64}$/.test(candidate.artifactDigest ?? '') &&
+        /^[a-f0-9]{64}$/.test(candidate.payloadReceiptSha256 ?? '')
+    );
+    const { payloadReceiptSha256, allowedPrunedRoots, ...staged } = candidate;
+    assert(payloadReceiptSha256 && Array.isArray(allowedPrunedRoots));
+    assert.deepEqual(JSON.parse(await readFile(candidatePath, 'utf8')), staged);
+    await verifyCandidatePayload(path.join(resources, 'runtime'), candidate, { packaged: true });
+  }
   const renderer = path.join(resources, 'app.asar.unpacked/out/renderer/index.html');
   const rendererArtifact = await fingerprint(renderer);
   for (const item of [archive, orchestrator, rendererArtifact])
@@ -60,6 +90,7 @@ export async function packagedArtifact(executable) {
     app,
     archive,
     orchestrator,
+    ...(candidate ? { candidate } : {}),
     rendererArtifact,
     // Electron loadFile uses the virtual asar path even though renderer files are unpacked.
     renderer: path.join(resources, 'app.asar/out/renderer/index.html'),
@@ -233,6 +264,10 @@ export async function runtimeProvenance(status, data, role) {
       'Non-bundled orchestrator refused'
     );
     assert.equal(binary.sha256, data.artifact.orchestrator.sha256, 'Bundled runtime changed');
+    if (data.artifact.candidate)
+      await verifyCandidatePayload(path.dirname(binary.path), data.artifact.candidate, {
+        packaged: true,
+      });
   } else {
     assert.equal(status.source, 'app-managed', 'Installed developer/PATH OpenCode refused');
     const managedRoot = await realpath(path.join(data.userData, 'data/runtimes/opencode'));
@@ -296,33 +331,54 @@ export function probeOrchestratorVersion(
 
 // Ownership is established before ordering; executable names alone grant no authority.
 export function packagedStopOrder(owned, executable) {
-  const main = owned.filter(entry => entry.parent === owned[0]?.pid
-    && entry.executable?.toLowerCase() === executable.toLowerCase());
+  const main = owned.filter(
+    (entry) =>
+      entry.parent === owned[0]?.pid && entry.executable?.toLowerCase() === executable.toLowerCase()
+  );
   assert(main.length <= 1, 'Ambiguous packaged main identity');
-  return [...main, ...owned.filter(entry => entry !== main[0]).reverse()];
+  return [...main, ...owned.filter((entry) => entry !== main[0]).reverse()];
 }
 
 export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
-  const ownedRemaining = identities.filter(entry => snapshot.some(current =>
-    current.pid === entry.pid && current.birth === entry.birth));
-  return { ownedRemaining, listenerPids,
-    drained: ownedRemaining.length === 0 && listenerPids.length === 0 };
+  const ownedRemaining = identities.filter((entry) =>
+    snapshot.some((current) => current.pid === entry.pid && current.birth === entry.birth)
+  );
+  return {
+    ownedRemaining,
+    listenerPids,
+    drained: ownedRemaining.length === 0 && listenerPids.length === 0,
+  };
 }
 
 // Acknowledgement is diagnostic only; the caller must still prove OS/socket drain.
-export async function closePackagedBrowser({ assertOwnership, readVersion, connect, timeoutMs = 5000 }) {
+export async function closePackagedBrowser({
+  assertOwnership,
+  readVersion,
+  connect,
+  timeoutMs = 5000,
+  receipt,
+}) {
   await assertOwnership();
   const version = await readVersion();
   const endpoint = new URL(version.webSocketDebuggerUrl);
-  assert(endpoint.protocol === 'ws:' && endpoint.port === '9222'
-    && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)
-    && !endpoint.username && !endpoint.password && endpoint.pathname.startsWith('/devtools/browser/'),
-  'Unexpected packaged browser CDP endpoint');
+  assert(
+    endpoint.protocol === 'ws:' &&
+      endpoint.port === '9222' &&
+      ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) &&
+      !endpoint.username &&
+      !endpoint.password &&
+      endpoint.pathname.startsWith('/devtools/browser/'),
+    'Unexpected packaged browser CDP endpoint'
+  );
   await assertOwnership();
+  if (receipt) receipt.endpoint = endpoint.href;
   const ws = connect(endpoint);
   try {
     return await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error('Packaged Browser.close timed out')), timeoutMs);
+      const timer = setTimeout(
+        () => finish(new Error('Packaged Browser.close timed out')),
+        timeoutMs
+      );
       let sent = false;
       let finished = false;
       const finish = (error, outcome) => {
@@ -331,13 +387,24 @@ export async function closePackagedBrowser({ assertOwnership, readVersion, conne
         clearTimeout(timer);
         error ? reject(error) : resolve(outcome);
       };
-      ws.once('error', error => finish(error));
-      ws.once('close', () => finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed'));
-      ws.on('message', raw => {
+      ws.once('error', (error) => {
+        if (receipt) receipt.socketError = true;
+        finish(error);
+      });
+      ws.once('close', () => {
+        if (receipt) receipt.socketClosed = { at: Date.now(), afterSend: sent };
+        finish(sent ? null : new Error('CDP closed before Browser.close'), 'socket-closed');
+      });
+      ws.on('message', (raw) => {
         try {
           const response = JSON.parse(String(raw));
-          if (response.id === 1) finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
-        } catch (error) { finish(error); }
+          if (response.id === 1) {
+            if (receipt) receipt.ack = { at: Date.now(), id: 1, error: Boolean(response.error) };
+            finish(response.error ? new Error(response.error.message) : null, 'acknowledged');
+          }
+        } catch (error) {
+          finish(error);
+        }
       });
       ws.once('open', async () => {
         try {
@@ -346,10 +413,120 @@ export async function closePackagedBrowser({ assertOwnership, readVersion, conne
           if (ws.readyState !== 1) throw new Error('CDP closed during ownership check');
           ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
           sent = true;
-        } catch (error) { finish(error); }
+          if (receipt) receipt.command = { at: Date.now(), id: 1, method: 'Browser.close' };
+        } catch (error) {
+          finish(error);
+        }
       });
     });
   } finally {
     ws.terminate();
   }
+}
+
+// Metadata-only TEST observation; never opens executable bytes or changes installer state.
+export async function installerPublicationSnapshot(data) {
+  assert.equal(process.platform, 'win32');
+  assert(containedPath(data.userData, data.root));
+  const sandbox = await lstat(data.root);
+  assert(sandbox.isDirectory() && !sandbox.isSymbolicLink(), 'Installer sandbox symlink refused');
+  const manifestPath = path.join(data.root, 'manifest.json');
+  const manifestLeaf = await lstat(manifestPath);
+  assert(
+    manifestLeaf.isFile() && !manifestLeaf.isSymbolicLink(),
+    'Installer manifest must be regular'
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  assert.equal(manifest.artifact.app.path, data.artifact.app.path);
+  const snapshot = processes();
+  const owned = ownedTree(snapshot, manifest.launcher);
+  const candidates = (manifest.observedProcesses ?? []).filter(
+    (p) =>
+      p.parent === manifest.launcher.pid &&
+      p.executable?.toLowerCase() === data.artifact.app.path.toLowerCase()
+  );
+  assert.equal(candidates.length, 1, 'Actual owned app identity unavailable or ambiguous');
+  const app = candidates[0];
+  const live = owned.find((p) => p.pid === app.pid);
+  sameIdentity(app, live);
+  assert.equal(live.executable?.toLowerCase(), app.executable.toLowerCase());
+  const runtime = path.join(data.userData, 'data/runtimes/opencode');
+  const metadata = async (relative) => {
+    const parts = relative ? relative.split('/') : [];
+    let file = data.userData,
+      leaf;
+    for (const part of ['', 'data', 'runtimes', 'opencode', ...parts]) {
+      if (part) file = path.join(file, part);
+      try {
+        leaf = await lstat(file);
+      } catch (error) {
+        if (error.code === 'ENOENT') return { state: 'missing' };
+        throw error;
+      }
+      assert(!leaf.isSymbolicLink(), 'Installer diagnostic symlink refused');
+      if (file !== path.join(runtime, relative))
+        assert(leaf.isDirectory(), 'Installer ancestor is not a directory');
+    }
+    return {
+      state: 'present',
+      kind: leaf.isDirectory() ? 'directory' : leaf.isFile() ? 'file' : 'other',
+      size: leaf.size,
+      mtimeMs: leaf.mtimeMs,
+      birthtimeMs: leaf.birthtimeMs,
+      dev: leaf.dev,
+      ino: leaf.ino,
+    };
+  };
+  const runtimeMetadata = await metadata('');
+  const names = runtimeMetadata.state === 'missing' ? [] : await readdir(runtime);
+  assert(names.length <= 128, 'Installer namespace diagnostic bound exceeded');
+  const prefix = new RegExp(
+    `^installing-${app.pid}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`,
+    'i'
+  );
+  const staging = [];
+  const exactExecutables = new Set();
+  for (const name of names.filter((name) => prefix.test(name))) {
+    const directory = await metadata(name);
+    assert(directory.kind === 'directory', 'Installer staging is not a directory');
+    const executable = await metadata(`${name}/opencode.exe`);
+    assert(
+      executable.state === 'missing' || executable.kind === 'file',
+      'Installer leaf is not regular'
+    );
+    staging.push({ name, directory, executable });
+    exactExecutables.add(path.join(runtime, name, 'opencode.exe').toLowerCase());
+  }
+  const target = 'versions/1.19.0/opencode-windows-x64';
+  const targetDirectory = await metadata(target);
+  const targetExecutable = await metadata(`${target}/opencode.exe`);
+  assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
+  assert(targetExecutable.state === 'missing' || targetExecutable.kind === 'file');
+  exactExecutables.add(path.join(runtime, target, 'opencode.exe').toLowerCase());
+  const current = await metadata('current.json');
+  assert(current.state === 'missing' || current.kind === 'file');
+  const matching = snapshot.filter(
+    (p) =>
+      owned.some((o) => o.pid === p.pid && o.birth === p.birth) ||
+      exactExecutables.has(p.executable?.toLowerCase())
+  );
+  return {
+    at: Date.now(),
+    app: { pid: app.pid, parent: app.parent, birth: app.birth, executable: app.executable },
+    runtime: runtimeMetadata,
+    staging,
+    target: { directory: targetDirectory, executable: targetExecutable },
+    current,
+    rejectedStagingNames: names.filter(
+      (name) => name.startsWith('installing-') && !prefix.test(name)
+    ).length,
+    processes: matching.slice(0, 100).map((p) => ({
+      pid: p.pid,
+      parent: p.parent,
+      birth: p.birth,
+      executable: p.executable ?? null,
+    })),
+    processOverflow: matching.length > 100,
+    holder: 'unknown; census is not an open-handle query',
+  };
 }

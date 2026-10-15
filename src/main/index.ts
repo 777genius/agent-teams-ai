@@ -1,9 +1,3 @@
-import {
-  createDesktopTeamGroupChats,
-  registerTeamGroupChatsIpc,
-  type TeamGroupChatsFeature,
-} from '@features/team-group-chats/main';
-import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 /**
  * Main process entry point for Agent Teams AI.
  *
@@ -32,6 +26,12 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import {
+  createDesktopTeamGroupChats,
+  registerTeamGroupChatsIpc,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
@@ -709,49 +709,52 @@ const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
-  if (openCodeLifecycleBridge) {
-    const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
-      reason,
-      mode: reason === 'shutdown' ? 'force' : 'stale',
-      staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
-      leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
-    });
-    registryHostPids = new Set(
-      result.hosts
-        .filter((host) => host.action.startsWith('kept_'))
-        .map((host) => host.pid)
-        .filter((pid) => Number.isFinite(pid) && pid > 0)
-    );
-    if (result.cleaned > 0) {
-      logger.info(
-        `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+  try {
+    if (openCodeLifecycleBridge) {
+      const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
+        reason,
+        mode: reason === 'shutdown' ? 'force' : 'stale',
+        staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
+        leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
+        preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
+      });
+      registryHostPids = new Set(
+        result.hosts
+          .filter((host) => host.action.startsWith('kept_'))
+          .map((host) => host.pid)
+          .filter((pid) => Number.isFinite(pid) && pid > 0)
+      );
+      if (result.cleaned > 0) {
+        logger.info(
+          `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+        );
+      }
+      for (const diagnostic of result.diagnostics) {
+        logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+      }
+      registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
+        diagnostic.startsWith('OpenCode host cleanup bridge failed:')
       );
     }
-    for (const diagnostic of result.diagnostics) {
-      logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
-    }
-    registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
-      diagnostic.startsWith('OpenCode host cleanup bridge failed:')
-    );
-  }
-  // After the command, not before it: the managed host the registry sweep
-  // boots in this process directory is younger than the moment the command was
-  // issued, so an issue-time fence keeps the one host the tail below exists to
-  // reap.
-  const sweepCommandSettledAtMs = Date.now();
+  } finally {
+    // After the command, not before it: the managed host the registry sweep
+    // boots in this process directory is younger than the moment the command was
+    // issued, so an issue-time fence keeps the one host the tail below exists to
+    // reap.
+    const sweepCommandSettledAtMs = Date.now();
 
-  await runOpenCodeLifecycleCleanupTail({
-    reason,
-    registryHostPids,
-    registryCleanupAvailable,
-    appStartedAtMs,
-    sweepCommandSettledAtMs,
-    managedHostInstanceId: openCodeManagedHostInstanceId,
-    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
-    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
-    ports: openCodeLifecycleCleanupTailPorts,
-  });
+    await runOpenCodeLifecycleCleanupTail({
+      reason,
+      registryHostPids,
+      registryCleanupAvailable,
+      appStartedAtMs,
+      sweepCommandSettledAtMs,
+      managedHostInstanceId: openCodeManagedHostInstanceId,
+      profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+      releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+      ports: openCodeLifecycleCleanupTailPorts,
+    });
+  }
 }
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
@@ -3058,6 +3061,7 @@ async function shutdownServices(): Promise<void> {
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
+    openCodeLifecycleBridge?.prepareShutdownCleanup();
     await runShutdownStep('external connection admission drain', () =>
       externalAgentConnection?.closeAdmission()
     );
