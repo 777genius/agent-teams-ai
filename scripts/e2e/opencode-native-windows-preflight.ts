@@ -1,9 +1,9 @@
-/** No Electron package, real credentials, model calls or tasks: exact desktop TEST setup -> SDK discovery. */
+/** No Electron package, real credentials or prompts: real native startup, MCP and physical stop. */
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { mkdir, realpath, writeFile } from 'node:fs/promises';
+import { realpath } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { applyOpenCodeRuntimeBinaryEnv } from '../../src/main/services/runtime/openCodeRuntimeBinaryEnv';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
@@ -32,6 +32,11 @@ function safeSourceGateFailure(error: unknown): { reason: string; errno: string 
     'TEST probe launch boundary not reached': 'probe_launch_boundary_not_reached',
     'TEST probe launch boundary count invalid': 'probe_launch_boundary_count_invalid',
     'TEST cold namespace exists': 'TESTcold_namespace_exists',
+    'TEST probe startup response invalid': 'probe_startup_response_invalid',
+    'TEST probe startup binding changed': 'probe_startup_binding_changed',
+    'TEST probe readiness budget exhausted': 'probe_readiness_budget_exhausted',
+    'TEST probe member not ready': 'probe_member_not_ready',
+    'TEST probe physical stop unconfirmed': 'probe_physical_stop_unconfirmed',
   };
   // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
   const reason =
@@ -60,7 +65,8 @@ async function verifyModelFreeReadiness(
   execute: ReadinessExecutor,
   executeV1: (input: unknown) => Promise<unknown>,
   projectPath: string,
-  expectedVersion: string
+  expectedVersion: string,
+  selectedModel: string
 ) {
   const record = (value: unknown): Record<string, unknown> => {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -76,7 +82,7 @@ async function verifyModelFreeReadiness(
         cwd: projectPath,
         startedAt: new Date().toISOString(),
         timeoutMs: 120_000,
-        body: { selectedModel: 'openrouter/TEST-model', requireExecutionProbe: false },
+        body: { selectedModel, requireExecutionProbe: false },
       },
       executeV1
     )
@@ -101,24 +107,35 @@ async function verifyModelFreeReadiness(
     throw new Error('TEST model-free readiness contract changed');
 }
 
-// Only the final owner-launch boundary is replaced. Store, native filesystem,
-// selected auth/controller and complete member-plan preparation stay genuine.
+// Intercept only the final launch return: the real owner and native member start
+// once, then retire before resolveProbe can mark submitted or call send.
 async function verifyProbePreparation(
   inspect: (input: unknown) => Promise<unknown>,
   resolveProbe: (input: unknown, selection: unknown, run: boolean,
     options: { unattendedTeam: boolean }) => Promise<unknown>,
   owner: { launchExplicitOpenCodeV2Run: (plan: unknown) => Promise<unknown> },
+  control: {
+    awaitOpenCodeV2RunMemberReadiness(record: unknown, target: {
+      memberId: string; originalSessionId: string; selectedModel: string;
+      selectedVariant: string; pin: string;
+    }, timeout: number): Promise<unknown>;
+    requestOpenCodeV2Run(record: unknown, request: { operation: 'stop' }, timeout: number): Promise<unknown>;
+  },
   spyOn: (target: typeof owner, key: 'launchExplicitOpenCodeV2Run') => {
     mockImplementation(fn: (plan: unknown) => Promise<never>): void;
     mockRestore(): void;
   },
-  projectPath: string
+  projectPath: string, selectedModel: string, expectedVersion: string,
+  report: (phase: 'owner_launch' | 'member_readiness' | 'physical_stop', facts: {
+    launchCalls: number; ownerReturned: boolean; memberReady: boolean;
+    stopConfirmed: boolean; cleanupUnknown: boolean;
+  }) => void
 ) {
   const envelope = {
-    schemaVersion: 1, requestId: 'TEST-source-probe-preparation',
+    schemaVersion: 1, requestId: 'TEST-source-probe-startup',
     command: 'opencode.readiness', cwd: projectPath,
     startedAt: new Date().toISOString(), timeoutMs: 120_000,
-    body: { selectedModel: 'openrouter/TEST-model', requireExecutionProbe: true },
+    body: { selectedModel, requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
   const { lstat } = await import('node:fs/promises');
@@ -126,64 +143,105 @@ async function verifyProbePreparation(
   const dataRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
   if (!dataRoot) throw new Error('TEST cold namespace exists');
   const existing = await lstat(join(dataRoot, 'opencode', 'v2')).catch((error: unknown) => {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
-      return null;
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
     throw error;
   });
   if (existing) throw new Error('TEST cold namespace exists');
-  const sentinel = new Error('TEST probe preparation reached launch boundary');
+  const record = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('TEST probe startup response invalid');
+    return value as Record<string, unknown>;
+  };
+  const sentinel = new Error('TEST model-free startup and physical stop complete');
+  const originalLaunch = owner.launchExplicitOpenCodeV2Run;
   let boundaryCalls = 0;
-  let preparedPlan: unknown;
+  const facts = { launchCalls: 0, ownerReturned: false, memberReady: false,
+    stopConfirmed: false, cleanupUnknown: false };
   const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
   try {
     boundary.mockImplementation(async (value) => {
       boundaryCalls++;
-      const plan = value as { members?: { memberId?: string }[];
-        executionProbe?: { memberId?: string; prepared?: unknown } };
-      if (boundaryCalls !== 1 || plan.members?.length !== 1 ||
-          plan.members[0]?.memberId !== 'probe' ||
-          plan.executionProbe?.memberId !== 'probe' || !plan.executionProbe.prepared)
+      const plan = record(value), probe = record(plan.executionProbe);
+      if (boundaryCalls !== 1 || !Array.isArray(plan.members) || plan.members.length !== 1 ||
+          probe.memberId !== 'probe' || !probe.prepared)
         throw new Error('TEST probe preparation plan invalid');
-      preparedPlan = value;
-      // Never invoke the original: no run owner/server/session/model can start.
-      throw sentinel;
+      const member = record(plan.members[0]);
+      if (member.memberId !== 'probe' || typeof member.originalSessionId !== 'string')
+        throw new Error('TEST probe preparation plan invalid');
+      let returnedOwner: unknown, readyPid: number | undefined, primary: unknown, cleanupFailure: unknown;
+      let phase: 'owner_launch' | 'member_readiness' | 'physical_stop' = 'owner_launch';
+      const update = () => report(phase, { ...facts });
+      try {
+        facts.launchCalls++; update();
+        const launchedOwner = await originalLaunch(value); // Exactly one original call, never a reserved-plan replay.
+        const current = record(launchedOwner), binding = record(current.binding);
+        const expectedBinding = record(plan.binding);
+        if (!['teamId', 'runId', 'controllerInstanceId', 'ownerId'].every((key) =>
+          typeof expectedBinding[key] === 'string' && binding[key] === expectedBinding[key]))
+          throw new Error('TEST probe startup binding changed');
+        returnedOwner = launchedOwner; // Only the exact returned binding can authorize this TEST stop.
+        facts.ownerReturned = true;
+        phase = 'member_readiness'; update();
+        if (typeof current.deadline !== 'number' || !Number.isFinite(current.deadline))
+          throw new Error('TEST probe startup response invalid');
+        // Leave the existing 30s public stop budget inside the original probe deadline.
+        const readinessMs = Math.min(90_000, current.deadline - Date.now() - 30_000);
+        if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
+        const ready = await control.awaitOpenCodeV2RunMemberReadiness(returnedOwner, {
+          memberId: 'probe', originalSessionId: member.originalSessionId,
+          selectedModel, selectedVariant: 'default', pin: expectedVersion,
+        }, Math.floor(readinessMs));
+        if (!ready) throw new Error('TEST probe member not ready');
+        const memberStatus = record(ready);
+        if (typeof memberStatus.runtimePid !== 'number' || !Number.isSafeInteger(memberStatus.runtimePid) ||
+            memberStatus.runtimePid <= 0) throw new Error('TEST probe member not ready');
+        readyPid = memberStatus.runtimePid;
+        facts.memberReady = true; update();
+      } catch (error) { primary = error; }
+      finally {
+        if (returnedOwner) {
+          const primaryPhase = phase;
+          phase = 'physical_stop'; update();
+          try {
+            const stopped = record(await control.requestOpenCodeV2Run(returnedOwner, { operation: 'stop' }, 30_000));
+            const members = stopped.members;
+            const stoppedMember = Array.isArray(members) && members.length === 1 ? record(members[0]) : null;
+            const cleanup = stoppedMember?.cleanup ? record(stoppedMember.cleanup) : null;
+            if (stopped.kind !== 'stop' || stopped.state !== 'stopped' || stopped.ownerRetired !== true ||
+                stoppedMember?.memberId !== 'probe' || !Array.isArray(stoppedMember.errors) ||
+                stoppedMember.errors.length !== 0 || !cleanup || cleanup.scopeClosed !== true ||
+                cleanup.processRetired !== true || cleanup.descendantsRetired !== true ||
+                (readyPid !== undefined && cleanup.pid !== readyPid)) {
+              cleanupFailure = new Error('TEST probe physical stop unconfirmed');
+              facts.cleanupUnknown = true;
+            } else facts.stopConfirmed = true;
+          } catch (error) { cleanupFailure = error; facts.cleanupUnknown = true; }
+          update();
+          if (primary !== undefined) { phase = primaryPhase; update(); }
+        } else { facts.cleanupUnknown = true; update(); } // Partial launch has no returned authority to invent or replay.
+      }
+      if (primary !== undefined) throw primary;
+      if (cleanupFailure !== undefined) throw cleanupFailure;
+      if (!facts.memberReady || !facts.stopConfirmed) throw new Error('TEST probe physical stop unconfirmed');
+      throw sentinel; // resolveProbe never reaches submitted=true or send.
     });
     let caught: unknown;
     try { await resolveProbe(envelope, selection, true, { unattendedTeam: true }); }
     catch (error) { caught = error; }
     if (caught !== sentinel) throw caught ?? new Error('TEST probe launch boundary not reached');
-    if (boundaryCalls !== 1) throw new Error('TEST probe launch boundary count invalid');
-    return { preparationOnly: true, interceptedOwnerLaunches: boundaryCalls, plan: preparedPlan };
+    if (boundaryCalls !== 1 || facts.launchCalls !== 1 || !facts.stopConfirmed)
+      throw new Error('TEST probe launch boundary count invalid');
+    return { modelFreeStartupOnly: true, ownerLaunchCalls: facts.launchCalls,
+      authenticatedMemberReady: facts.memberReady, physicalStopConfirmed: facts.stopConfirmed,
+      modelSubmissionAttempted: false };
   } finally { boundary.mockRestore(); }
-}
-
-async function reservePreparedProbe(
-  value: unknown,
-  reserve: (dataRoot: string, binding: Record<string, string>, sourceHash: string,
-    profiles: unknown[]) => Promise<string>,
-  hash: (files: { path: string; sha256: string }[]) => string
-) {
-  const prepared = value as { preparationOnly?: boolean; interceptedOwnerLaunches?: number;
-    plan?: { dataRoot?: string; binding?: Record<string, string>;
-      source?: { files?: { path: string; sha256: string }[] };
-      members?: { profile?: unknown }[] } };
-  const plan = prepared?.plan;
-  if (prepared?.preparationOnly !== true || prepared.interceptedOwnerLaunches !== 1 ||
-      !plan || typeof plan.dataRoot !== 'string' || !plan.binding ||
-      !Array.isArray(plan.source?.files) || !Array.isArray(plan.members) ||
-      plan.members.length !== 1 || !plan.members[0]?.profile)
-    throw new Error('TEST probe preparation plan invalid');
-  await reserve(plan.dataRoot, plan.binding, hash(plan.source.files),
-    plan.members.map((member) => member.profile));
-  // A retained TEST start fence only; subprocess exit supplies broker stdio EOF.
-  // No owner launch, execution proof or measured physical-retirement claim.
-  return { preparationOnly: true, interceptedOwnerLaunches: 1, runControlReservedOnly: true };
 }
 
 async function verifySelectedControllerRoot(
   inspect: (input: unknown) => Promise<unknown>,
   projectPath: string,
-  expectedClaudeRoot: string
+  expectedClaudeRoot: string,
+  selectedModel: string
 ) {
   const record = (value: unknown): Record<string, unknown> => {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -198,7 +256,7 @@ async function verifySelectedControllerRoot(
       cwd: projectPath,
       startedAt: new Date().toISOString(),
       timeoutMs: 120_000,
-      body: { selectedModel: 'openrouter/TEST-model' },
+      body: { selectedModel },
     })
   );
   const controller = record(selection.controller);
@@ -222,7 +280,11 @@ async function verifySelectedControllerRoot(
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.3.11');
-assert.equal(process.argv.length, 5);
+assert.equal(process.argv.length, 7);
+const selectedModel = process.argv[5]!;
+assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required');
+const mcpNode = await realpath(path.resolve(process.argv[6]!));
+const mcpEntry = await realpath(path.resolve('mcp-server/dist/index.js'));
 const sdk = await realpath(path.resolve(process.argv[2]!));
 const resourcesPath = await realpath(path.resolve('resources'));
 // The desktop's real wrapper must be present so this gate exercises its binary projection.
@@ -235,20 +297,6 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
   }
   // Match the packaged Windows scenario exactly: root protection follows child creation.
   await protectWindowsTestDirectory(desktop.root);
-  // The read-only receipt requires a named/versioned package for each selected
-  // controller entry. This isolated stub qualifies SDK readiness, not real MCP integration.
-  const mcpRoot = path.join(desktop.root, 'TEST-source-controller');
-  await mkdir(mcpRoot, { mode: 0o700 });
-  await writeFile(
-    path.join(mcpRoot, 'package.json'),
-    JSON.stringify({ name: 'TEST-source-controller', version: '1.0.0' }),
-    { flag: 'wx', mode: 0o600 }
-  );
-  const mcpEntry = path.join(mcpRoot, 'TEST-never-launch-mcp.mjs');
-  await writeFile(mcpEntry, "throw new Error('Source gate must not launch MCP');\n", {
-    flag: 'wx',
-    mode: 0o600,
-  });
   const moduleUrl = pathToFileURL(
     path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunControl.ts')
   ).href;
@@ -267,6 +315,7 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
   const script = `
 let stage='startup-cleanup';
 let preparation = null;
+let startupFacts = null;
 try {
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
@@ -289,7 +338,7 @@ try {
  stage='resolve-scope';
  const profileScope = await resolveOpenCodeProfileScope({
    projectPath:${JSON.stringify(desktop.projectPath)}, purpose:'launch_runtime',
-   selectedModel:'openrouter/TEST-model', env:process.env});
+   selectedModel:${JSON.stringify(selectedModel)}, env:process.env});
  stage='prepare-profile';
  await manager.prepareProfile(${JSON.stringify(desktop.projectPath)},
    {profileScope,includeAppMcp:false,includeManagedSubscriptionPlugins:false});
@@ -302,31 +351,29 @@ try {
    binary
      ? `stage='probe-controller-state';
  const { inspectOpenCodeV2LaunchSelection } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
- await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)});
+ await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)},${JSON.stringify(selectedModel)});
  stage='probe-preparation';
  const { inspectOpenCodeV2SourceAvailability } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
  const runOwner = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunOwner.ts')).href)});
  const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
  const { spyOn } = await import('bun:test');
- const prepared = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
-   resolveOpenCodeV2ExecutionProbe, runOwner, spyOn, ${JSON.stringify(desktop.projectPath)});
- stage='run_control_reserve';
- const { reserveRunControlDirectory } = await import(${JSON.stringify(moduleUrl)});
- const { executionHash } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/execution/OpenCodeV2ExecutionContracts.ts')).href)});
- preparation = await (${reservePreparedProbe.toString()})(prepared, reserveRunControlDirectory,
-   executionHash);
+ const control = await import(${JSON.stringify(moduleUrl)});
+ preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
+   resolveOpenCodeV2ExecutionProbe, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
+   ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
+   (phase, facts) => { stage=phase; startupFacts=facts; });
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
-   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});`
+   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)},${JSON.stringify(selectedModel)});`
      : ''
  }
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,version:${JSON.stringify(expectedVersion ?? null)}}));
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,startupFacts,version:${JSON.stringify(expectedVersion ?? null)}}));
  process.exit(0);
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
    ...(${safeSourceGateFailure.toString()})(error)}));
  process.exit(1);
@@ -340,6 +387,7 @@ try {
         ...desktop.env,
         OPENROUTER_API_KEY: 'TEST-noncredential',
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry,
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpNode,
         // Desktop's bridge projects getClaudeBasePath() after the Electron override.
         AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
       },
@@ -356,7 +404,7 @@ try {
   const receipt: unknown = JSON.parse(receipts[0]!.slice('TEST_SOURCE_GATE='.length));
   assert(receipt && typeof receipt === 'object' && 'ok' in receipt);
   console.log(
-    JSON.stringify({ scope: 'desktop TEST setup -> real SDK native discovery', ...receipt })
+    JSON.stringify({ scope: 'desktop TEST setup -> native startup/MCP/physical stop without prompts', ...receipt })
   );
   assert.equal(code, 0, 'Source discovery gate failed; do not package or submit model tasks');
 }

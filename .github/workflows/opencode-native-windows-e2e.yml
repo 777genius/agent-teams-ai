@@ -94,12 +94,25 @@ jobs:
           }
       - name: Stage the real desktop console wrapper before binary projection
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
-      - name: Preflight SDK discovery with exact desktop TEST directories
+      - name: Install frozen desktop dependencies and build only the real controller
         shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/ci/install-dependencies-with-retry.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop install failed' }
+          pnpm --filter agent-teams-controller build
+          if ($LASTEXITCODE -ne 0) { throw 'Controller build failed' }
+          pnpm --filter agent-teams-mcp build
+          if ($LASTEXITCODE -ne 0) { throw 'MCP build failed' }
+      - name: Preflight real native startup and physical stop without model prompts
+        shell: pwsh
+        env:
+          SELECTED_MODEL: ${{ inputs.model }}
         run: |
           $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
-          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current
+          $node = (Get-Command node).Source
+          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current $env:SELECTED_MODEL $node
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
         if: ${{ !inputs.source_only }}
@@ -157,8 +170,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
-          node scripts/ci/install-dependencies-with-retry.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Desktop install failed' }
           node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
           if ($LASTEXITCODE -ne 0) { throw 'Terminal staging failed' }
           pnpm build
