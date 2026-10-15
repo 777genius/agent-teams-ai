@@ -55,30 +55,34 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $target = Join-Path $env:GITHUB_WORKSPACE 'TEST-native-source'
-          try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
-          catch [System.Management.Automation.ItemNotFoundException] { }
-          $parent = [IO.DirectoryInfo]::new($env:GITHUB_WORKSPACE)
-          if (!$parent.Exists -or ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'TEST source parent invalid' }
-          $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
-          $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
-          $acl = [Security.AccessControl.DirectorySecurity]::new()
-          $acl.SetOwner($sid)
-          $acl.SetAccessRuleProtection($true, $false)
-          $inherit = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
-          foreach ($principal in @($sid, $system)) {
-            $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
-          }
-          $directory = [IO.DirectoryInfo]::new($target)
-          [IO.FileSystemAclExtensions]::Create($directory, $acl)
-          $directory.Refresh()
-          if (!$directory.Exists -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $directory.FullName -cne $target) { throw 'TEST source container invalid' }
-          $observed = [IO.FileSystemAclExtensions]::GetAccessControl($directory)
-          if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $sid.Value) { throw 'TEST source custody invalid' }
-          $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
-          if ($rules.Count -ne 2) { throw 'TEST source ACL invalid' }
-          foreach ($rule in $rules) {
-            if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
+          # Keep Bun's resolver outside the unrelated desktop package scope.
+          # Both source trees retain independent owner-only custody.
+          foreach ($name in @('TEST-native-source', 'TEST-native-sdk')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
+            catch [System.Management.Automation.ItemNotFoundException] { }
+            $parent = [IO.DirectoryInfo]::new($env:GITHUB_WORKSPACE)
+            if (!$parent.Exists -or ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'TEST source parent invalid' }
+            $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+            $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+            $acl = [Security.AccessControl.DirectorySecurity]::new()
+            $acl.SetOwner($sid)
+            $acl.SetAccessRuleProtection($true, $false)
+            $inherit = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
+            foreach ($principal in @($sid, $system)) {
+              $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
+            }
+            $directory = [IO.DirectoryInfo]::new($target)
+            [IO.FileSystemAclExtensions]::Create($directory, $acl)
+            $directory.Refresh()
+            if (!$directory.Exists -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $directory.FullName -cne $target) { throw 'TEST source container invalid' }
+            $observed = [IO.FileSystemAclExtensions]::GetAccessControl($directory)
+            if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $sid.Value) { throw 'TEST source custody invalid' }
+            $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+            if ($rules.Count -ne 2) { throw 'TEST source ACL invalid' }
+            foreach ($rule in $rules) {
+              if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
+            }
           }
       - uses: actions/checkout@v6
         with:
@@ -97,7 +101,7 @@ jobs:
         with:
           repository: 777genius/agent_teams_orchestrator
           ref: ${{ inputs.sdk_ref }}
-          path: TEST-native-source/.test-sdk
+          path: TEST-native-sdk
           persist-credentials: false
       - uses: pnpm/action-setup@v6
         with:
@@ -146,7 +150,7 @@ jobs:
               'S-1-15-2-1' { 'all_application_packages'; break }; default { if ($sid.StartsWith('S-1-15-2-')) { 'app_package' } else { 'other' } }
             }
           }
-          $roots = @(@{kind='sdk'; path=(Resolve-Path .test-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path $env:OPENCODE_NATIVE_TEST_NODE_PATH)})
+          $roots = @(@{kind='sdk'; path=(Resolve-Path ../TEST-native-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path $env:OPENCODE_NATIVE_TEST_NODE_PATH)})
           :roots foreach ($root in $roots) {
             $sections = [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access
             $acl = [IO.FileSystemAclExtensions]::GetAccessControl([IO.DirectoryInfo]::new($root.path), $sections)
@@ -207,7 +211,7 @@ jobs:
             $candidateBinary = (Resolve-Path TEST-provider/runtime119/claude-multimodel.exe).Path
             $official = (Resolve-Path TEST-provider/npm/opencode.cmd).Path
             $receipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-v1-provider-comparison.json'
-            node .test-sdk/scripts/smoke/windows-runtime-opencode-provider-json.mjs --actual-provider-compare $baseline $candidateBinary $official $receipt (Resolve-Path scripts/e2e/opencode-native-test-auth.ts).Path
+            node ../TEST-native-sdk/scripts/smoke/windows-runtime-opencode-provider-json.mjs --actual-provider-compare $baseline $candidateBinary $official $receipt (Resolve-Path scripts/e2e/opencode-native-test-auth.ts).Path
             if ($LASTEXITCODE -ne 0) { throw 'Real V1 provider comparison failed; inspect finite receipt' }
           } finally { Set-Content runtime.lock.json $originalLock -Encoding utf8NoBOM }
       - name: Preserve finite V1 provider comparison
@@ -234,18 +238,18 @@ jobs:
         id: native-cache
         uses: actions/cache/restore@v5
         with:
-          path: TEST-native-source/.test-sdk/native/win32-x64
-          key: opencode-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-image.outputs.version }}-bun-1.4.3-${{ hashFiles('TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.cpp', 'TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.hpp', 'TEST-native-source/.test-sdk/scripts/opencode-v2/compile-windows.ts', 'TEST-native-source/.test-sdk/scripts/opencode-v2/stage-windows.ts') }}
+          path: TEST-native-sdk/native/win32-x64
+          key: opencode-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-image.outputs.version }}-bun-1.4.3-${{ hashFiles('TEST-native-sdk/src/services/opencode/host/windows/*.cpp', 'TEST-native-sdk/src/services/opencode/host/windows/*.hpp', 'TEST-native-sdk/scripts/opencode-v2/compile-windows.ts', 'TEST-native-sdk/scripts/opencode-v2/stage-windows.ts') }}
       - name: Restore frozen SDK package downloads
         if: ${{ !inputs.provider_only }}
         id: sdk-download-cache
         uses: actions/cache/restore@v5
         with:
           path: TEST-bun-download-cache
-          key: opencode-sdk-downloads-v1-${{ runner.os }}-bun-1.4.3-${{ hashFiles('TEST-native-source/.test-sdk/bun.lock', 'TEST-native-source/.test-sdk/package.json') }}
+          key: opencode-sdk-downloads-v1-${{ runner.os }}-bun-1.4.3-${{ hashFiles('TEST-native-sdk/bun.lock', 'TEST-native-sdk/package.json') }}
       - name: Compile exact Windows native producer
         if: ${{ !inputs.provider_only }}
-        working-directory: TEST-native-source/.test-sdk
+        working-directory: TEST-native-sdk
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
@@ -269,7 +273,7 @@ jobs:
         if: ${{ !inputs.provider_only && steps.native-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v5
         with:
-          path: TEST-native-source/.test-sdk/native/win32-x64
+          path: TEST-native-sdk/native/win32-x64
           key: ${{ steps.native-cache.outputs.cache-primary-key }}
       - name: Save frozen SDK package downloads before E2E
         if: ${{ !inputs.provider_only && steps.sdk-download-cache.outputs.cache-hit != 'true' }}
@@ -279,7 +283,7 @@ jobs:
           key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
       - name: Qualify native command isolation before desktop installation
         if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: TEST-native-source/.test-sdk
+        working-directory: TEST-native-sdk
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -289,7 +293,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Qualify native ownership and command retirement
         if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: TEST-native-source/.test-sdk
+        working-directory: TEST-native-sdk
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -332,7 +336,7 @@ jobs:
           $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
-          bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current $env:SELECTED_MODEL $node
+          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Select Windows release compiler Bun
         if: ${{ !inputs.source_only && !inputs.provider_only }}
@@ -341,7 +345,7 @@ jobs:
           bun-version: '1.4.2'
       - name: Build and stage the verified runtime candidate
         if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: TEST-native-source/.test-sdk
+        working-directory: TEST-native-sdk
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
@@ -392,11 +396,11 @@ jobs:
           $ErrorActionPreference = 'Stop'
           # Apply the existing afterPack pruning policy to the independent candidate.
           # Retained expected bytes still originate from the SDK build, not the app.
-          New-Item -ItemType Directory .test-sdk/candidate/resources | Out-Null
-          Move-Item .test-sdk/candidate/runtime .test-sdk/candidate/resources/runtime
-          node -e "(async () => { const p = require('./scripts/electron-builder/afterPack.cjs')._internal; const root = require('node:path').resolve('.test-sdk/candidate'); await p.pruneKnownIncompatibleNativeArtifacts(root, 'win32', 'x64'); await p.pruneNodePtyArtifacts(root, 'win32', 'x64'); })().catch(() => process.exit(1))"
+          New-Item -ItemType Directory ../TEST-native-sdk/candidate/resources | Out-Null
+          Move-Item ../TEST-native-sdk/candidate/runtime ../TEST-native-sdk/candidate/resources/runtime
+          node -e "(async () => { const p = require('./scripts/electron-builder/afterPack.cjs')._internal; const root = require('node:path').resolve('../TEST-native-sdk/candidate'); await p.pruneKnownIncompatibleNativeArtifacts(root, 'win32', 'x64'); await p.pruneNodePtyArtifacts(root, 'win32', 'x64'); })().catch(() => process.exit(1))"
           if ($LASTEXITCODE -ne 0) { throw 'Candidate pruning qualification failed' }
-          $candidateRoot = (Resolve-Path .test-sdk/candidate/resources/runtime).Path
+          $candidateRoot = (Resolve-Path ../TEST-native-sdk/candidate/resources/runtime).Path
           $packagedRoot = (Resolve-Path release/win-unpacked/resources/runtime).Path
           $required = @('claude-multimodel.exe', 'COMMIT_SHA', 'bun/bun.exe', 'local-cli/cli.js', 'local-cli/native/win32-x64/opencode-v2-windows-helper.exe', 'local-cli/native/win32-x64/opencode-v2-windows-realpath.dll')
           foreach ($relative in $required) {
