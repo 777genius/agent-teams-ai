@@ -283,15 +283,16 @@ jobs:
         with:
           path: TEST-bun-download-cache
           key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
+      # Temporary TEST diagnostic: observe complete ACL retirement on this exact SDK tree.
       - name: Qualify native command isolation before desktop installation
-        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        if: ${{ !inputs.provider_only }}
         working-directory: TEST-native-sdk
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $commandRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-command-" + [guid]::NewGuid().ToString('N'))
           $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
-          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
+          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt (Resolve-Path '.').Path
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Qualify native ownership and command retirement
         if: ${{ !inputs.source_only && !inputs.provider_only }}
