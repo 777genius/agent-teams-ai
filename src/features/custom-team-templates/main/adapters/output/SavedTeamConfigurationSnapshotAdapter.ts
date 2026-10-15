@@ -86,14 +86,18 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
       return { status: 'sourceUnavailable', sourceTeamName };
     }
     const teamName = identity.value;
-    const directory = join(getTeamsBasePath(), teamName);
+    // Capture the teams base path once at the start of the snapshot read.
+    // This ensures all file reads and store calls use the same root, even if
+    // the global root changes during the operation.
+    const teamsBasePath = getTeamsBasePath();
+    const directory = join(teamsBasePath, teamName);
 
     const before = await this.probeTeamDirectory(teamName, directory);
     if (!before) {
       return { status: 'sourceUnavailable', sourceTeamName: teamName };
     }
 
-    const snapshot = await this.buildSnapshot(teamName, before);
+    const snapshot = await this.buildSnapshot(teamName, before, teamsBasePath);
     const after = await this.probeTeamDirectory(teamName, directory);
     if (after?.revision !== before.revision) {
       return { status: 'configurationChanged', sourceTeamName: teamName };
@@ -106,7 +110,8 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
 
   private async buildSnapshot(
     teamName: string,
-    probe: TeamDirectoryProbe
+    probe: TeamDirectoryProbe,
+    teamsBasePath: string
   ): Promise<CustomTemplateSourceTeamSnapshot | null> {
     if (probe.config.status === 'unreadable') {
       return null;
@@ -118,7 +123,7 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
     if (probe.teamMeta.status === 'unreadable') {
       return null;
     }
-    const teamMeta = await this.readTeamMeta(teamName);
+    const teamMeta = await this.readTeamMeta(teamName, teamsBasePath);
     if (probe.teamMeta.status === 'file' && !teamMeta) {
       return null;
     }
@@ -141,13 +146,16 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
     return {
       sourceTeamName: teamName,
       ...(teamPrompt ? { teamPrompt } : {}),
-      roster: await this.readRoster(teamName, probe.members),
+      roster: await this.readRoster(teamName, probe.members, teamsBasePath),
     };
   }
 
-  private async readTeamMeta(teamName: string): Promise<TeamMetaFile | null> {
+  private async readTeamMeta(
+    teamName: string,
+    teamsBasePath: string
+  ): Promise<TeamMetaFile | null> {
     try {
-      return await this.metaStore.getMeta(teamName, undefined, { requireCompleteFields: true });
+      return await this.metaStore.getMeta(teamName, teamsBasePath, { requireCompleteFields: true });
     } catch {
       // Presence was already established by the probe, so an unreadable file is
       // reported as an unavailable source rather than as a missing one.
@@ -164,7 +172,8 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
    */
   private async readRoster(
     teamName: string,
-    membersProbe: AuthoritativeFileProbe
+    membersProbe: AuthoritativeFileProbe,
+    teamsBasePath: string
   ): Promise<RosterMetadataReadResult> {
     if (membersProbe.status === 'absent') {
       return { status: 'absent' };
@@ -175,14 +184,18 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
 
     let meta: Awaited<ReturnType<TeamMembersMetaStore['getMeta']>>;
     try {
-      meta = await this.membersStore.getMeta(teamName, {
-        requireCompleteMembers: true,
-        // A generated CLI auto-suffix duplicate (alice-2 above an active
-        // alice) is a known artifact the template projection removes, so it
-        // must not make the whole roster unreadable. Real corruption and
-        // missing required fields still fail the strict read.
-        allowCliAutoSuffixArtifacts: true,
-      });
+      meta = await this.membersStore.getMeta(
+        teamName,
+        {
+          requireCompleteMembers: true,
+          // A generated CLI auto-suffix duplicate (alice-2 above an active
+          // alice) is a known artifact the template projection removes, so it
+          // must not make the whole roster unreadable. Real corruption and
+          // missing required fields still fail the strict read.
+          allowCliAutoSuffixArtifacts: true,
+        },
+        teamsBasePath
+      );
     } catch {
       return { status: 'unreadable' };
     }

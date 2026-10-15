@@ -46,6 +46,14 @@ export interface CustomTeamTemplatePreviewState extends CustomTeamTemplatePrevie
    * token.
    */
   confirmedSave?: CustomTeamTemplateConfirmedSaveIdentity;
+  /**
+   * True when a previous save attempt for this token returned
+   * `unresolvedWriteOutcome` and no later attempt has established a definitive
+   * outcome. While set, a subsequent `not_started` failure must not be
+   * reported as definitively not saved, because the earlier writer may still
+   * commit. Cleared when a save or re-check establishes a definitive outcome.
+   */
+  hasUnresolvedWrite?: boolean;
 }
 
 /**
@@ -98,11 +106,15 @@ function isSameConfirmedSaveIdentity(
  * `unknown` and `expired` are distinct so a caller can tell a token that was
  * never issued (or was already replaced by a refreshed preview) from one that
  * simply aged out. Neither is ever reinterpreted as another team's preview.
+ *
+ * When `status === 'expired'` and `state` is present, the token had a confirmed
+ * save before expiring. The `state.confirmedSave` is preserved for re-check,
+ * but the preview data is no longer valid for new saves.
  */
 export type CustomTeamTemplatePreviewResolution =
   | { status: 'found'; state: CustomTeamTemplatePreviewState }
   | { status: 'unknown' }
-  | { status: 'expired' };
+  | { status: 'expired'; state?: CustomTeamTemplatePreviewState };
 
 export interface InMemoryCustomTeamTemplatePreviewStoreOptions {
   now(): number;
@@ -127,6 +139,18 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     const createdAtMs = this.options.now();
     this.dropExpired(createdAtMs);
     while (this.entries.size >= this.capacity) {
+      // Prefer evicting previews that were never submitted; a submitted
+      // operation may still need re-check, so it is evicted only when every
+      // retained entry is a submitted operation.
+      let evicted = false;
+      for (const [token, state] of this.entries) {
+        if (!state.confirmedSave) {
+          this.entries.delete(token);
+          evicted = true;
+          break;
+        }
+      }
+      if (evicted) continue;
       const oldest = this.entries.keys().next();
       if (oldest.done) break;
       this.entries.delete(oldest.value);
@@ -150,6 +174,11 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       return { status: 'unknown' };
     }
     if (state.expiresAtMs <= this.options.now()) {
+      if (state.confirmedSave) {
+        // Preserve the confirmed save identity for re-check, but mark as expired
+        // so no new save can be confirmed against this preview.
+        return { status: 'expired', state: { ...state, confirmedSave: state.confirmedSave } };
+      }
       this.entries.delete(token);
       return { status: 'expired' };
     }
@@ -201,14 +230,54 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   }
 
   /**
-   * Forgets one token.
+   * Forgets one token for new saves, but preserves confirmed save identity.
    *
    * Used when the confirmed projection no longer matches the source: the old
    * token must not be able to save the refreshed data, so the next attempt has
-   * to start from a fresh preview.
+   * to start from a fresh preview. However, if a save was already confirmed
+   * for this token, its operation identity is preserved so re-check can still
+   * reconcile the operation that was actually attempted.
    */
   invalidate(token: string): void {
+    const state = this.entries.get(token);
+    if (state?.confirmedSave) {
+      // Preserve the full submitted-operation state for re-check. New saves
+      // remain blocked: SaveUseCase re-reads the source and rejects a changed
+      // projection as stale, and confirmSave rejects a rebound identity.
+      // Clearing contentHash here would break re-check reconciliation, so the
+      // entry is kept intact.
+      return;
+    }
     this.entries.delete(token);
+  }
+
+  /**
+   * Marks a token's operation as having an unresolved write outcome.
+   *
+   * Called when a save returns `unresolvedWriteOutcome`: a later `not_started`
+   * failure must not clear that uncertainty, because the earlier writer may
+   * still commit. The flag is cleared when a save or re-check establishes a
+   * definitive outcome.
+   */
+  markUnresolvedWrite(token: string): void {
+    const state = this.entries.get(token);
+    if (state) {
+      this.entries.set(token, { ...state, hasUnresolvedWrite: true });
+    }
+  }
+
+  /** Clears a previously marked unresolved write once the outcome is definitive. */
+  clearUnresolvedWrite(token: string): void {
+    const state = this.entries.get(token);
+    if (state?.hasUnresolvedWrite) {
+      const { hasUnresolvedWrite: _removed, ...rest } = state;
+      this.entries.set(token, rest);
+    }
+  }
+
+  /** Whether a previous save for this token left an unresolved write. */
+  hasUnresolvedWrite(token: string): boolean {
+    return this.entries.get(token)?.hasUnresolvedWrite === true;
   }
 
   /** Drops every retained preview and confirmed operation (used on shutdown). */
@@ -223,6 +292,13 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   private dropExpired(nowMs: number): void {
     for (const [token, state] of this.entries) {
       if (state.expiresAtMs <= nowMs) {
+        if (state.confirmedSave) {
+          // Preserve the full submitted-operation state for re-check.
+          // resolve() reports it as expired (blocking new saves) while still
+          // returning the identity re-check needs. Clearing contentHash here
+          // would break reconciliation, so the entry is kept intact.
+          continue;
+        }
         this.entries.delete(token);
       }
     }

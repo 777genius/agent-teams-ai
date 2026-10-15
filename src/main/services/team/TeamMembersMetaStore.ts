@@ -113,8 +113,8 @@ function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: st
 }
 
 export class TeamMembersMetaStore {
-  private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
+  private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
+    return path.join(teamsBasePath, teamName, 'members.meta.json');
   }
 
   /**
@@ -126,9 +126,10 @@ export class TeamMembersMetaStore {
    */
   async getMeta(
     teamName: string,
-    options?: { requireCompleteMembers?: boolean; allowCliAutoSuffixArtifacts?: boolean }
+    options?: { requireCompleteMembers?: boolean; allowCliAutoSuffixArtifacts?: boolean },
+    teamsBasePath = getTeamsBasePath()
   ): Promise<TeamMembersMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName);
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
     try {
       const stat = await fs.promises.stat(metaPath);
       if (!stat.isFile()) {

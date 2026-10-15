@@ -217,6 +217,81 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.resolve(second.token)).toEqual({ status: 'unknown' });
   });
 
+  it('preserves a submitted operation for re-check when its preview expires', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+    });
+    const state = store.issue(baseInput);
+    const identity = {
+      templateId: 'tmpl-confirmed',
+      name: 'Confirmed',
+      nameKey: 'confirmed',
+    };
+    expect(store.confirmSave(state.token, identity)).toEqual({ status: 'recorded' });
+
+    now = 100;
+    const resolved = store.resolve(state.token);
+    expect(resolved.status).toBe('expired');
+    if (resolved.status !== 'expired' || !resolved.state) return;
+    // The full reconciliation state survives expiry: template id, display
+    // identity, canonical content and digest are all intact for re-check.
+    expect(resolved.state.confirmedSave).toEqual(identity);
+    expect(resolved.state.templateId).toBe('tmpl-confirmed');
+    expect(resolved.state.contentHash).toBe(baseInput.contentHash);
+    expect(resolved.state.canonicalContent).toBe(baseInput.canonicalContent);
+    // A new save can no longer be confirmed against the expired preview.
+    expect(store.confirmSave(state.token, identity)).toEqual({ status: 'unavailable' });
+  });
+
+  it('preserves a submitted operation for re-check when its preview is invalidated', () => {
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: counterTokens(),
+    });
+    const state = store.issue(baseInput);
+    const identity = {
+      templateId: 'tmpl-confirmed',
+      name: 'Confirmed',
+      nameKey: 'confirmed',
+    };
+    expect(store.confirmSave(state.token, identity)).toEqual({ status: 'recorded' });
+
+    store.invalidate(state.token);
+
+    // The entry is preserved with its full reconciliation state, so re-check
+    // can still reconcile the submitted write by its stable id and digest.
+    const resolved = store.resolve(state.token);
+    expect(resolved.status).toBe('found');
+    if (resolved.status !== 'found') return;
+    expect(resolved.state.templateId).toBe('tmpl-confirmed');
+    expect(resolved.state.contentHash).toBe(baseInput.contentHash);
+    expect(resolved.state.canonicalContent).toBe(baseInput.canonicalContent);
+    expect(resolved.state.confirmedSave).toEqual(identity);
+  });
+
+  it('prefers evicting unsubmitted previews over submitted operations', () => {
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => 0,
+      createToken: counterTokens(),
+      ttlMs: 10_000,
+      capacity: 2,
+    });
+    const first = store.issue({ ...baseInput, templateId: 'tmpl-1' });
+    store.confirmSave(first.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.issue({ ...baseInput, templateId: 'tmpl-2' });
+
+    // The store is full (1 submitted + 1 unsubmitted). Issuing a third must
+    // evict the unsubmitted preview, preserving the submitted operation.
+    store.issue({ ...baseInput, templateId: 'tmpl-3' });
+
+    expect(store.resolve(first.token).status).toBe('found');
+    expect(store.resolve('token-2')).toEqual({ status: 'unknown' });
+    expect(store.resolve('token-3').status).toBe('found');
+  });
+
   it('clears every retained preview and confirmed operation on disposal', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,

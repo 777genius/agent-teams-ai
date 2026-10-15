@@ -1021,4 +1021,84 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     ).resolves.toEqual({ status: 'storageUnavailable' });
     expect(fixture.getById).toHaveBeenCalledTimes(2);
   });
+
+  it('preserves uncertainty when an unknown write is followed by a not-started retry', async () => {
+    vi.useFakeTimers();
+    try {
+      // First write may still commit (settlement never confirms); the exact
+      // retry is rejected as not_started, and its settlement does not prove
+      // the first write absent. The operation must stay unresolved under the
+      // original stable id.
+      const firstUnknown = new CustomTeamTemplateStorageInterruptedError(
+        'worker call timeout',
+        'unknown',
+        new Promise<void>(() => undefined)
+      );
+      const retryNotStarted = new CustomTeamTemplateStorageInterruptedError(
+        'previous worker has not exited',
+        'not_started',
+        Promise.resolve()
+      );
+      const fixture = gatewayFixture({
+        create: [firstUnknown, retryNotStarted],
+      });
+      const preview = await preparedPreview({ gateway: fixture.gateway });
+
+      const pending = useCase({ gateway: fixture.gateway }, preview.store).execute({
+        previewToken: preview.token,
+      });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+
+      await expect(pending).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: preview.stateTemplateId,
+      });
+      // No second write is issued on an unsettled unknown, and no
+      // reconciliation read can prove absence while the writer may run.
+      expect(fixture.create).toHaveBeenCalledTimes(1);
+      expect(fixture.getById).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('preserves uncertainty across executes when a retry never starts after an unknown write', async () => {
+    vi.useFakeTimers();
+    try {
+      const firstUnknown = new CustomTeamTemplateStorageInterruptedError(
+        'worker call timeout',
+        'unknown',
+        new Promise<void>(() => undefined)
+      );
+      const retryNotStarted = new CustomTeamTemplateStorageInterruptedError(
+        'worker restarting',
+        'not_started',
+        Promise.resolve()
+      );
+      const fixture = gatewayFixture({
+        create: [firstUnknown, retryNotStarted, retryNotStarted],
+      });
+      const preview = await preparedPreview({ gateway: fixture.gateway });
+      const save = useCase({ gateway: fixture.gateway }, preview.store);
+
+      const first = save.execute({ previewToken: preview.token });
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
+      await expect(first).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: preview.stateTemplateId,
+      });
+
+      // An exact retry (same token, same identity) whose write never starts
+      // must not clear the earlier uncertainty: the first writer never
+      // confirmed it stopped, so absence cannot be proven.
+      await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+        status: 'unresolvedWriteOutcome',
+        templateId: preview.stateTemplateId,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

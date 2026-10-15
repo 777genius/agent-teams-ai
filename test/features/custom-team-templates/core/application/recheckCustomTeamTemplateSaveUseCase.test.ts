@@ -216,9 +216,8 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
     });
   });
 
-  it('rejects a missing, unknown or expired token without touching storage', async () => {
-    let now = 0;
-    const fixture = operation({ read: { status: 'notFound' }, ttlMs: 100, now: () => now });
+  it('rejects a missing or unknown token without touching storage', async () => {
+    const fixture = operation({ read: { status: 'notFound' } });
 
     await expect(fixture.useCase.execute({})).resolves.toEqual({
       status: 'validationFailed',
@@ -232,14 +231,61 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
       status: 'validationFailed',
       issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
     });
+    expect(fixture.read).not.toHaveBeenCalled();
+    expect(fixture.create).not.toHaveBeenCalled();
+  });
+
+  it('allows re-check for an expired token that has a confirmed save', async () => {
+    let now = 0;
+    const fixture = operation({
+      read: { status: 'found', template: stored() },
+      ttlMs: 100,
+      now: () => now,
+    });
 
     now = 100;
     await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
+      status: 'saved',
+      template: stored(),
+    });
+    expect(fixture.read).toHaveBeenCalled();
+  });
+
+  it('rejects an expired token that was never confirmed', async () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: () => 'token-1',
+      ttlMs: 100,
+    });
+    const state = store.issue({
+      sourceTeamName: 'alpha-team',
+      templateId: TEMPLATE_ID,
+      name: 'Release Pipeline',
+      nameKey: 'release pipeline',
+      canonicalContent: CANONICAL_CONTENT,
+      contentHash: CONTENT_HASH,
+    });
+    // Note: confirmSave is NOT called, so no confirmed save identity exists
+    const read = vi.fn(
+      (): Promise<ReadCustomTeamTemplateRecordResult> => Promise.resolve({ status: 'notFound' })
+    );
+    const useCase = new RecheckCustomTeamTemplateSaveUseCase({
+      gateway: {
+        customTeamTemplateCreate: vi.fn(),
+        customTeamTemplateList: vi.fn().mockResolvedValue({ templates: [], unreadableRecords: [] }),
+        customTeamTemplateGetById: read,
+      },
+      hasher,
+      previewStore: store,
+    });
+
+    now = 100;
+    await expect(useCase.execute({ previewToken: state.token })).resolves.toEqual({
       status: 'validationFailed',
       issues: [{ code: 'previewTokenExpired', field: 'previewToken' }],
     });
-    expect(fixture.read).not.toHaveBeenCalled();
-    expect(fixture.create).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
   });
 
   it('reports unavailable storage instead of absence when there is no backend', async () => {

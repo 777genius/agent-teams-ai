@@ -374,4 +374,72 @@ describe('SavedTeamConfigurationSnapshotAdapter', () => {
       members: [{ name: 'alice' }, { name: 'bob' }],
     });
   });
+
+  it('binds every read to the root captured at the start of the snapshot', async () => {
+    // Two isolated roots with deliberately different metadata for the same team.
+    const rootA = await fs.mkdtemp(path.join(os.tmpdir(), 'custom-template-root-a-'));
+    const rootB = await fs.mkdtemp(path.join(os.tmpdir(), 'custom-template-root-b-'));
+    try {
+      for (const root of [rootA, rootB]) {
+        await fs.mkdir(path.join(root, 'teams', 'switch-team'), { recursive: true });
+      }
+      hoisted.teamsBase = path.join(rootA, 'teams');
+      await writeTeamMeta('switch-team', 'Prompt from root A.');
+      await writeRoster('switch-team', [{ name: 'alice', role: 'reviewer' }]);
+
+      const rootBTeams = path.join(rootB, 'teams');
+      const savedBase = hoisted.teamsBase;
+      hoisted.teamsBase = rootBTeams;
+      await fs.writeFile(
+        path.join(rootBTeams, 'switch-team', 'team.meta.json'),
+        metaStore.serializeMeta({
+          cwd: '/projects/example',
+          prompt: 'Prompt from root B.',
+          createdAt: Date.now(),
+        })
+      );
+      await fs.writeFile(
+        path.join(rootBTeams, 'switch-team', 'members.meta.json'),
+        JSON.stringify({ version: 1, members: [{ name: 'bob', role: 'writer' }] })
+      );
+      hoisted.teamsBase = savedBase;
+
+      // Switch the global root in the middle of the snapshot: after the
+      // before-probe but during the store reads. Every read must still use
+      // the originally captured root A.
+      const originalGetMeta = TeamMembersMetaStore.prototype.getMeta;
+      const switchOnce = vi
+        .spyOn(TeamMembersMetaStore.prototype, 'getMeta')
+        .mockImplementation(async function (
+          this: TeamMembersMetaStore,
+          ...args: Parameters<typeof originalGetMeta>
+        ) {
+          hoisted.teamsBase = rootBTeams;
+          try {
+            return await originalGetMeta.apply(this, args);
+          } finally {
+            hoisted.teamsBase = savedBase;
+          }
+        });
+
+      try {
+        const outcome = await adapter.readSnapshot('switch-team');
+        expect(outcome.status).toBe('available');
+        if (outcome.status !== 'available') return;
+        // All metadata comes from the captured root A; nothing from root B
+        // is mixed in, and the consistency check compares against root A.
+        expect(outcome.snapshot.teamPrompt).toBe('Prompt from root A.');
+        expect(outcome.snapshot.roster).toEqual({
+          status: 'readable',
+          members: [{ name: 'alice', role: 'reviewer' }],
+        });
+      } finally {
+        switchOnce.mockRestore();
+        hoisted.teamsBase = savedBase;
+      }
+    } finally {
+      await fs.rm(rootA, { recursive: true, force: true });
+      await fs.rm(rootB, { recursive: true, force: true });
+    }
+  });
 });

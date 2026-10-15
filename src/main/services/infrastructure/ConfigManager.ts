@@ -44,7 +44,14 @@ function getDefaultConfigPath(): string {
 }
 
 function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
-  setClaudeBasePathOverride(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
+  const next = getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath;
+  // A null outcome means no root is configured anywhere. Resetting the
+  // override to null here would discard a previously established explicit
+  // root (standalone CLAUDE_ROOT applied before services initialize), so an
+  // absent configuration leaves the current base path untouched instead.
+  if (next != null) {
+    setClaudeBasePathOverride(next);
+  }
 }
 
 function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {

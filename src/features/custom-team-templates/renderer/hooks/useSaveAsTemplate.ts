@@ -306,18 +306,42 @@ export function useSaveAsTemplate({
     await runPrepare(name, description);
   }, [description, name, runPrepare]);
 
-  const setName = useCallback((value: string): void => {
-    setNameState(value);
-    setIssues((current) => current.filter((issue) => issue.field !== 'name'));
-    setNameConflict(false);
-    setAttempt((current) => (current?.status === 'idConflict' ? null : current));
-  }, []);
+  const setName = useCallback(
+    (value: string): void => {
+      setNameState(value);
+      setIssues((current) => current.filter((issue) => issue.field !== 'name'));
+      // If we had a name conflict and the user is changing the name, automatically
+      // refresh the preview with the new name so the next save works without a
+      // false expiry error or redundant confirmation. We only do this when the
+      // preview exists (content unchanged) and there was a nameConflict.
+      if (nameConflict && preview && value !== name) {
+        setNameConflict(false);
+        setAttempt(null);
+        // Trigger a fresh preview preparation with the new name
+        void runPrepare(value, description);
+      } else {
+        setNameConflict(false);
+        setAttempt((current) => (current?.status === 'idConflict' ? null : current));
+      }
+    },
+    [description, name, nameConflict, preview, runPrepare]
+  );
 
-  const setDescription = useCallback((value: string): void => {
-    setDescriptionState(value);
-    setIssues((current) => current.filter((issue) => issue.field !== 'description'));
-    setAttempt((current) => (current?.status === 'idConflict' ? null : current));
-  }, []);
+  const setDescription = useCallback(
+    (value: string): void => {
+      setDescriptionState(value);
+      setIssues((current) => current.filter((issue) => issue.field !== 'description'));
+      // If we had a name conflict and the user is changing the description, also
+      // refresh the preview so the next save works with the updated content.
+      if (nameConflict && preview) {
+        setAttempt(null);
+        void runPrepare(name, value);
+      } else {
+        setAttempt((current) => (current?.status === 'idConflict' ? null : current));
+      }
+    },
+    [name, nameConflict, preview, runPrepare]
+  );
 
   useEffect(() => {
     if (!open) return;

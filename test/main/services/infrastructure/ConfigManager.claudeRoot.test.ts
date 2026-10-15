@@ -23,6 +23,24 @@ describe('ConfigManager CLAUDE_ROOT support', () => {
     expect(configManager.getConfigPath()).toBe(path.join(overrideRoot, 'agent-teams-config.json'));
   });
 
+  it('keeps an explicitly established Claude root when no root is configured', async () => {
+    vi.resetModules();
+
+    // Mirrors standalone startup: CLAUDE_ROOT is applied before services
+    // initialize, and the default config carries no claudeRootPath. Loading
+    // the configuration must not reset the explicit root to auto-detection.
+    const standaloneRoot = path.join(os.tmpdir(), 'standalone-claude-root-test');
+    const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
+    pathDecoder.setClaudeBasePathOverride(standaloneRoot);
+
+    const { ConfigManager } =
+      await import('../../../../src/main/services/infrastructure/ConfigManager');
+    const manager = new ConfigManager(path.join(os.tmpdir(), 'missing-agent-teams-config.json'));
+
+    expect(manager.getConfig().general.claudeRootPath).toBeNull();
+    expect(pathDecoder.getClaudeBasePath()).toBe(standaloneRoot);
+  });
+
   it('keeps the Electron dev Claude root override above default config values', async () => {
     vi.resetModules();
 
@@ -32,9 +50,8 @@ describe('ConfigManager CLAUDE_ROOT support', () => {
     const overrides = await import('../../../../src/main/utils/electronDevPathOverrides');
     overrides.applyElectronDevPathOverrides({});
 
-    const { ConfigManager } = await import(
-      '../../../../src/main/services/infrastructure/ConfigManager'
-    );
+    const { ConfigManager } =
+      await import('../../../../src/main/services/infrastructure/ConfigManager');
     const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
 
     const manager = new ConfigManager(path.join(os.tmpdir(), 'missing-agent-teams-config.json'));
