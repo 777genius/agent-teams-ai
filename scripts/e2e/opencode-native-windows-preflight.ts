@@ -392,7 +392,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string } } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -414,11 +414,21 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined;
+        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string } | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
             const message = line.trimStart();
+            if (message.startsWith('{')) {
+              try {
+                const event = row(JSON.parse(message));
+                if (event.event === 'opencode-v2-startup') childStartup = {
+                  stage: one(event.stage, ['waiting-for-prepare', 'delivery-resolution', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+                  cause: one(event.cause, ['execution_contract_invalid', 'execution_identity_mismatch', 'execution_entry_changed', 'v2_compiled_runtime_unsupported', 'v2_execution_layout_unsupported', 'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing', 'execution_containment_identity_mismatch', 'execution_timeout', 'execution_cancelled']),
+                  reason: one(event.reason, ['timeout', 'failed']),
+                };
+              } catch { /* Only the fixed structured startup event is observed. */ }
+            }
             if (!/^(?:error|Error): /.test(message)) continue;
             kind = 'bun_error';
             // Fixed TEST diagnostic roles only: never publish the denied path.
@@ -478,7 +488,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             if (matched) { kind = matched[1]; break; }
           }
         }
-        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }), ...(readTargetLocation === undefined ? {} : { readTargetLocation }), ...(readTargetAncestorDistance === undefined ? {} : { readTargetAncestorDistance }) };
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }), ...(readTargetLocation === undefined ? {} : { readTargetLocation }), ...(readTargetAncestorDistance === undefined ? {} : { readTargetAncestorDistance }), ...(childStartup === undefined ? {} : { childStartup }) };
       }
       for (let index = 0; index < parents.length; index++) {
         const parent = parents[index]!;
