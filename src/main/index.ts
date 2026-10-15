@@ -1,9 +1,3 @@
-import {
-  createDesktopTeamGroupChats,
-  registerTeamGroupChatsIpc,
-  type TeamGroupChatsFeature,
-} from '@features/team-group-chats/main';
-import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 /**
  * Main process entry point for Agent Teams AI.
  *
@@ -32,6 +26,12 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import {
+  createDesktopTeamGroupChats,
+  registerTeamGroupChatsIpc,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
