@@ -1,5 +1,10 @@
 const CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV = 'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH';
 
+/** Caps native 1M models too, without changing the selected model identity. */
+export function applyTeamContextLimitEnv(env: NodeJS.ProcessEnv, limitContext?: boolean): void {
+  if (limitContext) env.CLAUDE_CODE_DISABLE_1M_CONTEXT = '1';
+}
+
 /**
  * Throws when deterministic team bootstrap has been disabled, either by the app
  * rollout flag or the runtime kill switch.

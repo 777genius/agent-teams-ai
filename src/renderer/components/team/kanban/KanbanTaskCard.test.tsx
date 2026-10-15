@@ -161,6 +161,7 @@ function createTaskCardElement(
   props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
 ): React.ReactElement {
   return React.createElement(KanbanTaskCard, {
+    contextId: 'local',
     task: baseTask,
     teamName: 'my-team',
     columnId: 'in_progress',
@@ -554,6 +555,7 @@ describe('KanbanTaskCard change badge', () => {
     await act(async () => {
       root.render(
         React.createElement(KanbanTaskCard, {
+          contextId: 'local',
           task: { ...baseTask, changePresence: 'no_changes' },
           teamName: 'my-team',
           columnId: 'in_progress',
@@ -591,6 +593,7 @@ describe('KanbanTaskCard change badge', () => {
     await act(async () => {
       root.render(
         React.createElement(KanbanTaskCard, {
+          contextId: 'local',
           task: { ...baseTask, changePresence: 'has_changes' },
           teamName: 'my-team',
           columnId: 'in_progress',
@@ -628,6 +631,7 @@ describe('KanbanTaskCard change badge', () => {
     await act(async () => {
       root.render(
         React.createElement(KanbanTaskCard, {
+          contextId: 'local',
           task: { ...baseTask, changePresence: 'needs_attention' },
           teamName: 'my-team',
           columnId: 'in_progress',
@@ -880,6 +884,7 @@ describe('KanbanTaskCard live log indicator', () => {
     await act(async () => {
       root.render(
         React.createElement(KanbanTaskCard, {
+          contextId: 'local',
           task: baseTask,
           teamName: 'my-team',
           columnId: 'in_progress',

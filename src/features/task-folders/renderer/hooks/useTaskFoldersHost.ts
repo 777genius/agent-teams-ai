@@ -11,6 +11,7 @@ import { projectFolders } from '../view-models/projection';
 
 import type { RefObject } from 'react';
 export function useTaskFoldersHost(
+  contextId: string,
   sidebar: RefObject<HTMLDivElement | null>,
   collapsed: boolean,
   panelRef: RefObject<HTMLDivElement | null>
@@ -141,10 +142,12 @@ export function useTaskFoldersHost(
     showArchived,
     setShowArchived,
     openTask: (team: string, id: string): void => {
-      clearTaskManualUnread(team, id);
+      clearTaskManualUnread({ contextId, teamName: team, taskId: id });
       openDetail(team, id);
     },
-    markUnread: markTaskUnread,
+    markUnread: (team: string, id: string): void => {
+      markTaskUnread({ contextId, teamName: team, taskId: id });
+    },
   };
 }
 export type TaskFoldersHostModel = ReturnType<typeof useTaskFoldersHost>;

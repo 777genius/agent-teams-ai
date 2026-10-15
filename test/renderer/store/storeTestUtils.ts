@@ -9,20 +9,21 @@ import { createCliInstallerSlice } from '../../../src/renderer/store/slices/cliI
 import { createConfigSlice } from '../../../src/renderer/store/slices/configSlice';
 import { createConnectionSlice } from '../../../src/renderer/store/slices/connectionSlice';
 import { createContextSlice } from '../../../src/renderer/store/slices/contextSlice';
+import { createConversationSlice } from '../../../src/renderer/store/slices/conversationSlice';
 import { createEditorSlice } from '../../../src/renderer/store/slices/editorSlice';
 import { createExtensionsSlice } from '../../../src/renderer/store/slices/extensionsSlice';
-import { createConversationSlice } from '../../../src/renderer/store/slices/conversationSlice';
 import { createNotificationSlice } from '../../../src/renderer/store/slices/notificationSlice';
-import { createScheduleSlice } from '../../../src/renderer/store/slices/scheduleSlice';
 import { createPaneSlice } from '../../../src/renderer/store/slices/paneSlice';
 import { createProjectSlice } from '../../../src/renderer/store/slices/projectSlice';
 import { createRepositorySlice } from '../../../src/renderer/store/slices/repositorySlice';
+import { createScheduleSlice } from '../../../src/renderer/store/slices/scheduleSlice';
 import { createSessionDetailSlice } from '../../../src/renderer/store/slices/sessionDetailSlice';
 import { createSessionSlice } from '../../../src/renderer/store/slices/sessionSlice';
 import { createSubagentSlice } from '../../../src/renderer/store/slices/subagentSlice';
 import { createTabSlice } from '../../../src/renderer/store/slices/tabSlice';
 import { createTabUISlice } from '../../../src/renderer/store/slices/tabUISlice';
 import { createTeamSlice } from '../../../src/renderer/store/slices/teamSlice';
+import { createTeamTaskDetailStoreSlices } from '../../../src/renderer/store/slices/taskDetailStoreSlices';
 import { createUISlice } from '../../../src/renderer/store/slices/uiSlice';
 import { createUpdateSlice } from '../../../src/renderer/store/slices/updateSlice';
 
@@ -40,6 +41,7 @@ export function createTestStore() {
     ...createSessionDetailSlice(...args),
     ...createSubagentSlice(...args),
     ...createTeamSlice(...args),
+    ...createTeamTaskDetailStoreSlices(...args),
     ...createConversationSlice(...args),
     ...createTabSlice(...args),
     ...createTabUISlice(...args),

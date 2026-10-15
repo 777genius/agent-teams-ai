@@ -1004,7 +1004,8 @@
       "cancel": "لغو",
       "delete": "حذف",
       "markResolved": "علامت‌گذاری حل‌شده",
-      "save": "ذخیره"
+      "save": "ذخیره",
+      "openInTaskTab": "در برگه جداگانه باز کنید"
     },
     "attachments": {
       "commentAttachment": "پیوست نظر",

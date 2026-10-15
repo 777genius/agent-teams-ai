@@ -1080,11 +1080,16 @@
     "explicitChoice": "Выбрано явно - {{model}}"
   },
   "taskDetail": {
+    "navigation": {
+      "reviewRefused": "Не удалось открыть просмотр изменений. Запрос сохранён.",
+      "editorRefused": "Не удалось открыть файл в редакторе команды. Запрос сохранён."
+    },
     "actions": {
       "cancel": "Отмена",
       "delete": "Удалить",
       "markResolved": "Отметить решённым",
-      "save": "Сохранить"
+      "save": "Сохранить",
+      "openInTaskTab": "Открыть в отдельной вкладке"
     },
     "attachments": {
       "commentAttachment": "Вложение комментария",
@@ -1159,6 +1164,11 @@
       "newArriving": "Поступают новые task logs"
     },
     "notFound": "Задача не найдена",
+    "page": {
+      "deleted": "Задача удалена",
+      "provisioning": "Задача временно недоступна, пока команда запускается",
+      "unavailable": "Задача недоступна"
+    },
     "related": {
       "blockedBy": "Заблокировано",
       "blocks": "Блокирует",

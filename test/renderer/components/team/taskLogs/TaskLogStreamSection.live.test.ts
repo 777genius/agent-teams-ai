@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import * as os from 'os';
 import * as path from 'path';
 
@@ -14,15 +17,13 @@ const LIVE_TEAM = process.env.LIVE_TASK_LOG_TEAM?.trim();
 const LIVE_TASK = process.env.LIVE_TASK_LOG_TASK?.trim();
 const LIVE_CLAUDE_BASE =
   process.env.LIVE_TASK_LOG_CLAUDE_BASE?.trim() || path.join(os.homedir(), '.claude');
-const EXPECT_NO_EMPTY_PAYLOADS =
-  process.env.LIVE_TASK_LOG_EXPECT_NO_EMPTY_PAYLOADS === '1';
+const EXPECT_NO_EMPTY_PAYLOADS = process.env.LIVE_TASK_LOG_EXPECT_NO_EMPTY_PAYLOADS === '1';
 const EXPECT_VISIBLE_TOOLS = (process.env.LIVE_TASK_LOG_EXPECT_VISIBLE_TOOLS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
 
-const describeLive =
-  LIVE_TEAM && LIVE_TASK && LIVE_CLAUDE_BASE ? describe : describe.skip;
+const describeLive = LIVE_TEAM && LIVE_TASK && LIVE_CLAUDE_BASE ? describe : describe.skip;
 
 const apiState = {
   getTaskLogStream: vi.fn(),
@@ -77,11 +78,15 @@ describeLive('TaskLogStreamSection live smoke', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, {
-            teamName: LIVE_TEAM!,
-            taskId: report.task.taskId,
-          }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: LIVE_TEAM!, taskId: report.task.taskId },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: LIVE_TEAM!, taskId: report.task.taskId },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();

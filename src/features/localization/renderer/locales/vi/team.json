@@ -1004,7 +1004,8 @@
       "cancel": "Hủy",
       "delete": "Xóa",
       "markResolved": "Đánh dấu đã giải quyết",
-      "save": "Lưu"
+      "save": "Lưu",
+      "openInTaskTab": "Mở trong tab riêng"
     },
     "attachments": {
       "commentAttachment": "Tệp đính kèm bình luận",

@@ -2028,7 +2028,15 @@ describe('TeamGraphAdapter particles', () => {
       undefined,
       undefined,
       undefined,
-      {}
+      {},
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'local'
     );
     const readGraph = adapter.adapt(
       teamData,
@@ -2041,11 +2049,19 @@ describe('TeamGraphAdapter particles', () => {
       undefined,
       undefined,
       {
-        'my-team/task-comments': {
+        '["local","my-team","task-comments"]': {
           readIds: ['comment-1'],
           lastUpdated: Date.now(),
         },
-      }
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'local'
     );
 
     expect(findNode(unreadGraph, 'task:my-team:task-comments')?.unreadCommentCount).toBe(1);

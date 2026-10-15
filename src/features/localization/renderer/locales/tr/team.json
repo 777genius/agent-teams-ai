@@ -1004,7 +1004,8 @@
       "cancel": "İptal",
       "delete": "Sil",
       "markResolved": "Çözüldü olarak işaretle",
-      "save": "Kaydet"
+      "save": "Kaydet",
+      "openInTaskTab": "Ayrı sekmede aç"
     },
     "attachments": {
       "commentAttachment": "Yorum eki",

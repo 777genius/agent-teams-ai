@@ -1,3 +1,5 @@
+import { isOrdinaryTeamTab } from '@renderer/types/tabs';
+
 import { selectTeamDataForName } from './team/teamDataSelectors';
 
 import type { AppState } from './types';
@@ -16,7 +18,10 @@ export function getFocusedVisibleTeamName(state: AppState): string | null {
   }
 
   const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-  if ((activeTab?.type !== 'team' && activeTab?.type !== 'graph') || !activeTab.teamName) {
+  if (
+    !(activeTab && (isOrdinaryTeamTab(activeTab) || activeTab.type === 'graph')) ||
+    !activeTab.teamName
+  ) {
     return null;
   }
 

@@ -18,15 +18,17 @@ import type { FolderDialog } from './ui/FolderDialogs';
 import type { TreeFocusRequest } from './ui/FolderTree';
 import type { RefObject } from 'react';
 export const TaskFoldersHost = ({
+  contextId,
   sidebar,
   collapsed,
 }: {
+  contextId: string;
   sidebar: RefObject<HTMLDivElement | null>;
   collapsed: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const model = useTaskFoldersHost(sidebar, collapsed, panelRef);
+  const model = useTaskFoldersHost(contextId, sidebar, collapsed, panelRef);
   const [action, setAction] = useState<FolderDialog | null>(null);
   const [focus, setFocus] = useState<TreeFocusRequest | null>(null);
   const dialog = (next: FolderDialog): void => {

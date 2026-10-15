@@ -24,6 +24,10 @@ import {
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 import {
+  hasOpenCodeOwnedChildBinding,
+  prepareOpenCodeShutdownCleanupEnvironment,
+} from './OpenCodeMcpBridgeEnv';
+import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
 } from './OpenCodeStartupCleanupBridge';
@@ -200,6 +204,8 @@ export class OpenCodeBridgeCommandClient {
   private readonly clock: () => Date;
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: OpenCodeBridgeCommandClientOptions['envProvider'] | null;
+  private lastSuccessfulOwnedChildEnv: NodeJS.ProcessEnv | null = null;
+  private shutdownCleanupEnv: NodeJS.ProcessEnv | null = null;
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -220,6 +226,15 @@ export class OpenCodeBridgeCommandClient {
     this.keepInputFile = options.keepInputFile ?? false;
     this.ensureWindowsNodeModulesJunction =
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
+  }
+
+  /** Prepare one registry-only shutdown child while the current app binding is still open. */
+  prepareShutdownCleanup(currentBoundChildEnv: Readonly<Record<string, string>>): void {
+    this.shutdownCleanupEnv = null;
+    this.shutdownCleanupEnv = prepareOpenCodeShutdownCleanupEnvironment(
+      this.lastSuccessfulOwnedChildEnv,
+      currentBoundChildEnv
+    );
   }
 
   /** Read only the original request's retained response; never launch another CLI. */
@@ -380,7 +395,16 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
-        const env = await this.resolveEnv(command);
+        const prepared =
+          command === 'opencode.cleanupHosts' &&
+          body &&
+          typeof body === 'object' &&
+          'reason' in body &&
+          body.reason === 'shutdown'
+            ? this.shutdownCleanupEnv
+            : null;
+        if (prepared) this.shutdownCleanupEnv = null;
+        const env = prepared ? { ...prepared } : await this.resolveEnv(command);
         if (options.canDispatch?.() === false) {
           retainStartupEvidence = false;
           return this.contractFailure(
@@ -399,7 +423,7 @@ export class OpenCodeBridgeCommandClient {
           timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-          env,
+          env: { ...env },
         });
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         let observedOutputWriteError: string | null = null;
@@ -513,6 +537,8 @@ export class OpenCodeBridgeCommandClient {
         ) {
           retainStartupEvidence = false;
         }
+        if (parsed.value.ok && this.envProvider && !prepared && hasOpenCodeOwnedChildBinding(env))
+          this.lastSuccessfulOwnedChildEnv = env;
         return parsed.value;
       }
 

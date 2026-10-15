@@ -45,6 +45,7 @@ import {
   buildDirectTmuxRestartLauncher,
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
+import { applyTeamContextLimitEnv } from './TeamProvisioningEnvGuards';
 import {
   createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
   type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
@@ -98,7 +99,6 @@ import type {
 } from './TeamProvisioningMemberLifecycleHostPorts';
 import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
 import type {
-  DirectProcessMemberLaunchReason,
   DirectProcessMemberRestartInput,
   EffectiveConfiguredMember,
   LiveRosterAttachReason,
@@ -609,7 +609,6 @@ export class TeamProvisioningMemberLifecycleController {
     });
     await ensureCwdExists(cwd);
 
-    const operation: DirectProcessMemberLaunchReason = 'manual_restart';
     const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
       configuredMember: input.configuredMember,
       run: input.run,
@@ -628,6 +627,7 @@ export class TeamProvisioningMemberLifecycleController {
     });
     let directTmuxLaunchSucceeded = false;
     try {
+      applyTeamContextLimitEnv(provisioningEnv.env, input.run.request.limitContext);
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }
@@ -645,7 +645,7 @@ export class TeamProvisioningMemberLifecycleController {
         primaryEnv: provisioningEnv,
         teamRuntimeAuth: {
           teamName: input.teamName,
-          authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          authMaterialId: `${input.run.runId}-direct-manual_restart-${input.configuredMember.name}-defaults-${randomUUID()}`,
           allowAnthropicApiKeyHelper: true,
         },
       });
@@ -765,7 +765,7 @@ export class TeamProvisioningMemberLifecycleController {
           leadName: input.leadName,
           leadSessionId: parentSessionId,
           prompt,
-          operation,
+          operation: 'manual_restart',
         });
         await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
         this.appendMemberBootstrapDiagnostic(
@@ -816,7 +816,6 @@ export class TeamProvisioningMemberLifecycleController {
       run: input.run,
     });
     await ensureCwdExists(cwd);
-
     const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
       configuredMember: input.configuredMember,
       run: input.run,
@@ -835,6 +834,7 @@ export class TeamProvisioningMemberLifecycleController {
     });
     let directProcessLaunchSucceeded = false;
     try {
+      applyTeamContextLimitEnv(provisioningEnv.env, input.run.request.limitContext);
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }

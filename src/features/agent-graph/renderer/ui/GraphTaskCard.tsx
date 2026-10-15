@@ -85,7 +85,7 @@ export const GraphTaskCard = ({
   onDeleteTask,
 }: GraphTaskCardProps): React.JSX.Element => {
   const taskId = node.domainRef.kind === 'task' ? node.domainRef.taskId : '';
-  const { teamData } = useGraphActivityContext(teamName);
+  const { contextId, teamData } = useGraphActivityContext(teamName);
   const tasks = teamData?.tasks ?? [];
   const members = teamData?.members ?? [];
   const task = tasks.find((candidate) => candidate.id === taskId);
@@ -129,6 +129,7 @@ export const GraphTaskCard = ({
     >
       <KanbanTaskCard
         task={taskWithKanban}
+        contextId={contextId}
         teamName={teamName}
         columnId={columnId}
         hasReviewers={false}

@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import { readFile } from 'fs/promises';
 import path from 'path';
 import React, { act } from 'react';
@@ -130,10 +133,13 @@ describe('TaskLogStreamSection OpenCode real fixture e2e', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, {
-            teamName: TEAM_NAME,
-            taskId: TASK_ID,
-            liveEnabled: false,
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
           })
         )
       );
@@ -174,10 +180,13 @@ describe('TaskLogStreamSection OpenCode real fixture e2e', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, {
-            teamName: TEAM_NAME,
-            taskId: COORDINATION_TASK_ID,
-            liveEnabled: false,
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: COORDINATION_TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: COORDINATION_TASK_ID },
+            }),
           })
         )
       );

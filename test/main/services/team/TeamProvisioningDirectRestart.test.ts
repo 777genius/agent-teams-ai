@@ -15,6 +15,15 @@ import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/ant
 import { describe, expect, it } from 'vitest';
 
 describe('TeamProvisioningDirectRestart', () => {
+  it('carries the 200K context cap into a tmux restart command', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      { CLAUDE_CODE_DISABLE_1M_CONTEXT: '1' },
+      'anthropic'
+    );
+    expect(assignments).toContain('CLAUDE_CODE_DISABLE_1M_CONTEXT=');
+    expect(assignments).toContain("CLAUDE_CODE_DISABLE_1M_CONTEXT='1'");
+  });
+
   it('quotes shell values without losing apostrophes or empty strings', () => {
     expect(shellQuote('')).toBe("''");
     expect(shellQuote('/tmp/demo path')).toBe("'/tmp/demo path'");
@@ -134,9 +143,7 @@ describe('TeamProvisioningDirectRestart', () => {
       'anthropic'
     );
 
-    expect(assignments).toContain(
-      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
-    );
+    expect(assignments).toContain(`${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`);
     expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
     expect(assignments).toContain("CLAUDE_CODE_USE_BEDROCK=''");
   });
@@ -296,9 +303,7 @@ describe('TeamProvisioningDirectRestart', () => {
       'anthropic'
     );
 
-    expect(assignments).toContain(
-      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
-    );
+    expect(assignments).toContain(`${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`);
     expect(assignments).toContain("ANTHROPIC_API_KEY='sk-ant-direct'");
     expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
     expect(assignments).toContain("ANTHROPIC_BASE_URL=''");

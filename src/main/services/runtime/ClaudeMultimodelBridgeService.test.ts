@@ -141,6 +141,23 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
     });
   });
 
+  test('keeps the runtime default model separate from catalog fallback truth', () => {
+    const provider = mapRuntimeProviderStatus('anthropic', {
+      supported: true,
+      authenticated: true,
+      authMethod: 'claude.ai',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      canLoginFromUi: true,
+      models: ['opus', 'claude-opus-5-5'],
+      defaultModel: 'claude-opus-5-5',
+      capabilities: { teamLaunch: true, oneShot: true },
+    });
+
+    expect(provider.defaultModel).toBe('claude-opus-5-5');
+    expect(provider.modelCatalog).toBeNull();
+  });
+
   test('drops malformed Anthropic subscription rate limit windows', () => {
     const provider = mapRuntimeProviderStatus('anthropic', {
       supported: true,

@@ -68,6 +68,7 @@ const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.
 
 interface KanbanBoardProps {
   tasks: TeamTask[];
+  contextId: string;
   teamName: string;
   kanbanState: KanbanState;
   filter: KanbanFilterState;
@@ -213,6 +214,7 @@ function sortColumnTasksByField(
 
 interface SortableKanbanTaskCardProps {
   task: TeamTask;
+  contextId: string;
   columnId: KanbanColumnId;
   teamName: string;
   kanbanState: KanbanState;
@@ -236,6 +238,7 @@ interface SortableKanbanTaskCardProps {
 
 const SortableKanbanTaskCard = ({
   task,
+  contextId,
   columnId,
   teamName,
   kanbanState,
@@ -273,6 +276,7 @@ const SortableKanbanTaskCard = ({
       <KanbanTaskCard
         flat
         task={task}
+        contextId={contextId}
         teamName={teamName}
         columnId={columnId}
         kanbanTaskState={kanbanState.tasks[task.id]}
@@ -300,6 +304,7 @@ const SortableKanbanTaskCard = ({
 
 export const KanbanBoard = memo(function KanbanBoard({
   tasks,
+  contextId,
   teamName,
   kanbanState,
   filter,
@@ -576,6 +581,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                 <SortableKanbanTaskCard
                   key={task.id}
                   task={task}
+                  contextId={contextId}
                   columnId={columnId}
                   teamName={teamName}
                   kanbanState={kanbanState}
@@ -610,6 +616,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               flat
               key={task.id}
               task={task}
+              contextId={contextId}
               teamName={teamName}
               columnId={columnId}
               kanbanTaskState={kanbanState.tasks[task.id]}
@@ -638,6 +645,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       );
     },
     [
+      contextId,
       enableTaskSorting,
       activeTaskLogActivity,
       handleScrollToTask,
