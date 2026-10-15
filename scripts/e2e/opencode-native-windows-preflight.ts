@@ -530,6 +530,7 @@ async function verifyProbePreparation(
     options: { unattendedTeam: boolean }) => Promise<unknown>,
   owner: { launchExplicitOpenCodeV2Run: (plan: unknown) => Promise<unknown> },
   control: {
+    OPEN_CODE_V2_RUN_INITIALIZATION_MS: number;
     awaitOpenCodeV2RunMemberReadiness(record: unknown, target: {
       memberId: string; originalSessionId: string; selectedModel: string;
       selectedVariant: string; pin: string;
@@ -552,7 +553,7 @@ async function verifyProbePreparation(
     command: 'opencode.readiness', cwd: projectPath,
     // Cold source graph preparation shares this one supported caller budget
     // with native startup; owner/readiness/stop retain their production limits.
-    startedAt: new Date().toISOString(), timeoutMs: 180_000,
+    startedAt: new Date().toISOString(), timeoutMs: 300_000,
     body: { selectedModel, requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
@@ -603,7 +604,7 @@ async function verifyProbePreparation(
         if (typeof current.deadline !== 'number' || !Number.isFinite(current.deadline))
           throw new Error('TEST probe startup response invalid');
         // Leave the existing 30s public stop budget inside the original probe deadline.
-        const readinessMs = Math.min(90_000, current.deadline - Date.now() - 30_000);
+        const readinessMs = Math.min(control.OPEN_CODE_V2_RUN_INITIALIZATION_MS, current.deadline - Date.now() - 30_000);
         if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
         const ready = await control.awaitOpenCodeV2RunMemberReadiness(returnedOwner, {
           memberId: 'probe', originalSessionId: member.originalSessionId,
@@ -874,7 +875,7 @@ process.exit(exitCode);`;
         // Desktop's bridge projects getClaudeBasePath() after the Electron override.
         AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
       },
-      timeout: binary ? 210_000 : 45_000,
+      timeout: binary ? 330_000 : 45_000,
       maxBuffer: 65_536,
     }));
   } catch (error: unknown) {
