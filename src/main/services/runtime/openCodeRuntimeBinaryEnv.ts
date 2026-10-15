@@ -75,6 +75,38 @@ export function resolveOpenCodeConsoleWrapperPath(
   return wrapperPath;
 }
 
+/** Routing hint only. The SDK still measures the selected native delivery. */
+function selectedWindowsV2PackageBinary(binaryPath: string): string | null {
+  if (!path.isAbsolute(binaryPath)) return null;
+  try {
+    const selected = fs.realpathSync(binaryPath);
+    if (
+      !fs.statSync(selected).isFile() ||
+      path.basename(selected).toLowerCase() !== 'opencode.exe' ||
+      path.basename(path.dirname(selected)).toLowerCase() !== 'bin'
+    )
+      return null;
+    const manifest = path.join(path.dirname(path.dirname(selected)), 'package.json');
+    const info = fs.lstatSync(manifest);
+    if (!info.isFile() || info.isSymbolicLink() || info.size <= 0 || info.size > 64 * 1024)
+      return null;
+    const metadata: unknown = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+    if (
+      !metadata ||
+      typeof metadata !== 'object' ||
+      !('name' in metadata) ||
+      metadata.name !== '@opencode/cli-windows-x64' ||
+      !('version' in metadata) ||
+      typeof metadata.version !== 'string' ||
+      !/^2\.\d+\.\d+$/.test(metadata.version)
+    )
+      return null;
+    return selected;
+  } catch {
+    return null;
+  }
+}
+
 function normalizePathEntryForCompare(value: string): string {
   const normalized = path.resolve(value.trim());
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
@@ -106,6 +138,22 @@ export function applyOpenCodeRuntimeBinaryEnv(
     existingBinaryPath || existingLegacyBinaryPath || discoveredBinaryPath?.trim() || '';
   if (!nextBinaryPath) {
     return;
+  }
+
+  if ((wrapperOptions.platform ?? process.platform) === 'win32') {
+    // Only an already-selected wrapper may resolve through its explicit target.
+    // Never let an unrelated stale target replace a different explicit binary.
+    const target = isOpenCodeConsoleWrapperBinaryPath(nextBinaryPath)
+      ? env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV]?.trim()
+      : nextBinaryPath;
+    const nativeV2 = target ? selectedWindowsV2PackageBinary(target) : null;
+    if (nativeV2) {
+      env[OPENCODE_RUNTIME_BINARY_PATH_ENV] = nativeV2;
+      env[OPENCODE_LEGACY_BINARY_PATH_ENV] = nativeV2;
+      delete env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV];
+      prependPathEntry(env, path.dirname(nativeV2));
+      return;
+    }
   }
 
   const wrapperPath = path.isAbsolute(nextBinaryPath)

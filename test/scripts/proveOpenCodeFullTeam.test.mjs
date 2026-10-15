@@ -528,3 +528,31 @@ for (const raw of ['unchanged', 'unchanged-internal', 'rotated', 'missing', 'mal
     });
   }
 }
+
+
+test('stages a declared model config after ownership and before passive preflight', async () => {
+  const { root, env } = fixture();
+  const config = { provider: { selected: { models: { model: { name: 'Declared TEST model' } } } } };
+  const configFile = path.join(root, 'model-config.json');
+  fs.writeFileSync(configFile, JSON.stringify(config), { mode: 0o600 });
+  let input;
+  try {
+    const status = await runFullTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
+      sourceEnv: { ...env, OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH: configFile },
+      log() {},
+      preflight: async (value) => {
+        input = value;
+        assertOwnedSmokeEnvironment(value.env, 'FULL');
+        assert.deepEqual(JSON.parse(fs.readFileSync(path.join(value.projectPath, 'opencode.json'), 'utf8')), config);
+        return { ok: false };
+      },
+      spawn() { throw new Error('No model or runner may start in this offline boundary test'); },
+    });
+    assert.equal(status, 1);
+    assert.ok(input, 'Passive preflight must be reached with the staged config');
+  } finally {
+    cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

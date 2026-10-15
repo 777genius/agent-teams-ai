@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import { constants, promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -126,6 +126,19 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await Promise.all(members.map((member) => observe(member).catch(() => undefined)));
       }
       try {
+        // Hosted Linux may not provide a usable system Node. Use the actual
+        // test runner's Node inside this disposable project, without granting
+        // the team access to an unrelated host installation.
+        const nodeCommand = process.platform === 'linux' ? './.TEST-node-runtime' : 'node';
+        if (process.platform === 'linux') {
+          const nodeSource = await fs.realpath(process.execPath);
+          const sourceStat = await fs.lstat(nodeSource);
+          expect(sourceStat.isFile()).toBe(true);
+          await fs.access(nodeSource, constants.X_OK);
+          const nodeFixture = path.join(projectPath, '.TEST-node-runtime');
+          await fs.copyFile(nodeSource, nodeFixture, constants.COPYFILE_EXCL);
+          await fs.chmod(nodeFixture, 0o700);
+        }
         harness = await createHarness(tempDir, claudeRoot);
         const { svc, bridgeClient } = harness;
         // Neither host nor setup writes these agent-owned artifacts.
@@ -205,7 +218,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             'Own only sum.cjs and alice-result.txt. Implement sum(values) returning the sum of finite numbers.',
             'Throw TypeError for non-arrays or any non-finite/non-number element. Empty input returns 0.',
             'Export with module.exports = { sum }.',
-            `Run node -e 'const {sum}=require("./sum.cjs"); const a=require("node:assert/strict"); a.equal(sum([2,-5,7]),4); a.equal(sum([]),0); a.throws(()=>sum([NaN]),TypeError); console.log("ALICE_EXEC:${aliceNonce}")'`,
+            `Run ${nodeCommand} -e 'const {sum}=require("./sum.cjs"); const a=require("node:assert/strict"); a.equal(sum([2,-5,7]),4); a.equal(sum([]),0); a.throws(()=>sum([NaN]),TypeError); console.log("ALICE_EXEC:${aliceNonce}")'`,
             `After successful execution write alice-result.txt containing exactly ALICE_EXEC:${aliceNonce} and one newline.`,
             `Send bob the exact team message CHALLENGE:${aliceNonce} using agent-teams_message_send.`,
           ].join('\n'),
@@ -226,7 +239,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             'Own only sum.test.cjs and bob-result.txt. Read sum.cjs but do not change it.',
             'Create sum.test.cjs using node:assert/strict. Test sum([2,-5,7])===4 and sum([])===0;',
             'also test sum([1.5,2.5])===4, sum([-2,-3])===-5, and TypeError for null, [NaN], [Infinity], and ["1"].',
-            `At the end print BOB_EXEC:${bobNonce}. Run node sum.test.cjs using bash.`,
+            `At the end print BOB_EXEC:${bobNonce}. Run ${nodeCommand} sum.test.cjs using bash.`,
             `After it passes write bob-result.txt containing exactly BOB_EXEC:${bobNonce} and one newline.`,
             `Send alice the exact team message CHALLENGE:${bobNonce} using agent-teams_message_send.`,
           ].join('\n'),
@@ -286,8 +299,13 @@ liveDescribe('OpenCode full paid team collaboration', () => {
           const peer = member === 'alice' ? 'bob' : 'alice';
           expect(hasMessage(calls, teamName, member, peer, `ACK:${peerNonce}`)).toBe(true);
           expect(
-            hasMessage(calls, teamName, member, peer,
-              `CHALLENGE:${member === 'alice' ? aliceNonce : bobNonce}`)
+            hasMessage(
+              calls,
+              teamName,
+              member,
+              peer,
+              `CHALLENGE:${member === 'alice' ? aliceNonce : bobNonce}`
+            )
           ).toBe(true);
           toolProofs.push({
             member,
@@ -355,8 +373,8 @@ liveDescribe('OpenCode full paid team collaboration', () => {
               startImmediately: true,
               prompt: [
                 `Work only in ${projectPath}. Do not delegate or install anything.`,
-                `Own only ${file}. Run node sum.test.cjs with bash to verify the existing implementation.`,
-                `Then run node -e 'console.log("${marker}")' with bash.`,
+                `Own only ${file}. Run ${nodeCommand} sum.test.cjs with bash to verify the existing implementation.`,
+                `Then run ${nodeCommand} -e 'console.log("${marker}")' with bash.`,
                 `If both commands succeed, write ${file} containing exactly ${marker} and one newline.`,
                 'Then complete this assigned task with task_complete.',
               ].join('\n'),
@@ -451,7 +469,10 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         }
         proof.phase = phase;
         proof.finishedAt = new Date().toISOString();
-        await finalizeProof(() => checkpoint(phase), () => setClaudeBasePathOverride(null));
+        await finalizeProof(
+          () => checkpoint(phase),
+          () => setClaudeBasePathOverride(null)
+        );
       }
       if (cleanupFailure)
         throw new Error('Owned host cleanup not confirmed; failed state retained');
@@ -524,7 +545,11 @@ async function submitPeerOnce(
   return { member, messageId, ...relayMetadata(result) };
 }
 
-async function stopped(svc: TeamProvisioningService, teamName: string, runId: string): Promise<void> {
+async function stopped(
+  svc: TeamProvisioningService,
+  teamName: string,
+  runId: string
+): Promise<void> {
   await svc.stopTeam(teamName);
   await waitForOpenCodeLanesStopped(teamName);
   const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);

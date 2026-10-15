@@ -73,3 +73,5 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/events.ndjson

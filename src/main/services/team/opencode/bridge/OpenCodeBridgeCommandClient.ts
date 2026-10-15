@@ -71,7 +71,9 @@ export interface OpenCodeBridgeCommandClientOptions {
   diagnosticIdFactory?: () => string;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
-  envProvider?: () => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
+  envProvider?: (
+    command: OpenCodeBridgeCommandName
+  ) => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
   keepInputFile?: boolean;
   /** Test seam; defaults to the real Windows profile junction repair. */
   ensureWindowsNodeModulesJunction?: (profileId: string, errorMessage: string) => boolean;
@@ -197,7 +199,7 @@ export class OpenCodeBridgeCommandClient {
   private readonly diagnosticIdFactory: () => string;
   private readonly clock: () => Date;
   private readonly env: NodeJS.ProcessEnv;
-  private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
+  private readonly envProvider: OpenCodeBridgeCommandClientOptions['envProvider'] | null;
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -378,7 +380,7 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
-        const env = await this.resolveEnv();
+        const env = await this.resolveEnv(command);
         if (options.canDispatch?.() === false) {
           retainStartupEvidence = false;
           return this.contractFailure(
@@ -601,13 +603,13 @@ export class OpenCodeBridgeCommandClient {
     }
   }
 
-  private async resolveEnv(): Promise<NodeJS.ProcessEnv> {
+  private async resolveEnv(command: OpenCodeBridgeCommandName): Promise<NodeJS.ProcessEnv> {
     if (!this.envProvider) {
       return this.env;
     }
     // Host publication is authoritative, including removal. A cached URL can name
     // a retired server and must never override the current transport selection.
-    return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
+    return applyOpenCodeAutoUpdatePolicy(await this.envProvider(command));
   }
 
   private async writeInputFile<TBody>(

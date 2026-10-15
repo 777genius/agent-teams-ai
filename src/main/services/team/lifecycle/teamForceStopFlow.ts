@@ -23,6 +23,7 @@ import {
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { OpenCodeRuntimeStopUnconfirmedError } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
@@ -365,12 +366,19 @@ async function runTeamStopFlow(
           ports.logWarning(
             `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
           );
+          if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
+            diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
+          }
           diagnostics.push(`Regular stop failed: ${message}`);
         }
         return 'stop_failed' as const;
       }
     );
-    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
+    // Recorded host exit does not acknowledge native lane/session cleanup.
+    // Keep its original stop attempt authoritative until the existing deadline.
+    runtimeHostsGone = ownedLaneIds?.length
+      ? { promise: new Promise<'runtime_already_down'>(() => {}), cancel() {} }
+      : watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
       runtimeHostsGone.promise,

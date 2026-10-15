@@ -248,6 +248,61 @@ function findNodeModulesSequence(segments, sequence) {
 }
 
 async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
+  const relativePath = path.relative(appOutDir, filePath);
+  const segments = relativePath.split(path.sep);
+  const normalizedPath = segments.join('/');
+  const isPortableRuntimeGraph =
+    normalizedPath.startsWith('resources/runtime/local-cli/node_modules/') ||
+    /^(?:[^/]+\.app\/)?Contents\/Resources\/runtime\/local-cli\/node_modules\//.test(
+      normalizedPath
+    );
+
+  if (isPortableRuntimeGraph) {
+    // Portable payloads can contain these exact host-built msgpackr outputs.
+    // Prune individual files only after the metadata compatibility check below.
+    const msgpackrIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      'msgpackr-extract',
+      'build',
+      'Release',
+    ]);
+    if (
+      msgpackrIndex >= 0 &&
+      ['extract.node', 'obj.target/extract.node', 'obj.target/extract/src/extract.o'].includes(
+        segments.slice(msgpackrIndex + 4).join('/')
+      )
+    ) {
+      return filePath;
+    }
+    if (targetPlatform === 'win32' && targetArch === 'arm64') {
+      const ptyIndex = findNodeModulesSequence(segments, [
+        'node_modules',
+        'bun-pty',
+        'rust-pty',
+        'target',
+        'release',
+      ]);
+      const library =
+        ptyIndex >= 0 && segments.length === ptyIndex + 6 ? segments[ptyIndex + 5] : null;
+      const libraryTargets = {
+        'librust_pty.so': ['linux', 'x64'],
+        'librust_pty_arm64.so': ['linux', 'arm64'],
+        'librust_pty.dylib': ['darwin', 'x64'],
+        'librust_pty_arm64.dylib': ['darwin', 'arm64'],
+        'rust_pty.dll': ['win32', 'x64'],
+      };
+      const target =
+        library && Object.hasOwn(libraryTargets, library) ? libraryTargets[library] : null;
+      if (
+        target &&
+        (target[0] !== targetPlatform ||
+          (target[1] !== targetArch && !(targetPlatform === 'darwin' && targetArch === 'universal')))
+      ) {
+        return filePath;
+      }
+    }
+  }
+
   if (
     targetPlatform !== 'win32' &&
     !(targetPlatform === 'linux' && targetArch === 'x64') &&
@@ -255,9 +310,6 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   ) {
     return null;
   }
-
-  const relativePath = path.relative(appOutDir, filePath);
-  const segments = relativePath.split(path.sep);
 
   const conptyIndex = findNodeModulesSequence(segments, [
     'node_modules',
@@ -300,7 +352,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       /^(darwin|linux|win32)-(arm64|x64)$/.test(variant) &&
       variant !== `${targetPlatform}-${targetArch}`
     ) {
-      rootToRemove = path.join(runtimeRoot, ...prebuildRoot.split('/'), variant);
+      rootToRemove = filePath;
       targetSibling = path.join(
         runtimeRoot,
         ...prebuildRoot.split('/'),
@@ -314,7 +366,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     /^@yuuang\/ffi-rs-win32-(ia32|x64|arm64)-msvc\/ffi-rs\.win32-\1-msvc\.node$/
   );
   if (targetPlatform === 'win32' && ffiMatch && ffiMatch[1] !== targetArch) {
-    rootToRemove = path.join(runtimeRoot, '@yuuang', `ffi-rs-win32-${ffiMatch[1]}-msvc`);
+    rootToRemove = filePath;
     targetSibling = path.join(
       runtimeRoot,
       '@yuuang',
@@ -406,6 +458,14 @@ async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, 
     }
 
     if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+      continue;
+    }
+
+    // The ffi-rs optional artifact must also match its advertised PE ia32 header.
+    if (
+      path.basename(rootToRemove) === 'ffi-rs.win32-ia32-msvc.node' &&
+      (metadata.format !== 'pe' || metadata.archs.size !== 1 || !metadata.archs.has('ia32'))
+    ) {
       continue;
     }
 
@@ -649,6 +709,7 @@ module.exports._internal = {
   OPENCODE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
+  getKnownPrunableNativeArtifactRoot,
   isBinaryCompatible,
   isKnownAllowedNativeMismatch,
   parseElf,

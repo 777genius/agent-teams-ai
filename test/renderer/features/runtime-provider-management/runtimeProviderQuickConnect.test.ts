@@ -207,6 +207,65 @@ describe('RuntimeProviderQuickConnect', () => {
     });
   };
 
+  it('opens provider connection from an installed recognized native V2 runtime', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    const onBrowseProviders = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter', {
+          state: 'available',
+          connectedAuthHint: null,
+          setupKind: 'connect-api-key',
+          authMethods: ['api'],
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(() => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'path',
+            state: 'ready',
+            version: '2.0.21',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders,
+        })
+      );
+      return Promise.resolve();
+    });
+    const connect = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-action-openrouter"]'
+    );
+    expect(connect).not.toBeNull();
+    expect(connect?.disabled).toBe(false);
+    const browse = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('cliStatus.quickConnect.browseAll')
+    );
+    expect(browse).toBeDefined();
+    expect(browse?.disabled).toBe(false);
+    await act(() => {
+      connect?.click();
+      browse?.click();
+      return Promise.resolve();
+    });
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('openrouter', 'settings-connect');
+    expect(onBrowseProviders).toHaveBeenCalledTimes(1);
+  });
+
   it('refreshes both the provider directory and project model catalog after local setup', async () => {
     const refresh = vi.fn(async () => undefined);
     mocks.directory = {

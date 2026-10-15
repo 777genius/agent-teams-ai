@@ -3,6 +3,22 @@ name: OpenCode packaged Windows E2E
 on:
   workflow_dispatch:
     inputs:
+      native_sdk_ref:
+        description: 'Exact reviewed native SDK SHA for real Windows tasks; empty keeps diagnostics'
+        type: string
+        default: ''
+      native_model:
+        description: 'Explicit openrouter/provider-model for native real tasks'
+        type: string
+        default: ''
+      native_provider_only:
+        description: Compare verified published V1 provider commands only; no native startup or packaging
+        type: boolean
+        default: false
+      native_source_only:
+        description: 'Stop after the native source preflight; no packaging or model tasks'
+        type: boolean
+        default: false
       runtime_candidate_run:
         description: 'Optional runtime CI run with a successful Windows candidate job'
         type: string
@@ -17,16 +33,35 @@ on:
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
+      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
+      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
       - scripts/e2e/opencode-diagnostics/catalog.mjs
       - runtime.lock.json
+      - scripts/stage-runtime.mjs
+      - scripts/lib/github-release-download-error.mjs
+      - scripts/lib/runtime-archive-checksum.mjs
+      - scripts/lib/runtime-payload-cache.mjs
+      - scripts/lib/runtime-archive-extraction.mts
 
 permissions:
   contents: read
 
 jobs:
+  native-real-tasks:
+    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
+    uses: ./.github/workflows/opencode-native-windows-e2e.yml
+    with:
+      sdk_ref: ${{ inputs.native_sdk_ref }}
+      model: ${{ inputs.native_model }}
+      source_only: ${{ inputs.native_source_only }}
+      provider_only: ${{ inputs.native_provider_only }}
+    secrets:
+      RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   packaged-windows:
+    if: inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -44,6 +79,8 @@ jobs:
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
+      - name: Typecheck admission diagnostic
+        run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
@@ -77,14 +114,65 @@ jobs:
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Qualify cold and warm packaged starts
+        id: qualify
         shell: pwsh
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/e2e/opencode-diagnostics/run-packaged.mjs --packaged-executable $executable --runtime-setup app-install | Tee-Object -Variable qualificationOutput
+          $qualificationExit = $LASTEXITCODE
+          $roots = @($qualificationOutput | Where-Object { $_ -match '^Packaged artifacts/profile: ' })
+          if ($roots.Count -eq 1) { "root=$($roots[0].Substring('Packaged artifacts/profile: '.Length))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append }
+          if ($qualificationExit -ne 0) { exit $qualificationExit }
+      - name: Checkout exact SDK admission source
+        id: sdk_source
+        if: always() && failure() && steps.qualify.outcome == 'failure'
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: d6361e0f50821ffc31cc5a9efd0dcaf6643c850d
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          path: .test-tmp/sdk-admission
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            src/services/opencode/OpenCodeBinaryResolver.ts
+            src/services/opencode/OpenCodeCursorAgentTreeKill.ts
+            src/services/opencode/compatibility/OpenCodeGenerationPolicy.ts
+            src/services/opencode/compatibility/OpenCodeNativeIdentity.ts
+            src/services/opencode/compatibility/OpenCodeVersionProbe.ts
+            src/services/opencode/profile/OpenCodeV2ManagedConfig.ts
+            src/services/opencode/transport/OpenCodeBoundedFetch.ts
+            src/utils/portableCli.ts
+            src/utils/processKill.ts
+      - name: Record selected identity admission failure evidence
+        if: always() && failure() && steps.qualify.outcome == 'failure'
+        timeout-minutes: 2
+        shell: pwsh
+        env:
+          QUALIFICATION_ROOT: ${{ steps.qualify.outputs.root }}
+          SDK_CHECKOUT_OUTCOME: ${{ steps.sdk_source.outcome }}
+        run: |
+          $sdk = Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission'
+          $packaged = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked'
+          $bun = Join-Path $packaged 'resources/runtime/bun/bun.exe'
+          $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
+          if (!(Test-Path $bun)) {
+            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"packaged_bun_missing","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
+          } else {
+            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"process_start","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
+            & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged $receipt
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Archive qualified Windows test build
         shell: pwsh
         run: |
@@ -123,6 +211,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: |
+            ${{ runner.temp }}/selected-identity-diagnostic.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png
