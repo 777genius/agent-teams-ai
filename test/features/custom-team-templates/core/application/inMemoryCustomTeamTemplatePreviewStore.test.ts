@@ -267,6 +267,36 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     expect(store.resolve(state.token)).toEqual({ status: 'unknown' });
   });
 
+  it('frees an expired settled entry under capacity pressure instead of evicting a live preview', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+      capacity: 2,
+    });
+    const settled = store.issue(baseInput);
+    expect(
+      store.confirmSave(settled.token, {
+        templateId: 'tmpl-confirmed',
+        name: 'Confirmed',
+        nameKey: 'confirmed',
+      })
+    ).toEqual({ status: 'recorded' });
+    now = 10;
+    const live = store.issue({ ...baseInput, templateId: 'tmpl-2' });
+
+    // The settled entry expired while the unsubmitted preview is still live.
+    // The next issue must reclaim the settled slot; evicting the live preview
+    // instead would fail the save the user is about to confirm.
+    now = 100;
+    const next = store.issue({ ...baseInput, templateId: 'tmpl-3' });
+    expect(store.resolve(settled.token)).toEqual({ status: 'unknown' });
+    expect(store.resolve(live.token).status).toBe('found');
+    expect(store.resolve(next.token).status).toBe('found');
+    expect(store.size).toBe(2);
+  });
+
   it('retains an expired entry while its write outcome is unresolved', () => {
     let now = 0;
     const store = new InMemoryCustomTeamTemplatePreviewStore({
