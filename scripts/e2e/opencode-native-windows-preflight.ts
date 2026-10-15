@@ -312,7 +312,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_selected_oauth_readback_unknown', 'execution_selected_oauth_recovery_required', 'execution_selected_oauth_windows_unqualified',
   'execution_selected_oauth_provider_unknown', 'execution_selected_oauth_integration_unknown',
   'execution_selected_oauth_connection_unknown', 'execution_selected_oauth_model_unknown',
-  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_invalid_response', 'execution_identity_mismatch', 'execution_identity_unknown',
+  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_containment_unqualified', 'execution_invalid_response', 'execution_identity_mismatch', 'execution_identity_unknown',
   'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing',
   'execution_timeout', 'execution_owner_unknown', 'cleanup_unknown', 'selection_mismatch', 'authority_mismatch',
   'graph_mismatch', 'identity_mismatch', 'unqualified_version', 'invalid_response', 'invalid_model',
@@ -328,7 +328,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_owner_metadata_purpose_invalid', 'execution_owner_not_private', 'execution_owner_ntfs_required',
   'execution_owner_path_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
   'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
-    const nativeStages = ['retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
+    const nativeStages = ['assert_mapping', 'assert_stopped', 'assert_broker', 'retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
   'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants', 'process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
   'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
   'shared_acl_mutex_encoding', 'shared_acl_mutex_authority', 'shared_acl_mutex_wait', 'shared_acl_mutex',
@@ -380,7 +380,12 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         const nativeFailure = nativeStage && typeof native.nativeCode === 'number' && Number.isSafeInteger(native.nativeCode) &&
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization', 'run-member-retirement']),
-          category: one(data.category, providerCodes), native: nativeFailure, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
+          category: one(data.category, providerCodes), native: nativeFailure,
+          failure: data.failure === undefined ? null : {
+            name: one(row(data.failure).name, ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'AbortError']),
+            errno: one(row(data.failure).errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),
+            operation: one(row(data.failure).operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
+          }, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
             ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
           startupElapsedMs, startupHistory,
           cleanupPhase: one(row(data.cleanup).phase, ['dispose-transport', 'send-close', 'force-kill', 'wait-exit', 'read-birth', 'kernel-retirement', 'process-retirement', 'closed-ack', 'kernel-proof', 'kernel-binding']),
