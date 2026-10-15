@@ -89,6 +89,7 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
     result.error = String(error);
   } finally {
     let history;
+    let crashOwner;
     const observeHistory = () => {
       const current = processes();
       return history.expected.map((expected) => {
@@ -139,6 +140,24 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
             executable: p.executable ?? null,
           })),
         };
+        const app = history.expected.filter(
+          (p) =>
+            p.parent === ownedManifest.launcher.pid &&
+            p.executable?.toLowerCase() === ownedManifest.artifact.app.path.toLowerCase()
+        );
+        if (
+          app.length === 1 &&
+          Number.isSafeInteger(app[0].pid) &&
+          app[0].pid > 0 &&
+          typeof app[0].birth === 'string' &&
+          Number.isFinite(Date.parse(app[0].birth))
+        ) {
+          crashOwner = {
+            pid: app[0].pid,
+            birth: app[0].birth,
+            appPath: ownedManifest.artifact.app.path,
+          };
+        }
         history.beforeStop = observeHistory();
         await writeFile(
           path.join(runDir, 'cleanup-history.json'),
@@ -371,6 +390,93 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         );
       } catch {
         /* Historical observation cannot replace the cleanup result. */
+      }
+    }
+    if (!result.passed || !result.cleanup) {
+      let crash = { observationOnly: true, state: 'unknown-no-captured-app-identity' };
+      try {
+        if (crashOwner && crashOwner.appPath.length <= 1024) {
+          const input = Buffer.from(
+            JSON.stringify({ ...crashOwner, until: new Date().toISOString() })
+          ).toString('base64');
+          const script = String.raw`
+$ErrorActionPreference = 'Stop'
+$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${input}')) | ConvertFrom-Json
+$start = [DateTime]::Parse($t.birth, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+$end = [DateTime]::Parse($t.until, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+$events = @(Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001; StartTime=$start; EndTime=$end} -MaxEvents 64 -ErrorAction Stop)
+if ($events.Count -ge 64) { @{observationOnly=$true;state='unknown-truncated';count=64} | ConvertTo-Json -Compress; exit }
+$errors = @(); $reports = @(); $unknown = 0
+foreach ($event in $events) {
+  if (!$event.TimeCreated -or $event.TimeCreated.ToUniversalTime() -lt $start -or $event.TimeCreated.ToUniversalTime() -gt $end) { $unknown++; continue }
+  $xml = $event.ToXml()
+  if ($xml.Length -gt 32768) { $unknown++; continue }
+  $fields = @{}; $valid = $true
+  foreach ($entry in ([xml]$xml).Event.EventData.Data) {
+    $name = [string]$entry.Name
+    if (!$name -or $fields.ContainsKey($name)) { $valid=$false; break }
+    $fields[$name] = [string]$entry.'#text'
+  }
+  if (!$valid) { $unknown++; continue }
+  if ($event.Id -eq 1000 -and $event.ProviderName -ceq 'Application Error') {
+    if ($fields.ProcessId -notmatch '^0[xX][0-9a-fA-F]{1,8}$' -or $fields.ProcessCreationTime -notmatch '^0[xX][0-9a-fA-F]{1,16}$' -or !$fields.AppPath) { $unknown++; continue }
+    try {
+      $pidValue = [Convert]::ToUInt32($fields.ProcessId.Substring(2),16)
+      $birthValue = [DateTime]::FromFileTimeUtc([Convert]::ToInt64($fields.ProcessCreationTime.Substring(2),16))
+    } catch { $unknown++; continue }
+    if ($pidValue -ne $t.pid -or ($birthValue.Ticks - ($birthValue.Ticks % 10)) -ne $start.Ticks -or ![String]::Equals($fields.AppPath,$t.appPath,[StringComparison]::OrdinalIgnoreCase)) { continue }
+    $module = [IO.Path]::GetFileName($fields.ModuleName)
+    if ($module -notmatch '^[A-Za-z0-9_.-]{1,128}$') { $module=$null }
+    $version = $fields.ModuleVersion
+    if ($version -notmatch '^\d{1,6}(\.\d{1,6}){0,3}$') { $version=$null }
+    $exception = $fields.ExceptionCode
+    if ($exception -notmatch '^(0x)?[0-9a-fA-F]{8}$') { $exception=$null }
+    $offset = $fields.FaultingOffset
+    if ($offset -notmatch '^(0x)?[0-9a-fA-F]{1,16}$') { $offset=$null }
+    $guid = [Guid]::Empty; $report=$null
+    if ([Guid]::TryParse($fields.IntegratorReportId,[ref]$guid) -and $guid -ne [Guid]::Empty) { $report=$guid.ToString() }
+    $errors += @{eventId=1000;recordId=$event.RecordId;at=$event.TimeCreated.ToUniversalTime().ToString('o');moduleName=$module;moduleVersion=$version;exceptionCode=$exception;faultingOffset=$offset;integratorReportId=$report}
+  } elseif ($event.Id -eq 1001 -and $event.ProviderName -ceq 'Windows Error Reporting') {
+    $guid = [Guid]::Empty
+    if ([Guid]::TryParse($fields.ReportId,[ref]$guid) -and $guid -ne [Guid]::Empty) {
+      $reports += @{eventId=1001;recordId=$event.RecordId;at=$event.TimeCreated.ToUniversalTime().ToString('o');reportId=$guid.ToString()}
+    } else { $unknown++ }
+  } else { $unknown++ }
+}
+$ids = @($errors | ForEach-Object { $_.integratorReportId } | Where-Object { $_ })
+@{observationOnly=$true;state='bounded-query';event1000=@($errors);event1001=@($reports | Where-Object {$ids -contains $_.reportId});unknownSchemaCount=$unknown} | ConvertTo-Json -Depth 5 -Compress
+`;
+          const queried = spawnSync(
+            'powershell.exe',
+            [
+              '-NoProfile',
+              '-NonInteractive',
+              '-EncodedCommand',
+              Buffer.from(script, 'utf16le').toString('base64'),
+            ],
+            { encoding: 'utf8', timeout: 5000, maxBuffer: 65536, windowsHide: true }
+          );
+          if (queried.status === 0 && Buffer.byteLength(queried.stdout) <= 65536)
+            crash = JSON.parse(queried.stdout);
+          else
+            crash = {
+              observationOnly: true,
+              state:
+                queried.error?.code === 'ETIMEDOUT'
+                  ? 'unknown-query-timeout'
+                  : 'unknown-query-failed',
+            };
+        }
+      } catch {
+        crash = { observationOnly: true, state: 'unknown-collection-failed' };
+      }
+      try {
+        await writeFile(
+          path.join(root, `crash-observation-${run}.json`),
+          JSON.stringify(crash, null, 2)
+        );
+      } catch {
+        /* Diagnostic retention cannot replace the original failure or cleanup decision. */
       }
     }
     await log.close();

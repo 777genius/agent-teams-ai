@@ -406,6 +406,7 @@ if (mode === 'seed-packaged') {
     assert.equal(process.platform, 'win32');
     data.cleanupLaunchStartedAt = Date.now();
   }
+  if (data.packaged) env.ELECTRON_ENABLE_STACK_DUMPING = '1';
   const child = spawn(launch.command, launch.args, {
     cwd: data.packaged ? data.root : repo,
     stdio: 'inherit',
