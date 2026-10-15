@@ -4,10 +4,6 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const draftHarness = vi.hoisted(() => ({
-  addTaskComment: vi.fn(),
-}));
-
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -52,24 +48,6 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement(React.Fragment, null, children),
 }));
 
-vi.mock('@renderer/hooks/useChipDraftPersistence', () => ({
-  useChipDraftPersistence: () => ({
-    chips: [],
-    addChip: vi.fn(),
-    removeChip: vi.fn(),
-    clearChipDraft: vi.fn(),
-  }),
-}));
-
-vi.mock('@renderer/hooks/useDraftPersistence', () => ({
-  useDraftPersistence: () => ({
-    value: '',
-    setValue: vi.fn(),
-    isSaved: false,
-    clearDraft: vi.fn(),
-  }),
-}));
-
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
   useTaskSuggestions: () => ({ suggestions: [] }),
 }));
@@ -78,17 +56,11 @@ vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
   useTeamSuggestions: () => ({ suggestions: [] }),
 }));
 
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      addTaskComment: draftHarness.addTaskComment,
-      addingComment: false,
-      selectedTeamData: null,
-    }),
-}));
 /* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock exports. */
 
 import { TaskCommentInput } from '@renderer/components/team/dialogs/TaskCommentInput';
+
+import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
 
 describe('TaskCommentInput composer layout', () => {
   afterEach(() => {
@@ -103,16 +75,29 @@ describe('TaskCommentInput composer layout', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    const View = () => {
+      const [error, setError] = React.useState<string | null>(null);
+      const controller = createTaskDetailSessionFixture('task-a');
+      controller.session = {
+        ...controller.session,
+        reply: { taskId: 'task-a', author: 'alice', text: 'Please update this' },
+      };
+      controller.attachmentError = error;
+      controller.addPendingFiles = async () => {
+        setError('File "empty.txt" is empty');
+      };
+      return React.createElement(TaskCommentInput, {
+        surfaceId: 'test-comment',
+        contextId: 'local',
+        teamName: 'team-a',
+        taskId: 'task-a',
+        projectPath: '/TEST/project',
+        members: [],
+        controller,
+      });
+    };
     await act(async () => {
-      root.render(
-        React.createElement(TaskCommentInput, {
-          teamName: 'team-a',
-          taskId: 'task-a',
-          members: [],
-          replyTo: { author: 'alice', text: 'Please update this' },
-          onClearReply: vi.fn(),
-        })
-      );
+      root.render(React.createElement(View));
       await Promise.resolve();
     });
 

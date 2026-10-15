@@ -1004,7 +1004,8 @@
       "cancel": "रद्द करना",
       "delete": "डिलीट",
       "markResolved": "मार्क हल",
-      "save": "सहेजें"
+      "save": "सहेजें",
+      "openInTaskTab": "अलग टैब में खोलें"
     },
     "attachments": {
       "commentAttachment": "टिप्पणी अनुलग्नक",

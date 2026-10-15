@@ -1004,7 +1004,8 @@
       "cancel": "キャンセル",
       "delete": "削除",
       "markResolved": "マークが解決",
-      "save": "保存する"
+      "save": "保存する",
+      "openInTaskTab": "別のタブで開く"
     },
     "attachments": {
       "commentAttachment": "コメント添付",

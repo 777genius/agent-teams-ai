@@ -41,6 +41,7 @@ const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; ke
 
 interface SidebarTaskItemProps {
   task: GlobalTask;
+  contextId: string;
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
@@ -64,6 +65,7 @@ interface SidebarTaskItemProps {
 
 const SidebarTaskItemContent = ({
   task,
+  contextId,
   hideTeamName,
   hideProjectName,
   showTeamName,
@@ -86,7 +88,10 @@ const SidebarTaskItemContent = ({
       shouldResolveOwnerColorFromStore ? s.teamByName[task.teamName]?.members : undefined
     )
   );
-  const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
+  const unreadCount = useUnreadCommentCount(
+    { contextId, teamName: task.teamName, taskId: task.id },
+    task.comments
+  );
 
   const isRenaming = renamingKey === `${task.teamName}:${task.id}`;
   const displaySubject = displaySubjectOverride ?? getDisplaySubject?.(task) ?? task.subject;
@@ -222,7 +227,7 @@ const SidebarTaskItemContent = ({
             className="flex w-full min-w-0 cursor-pointer flex-col justify-center text-left"
             onFocus={preloadGlobalTaskDetailDialog}
             onClick={() => {
-              clearTaskManualUnread(task.teamName, task.id);
+              clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
               openGlobalTaskDetail(task.teamName, task.id);
             }}
           >

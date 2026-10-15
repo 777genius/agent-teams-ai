@@ -1004,7 +1004,8 @@
       "cancel": "取消",
       "delete": "删除",
       "markResolved": "标记为已解决",
-      "save": "保存"
+      "save": "保存",
+      "openInTaskTab": "在单独标签页中打开"
     },
     "attachments": {
       "commentAttachment": "评论附件",

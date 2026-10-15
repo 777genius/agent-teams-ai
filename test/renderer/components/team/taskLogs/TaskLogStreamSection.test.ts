@@ -1,3 +1,10 @@
+import { beforeEach } from 'vitest';
+import {
+  TaskResourceTestHost,
+  resetTaskResourceTestState,
+  emitTaskResourceChange,
+} from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -6,9 +13,8 @@ import type { TeamChangeEvent } from '../../../../../src/shared/types';
 import type { BoardTaskLogStreamResponse } from '../../../../../src/shared/types';
 
 const apiState = {
-  getTaskLogStream: vi.fn<
-    (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>
-  >(),
+  getTaskLogStream:
+    vi.fn<(teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>>(),
   onTeamChange: vi.fn<(callback: (event: unknown, data: TeamChangeEvent) => void) => () => void>(),
   setTaskLogStreamTracking: vi.fn<(teamName: string, enabled: boolean) => Promise<void>>(),
 };
@@ -122,7 +128,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -206,7 +221,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -257,7 +281,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -300,7 +333,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -349,7 +391,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -366,13 +417,7 @@ describe('TaskLogStreamSection', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
 
-    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
-    apiState.onTeamChange.mockImplementation((callback) => {
-      handler = callback;
-      return () => {
-        handler = null;
-      };
-    });
+    const handler = emitTaskResourceChange;
 
     apiState.getTaskLogStream
       .mockResolvedValueOnce({
@@ -457,7 +502,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -472,7 +526,9 @@ describe('TaskLogStreamSection', () => {
     });
 
     expect(
-      [...host.querySelectorAll('[data-testid="member-execution-log"]')].map((node) => node.textContent)
+      [...host.querySelectorAll('[data-testid="member-execution-log"]')].map(
+        (node) => node.textContent
+      )
     ).toEqual(['tom:1']);
 
     expect(handler).toBeTypeOf('function');
@@ -529,7 +585,9 @@ describe('TaskLogStreamSection', () => {
 
     expect(apiState.getTaskLogStream).toHaveBeenCalledTimes(2);
     expect(
-      [...host.querySelectorAll('[data-testid="member-execution-log"]')].map((node) => node.textContent)
+      [...host.querySelectorAll('[data-testid="member-execution-log"]')].map(
+        (node) => node.textContent
+      )
     ).toEqual(['tom:1', 'tom:1']);
 
     await act(async () => {
@@ -550,13 +608,7 @@ describe('TaskLogStreamSection', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
 
-    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
-    apiState.onTeamChange.mockImplementation((callback) => {
-      handler = callback;
-      return () => {
-        handler = null;
-      };
-    });
+    const handler = emitTaskResourceChange;
 
     apiState.getTaskLogStream
       .mockResolvedValueOnce({
@@ -593,7 +645,16 @@ describe('TaskLogStreamSection', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      root.render(
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
+        })
+      );
       await flushMicrotasks();
     });
 
@@ -659,10 +720,13 @@ describe('TaskLogStreamSection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogStreamSection, {
-          teamName: 'demo',
-          taskId: 'task-a',
-          liveEnabled: false,
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
         })
       );
       await flushMicrotasks();
@@ -721,11 +785,13 @@ describe('TaskLogStreamSection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogStreamSection, {
-          teamName: 'demo',
-          taskId: 'task-a',
-          taskStatus: 'in_progress',
-          liveEnabled: true,
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
         })
       );
       await flushMicrotasks();
@@ -735,11 +801,13 @@ describe('TaskLogStreamSection', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskLogStreamSection, {
-          teamName: 'demo',
-          taskId: 'task-a',
-          taskStatus: 'completed',
-          liveEnabled: false,
+        React.createElement(TaskResourceTestHost, {
+          identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          kind: 'log-stream',
+          enabled: true,
+          children: React.createElement(TaskLogStreamSection, {
+            identity: { contextId: 'local', teamName: 'demo', taskId: 'task-a' },
+          }),
         })
       );
       await flushMicrotasks();

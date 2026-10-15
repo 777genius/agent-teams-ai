@@ -1004,7 +1004,8 @@
       "cancel": "Batal",
       "delete": "Padam",
       "markResolved": "Tandakan diselesaikan",
-      "save": "Simpan"
+      "save": "Simpan",
+      "openInTaskTab": "Buka dalam tab berasingan"
     },
     "attachments": {
       "commentAttachment": "Lampiran komen",

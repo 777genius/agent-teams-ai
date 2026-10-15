@@ -1004,7 +1004,8 @@
       "cancel": "Anuluj",
       "delete": "Usuń",
       "markResolved": "Oznacz jako rozwiązane",
-      "save": "Zapisz"
+      "save": "Zapisz",
+      "openInTaskTab": "Otwórz w osobnej karcie"
     },
     "attachments": {
       "commentAttachment": "Załącznik komentarza",

@@ -75,3 +75,64 @@ describe('getVisibleCommentIdsFallback', () => {
     expect(result).toEqual(['enough-visible']);
   });
 });
+
+describe('context-scoped comment read persistence', () => {
+  it('migrates old contextless markers only into the local context', async () => {
+    vi.resetModules();
+    localStorage.clear();
+    localStorage.setItem(
+      'comment-read-state-v2',
+      JSON.stringify({
+        'same-team/1': { readIds: ['same-comment'], lastUpdated: 1 },
+      })
+    );
+    const storage = await import('../../../src/renderer/services/commentReadStorage');
+    const comments = [{ id: 'same-comment', createdAt: '2026-01-01T00:00:00Z' }];
+    expect(
+      storage.getUnreadCount(
+        storage.getSnapshot(),
+        { contextId: 'local', teamName: 'same-team', taskId: '1' },
+        comments
+      )
+    ).toBe(0);
+    expect(
+      storage.getUnreadCount(
+        storage.getSnapshot(),
+        { contextId: 'remote', teamName: 'same-team', taskId: '1' },
+        comments
+      )
+    ).toBe(1);
+    localStorage.clear();
+  });
+
+  it('does not resurrect a legacy manual-unread marker after a newer local read', async () => {
+    vi.resetModules();
+    localStorage.clear();
+    let resolve!: (value: unknown) => void;
+    const pending = new Promise((inner) => {
+      resolve = inner;
+    });
+    const getStored = vi.fn(() => pending);
+    vi.doMock('idb-keyval', () => ({ get: getStored, set: async () => undefined }));
+    vi.stubGlobal('indexedDB', {});
+    const storage = await import('../../../src/renderer/services/commentReadStorage');
+    const unsubscribe = storage.subscribe(() => undefined);
+    const identity = { contextId: 'local', teamName: 'same-team', taskId: '1' };
+    storage.markCommentsRead(identity, ['same-comment']);
+    const unsubscribeLaterSurface = storage.subscribe(() => undefined);
+    expect(getStored).toHaveBeenCalledTimes(1);
+    resolve({ 'same-team/1': { readIds: [], lastUpdated: 1, manualUnread: true } });
+    await pending;
+    await Promise.resolve();
+    expect(
+      storage.getUnreadCount(storage.getSnapshot(), identity, [
+        { id: 'same-comment', createdAt: '2026-01-01T00:00:00Z' },
+      ])
+    ).toBe(0);
+    unsubscribe();
+    unsubscribeLaterSurface();
+    vi.doUnmock('idb-keyval');
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+});

@@ -110,6 +110,7 @@ import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
 import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type {
   DiscardQueuedUserMessagesResult,
   InboxMessage,
@@ -157,8 +158,7 @@ interface MessagesPanelProps {
   onReplyToMessage?: (message: InboxMessage, recipientHint?: string) => void;
   /** Callback when "Restart team" is clicked. */
   onRestartTeam?: () => void;
-  /** Callback when a task ID link is clicked. */
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   /** Reports the rendered floating composer height so the parent can reserve scroll space. */
   onFloatingComposerHeightChange?: (height: number) => void;
   /** Parent-owned scroll viewport for the unchanged inline activity presentation. */

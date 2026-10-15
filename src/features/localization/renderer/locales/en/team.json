@@ -1125,11 +1125,16 @@
     "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
+    "navigation": {
+      "reviewRefused": "Changes could not be opened. The request is saved.",
+      "editorRefused": "The file could not be opened in the team editor. The request is saved."
+    },
     "actions": {
       "cancel": "Cancel",
       "delete": "Delete",
       "markResolved": "Mark resolved",
-      "save": "Save"
+      "save": "Save",
+      "openInTaskTab": "Open in a separate tab"
     },
     "attachments": {
       "commentAttachment": "Comment attachment",
@@ -1204,6 +1209,11 @@
       "newArriving": "New task logs arriving"
     },
     "notFound": "Task not found",
+    "page": {
+      "deleted": "Task deleted",
+      "provisioning": "Task is temporarily unavailable while the team is provisioning",
+      "unavailable": "Task unavailable"
+    },
     "related": {
       "blockedBy": "Blocked by",
       "blocks": "Blocks",

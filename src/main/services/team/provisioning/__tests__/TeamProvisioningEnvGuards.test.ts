@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   applyAppManagedRuntimeSettingsPathEnv,
+  applyTeamContextLimitEnv,
   assertAppDeterministicBootstrapEnabled,
 } from '../TeamProvisioningEnvGuards';
 
@@ -10,6 +11,24 @@ const RUNTIME_FLAG = 'CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP';
 const TEST_SETTINGS_PATH = '/repo/.agent-teams/settings.json';
 
 describe('TeamProvisioningEnvGuards', () => {
+  it('enforces 200K without changing other launch environment values', () => {
+    const env = { CLAUDE_CODE_DISABLE_1M_CONTEXT: '0', OTHER: 'keep' };
+    applyTeamContextLimitEnv(env, true);
+    expect(env).toEqual({ CLAUDE_CODE_DISABLE_1M_CONTEXT: '1', OTHER: 'keep' });
+  });
+
+  it.each([false, undefined])(
+    'preserves inherited context policy when limitContext=%s',
+    (limit) => {
+      const env = { CLAUDE_CODE_DISABLE_1M_CONTEXT: '1' };
+      applyTeamContextLimitEnv(env, limit);
+      expect(env.CLAUDE_CODE_DISABLE_1M_CONTEXT).toBe('1');
+      const emptyEnv: NodeJS.ProcessEnv = {};
+      applyTeamContextLimitEnv(emptyEnv, limit);
+      expect(emptyEnv.CLAUDE_CODE_DISABLE_1M_CONTEXT).toBeUndefined();
+    }
+  );
+
   let savedApp: string | undefined;
   let savedRuntime: string | undefined;
 

@@ -1305,12 +1305,60 @@ describe('ActivityItem bootstrap recipient route', () => {
       taskChip?.click();
       await Promise.resolve();
     });
-    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123', 'demo', 'canonical');
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('routes literal same-display-ID task chips to their explicit A/B teams', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+    const messageFor = (teamName: string, taskId: string): InboxMessage => ({
+      from: 'alice',
+      to: 'user',
+      text: 'please review',
+      timestamp: new Date('2026-10-14T12:00:00.000Z').toISOString(),
+      read: false,
+      source: 'inbox',
+      messageKind: 'task_comment_notification',
+      taskRefs: [{ taskId, displayId: '#7', teamName }],
+    });
+
+    for (const [teamName, taskId] of [
+      ['team-a', 'canonical-a'],
+      ['team-b', 'canonical-b'],
+    ] as const) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: messageFor(teamName, taskId),
+            teamName,
+            directParticipant: 'alice',
+            onTaskIdClick,
+          })
+        );
+        await Promise.resolve();
+      });
+      const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+        (button.textContent ?? '').includes('#7')
+      );
+      expect(taskChip).toBeDefined();
+      await act(async () => {
+        taskChip?.click();
+        await Promise.resolve();
+      });
+    }
+
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(1, 'canonical-a', 'team-a', 'canonical');
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(2, 'canonical-b', 'team-b', 'canonical');
+
+    await act(async () => root.unmount());
   });
 
   it('keeps lead→teammate routes visible in the lead thread', async () => {

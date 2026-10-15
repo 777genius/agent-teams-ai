@@ -193,9 +193,21 @@ export function buildRuntimeProviderLaunchFacts(
     }
   }
 
+  if (input.providerId === 'anthropic' && !defaultModel) {
+    const statusDefaultModel =
+      typeof providerStatus?.defaultModel === 'string' ? providerStatus.defaultModel.trim() : null;
+    if (statusDefaultModel) {
+      defaultModel = statusDefaultModel;
+      modelIds.add(statusDefaultModel);
+    }
+  }
+
   if (modelCatalog) {
     addModelCatalogLaunchModels(modelIds, modelCatalog);
-    defaultModel = modelCatalog.defaultLaunchModel?.trim() || defaultModel;
+    defaultModel =
+      input.providerId === 'anthropic' && defaultModel
+        ? defaultModel
+        : modelCatalog.defaultLaunchModel?.trim() || defaultModel;
   }
 
   if (input.providerId === 'codex' && isUsableCodexModelCatalog(input.codexModelCatalog)) {

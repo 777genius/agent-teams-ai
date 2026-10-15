@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { taskDetailKey, useTaskDetailSession } from '@features/team-task-detail/renderer';
 import { useStore } from '@renderer/store';
-import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import {
+  selectResolvedMembersForTeamName,
+  selectTeamDataForName,
+} from '@renderer/store/slices/teamSlice';
 import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -13,7 +17,10 @@ import {
 } from './globalTaskDetailDialogLoading';
 import { TaskDetailDialog } from './TaskDetailDialog';
 
-import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';
+import type { TaskDetailIdentity } from '@features/team-task-detail/renderer';
+import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+
+const EMPTY_TARGET_MEMBERS: readonly ResolvedTeamMember[] = [];
 
 /**
  * Global wrapper around TaskDetailDialog.
@@ -25,134 +32,143 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   const {
     globalTaskDetail,
     closeGlobalTaskDetail,
-    selectedTeamName,
-    selectedTeamData,
-    selectedTeamMembers,
-    selectedTeamLoading,
-    selectedTeamError,
-    selectTeam,
+    targetTeamData,
+    targetMembers,
+    setTaskDetailSurfaceInterest,
+    taskDetailEntry,
+    ensureTaskDetail,
     openTeamTab,
-    setPendingReviewRequest,
-    globalTasks,
+    openTaskDetailReview,
   } = useStore(
-    useShallow((s) => ({
-      globalTaskDetail: s.globalTaskDetail,
-      closeGlobalTaskDetail: s.closeGlobalTaskDetail,
-      selectedTeamName: s.selectedTeamName,
-      selectedTeamData: s.selectedTeamData,
-      selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
-      selectedTeamLoading: s.selectedTeamLoading,
-      selectedTeamError: s.selectedTeamError,
-      selectTeam: s.selectTeam,
-      openTeamTab: s.openTeamTab,
-      setPendingReviewRequest: s.setPendingReviewRequest,
-      globalTasks: s.globalTasks,
-    }))
+    useShallow((s) => {
+      const detail =
+        s.globalTaskDetail?.contextId === s.activeContextId ? s.globalTaskDetail : null;
+      return {
+        globalTaskDetail: detail,
+        closeGlobalTaskDetail: s.closeGlobalTaskDetail,
+        ensureTaskDetail: s.ensureTaskDetail,
+        targetTeamData: detail ? selectTeamDataForName(s, detail.teamName) : null,
+        targetMembers: detail
+          ? selectResolvedMembersForTeamName(s, detail.teamName)
+          : EMPTY_TARGET_MEMBERS,
+        setTaskDetailSurfaceInterest: s.setTaskDetailSurfaceInterest,
+        taskDetailEntry: detail ? s.taskDetailById[taskDetailKey(detail)] : undefined,
+        openTeamTab: s.openTeamTab,
+        openTaskDetailReview: s.openTaskDetailReview,
+      };
+    })
   );
 
   const teamName = globalTaskDetail?.teamName ?? '';
   const taskId = globalTaskDetail?.taskId ?? '';
   const commentId = globalTaskDetail?.commentId;
+  const identity = useMemo(
+    () =>
+      globalTaskDetail
+        ? {
+            contextId: globalTaskDetail.contextId,
+            teamName: globalTaskDetail.teamName,
+            taskId: globalTaskDetail.taskId,
+          }
+        : null,
+    [globalTaskDetail]
+  );
   const hasTargetTeamData = hasSelectedTargetTeamData(
     teamName,
-    selectedTeamName,
-    selectedTeamData?.teamName
+    globalTaskDetail?.teamName ?? null,
+    targetTeamData?.teamName ?? null
   );
+  const fallbackIdentity = useMemo(() => ({ contextId: '', teamName: '', taskId: '' }), []);
+  const surfaceIdRef = useRef(crypto.randomUUID());
+  const sessionController = useTaskDetailSession({
+    identity: identity ?? fallbackIdentity,
+    surfaceId: surfaceIdRef.current,
+    currentTask: taskDetailEntry?.full ?? null,
+    enabled: Boolean(identity),
+  });
 
-  // Load full team data in the background to enable "as before" details (logs/changes/members).
   useEffect(() => {
-    if (!globalTaskDetail) return;
-    if (!teamName) return;
-
-    // Avoid re-triggering selectTeam in a loop while the fetch is in flight.
-    // selectedTeamName is set immediately by selectTeam(), but selectedTeamData
-    // remains null until IPC resolves.
-    if (selectedTeamName === teamName) {
-      if (selectedTeamData || selectedTeamLoading) return;
-      // Retry once if we are on the right team but have no data and not loading (e.g. prior error).
-    }
-
-    void selectTeam(teamName, { skipProjectAutoSelect: true });
-  }, [
-    globalTaskDetail,
-    selectTeam,
-    selectedTeamData,
-    selectedTeamLoading,
-    selectedTeamName,
-    teamName,
-  ]);
+    const surfaceId = surfaceIdRef.current;
+    setTaskDetailSurfaceInterest(surfaceId, identity);
+    return () => setTaskDetailSurfaceInterest(surfaceId, null);
+  }, [identity, setTaskDetailSurfaceInterest]);
 
   const isFullTeamLoaded = hasTargetTeamData;
 
   const taskMap = useMemo(() => {
     const map = new Map<string, TeamTaskWithKanban>();
     if (!globalTaskDetail) return map;
-    if (isFullTeamLoaded && selectedTeamData) {
-      for (const t of selectedTeamData.tasks) map.set(t.id, t);
-      return map;
-    }
-    for (const t of globalTasks) {
-      if (t.teamName === globalTaskDetail.teamName) {
-        map.set(t.id, t);
-      }
-    }
+    for (const preview of targetTeamData?.tasks ?? []) map.set(preview.id, preview);
+    if (taskDetailEntry?.full) map.set(taskDetailEntry.full.id, taskDetailEntry.full);
     return map;
-  }, [globalTaskDetail, globalTasks, isFullTeamLoaded, selectedTeamData]);
+  }, [globalTaskDetail, targetTeamData?.tasks, taskDetailEntry?.full]);
 
-  const activeMembers = useMemo(
-    () => (isFullTeamLoaded ? selectedTeamMembers.filter((m) => !m.removedAt) : []),
-    [isFullTeamLoaded, selectedTeamMembers]
-  );
+  const activeMembers = useMemo(() => targetMembers.filter((m) => !m.removedAt), [targetMembers]);
 
   const handleOpenTeam = useCallback((): void => {
+    if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
     closeGlobalTaskDetail();
-    openTeamTab(teamName, undefined, taskId);
-  }, [closeGlobalTaskDetail, openTeamTab, teamName, taskId]);
+    openTeamTab(identity.teamName, undefined, identity.taskId);
+  }, [closeGlobalTaskDetail, identity, openTeamTab]);
+
+  const handleOpenTaskTab = useCallback((): void => {
+    if (sessionController.openInTaskTab()) closeGlobalTaskDetail();
+  }, [closeGlobalTaskDetail, sessionController]);
+
+  const retryTaskDetailRead = useCallback(
+    (identity: TaskDetailIdentity) => {
+      if (sessionController.isOriginCurrent()) void ensureTaskDetail(identity);
+    },
+    [ensureTaskDetail, sessionController]
+  );
 
   const handleViewChanges = useCallback(
     (viewTaskId: string, filePath?: string) => {
+      if (!identity || identity.contextId !== useStore.getState().activeContextId) return;
       const targetTask = taskMap.get(viewTaskId);
       if (!targetTask) return;
-      setPendingReviewRequest({
-        taskId: viewTaskId,
-        filePath,
-        requestOptions: buildTaskChangeRequestOptions(targetTask),
-      });
-      closeGlobalTaskDetail();
-      openTeamTab(teamName);
+      if (
+        openTaskDetailReview(
+          { ...identity, taskId: viewTaskId },
+          {
+            filePath,
+            requestOptions: buildTaskChangeRequestOptions(targetTask),
+          }
+        )
+      )
+        closeGlobalTaskDetail();
     },
-    [closeGlobalTaskDetail, openTeamTab, setPendingReviewRequest, taskMap, teamName]
+    [closeGlobalTaskDetail, identity, openTaskDetailReview, taskMap]
   );
 
   if (!globalTaskDetail) return null;
 
-  const task = (taskMap.get(taskId) as GlobalTask | undefined) ?? null;
-  const kanbanTaskState = isFullTeamLoaded
-    ? selectedTeamData?.kanbanState.tasks[taskId]
-    : undefined;
+  const task = taskDetailEntry?.full ?? null;
+  const kanbanTaskState = targetTeamData?.kanbanState.tasks[taskId];
   const loading = shouldKeepGlobalTaskDialogLoading({
-    teamName,
-    taskId,
-    selectedTeamName,
-    selectedTeamDataPresent: hasTargetTeamData,
-    selectedTeamLoading,
-    selectedTeamError,
-    hasTaskInMap: taskMap.has(taskId),
+    identity,
+    taskDetail: taskDetailEntry ?? null,
   });
 
   return (
     <TaskDetailDialog
       open
       variant={isFullTeamLoaded ? 'team' : 'global'}
-      loading={!isFullTeamLoaded && loading}
+      loading={loading}
       task={task}
+      readPhase={taskDetailEntry?.phase}
+      readError={taskDetailEntry?.error ?? null}
       teamName={teamName}
+      projectPath={targetTeamData?.config.projectPath ?? null}
+      sessionController={sessionController}
       kanbanTaskState={kanbanTaskState}
       taskMap={taskMap}
       members={activeMembers}
       onClose={closeGlobalTaskDetail}
       onOwnerChange={undefined}
       onViewChanges={isFullTeamLoaded ? handleViewChanges : undefined}
+      onOpenInTaskTab={identity ? handleOpenTaskTab : undefined}
+      onRetryRead={retryTaskDetailRead}
       focusCommentId={commentId}
       headerExtra={
         <button

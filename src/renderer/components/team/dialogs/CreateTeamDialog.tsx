@@ -1660,6 +1660,7 @@ export const CreateTeamDialog = ({
             },
             selectedModel,
             limitContext: effectiveAnthropicRuntimeLimitContext,
+            defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
           })
         : null,
     [
@@ -1734,6 +1735,7 @@ export const CreateTeamDialog = ({
                 },
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
+                defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
               }),
             selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,

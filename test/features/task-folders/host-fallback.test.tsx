@@ -63,7 +63,7 @@ async function renderAt(left: number) {
     root.render(
       <TooltipProvider>
         <TaskDragHandle identity={{ teamName: 't', taskId: '1' }} subject="Task" />
-        <TaskFoldersHost sidebar={ref} collapsed={false} />
+        <TaskFoldersHost contextId="local" sidebar={ref} collapsed={false} />
       </TooltipProvider>
     )
   );
@@ -291,9 +291,13 @@ it('restores row focus after a deferred state-only action', async () => {
   ) as HTMLElement;
   await act(async () => pin.click());
   await act(async () => {
-    await vi.waitFor(() => {
-      if (document.activeElement !== trigger) throw new Error('Menu trigger focus was not restored');
-    }, { timeout: 1000, interval: 10 });
+    await vi.waitFor(
+      () => {
+        if (document.activeElement !== trigger)
+          throw new Error('Menu trigger focus was not restored');
+      },
+      { timeout: 1000, interval: 10 }
+    );
   });
   expect(JSON.parse(localStorage.getItem('taskPinnedIds')!)).toEqual(['t:1']);
 });
@@ -447,13 +451,16 @@ it('keeps the page interactive after a menu-launched nested folder dialog closes
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   let input!: HTMLInputElement;
   await act(async () => {
-    input = await vi.waitFor(() => {
-      const next = document.querySelector<HTMLInputElement>(
-        'input[aria-label="taskFolders.folderName"]'
-      );
-      if (!next) throw new Error('Deferred folder dialog input did not mount');
-      return next;
-    }, { timeout: 1000, interval: 10 });
+    input = await vi.waitFor(
+      () => {
+        const next = document.querySelector<HTMLInputElement>(
+          'input[aria-label="taskFolders.folderName"]'
+        );
+        if (!next) throw new Error('Deferred folder dialog input did not mount');
+        return next;
+      },
+      { timeout: 1000, interval: 10 }
+    );
   });
   expect(restoredToTrigger).not.toHaveBeenCalled();
   await act(async () => {

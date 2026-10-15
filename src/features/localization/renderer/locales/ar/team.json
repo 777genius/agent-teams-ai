@@ -1004,7 +1004,8 @@
       "cancel": "إلغاء",
       "delete": "تحذف",
       "markResolved": "(مارك)",
-      "save": "أنقذ"
+      "save": "أنقذ",
+      "openInTaskTab": "فتح في تبويب منفصل"
     },
     "attachments": {
       "commentAttachment": "التعليق",
