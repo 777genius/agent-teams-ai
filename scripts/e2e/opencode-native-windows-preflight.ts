@@ -367,7 +367,7 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization']),
           category: one(data.category, providerCodes), native: nativeFailure, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
-            ['waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+            ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
           initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
           acquisitionLastPhase: data.acquisition === undefined ? null : one(
             row(Array.isArray(row(data.acquisition).history) ? (row(data.acquisition).history as unknown[]).at(-1) : null).phase,
