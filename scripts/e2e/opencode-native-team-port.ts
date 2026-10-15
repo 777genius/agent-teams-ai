@@ -113,6 +113,70 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       selectedTask(id);
       return api.teams.getTaskLogStream(teamName, id);
     },
+    async getSafeTaskFailureSnapshot(id: string, expectedOwner: 'alice' | 'bob') {
+      selectedTask(id);
+      if (expectedOwner !== 'alice' && expectedOwner !== 'bob') throw new Error('TEST owner required');
+      const [taskRead, dataRead, logRead, pageRead] = await Promise.allSettled([
+        api.teams.getTask(teamName, id), api.teams.getData(teamName),
+        api.teams.getTaskLogStream(teamName, id),
+        api.teams.getMessagesPage(teamName, { limit: 100, cursor: null }),
+      ]);
+      const task = taskRead.status === 'fulfilled' ? taskRead.value : null;
+      const data = dataRead.status === 'fulfilled' ? dataRead.value : null;
+      const log = logRead.status === 'fulfilled' ? logRead.value : null;
+      const page = pageRead.status === 'fulfilled' ? pageRead.value : null;
+      const statuses = ['pending', 'in_progress', 'completed', 'deleted'] as const;
+      const advisory = data?.members.find((member) => member.name === expectedOwner)?.runtimeAdvisory;
+      const advisoryCodes = ['quota_exhausted', 'rate_limited', 'auth_error',
+        'codex_native_timeout', 'network_error', 'filesystem_error', 'provider_overloaded',
+        'protocol_proof_missing', 'backend_error'] as const;
+      const count = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value)
+        ? Math.max(0, Math.min(10_000, Math.floor(value))) : null;
+      const messageIds = [...new Set((page?.messages ?? []).filter((message) =>
+        message.to === expectedOwner && message.taskRefs?.some((ref) =>
+          ref.taskId === id && ref.teamName === teamName))
+        .map((message) => message.messageId).filter((value): value is string => !!value))].slice(0, 4);
+      const ledgerStates = ['pending', 'accepted', 'responded', 'unanswered', 'retry_scheduled',
+        'retried', 'failed_retryable', 'failed_terminal'] as const;
+      const responseStates = ['not_observed', 'pending', 'prompt_not_indexed', 'responded_tool_call',
+        'responded_visible_message', 'responded_non_visible_tool', 'responded_plain_text',
+        'permission_blocked', 'tool_error', 'empty_assistant_turn',
+        'prompt_delivered_no_assistant_message', 'session_stale', 'session_error', 'reconcile_failed'] as const;
+      const deliveries = await Promise.all(messageIds.map(async (messageId) => {
+        try {
+          const status = await this.getOpenCodeRuntimeDeliveryStatus(messageId);
+          if (!status) return null;
+          const boolean = (value: unknown) => typeof value === 'boolean' ? value : null;
+          return {
+            attempted: boolean(status.attempted), accepted: boolean(status.accepted),
+            delivered: boolean(status.delivered), acceptanceUnknown: boolean(status.acceptanceUnknown),
+            responsePending: boolean(status.responsePending),
+            ledgerStatus: ledgerStates.find((value) => value === status.ledgerStatus) ?? null,
+            responseState: responseStates.find((value) => value === status.responseState) ?? null,
+            reasonCode: status.reasonCode === 'unclassified' ? null : status.reasonCode,
+            diagnosticCodes: status.diagnosticCodes.filter((code) => code !== 'unclassified'),
+          };
+        } catch { return null; }
+      }));
+      return {
+        taskId: id,
+        taskStatus: task ? statuses.find((value) => value === task.status) ?? 'unknown' : 'missing',
+        ownerMatches: !!task && task.owner === expectedOwner,
+        commentCount: count(task?.comments?.length),
+        log: log ? { segments: count(log.segments.length),
+          projectedMessages: count(log.runtimeProjection?.projectedMessageCount),
+          nativeTools: count(log.runtimeProjection?.nativeToolCount),
+          boardTools: count(log.runtimeProjection?.boardMcpToolCount) } : null,
+        advisory: advisory ? {
+          kind: advisory.kind === 'api_error' || advisory.kind === 'sdk_retrying' ? advisory.kind : null,
+          reasonCode: advisoryCodes.find((code) => code === advisory.reasonCode) ?? null,
+        } : null,
+        // A bounded page is not an exhaustive proof that delivery never happened.
+        matchedMessages: messageIds.length, messageSearchExhaustive: false,
+        deliveries,
+        unavailable: [taskRead, dataRead, logRead, pageRead].some((read) => read.status === 'rejected'),
+      };
+    },
     async updateTaskOwner(id: string, owner: string | null) {
       selectedTask(id);
       return api.teams.updateTaskOwner(teamName, id, owner);

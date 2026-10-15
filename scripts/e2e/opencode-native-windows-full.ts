@@ -18,6 +18,7 @@ import {
 } from './opencode-native-desktop-host';
 import { protectWindowsTestDirectory } from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
+import type { electronTeamPort } from './opencode-native-team-port';
 
 const execute = promisify(execFile);
 // The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
@@ -484,6 +485,7 @@ async function main() {
           process.env.OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST ?? ''
         )
       : { bundledSdkSha: '', runtimeDigests: {} };
+  const taskOwners = new Map<string, 'alice' | 'bob'>();
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
     scope: short ? 'Windows real packaged short task only' : 'Windows real packaged full team',
@@ -494,6 +496,7 @@ async function main() {
     version,
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
+    taskFailureSnapshot: null as null | { unavailable: boolean; tasks: Awaited<ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>>[] },
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
     peerObservation: null as PeerObservation | null,
@@ -625,6 +628,7 @@ async function main() {
       prompt: `${base}\nOwn only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise. Read alice-verify.cjs, create sum.cjs, then run ${command('alice-verify.cjs')}. ${short ? '' : `Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`} Before task_complete add task_add_comment from alice text TASK_COMMENT:${nonce.alice}. Complete only after successful command.`,
     });
     proof.taskIds.push(alice.id);
+    taskOwners.set(alice.id, 'alice');
     await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`, recordCompletion);
     const aliceCommandEvidence = await commandEvidence(
       app,
@@ -677,6 +681,7 @@ async function main() {
       prompt: `${base}\nOwn only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it. Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1']. Run ${command('bob-verify.cjs')}. Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send. Before task_complete add task_add_comment from bob text TASK_COMMENT:${nonce.bob}. Complete only after successful command.`,
     });
     proof.taskIds.push(bob.id);
+    taskOwners.set(bob.id, 'bob');
     await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`, recordCompletion);
     const bobCommandEvidence = await commandEvidence(
       app,
@@ -824,6 +829,7 @@ async function main() {
         prompt: `${base}\nRun ${command(name)} in foreground with timeout 660000ms. Do not edit the script, detach, delegate or complete this task. The host stops this team.`,
       });
       proof.taskIds.push(task.id);
+      taskOwners.set(task.id, 'alice');
       const started = await waitFor(
         async () => {
           try {
@@ -931,6 +937,7 @@ async function main() {
       prompt: `${base}\nRun ${command('new-verify.cjs')}. Add task_add_comment from alice text TASK_COMMENT:${nonce.new}, then task_complete after successful command.`,
     });
     proof.taskIds.push(task.id);
+    taskOwners.set(task.id, 'alice');
     await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`, recordCompletion);
     const freshCommandEvidence = await commandEvidence(
       app,
@@ -971,6 +978,24 @@ async function main() {
   } catch (error: unknown) {
     proof.status = 'failed';
     proof.failure ??= proofFailure(error, proof.stage);
+    const latestTasks = proof.taskIds.slice(-2).flatMap((id) => {
+      const owner = taskOwners.get(id);
+      return owner ? [{ id, owner }] : [];
+    });
+    if (latestTasks.length) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const tasks = await Promise.race([
+          Promise.all(latestTasks.map(({ id, owner }) =>
+            app.call('getSafeTaskFailureSnapshot', id, owner))),
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => reject(new Error('TEST failure snapshot expired')), 10_000);
+          }),
+        ]);
+        proof.taskFailureSnapshot = { unavailable: false, tasks };
+      } catch { proof.taskFailureSnapshot = { unavailable: true, tasks: [] }; }
+      finally { clearTimeout(timer); }
+    }
     if (proof.stage === 'create_team' || proof.stage === 'provision') {
       try {
         const diagnostics = await app.call('getSafeLaunchFailure');
