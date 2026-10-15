@@ -248,7 +248,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
 }
 
 // Diagnostic observation only: never substitutes for authenticated stop or retirement.
-async function snapshotStartupFailure(value: unknown, session: string): Promise<unknown> {
+async function snapshotStartupFailure(value: unknown, session: string, plan?: unknown): Promise<unknown> {
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
@@ -262,7 +262,7 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
     if (paths.dirname(directory) !== runs || !/^[a-f0-9]{32}$/.test(paths.basename(directory)))
       return { observation: 'unavailable' };
     const same = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) => a.dev === b.dev && a.ino === b.ino;
-    const read = async (parent: string, name: string, limit: number, presence = false): Promise<Record<string, unknown>> => {
+    const read = async (parent: string, name: string, limit: number, presence = false, plain = false): Promise<Record<string, unknown>> => {
       try {
         const parentBefore = await fs.lstat(parent, { bigint: true });
         if (!parentBefore.isDirectory() || parentBefore.isSymbolicLink() || await fs.realpath(parent) !== parent)
@@ -278,7 +278,7 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
           if (result.bytesRead > limit || after.size !== before.size || after.mtimeNs !== before.mtimeNs ||
               !same(before, after) || !same(before, await fs.lstat(file, { bigint: true })) ||
               !same(parentBefore, await fs.lstat(parent, { bigint: true }))) return { observation: 'unavailable' };
-          return presence ? { observation: 'present' } : { observation: 'read', data: row(JSON.parse(bytes.subarray(0, result.bytesRead).toString('utf8'))) };
+          return presence ? { observation: 'present' } : plain ? { observation: 'read', body: bytes.subarray(0, result.bytesRead).toString('utf8') } : { observation: 'read', data: row(JSON.parse(bytes.subarray(0, result.bytesRead).toString('utf8'))) };
         } finally { await handle.close(); }
       } catch (error: unknown) {
         return { observation: row(error).code === 'ENOENT' ? 'missing' : 'unavailable' };
@@ -391,7 +391,52 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    return { observation: 'snapshot_only', state: { observation: state.observation,
+    let stdio: { observation: string; kind: string } = { observation: 'unavailable', kind: 'unavailable' };
+    try {
+      const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
+      const members = Array.isArray(selected.members) ? selected.members : [];
+      const profileRoot = prepared.profileRootPath;
+      if (members.length !== 1 || typeof profileRoot !== 'string' ||
+          profileRoot !== row(row(members[0]).profile).root ||
+          paths.dirname(profileRoot) !== paths.join(root, 'opencode', 'v2', 'profiles') ||
+          !/^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(paths.basename(profileRoot)))
+        throw new Error('TEST fixed stdio profile invalid');
+      const ownerRoot = paths.join(profileRoot, '.opencode-v2-execution-owner');
+      const parents = [profileRoot, ownerRoot];
+      const pins = await Promise.all(parents.map(async parent => {
+        const pin = await fs.lstat(parent, { bigint: true });
+        if (!pin.isDirectory() || pin.isSymbolicLink() || await fs.realpath(parent) !== parent)
+          throw new Error('TEST fixed stdio parent invalid');
+        return pin;
+      }));
+      const leaves = (await fs.readdir(ownerRoot)).filter(name => /^native-stdio-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(name));
+      if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
+      else {
+        const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
+        let kind = 'unavailable';
+        if (result.observation === 'read' && typeof result.body === 'string') {
+          kind = result.body.length === 0 ? 'empty' : 'unclassified';
+          for (const line of result.body.split('\n')) {
+            const message = line.trimStart();
+            if (!/^(?:error|Error): /.test(message)) continue;
+            kind = 'bun_error';
+            const rules = [['Unable to resolve entry point', 'entry_resolution'], ['Cannot find module', 'module_resolution'],
+              ['execution_containment_identity_mismatch', 'child_identity'], ['execution_containment_pipe_denied', 'child_pipe'],
+              ['EACCES', 'access_denied'], ['EPERM', 'access_denied'], ['Access is denied', 'access_denied'],
+              ['ECONNREFUSED', 'pipe_refused'], ['connect ENOENT', 'pipe_missing']] as const;
+            const matched = rules.find(([token]) => message.includes(token));
+            if (matched) { kind = matched[1]; break; }
+          }
+        }
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind };
+      }
+      for (let index = 0; index < parents.length; index++) {
+        const parent = parents[index]!;
+        if (!same(pins[index]!, await fs.lstat(parent, { bigint: true })) || await fs.realpath(parent) !== parent)
+          stdio = { observation: 'unavailable', kind: 'unavailable' };
+      }
+    } catch (error) { stdio = { observation: row(error).code === 'ENOENT' ? 'missing' : 'unavailable', kind: 'unavailable' }; }
+    return { observation: 'snapshot_only', stdio, state: { observation: state.observation,
       state: one(stateData.state, ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown']), members: members(stateData.members) },
       operation: { observation: operation.observation, operation: one(failure.operation,
         ['send', 'observe', 'transcript', 'permissions', 'permissionReply', 'mcp', 'status', 'probeEvidence', 'stop']), category: one(failure.category, [...codes, 'run_control_pump_failed']),
@@ -716,10 +761,10 @@ try {
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
-       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session);
+       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan);
        return;
      }
-     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session);
+     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan);
      const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
      readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
    });
