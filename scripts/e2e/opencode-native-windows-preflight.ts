@@ -416,7 +416,7 @@ async function verifyProbePreparation(
     launchCalls: number; ownerReturned: boolean; memberReady: boolean;
     stopConfirmed: boolean; cleanupUnknown: boolean;
   }) => void,
-  snapshot: (record: unknown, session: string, plan: unknown) => Promise<void>
+  snapshot: (record: unknown, session: string, plan: unknown, timing: 'before_stop' | 'after_stop') => Promise<void>
 ) {
   const envelope = {
     schemaVersion: 1, requestId: 'TEST-source-probe-startup',
@@ -515,7 +515,11 @@ async function verifyProbePreparation(
             afterDll.dev !== beforeDll.dev || afterDll.ino !== beforeDll.ino)
           throw new Error('TEST private DLL custody changed');
         facts.memberReady = true; update();
-      } catch (error) { primary = error; }
+      } catch (error) {
+        primary = error;
+        try { await snapshot(returnedOwner, member.originalSessionId, value, 'before_stop'); }
+        catch { /* Preserve the original failure and always attempt its public stop. */ }
+      }
       finally {
         if (returnedOwner) {
           const primaryPhase = phase;
@@ -539,7 +543,7 @@ async function verifyProbePreparation(
         } else { facts.cleanupUnknown = true; update(); } // Partial launch has no returned authority to invent or replay.
       }
       if (primary !== undefined || cleanupFailure !== undefined) {
-        try { await snapshot(returnedOwner, member.originalSessionId, value); } catch { /* Preserve original failure. */ }
+        try { await snapshot(returnedOwner, member.originalSessionId, value, 'after_stop'); } catch { /* Preserve original failure. */ }
       }
       if (primary !== undefined) throw primary;
       if (cleanupFailure !== undefined) throw cleanupFailure;
@@ -642,6 +646,7 @@ let stage='startup-cleanup';
 let preparation = null;
 let startupFacts = null;
 let startupFailureState = null;
+let startupBeforeStop = null;
 let readOnlyAclObservation = null;
 const nativeFailures = new WeakMap();
 let nativeObserver, exitCode = 0;
@@ -694,7 +699,11 @@ try {
    resolveOpenCodeV2ExecutionProbe, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
    ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
    (phase, facts) => { stage=phase; startupFacts=facts; },
-   async (record, session, plan) => {
+   async (record, session, plan, timing) => {
+     if (timing === 'before_stop') {
+       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session);
+       return;
+     }
      if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session);
      const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
      readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
@@ -709,7 +718,7 @@ try {
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupFailureState,readOnlyAclObservation,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
    ...(${safeSourceGateFailure.toString()})(error,nativeFailures)}));
  exitCode = 1;
