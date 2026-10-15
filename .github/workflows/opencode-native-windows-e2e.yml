@@ -171,8 +171,8 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-          RUNTIME_CANDIDATE_RUN: '38671108468'
-          RUNTIME_CANDIDATE_SHA: '1ccd8a4f47849b71df53f2288fef45caec4bf77f'
+          RUNTIME_CANDIDATE_RUN: '38691843263'
+          RUNTIME_CANDIDATE_SHA: 'df1a9695fcaaaececb07d6a16550ee5f3bad6c1c'
         run: |
           $ErrorActionPreference = 'Stop'
           $originalLock = Get-Content runtime.lock.json -Raw
@@ -191,7 +191,7 @@ jobs:
             node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
             if ($LASTEXITCODE -ne 0) { throw 'Verified 119 candidate staging failed' }
             $candidate = Get-Content runtime-candidate-evidence.json -Raw | ConvertFrom-Json
-            if ($candidate.artifactId -ne 11944548354 -or $candidate.payloadArchiveSha256 -cne 'dc04840cf56451b91f32a15732c01dc673498bc56f566b4dd3a2b1c7af0adc2a' -or $candidate.binarySha256 -cne '7216c5f24ba57a5ead5a1418eecdbc93b11a0131ce59b32c63101139ff1ae41b') { throw '119 candidate pin changed' }
+            if ($candidate.artifactId -ne 11952374623 -or $candidate.artifactDigest -cne 'sha256:92daae1ea428a0e5002a516b62d5307645d2fab123ed20f02a11d354fac13aee' -or $candidate.sourceSha -cne $env:RUNTIME_CANDIDATE_SHA) { throw '119 candidate pin changed' }
             Move-Item resources/runtime TEST-provider/runtime119
             npm install --global --prefix TEST-provider/npm --no-audit --no-fund opencode-ai@1.18.31
             if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
