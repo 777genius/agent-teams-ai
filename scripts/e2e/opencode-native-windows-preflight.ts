@@ -107,6 +107,90 @@ async function verifyModelFreeReadiness(
     throw new Error('TEST model-free readiness contract changed');
 }
 
+// Diagnostic observation only: never substitutes for authenticated stop or retirement.
+async function snapshotStartupFailure(value: unknown, session: string): Promise<unknown> {
+  const row = (v: unknown): Record<string, unknown> =>
+    v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
+  const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
+  const collect = async () => {
+    const fs = await import('node:fs/promises'), paths = await import('node:path');
+    const run = row(value), binding = row(run.binding), root = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+    const keys = ['teamId', 'runId', 'controllerInstanceId', 'ownerId'];
+    if (!root || typeof run.directory !== 'string' || !keys.every((key) => typeof binding[key] === 'string'))
+      return { observation: 'unavailable' };
+    const directory = run.directory, runs = paths.join(root, 'opencode', 'v2', 'runs');
+    if (paths.dirname(directory) !== runs || !/^[a-f0-9]{32}$/.test(paths.basename(directory)))
+      return { observation: 'unavailable' };
+    const same = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) => a.dev === b.dev && a.ino === b.ino;
+    const read = async (parent: string, name: string, limit: number, presence = false): Promise<Record<string, unknown>> => {
+      try {
+        const parentBefore = await fs.lstat(parent, { bigint: true });
+        if (!parentBefore.isDirectory() || parentBefore.isSymbolicLink() || await fs.realpath(parent) !== parent)
+          return { observation: 'unavailable' };
+        const file = paths.join(parent, name), before = await fs.lstat(file, { bigint: true });
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit) || await fs.realpath(file) !== file)
+          return { observation: 'unavailable' };
+        const handle = await fs.open(file, 'r');
+        try {
+          if (!same(before, await handle.stat({ bigint: true }))) return { observation: 'unavailable' };
+          const bytes = Buffer.alloc(limit + 1), result = await handle.read(bytes, 0, bytes.length, 0);
+          const after = await handle.stat({ bigint: true });
+          if (result.bytesRead > limit || after.size !== before.size || after.mtimeNs !== before.mtimeNs ||
+              !same(before, after) || !same(before, await fs.lstat(file, { bigint: true })) ||
+              !same(parentBefore, await fs.lstat(parent, { bigint: true }))) return { observation: 'unavailable' };
+          return presence ? { observation: 'present' } : { observation: 'read', data: row(JSON.parse(bytes.subarray(0, result.bytesRead).toString('utf8'))) };
+        } finally { await handle.close(); }
+      } catch (error: unknown) {
+        return { observation: row(error).code === 'ENOENT' ? 'missing' : 'unavailable' };
+      }
+    };
+    const bound = async (name: string) => {
+      const result = await read(directory, name, 65536), data = row(result.data);
+      return result.observation !== 'read' ? result : keys.every((key) => row(data.binding)[key] === binding[key])
+        ? { observation: 'bound', data } : { observation: 'foreign' };
+    };
+    const state = await bound('state.json'), operation = await bound('operation-failure.json'), stop = await bound('stop.json');
+    const stateData = row(state.data), failure = row(operation.data), receipt = row(row(stop.data).receipt);
+    const codes = ['mutable_readback', 'run_operation_timeout', 'run_not_active', 'run_control_disconnected', 'run_control_timeout',
+      'run_owner_stale', 'run_process_unknown', 'execution_owner_unknown', 'cleanup_unknown', 'execution_timeout',
+      'terminal_cut_unknown', 'session_selection_changed', 'execution_profile_changed', 'execution_selected_auth_changed'];
+    const members = (v: unknown) => Array.isArray(v) ? v.slice(0, 2).map((item) => {
+      const member = row(item), bootstrap = row(member.bootstrap), cleanup = row(member.cleanup);
+      return { memberMatches: member.memberId === 'probe', state: one(member.state, ['accepted', 'unknown', 'rejected']),
+        originalSessionMatches: member.originalSessionId === session, runtimeSessionMatches: member.runtimeSessionId === session,
+        opencodeSessionMatches: member.opencodeSessionId === session, bootstrapVerified: bootstrap.verified === true,
+        missingNativeMessageID: bootstrap.missingNativeMessageID === true, scopeClosed: cleanup.scopeClosed === true,
+        processRetired: cleanup.processRetired === true, descendantsRetired: cleanup.descendantsRetired === true,
+        errors: Array.isArray(member.errors) ? member.errors.slice(0, 8).map((code) => one(code,
+          ['tombstone_unknown', 'cancel_or_interrupt_unknown', 'readers_unknown', 'physical_cleanup_unknown', 'run_tombstone_unknown'])) : [] };
+    }) : [];
+    const diagnostics = [], diagnosticRoot = paths.join(root, 'opencode', 'v2', 'provider-diagnostics');
+    try {
+      const listing = await fs.opendir(diagnosticRoot);
+      try { for await (const entry of listing) {
+        if (!/^[a-f0-9-]{36}\.json$/.test(entry.name)) continue;
+        const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data);
+        diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization']),
+          category: one(data.category, codes), startupStage: one(row(data.startup).stage,
+            ['waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+          initializationPhase: one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']) });
+        if (diagnostics.length === 4) break;
+      } } finally { await listing.close().catch(() => {}); }
+    } catch { /* Diagnostic absence is not evidence of process retirement. */ }
+    return { observation: 'snapshot_only', state: { observation: state.observation,
+      state: one(stateData.state, ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown']), members: members(stateData.members) },
+      operation: { observation: operation.observation, operation: one(failure.operation,
+        ['send', 'observe', 'transcript', 'permissions', 'permissionReply', 'mcp', 'status', 'probeEvidence', 'stop']), category: one(failure.category, codes) },
+      stop: { observation: stop.observation, state: one(receipt.state, ['stopped', 'cleanup_unknown']), ownerRetired: receipt.ownerRetired === true, members: members(receipt.members) },
+      tombstone: (await read(directory, 'tombstone.json', 65536, true)).observation,
+      orphan: (await read(directory, 'orphan.json', 65536, true)).observation, diagnostics };
+  };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try { return await Promise.race([collect().catch(() => ({ observation: 'unavailable' })),
+    new Promise((resolve) => { timer = setTimeout(() => resolve({ observation: 'timeout' }), 2000); })]); }
+  finally { clearTimeout(timer); }
+}
+
 // Intercept only the final launch return: the real owner and native member start
 // once, then retire before resolveProbe can mark submitted or call send.
 async function verifyProbePreparation(
@@ -129,7 +213,8 @@ async function verifyProbePreparation(
   report: (phase: 'owner_launch' | 'member_readiness' | 'physical_stop', facts: {
     launchCalls: number; ownerReturned: boolean; memberReady: boolean;
     stopConfirmed: boolean; cleanupUnknown: boolean;
-  }) => void
+  }) => void,
+  snapshot: (record: unknown, session: string) => Promise<void>
 ) {
   const envelope = {
     schemaVersion: 1, requestId: 'TEST-source-probe-startup',
@@ -219,6 +304,9 @@ async function verifyProbePreparation(
           update();
           if (primary !== undefined) { phase = primaryPhase; update(); }
         } else { facts.cleanupUnknown = true; update(); } // Partial launch has no returned authority to invent or replay.
+      }
+      if (returnedOwner && (primary !== undefined || cleanupFailure !== undefined)) {
+        try { await snapshot(returnedOwner, member.originalSessionId); } catch { /* Preserve original failure. */ }
       }
       if (primary !== undefined) throw primary;
       if (cleanupFailure !== undefined) throw cleanupFailure;
@@ -316,6 +404,7 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
 let stage='startup-cleanup';
 let preparation = null;
 let startupFacts = null;
+let startupFailureState = null;
 try {
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
@@ -361,7 +450,8 @@ try {
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
    resolveOpenCodeV2ExecutionProbe, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
    ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
-   (phase, facts) => { stage=phase; startupFacts=facts; });
+   (phase, facts) => { stage=phase; startupFacts=facts; },
+   async (record, session) => { startupFailureState = await (${snapshotStartupFailure.toString()})(record, session); });
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
@@ -373,7 +463,7 @@ try {
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupFailureState,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
    ...(${safeSourceGateFailure.toString()})(error)}));
  process.exit(1);
