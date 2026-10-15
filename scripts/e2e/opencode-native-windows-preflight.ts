@@ -248,7 +248,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
 }
 
 // Diagnostic observation only: never substitutes for authenticated stop or retirement.
-async function snapshotStartupFailure(value: unknown, session: string, plan?: unknown): Promise<unknown> {
+async function snapshotStartupFailure(value: unknown, session: string, plan: unknown, sdkRoot: string): Promise<unknown> {
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
@@ -392,7 +392,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -414,7 +414,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined;
+        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
@@ -425,6 +425,16 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             if (readTargetKind === undefined && /^error: (?:EPERM reading |Cannot read file )/.test(message)) {
               const match = /["'`]([^"'`]+)["'`](?::\s*(EPERM|EACCES|ENOENT|ENOTDIR|EISDIR))?\s*$/.exec(message);
               const target = match?.[1]; readErrorCode = match?.[2];
+              if (target !== undefined && paths.win32.isAbsolute(target)) {
+                const directory = paths.win32.normalize(target), source = paths.win32.normalize(sdkRoot);
+                const relative = paths.win32.relative(source, directory);
+                readTargetLocation = relative === '' ? 'sdk_root' :
+                  !paths.win32.isAbsolute(relative) && relative.split('\\').every(part => part === '..') ? 'sdk_ancestor' :
+                  !paths.win32.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..\\') ? 'sdk_descendant' :
+                  paths.win32.relative(process.cwd(), directory) === '' ? 'desktop_root' :
+                  paths.win32.relative(profileRoot, directory) === '' ? 'profile_root' : 'other';
+                if (readTargetLocation === 'sdk_ancestor') readTargetAncestorDistance = relative.split('\\').length;
+              }
               const leaf = target?.split(/[\\/]/).at(-1);
               const roles: Record<string, string> = { 'package.json': 'package_manifest',
                 'tsconfig.json': 'typescript_config', 'bunfig.toml': 'bun_config',
@@ -468,7 +478,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             if (matched) { kind = matched[1]; break; }
           }
         }
-        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }) };
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }), ...(readTargetLocation === undefined ? {} : { readTargetLocation }), ...(readTargetAncestorDistance === undefined ? {} : { readTargetAncestorDistance }) };
       }
       for (let index = 0; index < parents.length; index++) {
         const parent = parents[index]!;
@@ -803,10 +813,10 @@ try {
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
-       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan);
+       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)});
        return;
      }
-     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan);
+     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)});
      const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
      readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
    });
