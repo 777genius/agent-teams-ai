@@ -312,7 +312,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_selected_oauth_readback_unknown', 'execution_selected_oauth_recovery_required', 'execution_selected_oauth_windows_unqualified',
   'execution_selected_oauth_provider_unknown', 'execution_selected_oauth_integration_unknown',
   'execution_selected_oauth_connection_unknown', 'execution_selected_oauth_model_unknown',
-  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_invalid_response', 'execution_identity_mismatch',
+  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_invalid_response', 'execution_identity_mismatch', 'execution_identity_unknown',
   'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing',
   'execution_timeout', 'execution_owner_unknown', 'cleanup_unknown', 'selection_mismatch', 'authority_mismatch',
   'graph_mismatch', 'identity_mismatch', 'unqualified_version', 'invalid_response', 'invalid_model',
