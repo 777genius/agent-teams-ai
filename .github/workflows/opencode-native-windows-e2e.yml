@@ -287,6 +287,17 @@ jobs:
           $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
+      - name: Qualify native ownership and command retirement
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        working-directory: TEST-native-source/.test-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          bun test scripts/opencode-v2/stage-windows.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Native producer contract failed' }
+          $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
+          bun scripts/opencode-v2/windows-owner-probe.ts $ownerRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Native held-directory contract failed' }
       - name: Install exact official OpenCode CLI pins
         if: ${{ !inputs.provider_only }}
         shell: pwsh
@@ -323,17 +334,6 @@ jobs:
           $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
           bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current $env:SELECTED_MODEL $node
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
-      - name: Qualify native ownership and command retirement
-        if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: TEST-native-source/.test-sdk
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          bun test scripts/opencode-v2/stage-windows.test.ts
-          if ($LASTEXITCODE -ne 0) { throw 'Native producer contract failed' }
-          $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
-          bun scripts/opencode-v2/windows-owner-probe.ts $ownerRoot
-          if ($LASTEXITCODE -ne 0) { throw 'Native held-directory contract failed' }
       - name: Select Windows release compiler Bun
         if: ${{ !inputs.source_only && !inputs.provider_only }}
         uses: oven-sh/setup-bun@v2
