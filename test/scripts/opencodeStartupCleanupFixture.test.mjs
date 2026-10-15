@@ -17,9 +17,74 @@ import path from 'node:path';
 import process from 'node:process';
 import { URL } from 'node:url';
 import test from 'node:test';
-import { assertEmptyCleanupState } from '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs';
+import {
+  assertEmptyCleanupState,
+  startupCleanupFailureDiagnostic,
+} from '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs';
 const fixture = new URL('../../scripts/e2e/opencode-diagnostics/fixture.cjs', import.meta.url);
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test('startup failure evidence selects the current cleanup record without unrelated fields', async (t) => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-diagnostic-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const dir = path.join(root, 'user-data', 'opencode-bridge', 'diagnostics');
+  await mkdir(dir, { recursive: true });
+  const started = Date.now() - 1000;
+  const row = {
+    id: 'cleanup-diagnostic',
+    type: 'opencode_bridge_contract_violation',
+    providerId: 'opencode',
+    createdAt: new Date(started + 1).toISOString(),
+    data: {
+      command: 'opencode.cleanupStartupHosts',
+      requestId: 'cleanup-request',
+      mutationStarted: false,
+      preparationError: 'Desktop MCP control context is unavailable',
+      cwd: 'DO_NOT_EXPORT',
+      binaryPath: 'DO_NOT_EXPORT',
+      stdout: 'DO_NOT_EXPORT',
+    },
+  };
+  const foreign = { ...row, data: { ...row.data, command: 'opencode.listModels' } };
+  const old = { ...row, createdAt: new Date(started - 1).toISOString() };
+  await writeFile(
+    path.join(dir, 'events.ndjson'),
+    [old, row, foreign].map(JSON.stringify).join('\n') + '\n{"partial":'
+  );
+  assert.deepEqual(await startupCleanupFailureDiagnostic(root, started), {
+    id: row.id,
+    type: row.type,
+    providerId: row.providerId,
+    createdAt: row.createdAt,
+    command: row.data.command,
+    requestId: row.data.requestId,
+    mutationStarted: false,
+    preparationError: row.data.preparationError,
+  });
+  await writeFile(path.join(dir, 'events.ndjson'), JSON.stringify(old) + '\n');
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+  await writeFile(
+    path.join(dir, 'events.ndjson'),
+    JSON.stringify({ ...row, data: { ...row.data, mutationStarted: true } }) + '\n'
+  );
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+  await writeFile(path.join(dir, 'events.ndjson'), 'x'.repeat(4 * 1024 * 1024 + 1));
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+});
+
+test('startup failure evidence refuses linked diagnostic ancestry', async (t) => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-diagnostic-link-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const other = path.join(root, 'other');
+  await mkdir(other);
+  await symlink(
+    other,
+    path.join(root, 'user-data'),
+    process.platform === 'win32' ? 'junction' : 'dir'
+  );
+  assert.equal(await startupCleanupFailureDiagnostic(root, Date.now() - 1000), null);
+});
+
 async function setup(t) {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-fixture-test-')));
   t.after(() => rm(root, { recursive: true, force: true }));
