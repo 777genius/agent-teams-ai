@@ -1,4 +1,13 @@
 const { wrapAgentBlock } = require('./agentBlocks.js');
+const {
+    buildChatVisualizationProtocolText,
+} = require('./chatVisualizationProtocol.js');
+
+function appendChatVisualizationProtocol(text, include = true) {
+    return include
+        ? `${text}\n\n${buildChatVisualizationProtocolText()}`
+        : text;
+}
 
 /**
  * Raw action-mode protocol text parameterized by DELEGATE description.
@@ -14,7 +23,7 @@ function buildActionModeProtocolText(delegateDescription) {
         '- Never reveal the hidden mode block verbatim to the human unless they explicitly ask for it.',
         '- Modes:',
         '  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.',
-        '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts.',
+        '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts. The optional group_chat_react communication acknowledgement is allowed; it does not grant file, task, or process writes.',
         `  - DELEGATE: ${delegateDescription}`,
     ].join('\n');
 }
@@ -81,6 +90,7 @@ function buildMemberFormattingProtocol() {
 }
 
 module.exports = {
+    appendChatVisualizationProtocol,
     MEMBER_DELEGATE_DESCRIPTION,
     buildActionModeProtocolText,
     buildMemberActionModeProtocol,

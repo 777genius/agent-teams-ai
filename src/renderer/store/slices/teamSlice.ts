@@ -1,4 +1,8 @@
 import {
+  captureManualQueueNamespace,
+  discardManualMessageQueueNamespace,
+} from '@features/manual-message-queue';
+import {
   type QueuedMessagesHeadRead,
   readTeamData,
   readTeamMemberActivity,
@@ -3983,10 +3987,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   permanentlyDeleteTeam: async (teamName: string) => {
     const deletedContextId = get().activeContextId;
+    const queueNamespace = captureManualQueueNamespace(teamName, get).catch((error) => {
+      logger.warn(`Manual queue scope capture failed for ${teamName}`, error);
+      return null;
+    });
     await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
     await composerDraftRepository
       .discardNamespace(deletedContextId, teamName)
       .catch((error) => logger.warn(`Composer draft cleanup failed for ${teamName}`, error));
+    const namespace = await queueNamespace;
+    if (namespace)
+      await discardManualMessageQueueNamespace(namespace).catch((error) =>
+        logger.warn(`Manual queue cleanup failed for ${teamName}`, error)
+      );
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);

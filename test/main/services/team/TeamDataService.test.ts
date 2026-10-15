@@ -1,3 +1,4 @@
+import { mergeMessageAttachments } from '@features/agent-attachments/contracts';
 import { createHash } from 'crypto';
 import * as nodeFs from 'fs';
 import * as fs from 'fs/promises';
@@ -15,6 +16,7 @@ import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMembe
 import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { TeamSentMessagesStore } from '../../../../src/main/services/team/TeamSentMessagesStore';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
@@ -3364,9 +3366,11 @@ describe('TeamDataService', () => {
 
   it('awaits the async controller message API for durable inbox writes', async () => {
     let settle!: (value: { deliveredToInbox: boolean; messageId: string }) => void;
-    const pendingWrite = new Promise<{ deliveredToInbox: boolean; messageId: string }>(resolve => {
-      settle = resolve;
-    });
+    const pendingWrite = new Promise<{ deliveredToInbox: boolean; messageId: string }>(
+      (resolve) => {
+        settle = resolve;
+      }
+    );
     const sendMessageMock = vi.fn(() => pendingWrite);
 
     const service = new TeamDataService(
@@ -3392,13 +3396,18 @@ describe('TeamDataService', () => {
     );
 
     let settled = false;
-    const resultPromise = service.sendMessage('my-team', {
-      member: 'alice',
-      text: 'hello',
-      summary: 'ping',
-      actionMode: 'ask',
-      commentId: 'comment-1',
-    }).then(result => { settled = true; return result; });
+    const resultPromise = service
+      .sendMessage('my-team', {
+        member: 'alice',
+        text: 'hello',
+        summary: 'ping',
+        actionMode: 'ask',
+        commentId: 'comment-1',
+      })
+      .then((result) => {
+        settled = true;
+        return result;
+      });
     await vi.waitFor(() => expect(sendMessageMock).toHaveBeenCalledTimes(1));
     expect(settled).toBe(false);
     settle({ deliveredToInbox: true, messageId: 'm-1' });
@@ -6038,6 +6047,51 @@ describe('TeamDataService', () => {
     const data = await service.getTaskChangePresence('my-team');
 
     expect(data).toEqual({ 'task-1': 'needs_attention' });
+  });
+
+  it('retains lead reference classification through real sent history and reloaded message projection', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-lead-reference-history-'));
+    tempPaths.push(root);
+    setClaudeBasePathOverride(root);
+    const createService = () =>
+      new TeamDataService(
+        {
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {} as never,
+        { getMessages: vi.fn(async () => []), listInboxNames: vi.fn(async () => []) } as never
+      );
+    const png = { id: 'png', filename: 'native.png', mimeType: 'image/png', size: 3, order: 0 };
+    const gif = { id: 'gif', filename: 'reference.gif', mimeType: 'image/gif', size: 3, order: 1 };
+    const result = await createService().sendDirectToLead(
+      'my-team',
+      'team-lead',
+      'Read both files',
+      undefined,
+      [png, gif],
+      undefined,
+      'classified-lead-message',
+      'do',
+      [gif]
+    );
+    expect(result).toMatchObject({ deliveredViaStdin: true, messageId: 'classified-lead-message' });
+    const persisted = await new TeamSentMessagesStore().readMessages('my-team');
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].attachments).toEqual([png, gif]);
+    expect(persisted[0].fileReferences).toEqual([gif]);
+    const page = await createService().getMessagesPage('my-team', { limit: 20 });
+    const reloaded = page.messages.find((row) => row.messageId === 'classified-lead-message');
+    expect(reloaded).toMatchObject({
+      text: 'Read both files',
+      attachments: [png, gif],
+      fileReferences: [gif],
+    });
+    expect(mergeMessageAttachments(reloaded!).map((item) => item.id)).toEqual(['png', 'gif']);
+    // Renderer generic-file classification uses these reference IDs even for image/gif MIME.
+    expect(new Set(reloaded!.fileReferences?.map((item) => item.id))).toEqual(new Set(['gif']));
   });
 
   it('persists standalone slash metadata when sending directly to the live lead', async () => {

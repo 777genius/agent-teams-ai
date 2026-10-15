@@ -29,6 +29,7 @@ import {
   canMemberShowAttachmentControl,
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
+  isReferenceAttachmentForMember,
   validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
@@ -149,7 +150,11 @@ export const SendMessageDialog = ({
     clearError: clearAttachmentError,
     handlePaste,
     handleDrop,
-  } = useAttachments({ persistenceKey: `sendMessage:${teamName}:attachments` });
+  } = useAttachments({
+    persistenceKey: `sendMessage:${teamName}:attachments`,
+    allowFileReferences: true,
+    operationKey: member,
+  });
 
   const selectedMember = members.find((m) => m.name === member);
   const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
@@ -527,6 +532,9 @@ export const SendMessageDialog = ({
 
             <AttachmentPreviewList
               attachments={attachments}
+              isFileReference={(attachment) =>
+                isReferenceAttachmentForMember(selectedMember, attachment)
+              }
               onRemove={removeAttachment}
               error={attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason}
               onDismissError={clearAttachmentError}

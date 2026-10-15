@@ -1,12 +1,15 @@
 import {
-  isAgentVideoMimeType,
-  resolveAgentAttachmentCapability,
-} from '@features/agent-attachments/contracts';
-import {
+  admitNativeTeammateAttachmentIpcMessage,
+  assertAttachmentRecipientOnline,
+  enrichTeamSnapshotNativeAttachmentSupport,
+  getNativeAttachmentRecipientRestriction,
   MAX_AGENT_IPC_ATTACHMENTS,
+  prepareMessageAttachments,
+  selectNativeMessageAttachments,
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
+import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -25,6 +28,7 @@ import {
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
@@ -148,10 +152,7 @@ import * as path from 'path';
 import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
-import {
-  buildActionModeAgentBlock,
-  isAgentActionMode,
-} from '../services/team/actionModeInstructions';
+import { isAgentActionMode } from '../services/team/actionModeInstructions';
 import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
@@ -177,6 +178,10 @@ import {
   mergeLiveLeadProcessMessages,
   mergeLiveLeadProcessMessagesPage,
 } from '../services/team/mergeLiveLeadProcessMessages';
+import {
+  buildMessageDeliveryText,
+  buildOriginalUserRequestBlock,
+} from '../services/team/messageDeliveryText';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
@@ -248,7 +253,6 @@ import type {
   AddTaskCommentRequest,
   AgentActionMode,
   AttachmentFileData,
-  AttachmentMeta,
   AttachmentPayload,
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -1121,8 +1125,7 @@ async function handleGetData(
     return { success: false, error: optionsResult.error };
   }
   const tn = validated.value!;
-  // The UI is fetching this team, so keep its team-root/task artifacts watched
-  // (idle teams the UI never opens are not watched, to scale with team count).
+  // Keep UI-opened team artifacts watched; idle teams stay outside the watch scope.
   markTeamEngaged(tn);
   const getDataOptions = optionsResult.value;
   const startedAt = Date.now();
@@ -1176,7 +1179,7 @@ async function handleGetData(
     ) {
       return { success: false, error: 'TEAM_PROVISIONING' };
     }
-    // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
+    // Draft: team.meta.json exists without config.json.
     if (message === `Team not found: ${tn}`) {
       const meta = await withTimeoutValue(
         teamMetaStore.getMeta(tn).catch(() => null),
@@ -1213,6 +1216,17 @@ async function handleGetData(
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
   const live = messaging.getLiveLeadProcessMessages(tn);
+  data = await enrichTeamSnapshotNativeAttachmentSupport({
+    teamName: tn,
+    snapshot: data,
+    deps: {
+      teamsBasePath: getTeamsBasePath(),
+      readCapability: readNativeInboxAttachmentCapability,
+      readRuntimeSnapshot: (teamName) =>
+        getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
+      isProcessAlive,
+    },
+  });
   const durableMessages = Array.isArray((data as { messages?: unknown }).messages)
     ? ((data as { messages?: typeof live }).messages ?? [])
     : [];
@@ -2141,10 +2155,7 @@ async function handleLaunchTeamUnlocked(
     return { success: false, error: providerBackendValidation.error };
   }
 
-  // Detect draft team: team.meta.json exists but config.json doesn't.
-  // This happens when user created team config without launching (launchTeam=false),
-  // or when provisioning failed before TeamCreate could run.
-  // Redirect to createTeam so TeamCreate runs properly.
+  // Redirect metadata-only drafts through createTeam so TeamCreate can run.
   const tn = validatedTeamName.value!;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
@@ -2336,9 +2347,7 @@ async function handleLaunchTeamUnlocked(
   return wrapTeamHandler('launch', async () => {
     addMainBreadcrumb('team', 'launch', { teamName: validatedTeamName.value! });
     launchIoGovernor?.noteLaunchIntent(validatedTeamName.value!, 'launch');
-    // Keep this team's team-root/task artifacts file-watched for the whole launch (and the
-    // engaged TTL after), so the lead's immediate startup writes are not missed during the
-    // 0-30s window before the periodic watch-scope reconcile would otherwise pick it up.
+    // Keep launch artifacts watched through startup and the engaged TTL.
     markTeamEngaged(validatedTeamName.value!);
     try {
       const response = await getTeamProvisioningStartApi().launchTeam(
@@ -2668,46 +2677,6 @@ async function handleGetAttachments(
   );
 }
 
-async function getVideoAttachmentRecipientRestriction(input: {
-  teamName: string;
-  memberName: string;
-  providerId: TeamProviderId | undefined;
-  attachments: AttachmentPayload[];
-}): Promise<string | null> {
-  const videoAttachments = input.attachments.filter((attachment) =>
-    isAgentVideoMimeType(attachment.mimeType)
-  );
-  if (videoAttachments.length === 0) {
-    return null;
-  }
-
-  const snapshot = await getTeamDataService().getTeamData(input.teamName, {
-    includeMemberBranches: false,
-  });
-  const normalizedMemberName = input.memberName.trim().toLowerCase();
-  const member =
-    snapshot.members.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    ) ??
-    snapshot.config.members?.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    );
-  const capability = resolveAgentAttachmentCapability({
-    providerId: input.providerId ?? member?.providerId ?? 'unknown',
-    model: member?.model,
-  });
-
-  if (!capability.supportsVideo) {
-    return capability.videoDisplayText;
-  }
-  for (const attachment of videoAttachments) {
-    if (!capability.supportedVideoMimeTypes.some((mimeType) => mimeType === attachment.mimeType)) {
-      return 'This video type is not supported by the selected model.';
-    }
-  }
-  return null;
-}
-
 function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean): string {
   if (!teamStillAlive) {
     return 'Failed to deliver message with attachments: team process became unavailable';
@@ -2717,86 +2686,6 @@ function formatAttachmentDeliveryFailure(error: unknown, teamStillAlive: boolean
     return message;
   }
   return `Failed to deliver message with attachments: ${message}`;
-}
-
-function buildMessageDeliveryText(
-  baseText: string,
-  opts: {
-    actionMode?: AgentActionMode;
-    isLeadRecipient: boolean;
-    memberName?: string;
-    messageId?: string;
-    protocol?: VisibleDirectReplyProtocol;
-    replyRecipient?: string;
-    teamName?: string;
-  }
-): string {
-  const hiddenBlocks: string[] = [];
-  const actionModeBlock = buildActionModeAgentBlock(opts.actionMode);
-  if (actionModeBlock) {
-    hiddenBlocks.push(actionModeBlock);
-  }
-  if (!opts.isLeadRecipient) {
-    const rawReplyRecipient =
-      typeof opts.replyRecipient === 'string' && opts.replyRecipient.trim().length > 0
-        ? opts.replyRecipient.trim()
-        : 'user';
-    const isUserReplyRecipient = rawReplyRecipient.toLowerCase() === 'user';
-    const replyRecipient = isUserReplyRecipient ? 'user' : rawReplyRecipient;
-    const senderDescriptor = isUserReplyRecipient ? 'the human user' : `"${replyRecipient}"`;
-    const protocol = opts.protocol ?? 'send_message';
-    const canUseAgentTeamsMessageSend =
-      protocol === 'agent_teams_message_send' &&
-      isUserReplyRecipient &&
-      typeof opts.teamName === 'string' &&
-      opts.teamName.trim().length > 0 &&
-      typeof opts.memberName === 'string' &&
-      opts.memberName.trim().length > 0 &&
-      typeof opts.messageId === 'string' &&
-      opts.messageId.trim().length > 0;
-    const replyInstructionLines = canUseAgentTeamsMessageSend
-      ? [
-          'CRITICAL: Reply using the Agent Teams MCP message_send tool, not SendMessage.',
-          'Use tool agent-teams_message_send or mcp__agent-teams__message_send, whichever exposed name is available.',
-          `CRITICAL: The tool input must include teamName="${opts.teamName!.trim()}", to="user", from="${opts.memberName!.trim()}", text, summary, source="runtime_delivery", and relayOfMessageId="${opts.messageId!.trim()}".`,
-          'Do NOT answer only with normal assistant text when the Agent Teams message_send tool is available because that will not appear in the UI message thread.',
-        ]
-      : [
-          'CRITICAL: Reply using the SendMessage tool, not plain assistant text.',
-          `CRITICAL: The destination must be exactly to="${replyRecipient}".`,
-          'CRITICAL: The SendMessage tool input must use the exact field names `to`, `summary`, and `message`.',
-          'Do NOT answer only with normal assistant text because that will not appear in the UI message thread.',
-        ];
-    hiddenBlocks.push(
-      wrapAgentBlock(
-        [
-          `You received a direct message from ${senderDescriptor} via the UI.`,
-          ...replyInstructionLines,
-          `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
-          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
-          ...(canUseAgentTeamsMessageSend
-            ? [
-                'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
-              ]
-            : []),
-          ...(isUserReplyRecipient
-            ? [
-                'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
-                'Only after that first acknowledgement may you message the lead or another teammate.',
-                'After you get the needed information, send the final answer back to "user".',
-                'Do NOT stay silent while you go ask someone else.',
-              ]
-            : []),
-        ].join('\n')
-      )
-    );
-  }
-
-  if (hiddenBlocks.length === 0) {
-    return baseText;
-  }
-
-  return [...hiddenBlocks, baseText].join('\n\n');
 }
 
 const handleGetMessagesPage = createMessagesPageHandler({
@@ -2874,22 +2763,28 @@ async function handleSendMessage(
     return { success: false, error: validatedMessageId.error ?? 'Invalid messageId' };
 
   let validatedAttachments: AttachmentPayload[] | undefined;
-  if (
-    payload.attachments !== undefined &&
-    Array.isArray(payload.attachments) &&
-    payload.attachments.length > 0
-  ) {
+  if ('fileReferences' in payload || 'nativeAttachmentDelivery' in payload) {
+    return { success: false, error: 'Attachment delivery metadata is main-owned' };
+  }
+  if (payload.attachments !== undefined) {
     const attResult = validateAgentAttachmentIpcPayload(payload.attachments);
     if (!attResult.valid) {
       return { success: false, error: attResult.error };
     }
     validatedAttachments = attResult.value;
-    const serializedResult = validateAgentAttachmentSerializedIpcPayload({
-      text: payload.text,
-      attachments: validatedAttachments,
-    });
-    if (!serializedResult.valid) {
-      return { success: false, error: serializedResult.error };
+    if (
+      validatedAttachments.length &&
+      ((payload.from !== undefined && payload.from.trim().toLowerCase() !== 'user') ||
+        (payload.source !== undefined && payload.source !== 'user_sent'))
+    ) {
+      return { success: false, error: 'Message file attachments require user origin' };
+    }
+    if (!validatedAttachments.some((attachment) => attachment.mimeType.startsWith('video/'))) {
+      const serialized = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text,
+        attachments: validatedAttachments,
+      });
+      if (!serialized.valid) return { success: false, error: serialized.error };
     }
   }
 
@@ -2928,37 +2823,49 @@ async function handleSendMessage(
       prevalidatedIsLeadRecipient !== undefined
         ? prevalidatedIsLeadRecipient
         : leadName !== null && memberName === leadName;
-    const actionMode = payload.actionMode;
+    const actionMode = payload.actionMode ?? 'do';
 
     const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
     if (validatedAttachments?.length) {
-      const videoRestriction = await getVideoAttachmentRecipientRestriction({
+      const nativeAttachments = selectNativeMessageAttachments(
+        { providerId: recipientProviderId ?? 'unknown', isLeadRecipient },
+        validatedAttachments
+      );
+      const videoRestriction = await getNativeAttachmentRecipientRestriction({
         teamName: tn,
         memberName,
         providerId: recipientProviderId,
-        attachments: validatedAttachments,
+        attachments: nativeAttachments,
+        readTeamData: (teamName) =>
+          getTeamDataService().getTeamData(teamName, { includeMemberBranches: false }),
       });
       if (videoRestriction) {
         throw new Error(videoRestriction);
       }
+      const serializedResult = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text!,
+        attachments: validatedAttachments,
+        nativeVideoDelivery:
+          isOpenCodeRecipient &&
+          nativeAttachments.some((attachment) => attachment.mimeType.startsWith('video/')),
+      });
+      if (!serializedResult.valid) throw new Error(serializedResult.error);
+      const nativeIds = new Set(nativeAttachments.map((attachment) => attachment.id));
+      const referenceBudget = validateAgentAttachmentSerializedIpcPayload({
+        text: payload.text!,
+        attachments: validatedAttachments.filter((attachment) => !nativeIds.has(attachment.id)),
+      });
+      if (!referenceBudget.valid) throw new Error(referenceBudget.error);
     }
 
-    // Attachments are routed through explicit provider transports only.
-    // Native Claude/Codex teammates still read inbox files directly, so storing
-    // attachment metadata there would look successful while silently dropping
-    // the image at runtime. Keep those paths fail-closed until they have a
-    // real runtime attachment transport.
     if (validatedAttachments?.length) {
-      const supportedLiveLead = isLeadRecipient && isAlive;
-      const supportedLiveOpenCodeRecipient = !isLeadRecipient && isOpenCodeRecipient && isAlive;
-      if (!supportedLiveLead && !supportedLiveOpenCodeRecipient) {
-        throw new Error(
-          isOpenCodeRecipient
-            ? 'Attachments for OpenCode teammates require the team to be online'
-            : 'Attachments are supported for the online team lead and online OpenCode teammates only'
-        );
-      }
+      assertAttachmentRecipientOnline({
+        isLeadRecipient,
+        isAlive,
+        isOpenCodeRecipient,
+        providerId: recipientProviderId,
+      });
     }
 
     // Smart routing: lead + alive → stdin direct, else → inbox
@@ -2967,11 +2874,9 @@ async function handleSendMessage(
       const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
       const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
       const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
-      // Pre-generate stable messageId so both stdin and persistence use the same identity.
-      // This allows the lead to call task_create_from_message with the exact messageId.
+      // Use one stable messageId for stdin and persistence provenance.
       const preGeneratedMessageId = validatedMessageId?.value ?? crypto.randomUUID();
-      // Separate try blocks: stdin delivery vs persistence
-      // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
+      // Never fall back to the inbox after stdin succeeds; that would duplicate delivery.
       const standaloneSlashCommand = !validatedAttachments?.length
         ? parseStandaloneSlashCommand(payload.text!)
         : null;
@@ -2979,6 +2884,20 @@ async function handleSendMessage(
         ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
         : null;
       const rawSlashCommandText = standaloneSlashCommand?.raw;
+      const preparedAttachments = validatedAttachments?.length
+        ? await prepareMessageAttachments(
+            {
+              teamName: tn,
+              messageId: preGeneratedMessageId,
+              text: payload.text!,
+              from: payload.from,
+              providerId: recipientProviderId ?? 'unknown',
+              isLeadRecipient: true,
+              attachments: validatedAttachments,
+            },
+            attachmentStore
+          )
+        : undefined;
       const stdinTextForLead = rawSlashCommandText
         ? rawSlashCommandText
         : [
@@ -2986,6 +2905,7 @@ async function handleSendMessage(
             `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
             ...(rosterContextBlock ? [rosterContextBlock] : []),
             ...(delegateAckBlock ? [delegateAckBlock] : []),
+            buildOriginalUserRequestBlock(preGeneratedMessageId),
             wrapAgentBlock(
               [
                 `MessageId: ${preGeneratedMessageId}`,
@@ -2994,7 +2914,7 @@ async function handleSendMessage(
             ),
             ``,
             `Message from user:`,
-            buildMessageDeliveryText(payload.text!, {
+            buildMessageDeliveryText(preparedAttachments?.text ?? payload.text!, {
               actionMode,
               isLeadRecipient: true,
             }),
@@ -3006,47 +2926,21 @@ async function handleSendMessage(
         await messaging.sendMessageToTeam(
           tn,
           stdinTextForLead,
-          rawSlashCommandText ? undefined : validatedAttachments
+          rawSlashCommandText ? undefined : preparedAttachments?.nativePayloads
         );
         stdinSent = true;
       } catch (stdinError: unknown) {
-        // If attachments were requested, fail rather than silently dropping them.
-        // Only report offline when liveness confirms the process is unavailable.
+        // Attachment sends fail instead of silently dropping content.
         if (validatedAttachments?.length) {
           throw new Error(formatAttachmentDeliveryFailure(stdinError, runtime.isTeamAlive(tn)));
         }
         const errMsg = stdinError instanceof Error ? stdinError.message : 'unknown error';
         logger.warn(`stdin fallback for ${tn}: ${errMsg}`);
-        // Fallback to inbox path below
       }
 
       if (stdinSent) {
-        // Save attachment files to disk FIRST to get file paths for metadata
-        let attachmentFilePaths: Map<string, string> | undefined;
-        if (validatedAttachments?.length) {
-          try {
-            attachmentFilePaths = await attachmentStore.saveAttachments(
-              tn,
-              preGeneratedMessageId,
-              validatedAttachments
-            );
-          } catch (e) {
-            logger.warn(`Failed to save attachments: ${e}`);
-          }
-        }
+        const attachmentMeta = preparedAttachments?.stored;
 
-        const attachmentMeta: AttachmentMeta[] | undefined = validatedAttachments?.map((a) => {
-          const fp = attachmentFilePaths?.get(a.id);
-          return {
-            id: a.id,
-            filename: a.filename,
-            mimeType: a.mimeType,
-            size: a.size,
-            ...(fp ? { filePath: fp } : {}),
-          };
-        });
-
-        // Persistence is best-effort — stdin already delivered the message
         let result: SendMessageResult;
         try {
           result = await getTeamDataService().sendDirectToLead(
@@ -3056,14 +2950,14 @@ async function handleSendMessage(
             payload.summary,
             attachmentMeta,
             validatedTaskRefs.value,
-            preGeneratedMessageId
+            preGeneratedMessageId,
+            actionMode,
+            preparedAttachments?.fileReferences
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
           result = { deliveredToInbox: false, messageId: preGeneratedMessageId };
         }
-
-        // Attachment files already saved above (before metadata construction)
 
         messaging.pushLiveLeadProcessMessage(tn, {
           from: 'user',
@@ -3075,6 +2969,7 @@ async function handleSendMessage(
           messageId: result.messageId,
           source: 'user_sent',
           attachments: attachmentMeta,
+          fileReferences: preparedAttachments?.fileReferences,
           taskRefs: validatedTaskRefs.value,
           ...(slashCommandMeta
             ? {
@@ -3100,11 +2995,7 @@ async function handleSendMessage(
       replyRecipient,
       ...(recipientProviderId ? { providerId: recipientProviderId } : {}),
     });
-    const inboxMessageId =
-      validatedMessageId?.value ??
-      (directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
-        ? crypto.randomUUID()
-        : undefined);
+    const inboxMessageId = validatedMessageId?.value ?? crypto.randomUUID();
     const memberDeliveryText = buildMessageDeliveryText(baseText, {
       actionMode,
       isLeadRecipient,
@@ -3115,48 +3006,51 @@ async function handleSendMessage(
       ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
     });
     const inboxText = isOpenCodeRecipient ? baseText : memberDeliveryText;
-    if (validatedAttachments?.length && inboxMessageId) {
-      try {
-        await attachmentStore.saveAttachments(tn, inboxMessageId, validatedAttachments);
-      } catch (error) {
-        throw new Error(`Failed to save message attachments: ${getErrorMessage(error)}`);
-      }
-    }
+    const result = validatedAttachments?.length
+      ? await admitNativeTeammateAttachmentIpcMessage(
+          {
+            teamName: tn,
+            memberName,
+            providerId: recipientProviderId!,
+            messageId: inboxMessageId,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            taskRefs: validatedTaskRefs.value,
+            attachments: validatedAttachments,
+          },
+          {
+            readRuntimeSnapshot: (teamName) =>
+              getTeamDiagnosticsApi().getTeamAgentRuntimeSnapshot(teamName),
+            attachmentStore,
+            runWithLiveRosterMutation: (teamName, operation) =>
+              getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation),
+          }
+        )
+      : isOpenCodeRecipient
+        ? await getTeamDataService().sendRuntimeRecipientMessage(tn, {
+            member: memberName,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            source: 'user_sent',
+            taskRefs: validatedTaskRefs.value,
+            messageId: inboxMessageId,
+          })
+        : await getTeamDataService().sendMessage(tn, {
+            member: memberName,
+            text: inboxText,
+            summary: payload.summary,
+            from: storedFrom,
+            actionMode,
+            source: 'user_sent',
+            taskRefs: validatedTaskRefs.value,
+            messageId: inboxMessageId,
+          });
 
-    const messageRequest: SendMessageRequest = {
-      member: memberName,
-      text: inboxText,
-      summary: payload.summary,
-      from: storedFrom,
-      actionMode,
-      source: 'user_sent',
-      taskRefs: validatedTaskRefs.value,
-      ...(inboxMessageId ? { messageId: inboxMessageId } : {}),
-      ...(validatedAttachments?.length ? { attachments: validatedAttachments } : {}),
-    };
-    const teamDataService = getTeamDataService();
-    const result = isOpenCodeRecipient
-      ? await teamDataService.sendRuntimeRecipientMessage(tn, messageRequest)
-      : await teamDataService.sendMessage(tn, messageRequest);
-
-    // Teammate inbox relay DISABLED (2026-03-23).
-    // Codex/Claude teammates read their own inbox files directly via fs.watch.
-    // Relaying through the lead (relayMemberInboxMessages) caused multiple bugs:
-    //   1. Lead responded to user instead of forwarding to the teammate
-    //   2. Duplicate messages (relay loop: markInboxMessagesRead → FileWatcher → relay again)
-    //   3. Fragile LLM-dependent prompt chain for routing
-    // The message is already persisted in inboxes/{member}.json above.
-    // Teammate responses go to inboxes/user.json and are read by TeamInboxReader.
-    // Lead relay (relayLeadInboxMessages) is still needed because lead reads stdin only, not inbox.
-    // OpenCode secondary lanes do not watch these inbox files, so they need runtime bridge delivery.
-    //
-    // if (!isLeadRecipient && isAlive) {
-    //   try {
-    //     await provisioning.relayMemberInboxMessages(tn, memberName);
-    //   } catch (e: unknown) {
-    //     logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
-    //   }
-    // }
+    // Native teammates consume their inbox directly. Keep member relay disabled.
     if (isOpenCodeRecipient) {
       try {
         const relay = await waitForOpenCodeRuntimeRelayForUi({
@@ -5041,11 +4935,7 @@ export function showTeamNativeNotification(opts: {
     ...(iconPath ? { icon: iconPath } : {}),
   });
 
-  // Hold a strong reference to prevent GC from collecting the notification.
-  // macOS never fires 'close' for toasts the user ignores, so also drop the
-  // reference after a grace window — otherwise ignored toasts accumulate for
-  // the whole session. Late clicks from Notification Center past this window
-  // are best-effort only.
+  // Keep macOS toast references alive briefly; late Notification Center clicks are best-effort.
   activeTeamNotifications.add(notification);
   const releaseTimer = setTimeout(cleanup, 15 * 60_000);
   releaseTimer.unref?.();

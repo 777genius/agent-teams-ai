@@ -1,5 +1,3 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
-
 import {
   buildGroupPlainTextVisibleReplyMessageId,
   buildPlainTextVisibleReplyMessageId,
@@ -31,11 +29,12 @@ import {
 
 import type { TeamInboxReader } from '../../TeamInboxReader';
 import type { TeamInboxWriter } from '../../TeamInboxWriter';
+import type { OpenCodeGroupAcknowledgementReader } from './OpenCodeGroupAcknowledgement';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
-import type { InboxMessage, TeamCreateRequest } from '@shared/types/team';
+import type { InboxMessage } from '@shared/types/team';
 
 type OpenCodeVisibleReplyCorrelation = NonNullable<
   OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
@@ -59,46 +58,7 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
   getErrorMessage: (error: unknown) => string;
   nowIso?: () => string;
   sendGroupChatReply?: OpenCodeGroupReplySender;
-}
-
-export interface OpenCodeVisibleReplyProofServiceHost {
-  sendGroupChatReply?: OpenCodeGroupReplySender;
-  inboxReader: OpenCodeVisibleReplyProofServiceDependencies['inboxReader'];
-  inboxWriter: OpenCodeVisibleReplyProofServiceDependencies['inboxWriter'];
-  configFacade: {
-    readConfigForObservation(teamName: string): Promise<{
-      members?: TeamCreateRequest['members'];
-    } | null>;
-  };
-  emitRuntimeDeliveryReplyAdvisoryRefresh: OpenCodeVisibleReplyProofServiceDependencies['emitRuntimeDeliveryReplyAdvisoryRefresh'];
-}
-
-export interface OpenCodeVisibleReplyProofServiceHostOptions
-  extends
-    Pick<OpenCodeVisibleReplyProofServiceDependencies, 'warn' | 'getErrorMessage'>,
-    Partial<Pick<OpenCodeVisibleReplyProofServiceDependencies, 'nowIso' | 'sendGroupChatReply'>> {}
-
-export function createOpenCodeVisibleReplyProofServiceFromHost(
-  service: OpenCodeVisibleReplyProofServiceHost,
-  options: OpenCodeVisibleReplyProofServiceHostOptions
-): OpenCodeVisibleReplyProofService {
-  return new OpenCodeVisibleReplyProofService({
-    inboxReader: service.inboxReader,
-    sendGroupChatReply: options.sendGroupChatReply ?? service.sendGroupChatReply,
-    inboxWriter: service.inboxWriter,
-    getConfiguredLeadName: async (teamName) =>
-      service.configFacade
-        .readConfigForObservation(teamName)
-        .then(
-          (config) => config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
-        )
-        .catch(() => null),
-    emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
-      service.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
-    warn: options.warn,
-    getErrorMessage: options.getErrorMessage,
-    nowIso: options.nowIso,
-  });
+  hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
 }
 
 export class OpenCodeVisibleReplyProofService {
@@ -634,6 +594,7 @@ export class OpenCodeVisibleReplyProofService {
       return materializeOpenCodeGroupReply({
         ...input,
         send: this.deps.sendGroupChatReply,
+        hasAcknowledgedInbound: this.deps.hasAcknowledgedInbound,
         messageId: buildGroupPlainTextVisibleReplyMessageId(input.ledgerRecord),
         nowIso: this.nowIso,
         checkpoint: () =>
@@ -793,3 +754,9 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 }
+
+export type {
+  OpenCodeVisibleReplyProofServiceHost,
+  OpenCodeVisibleReplyProofServiceHostOptions,
+} from './OpenCodeVisibleReplyProofComposition';
+export { createOpenCodeVisibleReplyProofServiceFromHost } from './OpenCodeVisibleReplyProofComposition';

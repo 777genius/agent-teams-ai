@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "افزودن واکنش ({{count}})",
+      "remove": "حذف واکنش ({{count}})",
+      "count": "واکنش‌ها: {{count}}",
+      "failed": "به‌روزرسانی واکنش‌ها انجام نشد"
+    },
     "actions": {
       "createTaskFromMessage": "ایجاد وظیفه از پیام",
       "editMessage": "ویرایش پیام",

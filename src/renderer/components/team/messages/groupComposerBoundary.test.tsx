@@ -16,6 +16,11 @@ const ports = vi.hoisted(() => ({
   send: vi.fn(),
   contextId: 'root-a',
 }));
+// Queue transaction/transport behavior has its own real IndexedDB adapter tests.
+// This boundary fixture uses synthetic context ids and isolates ordinary composer recovery.
+vi.mock('@features/manual-message-queue/renderer', () => ({
+  useGroupMessageQueue: () => ({ onEnqueue: () => {}, list: null }),
+}));
 vi.mock('@renderer/api', () => ({ api: { teamGroupChats: { send: ports.send } } }));
 vi.mock('@renderer/services/composerDraftRepository', () => ({
   composerDraftRepository: { loadWorking: ports.load, saveWorking: ports.save },

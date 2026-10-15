@@ -26,6 +26,16 @@ export interface GroupChatCreateRequest {
   autoIncludeNewMembers: boolean;
 }
 
+/** Agent creation always refers to the actual persisted original human request. */
+export interface AgentGroupChatCreateRequest {
+  teamName: string;
+  from: string;
+  sourceMessageId: string;
+  name: string;
+  selectedMemberNames: string[];
+  autoIncludeNewMembers?: boolean;
+}
+
 export interface GroupChatSendRequest {
   teamName: string;
   groupChatId: string;
@@ -60,7 +70,52 @@ export interface GroupChatSendResult {
   deliverySummary?: GroupDeliverySummary;
 }
 
+export interface GroupMessageReactionTarget {
+  teamName: string;
+  groupChatId: string;
+  messageId: string;
+}
+
+export interface GroupMessageReactionDTO {
+  groupChatId: string;
+  messageId: string;
+  actorNames: string[];
+  hasUserReacted: boolean;
+  canReact: boolean;
+}
+
+/** Agent acknowledgement identifies its actual physical inbound, never a logical post. */
+export interface GroupChatReactionRequest {
+  teamName: string;
+  from: string;
+  groupChatId: string;
+  relayOfMessageId: string;
+}
+
+export interface GroupChatReactionResult {
+  saved: true;
+  acknowledged: true;
+  teamName: string;
+  groupChatId: string;
+  messageId: string;
+  relayOfMessageId: string;
+  from: string;
+  groupRunKey: string;
+}
+
+export interface GroupInboundAcknowledgementTarget {
+  teamName: string;
+  groupChatId: string;
+  memberName: string;
+  inboxMessageId: string;
+  runId: string;
+}
+
 export interface TeamGroupChatsAPI {
+  getReaction(request: GroupMessageReactionTarget): Promise<GroupMessageReactionDTO>;
+  setReaction(
+    request: GroupMessageReactionTarget & { active: boolean }
+  ): Promise<GroupMessageReactionDTO>;
   list(request: { teamName: string }): Promise<TeamGroupChatDTO[]>;
   create(request: GroupChatCreateRequest): Promise<TeamGroupChatDTO>;
   setArchived(request: {

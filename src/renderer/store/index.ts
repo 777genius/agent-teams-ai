@@ -1598,6 +1598,7 @@ export function initializeNotificationListeners(): () => void {
       event: TeamChangeEvent,
       managementAccepted = false
     ): void {
+      if (event.type === 'group-reactions') return;
       if (event.management && !managementAccepted) {
         void continueAcceptedTeamManagementChange(useStore.getState, event, () => {
           if (!disposed) handleTeamChange(_event, event, true);

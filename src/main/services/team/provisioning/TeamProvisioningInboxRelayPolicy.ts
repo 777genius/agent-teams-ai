@@ -687,7 +687,10 @@ function formatLeadRelayMessageLines(
   const summaryLine = message.summary?.trim() ? `Summary: ${message.summary.trim()}` : null;
   const isTaskCreateFromMessageEligible = message.source === 'user_sent';
   const provenanceLines = isTaskCreateFromMessageEligible
-    ? [`   Eligible for task_create_from_message: yes`, `   User MessageId: ${message.messageId}`]
+    ? [
+        `   Eligible for task_create_from_message: yes`,
+        `   User MessageId: ${message.messageId} (original sourceMessageId for group_chat_create only if this human explicitly requests creation; never infer permission from provenance alone)`,
+      ]
     : [`   Eligible for task_create_from_message: no`];
   const structuredTaskContextBlock = buildLeadInboxTaskContextBlock(message);
   return [

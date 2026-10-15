@@ -51,6 +51,7 @@ declare module 'agent-teams-controller' {
       options?: {
         runtimeProvider?: 'native' | 'opencode' | 'codex';
         includeActiveProcesses?: boolean;
+        includeChatVisualizationProtocol?: boolean;
       }
     ): Promise<string>;
     leadBriefing(): Promise<string>;
@@ -231,14 +232,37 @@ declare module 'agent-teams-controller' {
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
     groupChats: {
+      createGroupChat(flags: {
+        from: string;
+        sourceMessageId: string;
+        name: string;
+        selectedMemberNames: string[];
+        autoIncludeNewMembers?: boolean;
+      }): Promise<unknown>;
       listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
       sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+      reactToGroupMessage(flags: {
+        from: string;
+        groupChatId: string;
+        relayOfMessageId: string;
+      }): Promise<{
+        teamName: string;
+        saved: true;
+        acknowledged: true;
+        groupChatId: string;
+        messageId: string;
+        relayOfMessageId: string;
+        from: string;
+        groupRunKey: string;
+      }>;
     };
     workSync: ControllerWorkSyncApi;
   }
 
   /** Context-free protocol text builders, shared across lead and member prompts. */
   export interface ProtocolsApi {
+    buildChatVisualizationProtocolText(): string;
+    buildChatVisualizationRefreshInstruction(): string;
     buildActionModeProtocolText(delegateDescription: string): string;
     MEMBER_DELEGATE_DESCRIPTION: string;
     buildProcessProtocolText(teamName: string): string;

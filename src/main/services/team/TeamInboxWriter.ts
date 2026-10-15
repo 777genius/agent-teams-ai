@@ -11,7 +11,14 @@ import { resolveInboxPath } from './teamInboxPath';
 import { MAX_INBOX_FILE_BYTES } from './TeamInboxReader';
 import { pickTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
-import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
+import type {
+  AttachmentMeta,
+  InboxMessage,
+  NativeAttachmentDeliveryEnvelope,
+  SendMessageRequest,
+  SendMessageResult,
+  TaskRef,
+} from '@shared/types';
 
 function serializeInboxRows(rows: unknown): string {
   assertValidGroupInboxRows(rows);
@@ -80,6 +87,21 @@ export interface SendInboxMessageOptions {
   shouldStillWrite?: () => boolean | Promise<boolean>;
 }
 
+type TeamInboxWriteRequest = Omit<SendMessageRequest, 'attachments'> & {
+  attachments?: AttachmentMeta[];
+  nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
+  fileReferences?: AttachmentMeta[];
+};
+
+export interface SendNativeAttachmentMessageRequest extends Omit<
+  SendMessageRequest,
+  'attachments'
+> {
+  attachments: AttachmentMeta[];
+  fileReferences?: AttachmentMeta[];
+  recipientRuntimeInstanceId?: string;
+}
+
 class TeamInboxWriteAbortedError extends Error {
   constructor() {
     super('Inbox write aborted before commit');
@@ -93,16 +115,51 @@ export class TeamInboxWriter {
     request: SendMessageRequest,
     options?: SendInboxMessageOptions
   ): Promise<SendMessageResult> {
+    const {
+      attachments,
+      nativeAttachmentDelivery: _untrustedEnvelope,
+      ...message
+    } = request as SendMessageRequest & {
+      nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
+    };
+    return this.writeMessage(
+      teamName,
+      {
+        ...message,
+        attachments: attachments?.map(({ data: _data, ...meta }) => meta),
+      },
+      options
+    );
+  }
+
+  async sendNativeAttachmentMessage(
+    teamName: string,
+    request: SendNativeAttachmentMessageRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
+    const { recipientRuntimeInstanceId, ...message } = request;
+    return this.writeMessage(
+      teamName,
+      {
+        ...message,
+        nativeAttachmentDelivery: recipientRuntimeInstanceId
+          ? { version: 1, recipientRuntimeInstanceId }
+          : undefined,
+      },
+      options
+    );
+  }
+
+  private async writeMessage(
+    teamName: string,
+    request: TeamInboxWriteRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
     const inboxPath = resolveInboxPath(teamName, request.member);
     const explicitMessageId = request.messageId?.trim();
     const messageId = explicitMessageId || randomUUID();
 
-    const attachmentMeta = request.attachments?.map((a) => ({
-      id: a.id,
-      filename: a.filename,
-      mimeType: a.mimeType,
-      size: a.size,
-    }));
+    const attachmentMeta = request.attachments;
 
     const payload: InboxMessage = {
       from: request.from ?? 'user',
@@ -117,6 +174,10 @@ export class TeamInboxWriter {
       messageId,
       ...(request.relayOfMessageId && { relayOfMessageId: request.relayOfMessageId }),
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,
+      fileReferences: request.fileReferences?.length ? request.fileReferences : undefined,
+      ...(request.nativeAttachmentDelivery && {
+        nativeAttachmentDelivery: request.nativeAttachmentDelivery,
+      }),
       ...(request.source && { source: request.source }),
       ...(request.leadSessionId && { leadSessionId: request.leadSessionId }),
       ...(request.color && { color: request.color }),
@@ -234,7 +295,11 @@ export class TeamInboxWriter {
             return;
           }
           const written = await this.readInbox(inboxPath);
-          if (written.some((msg) => msg != null && typeof msg === 'object' && msg.messageId === messageId)) {
+          if (
+            written.some(
+              (msg) => msg != null && typeof msg === 'object' && msg.messageId === messageId
+            )
+          ) {
             return;
           }
           await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
@@ -259,8 +324,10 @@ export class TeamInboxWriter {
   ): number {
     return messages.findIndex(
       (candidate) =>
-        candidate != null && typeof candidate === 'object' &&
-        typeof candidate.messageId === 'string' && candidate.messageId.trim() === messageId
+        candidate != null &&
+        typeof candidate === 'object' &&
+        typeof candidate.messageId === 'string' &&
+        candidate.messageId.trim() === messageId
     );
   }
 
@@ -307,6 +374,8 @@ export class TeamInboxWriter {
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
       attachments: message.attachments,
+      fileReferences: message.fileReferences,
+      nativeAttachmentDelivery: message.nativeAttachmentDelivery,
       source: message.source,
       conversationId: message.conversationId,
       replyToConversationId: message.replyToConversationId,
@@ -613,10 +682,12 @@ export class TeamInboxWriter {
     // deliberately excluded from the duplicate key.
     return messages.findIndex(
       (candidate) =>
-        candidate != null && typeof candidate === 'object' &&
+        candidate != null &&
+        typeof candidate === 'object' &&
         !candidate.groupChatId &&
         candidate.source === 'runtime_delivery' &&
-        typeof candidate.relayOfMessageId === 'string' && candidate.relayOfMessageId.trim() === relayOfMessageId &&
+        typeof candidate.relayOfMessageId === 'string' &&
+        candidate.relayOfMessageId.trim() === relayOfMessageId &&
         this.normalizeComparableParticipant(candidate.from) === from &&
         this.normalizeComparableParticipant(candidate.to) === to
     );

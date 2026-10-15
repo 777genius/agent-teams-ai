@@ -12,9 +12,11 @@ import {
   WORKFLOW,
 } from './ci-feedback-reuse.mts';
 import type { GitHubRead } from './ci-feedback-reuse.mts';
+import { collectChangeScope, type ChangeScope } from './ci-change-scope.mts';
 import { proveMetadataProducer } from './ci-feedback-metadata-proof.mts';
 
 export type Plan = {
+  scope?: ChangeScope;
   full: boolean;
   metadata: boolean;
   reuse: boolean;
@@ -149,6 +151,7 @@ export async function planFeedback(
   now = Date.now()
 ): Promise<Plan> {
   const fallback: Plan = {
+    scope: 'full',
     full: true,
     metadata: false,
     reuse: false,
@@ -167,7 +170,10 @@ export async function planFeedback(
   if (
     isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
     (await proveMetadataProducer(
-      env, event, read, object(object(event).pull_request).draft === false
+      env,
+      event,
+      read,
+      object(object(event).pull_request).draft === false
     ))
   ) {
     return {
@@ -180,14 +186,18 @@ export async function planFeedback(
   // An edited event that failed strict metadata proof always requires full CI.
   // The legacy selector remains available to callers using draft lifecycle feedback.
   try {
-    if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited') return fallback;
+    if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited')
+      return fallback;
   } catch {
     return fallback;
   }
   if (selectFeedbackMode(env.GITHUB_EVENT_NAME, event) === 'fast') {
     return { ...fallback, full: false, reason: 'Draft feedback' };
   }
-  if (env.GITHUB_EVENT_NAME !== 'push') return fallback;
+  if (env.GITHUB_EVENT_NAME !== 'push') {
+    const change = collectChangeScope(env);
+    return { ...fallback, scope: change.scope, reason: change.reason };
+  }
   if (env.RUNNER_OS !== 'Linux') return fallback;
   if (
     env.GITHUB_WORKFLOW_REF !== `${REPOSITORY}/.github/workflows/ci.yml@refs/heads/main` ||
@@ -285,7 +295,20 @@ export function qualifyFull(
     ) {
       throw new Error('Reuse lacks authenticated source run');
     }
-    for (const name of ['validate', 'test', 'lint', 'task-change-ledger-windows']) {
+    const scope = outputs.scope ?? 'full';
+    if (!['full', 'docs', 'assets', 'dmg', 'source'].includes(String(scope)))
+      throw new Error('Invalid change scope');
+    if (scope !== 'full' && reuse !== 'false')
+      throw new Error('Scoped qualification cannot reuse full evidence');
+    const required =
+      scope === 'full'
+        ? ['validate', 'test', 'lint', 'task-change-ledger-windows']
+        : scope === 'source'
+          ? ['source', 'test']
+          : scope === 'dmg'
+            ? ['focused', 'dmg-artwork']
+            : ['focused'];
+    for (const name of required) {
       // GitHub's matrix job result aggregates every configured test shard.
       const result = object(needs[name]).result;
       if (
@@ -300,7 +323,7 @@ export function qualifyFull(
       reason:
         reuse === 'true'
           ? `Verified reuse from run ${outputs.source_run}`
-          : 'Complete full qualification',
+          : `Complete ${scope} qualification`,
     };
   } catch (error) {
     return { ok: false, reason: error instanceof Error ? error.message : 'Invalid gate inputs' };
@@ -396,7 +419,7 @@ async function main(): Promise<void> {
   if (process.argv[2] !== 'plan') throw new Error('Expected plan, gate, image or windows');
   const plan = await planFeedback(process.env, readEvent(), read);
   output(
-    `full=${plan.full}\nmetadata=${plan.metadata}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
+    `scope=${plan.scope ?? 'full'}\nfull=${plan.full}\nmetadata=${plan.metadata}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`
   );
   console.log(plan.reason);
 }

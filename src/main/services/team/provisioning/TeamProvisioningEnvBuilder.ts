@@ -1,9 +1,12 @@
+import { mkdir } from 'node:fs/promises';
+
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv';
 import {
+  getAppDataPath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
@@ -15,6 +18,7 @@ import {
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
 } from '@shared/constants/anthropicConnectionMode';
 import * as os from 'os';
+import * as path from 'path';
 
 import {
   ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS,
@@ -346,6 +350,9 @@ export async function buildProvisioningEnv({
   });
   const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
   const providerEnv = providerEnvResult.env;
+  const attachmentRoot = path.join(getAppDataPath(), 'attachments');
+  await mkdir(attachmentRoot, { recursive: true, mode: 0o700 });
+  providerEnv.CLAUDE_AGENT_TEAMS_ATTACHMENT_ROOT = attachmentRoot;
   const writableEnvResult = await (
     ports.prepareAgentChildProcessWritableEnv ?? prepareAgentChildProcessWritableEnv
   )(providerEnv, { home });

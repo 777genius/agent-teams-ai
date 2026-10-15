@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "添加回应 ({{count}})",
+      "remove": "移除回应 ({{count}})",
+      "count": "回应：{{count}}",
+      "failed": "无法更新回应"
+    },
     "actions": {
       "createTaskFromMessage": "从消息创建任务",
       "editMessage": "编辑消息",

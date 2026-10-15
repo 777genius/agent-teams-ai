@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "প্রতিক্রিয়া যোগ করুন ({{count}})",
+      "remove": "প্রতিক্রিয়া সরান ({{count}})",
+      "count": "প্রতিক্রিয়া: {{count}}",
+      "failed": "প্রতিক্রিয়া আপডেট করা যায়নি"
+    },
     "actions": {
       "createTaskFromMessage": "বার্তা থেকে একটি নতুন কাজ তৈরি করুন",
       "editMessage": "বার্তা সম্পাদনা করুন",

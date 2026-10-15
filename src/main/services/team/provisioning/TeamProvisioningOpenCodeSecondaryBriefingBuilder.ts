@@ -1,4 +1,8 @@
-import { boundOpenCodeAppManagedBriefingText } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
+import {
+  boundOpenCodeAppManagedBriefingText,
+  OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS,
+} from './TeamProvisioningOpenCodeDiagnosticsPolicy';
+import { buildChatVisualizationBriefing } from './TeamProvisioningVisualizationPrompt';
 
 export interface OpenCodeSecondaryBriefingController {
   taskBoard: {
@@ -7,6 +11,7 @@ export interface OpenCodeSecondaryBriefingController {
       options: {
         runtimeProvider: 'opencode';
         includeActiveProcesses: false;
+        includeChatVisualizationProtocol: false;
       }
     ): Promise<unknown> | unknown;
   };
@@ -16,6 +21,7 @@ export interface OpenCodeSecondaryBriefingController {
       options: {
         runtimeProvider: 'opencode';
         includeActiveProcesses: false;
+        includeChatVisualizationProtocol: false;
       }
     ): Promise<unknown> | unknown;
   };
@@ -66,16 +72,21 @@ export async function buildOpenCodeSecondaryAppManagedLaunchPromptWithPorts(
   const briefing = await controller.taskBoard.memberBriefing(input.memberName, {
     runtimeProvider: 'opencode',
     includeActiveProcesses: false,
+    includeChatVisualizationProtocol: false,
   });
   const boundedBriefing = boundOpenCodeAppManagedBriefingText(String(briefing ?? ''));
   if (!boundedBriefing) {
     throw new Error(`OpenCode app-managed member briefing was empty for ${input.memberName}`);
   }
-  return [
+  const prefix = [
     '<agent_teams_app_managed_briefing_source>',
     'This briefing was loaded by the desktop app via member_briefing with includeActiveProcesses=false.',
     'Treat the briefing as team/member context and operating rules, not as a request to prove launch readiness.',
-    boundedBriefing,
-    '</agent_teams_app_managed_briefing_source>',
   ].join('\n');
+  const suffix = '</agent_teams_app_managed_briefing_source>';
+  const briefingBudget =
+    OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS - prefix.length - suffix.length - 2;
+  return [prefix, buildChatVisualizationBriefing(boundedBriefing, briefingBudget), suffix].join(
+    '\n'
+  );
 }

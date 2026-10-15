@@ -110,3 +110,14 @@ export function countOpenInterval(
   const delta = previousMono === null ? 0 : nowMono - previousMono;
   return { anchor: nowMono, elapsedMs: delta >= 0 && delta <= maxGapMs ? Math.floor(delta) : 0 };
 }
+
+/** Temporary recovery audience; missing runtime identity fails closed. */
+export function announcementRuntimeAllowed(
+  item: Announcement,
+  runtime?: { platform: string; appVersion: string }
+): boolean {
+  return (
+    !item.macosManualUpdate2171Only ||
+    (runtime?.platform === 'darwin' && runtime.appVersion === '2.17.1')
+  );
+}

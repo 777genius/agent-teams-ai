@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskFoldersHost } from '@features/task-folders/renderer';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
 import { PanelLeft } from 'lucide-react';
@@ -137,7 +138,10 @@ export const Sidebar = (): React.JSX.Element => {
             <PanelLeft className="size-3.5" />
           </button>
 
-          <span className="text-[13px] font-semibold text-text">{t('tasksPanel.title')}</span>
+          <span className="flex-1 text-[13px] font-semibold text-text">
+            {t('tasksPanel.title')}
+          </span>
+          <TaskFoldersHost sidebar={sidebarRef} collapsed={sidebarCollapsed} />
         </div>
 
         {/* Content: tasks list. Sessions panel is temporarily hidden with the mode switcher above. */}

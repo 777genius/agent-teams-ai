@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "image": { "width": 960, "height": 600, "kind": "png", "readableText": true, "colorBlocks": 3 },
+  "text": { "encoding": "utf-8", "markerPrefix": "NATIVE-ATTACHMENT-TEXT" },
+  "pdf": { "kind": "pdf", "markerPrefix": "NATIVE-ATTACHMENT-PDF", "structuralNewlines": true, "xref": true }
+}

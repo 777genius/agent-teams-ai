@@ -4,18 +4,21 @@ import { resolve } from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
-import { registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
+import { createDesktopTeamGroupChats, registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
 import { createOpenCodeBridgeHandshakeIdentityHash, type OpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { buildGroupPlainTextVisibleReplyMessageId, buildPlainTextVisibleReplyMessageId } from '@main/services/team/opencode/delivery/OpenCodeGroupVisibleReply';
 import { createOpenCodePromptDeliveryLedgerStore } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OpenCodeVisibleReplyProofService } from '@main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
+import * as groupAtomicWrite from '@main/services/team/atomicWrite';
+import { buildOpenCodeRuntimeMessageText } from '@main/services/team/runtime/OpenCodeRuntimeMessageText';
+import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import Fastify from 'fastify';
-import { mkdir, mkdtemp, readFile, rm,writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm,writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -42,6 +45,9 @@ describe('group chat main authority and durable identity', () => {
   let available: boolean;
   let unavailableMembers: Set<string>;
   let runPrefix: string;
+  let reactionSupported: boolean;
+  const reactionChanged = vi.fn();
+  const inboxChanged = vi.fn();
   let deliver: TeamGroupChatsPorts['deliver'];
   const create = () =>
     feature.create({
@@ -66,6 +72,9 @@ describe('group chat main authority and durable identity', () => {
     roster = ['lead', 'alice', 'bob'];
     deliveries = [];
     available = true;
+    reactionSupported = true;
+    reactionChanged.mockClear();
+    inboxChanged.mockClear();
     unavailableMembers = new Set();
     runPrefix = 'run';
     deliver = async (_team, message) => {
@@ -74,15 +83,568 @@ describe('group chat main authority and durable identity', () => {
     };
     feature = createTeamGroupChatsFeature({
       roster: async () => roster,
+      leadName: async () => 'lead',
       getRun: async (_team, name) =>
         available && !unavailableMembers.has(name)
-          ? { runKey: `${runPrefix}:${name}`, protocolVersion: 1, provider: 'native' } : null,
+          ? { runKey: `${runPrefix}:${name}`, protocolVersion: 1, provider: 'native', ...(reactionSupported ? { groupReactionProtocolVersion: 1 as const } : {}) } : null,
       configurationOperation: (_team, operation) => operation(),
       deliver: (...args) => deliver(...args),
+      reactionChanged,
+      changed: inboxChanged,
     });
   });
   afterEach(async () => {
     await rm(state.root, { recursive: true, force: true });
+  });
+
+  const creationRequest = {
+    teamName: 'sandbox',
+    from: 'lead',
+    sourceMessageId: 'original-create-request',
+    name: ' Release ',
+    selectedMemberNames: ['alice', 'bob'],
+  };
+  const original = (patch: Record<string, unknown> = {}) => ({
+    messageId: creationRequest.sourceMessageId,
+    from: 'user',
+    to: 'lead',
+    text: 'Create Release with alice and bob, without the lead',
+    timestamp: new Date().toISOString(),
+    read: true,
+    source: 'user_sent',
+    actionMode: 'do',
+    ...patch,
+  });
+  const sourceFile = () => join(state.root, 'sandbox', 'sentMessages.json');
+  const registryFile = () => join(state.root, 'sandbox', 'group-chats.json');
+  const stageOriginal = async (patch: Record<string, unknown> = {}) =>
+    writeFile(sourceFile(), JSON.stringify([original(patch)]));
+
+  // Red on duplicate creation, payload adoption, membership expansion on archived retry or fanout.
+  it('creates once from the original, preserves immutable retries and keeps metadata private', async () => {
+    await stageOriginal();
+    const [first, retry] = await Promise.all([
+      feature.createFromAgent(creationRequest),
+      feature.createFromAgent({ ...creationRequest, selectedMemberNames: ['bob', 'alice'] }),
+    ]);
+    expect(retry.id).toBe(first.id);
+    expect(first).toMatchObject({
+      name: 'Release',
+      memberNames: ['alice', 'bob'],
+      membership: { kind: 'auto', excludedMemberNames: ['lead'] },
+    });
+    expect(first).not.toHaveProperty('agentCreation');
+    expect(inboxChanged).toHaveBeenCalledTimes(1);
+    expect(deliveries).toHaveLength(0);
+    await expect(
+      feature.createFromAgent({ ...creationRequest, name: 'Other' })
+    ).rejects.toMatchObject({ code: 'creation-conflict' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, from: 'alice' })
+    ).rejects.toMatchObject({ code: 'request-not-addressed' });
+    roster.push('carol');
+    await feature.setArchived({ teamName: 'sandbox', groupChatId: first.id, archived: true });
+    const stored = JSON.parse(await readFile(registryFile(), 'utf8'));
+    stored.groups[0].name = 'Renamed later';
+    await writeFile(registryFile(), JSON.stringify(stored));
+    const movedRoot = `${state.root}-moved`;
+    await rename(state.root, movedRoot);
+    state.root = movedRoot; // The same registry may move; its accepted source identity survives.
+    const movedRegistry = await readFile(registryFile());
+    expect((await feature.createFromAgent(creationRequest)).id).toBe(first.id);
+    expect(await readFile(registryFile())).toEqual(movedRegistry);
+    await rm(sourceFile()); // Accepted retries do not depend on retained original history.
+    await expect(
+      feature.createFromAgent({ ...creationRequest, name: 'Other' })
+    ).rejects.toMatchObject({ code: 'creation-conflict' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, from: 'alice' })
+    ).rejects.toMatchObject({ code: 'request-not-addressed' });
+    const before = await readFile(registryFile());
+    const archived = await feature.createFromAgent(creationRequest);
+    expect(archived).toMatchObject({
+      id: first.id,
+      name: 'Renamed later',
+      reason: 'archived',
+      memberNames: ['alice', 'bob', 'carol'],
+    });
+    expect(await readFile(registryFile())).toEqual(before);
+    expect(JSON.parse(before.toString()).groups).toHaveLength(1);
+    expect((await feature.list({ teamName: 'sandbox' }))[0]).not.toHaveProperty('agentCreation');
+    roster.splice(roster.indexOf('lead'), 1);
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'invalid-members',
+    });
+  });
+
+  it.each([
+    ['peer', { from: 'alice' }, 'invalid-user-request'],
+    ['relay', { relayOfMessageId: 'another-original' }, 'invalid-user-request'],
+    ['wrong actor', { to: 'alice' }, 'request-not-addressed'],
+    ['ASK', { actionMode: 'ask' }, 'invalid-user-request'],
+    ['legacy mode', { actionMode: undefined }, 'invalid-user-request'],
+    ['invalid mode', { actionMode: 'write' }, 'invalid-user-request'],
+    ['system source', { source: 'system_notification' }, 'invalid-user-request'],
+    ['cross-team', { conversationId: 'other-team' }, 'invalid-user-request'],
+    ['slash', { text: '/compact create Release' }, 'invalid-user-request'],
+    ['control kind', { messageKind: 'member_work_sync_nudge' }, 'invalid-user-request'],
+    ['malformed original', { timestamp: 'invalid' }, 'invalid-user-request'],
+  ])('rejects %s provenance before registry mutation', async (_label, patch, code) => {
+    await stageOriginal(patch as Record<string, unknown>);
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({ code });
+    expect(await readFile(registryFile()).catch(() => undefined)).toBeUndefined();
+    expect(inboxChanged).not.toHaveBeenCalled();
+    expect(deliveries).toHaveLength(0);
+  });
+
+  it('admits canonical group originals only for frozen recipients and current active source membership', async () => {
+    const source = await create();
+    await send();
+    const sourceId = '20000000-0000-4000-8000-000000000001';
+    const request = { ...creationRequest, sourceMessageId: sourceId };
+    const outcomes = await Promise.allSettled([
+      feature.createFromAgent(request),
+      feature.createFromAgent({ ...request, from: 'alice', name: 'Different interpretation' }),
+    ]);
+    expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.filter((item) => item.status === 'rejected')[0]).toMatchObject({
+      reason: { code: 'creation-conflict' },
+    });
+    const created = outcomes.find((item) => item.status === 'fulfilled')!;
+    if (created.status !== 'fulfilled') throw new Error('Missing creation');
+    const acceptedRequest = { ...request, name: created.value.name };
+    await expect(feature.createFromAgent({ ...acceptedRequest, from: 'bob' })).rejects.toMatchObject({
+      code: 'request-not-addressed',
+    });
+    const physical = deliveries.find((row) => row.to === 'lead')!;
+    await writeFile(
+      join(state.root, 'sandbox', 'inboxes', 'lead.json'),
+      JSON.stringify([physical])
+    );
+    await expect(
+      feature.createFromAgent({ ...request, sourceMessageId: physical.messageId! })
+    ).rejects.toMatchObject({ code: 'invalid-user-request' });
+    await feature.setArchived({ teamName: 'sandbox', groupChatId: source.id, archived: true });
+    await expect(feature.createFromAgent({ ...acceptedRequest, from: 'alice' })).resolves.toMatchObject({
+      id: created.value.id,
+    });
+    const canonicalFile = join(state.root, 'sandbox', 'inboxes', 'user.json');
+    const canonical = JSON.parse(await readFile(canonicalFile, 'utf8'));
+    const freshId = randomUUID();
+    canonical.push({ ...canonical[0], messageId: freshId, groupMessageId: freshId });
+    await writeFile(canonicalFile, JSON.stringify(canonical));
+    await expect(
+      feature.createFromAgent({ ...request, sourceMessageId: freshId })
+    ).rejects.toMatchObject({ code: 'request-not-addressed' });
+  });
+
+  it('fails closed on collision, ambiguity, malformed metadata and unavailable storage without replacing bytes', async () => {
+    await stageOriginal();
+    const group = await feature.createFromAgent(creationRequest);
+    const registry = JSON.parse(await readFile(registryFile(), 'utf8'));
+    delete registry.groups[0].agentCreation;
+    await writeFile(registryFile(), JSON.stringify(registry));
+    const collided = await readFile(registryFile());
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'creation-conflict',
+    });
+    expect(await readFile(registryFile())).toEqual(collided);
+    registry.groups[0].agentCreation = { sourceMessageId: creationRequest.sourceMessageId };
+    await writeFile(registryFile(), JSON.stringify(registry));
+    const malformed = await readFile(registryFile());
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'storage-unavailable',
+    });
+    expect(await readFile(registryFile())).toEqual(malformed);
+    await rm(registryFile());
+    await writeFile(
+      join(state.root, 'sandbox', 'inboxes', 'lead.json'),
+      JSON.stringify([original()])
+    );
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'invalid-user-request',
+    });
+    await rm(join(state.root, 'sandbox', 'inboxes', 'lead.json'));
+    await writeFile(sourceFile(), '{broken');
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'storage-unavailable',
+    });
+    expect(await readFile(sourceFile(), 'utf8')).toBe('{broken');
+    await stageOriginal();
+    const write = vi
+      .spyOn(groupAtomicWrite, 'atomicWriteAsync')
+      .mockRejectedValueOnce(new Error('disk full'));
+    try {
+      await expect(feature.createFromAgent(creationRequest)).rejects.toThrow('disk full');
+    } finally {
+      write.mockRestore();
+    }
+    expect(await readFile(registryFile()).catch(() => undefined)).toBeUndefined();
+    expect(group.id).toBeTruthy();
+  });
+
+  it('validates current selected agents and permits DELEGATE only for the configured lead', async () => {
+    await stageOriginal({ actionMode: 'delegate' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, selectedMemberNames: ['alice'] })
+    ).rejects.toMatchObject({ code: 'invalid-members' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, selectedMemberNames: ['user', 'alice'] })
+    ).rejects.toMatchObject({ code: 'invalid-members' });
+    roster.splice(roster.indexOf('bob'), 1);
+    await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+      code: 'invalid-members',
+    });
+    roster.push('bob');
+    await stageOriginal({ to: 'alice', actionMode: 'delegate' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, from: 'alice' })
+    ).rejects.toMatchObject({ code: 'invalid-user-request' });
+    await stageOriginal({ actionMode: 'delegate' });
+    await expect(
+      feature.createFromAgent({ ...creationRequest, autoIncludeNewMembers: false })
+    ).resolves.toMatchObject({ membership: { kind: 'fixed', memberNames: ['alice', 'bob'] } });
+  });
+
+  // Actual live-lead facade + controller original writer: a dropped mode makes ASK authorize or DO fail.
+  it('persists live-lead ASK and default DO originals before creation admission', async () => {
+    const claudeDir = state.root;
+    state.root = join(claudeDir, 'teams');
+    await mkdir(join(state.root, 'sandbox', 'inboxes'), { recursive: true });
+    await writeFile(
+      join(state.root, 'sandbox', 'config.json'),
+      JSON.stringify({
+        name: 'sandbox',
+        members: roster.map((name) => ({
+          name,
+          agentType: name === 'lead' ? 'team-lead' : 'teammate',
+        })),
+      })
+    );
+    const { createController } = createRequire(import.meta.url)(
+      '../../../agent-teams-controller/src/controller.js'
+    ) as typeof import('agent-teams-controller');
+    const controller = createController({ teamName: 'sandbox', claudeDir });
+    const service = new TeamDataService(
+      { getConfig: async () => ({ name: 'sandbox', members: [] }) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () => controller as never
+    );
+    try {
+      await service.sendDirectToLead(
+        'sandbox',
+        'lead',
+        original().text,
+        undefined,
+        undefined,
+        undefined,
+        creationRequest.sourceMessageId,
+        'ask'
+      );
+      expect(JSON.parse(await readFile(sourceFile(), 'utf8'))[0]).toMatchObject({
+        from: 'user',
+        to: 'lead',
+        source: 'user_sent',
+        actionMode: 'ask',
+        messageId: creationRequest.sourceMessageId,
+      });
+      await expect(feature.createFromAgent(creationRequest)).rejects.toMatchObject({
+        code: 'invalid-user-request',
+      });
+      const freshId = randomUUID();
+      await service.sendDirectToLead(
+        'sandbox',
+        'lead',
+        original().text,
+        undefined,
+        undefined,
+        undefined,
+        freshId
+      );
+      expect(
+        JSON.parse(await readFile(sourceFile(), 'utf8')).find(
+          (row: InboxMessage) => row.messageId === freshId
+        )
+      ).toMatchObject({ actionMode: 'do' });
+      await expect(
+        feature.createFromAgent({ ...creationRequest, sourceMessageId: freshId })
+      ).resolves.toMatchObject({ name: 'Release' });
+      for (const metadataOnly of [true, false]) {
+        const members = ['a-captain', 'alice', 'bob'].map((name) => ({ name }));
+        await writeFile(join(state.root, 'sandbox', 'config.json'), JSON.stringify({
+          name: 'sandbox', members: metadataOnly ? [] : members,
+        }));
+        await writeFile(join(state.root, 'sandbox', 'members.meta.json'), JSON.stringify({
+          version: 1, members: metadataOnly ? members : [],
+        }));
+        const leadService = new TeamDataService();
+        expect(await leadService.getLeadMemberName('sandbox')).toBe('a-captain');
+        const desktopFeature = createDesktopTeamGroupChats({
+          leadName: (teamName) => leadService.getLeadMemberName(teamName),
+          snapshot: async () => ({ teamName: 'sandbox', runId: null,
+            updatedAt: new Date().toISOString(), members: {} }),
+          openCodeRun: async () => null,
+          configurationOperation: (_team, operation) => operation(),
+          inboxWriter: new TeamInboxWriter(), changed: inboxChanged, reactionChanged,
+        });
+        const delegateId = randomUUID();
+        await service.sendDirectToLead('sandbox', 'a-captain', original().text,
+          undefined, undefined, undefined, delegateId, 'delegate');
+        await expect(desktopFeature.createFromAgent({ ...creationRequest,
+          from: 'a-captain', sourceMessageId: delegateId,
+        })).resolves.toMatchObject({ name: 'Release', memberNames: ['alice', 'bob'] });
+        const nonLeadId = randomUUID();
+        await stageOriginal({ to: 'alice', actionMode: 'delegate', messageId: nonLeadId });
+        await expect(desktopFeature.createFromAgent({ ...creationRequest,
+          from: 'alice', sourceMessageId: nonLeadId,
+        })).rejects.toMatchObject({ code: 'invalid-user-request' });
+      }
+    } finally {
+      state.root = claudeDir;
+    }
+  });
+
+  // These cases fail on lost actors, forged/stale acknowledgement proof, or inbox side effects.
+  const reactionTarget = {
+    teamName: 'sandbox',
+    groupChatId: '10000000-0000-4000-8000-000000000001',
+    messageId: '20000000-0000-4000-8000-000000000001',
+  };
+  const reactionFile = () => join(state.root, 'sandbox', 'group-chat-reactions.json');
+  async function stageReactionInbounds() {
+    await create();
+    await send();
+    for (const message of deliveries)
+      await writeFile(
+        join(state.root, 'sandbox', 'inboxes', `${message.to}.json`),
+        JSON.stringify([message])
+      );
+    reactionChanged.mockClear();
+    inboxChanged.mockClear();
+    return deliveries.find((row) => row.to === 'alice')!;
+  }
+  const acknowledge = (physical: InboxMessage) =>
+    feature.react({
+      teamName: 'sandbox',
+      groupChatId: physical.groupChatId!,
+      from: physical.to!,
+      relayOfMessageId: physical.messageId!,
+    });
+
+  it('persists unique concurrent actors and human toggle without inbox delivery or ordinary changes', async () => {
+    const alice = await stageReactionInbounds();
+    const inboxFiles = ['user', 'alice', 'lead'].map((name) =>
+      join(state.root, 'sandbox', 'inboxes', `${name}.json`)
+    );
+    const before = await Promise.all(inboxFiles.map((file) => readFile(file)));
+    const beforeDeliveries = deliveries.length;
+    await Promise.all([
+      acknowledge(alice),
+      acknowledge(deliveries.find((row) => row.to === 'lead')!),
+      feature.setReaction({ ...reactionTarget, active: true }),
+    ]);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({
+      actorNames: expect.arrayContaining(['alice', 'lead', 'user']),
+      hasUserReacted: true,
+      canReact: true,
+    });
+    const persisted = await readFile(reactionFile());
+    await acknowledge(alice);
+    await feature.setReaction({ ...reactionTarget, active: true });
+    expect(await readFile(reactionFile())).toEqual(persisted);
+    expect(reactionChanged).toHaveBeenCalledTimes(3);
+    await feature.setReaction({ ...reactionTarget, active: false });
+    expect((await feature.getReaction(reactionTarget)).actorNames.sort()).toEqual([
+      'alice',
+      'lead',
+    ]);
+    expect(
+      JSON.parse(await readFile(reactionFile(), 'utf8'))
+        .entries[0].actors.map((actor: { name: string }) => actor.name)
+        .sort()
+    ).toEqual(['alice', 'lead']);
+    expect(await Promise.all(inboxFiles.map((file) => readFile(file)))).toEqual(before);
+    expect(deliveries).toHaveLength(beforeDeliveries);
+    expect(inboxChanged).not.toHaveBeenCalled();
+    expect(
+      reactionChanged.mock.calls.every(
+        ([team, id]) => team === 'sandbox' && id === reactionTarget.messageId
+      )
+    ).toBe(true);
+  });
+
+  it('refreshes same-actor current inbound proof without changing count, name, reactedAt or refresh events', async () => {
+    const alice = await stageReactionInbounds();
+    await acknowledge(alice);
+    const original = JSON.parse(await readFile(reactionFile(), 'utf8')).entries[0].actors[0];
+    runPrefix = 'fresh';
+    const fresh = { ...alice, messageId: `${alice.messageId}:fresh`, groupRunKey: 'fresh:alice' };
+    await writeFile(
+      join(state.root, 'sandbox', 'inboxes', 'alice.json'),
+      JSON.stringify([alice, fresh])
+    );
+    const result = await acknowledge(fresh);
+    expect(result).toEqual({
+      saved: true,
+      acknowledged: true,
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      messageId: reactionTarget.messageId,
+      relayOfMessageId: fresh.messageId,
+      from: 'alice',
+      groupRunKey: 'fresh:alice',
+    });
+    const stored = JSON.parse(await readFile(reactionFile(), 'utf8')).entries[0].actors;
+    expect(stored).toEqual([
+      { ...original, inboxMessageId: fresh.messageId, groupRunKey: 'fresh:alice' },
+    ]);
+    expect(reactionChanged).toHaveBeenCalledTimes(1);
+    const proof = {
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      memberName: 'alice',
+    };
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        inboxMessageId: alice.messageId!,
+        runId: 'run:alice',
+      })
+    ).toBe(false);
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        inboxMessageId: fresh.messageId!,
+        runId: 'fresh:alice',
+      })
+    ).toBe(true);
+    expect(
+      await feature.hasAcknowledgedInbound({
+        ...proof,
+        memberName: 'lead',
+        inboxMessageId: fresh.messageId!,
+        runId: 'fresh:alice',
+      })
+    ).toBe(false);
+    const bytes = await readFile(reactionFile());
+    await feature.setArchived({
+      teamName: 'sandbox',
+      groupChatId: reactionTarget.groupChatId,
+      archived: true,
+    });
+    expect(await acknowledge(fresh)).toEqual(result);
+    expect(await readFile(reactionFile())).toEqual(bytes);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({
+      actorNames: ['alice'],
+      canReact: false,
+    });
+    await expect(acknowledge(alice)).rejects.toMatchObject({ code: 'invalid-relay' });
+  });
+
+  it('rejects agent spoofing, wrong targets, stale/unsupported runs and archived mutations across human/agent HTTP boundaries', async () => {
+    const alice = await stageReactionInbounds();
+    const app = Fastify();
+    registerTeamGroupChatsHttp(app, feature);
+    const agent = {
+      from: 'alice',
+      groupChatId: reactionTarget.groupChatId,
+      relayOfMessageId: alice.messageId,
+    };
+    const post = (url: string, payload: object) => app.inject({ method: 'POST', url, payload });
+    try {
+      for (const [input, code] of [
+        [{ ...agent, from: 'user' }, 'invalid-input'],
+        [{ ...agent, from: 'User' }, 'invalid-input'],
+        [{ ...agent, from: 'bob' }, 'not-member'],
+        [{ ...agent, relayOfMessageId: reactionTarget.messageId }, 'invalid-relay'],
+        [{ ...agent, groupChatId: randomUUID() }, 'not-found'],
+      ] as const) {
+        expect((await post('/api/teams/sandbox/group-chats/react', input)).json().error.code).toBe(
+          code
+        );
+      }
+      reactionSupported = false;
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'reaction-unsupported'
+      );
+      reactionSupported = true;
+      runPrefix = 'stale';
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'invalid-relay'
+      );
+      runPrefix = 'run';
+      expect(
+        (
+          await post('/api/team-group-chats/setReaction', {
+            ...reactionTarget,
+            active: true,
+            from: 'alice',
+          })
+        ).json()
+      ).toMatchObject({ actorNames: ['user'], hasUserReacted: true });
+      const bytes = await readFile(reactionFile());
+      await feature.setArchived({
+        teamName: 'sandbox',
+        groupChatId: reactionTarget.groupChatId,
+        archived: true,
+      });
+      expect((await post('/api/teams/sandbox/group-chats/react', agent)).json().error.code).toBe(
+        'archived'
+      );
+      await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject(
+        { code: 'archived' }
+      );
+      expect(await feature.setReaction({ ...reactionTarget, active: true })).toMatchObject({
+        actorNames: ['user'],
+        canReact: false,
+      });
+      expect(await readFile(reactionFile())).toEqual(bytes);
+      expect(
+        await feature.hasAcknowledgedInbound({
+          teamName: 'sandbox',
+          groupChatId: reactionTarget.groupChatId,
+          memberName: 'user',
+          inboxMessageId: alice.messageId!,
+          runId: 'run:alice',
+        })
+      ).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('preserves prior bytes and events on failed writes or corrupt reaction storage', async () => {
+    await stageReactionInbounds();
+    await feature.setReaction({ ...reactionTarget, active: true });
+    const bytes = await readFile(reactionFile());
+    reactionChanged.mockClear();
+    const failedWrite = vi
+      .spyOn(groupAtomicWrite, 'atomicWriteAsync')
+      .mockRejectedValueOnce(new Error('Disk unavailable'));
+    try {
+      await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject(
+        { code: 'storage-unavailable' }
+      );
+    } finally {
+      failedWrite.mockRestore();
+    }
+    expect(await readFile(reactionFile())).toEqual(bytes);
+    expect(await feature.getReaction(reactionTarget)).toMatchObject({ actorNames: ['user'] });
+    const corrupt = Buffer.from('{"version":2,"entries":[]}');
+    await writeFile(reactionFile(), corrupt);
+    await expect(feature.setReaction({ ...reactionTarget, active: false })).rejects.toMatchObject({
+      code: 'storage-unavailable',
+    });
+    expect(await readFile(reactionFile())).toEqual(corrupt);
+    expect(reactionChanged).not.toHaveBeenCalled();
   });
 
   it('keeps initial exclusions and adds future members even in archive; create retry returns first record', async () => {
@@ -504,7 +1066,7 @@ describe('group chat main authority and durable identity', () => {
     const writer = new TeamInboxWriter();
     feature = createTeamGroupChatsFeature({ roster: async () => roster,
       getRun: async (_team, member) => ({ runKey: `synthetic:${member}`, protocolVersion: 1,
-        provider: member === 'alice' ? 'opencode' : 'native', isCurrent: async () => true }),
+        provider: member === 'alice' ? 'opencode' : 'native', groupReactionProtocolVersion: 1, isCurrent: async () => true }),
       configurationOperation: (_team, operation) => operation(),
       deliver: async (team, message, _run, shouldStillWrite) => {
         deliveries.push(message);
@@ -540,7 +1102,7 @@ describe('group chat main authority and durable identity', () => {
       try {
         await client.initialize();
         const discovery = await client.listTools() as { result: { tools: { name: string }[] } };
-        expect(discovery.result.tools.map(item => item.name)).toEqual(expect.arrayContaining(['group_chat_list', 'group_chat_send']));
+        expect(discovery.result.tools.map(item => item.name)).toEqual(expect.arrayContaining(['group_chat_create', 'group_chat_list', 'group_chat_send', 'group_chat_react']));
         const response = await client.callTool(tool, { teamName: 'sandbox', from: 'alice', ...input }) as {
           result?: { content: { text: string }[]; isError?: boolean }; error?: unknown;
         };
@@ -570,7 +1132,57 @@ describe('group chat main authority and durable identity', () => {
         clearTimeout(releaseTimer);
         release();
       }
+      await controller.messages.sendMessageAsync({
+        member: 'alice',
+        from: 'user',
+        text: 'Create Agent Release with alice and bob',
+        messageId: 'mcp-original-create',
+        actionMode: 'do',
+        source: 'user_sent',
+      });
+      const created = await mcp('group_chat_create', {
+        sourceMessageId: 'mcp-original-create',
+        name: 'Agent Release',
+        selectedMemberNames: ['alice', 'bob'],
+      });
+      expect(created).toMatchObject({
+        name: 'Agent Release',
+        memberNames: ['alice', 'bob'],
+        membership: { kind: 'auto', excludedMemberNames: ['lead'] },
+      });
+      expect(created).not.toHaveProperty('agentCreation');
+      expect(
+        await mcp('group_chat_create', {
+          sourceMessageId: 'mcp-original-create',
+          name: 'Changed retry',
+          selectedMemberNames: ['alice', 'bob'],
+        })
+      ).toMatchObject({
+        error: { code: 'creation-conflict' },
+        sourceMessageId: 'mcp-original-create',
+        from: 'alice',
+      });
+      const unbound = await app.inject({
+        method: 'POST',
+        url: '/api/teams/sandbox/group-chats/create',
+        payload: {
+          from: 'alice',
+          sourceMessageId: 'mcp-original-create',
+          name: 'Agent Release',
+          selectedMemberNames: ['alice', 'bob'],
+        },
+      });
+      expect(unbound.json()).toMatchObject({
+        error: { code: 'invalid-input' },
+        sourceMessageId: 'mcp-original-create',
+      });
       const inbound = deliveries.find(message => message.to === 'alice')!;
+      const prompt = buildOpenCodeRuntimeMessageText({ teamName: 'sandbox', laneId: 'synthetic',
+        memberName: 'alice', cwd: '/synthetic', text: inbound.text, messageId: inbound.messageId,
+        groupChatId: inbound.groupChatId, groupMessageId: inbound.groupMessageId });
+      const instructedOrigin = JSON.parse(prompt.split('Its immutable origin is:\n')[1].split('\n')[0]);
+      expect(await mcp('group_chat_react', instructedOrigin)).toMatchObject({ saved: true, acknowledged: true, groupChatId: id, messageId: inbound.groupMessageId, relayOfMessageId: inbound.messageId, from: 'alice', groupRunKey: 'synthetic:alice' });
+      expect((await ipc('getReaction', { groupChatId: id, messageId: inbound.groupMessageId })).result).toMatchObject({ actorNames: ['alice'] });
       const reply = await mcp('group_chat_send', { groupChatId: id, messageId: randomUUID(), text: 'GROUP_REPLY', relayOfMessageId: inbound.messageId });
       expect(reply).toMatchObject({ saved: true, groupChatId: id, relayOfMessageId: inbound.messageId });
       expect(await mcp('group_chat_send', { groupChatId: id, messageId: randomUUID(), text: 'PROACTIVE' })).toMatchObject({ saved: true });

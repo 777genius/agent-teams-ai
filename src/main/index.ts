@@ -149,7 +149,7 @@ import {
   resolveOpenCodeRuntimeBinaryForBridgeEnv,
 } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
-import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { createAttachmentBridgeEnvironment } from '@features/agent-attachments/main';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
   computeLiveTeamWatchScope,
@@ -202,7 +202,6 @@ import {
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
-import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
@@ -516,10 +515,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   }
 
   reportProgress('runtime-environment', 'Preparing runtime environment...');
-  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
-    ...process.env,
-    PATH: buildMergedCliPath(binaryPath),
-  });
+  const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
   let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
   const readOpenCodeRuntimeStatus = () => {
     if (explicitOpenCodeBinaryOverride) {
@@ -2012,9 +2008,11 @@ async function initializeServices(): Promise<void> {
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
-    configurationOperation: (teamName, operation) =>
-      teamDataService.runConfigurationOperation(teamName, operation),
+    configurationOperation: (name, op) => teamDataService.runConfigurationOperation(name, op),
+    leadName: (teamName) => teamDataService.getLeadMemberName(teamName),
     inboxWriter: teamInboxWriter,
+    reactionChanged: (teamName, detail) =>
+      forwardTeamChangeToRendererAndHttp({ teamName, detail, type: 'group-reactions' }),
     changed: (teamName) => {
       const event: TeamChangeEvent = { teamName, type: 'inbox' };
       invalidateTeamChangeMessageFeed(event);

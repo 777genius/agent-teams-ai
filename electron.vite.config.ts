@@ -307,6 +307,18 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           'document-preview': resolve(__dirname, 'src/renderer/document-preview.html')
+        },
+        output: {
+          // OpenUI's catalog imports Lucide's lazy icon map. Keep it in one
+          // chunk instead of emitting a separate file for every unused icon.
+          manualChunks(id, { getModuleInfo }) {
+            if (
+              id.includes('/lucide-react/dist/esm/icons/') &&
+              getModuleInfo(id)?.dynamicImporters.some((importer) =>
+                importer.endsWith('/lucide-react/dist/esm/dynamicIconImports.js')
+              )
+            ) return 'openui-icons'
+          }
         }
       }
     }

@@ -1,4 +1,7 @@
-import { NativeMailboxMemberWorkSyncRuntimeTicketAdmission } from '@features/member-work-sync/main/adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
+import {
+  NativeMailboxMemberWorkSyncRuntimeTicketAdmission,
+  readNativeInboxAttachmentCapability,
+} from '@features/member-work-sync/main/adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -13,6 +16,54 @@ describe('NativeMailboxMemberWorkSyncRuntimeTicketAdmission', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it.each([1, 2, 3])(
+    'accepts only known attachment capability %s with current control',
+    async (version) => {
+      root = await mkdtemp(join(tmpdir(), 'work-sync-native-'));
+      const memberRoot = join(
+        root,
+        'team-a',
+        'members',
+        encodeTeamMemberStorageKey('bob'),
+        '.member-work-sync',
+        'runtime-admission'
+      );
+      await mkdir(memberRoot, { recursive: true });
+      await writeFile(
+        join(memberRoot, 'capability.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          recoveryProtocolVersion: 2,
+          teamName: 'team-a',
+          memberName: 'bob',
+          providerId: 'codex',
+          processorReady: true,
+          runtimeInstanceId: 'instance-1',
+          nativeInboxAttachmentsVersion: version,
+          pid: 42,
+          bootstrapRunId: 'run-1',
+        })
+      );
+      await writeFile(
+        join(memberRoot, 'control.json'),
+        JSON.stringify({ runtimeInstanceId: 'instance-1' })
+      );
+      const input = {
+        teamsBasePath: root,
+        teamName: 'team-a',
+        memberName: 'bob',
+        expectedProviderId: 'codex' as const,
+      };
+      const capability = await readNativeInboxAttachmentCapability(input);
+      expect(capability?.nativeInboxAttachmentsVersion ?? null).toBe(version <= 2 ? version : null);
+      await writeFile(
+        join(memberRoot, 'control.json'),
+        JSON.stringify({ runtimeInstanceId: 'restarted' })
+      );
+      await expect(readNativeInboxAttachmentCapability(input)).resolves.toBeNull();
+    }
+  );
 
   it('returns not_early when capability is missing', async () => {
     root = await mkdtemp(join(tmpdir(), 'work-sync-native-'));
@@ -315,10 +366,13 @@ describe('NativeMailboxMemberWorkSyncRuntimeTicketAdmission', () => {
     const commands = await Promise.all(
       names
         .filter((name) => name.endsWith('.json'))
-        .map(async (name) => JSON.parse(await readFile(join(commandsDir, name), 'utf8')) as {
-          op: string;
-          reservationNonce?: string;
-        })
+        .map(
+          async (name) =>
+            JSON.parse(await readFile(join(commandsDir, name), 'utf8')) as {
+              op: string;
+              reservationNonce?: string;
+            }
+        )
     );
     const reserve = commands.find((command) => command.op === 'reserve');
     const cancel = commands.find((command) => command.op === 'cancel');

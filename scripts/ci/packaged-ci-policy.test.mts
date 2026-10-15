@@ -337,3 +337,17 @@ test('CLI uses exact local git evidence and falls back to full after git/event f
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+test('focused changes skip platform matrix only after successful classification', () => {
+  for (const scope of ['docs', 'assets', 'dmg', 'source']) {
+    const valid = { scope, run: 'false', scopeResult: 'success', packagedResult: 'skipped' };
+    assert.doesNotThrow(() => assertFullPackagedGate(valid));
+    for (const result of ['failure', 'cancelled', 'skipped', undefined]) {
+      assert.throws(() => assertFullPackagedGate({ ...valid, scopeResult: result }));
+    }
+    assert.throws(() => assertFullPackagedGate({ ...valid, run: 'true' }));
+    assert.throws(() => assertFullPackagedGate({ ...valid, run: undefined }));
+    assert.throws(() => assertFullPackagedGate({ ...valid, packagedResult: 'cancelled' }));
+  }
+  assert.throws(() => assertFullPackagedGate({ scope: 'unknown', run: 'false', scopeResult: 'success', packagedResult: 'skipped' }));
+});

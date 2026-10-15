@@ -15,6 +15,8 @@ export function createTeamGroupChatsBridge(): TeamGroupChatsAPI {
     return reply.result as T;
   }
   return {
+    getReaction: (request) => invoke(GROUP_CHAT_CHANNELS.getReaction, request),
+    setReaction: (request) => invoke(GROUP_CHAT_CHANNELS.setReaction, request),
     list: (request) => invoke(GROUP_CHAT_CHANNELS.list, request),
     create: (request) => invoke(GROUP_CHAT_CHANNELS.create, request),
     setArchived: (request) => invoke(GROUP_CHAT_CHANNELS.setArchived, request),

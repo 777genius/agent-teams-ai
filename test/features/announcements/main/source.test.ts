@@ -321,3 +321,21 @@ it('cancels redirect bodies before every invalid redirect branch', async () => {
     expect(cancel).toHaveBeenCalledOnce();
   }
 });
+
+it('discards legacy normalized feed and ETag before requesting audience metadata', async () => {
+  const targeted = {
+    ...feed,
+    items: feed.items.map((item) => ({ ...item, macosManualUpdate2171Only: true })),
+  };
+  const f = await setup([
+    new Response(JSON.stringify(targeted), {
+      headers: { 'Content-Type': 'application/json', ETag: '"feed-one"' },
+    }),
+  ]);
+  await writeFile(join(f.directory, 'feed.json'), JSON.stringify({ feed, etag: '"feed-one"' }));
+  await f.source.loadCached();
+  expect(f.source.current()).toBeNull();
+  await f.source.refresh(signal());
+  expect(f.request.mock.calls[0][1]?.headers).not.toHaveProperty('If-None-Match');
+  expect(f.source.current()?.items[0].macosManualUpdate2171Only).toBe(true);
+});

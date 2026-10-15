@@ -28,6 +28,7 @@ import {
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
+import { sortQuickConnectCards } from './quickProviderCards';
 import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type {
@@ -143,33 +144,6 @@ const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
       'Use Vercel AI Gateway to access OpenAI, Anthropic, Google, xAI, and other models.',
   },
 ];
-
-const QUICK_CONNECT_CARD_ORDER = [
-  'github-copilot',
-  'supergrok',
-  'zai-coding-plan',
-  'kimi-code-membership',
-  'kiro',
-  'cursor',
-  'minimax-token-plan',
-  'xiaomi-mimo-token-plan',
-  'openrouter',
-  'vercel',
-] as const;
-
-const QUICK_CONNECT_CARD_RANK = new Map<string, number>(
-  QUICK_CONNECT_CARD_ORDER.map((id, index) => [id, index])
-);
-
-function sortQuickConnectCards(
-  cards: readonly RuntimeProviderQuickCardViewModel[]
-): RuntimeProviderQuickCardViewModel[] {
-  return [...cards].sort(
-    (left, right) =>
-      (QUICK_CONNECT_CARD_RANK.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
-      (QUICK_CONNECT_CARD_RANK.get(right.id) ?? Number.MAX_SAFE_INTEGER)
-  );
-}
 
 function findDirectoryEntry(
   entries: readonly RuntimeProviderDirectoryEntryDto[],
@@ -725,7 +699,20 @@ export const RuntimeProviderQuickConnect = ({
   return (
     <>
       <RuntimeProviderQuickConnectView
-        cards={sortQuickConnectCards(openCodeCards)}
+        cards={sortQuickConnectCards(openCodeCards).map((card) =>
+          gate === 'ready' && (!card.actionLabel || !card.onAction)
+            ? {
+                ...card,
+                actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
+                onAction:
+                  card.id === 'xiaomi-mimo-token-plan'
+                    ? () => setXiaomiDialogOpen(true)
+                    : card.id === 'kiro' || card.id === 'cursor'
+                      ? () => handleCompanionCardAction(card.id as CompanionPlanId)
+                      : () => onOpenCodeProviderAction(card.providerId, 'settings-connect'),
+              }
+            : card
+        )}
         gate={gate}
         runtimeStatus={openCodeRuntimeStatus}
         directoryError={directory.error}

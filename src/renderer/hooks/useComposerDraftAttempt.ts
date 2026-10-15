@@ -7,8 +7,8 @@ import { emptyContent, type LocalDraftState } from './composerDraftLocal';
 import { loadWorkingAfterEvents } from './composerDraftWorkingSync';
 
 import type { PendingComposerDraftPersistence } from './persistComposerDraftBeforeHydration';
-import type { ComposerBeginAttemptResult } from './useComposerDraft';
 import type {
+  BeginAttemptResult,
   ComposerDraftAddress,
   ComposerDraftRepository,
   ComposerPersistenceStatus,
@@ -24,6 +24,13 @@ interface Ref<T> {
 export type ComposerAttemptRequest =
   | ComposerPreparedRequest
   | ((snapshot: PreparedComposerAttempt['snapshot']) => ComposerPreparedRequest | null);
+
+export interface ComposerBeginAttemptResult {
+  readonly result: BeginAttemptResult;
+  readonly address: ComposerDraftAddress;
+  readonly attempt: PreparedComposerAttempt;
+  readonly localEditCounter: number;
+}
 
 export function useComposerDraftAttempt(options: {
   repository: ComposerDraftRepository;

@@ -93,6 +93,7 @@ import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRep
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
+import type { AgentActionMode } from '@shared/types';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -3246,7 +3247,9 @@ export class TeamDataService {
     summary?: string,
     attachments?: AttachmentMeta[],
     taskRefs?: TaskRef[],
-    messageId?: string
+    messageId?: string,
+    actionMode: AgentActionMode = 'do',
+    fileReferences?: AttachmentMeta[]
   ): Promise<SendMessageResult> {
     let leadSessionId: string | undefined;
     try {
@@ -3264,7 +3267,9 @@ export class TeamDataService {
       taskRefs,
       summary,
       source: 'user_sent',
+      actionMode,
       attachments: attachments?.length ? attachments : undefined,
+      fileReferences: fileReferences?.length ? fileReferences : undefined,
       leadSessionId,
       ...(slashCommandMeta
         ? {

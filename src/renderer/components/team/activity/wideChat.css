@@ -312,3 +312,63 @@
   max-width: calc(100vw - 16px);
   z-index: 100;
 }
+
+/* The expanded main thread overlays reactions; compact/sidebar footers keep their flow. */
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message:has([data-group-message-reaction='true']) {
+  content-visibility: visible;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  > [data-activity-message-footer='reaction'] {
+  padding: 0;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-group-message-reaction='true'] {
+  position: absolute;
+  inset-block-end: -10px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']
+  [data-group-message-reaction='true'] {
+  inset-inline-start: 8px;
+  inset-inline-end: auto;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-group-message-reaction='true']
+  button {
+  height: 18px;
+  border-radius: 999px;
+}
+
+/* Empty add controls retain their space and keyboard access without an invisible hit target. */
+.activity-timeline-card
+  > [data-activity-message-footer]
+  > [data-group-message-reaction][data-reaction-hover-only='true'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.activity-timeline-card:is(:hover, :focus-within)
+  > [data-activity-message-footer]
+  > [data-group-message-reaction][data-reaction-hover-only='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}

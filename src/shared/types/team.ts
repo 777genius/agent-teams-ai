@@ -1,11 +1,26 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
+import type {
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  NativeAttachmentDeliveryEnvelope,
+  NativeMemberCapability,
+} from '@features/agent-attachments/contracts';
 import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
 export type * from './teamProvisioning';
+export type {
+  AttachmentFileData,
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  ImageMimeType,
+  NativeAttachmentDeliveryEnvelope,
+} from '@features/agent-attachments/contracts';
 
 export interface TeamMember {
   name: string;
@@ -223,13 +238,9 @@ export interface SourceMessageSnapshot {
   /** Message source type (e.g. "user_sent", "inbox"). */
   source?: string;
   /** Attachment metadata references (IDs only, no blobs). filePath present when file is stored on disk. */
-  attachments?: {
-    id: string;
-    filename: string;
-    mimeType: string;
-    size: number;
-    filePath?: string;
-  }[];
+  attachments?: AttachmentMeta[];
+  /** IDs classified as generic file references in the original message. */
+  fileReferenceIds?: string[];
 }
 
 export type InboxMessageKind =
@@ -383,39 +394,6 @@ export interface CommentAttachmentPayload {
   base64Data: string;
 }
 
-/**
- * Broad MIME type string (e.g. "image/png", "application/pdf").
- *
- * Note: the UI may still choose to preview only certain types (e.g. images),
- * but tasks/comments can store arbitrary attachments for agent workflows.
- */
-// eslint-disable-next-line sonarjs/redundant-type-aliases -- semantic alias for documentation/readability
-export type AttachmentMediaType = string;
-
-/** Supported image MIME types (used for preview/validation in UI). */
-export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
-
-export interface AttachmentMeta {
-  id: string;
-  filename: string;
-  mimeType: AttachmentMediaType;
-  size: number;
-  /** Absolute path to the file on disk. Absent for metadata-only references. */
-  filePath?: string;
-}
-
-export interface AttachmentPayload extends AttachmentMeta {
-  data: string;
-}
-
-export interface AttachmentFileData {
-  id: string;
-  data: string;
-  mimeType: AttachmentMediaType;
-  /** Absolute path to the persisted attachment file when available. */
-  filePath?: string;
-}
-
 /** Lightweight metadata for a single tool call (for UI display in tooltips). */
 export interface ToolCallMeta {
   /** Tool name, e.g. "Read", "Bash", "Grep" */
@@ -487,6 +465,9 @@ export interface InboxMessage extends GroupChatEnvelope {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
+  fileReferences?: AttachmentMeta[];
+  /** Main-generated delivery identity; never accepted from renderer message input. */
+  nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
   /** Lead session ID that produced this message (for session boundary detection). */
   leadSessionId?: string;
   /** Stable cross-team thread ID shared across request/reply turns. */
@@ -711,7 +692,7 @@ export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
-export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'> {
+export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   agentId?: string;
   status: MemberStatus;
@@ -780,7 +761,7 @@ export interface TeamProcess {
   registeredAt: string;
   stoppedAt?: string;
 }
-export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'> {
+export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   agentId?: string;
   currentTaskId: string | null;
@@ -1198,6 +1179,7 @@ export interface TeamChangeEvent {
   type:
     | 'config'
     | 'inbox'
+    | 'group-reactions'
     | 'log-source-change'
     | 'task-log-change'
     | 'task'

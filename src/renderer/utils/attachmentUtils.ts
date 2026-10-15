@@ -4,6 +4,7 @@ import {
 } from '@features/agent-attachments/contracts';
 import {
   DEFAULT_AGENT_IMAGE_OPTIMIZATION_BUDGET,
+  isStrictUtf8,
   optimizeImageForAgent,
 } from '@features/agent-attachments/renderer';
 import {
@@ -33,33 +34,44 @@ export function isImageMimeType(type: string): type is ImageMimeType {
   return ALLOWED_MIME_TYPES.has(type as ImageMimeType);
 }
 
-export function validateAttachment(file: File): { valid: true } | { valid: false; error: string } {
+export function validateAttachment(
+  file: File,
+  allowFileReferences = false
+): { valid: true } | { valid: false; error: string } {
   const cat = categorizeFile(file);
-  if (cat === 'unsupported') {
+  if (cat === 'unsupported' && !allowFileReferences) {
     return { valid: false, error: `Unsupported file type: ${file.name}` };
   }
   if (file.size === 0) {
     return { valid: false, error: `File "${file.name}" is empty` };
   }
-  const maxFileSize = cat === 'video' ? MAX_VIDEO_FILE_SIZE : MAX_FILE_SIZE;
+  const maxFileSize = cat === 'video' && !allowFileReferences ? MAX_VIDEO_FILE_SIZE : MAX_FILE_SIZE;
   if (file.size > maxFileSize) {
-    const limit = cat === 'video' ? '8MB' : '10MB';
+    const limit = cat === 'video' && !allowFileReferences ? '8MB' : '10MB';
     return { valid: false, error: `File "${file.name}" exceeds ${limit} limit` };
   }
   return { valid: true };
 }
 
-export async function fileToAttachmentPayload(file: File): Promise<AttachmentPayload> {
+export async function fileToAttachmentPayload(
+  file: File,
+  allowFileReferences = false
+): Promise<AttachmentPayload> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
       // Strip "data:<mime>;base64," prefix to get raw base64
       const base64 = dataUrl.split(',')[1] ?? '';
+      const effectiveMime = getEffectiveMimeType(file);
+      const invalidText =
+        allowFileReferences &&
+        effectiveMime === 'text/plain' &&
+        !isStrictUtf8(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
       resolve({
         id: crypto.randomUUID(),
         filename: file.name,
-        mimeType: getEffectiveMimeType(file),
+        mimeType: invalidText ? file.type || effectiveMime : effectiveMime,
         size: file.size,
         data: base64,
       });
@@ -87,10 +99,13 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-export async function fileToAgentAttachmentPayload(file: File): Promise<AttachmentPayload> {
+export async function fileToAgentAttachmentPayload(
+  file: File,
+  allowFileReferences = false
+): Promise<AttachmentPayload> {
   const category = categorizeFile(file);
   if (category !== 'image' || file.type === 'image/gif') {
-    return fileToAttachmentPayload(file);
+    return fileToAttachmentPayload(file, allowFileReferences);
   }
 
   const optimized = await optimizeImageForAgent({ file });
@@ -104,12 +119,14 @@ export async function fileToAgentAttachmentPayload(file: File): Promise<Attachme
 }
 
 export function validateOptimizedImageTotal(
-  attachments: AttachmentPayload[]
+  attachments: AttachmentPayload[],
+  allowFileReferences = false
 ): { valid: true } | { valid: false; error: string } {
   const optimizedImageBytes = attachments
     .filter((attachment) => attachment.mimeType.startsWith('image/'))
     .reduce((sum, attachment) => sum + attachment.size, 0);
   if (optimizedImageBytes <= DEFAULT_AGENT_IMAGE_OPTIMIZATION_BUDGET.maxOutputBytesTotal) {
+    if (allowFileReferences) return { valid: true };
     const videoCount = attachments.filter((attachment) => isVideoMime(attachment.mimeType)).length;
     if (videoCount > MAX_VIDEOS) {
       return { valid: false, error: `Maximum ${MAX_VIDEOS} video attachment allowed` };

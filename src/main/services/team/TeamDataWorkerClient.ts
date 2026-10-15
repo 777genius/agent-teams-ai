@@ -153,6 +153,7 @@ function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
     summaryHash: shortHash(message.summary),
     taskRefsHash: shortHash(message.taskRefs),
     attachmentsHash: shortHash(message.attachments),
+    fileReferencesHash: shortHash(message.fileReferences),
     toolSummaryHash: shortHash(message.toolSummary),
     toolCallsHash: shortHash(message.toolCalls),
     workSyncReviewRequestEventIdsHash: shortHash(message.workSyncReviewRequestEventIds),

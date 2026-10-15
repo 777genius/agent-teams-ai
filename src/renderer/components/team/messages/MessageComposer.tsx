@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
 import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
@@ -513,7 +514,6 @@ const MemberMessageComposer = ({
   const memberAttachmentUnavailableReason = showAttachmentControl
     ? getMemberAttachmentUnavailableReason(selectedMember)
     : null;
-  const attachmentInputAccept = getAttachmentInputAcceptForMember(selectedMember);
   const hasTeammates = members.length > 1;
   const canDelegate = isCrossTeam ? crossTeamRecipient === null : hasTeammates && isLeadRecipient;
   const shouldAutoDelegate = canDelegate && (isCrossTeam || isLeadRecipient);
@@ -621,6 +621,15 @@ const MemberMessageComposer = ({
         (revisableMessageId === undefined ||
           editorContext.originalMessageId === revisableMessageId)));
 
+  const manualQueue = useDirectMessageQueue({
+    teamName,
+    recipient: effectiveRecipient,
+    members,
+    draft,
+    onSend,
+    disabled: isContextSwitching || sending || isLaunchBlocking,
+    isCrossTeam,
+  });
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
     const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
@@ -936,7 +945,7 @@ const MemberMessageComposer = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={attachmentInputAccept}
+                  accept={getAttachmentInputAcceptForMember(selectedMember)}
                   multiple
                   className="hidden"
                   onChange={handleFileInputChange}
@@ -1072,6 +1081,7 @@ const MemberMessageComposer = ({
           <div className="px-2 pt-2">
             <AttachmentPreviewList
               attachments={draft.attachments}
+              member={selectedMember}
               onRemove={draft.removeAttachment}
               error={
                 draft.attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason
@@ -1089,6 +1099,7 @@ const MemberMessageComposer = ({
         {revisionNotice ? <div className="px-2 pt-2">{revisionNotice}</div> : null}
       </div>
 
+      {manualQueue.list}
       <div className="relative">
         <DropZoneOverlay
           active={isDragOver}
@@ -1141,12 +1152,22 @@ const MemberMessageComposer = ({
           layout={layout}
           canSend={canSend}
           onSend={handleSend}
+          onQueue={manualQueue.onEnqueue}
           cornerActionPrefix={cornerActionPrefix}
           sendUnavailableReason={
             slashCommandRestrictionReason ||
             (isLaunchBlocking && !sending ? startupCopy.sendingUnavailable : undefined)
           }
-          footerRight={composerFooterRight}
+          footerRight={
+            <>
+              {composerFooterRight}
+              {manualQueue.unavailableReason ? (
+                <p role="status" className="text-xs text-[var(--color-text-muted)]">
+                  {manualQueue.unavailableReason}
+                </p>
+              ) : null}
+            </>
+          }
         />
       </div>
     </ComposerSurface>
