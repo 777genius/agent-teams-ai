@@ -292,6 +292,8 @@ jobs:
       - name: Install frozen desktop dependencies and build only the real controller
         if: ${{ !inputs.provider_only }}
         shell: pwsh
+        env:
+          AGENT_TEAMS_INSTALL_PROFILE: ${{ inputs.source_only && 'node-ci' || 'desktop' }}
         run: |
           $ErrorActionPreference = 'Stop'
           node scripts/ci/install-dependencies-with-retry.mjs
