@@ -1,13 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import {
+  buildTaskFilterTeamOptions,
+  buildTaskProjectFilterOptions,
+} from '@renderer/components/sidebar/taskFilterOptions';
+import { useReadStateSnapshot } from '@renderer/components/sidebar/taskFiltersState';
+import {
+  filterGlobalTasks,
+  sortGlobalTasks,
+} from '@renderer/components/sidebar/taskViewPolicy';
+import { selectLeadOfflineTeamNames } from '@renderer/components/sidebar/teamActivitySelectors';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
 import { clearTaskManualUnread, markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { sortTasksByFreshness } from '@renderer/utils/taskGrouping';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { useShallow } from 'zustand/react/shallow';
 
 import { moveRequest } from '../adapters/moveRequest';
 import { folderController, panelController } from '../composition';
 import { projectFolders } from '../view-models/projection';
+import { applyVisibleTaskChildren } from '../view-models/projectionView';
+
+import { useTaskViewState } from './useTaskViewState';
 
 import type { RefObject } from 'react';
 export function useTaskFoldersHost(
@@ -21,8 +35,21 @@ export function useTaskFoldersHost(
   const panel = useSyncExternalStore(panelController.subscribe, panelController.getSnapshot);
   const move = useSyncExternalStore(moveRequest.subscribe, moveRequest.getSnapshot);
   const tasks = useStore((s) => s.globalTasks);
+  const viewMode = useStore((s) => s.viewMode);
+  const projects = useStore((s) => s.projects);
+  const repositoryGroups = useStore((s) => s.repositoryGroups);
+  const teams = useStore((s) => s.teams);
+  const teamByName = useStore((s) => s.teamByName);
+  const leadOfflineTeamNames = useStore(
+    useShallow((s) => selectLeadOfflineTeamNames(s.leadActivityByTeam))
+  );
   const openDetail = useStore((s) => s.openGlobalTaskDetail);
   const local = useTaskLocalState();
+  const readState = useReadStateSnapshot();
+  const view = useTaskViewState('tree');
+  const viewSetSortOpen = view.setSortOpen;
+  const viewSetFiltersOpen = view.setFiltersOpen;
+  const viewClosePopovers = view.closePopovers;
   const [showArchived, setShowArchived] = useState(true);
   const [rect, setRect] = useState<{
     left: number;
@@ -30,17 +57,82 @@ export function useTaskFoldersHost(
     height: number;
     width: number;
   } | null>(null);
-  const projection = useMemo(
+  const canonicalProjection = useMemo(
     () =>
       projectFolders(
         state.snapshot,
-        sortTasksByFreshness(tasks),
+        tasks,
         local.isArchived,
         local.getRenamedSubject,
-        showArchived
+        true
       ),
-    [state.snapshot, tasks, local, showArchived]
+    [state.snapshot, tasks, local]
   );
+  const projection = useMemo(() => {
+    const visibleTasks = filterGlobalTasks(
+      tasks,
+      {
+        contextId,
+        filters: view.filters,
+        searchQuery: view.searchQuery,
+        archiveMode: showArchived ? 'all' : 'active',
+      },
+      readState,
+      (task) => local.isArchived(task.teamName, task.id)
+    );
+    const visibleTaskKeys = new Set(
+      visibleTasks.map((task) => `task:${JSON.stringify([task.teamName, task.id])}`)
+    );
+    return applyVisibleTaskChildren(
+      canonicalProjection,
+      tasks,
+      (task) => visibleTaskKeys.has(`task:${JSON.stringify([task.teamName, task.id])}`),
+      (siblings) =>
+        view.sortMode === 'manual'
+          ? [...siblings]
+          : sortGlobalTasks(siblings, view.sortMode, contextId, readState)
+    );
+  }, [canonicalProjection, contextId, local, readState, showArchived, tasks, view]);
+  const projectFilterOptions = useMemo(
+    () => buildTaskProjectFilterOptions({ viewMode, repositoryGroups, projects }),
+    [projects, repositoryGroups, viewMode]
+  );
+  const taskFilterTeams = useMemo(() => buildTaskFilterTeamOptions(teams), [teams]);
+  const getOwnerColorName = useCallback(
+    (task: { teamName: string; owner?: string }): string | null | undefined => {
+      if (!task.owner) return null;
+      const members = teamByName[task.teamName]?.members;
+      return members ? (buildMemberColorMap(members).get(task.owner) ?? null) : undefined;
+    },
+    [teamByName]
+  );
+  const isTeamOffline = useCallback(
+    (teamName: string): boolean => leadOfflineTeamNames.includes(teamName),
+    [leadOfflineTeamNames]
+  );
+  const setViewSortOpen = useCallback(
+    (open: boolean) => {
+      viewSetSortOpen(open);
+      panelController.hold('menu:task-view-sort', open);
+    },
+    [viewSetSortOpen]
+  );
+  const setViewFiltersOpen = useCallback(
+    (open: boolean) => {
+      viewSetFiltersOpen(open);
+      panelController.hold('menu:task-view-filters', open);
+    },
+    [viewSetFiltersOpen]
+  );
+  const closeViewControls = useCallback(() => {
+    viewClosePopovers();
+    panelController.hold('menu:task-view-sort', false);
+    panelController.hold('menu:task-view-filters', false);
+  }, [viewClosePopovers]);
+  useEffect(() => {
+    if (collapsed || !panel.open) closeViewControls();
+  }, [closeViewControls, collapsed, panel.open]);
+  useEffect(() => () => closeViewControls(), [closeViewControls]);
   useEffect(() => {
     void folderController.load();
   }, []);
@@ -132,10 +224,22 @@ export function useTaskFoldersHost(
     };
   }, []);
   return {
+    contextId,
     state,
     panel,
     move,
     projection,
+    canonicalProjection,
+    view: {
+      ...view,
+      setSortOpen: setViewSortOpen,
+      setFiltersOpen: setViewFiltersOpen,
+    },
+    closeViewControls,
+    projectFilterOptions,
+    taskFilterTeams,
+    getOwnerColorName,
+    isTeamOffline,
     local,
     rect,
     registerPanel,

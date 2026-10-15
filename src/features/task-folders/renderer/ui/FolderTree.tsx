@@ -8,9 +8,10 @@ import {
   syncDataLoaderFeature,
 } from '@headless-tree/core';
 import { useTree } from '@headless-tree/react';
+import { SidebarTaskItem } from '@renderer/components/sidebar/SidebarTaskItem';
+import { buildTaskCardActions } from '@renderer/components/sidebar/taskCardActions';
 import { Button } from '@renderer/components/ui/button';
 import {
-  ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
@@ -42,65 +43,17 @@ import { TreeDropAdapter } from '../adapters/treeDropAdapter';
 import { folderController, panelController } from '../composition';
 import { ROOT, UNFILED } from '../view-models/projection';
 
+import { RowMenuOwner } from './TreeRowMenu';
+
 import type { TaskFoldersHostModel } from '../hooks/useTaskFoldersHost';
 import type { Node } from '../view-models/projection';
 import type { FolderDialog } from './FolderDialogs';
 import type { ItemInstance } from '@headless-tree/core';
 import type { Virtualizer } from '@tanstack/react-virtual';
-import type { ReactNode } from 'react';
-interface RowMenuLifecycle {
-  deferAction(action: () => void, restoreFocus: boolean): void;
-  onCloseAutoFocus(event: Event): void;
-}
-interface PendingRowAction {
-  run: () => void;
-  restoreFocus: boolean;
-}
+
 type RenameError = 'invalid-name' | 'read-only' | 'save-error';
 const stopRowMenuEvent = (event: React.SyntheticEvent): void => {
   event.stopPropagation();
-};
-/** Radix roots do not notify onOpenChange when a virtual row disappears. */
-const RowMenuOwner = ({
-  id,
-  children,
-}: {
-  id: string;
-  children: (lifecycle: RowMenuLifecycle) => ReactNode;
-}): React.JSX.Element => {
-  const pendingAction = useRef<PendingRowAction | null>(null);
-  const actionFrame = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    return () => {
-      pendingAction.current = null;
-      if (actionFrame.current !== undefined) {
-        cancelAnimationFrame(actionFrame.current);
-        actionFrame.current = undefined;
-      }
-      panelController.hold(`menu:context:${id}`, false);
-      panelController.hold(`menu:dropdown:${id}`, false);
-    };
-  }, [id]);
-  const lifecycle: RowMenuLifecycle = {
-    deferAction(run, restoreFocus) {
-      pendingAction.current = { run, restoreFocus };
-    },
-    onCloseAutoFocus(event) {
-      const action = pendingAction.current;
-      pendingAction.current = null;
-      if (!action) return;
-      if (!action.restoreFocus) event.preventDefault();
-      actionFrame.current = requestAnimationFrame(() => {
-        actionFrame.current = undefined;
-        action.run();
-      });
-    },
-  };
-  return (
-    <ContextMenu onOpenChange={(open) => panelController.hold(`menu:context:${id}`, open)}>
-      {children(lifecycle)}
-    </ContextMenu>
-  );
 };
 export interface TreeFocusRequest {
   id: string;
@@ -188,7 +141,10 @@ export const FolderTree = ({
   const virtual = useVirtualizer({
     count: items.length,
     getScrollElement: () => scroll.current,
-    estimateSize: () => 32,
+    estimateSize: (index) => {
+      const kind = items[index]?.getItemData().kind;
+      return kind === 'task' ? 78 : kind === 'unfiled' ? 36 : 32;
+    },
     overscan: 6,
     getItemKey: (index) => items[index].getId(),
     rangeExtractor: (range) => {
@@ -394,45 +350,165 @@ export const FolderTree = ({
             restoreFocus: false,
           },
         ]
-      : n.identity
-        ? [
-            {
-              label: t('taskFolders.move'),
-              run: () => taskFolderMoveRequest.open(n.identity!),
-              restoreFocus: false,
+      : n.identity && n.task
+        ? buildTaskCardActions({
+            isPinned: model.local.isPinned(n.identity.teamName, n.identity.taskId) ?? false,
+            isArchived: n.archived ?? false,
+            editingReady: model.state.status === 'ready',
+            includeDelete: false,
+            handlers: {
+              onTogglePin: () => model.local.togglePin(n.identity!.teamName, n.identity!.taskId),
+              onMove: () => taskFolderMoveRequest.open(n.identity!),
+              onRename: () => dialog({ kind: 'renameTask', identity: n.identity!, name: n.name }),
+              onMarkUnread: () => model.markUnread(n.identity!.teamName, n.identity!.taskId),
+              onToggleArchive: () =>
+                model.local.toggleArchive(n.identity!.teamName, n.identity!.taskId),
             },
-            {
-              label: t('taskContextMenu.rename'),
-              run: () => dialog({ kind: 'renameTask', identity: n.identity!, name: n.name }),
-              restoreFocus: false,
-            },
-            {
-              label: t(
-                model.local.isPinned(n.identity.teamName, n.identity.taskId)
-                  ? 'taskContextMenu.unpin'
-                  : 'taskContextMenu.pin'
-              ),
-              run: () => model.local.togglePin(n.identity!.teamName, n.identity!.taskId),
-              restoreFocus: true,
-            },
-            {
-              label: t(n.archived ? 'taskContextMenu.unarchive' : 'taskContextMenu.archive'),
-              run: () => model.local.toggleArchive(n.identity!.teamName, n.identity!.taskId),
-              restoreFocus: true,
-            },
-            {
-              label: t('taskContextMenu.markUnread'),
-              run: () => model.markUnread(n.identity!.teamName, n.identity!.taskId),
-              restoreFocus: true,
-            },
-          ]
+          }).map((action) => ({
+            label: t(action.labelKey),
+            run: action.run,
+            restoreFocus: action.restoreFocus,
+          }))
         : [];
   const row = (item: ItemInstance<Node>): React.JSX.Element => {
     const n = item.getItemData();
     const menu = actions(n);
     const props = item.getProps();
     const drag = item.getDragHandleProps();
+    const level = item.getItemMeta().level;
     const editing = n.kind === 'folder' && rename === n.folderId;
+    const task = n.task;
+    const identity = n.identity;
+    if (n.kind === 'task' && task && identity) {
+      return (
+        <RowMenuOwner id={n.id}>
+          {({ deferAction, onCloseAutoFocus }) => (
+            <>
+              <ContextMenuTrigger asChild>
+                <SidebarTaskItem
+                  task={task}
+                  contextId={model.contextId}
+                  cardScope="tree"
+                  displaySubjectOverride={n.name}
+                  isArchived={n.archived}
+                  teamOffline={model.isTeamOffline(task.teamName)}
+                  ownerColorName={model.getOwnerColorName(task)}
+                  showTeamName
+                  containerProps={{
+                    ...props,
+                    role: 'treeitem',
+                    tabIndex: props.tabIndex ?? -1,
+                    'aria-selected': item.isSelected(),
+                    'aria-label': n.archived
+                      ? `${n.name} (${t('taskFolders.archived')})`
+                      : props['aria-label'],
+                    className: `min-h-8 outline-none focus:ring-1 focus:ring-blue-400 ${
+                      item.isDragTarget() ? 'bg-blue-500/20' : ''
+                    }`,
+                    style: { paddingLeft: `${level * 16}px` },
+                    onKeyDown: (event) => {
+                      if (event.target !== event.currentTarget || isImeComposing(event)) return;
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        item.primaryAction();
+                      } else props.onKeyDown?.(event);
+                    },
+                  }}
+                  onOpenDetail={(teamName, taskId) => model.openTask(teamName, taskId)}
+                  renderDragHandle={() => (
+                    <Button
+                      {...drag}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      tabIndex={-1}
+                      disabled={model.state.status !== 'ready'}
+                      aria-disabled={model.state.status !== 'ready'}
+                      aria-label={t('taskFolders.dragTask')}
+                      data-testid="sidebar-task-drag-handle"
+                      draggable={model.state.status === 'ready'}
+                      onDragStart={(event) => {
+                        if (model.state.status !== 'ready') {
+                          event.preventDefault();
+                          return;
+                        }
+                        drag.onDragStart?.(event);
+                        if (!event.defaultPrevented) panelController.begin(n.id);
+                      }}
+                      onDragEnd={(event) => {
+                        drag.onDragEnd?.(event);
+                        panelController.end();
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (model.state.status === 'ready') taskFolderMoveRequest.open(n.identity!);
+                      }}
+                      className="absolute top-1.5 z-10 size-5 shrink-0 p-0"
+                      style={{ left: `${22 + level * 16}px` }}
+                    >
+                      <GripVertical className="size-3" />
+                    </Button>
+                  )}
+                  menuSlot={
+                    <DropdownMenu
+                      onOpenChange={(open) =>
+                        panelController.hold(`menu:dropdown:${n.id}`, open)
+                      }
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('taskFolders.actions')}
+                          data-testid="tree-task-actions"
+                          onClick={(event) => event.stopPropagation()}
+                          className="absolute right-1 top-1 size-5 shrink-0 p-0"
+                        >
+                          <MoreHorizontal className="size-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        onCloseAutoFocus={onCloseAutoFocus}
+                        onClick={stopRowMenuEvent}
+                        onKeyDown={stopRowMenuEvent}
+                      >
+                        {menu.map((action) => (
+                          <DropdownMenuItem
+                            key={action.label}
+                            disabled={model.state.status !== 'ready'}
+                            onSelect={() => deferAction(action.run, action.restoreFocus)}
+                          >
+                            {action.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
+              </ContextMenuTrigger>
+              {menu.length > 0 && (
+                <ContextMenuContent
+                  onCloseAutoFocus={onCloseAutoFocus}
+                  onClick={stopRowMenuEvent}
+                  onKeyDown={stopRowMenuEvent}
+                >
+                  {menu.map((action) => (
+                    <ContextMenuItem
+                      key={action.label}
+                      disabled={model.state.status !== 'ready'}
+                      onSelect={() => deferAction(action.run, action.restoreFocus)}
+                    >
+                      {action.label}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuContent>
+              )}
+            </>
+          )}
+        </RowMenuOwner>
+      );
+    }
     return (
       <RowMenuOwner id={n.id}>
         {({ deferAction, onCloseAutoFocus }) => (
@@ -666,6 +742,8 @@ export const FolderTree = ({
         {virtual.getVirtualItems().map((v) => (
           <div
             key={items[v.index].getId()}
+            data-index={v.index}
+            ref={virtual.measureElement}
             className="absolute left-0 top-0 w-full"
             style={{ transform: `translateY(${v.start}px)` }}
           >

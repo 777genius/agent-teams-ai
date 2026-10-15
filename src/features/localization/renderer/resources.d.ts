@@ -878,7 +878,8 @@ export default interface Resources {
         "byProject": "By project",
         "byTeam": "By team",
         "byTime": "By time",
-        "byUnread": "By unread"
+        "byUnread": "By unread",
+        "manualOrder": "Manual order"
       },
       "teamLabel": "Team: {{team}}",
       "title": "Tasks"

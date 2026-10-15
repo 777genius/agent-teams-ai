@@ -26,14 +26,19 @@ export function translateTarget(
   if (target.id === ROOT || target.id === UNFILED) {
     if (source.kind === 'task') return { parent: null, anchor: append };
   }
-  const siblings = target.children.filter((id) => id !== source.id && id !== UNFILED);
+  const visibleSiblings = target.children.filter((id) => id !== source.id && id !== UNFILED);
   let insertion = index;
   if (foreign && insertion !== undefined) {
     const old = target.children.indexOf(source.id);
     if (old >= 0 && old < insertion) insertion--;
   }
-  const next = insertion === undefined ? undefined : siblings[insertion];
-  const anchor: Anchor = next ? { before: nodeChild(projection.nodes.get(next)!) } : append;
+  const next = insertion === undefined ? undefined : visibleSiblings[insertion];
+  const canonicalNext = next
+    ? (projection.canonicalChildren.get(parentId) ?? target.children).find((id) => id === next)
+    : undefined;
+  const anchor: Anchor = canonicalNext
+    ? { before: nodeChild(projection.nodes.get(canonicalNext)!) }
+    : append;
   return { parent: target.folderId ?? null, anchor };
 }
 export class TreeDropAdapter {

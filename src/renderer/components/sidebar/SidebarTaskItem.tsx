@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TaskDragHandle } from '@features/task-folders/renderer';
+import { Slot } from '@radix-ui/react-slot';
 import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -20,7 +21,7 @@ import {
   getTeamTaskWorkflowColumn,
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
-import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
+import { Archive, CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -39,9 +40,16 @@ const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; ke
   deleted: { icon: Circle, color: 'text-zinc-500', key: 'deleted' },
 };
 
-interface SidebarTaskItemProps {
+type SidebarTaskItemInjectedProps = Omit<
+  React.ComponentProps<'div'>,
+  'children' | 'className' | 'style' | 'ref'
+>;
+
+interface SidebarTaskItemProps extends SidebarTaskItemInjectedProps {
   task: GlobalTask;
   contextId: string;
+  ref?: React.Ref<HTMLDivElement>;
+  cardScope?: 'sidebar' | 'tree';
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
@@ -61,11 +69,19 @@ interface SidebarTaskItemProps {
   /** Precomputed custom display subject from list parents. */
   displaySubjectOverride?: string;
   ownerColorName?: string | null;
+  isArchived?: boolean;
+  /** Tree integration keeps Headless Tree/native props on the shared presentation root. */
+  containerProps?: React.ComponentProps<'div'>;
+  /** Injects the tree's real sibling drag Button without copying row presentation JSX. */
+  renderDragHandle?: (defaultHandle: React.ReactNode) => React.ReactNode;
+  menuSlot?: React.ReactNode;
+  onOpenDetail?: (teamName: string, taskId: string) => void;
 }
 
 const SidebarTaskItemContent = ({
   task,
   contextId,
+  cardScope,
   hideTeamName,
   hideProjectName,
   showTeamName,
@@ -78,6 +94,13 @@ const SidebarTaskItemContent = ({
   getDisplaySubject,
   displaySubjectOverride,
   ownerColorName,
+  isArchived = false,
+  containerProps,
+  renderDragHandle,
+  menuSlot,
+  onOpenDetail,
+  ref: forwardedRef,
+  ...triggerProps
 }: SidebarTaskItemProps & { isLight: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon, resolvedLanguage } = useAppTranslation('common');
@@ -116,6 +139,7 @@ const SidebarTaskItemContent = ({
   }, [isRenaming, displaySubject]);
 
   const reviewColumn = getTeamTaskWorkflowColumn(task);
+  const needsFix = isTeamTaskNeedsFixActionable(task);
   const cfg =
     reviewColumn === 'approved'
       ? ({ icon: ShieldCheck, color: 'text-teal-400', key: 'approved' } as const)
@@ -175,14 +199,37 @@ const SidebarTaskItemContent = ({
   const showTeamRow = showTeamName && !hideTeamName;
   const unreadBackgroundClass =
     unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.015]' : 'bg-blue-500/[0.025]') : '';
+  const defaultDragHandle = (
+    <TaskDragHandle
+      identity={{ teamName: task.teamName, taskId: task.id }}
+      subject={displaySubject}
+      className="absolute left-[22px] top-1.5 z-10"
+      onFocus={preloadGlobalTaskDetailDialog}
+    />
+  );
 
+  const { ref: containerRef, ...nativeContainerProps } = containerProps ?? {};
   return (
-    <div
-      data-task-key={JSON.stringify([task.teamName, task.id])}
-      className={`group/task-row sidebar-task-item relative flex w-full flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
-      style={{ borderColor: 'var(--color-border)' }}
-      onPointerEnter={preloadGlobalTaskDetailDialog}
-    >
+    <Slot {...triggerProps} ref={forwardedRef}>
+      <div
+        {...nativeContainerProps}
+        ref={containerRef}
+        data-task-key={JSON.stringify([task.teamName, task.id])}
+        data-task-card-scope={cardScope ?? 'sidebar'}
+        data-testid={`${cardScope ?? 'sidebar'}-task-card`}
+        className={cn(
+          'group/task-row sidebar-task-item relative flex w-full flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised',
+          unreadBackgroundClass,
+          task.teamDeleted && 'opacity-50',
+          isArchived && 'text-text-muted opacity-60',
+          containerProps?.className
+        )}
+        style={{ borderColor: 'var(--color-border)', ...containerProps?.style }}
+        onPointerEnter={(event) => {
+          preloadGlobalTaskDetailDialog();
+          containerProps?.onPointerEnter?.(event);
+        }}
+      >
       {isRenaming ? (
         <div className="flex w-full items-start gap-1.5">
           <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
@@ -224,34 +271,56 @@ const SidebarTaskItemContent = ({
           <button
             type="button"
             data-testid="sidebar-task-detail"
-            className="flex w-full min-w-0 cursor-pointer flex-col justify-center text-left"
+            className="flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
             onFocus={preloadGlobalTaskDetailDialog}
-            onClick={() => {
-              clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
-              openGlobalTaskDetail(task.teamName, task.id);
+            onClick={(event) => {
+              event.stopPropagation();
+              if (onOpenDetail) {
+                onOpenDetail(task.teamName, task.id);
+              } else {
+                clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
+                openGlobalTaskDetail(task.teamName, task.id);
+              }
             }}
           >
             {/* Row 1: status + subject */}
             <div className="w-full overflow-hidden">
               <span
-                className="line-clamp-2 text-[13px] font-medium leading-tight"
+                className="line-clamp-2 break-words text-[13px] font-medium leading-tight"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 <StatusIcon
+                  data-task-card-field="status"
+                  data-task-card-value={cfg.key}
+                  aria-label={cfg.key}
                   className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)}
                 />
+                {isArchived && (
+                  <Archive
+                    aria-label={tCommon('taskFolders.archived')}
+                    className="mr-1 inline-block size-3 align-[-1px]"
+                  />
+                )}
                 <span aria-hidden className="mr-1 inline-block size-3 align-middle" />
                 {unreadCount > 0 &&
                   (unreadCount === 1 ? (
-                    <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
+                    <span
+                      data-task-card-field="unread"
+                      className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle"
+                    />
                   ) : (
-                    <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
+                    <span
+                      data-task-card-field="unread"
+                      className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white"
+                    >
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   ))}
-                {displaySubject}
-                {isTeamTaskNeedsFixActionable(task) && (
+                <span data-task-card-field="subject">{displaySubject}</span>
+                {needsFix && (
                   <span
+                    data-task-card-field="needsFix"
+                    data-task-card-value="needsFix"
                     className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
                   >
                     {tCommon('tasks.reviewState.needsFix')}
@@ -268,6 +337,7 @@ const SidebarTaskItemContent = ({
               {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
               {projectLabel && (
                 <span
+                  data-task-card-field="project"
                   className="min-w-0 truncate"
                   style={projectColorSet ? { color: projectColorSet.text } : undefined}
                 >
@@ -282,7 +352,8 @@ const SidebarTaskItemContent = ({
                     </span>
                   )}
                   <span
-                    className="hidden shrink-0 opacity-100 group-hover/task-row:inline dark:opacity-60"
+                    data-task-card-field="owner"
+                    className="hidden min-w-0 shrink truncate opacity-100 group-hover/task-row:inline dark:opacity-60"
                     style={ownerTextColor ? { color: ownerTextColor } : undefined}
                   >
                     {task.owner ?? t('tasks.unassigned')}
@@ -293,6 +364,7 @@ const SidebarTaskItemContent = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
+                      data-task-card-field="updated"
                       data-testid="sidebar-task-relative-time"
                       dir="auto"
                       className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
@@ -316,18 +388,18 @@ const SidebarTaskItemContent = ({
                 )}
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                <span className="shrink-0 opacity-100 dark:opacity-50">
-                  {t('tasks.teamPrefix')}
-                </span>
-                <span
-                  className="shrink-0"
-                  style={teamColor ? { color: teamColor.text } : undefined}
-                >
+              <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>
+              <span
+                data-task-card-field="team"
+                className="min-w-0 shrink truncate"
+                style={teamColor ? { color: teamColor.text } : undefined}
+              >
                   {task.teamDisplayName}
                 </span>
                 <span className="opacity-100 dark:opacity-40">·</span>
                 <span
-                  className="shrink-0 opacity-100 dark:opacity-60"
+                  data-task-card-field="owner"
+                  className="min-w-0 shrink truncate opacity-100 dark:opacity-60"
                   style={ownerTextColor ? { color: ownerTextColor } : undefined}
                 >
                   {task.owner ?? t('tasks.unassigned')}
@@ -335,15 +407,12 @@ const SidebarTaskItemContent = ({
               </div>
             )}
           </button>
-          <TaskDragHandle
-            identity={{ teamName: task.teamName, taskId: task.id }}
-            subject={displaySubject}
-            className="absolute left-[22px] top-1.5 z-10"
-            onFocus={preloadGlobalTaskDetailDialog}
-          />
+          {renderDragHandle ? renderDragHandle(defaultDragHandle) : defaultDragHandle}
         </>
       )}
-    </div>
+        {menuSlot}
+      </div>
+    </Slot>
   );
 };
 

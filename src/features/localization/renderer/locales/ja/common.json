@@ -642,7 +642,8 @@
       "byTime": "時間によって",
       "byUnread": "未読で",
       "byProject": "プロジェクト",
-      "byTeam": "チーム別"
+      "byTeam": "チーム別",
+      "manualOrder": "手動順"
     }
   },
   "toolViewer": {

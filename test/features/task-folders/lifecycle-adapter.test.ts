@@ -28,7 +28,15 @@ import type { Node } from '../../../src/features/task-folders/renderer/view-mode
 import type { DndDataRef, DragTarget } from '@headless-tree/core';
 import type { GlobalTask } from '@shared/types';
 const identity = { teamName: 't', taskId: '1' };
-const tasks = [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[];
+const makeGlobalTask = (id: string, overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id,
+  teamName: 't',
+  teamDisplayName: 'Team',
+  subject: id === '1' ? 'Task' : id,
+  status: 'pending',
+  ...overrides,
+});
+const tasks = [makeGlobalTask('1')];
 const folder = applyCommand(emptySnapshot(), { type: 'create', id: 'a', parent: null, name: 'A' });
 afterEach(() => {
   vi.useRealTimers();
@@ -144,7 +152,7 @@ describe('host lifecycle and vendor drop boundary', () => {
         parent: 'a',
         anchor: append,
       });
-    const all = ['1', '2', '3'].map((id) => ({ teamName: 't', id, subject: id })) as GlobalTask[];
+    const all = ['1', '2', '3'].map((id) => makeGlobalTask(id));
     const projection = projectFolders(
       s,
       all,

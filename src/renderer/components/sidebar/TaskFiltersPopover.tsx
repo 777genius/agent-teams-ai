@@ -30,6 +30,7 @@ interface TaskFiltersPopoverProps {
   filters: TaskFiltersState;
   onFiltersChange: (f: TaskFiltersState) => void;
   onApply: () => void;
+  testId?: string;
 }
 
 export const TaskFiltersPopover = ({
@@ -40,6 +41,7 @@ export const TaskFiltersPopover = ({
   filters,
   onFiltersChange,
   onApply,
+  testId = 'task-view-filters',
 }: TaskFiltersPopoverProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   // Draft state — all changes accumulate here and only commit on Apply
@@ -82,15 +84,23 @@ export const TaskFiltersPopover = ({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
-          className="flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary data-[state=open]:bg-surface-raised data-[state=open]:text-text"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0 text-text-muted data-[state=open]:bg-surface-raised data-[state=open]:text-text"
+          data-testid={testId}
         >
           <Filter className="size-3.5" />
-        </button>
+        </Button>
       </PopoverTrigger>
       {open ? (
-        <PopoverContent className="w-64 p-3" align="end" sideOffset={6}>
+        <PopoverContent
+          className="w-64 p-3"
+          align="end"
+          sideOffset={6}
+          data-testid={`${testId}-content`}
+        >
           <div className="space-y-3">
             <div>
               <div className="mb-1.5 flex items-center justify-between">
@@ -99,6 +109,7 @@ export const TaskFiltersPopover = ({
                 </span>
                 <button
                   type="button"
+                  data-filter-select-all
                   className="text-[10px] text-text-muted hover:text-text-secondary"
                   onClick={handleSelectAll}
                 >
@@ -112,6 +123,7 @@ export const TaskFiltersPopover = ({
                     className="flex cursor-pointer items-center gap-2 text-[12px] text-text"
                   >
                     <Checkbox
+                      data-status-filter={opt.id}
                       checked={draft.statusIds.has(opt.id)}
                       onCheckedChange={() => toggleStatus(opt.id)}
                       style={{ '--color-accent': opt.color } as React.CSSProperties}
@@ -175,6 +187,7 @@ export const TaskFiltersPopover = ({
               <div className="flex rounded-md border border-[var(--color-border)]">
                 {READ_FILTER_OPTIONS.map((opt) => (
                   <button
+                    data-read-filter={opt.value}
                     key={opt.value}
                     type="button"
                     className={`flex-1 px-2 py-1 text-[11px] font-medium transition-colors first:rounded-l-[5px] last:rounded-r-[5px] ${

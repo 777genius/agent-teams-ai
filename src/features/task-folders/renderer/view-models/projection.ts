@@ -20,6 +20,8 @@ export interface Node {
 export interface Projection {
   nodes: Map<string, Node>;
   snapshot: Snapshot;
+  /** Canonical sibling membership/order used to map visible drop indices back to Snapshot anchors. */
+  canonicalChildren: ReadonlyMap<string, readonly string[]>;
 }
 export function projectFolders(
   snapshot: Snapshot,
@@ -32,6 +34,7 @@ export function projectFolders(
     tasks.map((task) => [taskKey({ teamName: task.teamName, taskId: task.id }), task])
   );
   const nodes = new Map<string, Node>();
+  const canonicalChildren = new Map<string, readonly string[]>();
   const placed = new Set<string>();
   const node = (id: string, name: string, kind: Node['kind']): Node => ({
     id,
@@ -64,6 +67,9 @@ export function projectFolders(
   snapshot.folders.forEach((f) =>
     nodes.set(`folder:${f.id}`, { ...node(`folder:${f.id}`, f.name, 'folder'), folderId: f.id })
   );
+  snapshot.folders.forEach((folder) =>
+    canonicalChildren.set(`folder:${folder.id}`, folder.children.map((child) => childKey(child)))
+  );
   const fill = (id: string): Node => {
     const n = nodes.get(`folder:${id}`)!;
     const f = snapshot.folders.find((f) => f.id === id)!;
@@ -86,20 +92,24 @@ export function projectFolders(
     return n;
   };
   const root = node(ROOT, '', 'root');
+  canonicalChildren.set(ROOT, snapshot.rootFolderIds.map((id) => `folder:${id}`));
   for (const id of snapshot.rootFolderIds) root.children.push(fill(id).id);
   const unfiled = node(UNFILED, '', 'unfiled');
+  const unfiledChildren: string[] = [];
   for (const task of tasks) {
     const identity = { teamName: task.teamName, taskId: task.id };
     if (placed.has(taskKey(identity))) continue;
     const c = taskNode(identity)!;
+    unfiledChildren.push(c.id);
     unfiled.active += c.active;
     unfiled.archivedCount += c.archivedCount;
     if (showArchived || !c.archived) unfiled.children.push(c.id);
   }
   root.children.push(UNFILED);
+  canonicalChildren.set(UNFILED, unfiledChildren);
   nodes.set(ROOT, root);
   nodes.set(UNFILED, unfiled);
-  return { nodes, snapshot };
+  return { nodes, snapshot, canonicalChildren };
 }
 export function nodeChild(node: Node): Child {
   if (node.kind === 'folder') return { kind: 'folder', id: node.folderId! };

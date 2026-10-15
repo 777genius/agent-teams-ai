@@ -642,7 +642,8 @@
       "byTime": "按时间",
       "byUnread": "未读",
       "byProject": "按项目",
-      "byTeam": "按团队"
+      "byTeam": "按团队",
+      "manualOrder": "手动顺序"
     }
   },
   "toolViewer": {

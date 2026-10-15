@@ -27,6 +27,22 @@ import type { TaskFoldersHostModel } from '../../../src/features/task-folders/re
 import type { Node } from '../../../src/features/task-folders/renderer/view-models/projection';
 import type { TreeInstance } from '@headless-tree/core';
 import type { GlobalTask } from '@shared/types';
+
+const makeGlobalTask = (overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id: '1',
+  teamName: 't',
+  teamDisplayName: 'Team',
+  subject: 'Task',
+  status: 'pending',
+  ...overrides,
+});
+
+const fakeIsTeamOffline = vi.fn((teamName: string): boolean => teamName === 'offline-team');
+const fakeGetOwnerColorName = vi.fn(
+  (task: Pick<GlobalTask, 'teamName' | 'owner'>): string | null =>
+    task.owner === 'alice' ? 'blue' : task.owner ? 'forest' : null
+);
+
 const vendor = vi.hoisted(() => ({ trees: [] as TreeInstance<Node>[], rowLimit: Infinity }));
 vi.mock('@headless-tree/react', async (importOriginal) => {
   const real = await importOriginal<typeof import('@headless-tree/react')>();
@@ -121,7 +137,7 @@ describe('shared task presentation and vendor external updates', () => {
     expect(host.querySelector('[data-probe="reader"]')!.getAttribute('data-name')).toBe('Edited');
   });
   it('rebuilds committed external CRUD/move projections immediately without requiring collapse/expand', async () => {
-    const tasks = [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[];
+    const tasks = [makeGlobalTask()];
     let snapshot = applyCommand(emptySnapshot(), {
       type: 'create',
       id: 'a',
@@ -136,11 +152,14 @@ describe('shared task presentation and vendor external updates', () => {
       const projection = projectFolders(s, tasks, local.isArchived, local.getRenamedSubject, true);
       const model = {
         projection,
+        contextId: 'local',
         local,
         state: { status: 'ready', snapshot: s },
         panel: { dragSource: null },
         openTask: vi.fn(),
         markUnread: vi.fn(),
+        isTeamOffline: fakeIsTeamOffline,
+        getOwnerColorName: fakeGetOwnerColorName,
       } as unknown as TaskFoldersHostModel;
       return (
         <TooltipProvider>
@@ -267,11 +286,14 @@ function treeHarness(tasks: GlobalTask[], snapshot = emptySnapshot(), showArchiv
         local.getRenamedSubject,
         state.showArchived
       ),
+      contextId: 'local',
       local,
       state: { status: state.status, snapshot: state.snapshot },
       panel: panelController.getSnapshot(),
       openTask,
       markUnread: vi.fn(),
+      isTeamOffline: fakeIsTeamOffline,
+      getOwnerColorName: fakeGetOwnerColorName,
     } as unknown as TaskFoldersHostModel;
     return (
       <TooltipProvider>
@@ -342,7 +364,7 @@ it.each([false, true])(
   'opens an arrow-focused task with Enter (archived=%s), preserving nested controls',
   async (archived) => {
     if (archived) localStorage.setItem('taskArchivedIds', JSON.stringify(['t:1']));
-    const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+    const fixture = treeHarness([makeGlobalTask()]);
     await act(async () => root.render(<fixture.Harness />));
     const unfiled = host.querySelector(
       '[role="treeitem"][aria-label="taskFolders.unfiled"]'
@@ -412,7 +434,7 @@ it('keeps Enter in the folder rename editor and nested buttons from triggering r
 
 it('uses shared native buttons for tree drag, disclosure and dropdown controls', async () => {
   const fixture = treeHarness(
-    [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[],
+    [makeGlobalTask()],
     applyCommand(emptySnapshot(), { type: 'create', id: 'a', name: 'A', parent: null })
   );
   await act(async () => root.render(<fixture.Harness />));
@@ -508,9 +530,7 @@ it.each([
 ] as const)(
   'keeps a real %s menu %s activation from opening a task row',
   async (kind, activation) => {
-    const fixture = treeHarness([
-      { teamName: 't', id: '1', subject: 'Task' },
-    ] as GlobalTask[]);
+    const fixture = treeHarness([makeGlobalTask()]);
     await act(async () => root.render(<fixture.Harness />));
     const row = host.querySelector('[data-task-key]') as HTMLElement;
 
@@ -550,7 +570,7 @@ it.each(['context', 'dropdown'] as const)(
   'releases an open real portaled %s menu on catalog removal with a full grace period',
   async (kind) => {
     vi.useFakeTimers();
-    const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+    const fixture = treeHarness([makeGlobalTask()]);
     panelController.begin('external');
     panelController.end();
     await act(async () => root.render(<fixture.Harness />));
@@ -581,7 +601,7 @@ it.each(['context', 'dropdown'] as const)(
 
 it('releases a menu owner when its row is virtualized away and on tree unmount', async () => {
   vi.useFakeTimers();
-  const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+  const fixture = treeHarness([makeGlobalTask()]);
   await act(async () => root.render(<fixture.Harness />));
   const row = host.querySelector('[data-task-key]')!;
   await act(async () => row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true })));
@@ -669,7 +689,7 @@ it('repairs hidden task focus to its still-present containing folder', async () 
     anchor: append,
   });
   const fixture = treeHarness(
-    [{ teamName: identity.teamName, id: identity.taskId, subject: 'Task' }] as GlobalTask[],
+    [makeGlobalTask({ id: identity.taskId, teamName: identity.teamName })],
     snapshot
   );
   await act(async () => root.render(<fixture.Harness />));
@@ -695,7 +715,7 @@ it('repairs hidden archived Unfiled task focus to Unfiled when custom roots rema
     parent: null,
   });
   const fixture = treeHarness(
-    [{ teamName: identity.teamName, id: identity.taskId, subject: 'Task' }] as GlobalTask[],
+    [makeGlobalTask({ id: identity.taskId, teamName: identity.teamName })],
     snapshot,
     true
   );
@@ -751,7 +771,7 @@ it('does not update DOM focus after an already-started repair scroll settles for
 });
 
 it('cancels a real internal vendor drag when catalog refresh removes its source without dragend', async () => {
-  const fixture = treeHarness([{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[]);
+  const fixture = treeHarness([makeGlobalTask()]);
   await act(async () => root.render(<fixture.Harness />));
   const tree = vendor.trees.at(-1)!;
   const handle = host.querySelector('[data-task-key] [draggable="true"]')!;

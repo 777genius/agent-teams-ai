@@ -12,7 +12,6 @@ import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { normalizePath } from '@renderer/utils/pathNormalize';
 import {
   getNonEmptyTaskCategories,
   groupTasksByDate,
@@ -24,7 +23,6 @@ import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/team
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import {
   Archive,
-  ArrowUpDown,
   Check,
   ChevronDown,
   ChevronRight,
@@ -36,7 +34,6 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
-import { type ComboboxOption } from '../ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 import {
@@ -46,16 +43,18 @@ import {
 import { ProjectTaskGroup } from './ProjectTaskGroup';
 import { SidebarTaskItem } from './SidebarTaskItem';
 import { TaskContextMenu } from './TaskContextMenu';
+import { buildTaskProjectFilterOptions } from './taskFilterOptions';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
 import {
   defaultTaskFiltersState,
-  getTaskUnreadCount,
-  taskMatchesStatus,
   useReadStateSnapshot,
 } from './taskFiltersState';
+import { TaskSortPopover } from './TaskSortPopover';
+import { filterGlobalTasks, sortGlobalTasks,type TaskSortMode } from './taskViewPolicy';
+import { selectLeadOfflineTeamNames } from './teamActivitySelectors';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask, LeadActivityState, TeamSummary } from '@shared/types';
+import type { GlobalTask, TeamSummary } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -79,16 +78,7 @@ function saveGroupingMode(mode: TaskGroupingMode): void {
   }
 }
 
-export type TaskSortMode = 'time' | 'project' | 'team' | 'unread';
-
 const TASK_SORT_STORAGE_KEY = 'sidebarTasksSort';
-
-const SORT_OPTIONS = [
-  { id: 'time', labelKey: 'tasksPanel.sort.byTime' },
-  { id: 'unread', labelKey: 'tasksPanel.sort.byUnread' },
-  { id: 'project', labelKey: 'tasksPanel.sort.byProject' },
-  { id: 'team', labelKey: 'tasksPanel.sort.byTeam' },
-] as const satisfies readonly { id: TaskSortMode; labelKey: string }[];
 
 function loadSortMode(): TaskSortMode {
   try {
@@ -105,54 +95,6 @@ function saveSortMode(mode: TaskSortMode): void {
     localStorage.setItem(TASK_SORT_STORAGE_KEY, mode);
   } catch {
     /* ignore */
-  }
-}
-
-function applySortMode(
-  tasks: GlobalTask[],
-  mode: TaskSortMode,
-  contextId: string,
-  readState?: ReturnType<typeof useReadStateSnapshot>
-): GlobalTask[] {
-  const sorted = [...tasks];
-  switch (mode) {
-    case 'time':
-      return sortTasksByFreshness(sorted);
-    case 'unread':
-      return sorted.sort((a, b) => {
-        const ua = readState
-          ? getTaskUnreadCount(
-              readState,
-              { contextId, teamName: a.teamName, taskId: a.id },
-              a.comments
-            )
-          : 0;
-        const ub = readState
-          ? getTaskUnreadCount(
-              readState,
-              { contextId, teamName: b.teamName, taskId: b.id },
-              b.comments
-            )
-          : 0;
-        if (ub !== ua) return ub - ua;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    case 'project':
-      return sorted.sort((a, b) => {
-        const pa = a.projectPath ?? '';
-        const pb = b.projectPath ?? '';
-        const cmp = pa.localeCompare(pb);
-        if (cmp !== 0) return cmp;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    case 'team':
-      return sorted.sort((a, b) => {
-        const cmp = a.teamDisplayName.localeCompare(b.teamDisplayName);
-        if (cmp !== 0) return cmp;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    default:
-      return sortTasksByFreshness(sorted);
   }
 }
 
@@ -182,23 +124,6 @@ const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
   Older: [],
 };
 const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
-
-function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
-  if (!query.trim()) return tasks;
-  const q = query.toLowerCase();
-  return tasks.filter(
-    (t) =>
-      t.subject.toLowerCase().includes(q) ||
-      t.owner?.toLowerCase().includes(q) ||
-      t.teamDisplayName.toLowerCase().includes(q)
-  );
-}
-
-function applyProjectFilter(tasks: GlobalTask[], projectPath: string | null): GlobalTask[] {
-  if (!projectPath) return tasks;
-  const normalized = normalizePath(projectPath);
-  return tasks.filter((t) => t.projectPath && normalizePath(t.projectPath) === normalized);
-}
 
 function buildTaskTeamSummary(task: GlobalTask): TeamSummary {
   return {
@@ -278,9 +203,6 @@ let cachedSidebarTeamsDerived: SidebarTeamsDerived = {
   memberColorByTeam: new Map(),
 };
 const cachedSidebarTeamSignatureByTeam = new WeakMap<TeamSummary, string>();
-let cachedLeadOfflineTeamsSource: Partial<Record<string, LeadActivityState>> | null = null;
-let cachedLeadOfflineTeamsSignature = '';
-let cachedLeadOfflineTeamNames: string[] = [];
 
 function encodeSignaturePart(part: unknown): string {
   const text = part == null ? '' : String(part);
@@ -328,38 +250,6 @@ function buildTeamNamesIdentityKey(teams: readonly TeamSummary[]): string {
     pushSignaturePart(signatureParts, team.teamName);
   }
   return signatureParts.join('');
-}
-
-function selectLeadOfflineTeamNames(
-  leadActivityByTeam: Partial<Record<string, LeadActivityState>>
-): string[] {
-  if (leadActivityByTeam === cachedLeadOfflineTeamsSource) {
-    return cachedLeadOfflineTeamNames;
-  }
-
-  const offlineTeamNames: string[] = [];
-  for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
-    if (activity === 'offline') {
-      offlineTeamNames.push(teamName);
-    }
-  }
-  offlineTeamNames.sort();
-
-  const signatureParts: string[] = [];
-  for (const teamName of offlineTeamNames) {
-    pushSignaturePart(signatureParts, teamName);
-  }
-  const signature = signatureParts.join('');
-
-  if (signature === cachedLeadOfflineTeamsSignature) {
-    cachedLeadOfflineTeamsSource = leadActivityByTeam;
-    return cachedLeadOfflineTeamNames;
-  }
-
-  cachedLeadOfflineTeamsSource = leadActivityByTeam;
-  cachedLeadOfflineTeamsSignature = signature;
-  cachedLeadOfflineTeamNames = offlineTeamNames;
-  return cachedLeadOfflineTeamNames;
 }
 
 function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsDerived {
@@ -536,6 +426,7 @@ const GlobalTaskRow = memo(
             revealTeamNameOnTaskHover={revealTeamNameOnTaskHover}
             isLight={isLight}
             teamOffline={teamOffline}
+            isArchived={isArchived}
             renamingKey={rowRenamingKey}
             onRenameComplete={onRenameComplete}
             onRenameCancel={onRenameCancel}
@@ -810,7 +701,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     repositoryGroupsError,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
-    leadOfflineTeamNames,
   } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
@@ -831,8 +721,10 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       repositoryGroupsError: s.repositoryGroupsError,
       provisioningRuns: s.provisioningRuns,
       currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
-      leadOfflineTeamNames: selectLeadOfflineTeamNames(s.leadActivityByTeam),
     }))
+  );
+  const leadOfflineTeamNames = useStore(
+    useShallow((s) => selectLeadOfflineTeamNames(s.leadActivityByTeam))
   );
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
@@ -1175,30 +1067,8 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     viewMode,
   ]);
 
-  // Build project combobox options from available projects/repos
-  const projectFilterOptions = useMemo((): ComboboxOption[] => {
-    const items =
-      viewMode === 'grouped'
-        ? repositoryGroups
-            .filter((r) => r.totalSessions > 0)
-            .map((r) => ({
-              value: r.worktrees[0]?.path ?? r.id,
-              label: r.name,
-              path: r.worktrees[0]?.path,
-            }))
-        : projects
-            .filter((p) => (p.totalSessions ?? p.sessions.length) > 0)
-            .map((p) => ({
-              value: p.path,
-              label: p.name,
-              path: p.path,
-            }));
-
-    return items.map((item) => ({
-      value: item.value,
-      label: item.label,
-      description: item.path,
-    }));
+  const projectFilterOptions = useMemo(() => {
+    return buildTaskProjectFilterOptions({ viewMode, repositoryGroups, projects });
   }, [viewMode, repositoryGroups, projects]);
 
   // Resolve project filter from filters state
@@ -1210,45 +1080,30 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const effectiveShowArchived = showArchived && hasArchivedTasks;
 
   const filtered = useMemo(() => {
-    let result = globalTasks;
-    result = applyProjectFilter(result, selectedProjectPath);
-    result = result.filter((t) => taskMatchesStatus(t, filters.statusIds));
-    if (filters.teamName) {
-      result = result.filter((t) => t.teamName === filters.teamName);
-    }
-    if (filters.readFilter === 'unread') {
-      result = result.filter(
-        (t) =>
-          getTaskUnreadCount(
-            readState,
-            { contextId, teamName: t.teamName, taskId: t.id },
-            t.comments
-          ) > 0
-      );
-    } else if (filters.readFilter === 'read') {
-      result = result.filter(
-        (t) =>
-          getTaskUnreadCount(
-            readState,
-            { contextId, teamName: t.teamName, taskId: t.id },
-            t.comments
-          ) === 0
-      );
-    }
-    result = applySearch(result, searchQuery);
-    // Archive filtering
-    if (effectiveShowArchived) {
-      result = result.filter((t) => getTaskLocalPresentation(t).archived);
-    } else {
-      result = result.filter((t) => !getTaskLocalPresentation(t).archived);
-    }
-    return result;
+    return filterGlobalTasks(
+      globalTasks,
+      {
+        contextId,
+        filters: {
+          statusIds: filters.statusIds,
+          teamName: filters.teamName,
+          projectPath: selectedProjectPath,
+          unreadOnly: filters.unreadOnly,
+          readFilter: filters.readFilter,
+        },
+        searchQuery,
+        archiveMode: effectiveShowArchived ? 'archived' : 'active',
+      },
+      readState,
+      (task) => getTaskLocalPresentation(task).archived
+    );
   }, [
     contextId,
     globalTasks,
     selectedProjectPath,
     filters.statusIds,
     filters.teamName,
+    filters.unreadOnly,
     filters.readFilter,
     searchQuery,
     readState,
@@ -1270,7 +1125,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const sortedFlat = useMemo(
     () =>
       groupingMode === 'none'
-        ? applySortMode(normalTasks, sortMode, contextId, readState)
+        ? sortGlobalTasks(normalTasks, sortMode, contextId, readState)
         : EMPTY_TASKS,
     [contextId, groupingMode, normalTasks, sortMode, readState]
   );
@@ -1390,44 +1245,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             <TooltipContent side="bottom">{t('tasksPanel.searchPlaceholder')}</TooltipContent>
           </Tooltip>
 
-          <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary data-[state=open]:bg-surface-raised data-[state=open]:text-text"
-              >
-                <ArrowUpDown className="size-3.5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-40 p-1" align="end" sideOffset={6}>
-              <div className="flex flex-col">
-                {SORT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setSortMode(opt.id);
-                      setSortPopoverOpen(false);
-                    }}
-                    className={cn(
-                      'flex items-center gap-2 rounded px-2 py-1.5 text-[12px] transition-colors',
-                      sortMode === opt.id
-                        ? 'bg-surface-raised text-text'
-                        : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
-                    )}
-                  >
-                    <Check
-                      className={cn(
-                        'size-3 shrink-0',
-                        sortMode === opt.id ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                    {t(opt.labelKey)}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <TaskSortPopover
+            open={sortPopoverOpen}
+            onOpenChange={setSortPopoverOpen}
+            mode={sortMode}
+            testId="sidebar-task-view-sort"
+            onModeChange={(mode) => {
+              if (mode !== 'manual') setSortMode(mode);
+            }}
+          />
 
           <Popover open={groupingPopoverOpen} onOpenChange={setGroupingPopoverOpen}>
             <PopoverTrigger asChild>
@@ -1505,6 +1331,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             <TaskFiltersPopover
               open={filtersPopoverOpen}
               onOpenChange={setFiltersPopoverOpen}
+              testId="sidebar-task-view-filters"
               teams={taskFilterTeams}
               projectOptions={projectFilterOptions}
               filters={filters}

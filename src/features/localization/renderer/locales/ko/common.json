@@ -642,7 +642,8 @@
       "byTime": "이용안내",
       "byUnread": "읽음",
       "byProject": "프로젝트",
-      "byTeam": "으로 팀"
+      "byTeam": "으로 팀",
+      "manualOrder": "수동 순서"
     }
   },
   "toolViewer": {

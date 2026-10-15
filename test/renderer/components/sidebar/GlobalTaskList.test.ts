@@ -211,16 +211,14 @@ function makeTask(index: number, overrides: Partial<GlobalTask> = {}): GlobalTas
     createdAt: `2026-04-18T10:${timestamp}:00.000Z`,
     updatedAt: `2026-04-18T10:${timestamp}:00.000Z`,
     reviewState: 'none',
-    reviewNotes: [],
     blockedBy: [],
     blocks: [],
     comments: [],
     attachments: [],
     workIntervals: [],
-    kanbanColumnId: null,
     projectPath: '/workspace/hookplex',
     ...overrides,
-  } as GlobalTask;
+  };
 }
 
 describe('GlobalTaskList project grouping', () => {

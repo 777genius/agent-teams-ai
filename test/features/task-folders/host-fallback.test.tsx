@@ -13,6 +13,16 @@ import { TaskFoldersHost } from '../../../src/features/task-folders/renderer/Tas
 import { TaskDragHandle } from '../../../src/features/task-folders/renderer/ui/TaskDragHandle';
 
 import type { GlobalTask } from '@shared/types';
+
+const makeGlobalTask = (overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id: '1',
+  teamName: 't',
+  teamDisplayName: 'Team',
+  subject: 'Task',
+  status: 'pending',
+  ...overrides,
+});
+
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key, resolvedLanguage: 'en' }),
 }));
@@ -32,7 +42,7 @@ beforeEach(async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   localStorage.clear();
   await folderController.reset();
-  useStore.setState({ globalTasks: [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[] });
+  useStore.setState({ globalTasks: [makeGlobalTask()] });
   host = document.createElement('div');
   sidebar = document.createElement('div');
   document.body.append(host, sidebar);
