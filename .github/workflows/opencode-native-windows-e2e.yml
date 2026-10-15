@@ -261,6 +261,8 @@ jobs:
           if ((git rev-parse HEAD) -ne $env:SDK_REF) { throw 'SDK checkout identity mismatch' }
           bun install --frozen-lockfile --linker hoisted
           if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
+          bun test src/services/opencode/execution/OpenCodeV2AdmissionService.test.ts -t 'host filesystem'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows admission journal filesystem regression failed' }
           if ($env:NATIVE_CACHE_HIT -ne 'true') {
             bun scripts/opencode-v2/compile-windows.ts
             if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }

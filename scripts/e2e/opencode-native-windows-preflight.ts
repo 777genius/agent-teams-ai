@@ -295,7 +295,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       'run_owner_stale', 'run_process_unknown', 'execution_owner_unknown', 'cleanup_unknown', 'execution_timeout',
       'terminal_cut_unknown', 'session_selection_changed', 'execution_profile_changed', 'execution_selected_auth_changed'];
     // Exact closed producer categories; do not classify arbitrary error text here.
-    const providerCodes = ['provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
+    const providerCodes = ['timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
   'provider_catalog_scope_changed', 'provider_catalog_location_changed', 'provider_integration_changed', 'provider_credential_identity_changed',
   'provider_owned_connection_unknown', 'provider_active_connection_changed', 'provider_auth_publication_changed', 'provider_auth_publication_unknown',
   'provider_selected_model_missing', 'provider_original_connect_unknown', 'provider_original_execution_pending', 'provider_execution_target_changed',
@@ -328,7 +328,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_owner_metadata_purpose_invalid', 'execution_owner_not_private', 'execution_owner_ntfs_required',
   'execution_owner_path_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
   'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
-    const nativeStages = [
+    const nativeStages = ['process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
   'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
   'shared_acl_mutex_encoding', 'shared_acl_mutex_authority', 'shared_acl_mutex_wait', 'shared_acl_mutex',
   'owner_archive_nt_rename', 'owner_canonical_open', 'owner_directory_create',
@@ -378,10 +378,11 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         }
         const nativeFailure = nativeStage && typeof native.nativeCode === 'number' && Number.isSafeInteger(native.nativeCode) &&
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
-        diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization']),
+        diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization', 'run-member-retirement']),
           category: one(data.category, providerCodes), native: nativeFailure, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
             ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
           startupElapsedMs, startupHistory,
+          cleanupElapsedMs: Number.isSafeInteger(row(data.cleanup).elapsedMs) && Number(row(data.cleanup).elapsedMs) >= 0 && Number(row(data.cleanup).elapsedMs) <= 86400000 ? Number(row(data.cleanup).elapsedMs) : null,
           startupStderrKind: one(startup.nativeStderrKind, ['empty', 'entry_resolution', 'module_resolution', 'child_identity', 'child_pipe', 'access_denied', 'pipe_refused', 'pipe_missing', 'bun_error', 'unclassified', 'unavailable']),
           startupExitCode: Number.isSafeInteger(startup.nativeExitCode) && Number(startup.nativeExitCode) >= 0 && Number(startup.nativeExitCode) <= 0xffffffff ? startup.nativeExitCode : null,
           initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
