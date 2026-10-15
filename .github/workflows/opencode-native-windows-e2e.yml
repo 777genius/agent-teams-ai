@@ -9,10 +9,15 @@ on:
       model:
         required: true
         type: string
+      provider_only:
+        type: boolean
+        default: false
       source_only:
         type: boolean
         default: false
     secrets:
+      RUNTIME_BUILD_DISPATCH_TOKEN:
+        required: false
       OPENROUTER_API_KEY:
         required: true
   workflow_dispatch:
@@ -25,6 +30,10 @@ on:
         description: Explicit authorized OpenRouter model ID including openrouter/ prefix
         required: true
         type: string
+      provider_only:
+        description: Compare verified 118/119 runtimes with official npm V1 provider commands only
+        type: boolean
+        default: false
       source_only:
         description: Stop after source preflight without packaging or model tasks
         type: boolean
@@ -46,9 +55,10 @@ jobs:
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
           SELECTED_MODEL: ${{ inputs.model }}
+          PROVIDER_ONLY: ${{ inputs.provider_only }}
         run: |
           if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required' }
-          if ($env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
+          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
       - uses: actions/checkout@v6
         with:
           repository: 777genius/agent_teams_orchestrator
@@ -61,17 +71,63 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - uses: actions/setup-python@v6
+        if: ${{ !inputs.provider_only }}
         with:
           python-version: '3.11'
       - uses: oven-sh/setup-bun@v2
+        if: ${{ !inputs.provider_only }}
         with:
           bun-version: '1.3.11'
+      - name: Compare published Windows V1 provider behavior without inference
+        if: ${{ inputs.provider_only }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          RUNTIME_CANDIDATE_RUN: '38671108468'
+          RUNTIME_CANDIDATE_SHA: '1ccd8a4f47849b71df53f2288fef45caec4bf77f'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $originalLock = Get-Content runtime.lock.json -Raw
+          try {
+            $lock = $originalLock | ConvertFrom-Json
+            $lock.version = '0.0.118'
+            $lock.releaseTag = 'runtime-v0.0.118'
+            $lock.assets.'win32-x64'.file = 'agent-teams-runtime-win32-x64-v0.0.118.zip'
+            $lock.assets.'win32-x64'.sha256 = 'f664938c6194dd2b9e08c6ba850a83cfbb7361809b11f855562bb03b5bb69d2d'
+            $lock | ConvertTo-Json -Depth 20 | Set-Content runtime.lock.json -Encoding utf8NoBOM
+            node scripts/stage-runtime.mjs --platform win32-x64
+            if ($LASTEXITCODE -ne 0) { throw 'Verified 118 staging failed' }
+            New-Item -ItemType Directory TEST-provider | Out-Null
+            Move-Item resources/runtime TEST-provider/runtime118
+            New-Item -ItemType Directory resources/runtime | Out-Null
+            node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Verified 119 candidate staging failed' }
+            $candidate = Get-Content runtime-candidate-evidence.json -Raw | ConvertFrom-Json
+            if ($candidate.artifactId -ne 11944548354 -or $candidate.payloadArchiveSha256 -cne 'dc04840cf56451b91f32a15732c01dc673498bc56f566b4dd3a2b1c7af0adc2a' -or $candidate.binarySha256 -cne '7216c5f24ba57a5ead5a1418eecdbc93b11a0131ce59b32c63101139ff1ae41b') { throw '119 candidate pin changed' }
+            Move-Item resources/runtime TEST-provider/runtime119
+            npm install --prefix TEST-provider/npm --no-audit --no-fund opencode-ai@1.18.31
+            if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
+            $baseline = (Resolve-Path TEST-provider/runtime118/claude-multimodel.exe).Path
+            $candidateBinary = (Resolve-Path TEST-provider/runtime119/claude-multimodel.exe).Path
+            $official = (Resolve-Path TEST-provider/npm/node_modules/.bin/opencode.cmd).Path
+            $receipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-v1-provider-comparison.json'
+            node .test-sdk/scripts/smoke/windows-runtime-opencode-provider-json.mjs --actual-provider-compare $baseline $candidateBinary $official $receipt (Resolve-Path scripts/e2e/opencode-native-test-auth.ts).Path
+            if ($LASTEXITCODE -ne 0) { throw 'Real V1 provider comparison failed; inspect finite receipt' }
+          } finally { Set-Content runtime.lock.json $originalLock -Encoding utf8NoBOM }
+      - name: Preserve finite V1 provider comparison
+        if: ${{ always() && inputs.provider_only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-v1-provider-comparison-${{ github.sha }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/TEST-windows-v1-provider-comparison.json
       - name: Seed private runner-local TEST provider auth
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
       - name: Compile exact Windows native producer
+        if: ${{ !inputs.provider_only }}
         working-directory: .test-sdk
         shell: pwsh
         env:
@@ -85,6 +141,7 @@ jobs:
           bun scripts/opencode-v2/compile-windows.ts
           if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }
       - name: Install exact official OpenCode CLI pins
+        if: ${{ !inputs.provider_only }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -93,8 +150,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
       - name: Stage the real desktop console wrapper before binary projection
+        if: ${{ !inputs.provider_only }}
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
       - name: Install frozen desktop dependencies and build only the real controller
+        if: ${{ !inputs.provider_only }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -105,6 +164,7 @@ jobs:
           pnpm --filter agent-teams-mcp build
           if ($LASTEXITCODE -ne 0) { throw 'MCP build failed' }
       - name: Preflight real native startup and physical stop without model prompts
+        if: ${{ !inputs.provider_only }}
         shell: pwsh
         env:
           SELECTED_MODEL: ${{ inputs.model }}
@@ -115,7 +175,7 @@ jobs:
           bun scripts/e2e/opencode-native-windows-preflight.ts .test-sdk $floor $current $env:SELECTED_MODEL $node
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         working-directory: .test-sdk
         shell: pwsh
         run: |
@@ -130,12 +190,12 @@ jobs:
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Select Windows release compiler Bun
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
       - name: Build and stage the verified runtime candidate
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         working-directory: .test-sdk
         shell: pwsh
         env:
@@ -164,7 +224,7 @@ jobs:
           New-Item -ItemType Directory -Force ../resources/runtime | Out-Null
           Copy-Item candidate/runtime/* ../resources/runtime -Recurse -Force
       - name: Install and package the desktop app
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -179,7 +239,7 @@ jobs:
           node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
           if ($LASTEXITCODE -ne 0) { throw 'Desktop native architecture failed' }
       - name: Verify retained candidate bytes and record post-pack manifest
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
@@ -214,7 +274,7 @@ jobs:
           @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
           "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
       - name: Real V1 and V2 tasks through the bundled runtime
-        if: ${{ !inputs.source_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
         id: real_tasks
         shell: pwsh
         env:
@@ -239,7 +299,7 @@ jobs:
           }
           if ($failedPins.Count -gt 0) { throw ('Real Windows task scenarios failed: ' + ($failedPins -join ',') + '; no automatic replay') }
       - name: Preserve only sanitized scenario proofs
-        if: ${{ always() && !inputs.source_only && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != '' }}
+        if: ${{ always() && !inputs.source_only && !inputs.provider_only && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: opencode-native-windows-proof-${{ github.sha }}
