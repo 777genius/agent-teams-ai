@@ -701,7 +701,7 @@ async function verifySelectedControllerRoot(
 }
 
 assert.equal(process.platform, 'win32');
-assert.equal(process.versions.bun, '1.3.11');
+assert.equal(process.versions.bun, '1.4.3');
 assert.equal(process.argv.length, 7);
 const selectedModel = process.argv[5]!;
 assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required');

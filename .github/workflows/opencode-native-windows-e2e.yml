@@ -128,7 +128,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         if: ${{ !inputs.provider_only }}
         with:
-          bun-version: '1.3.11'
+          bun-version: '1.4.3'
       - name: Observe three shared tool roots before native compilation
         if: ${{ !inputs.provider_only }}
         shell: pwsh
@@ -235,14 +235,14 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: TEST-native-source/.test-sdk/native/win32-x64
-          key: opencode-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-image.outputs.version }}-bun-1.3.11-${{ hashFiles('TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.cpp', 'TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.hpp', 'TEST-native-source/.test-sdk/scripts/opencode-v2/compile-windows.ts', 'TEST-native-source/.test-sdk/scripts/opencode-v2/stage-windows.ts') }}
+          key: opencode-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-image.outputs.version }}-bun-1.4.3-${{ hashFiles('TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.cpp', 'TEST-native-source/.test-sdk/src/services/opencode/host/windows/*.hpp', 'TEST-native-source/.test-sdk/scripts/opencode-v2/compile-windows.ts', 'TEST-native-source/.test-sdk/scripts/opencode-v2/stage-windows.ts') }}
       - name: Restore frozen SDK package downloads
         if: ${{ !inputs.provider_only }}
         id: sdk-download-cache
         uses: actions/cache/restore@v5
         with:
           path: TEST-bun-download-cache
-          key: opencode-sdk-downloads-v1-${{ runner.os }}-bun-1.3.11-${{ hashFiles('TEST-native-source/.test-sdk/bun.lock', 'TEST-native-source/.test-sdk/package.json') }}
+          key: opencode-sdk-downloads-v1-${{ runner.os }}-bun-1.4.3-${{ hashFiles('TEST-native-source/.test-sdk/bun.lock', 'TEST-native-source/.test-sdk/package.json') }}
       - name: Compile exact Windows native producer
         if: ${{ !inputs.provider_only }}
         working-directory: TEST-native-source/.test-sdk
