@@ -1,11 +1,12 @@
-import type { Node, Projection } from './projection';
+import type { Node, Projection, TaskOrder } from './projection';
 import type { GlobalTask } from '@shared/types';
 
 export function applyVisibleTaskChildren(
   projection: Projection,
   tasks: readonly GlobalTask[],
   isVisible: (task: GlobalTask) => boolean,
-  sortVisibleTasks: (tasks: readonly GlobalTask[]) => readonly GlobalTask[]
+  sortVisibleTasks: (tasks: readonly GlobalTask[]) => readonly GlobalTask[],
+  taskOrder: TaskOrder = 'manual'
 ): Projection {
   const taskById = new Map<string, GlobalTask>(
     tasks.map((task) => [`task:${JSON.stringify([task.teamName, task.id])}`, task] as const)
@@ -41,5 +42,6 @@ export function applyVisibleTaskChildren(
     nodes,
     snapshot: projection.snapshot,
     canonicalChildren: projection.canonicalChildren,
+    taskOrder,
   };
 }

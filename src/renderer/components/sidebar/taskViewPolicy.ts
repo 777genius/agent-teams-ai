@@ -27,6 +27,13 @@ export interface TaskViewPolicy {
   sortMode: TaskSortMode;
 }
 
+export type TaskEffectiveSubjectAccessor = (task: GlobalTask) => string;
+
+export const createTaskEffectiveSubjectAccessor =
+  (getRenamedSubject: (task: GlobalTask) => string | undefined): TaskEffectiveSubjectAccessor =>
+  (task) =>
+    getRenamedSubject(task) ?? task.subject;
+
 export interface TaskSortContext {
   contextId: string;
   readState?: ReturnType<typeof useReadStateSnapshot>;
@@ -115,12 +122,16 @@ export function sortGlobalTasks(
   return [...tasks].sort((a, b) => compareGlobalTasks(a, b, mode, context));
 }
 
-export function applyTaskSearch(tasks: readonly GlobalTask[], query: string): GlobalTask[] {
-  if (!query.trim()) return [...tasks];
-  const normalizedQuery = query.toLowerCase();
+export function applyTaskSearch(
+  tasks: readonly GlobalTask[],
+  query: string,
+  getEffectiveSubject: TaskEffectiveSubjectAccessor = (task) => task.subject
+): GlobalTask[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [...tasks];
   return tasks.filter(
     (task) =>
-      task.subject.toLowerCase().includes(normalizedQuery) ||
+      getEffectiveSubject(task).toLowerCase().includes(normalizedQuery) ||
       task.owner?.toLowerCase().includes(normalizedQuery) ||
       task.teamDisplayName.toLowerCase().includes(normalizedQuery)
   );
@@ -139,7 +150,9 @@ export function applyProjectTaskFilter(
 
 export function filterGlobalTasks(
   tasks: readonly GlobalTask[],
-  policy: Omit<TaskViewPolicy, 'sortMode'>,
+  policy: Omit<TaskViewPolicy, 'sortMode'> & {
+    getEffectiveSubject?: TaskEffectiveSubjectAccessor;
+  },
   readState: ReturnType<typeof useReadStateSnapshot>,
   isArchived: (task: GlobalTask) => boolean = () => false
 ): GlobalTask[] {
@@ -167,7 +180,7 @@ export function filterGlobalTasks(
         ) === 0
     );
   }
-  visible = applyTaskSearch(visible, policy.searchQuery);
+  visible = applyTaskSearch(visible, policy.searchQuery, policy.getEffectiveSubject);
   return visible.filter((task) => {
     const archived = isArchived(task);
     return policy.archiveMode === 'all'

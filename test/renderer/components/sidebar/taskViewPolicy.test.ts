@@ -6,6 +6,8 @@ import {
   type TaskStatusFilterId,
 } from '../../../../src/renderer/components/sidebar/taskFiltersState';
 import {
+  applyTaskSearch,
+  createTaskEffectiveSubjectAccessor,
   filterGlobalTasks,
   sortGlobalTasks,
 } from '../../../../src/renderer/components/sidebar/taskViewPolicy';
@@ -52,6 +54,23 @@ const comment = (id: string) => ({
 
 describe('shared task view policy', () => {
   beforeEach(() => localStorage.clear());
+
+  it('searches the effective subject with one trimmed and lowercased query', () => {
+    const renamed = task('renamed', {
+      subject: 'Obsolete Subject',
+      owner: undefined,
+      teamDisplayName: 'Unrelated Team',
+    });
+    const getEffectiveSubject = createTaskEffectiveSubjectAccessor((candidate) =>
+      candidate.id === 'renamed' ? 'Visible New Name' : undefined
+    );
+
+    expect(applyTaskSearch([renamed], '  VISIBLE new NAME  ', getEffectiveSubject)).toEqual([
+      renamed,
+    ]);
+    expect(applyTaskSearch([renamed], '  obsolete subject  ', getEffectiveSubject)).toEqual([]);
+    expect(applyTaskSearch([renamed], '   ', getEffectiveSubject)).toEqual([renamed]);
+  });
 
   it('preserves sidebar project/status/team/read/search/archive semantics without mutating inputs', () => {
     const unread = task('unread', { subject: 'Find me', comments: [comment('c')] });

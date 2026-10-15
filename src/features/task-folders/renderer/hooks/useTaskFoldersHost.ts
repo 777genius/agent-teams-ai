@@ -6,6 +6,7 @@ import {
 } from '@renderer/components/sidebar/taskFilterOptions';
 import { useReadStateSnapshot } from '@renderer/components/sidebar/taskFiltersState';
 import {
+  createTaskEffectiveSubjectAccessor,
   filterGlobalTasks,
   sortGlobalTasks,
 } from '@renderer/components/sidebar/taskViewPolicy';
@@ -47,6 +48,7 @@ export function useTaskFoldersHost(
   const local = useTaskLocalState();
   const readState = useReadStateSnapshot();
   const view = useTaskViewState('tree');
+  const taskOrder = view.sortMode === 'manual' ? 'manual' : 'computed';
   const viewSetSortOpen = view.setSortOpen;
   const viewSetFiltersOpen = view.setFiltersOpen;
   const viewClosePopovers = view.closePopovers;
@@ -58,15 +60,13 @@ export function useTaskFoldersHost(
     width: number;
   } | null>(null);
   const canonicalProjection = useMemo(
-    () =>
-      projectFolders(
-        state.snapshot,
-        tasks,
-        local.isArchived,
-        local.getRenamedSubject,
-        true
-      ),
+    () => projectFolders(state.snapshot, tasks, local.isArchived, local.getRenamedSubject, true),
     [state.snapshot, tasks, local]
+  );
+  const getEffectiveSubject = useMemo(
+    () =>
+      createTaskEffectiveSubjectAccessor((task) => local.getRenamedSubject(task.teamName, task.id)),
+    [local]
   );
   const projection = useMemo(() => {
     const visibleTasks = filterGlobalTasks(
@@ -76,6 +76,7 @@ export function useTaskFoldersHost(
         filters: view.filters,
         searchQuery: view.searchQuery,
         archiveMode: showArchived ? 'all' : 'active',
+        getEffectiveSubject,
       },
       readState,
       (task) => local.isArchived(task.teamName, task.id)
@@ -90,9 +91,22 @@ export function useTaskFoldersHost(
       (siblings) =>
         view.sortMode === 'manual'
           ? [...siblings]
-          : sortGlobalTasks(siblings, view.sortMode, contextId, readState)
+          : sortGlobalTasks(siblings, view.sortMode, contextId, readState),
+      taskOrder
     );
-  }, [canonicalProjection, contextId, local, readState, showArchived, tasks, view]);
+  }, [
+    canonicalProjection,
+    contextId,
+    getEffectiveSubject,
+    local,
+    readState,
+    showArchived,
+    taskOrder,
+    tasks,
+    view.filters,
+    view.searchQuery,
+    view.sortMode,
+  ]);
   const projectFilterOptions = useMemo(
     () => buildTaskProjectFilterOptions({ viewMode, repositoryGroups, projects }),
     [projects, repositoryGroups, viewMode]

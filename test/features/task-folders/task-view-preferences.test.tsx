@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BrowserTaskViewPreferencesRepository } from '../../../src/features/task-folders/renderer/adapters/browserTaskViewRepository';
 import {
   normalizeTaskViewState,
   useTaskViewState,
 } from '../../../src/features/task-folders/renderer/hooks/useTaskViewState';
 import { defaultTaskFiltersState } from '../../../src/renderer/components/sidebar/taskFiltersState';
+
+import type { TaskViewPreferencesRepository } from '../../../src/features/task-folders/renderer/adapters/taskViewRepository';
 
 interface ProbeApi {
   setTeam(teamName: string): void;
@@ -15,6 +18,7 @@ interface ProbeApi {
   openSort(): void;
   openFilters(): void;
   closePopovers(): void;
+  reset(): void;
 }
 
 describe('independent task view preferences', () => {
@@ -30,8 +34,14 @@ describe('independent task view preferences', () => {
     document.body.innerHTML = '';
   });
 
-  function Probe({ namespace }: { namespace: string }) {
-    const view = useTaskViewState(namespace);
+  function Probe({
+    namespace,
+    repository,
+  }: {
+    namespace: string;
+    repository?: TaskViewPreferencesRepository;
+  }) {
+    const view = useTaskViewState(namespace, 'manual', repository);
     probes.set(namespace, {
       setTeam: (teamName) => {
         const next = defaultTaskFiltersState();
@@ -42,6 +52,7 @@ describe('independent task view preferences', () => {
       openSort: () => view.setSortOpen(true),
       openFilters: () => view.setFiltersOpen(true),
       closePopovers: view.closePopovers,
+      reset: view.reset,
     });
     return (
       <output
@@ -157,6 +168,106 @@ describe('independent task view preferences', () => {
     expect(
       host.querySelector('[data-namespace="tree"]')!.getAttribute('data-filters-open')
     ).toBe('false');
+
+    await act(async () => {
+      probes.get('tree')!.setTeam('temporary-team');
+      probes.get('tree')!.setSort('time');
+      probes.get('tree')!.reset();
+    });
+    expect(
+      host.querySelector('[data-namespace="tree"]')!.getAttribute('data-team')
+    ).toBe('');
+    expect(
+      host.querySelector('[data-namespace="tree"]')!.getAttribute('data-sort')
+    ).toBe('manual');
     await act(async () => root.unmount());
+  });
+
+  it('routes persistence through an injected repository with preserved key and payload', async () => {
+    const storage = {
+      getItem: vi.fn((): string | null => null),
+      setItem: vi.fn(),
+    };
+    const repository = new BrowserTaskViewPreferencesRepository(() => storage);
+    const state = normalizeTaskViewState(
+      {
+        filters: {
+          statusIds: ['todo'],
+          teamName: 'team',
+          projectPath: '/project',
+          readFilter: 'unread',
+        },
+        sortMode: 'project',
+        searchQuery: 'query',
+      },
+      'manual'
+    );
+    repository.save('tree', state);
+
+    expect(storage.setItem).toHaveBeenCalledWith(
+      'taskFolders:taskView:v1:tree',
+      JSON.stringify({
+        filters: {
+          statusIds: ['todo'],
+          teamName: 'team',
+          projectPath: '/project',
+          readFilter: 'unread',
+        },
+        sortMode: 'project',
+        searchQuery: 'query',
+      })
+    );
+    storage.setItem.mockClear();
+    storage.getItem.mockReturnValue(
+      JSON.stringify({
+        filters: {
+          statusIds: ['todo', 'done'],
+          teamName: 'team',
+          projectPath: '/project',
+          readFilter: 'unread',
+        },
+        sortMode: 'time',
+        searchQuery: 'restored',
+      })
+    );
+    const restored = repository.load('tree', 'manual');
+    expect(restored.filters.statusIds).toEqual(new Set(['todo', 'done']));
+    expect(restored.sortMode).toBe('time');
+
+    const load = vi.fn(() => restored);
+    const save = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () =>
+      root.render(<Probe namespace="injected" repository={{ load, save }} />)
+    );
+    expect(load).toHaveBeenCalledWith('injected', 'manual');
+    expect(save).toHaveBeenCalledWith('injected', restored);
+    await act(async () => root.unmount());
+  });
+
+  it('falls back safely when storage is corrupt or unavailable', () => {
+    const corruptStorage = {
+      getItem: vi.fn(() => '{not-json'),
+      setItem: vi.fn(),
+    };
+    const corrupt = new BrowserTaskViewPreferencesRepository(() => corruptStorage);
+    expect(corrupt.load('tree', 'project')).toEqual(normalizeTaskViewState(undefined, 'project'));
+
+    const unavailable = new BrowserTaskViewPreferencesRepository(() => ({
+      getItem: vi.fn(() => {
+        throw new Error('unavailable');
+      }),
+      setItem: vi.fn(() => {
+        throw new Error('unavailable');
+      }),
+    }));
+    expect(unavailable.load('tree', 'manual')).toEqual(
+      normalizeTaskViewState(undefined, 'manual')
+    );
+    expect(() =>
+      unavailable.save('tree', normalizeTaskViewState(undefined, 'manual'))
+    ).not.toThrow();
   });
 });

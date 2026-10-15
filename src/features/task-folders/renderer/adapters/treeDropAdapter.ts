@@ -7,6 +7,14 @@ import type { Node, Projection } from '../view-models/projection';
 import type { PanelController } from './panelController';
 import type { DragTarget } from '@headless-tree/core';
 export const TASK_MIME = 'application/x-agent-teams-task-v1';
+function canonicalTaskParent(projection: Projection, identity: TaskIdentity): string | null {
+  const key = taskKey(identity);
+  return (
+    projection.snapshot.folders.find((folder) =>
+      folder.children.some((child) => child.kind === 'task' && taskKey(child.identity) === key)
+    )?.id ?? null
+  );
+}
 export function translateTarget(
   projection: Projection,
   parentId: string,
@@ -48,13 +56,20 @@ export class TreeDropAdapter {
     private panel: PanelController
   ) {}
   private command(source: Node, target: DragTarget<Node>, foreign: boolean): Command {
+    const projection = this.projection();
     const destination = translateTarget(
-      this.projection(),
+      projection,
       target.item.getId(),
       'insertionIndex' in target ? target.insertionIndex : undefined,
       source,
       foreign
     );
+    if (
+      source.kind === 'task' &&
+      projection.taskOrder === 'computed' &&
+      canonicalTaskParent(projection, source.identity!) === destination.parent
+    )
+      throw new Error('computed-task-sort');
     return source.kind === 'folder'
       ? { type: 'moveFolder', id: source.folderId!, ...destination }
       : { type: 'moveTask', identity: source.identity!, ...destination };

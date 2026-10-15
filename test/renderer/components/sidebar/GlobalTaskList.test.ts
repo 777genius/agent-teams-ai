@@ -617,6 +617,71 @@ describe('GlobalTaskList project grouping', () => {
     });
   });
 
+  it('searches locally renamed subjects live and ignores the obsolete subject', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('sidebarTasksGrouping', 'none');
+    storeState.globalTasks = [makeTask(1)];
+    taskLocalState.renamedSubjects.set('alpha-team:task-1', 'Visible New Name');
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    const searchButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label')?.toLowerCase().includes('search')
+    );
+    expect(searchButton).toBeTruthy();
+    await act(async () => {
+      searchButton!.click();
+      await flushMicrotasks();
+    });
+
+    const input = host.querySelector<HTMLInputElement>('input[type="text"]');
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!;
+    await act(async () => {
+      setValue.call(input, '  visible new NAME  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual(['Visible New Name']);
+
+    await act(async () => {
+      setValue.call(input, '  Task 1  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual([]);
+
+    await act(async () => {
+      setValue.call(input, '  another live name  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual([]);
+
+    await act(async () => {
+      taskLocalState.renamedSubjects = new Map(taskLocalState.renamedSubjects).set(
+        'alpha-team:task-1',
+        'Another Live Name'
+      );
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual(['Another Live Name']);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('marks task cards as offline when alive-list is initialized before teams are loaded', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const aliveList = vi.fn(() => Promise.resolve([]));

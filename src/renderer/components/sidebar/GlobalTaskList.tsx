@@ -21,16 +21,7 @@ import {
 } from '@renderer/utils/taskGrouping';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
-import {
-  Archive,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ListTodo,
-  Pin,
-  Search,
-  X,
-} from 'lucide-react';
+import { Archive, Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
@@ -45,12 +36,14 @@ import { SidebarTaskItem } from './SidebarTaskItem';
 import { TaskContextMenu } from './TaskContextMenu';
 import { buildTaskProjectFilterOptions } from './taskFilterOptions';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
-import {
-  defaultTaskFiltersState,
-  useReadStateSnapshot,
-} from './taskFiltersState';
+import { defaultTaskFiltersState, useReadStateSnapshot } from './taskFiltersState';
 import { TaskSortPopover } from './TaskSortPopover';
-import { filterGlobalTasks, sortGlobalTasks,type TaskSortMode } from './taskViewPolicy';
+import {
+  createTaskEffectiveSubjectAccessor,
+  filterGlobalTasks,
+  sortGlobalTasks,
+  type TaskSortMode,
+} from './taskViewPolicy';
 import { selectLeadOfflineTeamNames } from './teamActivitySelectors';
 
 import type { TaskFiltersState } from './taskFiltersState';
@@ -791,6 +784,12 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     ]
   );
 
+  const getEffectiveSubject = useMemo(
+    () =>
+      createTaskEffectiveSubjectAccessor((task) => getTaskLocalPresentation(task).renamedSubject),
+    [getTaskLocalPresentation]
+  );
+
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -1093,6 +1092,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
         },
         searchQuery,
         archiveMode: effectiveShowArchived ? 'archived' : 'active',
+        getEffectiveSubject,
       },
       readState,
       (task) => getTaskLocalPresentation(task).archived
@@ -1108,6 +1108,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     searchQuery,
     readState,
     effectiveShowArchived,
+    getEffectiveSubject,
     getTaskLocalPresentation,
   ]);
 

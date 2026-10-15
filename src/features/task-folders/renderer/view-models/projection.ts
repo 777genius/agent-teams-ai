@@ -4,6 +4,7 @@ import type { Child, Snapshot, TaskIdentity } from '../../core/domain/folders';
 import type { GlobalTask } from '@shared/types';
 export const ROOT = 'root';
 export const UNFILED = 'unfiled';
+export type TaskOrder = 'manual' | 'computed';
 export interface Node {
   id: string;
   name: string;
@@ -22,6 +23,7 @@ export interface Projection {
   snapshot: Snapshot;
   /** Canonical sibling membership/order used to map visible drop indices back to Snapshot anchors. */
   canonicalChildren: ReadonlyMap<string, readonly string[]>;
+  taskOrder: TaskOrder;
 }
 export function projectFolders(
   snapshot: Snapshot,
@@ -68,7 +70,10 @@ export function projectFolders(
     nodes.set(`folder:${f.id}`, { ...node(`folder:${f.id}`, f.name, 'folder'), folderId: f.id })
   );
   snapshot.folders.forEach((folder) =>
-    canonicalChildren.set(`folder:${folder.id}`, folder.children.map((child) => childKey(child)))
+    canonicalChildren.set(
+      `folder:${folder.id}`,
+      folder.children.map((child) => childKey(child))
+    )
   );
   const fill = (id: string): Node => {
     const n = nodes.get(`folder:${id}`)!;
@@ -92,7 +97,10 @@ export function projectFolders(
     return n;
   };
   const root = node(ROOT, '', 'root');
-  canonicalChildren.set(ROOT, snapshot.rootFolderIds.map((id) => `folder:${id}`));
+  canonicalChildren.set(
+    ROOT,
+    snapshot.rootFolderIds.map((id) => `folder:${id}`)
+  );
   for (const id of snapshot.rootFolderIds) root.children.push(fill(id).id);
   const unfiled = node(UNFILED, '', 'unfiled');
   const unfiledChildren: string[] = [];
@@ -109,7 +117,7 @@ export function projectFolders(
   canonicalChildren.set(UNFILED, unfiledChildren);
   nodes.set(ROOT, root);
   nodes.set(UNFILED, unfiled);
-  return { nodes, snapshot, canonicalChildren };
+  return { nodes, snapshot, canonicalChildren, taskOrder: 'manual' };
 }
 export function nodeChild(node: Node): Child {
   if (node.kind === 'folder') return { kind: 'folder', id: node.folderId! };
