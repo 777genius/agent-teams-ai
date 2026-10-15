@@ -361,17 +361,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Physical delivery identity failed' }
           Set-Content candidate/runtime/COMMIT_SHA $env:SDK_REF
           Compress-Archive candidate/runtime candidate/TEST-runtime-win32-x64.zip
-          $lock = Get-Content ../runtime.lock.json -Raw | ConvertFrom-Json
+          $lock = Get-Content ../TEST-native-source/runtime.lock.json -Raw | ConvertFrom-Json
           $lock.version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $lock.sourceRef = $env:SDK_REF
           $lock.releaseTag = "TEST-native-candidate-$($env:SDK_REF)"
           $lock.assets.'win32-x64'.file = 'TEST-runtime-win32-x64.zip'
           $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          $lock | ConvertTo-Json -Depth 20 | Set-Content ../runtime.lock.json -Encoding utf8NoBOM
-          New-Item -ItemType Directory -Force ../resources | Out-Null
-          if (Test-Path ../resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }
-          New-Item -ItemType Directory -Force ../resources/runtime | Out-Null
-          Copy-Item candidate/runtime/* ../resources/runtime -Recurse -Force
+          $lock | ConvertTo-Json -Depth 20 | Set-Content ../TEST-native-source/runtime.lock.json -Encoding utf8NoBOM
+          New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
+          if (Test-Path ../TEST-native-source/resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }
+          New-Item -ItemType Directory -Force ../TEST-native-source/resources/runtime | Out-Null
+          Copy-Item candidate/runtime/* ../TEST-native-source/resources/runtime -Recurse -Force
       - name: Install and package the desktop app
         if: ${{ !inputs.source_only && !inputs.provider_only }}
         shell: pwsh
