@@ -277,6 +277,16 @@ jobs:
         with:
           path: TEST-bun-download-cache
           key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
+      - name: Qualify native command isolation before desktop installation
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        working-directory: TEST-native-source/.test-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $commandRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-command-" + [guid]::NewGuid().ToString('N'))
+          $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
+          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
+          if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Install exact official OpenCode CLI pins
         if: ${{ !inputs.provider_only }}
         shell: pwsh
@@ -324,10 +334,6 @@ jobs:
           $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
           bun scripts/opencode-v2/windows-owner-probe.ts $ownerRoot
           if ($LASTEXITCODE -ne 0) { throw 'Native held-directory contract failed' }
-          $commandRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-command-" + [guid]::NewGuid().ToString('N'))
-          $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
-          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
-          if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Select Windows release compiler Bun
         if: ${{ !inputs.source_only && !inputs.provider_only }}
         uses: oven-sh/setup-bun@v2
