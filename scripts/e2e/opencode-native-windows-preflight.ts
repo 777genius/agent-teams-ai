@@ -204,24 +204,28 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
       "$ErrorActionPreference='Stop'; function Principal($sid) { if($sid -eq $current){return 'current_user'}; switch($sid){",
       "'S-1-5-18' {'local_system';break};'S-1-5-32-544' {'administrators';break};'S-1-5-32-545' {'builtin_users';break};'S-1-5-11' {'authenticated_users';break};'S-1-1-0' {'everyone';break};'S-1-3-0' {'creator_owner';break};'S-1-3-1' {'creator_group';break};'S-1-15-2-1' {'all_application_packages';break};default{if($sid.StartsWith('S-1-15-2-')){'app_package'}else{'other'}}}}",
       "try{$psPhase='principal';$current=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;$psPhase='input';$inputs=@([Console]::In.ReadToEnd()|ConvertFrom-Json);if($inputs.Count -gt 4096){throw 'budget'};$bad=@();foreach($r in $inputs){",
-      "$psPhase='acl_read';$acl=Get-Acl -LiteralPath $r.path;$psPhase='descriptor';$sd=[Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm(([Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access)));$owner=Principal $sd.Owner.Value;$guard=$null;$principal='other';$flags=0;[long]$mask=0;",
+      "$psPhase='acl_read';$sections=[Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access;$acl=[IO.FileSystemAclExtensions]::GetAccessControl([IO.DirectoryInfo]::new($r.path),$sections);$psPhase='descriptor';$sd=[Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm($sections));$owner=Principal $sd.Owner.Value;$guard=$null;$principal='other';$flags=0;[long]$mask=0;",
       "if($owner -notin @('current_user','local_system','administrators')){$guard='owner'}elseif($null -eq $sd.DiscretionaryAcl){$guard='acl'}else{foreach($ace in $sd.DiscretionaryAcl){$psPhase='ace';",
       "if($ace -isnot [Security.AccessControl.CommonAce] -or $ace.AceType.ToString() -notin @('AccessAllowed','AccessDenied')){$guard='ace_shape';break};$principal=Principal $ace.SecurityIdentifier.Value;$flags=[int]$ace.AceFlags;$mask=[long]$ace.AccessMask -band 4294967295L;",
       "$creator=$principal -eq 'creator_owner' -and ($flags -band 8) -ne 0 -and ($flags -band 3) -ne 0 -and ($flags -band (-bnot 27)) -eq 0;",
       "if($ace.AceType.ToString() -eq 'AccessAllowed' -and ($mask -band (-bnot 2685534377L)) -ne 0 -and !$creator -and $principal -notin @('current_user','local_system','administrators')){$guard='foreign_write';break}}}",
-      "if($guard){$bad+=@{rootClass=$r.rootClass;guard=$guard;ownerClass=$owner;principalClass=$principal;inheritOnly=($flags -band 8) -ne 0;mutation=@{writeData=($mask -band 2) -ne 0;appendData=($mask -band 4) -ne 0;writeEA=($mask -band 16) -ne 0;writeAttributes=($mask -band 256) -ne 0;deleteChild=($mask -band 64) -ne 0;delete=($mask -band 65536) -ne 0;writeDac=($mask -band 262144) -ne 0;writeOwner=($mask -band 524288) -ne 0;genericWrite=($mask -band 1073741824) -ne 0;genericAll=($mask -band 268435456) -ne 0;otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}};if($bad.Count -eq 4){break}}};@{observation='raw_acl_shape_only';offenders=@($bad)}|ConvertTo-Json -Depth 5 -Compress}catch{@{observation='unavailable';phase=$psPhase}|ConvertTo-Json -Compress}",
+      "if($guard){$bad+=@{rootClass=$r.rootClass;guard=$guard;ownerClass=$owner;principalClass=$principal;inheritOnly=($flags -band 8) -ne 0;mutation=@{writeData=($mask -band 2) -ne 0;appendData=($mask -band 4) -ne 0;writeEA=($mask -band 16) -ne 0;writeAttributes=($mask -band 256) -ne 0;deleteChild=($mask -band 64) -ne 0;delete=($mask -band 65536) -ne 0;writeDac=($mask -band 262144) -ne 0;writeOwner=($mask -band 524288) -ne 0;genericWrite=($mask -band 1073741824) -ne 0;genericAll=($mask -band 268435456) -ne 0;otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}};if($bad.Count -eq 1){break}}};@{observation='raw_acl_shape_only';offenders=@($bad)}|ConvertTo-Json -Depth 5 -Compress}catch{@{observation='unavailable';phase=$psPhase}|ConvertTo-Json -Compress}",
     ].join('\n');
     phase = 'powershell';
+    const powershell = process.env.OPENCODE_TEST_ACL_POWERSHELL;
+    if (!powershell || !p.win32.isAbsolute(powershell) || p.basename(powershell).toLowerCase() !== 'pwsh.exe' ||
+        p.basename(p.dirname(powershell)) !== '7' || p.basename(p.dirname(p.dirname(powershell))).toLowerCase() !== 'powershell' ||
+        await fs.realpath(powershell) !== powershell) return unavailable('powershell_unavailable');
     if (Date.now() >= deadline) return unavailable('deadline');
     const output = await new Promise<string>((resolve, reject) => {
-      const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')],
+      const child = execFile(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')],
         { timeout: Math.max(1, Math.min(5000, deadline - Date.now())), maxBuffer: 16384, windowsHide: true }, (e, stdout) => e ? reject(e) : resolve(stdout));
       child.stdin?.on('error', () => {}); child.stdin?.end(JSON.stringify(input));
     });
     phase = 'response';
     const result = row(JSON.parse(output)), principals = ['current_user', 'local_system', 'administrators', 'builtin_users', 'authenticated_users', 'everyone', 'creator_owner', 'creator_group', 'all_application_packages', 'app_package', 'other'];
     if (result.observation === 'unavailable') return { observation: 'unavailable', phase: 'powershell', reason: ['principal', 'input', 'acl_read', 'descriptor', 'ace'].find((value) => value === result.phase) ?? 'unclassified' };
-    if (result.observation !== 'raw_acl_shape_only' || !Array.isArray(result.offenders) || result.offenders.length > 4) return unavailable('response_invalid');
+    if (result.observation !== 'raw_acl_shape_only' || !Array.isArray(result.offenders) || result.offenders.length > 1) return unavailable('response_invalid');
     const offenders = result.offenders.map((v) => {
       const item = row(v), mutation = row(item.mutation);
       if (!['sdk', 'bun', 'selected_cli', 'controller_runtime', 'dependencies'].includes(String(item.rootClass)) || !['owner', 'acl', 'ace_shape', 'foreign_write'].includes(String(item.guard)) ||
@@ -573,6 +577,10 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
   }
   // Match the packaged Windows scenario exactly: root protection follows child creation.
   await protectWindowsTestDirectory(desktop.root);
+  // Reuse the PowerShell 7 installation already required by TEST ACL creation.
+  const programFiles = process.env.ProgramFiles;
+  assert(programFiles && path.win32.isAbsolute(programFiles));
+  const aclPowerShell = await realpath(path.win32.join(programFiles, 'PowerShell', '7', 'pwsh.exe'));
   const moduleUrl = pathToFileURL(
     path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunControl.ts')
   ).href;
@@ -678,6 +686,7 @@ process.exit(exitCode);`;
       cwd: sdk,
       env: {
         ...desktop.env,
+        OPENCODE_TEST_ACL_POWERSHELL: aclPowerShell,
         OPENROUTER_API_KEY: 'TEST-noncredential',
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpEntry,
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpNode,

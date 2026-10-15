@@ -78,6 +78,43 @@ jobs:
         if: ${{ !inputs.provider_only }}
         with:
           bun-version: '1.3.11'
+      - name: Observe three shared tool roots before native compilation
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $found = $false
+          try {
+          $current = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          function Principal($sid) {
+            if ($sid -eq $current) { return 'current_user' }
+            switch ($sid) {
+              'S-1-5-18' { 'local_system'; break }; 'S-1-5-32-544' { 'administrators'; break }
+              'S-1-5-32-545' { 'builtin_users'; break }; 'S-1-5-11' { 'authenticated_users'; break }
+              'S-1-1-0' { 'everyone'; break }; 'S-1-3-0' { 'creator_owner'; break }; 'S-1-3-1' { 'creator_group'; break }
+              'S-1-15-2-1' { 'all_application_packages'; break }; default { if ($sid.StartsWith('S-1-15-2-')) { 'app_package' } else { 'other' } }
+            }
+          }
+          $roots = @(@{kind='sdk'; path=(Resolve-Path .test-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path (Get-Command node).Source)})
+          :roots foreach ($root in $roots) {
+            $sections = [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access
+            $acl = [IO.FileSystemAclExtensions]::GetAccessControl([IO.DirectoryInfo]::new($root.path), $sections)
+            $descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm($sections))
+            foreach ($ace in $descriptor.DiscretionaryAcl) {
+              if ($ace -isnot [Security.AccessControl.CommonAce] -or $ace.AceType.ToString() -ne 'AccessAllowed') { continue }
+              $principal = Principal $ace.SecurityIdentifier.Value
+              [long]$mask = [long]$ace.AccessMask -band 4294967295L
+              $flags = [int]$ace.AceFlags
+              $creator = $principal -eq 'creator_owner' -and ($flags -band 8) -ne 0 -and ($flags -band 3) -ne 0 -and ($flags -band (-bnot 27)) -eq 0
+              if (($mask -band (-bnot 2685534377L)) -eq 0 -or $creator -or $principal -in @('current_user','local_system','administrators')) { continue }
+              $mutation = @{writeData=($mask -band 2) -ne 0; appendData=($mask -band 4) -ne 0; writeEA=($mask -band 16) -ne 0; writeAttributes=($mask -band 256) -ne 0; deleteChild=($mask -band 64) -ne 0; delete=($mask -band 65536) -ne 0; writeDac=($mask -band 262144) -ne 0; writeOwner=($mask -band 524288) -ne 0; genericWrite=($mask -band 1073741824) -ne 0; genericAll=($mask -band 268435456) -ne 0; otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}
+              @{observation='three_roots_acl_shape_only'; foreignWrite=$true; rootClass=$root.kind; principalClass=$principal; inheritOnly=($flags -band 8) -ne 0; mutation=$mutation} | ConvertTo-Json -Depth 4 -Compress | Write-Output
+              $found = $true; break roots
+            }
+          }
+          if (!$found) { @{observation='three_roots_only'; foreignWrite=$false} | ConvertTo-Json -Compress | Write-Output }
+          } catch { @{observation='unavailable'; reason='acl_measurement_failed'} | ConvertTo-Json -Compress | Write-Output }
+          if ($found) { throw 'native_readonly_acl_shape_rejected' }
       - name: Compare published Windows V1 provider behavior without inference
         if: ${{ inputs.provider_only }}
         shell: pwsh
