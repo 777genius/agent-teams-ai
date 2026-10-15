@@ -151,59 +151,77 @@ async function verifyModelFreeReadiness(
 // Raw ACL shape observation only; never effective-access or native authority.
 async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (location: string, child: 'execution') => Promise<{ root: string }>): Promise<unknown> {
   const deadline = Date.now() + 8000;
+  let phase = 'plan';
+  const unavailable = (reason: string) => ({ observation: 'unavailable', phase, reason });
   const work = async () => {
     const row = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
     const p = await import('node:path'), fs = await import('node:fs/promises'), { pathToFileURL } = await import('node:url'), { execFile } = await import('node:child_process');
     const plan = row(planValue), source = row(plan.source), members = plan.members;
-    if (typeof source.entryPath !== 'string' || !Array.isArray(members) || members.length !== 1) return { observation: 'unavailable' };
+    if (typeof source.entryPath !== 'string' || !Array.isArray(members) || members.length !== 1) return unavailable('plan_invalid');
     const native = row(row(members[0]).native), files = row(native.graph).files, bun = row(native.bun);
-    if (!Array.isArray(files) || files.length > 65536 || typeof bun.path !== 'string' || typeof native.executablePath !== 'string') return { observation: 'unavailable' };
+    if (!Array.isArray(files) || files.length > 65536 || typeof bun.path !== 'string' || typeof native.executablePath !== 'string') return unavailable('plan_invalid');
+    phase = 'delivery';
     const delivery = await resolveDelivery(pathToFileURL(source.entryPath).href, 'execution');
     const dirs = files.map((f) => { const name = row(f).path; if (typeof name !== 'string') throw new Error('TEST ACL graph invalid'); return p.dirname(name); });
     const candidates = new Set<string>(), mounts: string[] = [];
     for (const start of new Set([delivery.root, ...dirs])) for (let dir = start; ; dir = p.dirname(dir)) {
       candidates.add(p.join(dir, 'node_modules')); if (p.dirname(dir) === dir) break;
     }
-    for (const target of candidates) {
-      if (Date.now() >= deadline) return { observation: 'unavailable' };
-      const resolved = await fs.realpath(target).catch((e: unknown) => { if (row(e).code === 'ENOENT') return null; throw e; });
-      if (resolved === null) continue;
-      if (resolved !== target || !(await fs.lstat(resolved)).isDirectory()) return { observation: 'unavailable' };
-      mounts.push(resolved);
+    phase = 'mounts';
+    const targets = [...candidates];
+    for (let index = 0; index < targets.length; index += 32) {
+      if (Date.now() >= deadline) return unavailable('deadline');
+      const results = await Promise.all(targets.slice(index, index + 32).map(async (target) => {
+        const resolved = await fs.realpath(target).catch((e: unknown) => { if (row(e).code === 'ENOENT') return null; throw e; });
+        return { target, resolved, directory: resolved === null || (await fs.lstat(resolved)).isDirectory() };
+      }));
+      for (const result of results) {
+        if (result.resolved === null) continue;
+        if (result.resolved !== result.target || !result.directory) return unavailable('mount_alias_or_type');
+        mounts.push(result.resolved);
+      }
     }
     const bunRoot = p.dirname(bun.path), cliRoot = await fs.realpath(p.dirname(p.dirname(native.executablePath)));
     const inside = (a: string, b: string) => { const r = p.win32.relative(a, b); return r === '' || r !== '..' && !r.startsWith('..\\') && !p.win32.isAbsolute(r); };
+    phase = 'roots';
+    const rawRoots = [...new Set([delivery.root, bunRoot, cliRoot, ...dirs, ...mounts])];
+    for (let index = 0; index < rawRoots.length; index += 32) {
+      if (Date.now() >= deadline) return unavailable('deadline');
+      const results = await Promise.all(rawRoots.slice(index, index + 32).map(async (root) => await fs.realpath(root) === root));
+      if (results.some((same) => !same)) return unavailable('root_alias');
+    }
     const roots: string[] = [];
-    for (const root of new Set([delivery.root, bunRoot, cliRoot, ...dirs, ...mounts])) {
-      if (Date.now() >= deadline) return { observation: 'unavailable' };
-      if (await fs.realpath(root) !== root) return { observation: 'unavailable' };
+    for (const root of rawRoots) {
       if (roots.some((a) => inside(a, root))) continue;
       for (let i = roots.length - 1; i >= 0; i--) if (inside(root, roots[i]!)) roots.splice(i, 1);
       roots.push(root);
     }
-    if (roots.length > 4096) return { observation: 'unavailable' };
+    if (roots.length > 4096) return unavailable('root_budget');
     const taskNode = row(native.taskNode).path;
     const input = roots.map((root) => ({ path: root, rootClass: inside(root, delivery.root) ? 'sdk' : inside(root, bunRoot) ? 'bun' :
       inside(root, cliRoot) ? 'selected_cli' : typeof taskNode === 'string' && inside(root, taskNode) ? 'controller_runtime' : 'dependencies' }));
     const command = [
       "$ErrorActionPreference='Stop'; function Principal($sid) { if($sid -eq $current){return 'current_user'}; switch($sid){",
       "'S-1-5-18' {'local_system';break};'S-1-5-32-544' {'administrators';break};'S-1-5-32-545' {'builtin_users';break};'S-1-5-11' {'authenticated_users';break};'S-1-1-0' {'everyone';break};'S-1-3-0' {'creator_owner';break};'S-1-3-1' {'creator_group';break};'S-1-15-2-1' {'all_application_packages';break};default{if($sid.StartsWith('S-1-15-2-')){'app_package'}else{'other'}}}}",
-      "try{$current=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;$inputs=@([Console]::In.ReadToEnd()|ConvertFrom-Json);if($inputs.Count -gt 4096){throw 'budget'};$bad=@();foreach($r in $inputs){",
-      "$acl=Get-Acl -LiteralPath $r.path;$sd=[Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm(([Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access)));$owner=Principal $sd.Owner.Value;$guard=$null;$principal='other';$flags=0;[long]$mask=0;",
-      "if($owner -notin @('current_user','local_system','administrators')){$guard='owner'}elseif($null -eq $sd.DiscretionaryAcl){$guard='acl'}else{foreach($ace in $sd.DiscretionaryAcl){",
+      "try{$psPhase='principal';$current=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;$psPhase='input';$inputs=@([Console]::In.ReadToEnd()|ConvertFrom-Json);if($inputs.Count -gt 4096){throw 'budget'};$bad=@();foreach($r in $inputs){",
+      "$psPhase='acl_read';$acl=Get-Acl -LiteralPath $r.path;$psPhase='descriptor';$sd=[Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm(([Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access)));$owner=Principal $sd.Owner.Value;$guard=$null;$principal='other';$flags=0;[long]$mask=0;",
+      "if($owner -notin @('current_user','local_system','administrators')){$guard='owner'}elseif($null -eq $sd.DiscretionaryAcl){$guard='acl'}else{foreach($ace in $sd.DiscretionaryAcl){$psPhase='ace';",
       "if($ace -isnot [Security.AccessControl.CommonAce] -or $ace.AceType.ToString() -notin @('AccessAllowed','AccessDenied')){$guard='ace_shape';break};$principal=Principal $ace.SecurityIdentifier.Value;$flags=[int]$ace.AceFlags;$mask=[long]$ace.AccessMask -band 4294967295L;",
       "$creator=$principal -eq 'creator_owner' -and ($flags -band 8) -ne 0 -and ($flags -band 3) -ne 0 -and ($flags -band (-bnot 27)) -eq 0;",
       "if($ace.AceType.ToString() -eq 'AccessAllowed' -and ($mask -band (-bnot 2685534377L)) -ne 0 -and !$creator -and $principal -notin @('current_user','local_system','administrators')){$guard='foreign_write';break}}}",
-      "if($guard){$bad+=@{rootClass=$r.rootClass;guard=$guard;ownerClass=$owner;principalClass=$principal;inheritOnly=($flags -band 8) -ne 0;mutation=@{writeData=($mask -band 2) -ne 0;appendData=($mask -band 4) -ne 0;writeEA=($mask -band 16) -ne 0;writeAttributes=($mask -band 256) -ne 0;deleteChild=($mask -band 64) -ne 0;delete=($mask -band 65536) -ne 0;writeDac=($mask -band 262144) -ne 0;writeOwner=($mask -band 524288) -ne 0;genericWrite=($mask -band 1073741824) -ne 0;genericAll=($mask -band 268435456) -ne 0;otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}};if($bad.Count -eq 4){break}}};@{observation='raw_acl_shape_only';offenders=@($bad)}|ConvertTo-Json -Depth 5 -Compress}catch{'{\"observation\":\"unavailable\"}'}",
+      "if($guard){$bad+=@{rootClass=$r.rootClass;guard=$guard;ownerClass=$owner;principalClass=$principal;inheritOnly=($flags -band 8) -ne 0;mutation=@{writeData=($mask -band 2) -ne 0;appendData=($mask -band 4) -ne 0;writeEA=($mask -band 16) -ne 0;writeAttributes=($mask -band 256) -ne 0;deleteChild=($mask -band 64) -ne 0;delete=($mask -band 65536) -ne 0;writeDac=($mask -band 262144) -ne 0;writeOwner=($mask -band 524288) -ne 0;genericWrite=($mask -band 1073741824) -ne 0;genericAll=($mask -band 268435456) -ne 0;otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}};if($bad.Count -eq 4){break}}};@{observation='raw_acl_shape_only';offenders=@($bad)}|ConvertTo-Json -Depth 5 -Compress}catch{@{observation='unavailable';phase=$psPhase}|ConvertTo-Json -Compress}",
     ].join('\n');
-    if (Date.now() >= deadline) return { observation: 'unavailable' };
+    phase = 'powershell';
+    if (Date.now() >= deadline) return unavailable('deadline');
     const output = await new Promise<string>((resolve, reject) => {
       const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')],
         { timeout: Math.max(1, Math.min(5000, deadline - Date.now())), maxBuffer: 16384, windowsHide: true }, (e, stdout) => e ? reject(e) : resolve(stdout));
       child.stdin?.on('error', () => {}); child.stdin?.end(JSON.stringify(input));
     });
+    phase = 'response';
     const result = row(JSON.parse(output)), principals = ['current_user', 'local_system', 'administrators', 'builtin_users', 'authenticated_users', 'everyone', 'creator_owner', 'creator_group', 'all_application_packages', 'app_package', 'other'];
-    if (result.observation !== 'raw_acl_shape_only' || !Array.isArray(result.offenders) || result.offenders.length > 4) return { observation: 'unavailable' };
+    if (result.observation === 'unavailable') return { observation: 'unavailable', phase: 'powershell', reason: ['principal', 'input', 'acl_read', 'descriptor', 'ace'].find((value) => value === result.phase) ?? 'unclassified' };
+    if (result.observation !== 'raw_acl_shape_only' || !Array.isArray(result.offenders) || result.offenders.length > 4) return unavailable('response_invalid');
     const offenders = result.offenders.map((v) => {
       const item = row(v), mutation = row(item.mutation);
       if (!['sdk', 'bun', 'selected_cli', 'controller_runtime', 'dependencies'].includes(String(item.rootClass)) || !['owner', 'acl', 'ace_shape', 'foreign_write'].includes(String(item.guard)) ||
@@ -216,7 +234,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
     return { observation: 'raw_acl_shape_only', offenders };
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
-  try { return await Promise.race([work().catch(() => ({ observation: 'unavailable' })), new Promise((resolve) => { timer = setTimeout(() => resolve({ observation: 'unavailable' }), 8000); })]); }
+  try { return await Promise.race([work().catch(() => unavailable('observation_failed')), new Promise((resolve) => { timer = setTimeout(() => resolve(unavailable('deadline')), 8000); })]); }
   finally { clearTimeout(timer); }
 }
 
