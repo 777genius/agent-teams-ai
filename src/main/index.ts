@@ -3064,6 +3064,7 @@ async function shutdownServices(): Promise<void> {
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
+    openCodeLifecycleBridge?.prepareShutdownCleanup();
     await runShutdownStep('external connection admission drain', () =>
       externalAgentConnection?.closeAdmission()
     );

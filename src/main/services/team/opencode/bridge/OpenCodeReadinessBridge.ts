@@ -1,3 +1,4 @@
+import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { randomUUID } from 'crypto';
 
 import { openCodeReadinessArtifactKey } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
@@ -71,6 +72,7 @@ export interface OpenCodeLedgerBackfillPort {
 }
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
+  prepareShutdownCleanup?(currentBoundChildEnv: Readonly<Record<string, string>>): void;
   getRuntimeIdentity?(): Promise<string | null>;
   observeStartupCleanup?(
     requestId: string
@@ -124,6 +126,21 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     private readonly bridge: OpenCodeReadinessBridgeCommandExecutor,
     private readonly options: OpenCodeReadinessBridgeOptions = {}
   ) {}
+
+  prepareShutdownCleanup(): void {
+    if (!this.bridge.prepareShutdownCleanup) return;
+    let current: Record<string, string> = {};
+    try {
+      current = getDesktopMcpChildEnvironment();
+    } catch {
+      /* No current binding must clear any previously prepared cleanup. */
+    }
+    try {
+      this.bridge.prepareShutdownCleanup(current);
+    } catch {
+      /* Preparation never replaces the normal environment-provider refusal. */
+    }
+  }
 
   getRuntimeIdentity(): Promise<string | null> {
     return this.bridge.getRuntimeIdentity?.() ?? Promise.resolve(null);
