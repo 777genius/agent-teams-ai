@@ -105,11 +105,19 @@ jobs:
             $candidate = Get-Content runtime-candidate-evidence.json -Raw | ConvertFrom-Json
             if ($candidate.artifactId -ne 11944548354 -or $candidate.payloadArchiveSha256 -cne 'dc04840cf56451b91f32a15732c01dc673498bc56f566b4dd3a2b1c7af0adc2a' -or $candidate.binarySha256 -cne '7216c5f24ba57a5ead5a1418eecdbc93b11a0131ce59b32c63101139ff1ae41b') { throw '119 candidate pin changed' }
             Move-Item resources/runtime TEST-provider/runtime119
-            npm install --prefix TEST-provider/npm --no-audit --no-fund opencode-ai@1.18.31
+            npm install --global --prefix TEST-provider/npm --no-audit --no-fund opencode-ai@1.18.31
             if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
+            $npmLockPath = 'TEST-provider/npm/node_modules/.package-lock.json'
+            if (Test-Path $npmLockPath -PathType Leaf) {
+              $npmLock = Get-Content $npmLockPath -Raw | ConvertFrom-Json
+              $wrapper = $npmLock.packages.'node_modules/opencode-ai'
+              $native = @($npmLock.packages.PSObject.Properties | Where-Object { $_.Name -cin @('node_modules/opencode-windows-x64', 'node_modules/opencode-ai/node_modules/opencode-windows-x64') })
+              if ($wrapper.version -cne '1.18.31' -or $wrapper.integrity -cne 'sha512-J95feefeWwtIaw3irx76WjzWcgQXxmuHmDVphvs5ep9X30fBJ6T6bFhw50i9Kx50MG/xPn5w2pafXIfNtdry9w==') { throw 'Official npm wrapper integrity changed' }
+              if ($native.Count -ne 1 -or $native[0].Value.version -cne '1.18.31' -or $native[0].Value.integrity -cne 'sha512-1Za7uKeGLonNUkUIGHD7xfV5omi7ju/7z2WYfS5YvDLTr1iU/W1PPVHzHXiwiyV4gMxsWGwHHLubWdH99D7pSA==') { throw 'Official npm native integrity changed' }
+            }
             $baseline = (Resolve-Path TEST-provider/runtime118/claude-multimodel.exe).Path
             $candidateBinary = (Resolve-Path TEST-provider/runtime119/claude-multimodel.exe).Path
-            $official = (Resolve-Path TEST-provider/npm/node_modules/.bin/opencode.cmd).Path
+            $official = (Resolve-Path TEST-provider/npm/opencode.cmd).Path
             $receipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-v1-provider-comparison.json'
             node .test-sdk/scripts/smoke/windows-runtime-opencode-provider-json.mjs --actual-provider-compare $baseline $candidateBinary $official $receipt (Resolve-Path scripts/e2e/opencode-native-test-auth.ts).Path
             if ($LASTEXITCODE -ne 0) { throw 'Real V1 provider comparison failed; inspect finite receipt' }
