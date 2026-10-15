@@ -391,7 +391,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -413,13 +413,37 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable';
+        let kind = 'unavailable', errorLine: string | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
             const message = line.trimStart();
             if (!/^(?:error|Error): /.test(message)) continue;
             kind = 'bun_error';
+            if (errorLine === undefined) {
+              // TEST-only text: sanitize the complete bounded line before truncation.
+              let clean = message.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
+              if (clean.includes('\x1b')) clean = 'error: [terminal control text redacted]';
+              clean = clean.replace(/[^\x20-\x7e]/g, '');
+              if (/\b(?:authorization|bearer|password|token|secret|api[_-]?key|cookie)\b/i.test(clean)) clean = 'error: [credential-labelled text redacted]';
+              else {
+                let quoted = '', offset = 0;
+                while (offset < clean.length) {
+                  const quote = clean[offset]!;
+                  if (quote !== '"' && quote !== "'" && quote !== '`') { quoted += quote; offset++; continue; }
+                  quoted += '[value]'; offset++;
+                  while (offset < clean.length) {
+                    if (clean[offset] === '\\') { offset += 2; continue; }
+                    if (clean[offset++] === quote) break;
+                  }
+                }
+                clean = quoted.replace(/(?:https?:\/\/|[A-Za-z]:[\\/]|\\\\|\.{1,2}[\\/]|\/).*$/g, '[path]')
+                  .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\b/g, '[email]')
+                  .replace(/[A-Za-z0-9_+=/-]{20,}/g, '[value]');
+              }
+              errorLine = clean.slice(0, 256);
+            }
+
             const rules = [['Unable to resolve entry point', 'entry_resolution'], ['Cannot find module', 'module_resolution'],
               ['execution_containment_identity_mismatch', 'child_identity'], ['execution_containment_pipe_denied', 'child_pipe'],
               ['EACCES', 'access_denied'], ['EPERM', 'access_denied'], ['Access is denied', 'access_denied'],
@@ -428,7 +452,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             if (matched) { kind = matched[1]; break; }
           }
         }
-        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind };
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }) };
       }
       for (let index = 0; index < parents.length; index++) {
         const parent = parents[index]!;
