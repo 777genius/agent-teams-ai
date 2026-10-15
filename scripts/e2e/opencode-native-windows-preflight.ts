@@ -154,6 +154,51 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
     const codes = ['mutable_readback', 'run_operation_timeout', 'run_not_active', 'run_control_disconnected', 'run_control_timeout',
       'run_owner_stale', 'run_process_unknown', 'execution_owner_unknown', 'cleanup_unknown', 'execution_timeout',
       'terminal_cut_unknown', 'session_selection_changed', 'execution_profile_changed', 'execution_selected_auth_changed'];
+    // Exact closed producer categories; do not classify arbitrary error text here.
+    const providerCodes = ['provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
+  'provider_catalog_scope_changed', 'provider_catalog_location_changed', 'provider_integration_changed', 'provider_credential_identity_changed',
+  'provider_owned_connection_unknown', 'provider_active_connection_changed', 'provider_auth_publication_changed', 'provider_auth_publication_unknown',
+  'provider_selected_model_missing', 'provider_original_connect_unknown', 'provider_original_execution_pending', 'provider_execution_target_changed',
+  'provider_saved_proof_changed', 'provider_saved_proof_unqualified', 'provider_physical_cleanup_unknown', 'provider_mutation_unknown',
+  'provider_response_invalid', 'provider_authority_changed', 'provider_directory_changed', 'provider_rollback_peer_changed',
+  'provider_rollback_publication_changed', 'provider_rollback_unknown', 'provider_rollback_publication_unknown',
+  'run_control_timeout', 'run_control_disconnected', 'run_control_changed', 'run_control_foreign', 'run_control_invalid',
+  'run_control_frame_too_large', 'run_owner_stale', 'run_process_unknown', 'run_process_changed',
+  'run_deadline_expired', 'run_readiness_changed', 'run_readiness_unknown', 'run_operation_unknown',
+  'execution_selected_auth_required', 'execution_selected_auth_unbound', 'execution_selected_auth_changed',
+  'execution_selected_auth_missing', 'execution_selected_auth_unsupported', 'execution_selected_auth_location_changed',
+  'execution_selected_auth_provider_unknown', 'execution_selected_auth_existing_or_unsupported',
+  'execution_selected_auth_readback_unknown', 'execution_selected_auth_profile_changed',
+  'execution_selected_oauth_readback_unknown', 'execution_selected_oauth_recovery_required', 'execution_selected_oauth_windows_unqualified',
+  'execution_selected_oauth_provider_unknown', 'execution_selected_oauth_integration_unknown',
+  'execution_selected_oauth_connection_unknown', 'execution_selected_oauth_model_unknown',
+  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_invalid_response', 'execution_identity_mismatch',
+  'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing',
+  'execution_timeout', 'execution_owner_unknown', 'cleanup_unknown', 'selection_mismatch', 'authority_mismatch',
+  'graph_mismatch', 'identity_mismatch', 'unqualified_version', 'invalid_response', 'invalid_model',
+  'http_failure', 'transport_failure', 'media_type', 'deadline', 'authority_or_deadline', 'disposed', 'provider_operation_unknown',
+  'execution_cancelled', 'execution_containment_dll_identity', 'execution_containment_filesystem_denied',
+  'execution_containment_helper_closed', 'execution_containment_helper_failed', 'execution_containment_helper_identity',
+  'execution_containment_launcher_denied', 'execution_containment_pipe_denied', 'execution_containment_profile_denied',
+  'execution_containment_unavailable', 'execution_native_command_unknown', 'execution_native_stdio_owner_unknown',
+  'execution_native_timeout', 'execution_native_unknown', 'execution_owner_alias',
+  'execution_owner_archive_identity_mismatch', 'execution_owner_archive_path_mismatch', 'execution_owner_archive_reopen_identity_mismatch',
+  'execution_owner_archive_unknown', 'execution_owner_local_volume_required', 'execution_owner_metadata_budget',
+  'execution_owner_metadata_changed', 'execution_owner_metadata_invalid', 'execution_owner_metadata_missing',
+  'execution_owner_metadata_purpose_invalid', 'execution_owner_not_private', 'execution_owner_ntfs_required',
+  'execution_owner_path_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
+  'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
+    const nativeStages = [
+  'owner_archive_nt_rename', 'owner_canonical_open', 'owner_directory_create',
+  'owner_directory_open', 'owner_identity_links', 'owner_identity_reparse',
+  'owner_identity_type', 'owner_metadata_cleanup', 'owner_metadata_open',
+  'owner_metadata_publish', 'owner_parent_duplicate', 'owner_prepared_create',
+  'owner_verification_open', 'private_acl_foreign_allow', 'private_acl_owner',
+  'private_acl_owner_run_data_root', 'private_acl_owner_run_leaf', 'private_acl_owner_run_opencode',
+  'private_acl_owner_run_runs', 'private_acl_owner_run_v2', 'private_image_open',
+  'private_image_protected_dacl', 'private_owner_acquire', 'private_owner_cohort',
+  'private_owner_controller_tasks', 'private_owner_controller_teams', 'private_owner_discover_selection',
+  'private_owner_reserve_selection', 'private_owner_selected_selection'];
     const members = (v: unknown) => Array.isArray(v) ? v.slice(0, 2).map((item) => {
       const member = row(item), bootstrap = row(member.bootstrap), cleanup = row(member.cleanup);
       return { memberMatches: member.memberId === 'probe', state: one(member.state, ['accepted', 'unknown', 'rejected']),
@@ -169,11 +214,18 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
       const listing = await fs.opendir(diagnosticRoot);
       try { for await (const entry of listing) {
         if (!/^[a-f0-9-]{36}\.json$/.test(entry.name)) continue;
-        const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data);
+        const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data), native = row(data.native);
+        const nativeStage = nativeStages.find((stage) => stage === native.stage);
+        const nativeFailure = nativeStage && typeof native.nativeCode === 'number' && Number.isSafeInteger(native.nativeCode) &&
+          native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization']),
-          category: one(data.category, codes), startupStage: one(row(data.startup).stage,
+          category: one(data.category, providerCodes), native: nativeFailure, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
             ['waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
-          initializationPhase: one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']) });
+          initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
+          acquisitionLastPhase: data.acquisition === undefined ? null : one(
+            row(Array.isArray(row(data.acquisition).history) ? (row(data.acquisition).history as unknown[]).at(-1) : null).phase,
+            ['preparing', 'delivery-resolved', 'profile-validated', 'native-validated', 'graph-validated', 'resolution-prepared',
+              'controller-prepared', 'prepared', 'mapping', 'child-bound', 'start-sent', 'ready', 'catalog-ready', 'auth-ready', 'selection-ready']) });
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
