@@ -112,10 +112,11 @@ describe('large editor files on disk', () => {
     await fs.writeFile(target, 'original');
     await fs.writeFile(replacement, 'replacement');
     await fs.symlink(target, link);
+    const canonicalTarget = await fs.realpath(target);
     const actualOpen = fs.open;
     vi.spyOn(fs, 'open').mockImplementation(async (...args: Parameters<typeof fs.open>) => {
       const handle = await actualOpen(...args);
-      if (args[0] === target) { await fs.unlink(link); await fs.symlink(replacement, link); }
+      if (args[0] === canonicalTarget) { await fs.unlink(link); await fs.symlink(replacement, link); }
       return handle;
     });
     await expect(service.readFile(root, link)).rejects.toThrow('Path changed during read');

@@ -26,6 +26,7 @@ import { ThoughtBodyContent } from './ThoughtBodyContent';
 
 import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
 import type { MessageActionOwner, MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 function formatTime(timestamp: string): string {
@@ -36,9 +37,10 @@ function formatTime(timestamp: string): string {
 
 interface DialogThoughtsContentProps {
   group: LeadThoughtGroup;
+  teamName: string;
   members?: ResolvedTeamMember[];
   memberColor?: string;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onReply?: (message: InboxMessage) => void;
   memberColorMap?: Map<string, string>;
   teamNames?: string[];
@@ -48,6 +50,7 @@ interface DialogThoughtsContentProps {
 
 const DialogThoughtsContent = ({
   group,
+  teamName,
   members,
   memberColor,
   onTaskIdClick,
@@ -101,6 +104,7 @@ const DialogThoughtsContent = ({
           <ThoughtBodyContent
             key={thought.messageId ?? idx}
             thought={thought}
+            teamName={teamName}
             showDivider={idx > 0}
             onTaskIdClick={onTaskIdClick}
             onReply={onReply}
@@ -128,7 +132,7 @@ interface MessageExpandDialogProps {
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onRestartTeam?: () => void;
   teamNames?: string[];
   teamColorByName?: ReadonlyMap<string, string>;
@@ -229,6 +233,7 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
           ) : displayItem?.type === 'lead-thoughts' ? (
             <DialogThoughtsContent
               group={displayItem.group}
+              teamName={displayTeamName}
               members={members}
               memberColor={thoughtMemberColor}
               onTaskIdClick={isLiveItem ? onTaskIdClick : undefined}

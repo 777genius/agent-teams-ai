@@ -636,19 +636,18 @@ export class TeamProvisioningPrepareCoordinator {
       }
     );
     const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(stdout);
-    const providerStatus = parsed.providers?.[providerId] ?? null;
-    const modelCatalog =
-      providerStatus?.modelCatalog?.providerId === providerId ? providerStatus.modelCatalog : null;
-    const defaultLaunchModel = modelCatalog?.defaultLaunchModel?.trim() || null;
+    const status = parsed.providers?.[providerId] ?? null;
+    const catalog = status?.modelCatalog?.providerId === providerId ? status.modelCatalog : null;
+    const resolved = status?.defaultModel?.trim() || catalog?.defaultLaunchModel?.trim() || null;
 
     if (providerId === 'anthropic') {
       return resolveAnthropicLaunchModel({
         limitContext,
-        availableLaunchModels: modelCatalog?.models.map((model) => model.launchModel) ?? [],
-        defaultLaunchModel,
+        availableLaunchModels: catalog?.models.map((model) => model.launchModel) ?? [],
+        defaultLaunchModel: resolved,
       });
     }
-    return defaultLaunchModel;
+    return resolved;
   }
 
   async materializeEffectiveTeamMemberSpecs(params: {

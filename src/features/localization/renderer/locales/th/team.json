@@ -1004,7 +1004,8 @@
       "cancel": "ยกเลิก",
       "delete": "ลบ",
       "markResolved": "ทำเครื่องหมายว่าแก้ไขแล้ว",
-      "save": "บันทึก"
+      "save": "บันทึก",
+      "openInTaskTab": "เปิดในแท็บแยกต่างหาก"
     },
     "attachments": {
       "commentAttachment": "ไฟล์แนบความคิดเห็น",

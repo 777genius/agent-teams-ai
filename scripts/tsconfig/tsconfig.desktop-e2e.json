@@ -15,7 +15,9 @@
     "../../scripts/e2e/team-prompt-management-desktop.ts",
     "../../src/types/**/*.d.ts",
     "../../scripts/e2e/external-agent-shared-root.ts",
-    "../../scripts/e2e/opencode-status-recovery/**/*.mts"
+    "../../scripts/e2e/opencode-status-recovery/**/*.mts",
+    "../../scripts/e2e/task-detail-tabs-desktop.ts",
+    "../../scripts/e2e/task-detail-tabs/**/*.ts"
   ],
   "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
 }

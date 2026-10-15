@@ -8,29 +8,9 @@
 import { getCodeFenceLanguage } from '@renderer/utils/buildSelectionAction';
 import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 
-// =============================================================================
-// Types
-// =============================================================================
+export type { InlineChip } from '@shared/types/inlineChip';
 
-export interface InlineChip {
-  id: string;
-  /** Absolute file path */
-  filePath: string;
-  /** Basename (e.g. "auth.ts") */
-  fileName: string;
-  /** 1-based start line, or null for file-level mentions */
-  fromLine: number | null;
-  /** 1-based end line, or null for file-level mentions */
-  toLine: number | null;
-  /** Selected source code text (empty for file mentions) */
-  codeText: string;
-  /** Language identifier (e.g. "typescript", "python") */
-  language: string;
-  /** Relative display path for file-level mentions */
-  displayPath?: string;
-  /** Whether this chip represents a folder (not a file) */
-  isFolder?: boolean;
-}
+import type { InlineChip } from '@shared/types/inlineChip';
 
 // =============================================================================
 // Constants

@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 
+import { taskDetailKey } from '@features/team-task-detail/core';
 import { markCommentsRead } from '@renderer/services/commentReadStorage';
 
 import { useViewportObserver } from './useViewportObserver';
 
+import type { TaskDetailIdentity } from '@features/team-task-detail/core';
+
 interface UseViewportCommentReadOptions {
-  teamName: string;
-  taskId: string;
+  identity: TaskDetailIdentity;
+  enabled: boolean;
+  isOriginCurrent: () => boolean;
   /**
    * Scrollable ancestor DOM element (e.g. DialogContent) used as IO root.
    * Pass the actual element (not a RefObject) so that the observer is
@@ -59,8 +63,9 @@ export function getVisibleCommentIdsFallback(
  * comments to be marked read when the newest was visible at the top.
  */
 export function useViewportCommentRead({
-  teamName,
-  taskId,
+  identity,
+  enabled,
+  isOriginCurrent,
   scrollContainer,
 }: UseViewportCommentReadOptions): {
   /** Ref callback factory. Call with the comment's unique ID. */
@@ -73,28 +78,33 @@ export function useViewportCommentRead({
 } {
   const seenIdsRef = useRef<Set<string>>(new Set());
   const commentElementsRef = useRef<Map<string, HTMLElement>>(new Map());
-  const teamNameRef = useRef(teamName);
-  const taskIdRef = useRef(taskId);
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
+  const identityKey = taskDetailKey(identity);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+  const isOriginCurrentRef = useRef(isOriginCurrent);
+  isOriginCurrentRef.current = isOriginCurrent;
 
-  useEffect(() => {
-    teamNameRef.current = teamName;
-    taskIdRef.current = taskId;
-  }, [teamName, taskId]);
-
-  // Reset tracked state when team/task changes
-  useEffect(() => {
+  const trackedIdentityKey = useRef(identityKey);
+  if (trackedIdentityKey.current !== identityKey) {
+    trackedIdentityKey.current = identityKey;
     seenIdsRef.current = new Set();
-    commentElementsRef.current.clear();
-  }, [teamName, taskId]);
+    commentElementsRef.current = new Map();
+  }
 
   const persistSeen = useCallback(() => {
-    if (seenIdsRef.current.size > 0) {
-      markCommentsRead(teamNameRef.current, taskIdRef.current, Array.from(seenIdsRef.current));
-    }
+    if (!enabledRef.current || !isOriginCurrentRef.current()) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    if (seenIdsRef.current.size === 0) return;
+    markCommentsRead(identityRef.current, Array.from(seenIdsRef.current));
   }, []);
 
   const handleVisibleChange = useCallback(
-    (visibleValues: string[]) => {
+    (visibleValues: string[], scopeKey: string | undefined) => {
+      if (scopeKey !== taskDetailKey(identityRef.current)) return;
+      if (!enabledRef.current || !isOriginCurrentRef.current()) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       let changed = false;
       for (const id of visibleValues) {
         if (id && !seenIdsRef.current.has(id)) {
@@ -112,14 +122,21 @@ export function useViewportCommentRead({
   const { registerElement } = useViewportObserver({
     root: scrollContainer,
     threshold: VISIBILITY_THRESHOLD,
+    enabled,
+    scopeKey: identityKey,
     onVisibleChange: handleVisibleChange,
   });
 
   const registerComment = useCallback(
     (commentId: string) => {
       const registerObservedElement = registerElement(commentId);
+      const capturedKey = identityKey;
 
       return (el: HTMLElement | null) => {
+        if (capturedKey !== trackedIdentityKey.current) {
+          if (!el) registerObservedElement(null);
+          return;
+        }
         if (el) {
           commentElementsRef.current.set(commentId, el);
         } else {
@@ -129,10 +146,12 @@ export function useViewportCommentRead({
         registerObservedElement(el);
       };
     },
-    [registerElement]
+    [identityKey, registerElement]
   );
 
   const flush = useCallback(() => {
+    if (!enabledRef.current || !isOriginCurrentRef.current()) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
     const fallbackVisibleIds = getVisibleCommentIdsFallback(
       scrollContainer,
       commentElementsRef.current

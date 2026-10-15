@@ -1004,7 +1004,8 @@
       "cancel": "ரத்துசெய்",
       "delete": "நீக்கு",
       "markResolved": "தீர்க்கப்பட்டதாகக் குறி",
-      "save": "சேமி"
+      "save": "சேமி",
+      "openInTaskTab": "தனி தாவலில் திறக்கவும்"
     },
     "attachments": {
       "commentAttachment": "கருத்து இணைப்பு",

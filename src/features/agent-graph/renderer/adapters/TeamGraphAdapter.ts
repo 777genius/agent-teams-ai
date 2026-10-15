@@ -19,7 +19,6 @@ import {
   type GraphParticle,
   TASK_COLUMN_MAX_VISIBLE_ROWS,
 } from '@claude-teams/agent-graph';
-import { getUnreadCount } from '@renderer/services/commentReadStorage';
 import {
   agentAvatarUrl,
   buildMemberAvatarMap,
@@ -64,6 +63,8 @@ import {
   resolveTaskGraphColumn,
   resolveTaskReviewer,
 } from '../../core/domain/taskGraphSemantics';
+
+import { getGraphTaskUnreadCount } from './taskCommentReadCount';
 
 import type {
   ActiveToolCall,
@@ -146,7 +147,8 @@ export class TeamGraphAdapter {
     layoutMode: GraphLayoutMode = DEFAULT_TEAM_GRAPH_LAYOUT_MODE,
     gridOwnerOrder?: readonly string[],
     activeTaskLogActivity?: Record<string, true>,
-    text?: TeamGraphAdapterText
+    text?: TeamGraphAdapterText,
+    commentReadContextId?: string
   ): GraphDataPort {
     if (teamData?.teamName !== teamName) {
       return TeamGraphAdapter.#emptyResult(teamName);
@@ -233,7 +235,8 @@ export class TeamGraphAdapter {
       leadId,
       leadName,
       activeTaskLogActivity,
-      text
+      text,
+      commentReadContextId
     );
     this.#buildProcessNodes(nodes, edges, teamData, teamName, memberNodeIdByAlias);
     this.#attachActivityFeeds(nodes, teamData, teamName, leadId, leadName);
@@ -681,7 +684,8 @@ export class TeamGraphAdapter {
     leadId?: string,
     leadName?: string,
     activeTaskLogActivity?: Record<string, true>,
-    text?: TeamGraphAdapterText
+    text?: TeamGraphAdapterText,
+    commentReadContextId?: string
   ): void {
     const taskStateById = new Map<
       string,
@@ -782,15 +786,6 @@ export class TeamGraphAdapter {
         : undefined;
 
       const totalCommentCount = task.comments?.length ?? 0;
-      const unreadCommentCount = commentReadState
-        ? getUnreadCount(
-            commentReadState as Parameters<typeof getUnreadCount>[0],
-            teamName,
-            task.id,
-            task.comments ?? []
-          )
-        : 0;
-
       rawTaskNodes.push({
         id: taskId,
         kind: 'task',
@@ -813,7 +808,12 @@ export class TeamGraphAdapter {
         blockedByDisplayIds,
         blocksDisplayIds,
         totalCommentCount: totalCommentCount > 0 ? totalCommentCount : undefined,
-        unreadCommentCount: unreadCommentCount > 0 ? unreadCommentCount : undefined,
+        unreadCommentCount: getGraphTaskUnreadCount(
+          commentReadState,
+          commentReadContextId,
+          teamName,
+          task
+        ),
         hasLiveTaskLogs: activeTaskLogActivity?.[task.id] === true ? true : undefined,
         domainRef: { kind: 'task', teamName, taskId: task.id },
       });

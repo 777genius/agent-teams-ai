@@ -84,6 +84,7 @@ describe('LeadThoughtsGroup', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -227,6 +228,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           memberColor: 'green',
           collapseMode: 'managed',
@@ -267,14 +269,23 @@ System-level bootstrap rules:
   it('reports only the concrete visible thought and observes a newly prepended thought independently', async () => {
     const observerCallbacks: IntersectionObserverCallback[] = [];
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({
-      x: 0, y: 0, width: 100, height: 100, top: 0, right: 100, bottom: 100, left: 0,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      left: 0,
       toJSON: () => ({}),
     }));
     vi.stubGlobal(
       'IntersectionObserver',
       class {
         constructor(callback: IntersectionObserverCallback) {
-          observerCallbacks.push((entries) => callback(entries, this as unknown as IntersectionObserver));
+          observerCallbacks.push((entries) =>
+            callback(entries, this as unknown as IntersectionObserver)
+          );
         }
         observe = vi.fn();
         disconnect = vi.fn();
@@ -291,6 +302,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [newer, older] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -302,7 +314,12 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
+        [
+          {
+            isIntersecting: true,
+            intersectionRect: { width: 100, height: 100 },
+          } as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
     });
@@ -312,6 +329,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [newest, newer, older] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -323,7 +341,12 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
+        [
+          {
+            isIntersecting: true,
+            intersectionRect: { width: 100, height: 100 },
+          } as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
     });
@@ -355,6 +378,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -392,6 +416,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -429,6 +454,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -462,6 +488,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: true,
@@ -500,6 +527,7 @@ System-level bootstrap rules:
     await act(async () => {
       root.render(
         React.createElement(LeadThoughtsGroupRow, {
+          teamName: 'demo',
           group: { type: 'lead-thoughts', thoughts: [thought] },
           collapseMode: 'managed',
           isCollapsed: false,
@@ -510,12 +538,61 @@ System-level bootstrap rules:
     });
 
     expect(host.textContent).toContain('lead');
-    expect(
-      [...host.querySelectorAll('span')].map((node) => node.textContent)
-    ).toContain('lead');
-    expect(
-      [...host.querySelectorAll('span')].some((node) => node.textContent === 'max')
-    ).toBe(false);
+    expect([...host.querySelectorAll('span')].map((node) => node.textContent)).toContain('lead');
+    expect([...host.querySelectorAll('span')].some((node) => node.textContent === 'max')).toBe(
+      false
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps periodic live-state work only while the lead activity can be live', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-28T18:30:00.000Z'));
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const thought = makeLeadSessionMsg('Working.', {
+      messageId: 'thought-live-clock',
+      leadSessionId: 'lead-session-live-clock',
+    });
+    const renderRow = async (canBeLive: boolean, isTeamAlive: boolean): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(LeadThoughtsGroupRow, {
+            teamName: 'demo',
+            group: { type: 'lead-thoughts', thoughts: [thought] },
+            collapseMode: 'managed',
+            isCollapsed: false,
+            canToggleCollapse: true,
+            canBeLive,
+            isTeamAlive,
+            leadActivity: 'idle',
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await renderRow(false, true);
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+
+    await renderRow(true, true);
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(host.querySelector('.animate-ping')).not.toBeNull();
+    await act(async () => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(host.querySelector('.animate-ping')).toBeNull();
+
+    await renderRow(true, false);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

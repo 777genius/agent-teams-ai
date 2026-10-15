@@ -1004,7 +1004,8 @@
       "cancel": "বাতিল",
       "delete": "মুছে ফেলুন",
       "markResolved": "চিহ্ন সুসংগত করা হবে",
-      "save": "সংরক্ষণ"
+      "save": "সংরক্ষণ",
+      "openInTaskTab": "পৃথক ট্যাবে খুলুন"
     },
     "attachments": {
       "commentAttachment": "অ্যাটাচমেন্ট",

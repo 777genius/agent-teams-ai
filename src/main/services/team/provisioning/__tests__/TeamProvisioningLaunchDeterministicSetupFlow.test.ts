@@ -196,7 +196,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
   it('prepares launch identity, member args, auth cleanup, and synthetic request', async () => {
     const ports = createPorts();
 
-    const result = await prepareDeterministicLaunchSetup(request, ports);
+    const result = await prepareDeterministicLaunchSetup({ ...request, limitContext: true }, ports);
 
     expect(result.kind).toBe('prepared');
     if (result.kind !== 'prepared') {
@@ -230,6 +230,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       BASE_ENV: '1',
       CODEX_TURN_SETTLED: '1',
       CLAUDE_CODE_BOOTSTRAP_RUN_ID: result.runId,
+      CLAUDE_CODE_DISABLE_1M_CONTEXT: '1',
     });
     expect(result.shellEnv.ANTHROPIC_API_KEY).toBeUndefined();
     expect(result.shellEnv.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
@@ -261,7 +262,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
       expect.objectContaining({
         claudePath: '/usr/local/bin/claude',
         cwd: '/tmp',
-        request,
+        request: { ...request, limitContext: true },
         effectiveMembers: [
           expect.objectContaining({ name: 'Planner', providerId: 'codex', model: 'gpt-5' }),
         ],

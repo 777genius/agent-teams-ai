@@ -1004,7 +1004,8 @@
       "cancel": "రద్దు చేయి",
       "delete": "తొలగించు",
       "markResolved": "పరిష్కరించబడినట్లుగా గుర్తించు",
-      "save": "సేవ్ చేయి"
+      "save": "సేవ్ చేయి",
+      "openInTaskTab": "వేరే ట్యాబ్‌లో తెరవండి"
     },
     "attachments": {
       "commentAttachment": "వ్యాఖ్య అటాచ్‌మెంట్",

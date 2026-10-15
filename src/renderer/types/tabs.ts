@@ -99,6 +99,12 @@ export interface Tab {
   /** Team name (required when type === 'team'; optional for graph/token-usage deep links) */
   teamName?: string;
 
+  /** Discriminator for a full task-detail surface hosted by an otherwise rollback-compatible team tab. */
+  taskDetail?: {
+    contextId: string;
+    taskId: string;
+  };
+
   /** Display name for the tab (max 50 chars) */
   label: string;
 
@@ -119,6 +125,14 @@ export interface Tab {
 
   /** Whether the Context panel is shown (per-tab UI state) */
   showContextPanel?: boolean;
+}
+
+export function isTaskDetailTab(tab: Tab): boolean {
+  return tab.type === 'team' && Boolean(tab.taskDetail);
+}
+
+export function isOrdinaryTeamTab(tab: Tab): boolean {
+  return tab.type === 'team' && !tab.taskDetail;
 }
 
 /**

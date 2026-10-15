@@ -87,7 +87,7 @@ function buildTaskSuggestions(
       currentTeamMembers.length > 0 ? currentTeamMembers : (currentTeamSummary?.members ?? []);
     for (const task of currentTeamTasks) {
       if (!isVisibleTask(task)) continue;
-      seenTaskIds.add(task.id);
+      seenTaskIds.add(`${currentTeamName}\u0000${task.id}`);
       tasks.push({
         task,
         teamName: currentTeamName,
@@ -99,7 +99,7 @@ function buildTaskSuggestions(
     }
   }
   for (const task of globalTasks) {
-    if (!isVisibleTask(task) || seenTaskIds.has(task.id)) continue;
+    if (!isVisibleTask(task) || seenTaskIds.has(`${task.teamName}\u0000${task.id}`)) continue;
     const teamSummary = teamByName[task.teamName];
     tasks.push({
       task,
