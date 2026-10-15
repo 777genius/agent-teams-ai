@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { type Fixture } from './runtime.ts';
-import { el, label, selectors, taskRow, type UI } from './ui.ts';
+import { el, label, selectors, taskKeyData, taskRow, type UI } from './ui.ts';
 import type { Snapshot } from '../../../src/features/task-folders/core/domain/folders.ts';
 import type { GlobalTask, TaskComment } from '../../../src/shared/types';
 
@@ -33,6 +33,7 @@ interface FilterSelection {
 const filterContentTestId = (scope: CardScope) => `${scope}-task-view-filters-content`;
 const sortContentTestId = (scope: CardScope) => `${scope}-task-view-sort-content`;
 const panelRoot = (scope: CardScope) => (scope === 'tree' ? selectors.panel : selectors.sidebar);
+const FILTER_TEAM = 'task-folders-test-filter-team';
 const taskKeyExpression = (team: string, id: string) =>
   JSON.stringify(JSON.stringify([team, id]));
 const cardExpression = (scope: CardScope, team: string, id: string) =>
@@ -51,6 +52,134 @@ const fakeComment = (id: string): TaskComment => ({
   type: 'regular',
 });
 
+function waitCardArchiveStateInBrowser(
+  rootSelector: string,
+  cardSelector: string,
+  taskKey: string,
+  archived: boolean
+): boolean {
+  const root = document.querySelector(rootSelector);
+  const card = Array.from(root?.querySelectorAll(cardSelector) ?? []).find(
+    (element) => element.getAttribute('data-task-key') === taskKey
+  );
+  if (!card) return false;
+  const style = window.getComputedStyle(card);
+  return archived
+    ? card.classList.contains('opacity-60') && !!style && Number(style.opacity) < 1
+    : !card.classList.contains('opacity-60') && !!style && Number(style.opacity) >= 1;
+}
+
+function restoreTaskPreferencesInBrowser(values: Record<string, string | null>): void {
+  for (const [key, value] of Object.entries(values)) {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+    window.dispatchEvent(new StorageEvent('storage', { key }));
+  }
+}
+
+function waitLoadedTaskDetailInBrowser(
+  subject: string,
+  taskLabel: string,
+  description: string
+): boolean {
+  const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
+  if (dialogs.length !== 1) return false;
+  const dialog = dialogs[0];
+  if (dialog.querySelector('[role="alert"],[role="status"]')) return false;
+  const heading = dialog.querySelector('h2')?.textContent?.trim();
+  const descriptionId = dialog.getAttribute('aria-describedby');
+  const descriptionElement = descriptionId
+    ? Array.from(dialog.querySelectorAll('[id]')).find((element) => element.id === descriptionId)
+    : null;
+  const leaves = Array.from(dialog.querySelectorAll('*'))
+    .filter((element) => element.childElementCount === 0)
+    .map((element) => element.textContent?.trim());
+  return (
+    heading === subject &&
+    leaves.includes(taskLabel) &&
+    descriptionElement?.textContent?.trim() === description
+  );
+}
+
+const WAIT_CARD_ARCHIVE_STATE = waitCardArchiveStateInBrowser.toString();
+const RESTORE_TASK_PREFERENCES = restoreTaskPreferencesInBrowser.toString();
+const WAIT_LOADED_TASK_DETAIL = waitLoadedTaskDetailInBrowser.toString();
+const FRAME_SHARED_CARDS = `
+  async function frameSharedCardsInBrowser(
+    treeRoot,
+    treeCardSelector,
+    sidebarRoot,
+    sidebarCardSelector,
+    taskKey,
+    requiredFields
+  ) {
+    const find = (rootSelector, cardSelector) =>
+      Array.from(document.querySelector(rootSelector)?.querySelectorAll(cardSelector) ?? []).find(
+        (element) => element.getAttribute('data-task-key') === taskKey
+      );
+    const visible = (element) => {
+      const rect = element.getBoundingClientRect();
+      return (
+        element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= innerHeight &&
+        rect.right <= innerWidth
+      );
+    };
+    const ready = (cards) =>
+      cards.every((card) => {
+        const textReady = Object.entries(requiredFields).every(([field, expected]) => {
+          const element = card.querySelector('[data-task-card-field="' + field + '"]');
+          return !!element && visible(element) && element.textContent?.trim() === expected;
+        });
+        const status = card.querySelector('[data-task-card-field="status"]');
+        const statusReady =
+          !!status &&
+          visible(status) &&
+          !!(
+            status.getAttribute('data-task-card-value')?.trim() ||
+            status.getAttribute('aria-label')?.trim()
+          );
+        const markerReady = ['needsFix', 'unread'].every((field) => {
+          const element = card.querySelector('[data-task-card-field="' + field + '"]');
+          if (!element) return true;
+          const rect = element.getBoundingClientRect();
+          return (
+            visible(element) &&
+            !!(
+              element.getAttribute('data-task-card-value')?.trim() ||
+              element.getAttribute('aria-label')?.trim() ||
+              element.textContent?.trim() ||
+              (rect.width > 0 && rect.height > 0)
+            )
+          );
+        });
+        return textReady && statusReady && markerReady;
+      });
+
+    for (let frame = 0; frame < 8; frame++) {
+      const cards = [find(treeRoot, treeCardSelector), find(sidebarRoot, sidebarCardSelector)];
+      if (cards.some((card) => !card)) {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        continue;
+      }
+      cards.forEach((card) => card.scrollIntoView({ block: 'center' }));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const reacquired = [find(treeRoot, treeCardSelector), find(sidebarRoot, sidebarCardSelector)];
+      if (
+        reacquired.every((card) => !!card) &&
+        ready(reacquired) &&
+        reacquired.every((card) => visible(card))
+      )
+        return true;
+    }
+    return false;
+  }
+`.trim();
+
 const fakeTask = (
   id: string,
   fields: Partial<GlobalTask> & Pick<GlobalTask, 'status'>
@@ -58,7 +187,7 @@ const fakeTask = (
   id,
   subject: `TEST filter ${id}`,
   description: 'Disposable filter-only task',
-  teamName: 'task-folders-TEST-filter-team',
+  teamName: FILTER_TEAM,
   teamDisplayName: 'TEST filter team',
   owner: 'filter-owner',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -119,10 +248,34 @@ async function waitCardArchiveState(
   id: string,
   archived: boolean
 ) {
-  const card = cardExpression(scope, team, id);
-  await ui.wait(
-    `(() => {const card=${card};if(!card)return false;const style=window.getComputedStyle(card);return ${archived ? "card.classList.contains('opacity-60') && !!style && Number(style.opacity)<1" : "!card.classList.contains('opacity-60') && !!style && Number(style.opacity)>=1"};})()`,
+  await ui.waitFunction(
+    WAIT_CARD_ARCHIVE_STATE,
+    [
+      panelRoot(scope),
+      `[data-testid="${scope}-task-card"]`,
+      taskKeyData(team, id),
+      archived,
+    ],
     `${scope} shared card ${id} ${archived ? 'archived grey' : 'active ungrey'}`
+  );
+}
+
+async function frameSharedCards(
+  ui: UI,
+  f: Fixture,
+  requiredFields: Record<string, string>
+) {
+  await ui.waitFunction(
+    FRAME_SHARED_CARDS,
+    [
+      panelRoot('tree'),
+      '[data-testid="tree-task-card"]',
+      panelRoot('sidebar'),
+      '[data-testid="sidebar-task-card"]',
+      taskKeyData(f.team, 'a'),
+      requiredFields,
+    ],
+    'same shared task and metadata framed in both panes'
   );
 }
 
@@ -130,7 +283,7 @@ async function fakeCardIds(ui: UI, scope: CardScope) {
   return await ui.value<string[]>(
     `Array.from(${el(panelRoot(scope))}.querySelectorAll('[data-testid="${scope}-task-card"]'))
       .map(e=>JSON.parse(e.getAttribute('data-task-key')))
-      .filter(([team])=>team==='task-folders-TEST-filter-team')
+      .filter(([team])=>team===${JSON.stringify(FILTER_TEAM)})
       .map(([,id])=>id)`
   );
 }
@@ -314,9 +467,7 @@ async function localTaskPreferences(ui: UI) {
 }
 
 async function restoreTaskPreferences(ui: UI, values: Record<string, string | null>) {
-  await ui.cdp.evaluate(
-    `(() => {const values=${JSON.stringify(values)};for(const [key,value] of Object.entries(values)){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);window.dispatchEvent(new StorageEvent('storage',{key}));}})()`
-  );
+  await ui.callFunction(RESTORE_TASK_PREFERENCES, [values]);
 }
 
 export async function sharedCardParity(
@@ -366,6 +517,23 @@ export async function sharedCardParity(
       treeCard[field as keyof CardState] !== null,
       `shared card metadata was not rendered: ${field}`
     );
+  const requiredFields = {
+    subject: treeCard.subject,
+    project: treeCard.project,
+    owner: treeCard.owner,
+    team: treeCard.team,
+    updated: treeCard.updated,
+  };
+  assert(
+    Object.values(requiredFields).every((value): value is string => !!value),
+    'shared card visible text metadata was incomplete before screenshot framing'
+  );
+  await frameSharedCards(ui, f, requiredFields as Record<string, string>);
+  assert.deepEqual(
+    await readCard(ui, 'tree', f.team, 'a'),
+    await readCard(ui, 'sidebar', f.team, 'a'),
+    'shared card metadata diverged during screenshot framing'
+  );
   await screenshot('shared-cards-live');
   await ui.menu(taskRow(f.team, 'a'), 'Unpin');
   await sandboxUpdate(ui, {
@@ -474,7 +642,11 @@ export async function sharedCardLiveUpdates(ui: UI, f: Fixture) {
   await expectCard(ui, 'sidebar', f.team, 'a', { archived: false });
   assert.deepEqual(await ui.snapshot(), beforeArchive, 'Unarchive must not rewrite canonical folder membership');
   await ui.click(`${cardExpression('tree', f.team, 'a')}?.querySelector('[data-testid="sidebar-task-detail"]')`);
-  await ui.wait('document.querySelector(\'[role="dialog"]\')', 'shared task detail');
+  await ui.waitFunction(
+    WAIT_LOADED_TASK_DETAIL,
+    ['TEST task a', '#a', 'Disposable task only'],
+    'canonical shared task detail for task a'
+  );
   await ui.key('Escape');
   await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'shared task detail close');
   await sandboxUpdate(ui, {
@@ -498,7 +670,7 @@ export async function scopedSortAndFilters(ui: UI, f: Fixture) {
   const before = await ui.snapshot();
   const original = await storeSnapshot(ui);
   await setSidebarGrouping(ui, 'none');
-  const fakeTeam = 'task-folders-TEST-filter-team';
+  const fakeTeam = FILTER_TEAM;
   const readTask = fakeTask('fake-read', {
     status: 'pending',
     projectPath: f.project,

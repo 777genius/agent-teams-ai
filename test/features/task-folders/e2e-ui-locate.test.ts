@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   folderRow,
   selectors,
+  taskKeyData,
   taskRow,
   UI,
 } from '../../../scripts/e2e/task-folders/ui.ts';
@@ -99,5 +100,74 @@ describe('task-folders desktop UI target location', () => {
     );
     await vi.runAllTimersAsync();
     await failure;
+  });
+
+  it('passes one encoded task key as structured CDP data at the DOM boundary', async () => {
+    const taskKey = taskKeyData(taskIdentity[0], taskIdentity[1]);
+    const card = document.createElement('div');
+    card.setAttribute('data-task-key', taskKey);
+    document.body.append(card);
+
+    expect(card.getAttribute('data-task-key')).toBe(taskKey);
+    expect(JSON.parse(card.getAttribute('data-task-key')!)).toEqual(taskIdentity);
+
+    const calls: { method: string; payload: Record<string, unknown> }[] = [];
+    const desktop = {
+      cdp: {
+        evaluate: async () => undefined,
+        send: async (method: string, payload: Record<string, unknown>) => {
+          calls.push({ method, payload });
+          if (method === 'Runtime.evaluate') return { result: { objectId: 'global-this' } };
+          if (method === 'Runtime.callFunctionOn') return { result: { value: true } };
+          return {};
+        },
+        on: () => undefined,
+        screenshot: async () => undefined,
+        close: async () => undefined,
+      },
+    } as unknown as UIConstructor;
+    const ui = new UI(desktop);
+
+    await expect(
+      ui.callFunction<boolean>('function(taskKey){return true;}', [taskKey])
+    ).resolves.toBe(true);
+    expect(calls.map(({ method }) => method)).toEqual([
+      'Runtime.evaluate',
+      'Runtime.callFunctionOn',
+      'Runtime.releaseObject',
+    ]);
+    expect(calls[1].payload.arguments).toEqual([{ value: taskKey }]);
+  });
+
+  it('reacquires the same virtual target when point geometry unmounts it', async () => {
+    const { ui, tree } = createUi();
+    tree.scrollTop = 200;
+    let scrollIntoViewCalls = 0;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+      return { x: 10, y: 20, width: 100, height: 20 } as DOMRect;
+    });
+    Object.defineProperty(HTMLElement.prototype, 'checkVisibility', {
+      configurable: true,
+      value(this: HTMLElement) {
+        return this.isConnected;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value() {
+        scrollIntoViewCalls++;
+        if (scrollIntoViewCalls === 1) tree.scrollTop = 0;
+      },
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => tree.querySelector(`[data-folder-id="${folderId}"]`),
+    });
+
+    const point = await ui.point(folderRow(folderId));
+
+    expect(point).toEqual({ x: 60, y: 30 });
+    expect(scrollIntoViewCalls).toBe(2);
+    expect(tree.querySelector(`[data-folder-id="${folderId}"]`)).not.toBeNull();
   });
 });
