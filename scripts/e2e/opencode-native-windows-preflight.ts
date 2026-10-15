@@ -329,7 +329,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_owner_path_invalid', 'execution_owner_record_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
   'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
     const nativeStages = ['assert_mapping', 'assert_stopped', 'assert_broker', 'retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
-  'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants', 'process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
+  'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants',
+  'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata', 'process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
   'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
   'shared_acl_mutex_encoding', 'shared_acl_mutex_authority', 'shared_acl_mutex_wait', 'shared_acl_mutex',
   'owner_archive_nt_rename', 'owner_canonical_open', 'owner_directory_create',
