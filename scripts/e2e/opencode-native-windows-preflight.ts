@@ -481,7 +481,9 @@ async function verifyProbePreparation(
   const envelope = {
     schemaVersion: 1, requestId: 'TEST-source-probe-startup',
     command: 'opencode.readiness', cwd: projectPath,
-    startedAt: new Date().toISOString(), timeoutMs: 120_000,
+    // Cold source graph preparation shares this one supported caller budget
+    // with native startup; owner/readiness/stop retain their production limits.
+    startedAt: new Date().toISOString(), timeoutMs: 180_000,
     body: { selectedModel, requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
@@ -803,7 +805,7 @@ process.exit(exitCode);`;
         // Desktop's bridge projects getClaudeBasePath() after the Electron override.
         AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
       },
-      timeout: binary ? 150_000 : 45_000,
+      timeout: binary ? 210_000 : 45_000,
       maxBuffer: 65_536,
     }));
   } catch (error: unknown) {
