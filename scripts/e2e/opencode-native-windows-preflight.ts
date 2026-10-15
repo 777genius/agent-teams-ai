@@ -363,11 +363,25 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
         if (!/^[a-f0-9-]{36}\.json$/.test(entry.name)) continue;
         const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data), native = row(data.native);
         const nativeStage = nativeStages.find((stage) => stage === native.stage);
+        const startup = row(data.startup);
+        const startupElapsedMs = Number.isSafeInteger(startup.elapsedMs) && Number(startup.elapsedMs) >= 0 && Number(startup.elapsedMs) <= 86400000 ? Number(startup.elapsedMs) : null;
+        const startupHistory: { stage: string; elapsedMs: number }[] = [];
+        if (Array.isArray(startup.history) && startup.history.length <= 10) {
+          for (const value of startup.history) {
+            const item = row(value), stage = one(item.stage, ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert']);
+            if (stage === 'unclassified' || startupElapsedMs === null || !Number.isSafeInteger(item.elapsedMs) || Number(item.elapsedMs) < (startupHistory.at(-1)?.elapsedMs ?? 0) || Number(item.elapsedMs) > startupElapsedMs || startupHistory.some(entry => entry.stage === stage)) {
+              startupHistory.length = 0; break;
+            }
+            startupHistory.push({ stage, elapsedMs: Number(item.elapsedMs) });
+          }
+        }
         const nativeFailure = nativeStage && typeof native.nativeCode === 'number' && Number.isSafeInteger(native.nativeCode) &&
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization']),
           category: one(data.category, providerCodes), native: nativeFailure, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
             ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+          startupElapsedMs, startupHistory,
+          startupExitCode: Number.isSafeInteger(startup.nativeExitCode) && Number(startup.nativeExitCode) >= 0 && Number(startup.nativeExitCode) <= 0xffffffff ? startup.nativeExitCode : null,
           initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
           acquisitionLastPhase: data.acquisition === undefined ? null : one(
             row(Array.isArray(row(data.acquisition).history) ? (row(data.acquisition).history as unknown[]).at(-1) : null).phase,
