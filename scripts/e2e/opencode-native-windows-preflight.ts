@@ -392,7 +392,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -414,7 +414,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined;
+        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
@@ -423,13 +423,15 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             kind = 'bun_error';
             // Fixed TEST diagnostic roles only: never publish the denied path.
             if (readTargetKind === undefined && /^error: (?:EPERM reading |Cannot read file )/.test(message)) {
-              const target = /["'`]([^"'`]+)["'`]\s*$/.exec(message)?.[1];
+              const match = /["'`]([^"'`]+)["'`](?::\s*(EPERM|EACCES|ENOENT|ENOTDIR|EISDIR))?\s*$/.exec(message);
+              const target = match?.[1]; readErrorCode = match?.[2];
               const leaf = target?.split(/[\\/]/).at(-1);
               const roles: Record<string, string> = { 'package.json': 'package_manifest',
                 'tsconfig.json': 'typescript_config', 'bunfig.toml': 'bun_config',
                 'opencodeV2ExecutionServer.ts': 'execution_entry', 'opencodeV2ExecutionServer.js': 'execution_entry',
                 'opencodeV2RunOwner.ts': 'owner_entry', 'opencodeV2RunOwner.js': 'owner_entry' };
-              readTargetKind = leaf !== undefined && Object.hasOwn(roles, leaf) ? roles[leaf] :
+              readTargetKind = target !== undefined && /[\\/]$/.test(target) ? 'package_scope_directory' :
+                leaf !== undefined && Object.hasOwn(roles, leaf) ? roles[leaf] :
                 leaf?.endsWith('.json') ? 'json_file' : leaf?.endsWith('.node') ? 'native_module' :
                 leaf?.endsWith('.dll') ? 'native_library' : /\.[cm]?js$/.test(leaf ?? '') ? 'javascript_module' :
                 /\.[cm]?tsx?$/.test(leaf ?? '') ? 'typescript_module' : 'other';
@@ -466,7 +468,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan?: un
             if (matched) { kind = matched[1]; break; }
           }
         }
-        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }) };
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }) };
       }
       for (let index = 0; index < parents.length; index++) {
         const parent = parents[index]!;
