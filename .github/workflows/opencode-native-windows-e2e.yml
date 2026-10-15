@@ -46,9 +46,43 @@ jobs:
   real-tasks:
     runs-on: windows-2022
     timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: TEST-native-source
     steps:
+      - name: Create a fresh private TEST source container
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = Join-Path $env:GITHUB_WORKSPACE 'TEST-native-source'
+          try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
+          catch [System.Management.Automation.ItemNotFoundException] { }
+          $parent = [IO.DirectoryInfo]::new($env:GITHUB_WORKSPACE)
+          if (!$parent.Exists -or ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'TEST source parent invalid' }
+          $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+          $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+          $acl = [Security.AccessControl.DirectorySecurity]::new()
+          $acl.SetOwner($sid)
+          $acl.SetAccessRuleProtection($true, $false)
+          $inherit = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
+          foreach ($principal in @($sid, $system)) {
+            $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
+          }
+          $directory = [IO.DirectoryInfo]::new($target)
+          [IO.FileSystemAclExtensions]::Create($directory, $acl)
+          $directory.Refresh()
+          if (!$directory.Exists -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $directory.FullName -cne $target) { throw 'TEST source container invalid' }
+          $observed = [IO.FileSystemAclExtensions]::GetAccessControl($directory)
+          if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $sid.Value) { throw 'TEST source custody invalid' }
+          $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+          if ($rules.Count -ne 2) { throw 'TEST source ACL invalid' }
+          foreach ($rule in $rules) {
+            if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
+          }
       - uses: actions/checkout@v6
         with:
+          path: TEST-native-source
           persist-credentials: false
       - name: Validate exact inputs
         shell: pwsh
@@ -63,13 +97,16 @@ jobs:
         with:
           repository: 777genius/agent_teams_orchestrator
           ref: ${{ inputs.sdk_ref }}
-          path: .test-sdk
+          path: TEST-native-source/.test-sdk
           persist-credentials: false
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: TEST-native-source/package.json
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: TEST-native-source/.node-version
           cache: pnpm
+          cache-dependency-path: TEST-native-source/pnpm-lock.yaml
       - uses: actions/setup-python@v6
         if: ${{ !inputs.provider_only }}
         with:
@@ -173,7 +210,7 @@ jobs:
         run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
       - name: Compile exact Windows native producer
         if: ${{ !inputs.provider_only }}
-        working-directory: .test-sdk
+        working-directory: TEST-native-source/.test-sdk
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
@@ -221,7 +258,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Qualify native ownership and command retirement
         if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: .test-sdk
+        working-directory: TEST-native-source/.test-sdk
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -241,7 +278,7 @@ jobs:
           bun-version: '1.4.2'
       - name: Build and stage the verified runtime candidate
         if: ${{ !inputs.source_only && !inputs.provider_only }}
-        working-directory: .test-sdk
+        working-directory: TEST-native-source/.test-sdk
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
