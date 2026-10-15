@@ -324,6 +324,8 @@ async function snapshotStartupFailure(value: unknown, session: string): Promise<
   'execution_owner_path_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
   'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
     const nativeStages = [
+  'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
+  'shared_acl_mutex_encoding', 'shared_acl_mutex_authority', 'shared_acl_mutex_wait', 'shared_acl_mutex',
   'owner_archive_nt_rename', 'owner_canonical_open', 'owner_directory_create',
   'owner_directory_open', 'owner_identity_links', 'owner_identity_reparse',
   'owner_identity_type', 'owner_metadata_cleanup', 'owner_metadata_open',
