@@ -313,6 +313,9 @@ if (mode === 'seed-packaged') {
             })
           ).json(),
         connect: (endpoint) => new WebSocket(endpoint),
+      }).catch((error) => {
+        // Missing CDP acknowledgement does not end the app's owned shutdown.
+        graceful.error = String(error);
       });
       graceful.afterClose = closureCensus();
       const deadline = Date.now() + 5000;

@@ -968,7 +968,7 @@ test('candidate opt-in is explicit, bounded and refuses duplicate or foreign evi
     assert.throws(() => packagedArguments(['--packaged-executable', exe, ...args], 'win32'));
 });
 
-test('explicit candidate evidence survives real seed-to-start manifest handoff', async () => {
+test('explicit candidate evidence survives real seed-to-start manifest handoff', async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'packaged-handoff-test-'));
   const evidence = 'C:\\test\\runtime-candidate-evidence.json';
   const desktop = new URL('../opencode-diagnostics-desktop.mjs', import.meta.url);
@@ -978,12 +978,22 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   const mock = path.join(root, 'packaged-mock.mjs');
   const platform = path.join(root, 'platform-mock.mjs');
   const inert = path.join(root, 'inert.mjs');
-  await writeFile(preload, "Object.defineProperty(process, 'platform', {value:'win32'});");
+  await writeFile(
+    preload,
+    `
+    import assert from 'node:assert/strict';
+    Object.defineProperty(process, 'platform', {value:'win32'});
+    if (process.argv[2] === 'stop') process.kill = (pid) => {
+      assert.equal(pid, 101, 'App was signalled before its graceful shutdown completed');
+      return true;
+    };
+  `
+  );
   await writeFile(
     mock,
     `
     import assert from 'node:assert/strict';
-    export { packagedArguments } from ${JSON.stringify(helper.href)};
+    export { packagedArguments, packagedStopOrder } from ${JSON.stringify(helper.href)};
     export async function packagedArtifact(executable, candidateEvidence) {
       assert.equal(candidateEvidence, ${JSON.stringify(evidence)}, 'Explicit evidence lost during manifest handoff');
       return { app: {path: executable}, candidate: {testOnly:true} };
@@ -991,17 +1001,23 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     export async function preparePackagedProfile() { return {}; }
     export async function prepareExistingProject() { return {owned:true}; }
     export const packagedTarget = () => {};
-    export const packagedStopOrder = () => {};
-    export const closePackagedBrowser = () => {};
+    export const closePackagedBrowser = async () => {
+      globalThis.packagedCloseAt = Date.now();
+      throw new Error('TEST_CDP_CLOSE_TIMED_OUT');
+    };
   `
   );
   await writeFile(
     platform,
     `
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
-    export const processes = () => [];
+    export const processes = () => process.argv[2] !== 'stop' ? [] : [
+      {pid:101,birth:'launcher',executable:'node'},
+      ...(!globalThis.packagedCloseAt || Date.now() - globalThis.packagedCloseAt < 1000
+        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : [])
+    ];
     export const sameIdentity = () => {};
-    export const ownedTree = () => [];
+    export const ownedTree = (snapshot) => snapshot;
     export const listeners = () => [];
     export const assertListenerOwnership = () => {};
     export const fixtureShim = () => {};
@@ -1069,6 +1085,30 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     assert(started.error, 'Test fence must prevent actual launch');
     assert.match(started.stderr, /TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH/);
     assert.doesNotMatch(started.stderr, /Explicit evidence lost/);
+    await t.test(
+      'a CDP timeout still waits for the owned app to retire before fallback',
+      async () => {
+        manifest.launcher = { pid: 101, birth: 'launcher', executable: 'node' };
+        await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
+        const stopped = await invoke(['stop', sandbox]);
+        assert.ifError(stopped.error);
+        const graceful = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-graceful.json'), 'utf8')
+        );
+        assert.match(graceful.error, /TEST_CDP_CLOSE_TIMED_OUT/);
+        const signals = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-signals.json'), 'utf8')
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 102).outcome,
+          'missing-from-identity-snapshot'
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 101).outcome,
+          'signal-returned'
+        );
+      }
+    );
   } finally {
     if (sandbox) await rm(sandbox, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
