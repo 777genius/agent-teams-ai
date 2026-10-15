@@ -54,6 +54,7 @@ export async function prepareNativeDesktopEnvironment() {
     // Numeric mkdir modes do not set Windows ownership. This TEST-owned root is
     // precreated here, so give it the same private custody required by the SDK.
     await protectWindowsTestDirectory(env.CLAUDE_MULTIMODEL_DATA_HOME!);
+    await protectWindowsTestDirectory(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!);
   }
   await mkdir(projectPath, { mode: 0o700 });
   await writeFile(path.join(projectPath, '.opencode-e2e-test-project'), teamName + '\n', {
