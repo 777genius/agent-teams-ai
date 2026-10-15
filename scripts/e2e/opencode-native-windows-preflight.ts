@@ -37,6 +37,11 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
     'TEST probe readiness budget exhausted': 'probe_readiness_budget_exhausted',
     'TEST probe member not ready': 'probe_member_not_ready',
     'TEST probe physical stop unconfirmed': 'probe_physical_stop_unconfirmed',
+    'TEST private DLL profile invalid': 'private_dll_profile_invalid',
+    'TEST private DLL leaf invalid': 'private_dll_leaf_invalid',
+    'TEST private DLL custody invalid': 'private_dll_custody_invalid',
+    'TEST private DLL mutation admitted': 'private_dll_mutation_admitted',
+    'TEST private DLL custody changed': 'private_dll_custody_changed',
   };
   // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
   const reason =
@@ -417,8 +422,8 @@ async function verifyProbePreparation(
     body: { selectedModel, requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
-  const { lstat } = await import('node:fs/promises');
-  const { join } = await import('node:path');
+  const { lstat, readdir, open, rename } = await import('node:fs/promises');
+  const { join, isAbsolute } = await import('node:path');
   const dataRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
   if (!dataRoot) throw new Error('TEST cold namespace exists');
   const existing = await lstat(join(dataRoot, 'opencode', 'v2')).catch((error: unknown) => {
@@ -475,6 +480,37 @@ async function verifyProbePreparation(
         if (typeof memberStatus.runtimePid !== 'number' || !Number.isSafeInteger(memberStatus.runtimePid) ||
             memberStatus.runtimePid <= 0) throw new Error('TEST probe member not ready');
         readyPid = memberStatus.runtimePid;
+        // Exercise the actual live DLL custody, using only this fresh TEST profile.
+        const prepared = record(probe.prepared);
+        if (typeof prepared.tmpPath !== 'string' || !isAbsolute(prepared.tmpPath))
+          throw new Error('TEST private DLL profile invalid');
+        const leaves = (await readdir(prepared.tmpPath)).filter(name =>
+          /^native-realpath-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(name));
+        if (leaves.length !== 1) throw new Error('TEST private DLL leaf invalid');
+        const leaf = join(prepared.tmpPath, leaves[0]!);
+        const dll = join(leaf, 'opencode-v2-windows-realpath.dll');
+        const beforeLeaf = await lstat(leaf), beforeDll = await lstat(dll);
+        if (!beforeLeaf.isDirectory() || beforeLeaf.isSymbolicLink() ||
+            !beforeDll.isFile() || beforeDll.isSymbolicLink() || beforeDll.nlink !== 1)
+          throw new Error('TEST private DLL custody invalid');
+        const denied = async (work: () => Promise<unknown>) => {
+          try { await work(); }
+          catch (error) {
+            if (error && typeof error === 'object' && 'code' in error &&
+                ['EACCES', 'EPERM', 'EBUSY'].includes(String(error.code))) return;
+            throw error;
+          }
+          throw new Error('TEST private DLL mutation admitted');
+        };
+        await denied(async () => {
+          const writer = await open(dll, 'r+');
+          await writer.close().catch(() => undefined); // A writable open always fails the assertion.
+        });
+        await denied(() => rename(leaf, leaf + '.TEST-forbidden-rename'));
+        const afterLeaf = await lstat(leaf), afterDll = await lstat(dll);
+        if (afterLeaf.dev !== beforeLeaf.dev || afterLeaf.ino !== beforeLeaf.ino ||
+            afterDll.dev !== beforeDll.dev || afterDll.ino !== beforeDll.ino)
+          throw new Error('TEST private DLL custody changed');
         facts.memberReady = true; update();
       } catch (error) { primary = error; }
       finally {
