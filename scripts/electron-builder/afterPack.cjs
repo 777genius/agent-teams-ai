@@ -649,6 +649,7 @@ module.exports._internal = {
   OPENCODE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
+  getKnownPrunableNativeArtifactRoot,
   isBinaryCompatible,
   isKnownAllowedNativeMismatch,
   parseElf,
