@@ -57,6 +57,7 @@ export async function prepareNativeDesktopEnvironment() {
     await protectWindowsTestDirectory(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!);
   }
   await mkdir(projectPath, { mode: 0o700 });
+  if (process.platform === 'win32') await protectWindowsTestDirectory(projectPath);
   await writeFile(path.join(projectPath, '.opencode-e2e-test-project'), teamName + '\n', {
     mode: 0o600,
   });

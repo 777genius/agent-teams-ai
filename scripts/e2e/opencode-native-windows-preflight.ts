@@ -14,7 +14,7 @@ type ReadinessExecutor = (
   executeV1: (input: unknown) => Promise<unknown>
 ) => Promise<unknown>;
 
-function safeSourceGateFailure(error: unknown): { reason: string; errno: string | null } {
+function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, string>): { reason: string; errno: string | null; primaryNativeOperation: string } {
   const row = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
   const message = typeof row.message === 'string' ? row.message : '';
   const localReasons: Record<string, string> = {
@@ -57,7 +57,48 @@ function safeSourceGateFailure(error: unknown): { reason: string; errno: string 
     'ETIMEDOUT',
     'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
   ];
-  return { reason, errno: errnos.find((value) => value === row.code) ?? null };
+  return { reason, errno: errnos.find((value) => value === row.code) ?? null,
+    primaryNativeOperation: error && typeof error === 'object' ? nativeFailures?.get(error) ?? 'unknown' : 'unknown' };
+}
+
+// Observe rejection identity only; no request data, error text, or history is retained.
+function observeNativeBrokerFailures(
+  module: { createWindowsNativeBroker(artifact: unknown): {
+    request(operation: string, input?: Readonly<Record<string, unknown>>, deadline?: number, signal?: AbortSignal): Promise<unknown>;
+  } },
+  spyOn: (target: typeof module, key: 'createWindowsNativeBroker') => {
+    mockImplementation(fn: typeof module.createWindowsNativeBroker): void; mockRestore(): void;
+  },
+  failures: WeakMap<object, string>
+) {
+  const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire',
+    'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
+    'ownerValidateSelectedProfile', 'ownerSelectConfig', 'ownerInspectProfileConfig', 'ownerArchive',
+    'ownerCreatePreparedDatabase', 'ownerWritePreparedConfig', 'ownerReadMetadata', 'ownerWriteMetadata',
+    'ownerReadRecord', 'ownerWriteExclusive', 'runStateAcquire', 'runStateSelect', 'runStateDiscover',
+    'runStateReserve', 'runStateReadRecord', 'runStateWriteRecord', 'runStateReadStop', 'runStateOwnerRetired',
+    'runStateProcessIdentity', 'runStateValidateEndpoint', 'runStateRequest', 'runStateListen',
+    'runStateRespond', 'runStatePoisonConnection', 'runStateClose']);
+  const originalFactory = module.createWindowsNativeBroker;
+  const observer = spyOn(module, 'createWindowsNativeBroker');
+  observer.mockImplementation(function (this: unknown, artifact) {
+    const broker = Reflect.apply(originalFactory, this, [artifact]);
+    const descriptors = Object.getOwnPropertyDescriptors(broker), request = broker.request;
+    if (!descriptors.request || typeof request !== 'function') throw new Error('TEST native broker shape invalid');
+    descriptors.request = { ...descriptors.request, value: function (...args: Parameters<typeof request>) {
+      const rejected = (error: unknown): never => {
+        if (error && typeof error === 'object') {
+          const operation = operations.has(args[0]) ? args[0] : 'unknown', previous = failures.get(error);
+          failures.set(error, previous && previous !== operation ? 'unknown' : operation);
+        }
+        throw error;
+      };
+      try { return Reflect.apply(request, broker, args).catch(rejected); }
+      catch (error) { return rejected(error); }
+    } };
+    return Object.freeze(Object.create(Object.getPrototypeOf(broker), descriptors)) as typeof broker;
+  });
+  return observer;
 }
 
 // Serialized after TypeScript transpilation; no ambient closure or credentials.
@@ -458,7 +499,12 @@ let stage='startup-cleanup';
 let preparation = null;
 let startupFacts = null;
 let startupFailureState = null;
+const nativeFailures = new WeakMap();
+let nativeObserver, exitCode = 0;
 try {
+ const nativeModule = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/windows/OpenCodeV2WindowsNativeBroker.ts')).href)});
+ const { spyOn: observeFactory } = await import('bun:test');
+ nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures);
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
  const cleanup = await executeSelectedOpenCodeBridgeCommandEnvelope({
@@ -512,15 +558,15 @@ try {
      : ''
  }
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,startupFacts,version:${JSON.stringify(expectedVersion ?? null)}}));
- process.exit(0);
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupFailureState,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
-   ...(${safeSourceGateFailure.toString()})(error)}));
- process.exit(1);
-}`;
+   ...(${safeSourceGateFailure.toString()})(error,nativeFailures)}));
+ exitCode = 1;
+} finally { nativeObserver?.mockRestore(); }
+process.exit(exitCode);`;
   let output = '';
   let code = 0;
   try {
