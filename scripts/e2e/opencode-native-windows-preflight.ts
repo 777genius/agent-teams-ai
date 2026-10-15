@@ -28,6 +28,9 @@ function safeSourceGateFailure(error: unknown): { reason: string; errno: string 
     'TEST startup cleanup did not complete': 'startup_cleanup_incomplete',
     'TEST startup cleanup did not drain its empty registry': 'startup_cleanup_not_drained',
     'TEST unexpected run owner': 'unexpected_run_owner',
+    'TEST probe preparation plan invalid': 'probe_preparation_plan_invalid',
+    'TEST probe launch boundary not reached': 'probe_launch_boundary_not_reached',
+    'TEST probe launch boundary count invalid': 'probe_launch_boundary_count_invalid',
   };
   // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
   const reason =
@@ -95,6 +98,50 @@ async function verifyModelFreeReadiness(
     availability.installedGraphFiles <= 0
   )
     throw new Error('TEST model-free readiness contract changed');
+}
+
+// Only the final owner-launch boundary is replaced. Store, native filesystem,
+// selected auth/controller and complete member-plan preparation stay genuine.
+async function verifyProbePreparation(
+  inspect: (input: unknown) => Promise<unknown>,
+  resolveProbe: (input: unknown, selection: unknown, run: boolean,
+    options: { unattendedTeam: boolean }) => Promise<unknown>,
+  owner: { launchExplicitOpenCodeV2Run: (plan: unknown) => Promise<unknown> },
+  spyOn: (target: typeof owner, key: 'launchExplicitOpenCodeV2Run') => {
+    mockImplementation(fn: (plan: unknown) => Promise<never>): void;
+    mockRestore(): void;
+  },
+  projectPath: string
+) {
+  const envelope = {
+    schemaVersion: 1, requestId: 'TEST-source-probe-preparation',
+    command: 'opencode.readiness', cwd: projectPath,
+    startedAt: new Date().toISOString(), timeoutMs: 120_000,
+    body: { selectedModel: 'openrouter/TEST-model', requireExecutionProbe: true },
+  };
+  const selection = await inspect(envelope);
+  const sentinel = new Error('TEST probe preparation reached launch boundary');
+  let boundaryCalls = 0;
+  const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
+  try {
+    boundary.mockImplementation(async (value) => {
+      boundaryCalls++;
+      const plan = value as { members?: { memberId?: string }[];
+        executionProbe?: { memberId?: string; prepared?: unknown } };
+      if (boundaryCalls !== 1 || plan.members?.length !== 1 ||
+          plan.members[0]?.memberId !== 'probe' ||
+          plan.executionProbe?.memberId !== 'probe' || !plan.executionProbe.prepared)
+        throw new Error('TEST probe preparation plan invalid');
+      // Never invoke the original: no run owner/server/session/model can start.
+      throw sentinel;
+    });
+    let caught: unknown;
+    try { await resolveProbe(envelope, selection, true, { unattendedTeam: true }); }
+    catch (error) { caught = error; }
+    if (caught !== sentinel) throw caught ?? new Error('TEST probe launch boundary not reached');
+    if (boundaryCalls !== 1) throw new Error('TEST probe launch boundary count invalid');
+    return { preparationOnly: true, interceptedOwnerLaunches: boundaryCalls };
+  } finally { boundary.mockRestore(); }
 }
 
 async function verifySelectedControllerRoot(
@@ -183,6 +230,7 @@ async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') 
   ).href;
   const script = `
 let stage='startup-cleanup';
+let preparation = null;
 try {
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
@@ -221,10 +269,17 @@ try {
  await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)});
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
-   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});`
+   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});
+ stage='probe-preparation';
+ const { inspectOpenCodeV2SourceAvailability } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
+ const runOwner = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunOwner.ts')).href)});
+ const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
+ const { spyOn } = await import('bun:test');
+ preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
+   resolveOpenCodeV2ExecutionProbe, runOwner, spyOn, ${JSON.stringify(desktop.projectPath)});`
      : ''
  }
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,version:${JSON.stringify(expectedVersion ?? null)}}));
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,version:${JSON.stringify(expectedVersion ?? null)}}));
  process.exit(0);
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
