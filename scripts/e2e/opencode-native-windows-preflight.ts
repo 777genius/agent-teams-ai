@@ -133,6 +133,7 @@ async function verifyProbePreparation(
   if (existing) throw new Error('TEST cold namespace exists');
   const sentinel = new Error('TEST probe preparation reached launch boundary');
   let boundaryCalls = 0;
+  let preparedPlan: unknown;
   const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
   try {
     boundary.mockImplementation(async (value) => {
@@ -143,6 +144,7 @@ async function verifyProbePreparation(
           plan.members[0]?.memberId !== 'probe' ||
           plan.executionProbe?.memberId !== 'probe' || !plan.executionProbe.prepared)
         throw new Error('TEST probe preparation plan invalid');
+      preparedPlan = value;
       // Never invoke the original: no run owner/server/session/model can start.
       throw sentinel;
     });
@@ -151,8 +153,31 @@ async function verifyProbePreparation(
     catch (error) { caught = error; }
     if (caught !== sentinel) throw caught ?? new Error('TEST probe launch boundary not reached');
     if (boundaryCalls !== 1) throw new Error('TEST probe launch boundary count invalid');
-    return { preparationOnly: true, interceptedOwnerLaunches: boundaryCalls };
+    return { preparationOnly: true, interceptedOwnerLaunches: boundaryCalls, plan: preparedPlan };
   } finally { boundary.mockRestore(); }
+}
+
+async function reservePreparedProbe(
+  value: unknown,
+  reserve: (dataRoot: string, binding: Record<string, string>, sourceHash: string,
+    profiles: unknown[]) => Promise<string>,
+  hash: (files: { path: string; sha256: string }[]) => string
+) {
+  const prepared = value as { preparationOnly?: boolean; interceptedOwnerLaunches?: number;
+    plan?: { dataRoot?: string; binding?: Record<string, string>;
+      source?: { files?: { path: string; sha256: string }[] };
+      members?: { profile?: unknown }[] } };
+  const plan = prepared?.plan;
+  if (prepared?.preparationOnly !== true || prepared.interceptedOwnerLaunches !== 1 ||
+      !plan || typeof plan.dataRoot !== 'string' || !plan.binding ||
+      !Array.isArray(plan.source?.files) || !Array.isArray(plan.members) ||
+      plan.members.length !== 1 || !plan.members[0]?.profile)
+    throw new Error('TEST probe preparation plan invalid');
+  await reserve(plan.dataRoot, plan.binding, hash(plan.source.files),
+    plan.members.map((member) => member.profile));
+  // A retained TEST start fence only; subprocess exit supplies broker stdio EOF.
+  // No owner launch, execution proof or measured physical-retirement claim.
+  return { preparationOnly: true, interceptedOwnerLaunches: 1, runControlReservedOnly: true };
 }
 
 async function verifySelectedControllerRoot(
@@ -283,8 +308,13 @@ try {
  const runOwner = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunOwner.ts')).href)});
  const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
  const { spyOn } = await import('bun:test');
- preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
+ const prepared = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
    resolveOpenCodeV2ExecutionProbe, runOwner, spyOn, ${JSON.stringify(desktop.projectPath)});
+ stage='run_control_reserve';
+ const { reserveRunControlDirectory } = await import(${JSON.stringify(moduleUrl)});
+ const { executionHash } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/execution/OpenCodeV2ExecutionContracts.ts')).href)});
+ preparation = await (${reservePreparedProbe.toString()})(prepared, reserveRunControlDirectory,
+   executionHash);
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
