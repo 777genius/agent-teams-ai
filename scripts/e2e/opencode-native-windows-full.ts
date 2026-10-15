@@ -396,35 +396,39 @@ async function exactFile(project: string, name: string, expected?: string) {
   if (expected !== undefined) assert.equal(bytes.toString(), expected);
   return createHash('sha256').update(bytes).digest('hex');
 }
+async function readStopObservation(app: App) {
+  const processAlive = await app.call('processAlive');
+  const runtime = await app.call('getRuntime');
+  const knownKinds = [
+    'confirmed_bootstrap',
+    'runtime_process',
+    'runtime_process_candidate',
+    'permission_blocked',
+    'shell_only',
+    'registered_only',
+    'stale_metadata',
+    'not_found',
+  ];
+  const observation: StopObservation = {
+    processAlive,
+    memberCount: Object.values(runtime.members).length,
+    aliveMemberCount: Object.values(runtime.members).filter((member) => member.alive).length,
+    runId:
+      typeof runtime.runId === 'string' && /^[a-f0-9-]{36}$/i.test(runtime.runId)
+        ? runtime.runId
+        : null,
+    livenessKinds: Object.values(runtime.members).map(
+      (member) => knownKinds.find((kind) => kind === member.livenessKind) ?? 'unknown'
+    ),
+  };
+  return { processAlive, runtime, observation };
+}
 async function stopped(app: App, observe: (value: StopObservation) => Promise<void>) {
   await app.call('stop');
   let previous = '';
   const settled = await waitFor(
     async () => {
-      const processAlive = await app.call('processAlive');
-      const runtime = await app.call('getRuntime');
-      const knownKinds = [
-        'confirmed_bootstrap',
-        'runtime_process',
-        'runtime_process_candidate',
-        'permission_blocked',
-        'shell_only',
-        'registered_only',
-        'stale_metadata',
-        'not_found',
-      ];
-      const observation: StopObservation = {
-        processAlive,
-        memberCount: Object.values(runtime.members).length,
-        aliveMemberCount: Object.values(runtime.members).filter((member) => member.alive).length,
-        runId:
-          typeof runtime.runId === 'string' && /^[a-f0-9-]{36}$/i.test(runtime.runId)
-            ? runtime.runId
-            : null,
-        livenessKinds: Object.values(runtime.members).map(
-          (member) => knownKinds.find((kind) => kind === member.livenessKind) ?? 'unknown'
-        ),
-      };
+      const { processAlive, runtime, observation } = await readStopObservation(app);
       const encoded = JSON.stringify(observation);
       if (encoded !== previous) {
         await observe(observation);
@@ -499,6 +503,7 @@ async function main() {
     taskFailureSnapshot: null as null | { unavailable: boolean; tasks: Awaited<ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>>[] },
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
+    stopFailureObservationUnavailable: null as boolean | null,
     peerObservation: null as PeerObservation | null,
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
     runIds: [] as string[],
@@ -1041,6 +1046,19 @@ async function main() {
         } catch (error: unknown) {
           proof.status = 'failed';
           proof.cleanupFailures.push(proofFailure(error, 'team_stop'));
+          await checkpoint(proof.stage);
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const snapshot = await Promise.race([
+              readStopObservation(app),
+              new Promise<never>((_resolve, reject) => {
+                timer = setTimeout(() => reject(new Error('TEST stop observation expired')), 10_000);
+              }),
+            ]);
+            proof.stopFailureObservationUnavailable = false;
+            await recordStop(snapshot.observation);
+          } catch { proof.stopFailureObservationUnavailable = true; }
+          finally { clearTimeout(timer); }
           await checkpoint(proof.stage);
         }
       }
