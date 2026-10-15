@@ -3347,7 +3347,8 @@
       "recheck": "Re-check outcome",
       "retry": "Retry",
       "save": "Save template",
-      "saveAsTemplate": "Save as Template"
+      "saveAsTemplate": "Save as Template",
+      "templates": "Templates"
     },
     "errors": {
       "issues": {
@@ -3370,8 +3371,9 @@
       "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten."
     },
     "library": {
+      "builtInDescription": "Ready-made team setups with roles and responsibilities.",
       "createdAt": "Saved {{date}}",
-      "description": "Read-only list of the templates saved on this device.",
+      "description": "Browse ready-made team setups and your saved templates.",
       "empty": "No saved templates yet",
       "emptyDescription": "Open a team and choose Save as Template to create one.",
       "loadFailed": "The template library could not be loaded.",
@@ -3380,7 +3382,11 @@
       "noDescription": "No description",
       "noMembers": "Prompt-only template — no members recorded",
       "storageUnavailable": "The template library is unavailable right now.",
-      "title": "My Templates",
+      "tabs": {
+        "builtIn": "Built-in",
+        "myTemplates": "My Templates"
+      },
+      "title": "Templates",
       "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
       "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
       "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",

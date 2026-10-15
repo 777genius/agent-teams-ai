@@ -315,9 +315,9 @@ describe('TeamListView custom team template actions', () => {
     expect(storeState.openTeamTab).toHaveBeenCalledWith('alpha', '/opt/acme/project');
   });
 
-  it('opens the read-only My Templates dialog from the list header', async () => {
+  it('opens the Templates dialog from the list header', async () => {
     await renderView();
-    const headerButton = buttonByText('customTemplates.actions.myTemplates');
+    const headerButton = buttonByText('customTemplates.actions.templates');
     expect(listTemplates).not.toHaveBeenCalled();
     await act(async () => {
       headerButton.click();

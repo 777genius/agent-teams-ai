@@ -74,7 +74,12 @@ export function useCustomTemplateLibrary(open: boolean): {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Invalidate any in-flight read so a late response cannot overwrite
+      // newer state after the dialog closes.
+      requestIdRef.current += 1;
+      return;
+    }
     requestIdRef.current += 1;
     void reload();
   }, [open, reload]);

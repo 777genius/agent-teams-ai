@@ -18,6 +18,9 @@ vi.mock('@features/localization/renderer', () => ({
       values ? `${key}|${Object.values(values).join(',')}` : key,
   }),
 }));
+vi.mock('@renderer/hooks/useTheme', () => ({
+  useTheme: () => ({ isLight: false, isDark: true, resolvedTheme: 'dark', theme: 'dark' }),
+}));
 vi.mock('@renderer/components/ui/dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? React.createElement('div', null, children) : null,
@@ -40,9 +43,9 @@ let root: ReturnType<typeof createRoot>;
 
 function actionButton(): HTMLButtonElement {
   const found = Array.from(host.querySelectorAll('button')).find((candidate) =>
-    candidate.textContent?.includes('customTemplates.actions.myTemplates')
+    candidate.textContent?.includes('customTemplates.actions.templates')
   );
-  if (!found) throw new Error(`my templates action not found\n${host.textContent}`);
+  if (!found) throw new Error(`templates action not found\n${host.textContent}`);
   return found;
 }
 
@@ -73,7 +76,7 @@ afterEach(() => {
 });
 
 describe('MyTemplatesAction', () => {
-  it('opens the read-only library dialog and reads the library once', async () => {
+  it('opens the Templates library dialog and reads the library once', async () => {
     await act(async () => {
       root.render(<MyTemplatesAction />);
     });
@@ -85,6 +88,8 @@ describe('MyTemplatesAction', () => {
     await flush();
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host.textContent).toContain('customTemplates.library.title');
+    expect(host.textContent).toContain('customTemplates.library.tabs.myTemplates');
+    expect(host.textContent).toContain('customTemplates.library.tabs.builtIn');
     expect(listTemplates).toHaveBeenCalledTimes(1);
     expect(preparePreview).not.toHaveBeenCalled();
     expect(saveTemplate).not.toHaveBeenCalled();

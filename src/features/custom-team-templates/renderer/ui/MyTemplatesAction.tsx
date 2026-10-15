@@ -9,10 +9,10 @@ const MyTemplatesDialog = lazy(() =>
 );
 
 /**
- * Team-list header action that opens the read-only template library.
+ * Team-list header action that opens the template library.
  *
  * The dialog is lazy-loaded so its code stays out of the initial bundle, and
- * the library itself is re-read every time it opens.
+ * the custom-template library itself is re-read every time it opens.
  */
 export const MyTemplatesAction = (): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -22,7 +22,7 @@ export const MyTemplatesAction = (): React.JSX.Element => {
     <>
       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
         <Layers size={13} />
-        {t('customTemplates.actions.myTemplates')}
+        {t('customTemplates.actions.templates')}
       </Button>
       {open ? (
         <Suspense

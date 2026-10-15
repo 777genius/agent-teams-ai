@@ -1,0 +1,141 @@
+import { useAppTranslation } from '@features/localization/renderer';
+import { TEAM_TEMPLATES } from '@features/team-templates';
+import {
+  RosterParticipantFrame,
+  RosterParticipantIdentity,
+} from '@renderer/components/team/members/RosterParticipantFrame';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useTheme } from '@renderer/hooks/useTheme';
+import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
+import {
+  ChevronDown,
+  ClipboardList,
+  Code2,
+  GraduationCap,
+  Handshake,
+  Headset,
+  Megaphone,
+  PenLine,
+  Search,
+} from 'lucide-react';
+
+import type { TeamTemplateV1 } from '@features/team-templates';
+import type { LucideIcon } from 'lucide-react';
+
+const TEMPLATE_ICONS = {
+  'software-product': Code2,
+  marketing: Megaphone,
+  content: PenLine,
+  research: Search,
+  sales: Handshake,
+  'customer-support': Headset,
+  operations: ClipboardList,
+  learning: GraduationCap,
+} satisfies Record<TeamTemplateV1['id'], LucideIcon>;
+
+/**
+ * Static catalogue of the closed built-in team templates.
+ *
+ * Renders the same expandable card presentation as the existing template
+ * references (name, description, member names with responsibility details)
+ * directly from `TEAM_TEMPLATES`. It never touches SQLite or the custom
+ * template API, so it stays usable while custom templates load or fail.
+ */
+export const BuiltInTemplateCatalogue = (): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const { isLight } = useTheme();
+
+  return (
+    <div className="space-y-3" data-testid="built-in-template-catalogue">
+      <p className="text-xs text-[var(--color-text-muted)]">
+        {t('customTemplates.library.builtInDescription')}
+      </p>
+      {TEAM_TEMPLATES.map((template) => {
+        const participants = [
+          {
+            name: 'team-lead',
+            role: t('externalPrompt.coordinator'),
+            workflow: template.teamPrompt,
+          },
+          ...template.members,
+        ];
+        const colors = buildTeamMemberColorMap(participants, { preferProvidedColors: false });
+        const avatars = buildMemberAvatarMap(participants);
+        const Icon = TEMPLATE_ICONS[template.id];
+        return (
+          <Collapsible
+            key={template.id}
+            className="min-w-0 rounded-md border border-[var(--color-border)]"
+            data-template-reference={template.id}
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="group h-auto w-full justify-start gap-3 whitespace-normal p-3 text-left"
+              >
+                <Icon className="size-5 shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">
+                    {t(`templates.names.${template.id}`)}
+                  </span>
+                  <span className="mt-1 block break-words text-xs font-normal text-[var(--color-text-muted)]">
+                    {t(`templates.descriptions.${template.id}`)}
+                  </span>
+                </span>
+                <ChevronDown
+                  className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
+                  aria-hidden="true"
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              {participants.map((member) => (
+                <Collapsible key={member.name}>
+                  <RosterParticipantFrame
+                    accentColor={getTeamColorSet(colors.get(member.name) ?? '').border}
+                    isLight={isLight}
+                    layout="flat"
+                    dataRole="template-participant"
+                  >
+                    <RosterParticipantIdentity
+                      avatarSrc={avatars.get(member.name) ?? agentAvatarUrl(member.name, 32)}
+                    >
+                      <span className="min-w-0 break-words text-xs font-medium">{member.role}</span>
+                    </RosterParticipantIdentity>
+                    <div className="min-w-0 space-y-1 md:col-span-2">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto min-h-8 max-w-full justify-start whitespace-normal text-left"
+                          aria-label={t('externalPrompt.responsibilitiesFor', {
+                            name: member.role,
+                          })}
+                        >
+                          {t('externalPrompt.responsibilities')}
+                          <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="min-w-0 whitespace-pre-wrap break-words text-xs text-[var(--color-text-muted)]">
+                        {member.workflow}
+                      </CollapsibleContent>
+                    </div>
+                  </RosterParticipantFrame>
+                </Collapsible>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+};
