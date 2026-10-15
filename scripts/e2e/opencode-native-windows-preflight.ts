@@ -31,6 +31,7 @@ function safeSourceGateFailure(error: unknown): { reason: string; errno: string 
     'TEST probe preparation plan invalid': 'probe_preparation_plan_invalid',
     'TEST probe launch boundary not reached': 'probe_launch_boundary_not_reached',
     'TEST probe launch boundary count invalid': 'probe_launch_boundary_count_invalid',
+    'TEST cold namespace exists': 'TESTcold_namespace_exists',
   };
   // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
   const reason =
@@ -120,6 +121,16 @@ async function verifyProbePreparation(
     body: { selectedModel: 'openrouter/TEST-model', requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
+  const { lstat } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const dataRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+  if (!dataRoot) throw new Error('TEST cold namespace exists');
+  const existing = await lstat(join(dataRoot, 'opencode', 'v2')).catch((error: unknown) => {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+      return null;
+    throw error;
+  });
+  if (existing) throw new Error('TEST cold namespace exists');
   const sentinel = new Error('TEST probe preparation reached launch boundary');
   let boundaryCalls = 0;
   const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
@@ -267,16 +278,17 @@ try {
      ? `stage='probe-controller-state';
  const { inspectOpenCodeV2LaunchSelection } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
  await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)});
- stage='readiness';
- await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
-   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});
  stage='probe-preparation';
  const { inspectOpenCodeV2SourceAvailability } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
  const runOwner = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunOwner.ts')).href)});
  const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
  const { spyOn } = await import('bun:test');
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
-   resolveOpenCodeV2ExecutionProbe, runOwner, spyOn, ${JSON.stringify(desktop.projectPath)});`
+   resolveOpenCodeV2ExecutionProbe, runOwner, spyOn, ${JSON.stringify(desktop.projectPath)});
+ // False readiness also opens the store: run it only AFTER the cold preparation.
+ stage='readiness';
+ await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
+   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)});`
      : ''
  }
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,version:${JSON.stringify(expectedVersion ?? null)}}));
