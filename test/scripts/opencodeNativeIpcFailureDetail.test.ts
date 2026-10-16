@@ -219,6 +219,9 @@ describe('serialized native IPC failure details', () => {
         acquisitionHistory: { phase: string; elapsedMs: number }[];
         acquisitionLastPhase: string | null;
         startupStage: string | null;
+        cleanupPhase: string;
+        cleanupNativePhase: string;
+        cleanupElapsedMs: number | null;
       }[];
     }>;
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-acquisition-timing-')));
@@ -243,7 +246,8 @@ describe('serialized native IPC failure details', () => {
       const project = async (
         acquisition: unknown,
         category = 'execution_timeout',
-        startup?: unknown
+        startup?: unknown,
+        cleanup?: unknown
       ) => {
         await writeFile(
           diagnostic,
@@ -253,11 +257,22 @@ describe('serialized native IPC failure details', () => {
             category,
             acquisition,
             ...(startup === undefined ? {} : { startup }),
+            ...(cleanup === undefined ? {} : { cleanup }),
           })
         );
         return (await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', []))
           .diagnostics[0]!;
       };
+      const cleanup = { phase: 'kernel-retirement', nativePhase: 'retire_grants_roots', elapsedMs: 22_002,
+        rawPath: 'PRIVATE-TEST-cleanup-secret', memberId: 'PRIVATE-TEST-original-member' };
+      const live = await project(undefined, 'timeout', undefined, cleanup);
+      expect(live).toMatchObject({ cleanupPhase: 'kernel-retirement', cleanupNativePhase: 'retire_grants_roots', cleanupElapsedMs: 22_002 });
+      expect(JSON.stringify(live)).not.toContain('PRIVATE-TEST');
+      for (const phase of ['owner-release', 'retained-roots', 'plan-close'])
+        expect(await project(undefined, 'timeout', undefined, { ...cleanup, phase })).toMatchObject({ cleanupPhase: phase, cleanupNativePhase: 'unclassified' });
+      for (const phase of ['PRIVATE-TEST-secret', ['kernel-retirement']])
+        expect(await project(undefined, 'timeout', undefined, { ...cleanup, phase })).toMatchObject({ cleanupPhase: 'unclassified', cleanupNativePhase: 'unclassified' });
+      expect(await project(undefined, 'timeout', undefined, { ...cleanup, nativePhase: 'PRIVATE-TEST-secret', elapsedMs: -1 })).toMatchObject({ cleanupPhase: 'kernel-retirement', cleanupNativePhase: 'unclassified', cleanupElapsedMs: null });
       const phases = [
         'preparing',
         'delivery-resolved',
