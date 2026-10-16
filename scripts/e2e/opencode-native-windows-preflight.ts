@@ -977,7 +977,8 @@ async function verifyProbePreparation(
     launchCalls: number; ownerReturned: boolean; memberReady: boolean; memberCount: number; readyMemberCount: number;
     stopConfirmed: boolean; cleanupUnknown: boolean;
   }) => void,
-  snapshot: (record: unknown, session: string, plan: unknown, timing: 'before_stop' | 'after_stop') => Promise<void>
+  snapshot: (record: unknown, session: string, plan: unknown, timing: 'before_stop' | 'after_stop') => Promise<void>,
+  stopFailure: (error: unknown) => void = () => undefined
 ) {
   const envelope = {
     schemaVersion: 1, requestId: 'TEST-source-probe-startup',
@@ -1132,7 +1133,11 @@ async function verifyProbePreparation(
               cleanupFailure = new Error('TEST probe physical stop unconfirmed');
               facts.cleanupUnknown = true;
             } else facts.stopConfirmed = true;
-          } catch (error) { cleanupFailure = error; facts.cleanupUnknown = true; }
+          } catch (error) {
+            // Retain the exact public Stop rejection for its closed projection;
+            // a primary readiness failure must not hide why Stop was not proven.
+            cleanupFailure = error; facts.cleanupUnknown = true; stopFailure(error);
+          }
           update();
           if (primary !== undefined) { phase = primaryPhase; update(); }
         } else { facts.cleanupUnknown = true; update(); } // Partial launch has no returned authority to invent or replay.
@@ -1243,6 +1248,7 @@ let startupFacts = null;
 let startupFailureState = null;
 let startupBeforeStop = null;
 let readOnlyAclObservation = null;
+let publicStopFailure = null;
 const nativeFailures = new WeakMap();
 const nativeLaunches = [];
 const liveStatuses = [];
@@ -1307,7 +1313,7 @@ try {
        const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
        readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
      }
-   });
+   }, (error) => { publicStopFailure = error; });
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
@@ -1320,6 +1326,7 @@ try {
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
+   publicStopFailure:publicStopFailure===null?null:(${safeSourceGateFailure.toString()})(publicStopFailure,nativeFailures),
    ...(${safeSourceGateFailure.toString()})(error,nativeFailures)}));
  exitCode = 1;
 } finally { nativeObserver?.mockRestore(); }

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { compileFunction, constants, runInNewContext } from 'node:vm';
 
 import ts from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
@@ -679,6 +679,71 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
     await expect(verify(executable, manifest)).rejects.toThrow();
     expect(active).toBe(0);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+
+it('expired readiness still issues one original public Stop and retains its exact rejection', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+  const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find((node) => node.name?.text === 'verifyProbePreparation')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const verify = compileFunction(`${compiled}\nreturn verifyProbePreparation;`, ['process'], {
+    importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+  })(process) as (...args: unknown[]) => Promise<unknown>;
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-expired-readiness-stop-')));
+  const previousRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+  process.env.CLAUDE_MULTIMODEL_DATA_HOME = root;
+  let now = 1_000_000;
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  try {
+    const teamId = `TEST-execution-probe-${'a'.repeat(32)}`;
+    const binding = { teamId, runId: 'TEST-run', controllerInstanceId: 'TEST-controller', ownerId: 'TEST-owner' };
+    const returned = { binding, deadline: now + 290_000 };
+    const owner: { launchExplicitOpenCodeV2Run: (plan: unknown) => Promise<unknown> } = {
+      launchExplicitOpenCodeV2Run: () => Promise.resolve(returned),
+    };
+    const readiness: number[] = [], stops: { record: unknown; request: unknown; timeout: number; at: number }[] = [];
+    const reported: Record<string, unknown>[] = [], retained: unknown[] = [];
+    const primary = new Error('run_deadline_expired');
+    const stopRejection = Object.assign(new Error('execution_native_unknown'), { nativeOperation: 'runStateRequest' });
+    const control = {
+      OPEN_CODE_V2_RUN_INITIALIZATION_MS: 300_000,
+      awaitOpenCodeV2RunMemberReadiness: (_record: unknown, _target: unknown, timeout: number) => {
+        readiness.push(timeout); now += timeout + 1; return Promise.reject(primary);
+      },
+      requestOpenCodeV2Run: (record: unknown, request: unknown, timeout: number) => {
+        stops.push({ record, request, timeout, at: now }); return Promise.reject(stopRejection);
+      },
+    };
+    const spyOn = (target: typeof owner, key: 'launchExplicitOpenCodeV2Run') => {
+      const original = target[key];
+      return { mockImplementation: (fn: typeof original) => { target[key] = fn; },
+        mockRestore: () => { target[key] = original; } };
+    };
+    const resolveProbe = () => owner.launchExplicitOpenCodeV2Run({ members: [{}], deadline: now + 295_000,
+      executionProbe: { memberId: 'probe', prepared: {} }, binding: { teamId } });
+    const buildPlan = () => Promise.resolve({ binding, deadline: now + 290_000,
+      members: ['team-lead', 'alice'].map((memberId) => ({ memberId, originalSessionId: `ses_${memberId}` })) });
+    await expect(verify(() => Promise.resolve({}), resolveProbe, buildPlan, owner, control, spyOn, root,
+      'openrouter/TEST-model', '2.0.0', (_phase: string, facts: Record<string, unknown>) => { reported.push(facts); },
+      () => Promise.resolve(), (error: unknown) => { retained.push(error); })).rejects.toBe(primary);
+    const readinessDeadline = returned.deadline - 30_000;
+    expect(readiness).toEqual([readinessDeadline - 1_000_000]);
+    // The expired readiness window never consumes the separate original Stop budget.
+    expect(stops).toEqual([{ record: returned, request: { operation: 'stop' }, timeout: 30_000, at: readinessDeadline + 1 }]);
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toBe(stopRejection);
+    expect(reported.at(-1)).toMatchObject({ launchCalls: 1, ownerReturned: true, memberReady: false,
+      readyMemberCount: 0, stopConfirmed: false, cleanupUnknown: true });
+  } finally {
+    clock.mockRestore();
+    if (previousRoot === undefined) delete process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+    else process.env.CLAUDE_MULTIMODEL_DATA_HOME = previousRoot;
     await rm(root, { recursive: true, force: true });
   }
 });
