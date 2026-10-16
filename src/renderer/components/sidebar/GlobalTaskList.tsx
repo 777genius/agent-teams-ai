@@ -5,6 +5,7 @@ import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskProjectFilterOptions } from '@renderer/hooks/useTaskProjectFilterOptions';
 import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
@@ -32,7 +33,6 @@ import { ProjectTaskGroup } from './ProjectTaskGroup';
 import { SidebarTaskItem } from './SidebarTaskItem';
 import { selectSidebarTeamsDerived } from './sidebarTeamSelectors';
 import { TaskContextMenu } from './TaskContextMenu';
-import { buildTaskProjectFilterOptions } from './taskFilterOptions';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
 import { defaultTaskFiltersState, useReadStateSnapshot } from './taskFiltersState';
 import { TaskSortPopover } from './TaskSortPopover';
@@ -552,43 +552,16 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 }: GlobalTaskListProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
   const { isLight } = useTheme();
-  const {
-    globalTasks,
-    globalTasksLoading,
-    globalTasksInitialized,
-    fetchAllTasks,
-    fetchProjects,
-    fetchRepositoryGroups,
-    softDeleteTask,
-    projects,
-    projectsLoading,
-    projectsInitialized,
-    projectsError,
-    viewMode,
-    repositoryGroups,
-    repositoryGroupsLoading,
-    repositoryGroupsInitialized,
-    repositoryGroupsError,
-  } = useStore(
-    useShallow((s) => ({
-      globalTasks: s.globalTasks,
-      globalTasksLoading: s.globalTasksLoading,
-      globalTasksInitialized: s.globalTasksInitialized,
-      fetchAllTasks: s.fetchAllTasks,
-      fetchProjects: s.fetchProjects,
-      fetchRepositoryGroups: s.fetchRepositoryGroups,
-      softDeleteTask: s.softDeleteTask,
-      projects: s.projects,
-      projectsLoading: s.projectsLoading,
-      projectsInitialized: s.projectsInitialized,
-      projectsError: s.projectsError,
-      viewMode: s.viewMode,
-      repositoryGroups: s.repositoryGroups,
-      repositoryGroupsLoading: s.repositoryGroupsLoading,
-      repositoryGroupsInitialized: s.repositoryGroupsInitialized,
-      repositoryGroupsError: s.repositoryGroupsError,
-    }))
-  );
+  const { globalTasks, globalTasksLoading, globalTasksInitialized, fetchAllTasks, softDeleteTask } =
+    useStore(
+      useShallow((s) => ({
+        globalTasks: s.globalTasks,
+        globalTasksLoading: s.globalTasksLoading,
+        globalTasksInitialized: s.globalTasksInitialized,
+        fetchAllTasks: s.fetchAllTasks,
+        softDeleteTask: s.softDeleteTask,
+      }))
+    );
   const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
@@ -805,36 +778,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [fetchAllTasks, softDeleteTask, t]
   );
 
-  useEffect(() => {
-    if (!filtersPopoverOpen) {
-      return;
-    }
-    if (
-      viewMode === 'grouped' &&
-      !repositoryGroupsInitialized &&
-      !repositoryGroupsLoading &&
-      !repositoryGroupsError
-    ) {
-      void fetchRepositoryGroups();
-    } else if (viewMode === 'flat' && !projectsInitialized && !projectsLoading && !projectsError) {
-      void fetchProjects();
-    }
-  }, [
-    fetchProjects,
-    fetchRepositoryGroups,
-    filtersPopoverOpen,
-    projectsError,
-    projectsInitialized,
-    projectsLoading,
-    repositoryGroupsError,
-    repositoryGroupsInitialized,
-    repositoryGroupsLoading,
-    viewMode,
-  ]);
-
-  const projectFilterOptions = useMemo(() => {
-    return buildTaskProjectFilterOptions({ viewMode, repositoryGroups, projects });
-  }, [viewMode, repositoryGroups, projects]);
+  const projectFilterOptions = useTaskProjectFilterOptions(filtersPopoverOpen);
 
   // Resolve project filter from filters state
   const selectedProjectPath = filters.projectPath;

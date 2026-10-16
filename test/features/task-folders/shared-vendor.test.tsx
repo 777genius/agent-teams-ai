@@ -375,7 +375,11 @@ it.each([false, true])(
     );
     const row = host.querySelector('[data-task-key]') as HTMLElement;
     expect(row.getAttribute('tabindex')).toBe('0');
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(document.activeElement).toBe(row);
+      });
+    });
     expect(document.activeElement).toBe(row);
     expect(row.getAttribute('aria-label')).toBe(archived ? 'Task (taskFolders.archived)' : 'Task');
     expect(row.querySelector('[draggable="true"]')).not.toBeNull();

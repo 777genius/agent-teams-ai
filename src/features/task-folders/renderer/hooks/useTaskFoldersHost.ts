@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
-import {
-  buildTaskFilterTeamOptions,
-  buildTaskProjectFilterOptions,
-} from '@renderer/components/sidebar/taskFilterOptions';
+import { buildTaskFilterTeamOptions } from '@renderer/components/sidebar/taskFilterOptions';
 import { useReadStateSnapshot } from '@renderer/components/sidebar/taskFiltersState';
 import {
   createTaskEffectiveSubjectAccessor,
@@ -11,6 +8,7 @@ import {
   sortGlobalTasks,
 } from '@renderer/components/sidebar/taskViewPolicy';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskProjectFilterOptions } from '@renderer/hooks/useTaskProjectFilterOptions';
 import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { clearTaskManualUnread, markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -35,9 +33,6 @@ export function useTaskFoldersHost(
   const panel = useSyncExternalStore(panelController.subscribe, panelController.getSnapshot);
   const move = useSyncExternalStore(moveRequest.subscribe, moveRequest.getSnapshot);
   const tasks = useStore((s) => s.globalTasks);
-  const viewMode = useStore((s) => s.viewMode);
-  const projects = useStore((s) => s.projects);
-  const repositoryGroups = useStore((s) => s.repositoryGroups);
   const teams = useStore((s) => s.teams);
   const teamByName = useStore((s) => s.teamByName);
   const isTeamOffline = useTaskTeamStatus();
@@ -104,10 +99,7 @@ export function useTaskFoldersHost(
     view.searchQuery,
     view.sortMode,
   ]);
-  const projectFilterOptions = useMemo(
-    () => buildTaskProjectFilterOptions({ viewMode, repositoryGroups, projects }),
-    [projects, repositoryGroups, viewMode]
-  );
+  const projectFilterOptions = useTaskProjectFilterOptions(view.filtersOpen);
   const taskFilterTeams = useMemo(() => buildTaskFilterTeamOptions(teams), [teams]);
   const getOwnerColorName = useCallback(
     (task: { teamName: string; owner?: string }): string | null | undefined => {
