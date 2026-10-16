@@ -211,7 +211,8 @@ describe('serialized native IPC failure details', () => {
       session: string,
       plan: unknown,
       sdkRoot: string,
-      launches: unknown[]
+      launches: unknown[],
+      statuses?: unknown[]
     ) => Promise<{
       diagnostics: {
         category: string;
@@ -267,6 +268,68 @@ describe('serialized native IPC failure details', () => {
       expect(stdioPacket.stdio.errorLine.length).toBeLessThanOrEqual(256);
       expect(stdioPacket.stdio.errorKinds.length).toBeLessThanOrEqual(9);
       expect(JSON.stringify(stdioPacket.stdio)).not.toMatch(/TEST-private|TEST-sdk|entry\.ts/);
+
+      // Execute the actual passive observer and project its private captures through
+      // the actual snapshot. No new status request or product authority is invented.
+      const statuses: unknown[] = [];
+      let reply: unknown;
+      let forwarded = 0;
+      const module = { createWindowsNativeBroker: () => ({ request: async () => { forwarded += 1; return reply; } }) };
+      const observed = compileFunction(`${compiled}
+        const spyOn = (target, key) => ({ mockImplementation(fn) { target[key] = fn; }, mockRestore() {} });
+        observeNativeBrokerFailures(module, spyOn, new WeakMap(), [], statuses);
+        return module.createWindowsNativeBroker(null);`, ['module', 'statuses'])(module, statuses) as {
+          request(operation: string, input: unknown): Promise<unknown>;
+        };
+      const nonce = 'b'.repeat(64), endpoint = 'c'.repeat(64);
+      const member = { memberId: 'TEST-member', laneId: 'TEST-lane', originalSessionId: 'TEST-session',
+        opencodeSessionId: 'TEST-session', runtimeSessionId: 'TEST-session', profileEpoch: 'TEST-epoch',
+        profileRoot, pin: '2.0.21', state: 'unknown', bootstrap: null,
+        initialization: { phase: 'bootstrap-before-log', elapsedMs: 123 },
+        secret: 'EPRIVATE_TOKEN', selectedModel: 'PRIVATE_MODEL' };
+      const input = { endpointHash: endpoint, payload: { protocol: 1, nonce, endpoint, binding, request: { operation: 'status' } } };
+      const statusReply = (members: unknown[], responseNonce = nonce) => ({ response: {
+        nonce: responseNonce, endpoint, result: { kind: 'status', state: 'starting', members },
+      } });
+      reply = statusReply([member], 'd'.repeat(64));
+      expect(await observed.request('runStateRequest', input)).toBe(reply);
+      expect(statuses).toHaveLength(0);
+      reply = statusReply([member]);
+      expect(await observed.request('runStateRequest', input)).toBe(reply);
+      expect(forwarded).toBe(2);
+      const livePlan = { members: [{ memberId: member.memberId, laneId: member.laneId,
+        originalSessionId: 'TEST-session', profile: { root: profileRoot, epoch: member.profileEpoch }, native: { version: member.pin } }] };
+      const liveSnapshot = async (plan = livePlan) => await snapshot({ directory, binding }, 'TEST-session', plan, 'C:\\TEST-sdk', [], statuses) as unknown as {
+        liveStatus: { observation: string; initialization: unknown; firstObservedAcceptedElapsedMs: number | null; bootstrapVerified: boolean };
+      };
+      expect((await liveSnapshot()).liveStatus).toMatchObject({ observation: 'existing_status_response',
+        initialization: { phase: 'bootstrap-before-log', elapsedMs: 123 }, bootstrapVerified: false, firstObservedAcceptedElapsedMs: null });
+      reply = statusReply([{ ...member, state: 'accepted', bootstrap: null }]);
+      await observed.request('runStateRequest', input);
+      const accepted = (await liveSnapshot()).liveStatus.firstObservedAcceptedElapsedMs;
+      expect(accepted).toBeGreaterThanOrEqual(0);
+      expect((await liveSnapshot()).liveStatus.bootstrapVerified).toBe(false);
+      const lastStarting = (await liveSnapshot()).liveStatus as unknown as { lastStartingInitialization: { phase: string; elapsedMs: number; observedElapsedMs: number } };
+      expect(lastStarting.lastStartingInitialization).toMatchObject({ phase: 'bootstrap-before-log', elapsedMs: 123 });
+      for (const state of ['stopping', 'active']) {
+        reply = statusReply([{ ...member, state: 'accepted', initialization: undefined }]);
+        (reply as { response: { result: { state: string } } }).response.result.state = state;
+        await observed.request('runStateRequest', input);
+        const packet = (await liveSnapshot()).liveStatus as unknown as { state: string; initialization: unknown; observedElapsedMs: number; lastStartingInitialization: unknown };
+        expect(packet).toMatchObject({ state, initialization: null, lastStartingInitialization: lastStarting.lastStartingInitialization });
+        expect(packet.observedElapsedMs).toBeGreaterThanOrEqual(lastStarting.lastStartingInitialization.observedElapsedMs);
+      }
+      reply = statusReply([{ ...member, state: 'accepted', bootstrap: { verified: true, missingNativeMessageID: true }, initialization: { phase: 'EPRIVATE_TOKEN', elapsedMs: 86400001 } }]);
+      await observed.request('runStateRequest', input);
+      expect((await liveSnapshot()).liveStatus).toMatchObject({ initialization: null, firstObservedAcceptedElapsedMs: accepted });
+      expect((await liveSnapshot({ members: [{ ...livePlan.members[0]!, profile: { root: 'FOREIGN', epoch: member.profileEpoch } }] })).liveStatus.observation).toBe('unavailable');
+      reply = statusReply([0, 1, 2].map(index => ({ ...member, memberId: `TEST-extra-${index}` })));
+      await observed.request('runStateRequest', input);
+      expect(statuses).toHaveLength(3);
+      reply = { get response() { throw new Error('PRIVATE_GETTER'); } };
+      expect(await observed.request('runStateRequest', input)).toBe(reply);
+      expect(forwarded).toBe(8);
+      expect(JSON.stringify((await liveSnapshot()).liveStatus)).not.toMatch(/PRIVATE|TEST-session|TEST-member|TEST-lane|TEST-epoch|profileRoot|nonce|endpoint/);
 
       const project = async (
         acquisition: unknown,

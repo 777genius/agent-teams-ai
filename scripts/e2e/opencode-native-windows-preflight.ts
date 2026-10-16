@@ -187,7 +187,7 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
     primaryNativeOperation: error && typeof error === 'object' ? nativeFailures?.get(error) ?? 'unknown' : 'unknown', causal: { failures, truncated } };
 }
 
-// Observe rejection identity only; no request data, error text, or history is retained.
+// Passive bounded TEST observations only; never alter requests, results, or rejection identity.
 function observeNativeBrokerFailures(
   module: { createWindowsNativeBroker(artifact: unknown): {
     request(operation: string, input?: Readonly<Record<string, unknown>>, deadline?: number, signal?: AbortSignal): Promise<unknown>;
@@ -196,7 +196,8 @@ function observeNativeBrokerFailures(
     mockImplementation(fn: typeof module.createWindowsNativeBroker): void; mockRestore(): void;
   },
   failures: WeakMap<object, string>,
-  launches: unknown[]
+  launches: unknown[],
+  statuses: unknown[] = []
 ) {
   const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire', 'selfImageCustody',
     'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
@@ -206,6 +207,7 @@ function observeNativeBrokerFailures(
     'runStateReserve', 'runStateReadRecord', 'runStateWriteRecord', 'runStateReadStop', 'runStateOwnerRetired',
     'runStateProcessIdentity', 'runStateValidateEndpoint', 'runStateRequest', 'runStateListen',
     'runStateRespond', 'runStatePoisonConnection', 'runStateClose', 'runStateReadControllerInbox']);
+  const observedAt = Date.now();
   const originalFactory = module.createWindowsNativeBroker;
   const observer = spyOn(module, 'createWindowsNativeBroker');
   observer.mockImplementation(function (this: unknown, artifact) {
@@ -226,6 +228,44 @@ function observeNativeBrokerFailures(
         // anchors. Never retain the launch environment or alter an RPC result.
         try {
           const input = args[1], value = input?.value;
+          if (args[0] === 'runStateRequest') {
+            const row = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
+            const payload = row(input?.payload), response = row(row(result).response), status = row(response.result);
+            const binding = row(payload.binding), keys = ['teamId', 'runId', 'controllerInstanceId', 'ownerId'];
+            if (row(payload.request).operation === 'status' && payload.protocol === 1 &&
+                typeof payload.nonce === 'string' && /^[a-f0-9]{64}$/.test(payload.nonce) && response.nonce === payload.nonce &&
+                typeof payload.endpoint === 'string' && /^[a-f0-9]{64}$/.test(payload.endpoint) && response.endpoint === payload.endpoint &&
+                input?.endpointHash === payload.endpoint && response.error === undefined && status.kind === 'status' &&
+                keys.every(key => typeof binding[key] === 'string') && Array.isArray(status.members) && status.members.length <= 3) {
+              const elapsedMs = Math.max(0, Math.min(86400000, Date.now() - observedAt));
+              for (const item of status.members) {
+                const member = row(item);
+                if (!['memberId', 'laneId', 'originalSessionId', 'opencodeSessionId', 'runtimeSessionId', 'profileEpoch', 'profileRoot', 'pin'].every(key => typeof member[key] === 'string')) continue;
+                const existing = statuses.findIndex(item => {
+                  const previous = row(item);
+                  return keys.every(key => row(previous.binding)[key] === binding[key]) && previous.memberId === member.memberId;
+                });
+                if (existing < 0 && statuses.length >= 3) continue;
+                const previous = row(statuses[existing]), bootstrap = row(member.bootstrap), initialization = row(member.initialization);
+                if (existing >= 0 && !['laneId', 'originalSessionId', 'opencodeSessionId', 'runtimeSessionId', 'profileEpoch', 'profileRoot', 'pin'].every(key => previous[key] === member[key])) continue;
+                const phase = ['bootstrap-before-log', 'bootstrap-before-messages', 'bootstrap-before-log-confirm',
+                  'bootstrap-instruction-put', 'bootstrap-instruction-readback', 'bootstrap-after-log', 'bootstrap-after-messages',
+                  'bootstrap-after-log-confirm', 'bootstrap-verify', 'MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority'].find(value => value === initialization.phase);
+                const accepted = member.state === 'accepted';
+                const observed = { binding: Object.fromEntries(keys.map(key => [key, binding[key]])),
+                  ...Object.fromEntries(['memberId', 'laneId', 'originalSessionId', 'opencodeSessionId', 'runtimeSessionId', 'profileEpoch', 'profileRoot', 'pin'].map(key => [key, member[key]])),
+                  state: ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown'].find(value => value === status.state) ?? 'unclassified',
+                  memberState: ['accepted', 'unknown', 'rejected'].find(value => value === member.state) ?? 'unclassified',
+                  bootstrapVerified: bootstrap.verified === true, missingNativeMessageID: bootstrap.missingNativeMessageID === true,
+                  initialization: phase && Object.keys(initialization).sort().join(',') === 'elapsedMs,phase' && Number.isSafeInteger(initialization.elapsedMs) && Number(initialization.elapsedMs) >= 0 && Number(initialization.elapsedMs) <= 86400000
+                    ? { phase, elapsedMs: Number(initialization.elapsedMs) } : null,
+                  observedElapsedMs: elapsedMs, firstObservedAcceptedElapsedMs: previous.firstObservedAcceptedElapsedMs ?? (accepted ? elapsedMs : null) };
+                const retained = { ...observed, lastStartingInitialization: status.state === 'starting' && observed.initialization
+                  ? { ...observed.initialization, observedElapsedMs: elapsedMs } : previous.lastStartingInitialization ?? null };
+                if (existing < 0) statuses.push(retained); else statuses[existing] = retained;
+              }
+            }
+          }
           if (args[0] === 'launch' && input) launch = {
             entry: input.entry, cwd: input.cwd, executable: input.executable,
             nonce: input.nonce, leaseOwnerId: input.leaseOwnerId,
@@ -503,7 +543,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
 }
 
 // Diagnostic observation only: never substitutes for authenticated stop or retirement.
-async function snapshotStartupFailure(value: unknown, session: string, plan: unknown, sdkRoot: string, nativeLaunches: unknown[]): Promise<unknown> {
+async function snapshotStartupFailure(value: unknown, session: string, plan: unknown, sdkRoot: string, nativeLaunches: unknown[], liveStatuses: unknown[] = []): Promise<unknown> {
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
@@ -647,6 +687,31 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
     const matches = Array.isArray(selectedMembers) && selectedMembers.length <= 3 ? selectedMembers.map(row).filter(member => member.originalSessionId === session) : [];
     const selectedMember = matches.length === 1 ? matches[0]! : {};
     const selectedProfileRoot = row(selectedMember.profile).root;
+    const liveMatches = liveStatuses.slice(0, 3).map(row).filter(observed =>
+      keys.every(key => row(observed.binding)[key] === binding[key]) && observed.memberId === selectedMember.memberId &&
+      observed.laneId === selectedMember.laneId && observed.originalSessionId === session &&
+      observed.opencodeSessionId === session && observed.runtimeSessionId === session &&
+      observed.profileRoot === selectedProfileRoot && observed.profileEpoch === row(selectedMember.profile).epoch &&
+      observed.pin === row(selectedMember.native).version);
+    const live = liveMatches.length === 1 ? liveMatches[0]! : null;
+    const liveInitialization = row(live?.initialization);
+    const livePhases = ['bootstrap-before-log', 'bootstrap-before-messages', 'bootstrap-before-log-confirm',
+      'bootstrap-instruction-put', 'bootstrap-instruction-readback', 'bootstrap-after-log', 'bootstrap-after-messages',
+      'bootstrap-after-log-confirm', 'bootstrap-verify', 'MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority'];
+    const livePhase = livePhases.find(phase => phase === liveInitialization.phase);
+    const lastStarting = row(live?.lastStartingInitialization), lastStartingPhase = livePhases.find(phase => phase === lastStarting.phase);
+    const elapsed = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 86400000 ? Number(value) : null;
+    const liveStatus = live ? { observation: 'existing_status_response',
+      state: one(live.state, ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown']),
+      memberState: one(live.memberState, ['accepted', 'unknown', 'rejected']),
+      bootstrapVerified: live.bootstrapVerified === true, missingNativeMessageID: live.missingNativeMessageID === true,
+      initialization: livePhase && Object.keys(liveInitialization).sort().join(',') === 'elapsedMs,phase' && elapsed(liveInitialization.elapsedMs) !== null
+        ? { phase: livePhase, elapsedMs: elapsed(liveInitialization.elapsedMs) } : null,
+      lastStartingInitialization: lastStartingPhase && Object.keys(lastStarting).sort().join(',') === 'elapsedMs,observedElapsedMs,phase' &&
+        elapsed(lastStarting.elapsedMs) !== null && elapsed(lastStarting.observedElapsedMs) !== null &&
+        elapsed(live.observedElapsedMs) !== null && Number(lastStarting.observedElapsedMs) <= Number(live.observedElapsedMs)
+        ? { phase: lastStartingPhase, elapsedMs: elapsed(lastStarting.elapsedMs), observedElapsedMs: elapsed(lastStarting.observedElapsedMs) } : null,
+      observedElapsedMs: elapsed(live.observedElapsedMs), firstObservedAcceptedElapsedMs: elapsed(live.firstObservedAcceptedElapsedMs) } : { observation: 'unavailable' };
     const executionOwner = typeof selectedProfileRoot === 'string' && paths.dirname(selectedProfileRoot) === paths.join(root, 'opencode', 'v2', 'profiles') &&
         /^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(paths.basename(selectedProfileRoot))
       ? row((await read(paths.join(selectedProfileRoot, '.opencode-v2-execution-owner'), 'owner.json', 16384)).data) : {};
@@ -821,7 +886,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
           stdio = { observation: 'unavailable', kind: 'unavailable' };
       }
     } catch (error) { stdio = { observation: row(error).code === 'ENOENT' ? 'missing' : 'unavailable', kind: 'unavailable' }; }
-    return { observation: 'snapshot_only', stdio, state: { observation: state.observation,
+    return { observation: 'snapshot_only', stdio, liveStatus, state: { observation: state.observation,
       state: one(stateData.state, ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown']), members: members(stateData.members) },
       operation: { observation: operation.observation, operation: one(failure.operation,
         ['send', 'observe', 'transcript', 'permissions', 'permissionReply', 'mcp', 'status', 'probeEvidence', 'stop']), category: one(failure.category, [...codes, 'run_control_pump_failed']),
@@ -1131,12 +1196,13 @@ let startupBeforeStop = null;
 let readOnlyAclObservation = null;
 const nativeFailures = new WeakMap();
 const nativeLaunches = [];
+const liveStatuses = [];
 const graphFailureCoverage = (${graphFailureCoverage.toString()});
 let nativeObserver, exitCode = 0;
 try {
  const nativeModule = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/windows/OpenCodeV2WindowsNativeBroker.ts')).href)});
  const { spyOn: observeFactory } = await import('bun:test');
- nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures, nativeLaunches);
+ nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures, nativeLaunches, liveStatuses);
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
  const cleanup = await executeSelectedOpenCodeBridgeCommandEnvelope({
@@ -1184,10 +1250,10 @@ try {
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
-       if (record) { startupBeforeStop ??= []; startupBeforeStop.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches)); }
+       if (record) { startupBeforeStop ??= []; startupBeforeStop.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches, liveStatuses)); }
        return;
      }
-     if (record) { startupFailureState ??= []; startupFailureState.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches)); }
+     if (record) { startupFailureState ??= []; startupFailureState.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches, liveStatuses)); }
      if (readOnlyAclObservation === null) {
        const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
        readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
