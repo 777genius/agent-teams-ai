@@ -683,7 +683,6 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
   }
 });
 
-
 it('expired readiness still issues one original public Stop and retains its exact rejection', async () => {
   const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
   const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
