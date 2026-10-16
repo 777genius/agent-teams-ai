@@ -89,6 +89,7 @@ export const Combobox = ({
       </PopoverTrigger>
       {open ? (
         <PopoverContent
+          id={listboxId}
           className="w-[var(--radix-popover-trigger-width)] p-0"
           align="start"
           sideOffset={4}
@@ -108,7 +109,6 @@ export const Combobox = ({
               />
             </div>
             <CommandPrimitive.List
-              id={listboxId}
               className="max-h-72 overflow-y-auto overscroll-contain px-2 py-1"
               onWheel={(e) => e.stopPropagation()}
             >

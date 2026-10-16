@@ -25,8 +25,8 @@ interface CardState extends CardMetadata {
 
 interface FilterSelection {
   status?: 'todo' | 'in_progress' | 'needs_fix' | 'done' | 'review' | 'approved';
-  team?: string;
-  project?: string;
+  teamChoiceId?: string;
+  projectChoiceId?: string;
   read?: 'all' | 'unread' | 'read';
 }
 
@@ -34,6 +34,8 @@ const filterContentTestId = (scope: CardScope) => `${scope}-task-view-filters-co
 const sortContentTestId = (scope: CardScope) => `${scope}-task-view-sort-content`;
 const panelRoot = (scope: CardScope) => (scope === 'tree' ? selectors.panel : selectors.sidebar);
 const FILTER_TEAM = 'task-folders-test-filter-team';
+const TEAM_ALL_CHOICE_ID = '__all__';
+const PROJECT_RESET_CHOICE_ID = '__reset__';
 const taskKeyExpression = (team: string, id: string) =>
   JSON.stringify(JSON.stringify([team, id]));
 const cardExpression = (scope: CardScope, team: string, id: string) =>
@@ -87,17 +89,26 @@ function waitLoadedTaskDetailInBrowser(
   const dialog = dialogs[0];
   if (dialog.querySelector('[role="alert"],[role="status"]')) return false;
   const heading = dialog.querySelector('h2')?.textContent?.trim();
-  const descriptionId = dialog.getAttribute('aria-describedby');
-  const descriptionElement = descriptionId
-    ? Array.from(dialog.querySelectorAll('[id]')).find((element) => element.id === descriptionId)
-    : null;
-  const leaves = Array.from(dialog.querySelectorAll('*'))
-    .filter((element) => element.childElementCount === 0)
+  const content = dialog.querySelector('[data-task-detail-content]');
+  if (!content) return false;
+  const leaves = Array.from(content.querySelectorAll('*'))
+    .filter(
+      (element) =>
+        element.childElementCount === 0 &&
+        element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+    )
     .map((element) => element.textContent?.trim());
   return (
     heading === subject &&
     leaves.includes(taskLabel) &&
-    descriptionElement?.textContent?.trim() === description
+    Array.from(content.querySelectorAll('section')).some((section) =>
+      Array.from(section.querySelectorAll('*')).some(
+        (element) =>
+          element.childElementCount === 0 &&
+          element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) &&
+          element.textContent?.trim() === description
+      )
+    )
   );
 }
 
@@ -364,7 +375,29 @@ async function sidebarGrouping(ui: UI): Promise<'none' | 'project' | 'time'> {
   return mode === 'none' || mode === 'project' || mode === 'time' ? mode : 'project';
 }
 
-async function comboboxOption(ui: UI, content: string, optionLabel: string) {
+function scopedComboboxSettledExpression(content: string, popupId: string) {
+  return `(async()=>{const popupId=${JSON.stringify(popupId)};const content=${content};
+    const triggers=Array.from(content?.querySelectorAll('[role="combobox"]') ?? []);
+    const trigger=triggers.filter(e=>e.getAttribute('aria-controls')===popupId);
+    const sample=()=>{
+      if(trigger.length!==1 || document.getElementById(popupId)) return null;
+      const target=trigger[0];const rect=target.getBoundingClientRect();
+      if(target.getAttribute('aria-expanded')!=='false' || target.getAttribute('data-state')!=='closed' ||
+        document.activeElement!==target || !target.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) ||
+        rect.width<=0 || rect.height<=0) return null;
+      return [rect.x,rect.y,rect.width,rect.height];
+    };
+    let previous=sample();if(!previous)return false;
+    for(let frame=0;frame<4;frame++){
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+      const current=sample();
+      if(!current || current.some((value,index)=>value!==previous[index]))return false;
+      previous=current;
+    }
+    return true;})()`;
+}
+
+async function comboboxOption(ui: UI, content: string, choiceId: string) {
   await ui.wait(
     `Array.from(${content}.querySelectorAll('[role="combobox"]')).some(e=>e.getAttribute('aria-expanded')==='true')`,
     'scoped combobox open'
@@ -373,12 +406,17 @@ async function comboboxOption(ui: UI, content: string, optionLabel: string) {
     `Array.from(${content}.querySelectorAll('[role="combobox"]')).find(e=>e.getAttribute('aria-expanded')==='true')?.getAttribute('aria-controls')`
   );
   assert(trigger, 'Scoped combobox did not open');
-  const options = `document.getElementById(${JSON.stringify(trigger)})`;
-  await ui.wait(`${options}?.querySelector('[role="option"]')`, 'portaled combobox options');
+  const popup = `document.getElementById(${JSON.stringify(trigger)})`;
+  const listbox = `${popup}?.querySelector('[cmdk-list][role="listbox"]')`;
+  await ui.wait(`${listbox}?.querySelector('[role="option"]')`, 'portaled combobox options');
   await ui.click(
-    `Array.from(${options}.querySelectorAll('[role="option"]')).find(e=>e.textContent?.trim()===${JSON.stringify(optionLabel)})`
+    `Array.from(${listbox}.querySelectorAll('[role="option"]')).find(e=>e.getAttribute('data-value')===${JSON.stringify(choiceId)})`
   );
-  await ui.wait(`!document.getElementById(${JSON.stringify(trigger)})`, 'combobox options close');
+  await ui.wait(`!${popup}`, 'combobox options close');
+  await ui.wait(
+    scopedComboboxSettledExpression(content, trigger),
+    'combobox trigger focus and layout cleanup settled'
+  );
 }
 
 async function openScopedFilters(ui: UI, scope: CardScope) {
@@ -433,13 +471,13 @@ async function setStatusSelection(
 async function applyFilters(ui: UI, scope: CardScope, selection: FilterSelection) {
   const content = await openScopedFilters(ui, scope);
   await setStatusSelection(ui, content, selection.status);
-  if (selection.team) {
+  if (selection.teamChoiceId) {
     await ui.click(`${content}.querySelectorAll('[role="combobox"]')[0]`);
-    await comboboxOption(ui, content, selection.team);
+    await comboboxOption(ui, content, selection.teamChoiceId);
   }
-  if (selection.project) {
+  if (selection.projectChoiceId) {
     await ui.click(`${content}.querySelectorAll('[role="combobox"]')[1]`);
-    await comboboxOption(ui, content, selection.project);
+    await comboboxOption(ui, content, selection.projectChoiceId);
   }
   if (selection.read)
     await ui.click(`${content}.querySelector('[data-read-filter="${selection.read}"]')`);
@@ -451,9 +489,9 @@ async function restoreSidebarFilters(ui: UI) {
   const content = await openScopedFilters(ui, 'sidebar');
   await setStatusSelection(ui, content);
   await ui.click(`${content}.querySelectorAll('[role="combobox"]')[0]`);
-  await comboboxOption(ui, content, 'All teams');
+  await comboboxOption(ui, content, TEAM_ALL_CHOICE_ID);
   await ui.click(`${content}.querySelectorAll('[role="combobox"]')[1]`);
-  await comboboxOption(ui, content, 'All Projects');
+  await comboboxOption(ui, content, PROJECT_RESET_CHOICE_ID);
   await ui.click(`${content}.querySelector('[data-read-filter="all"]')`);
   await ui.click(label('Apply', content));
   await ui.wait(`!${content}`, 'sidebar filter popover close');
@@ -472,13 +510,20 @@ async function sandboxUpdate(ui: UI, patch: Record<string, unknown>) {
 }
 
 async function storeSnapshot(ui: UI) {
+  await ui.wait(
+    `window.__agentTeamsDevStore.getState().projectsLoading===false`,
+    'project catalog load settled before store snapshot'
+  );
   return await ui.value<{
     globalTasks: GlobalTask[];
     teams: unknown[];
     projects: unknown[];
     viewMode: string;
+    projectsInitialized: boolean;
+    projectsLoading: boolean;
+    projectsError: string | null;
   }>(
-    `(() => {const s=window.__agentTeamsDevStore.getState();return {globalTasks:s.globalTasks,teams:s.teams,projects:s.projects,viewMode:s.viewMode};})()`
+    `(() => {const s=window.__agentTeamsDevStore.getState();return {globalTasks:s.globalTasks,teams:s.teams,projects:s.projects,viewMode:s.viewMode,projectsInitialized:s.projectsInitialized,projectsLoading:s.projectsLoading,projectsError:s.projectsError};})()`
   );
 }
 
@@ -722,6 +767,7 @@ export async function scopedSortAndFilters(ui: UI, f: Fixture) {
       ...original.projects,
       { path: f.project, name: 'TEST-project', sessions: [], totalSessions: 1 },
     ],
+    projectsInitialized: true,
     viewMode: 'flat',
   });
   await expandUnfiled(ui);
@@ -742,19 +788,19 @@ export async function scopedSortAndFilters(ui: UI, f: Fixture) {
     await applyFilters(ui, scope, { status: 'done' });
     assert.deepEqual(await fakeCardIds(ui, scope), ['fake-unread']);
     assert.deepEqual(await fakeCardIds(ui, other), otherBefore);
-    await applyFilters(ui, scope, { team: 'TEST filter team', status: 'todo' });
+    await applyFilters(ui, scope, { teamChoiceId: FILTER_TEAM, status: 'todo' });
     assert.deepEqual(await fakeCardIds(ui, scope), ['fake-read']);
     assert.deepEqual(await fakeCardIds(ui, other), otherBefore);
     await applyFilters(ui, scope, {
-      team: 'TEST filter team',
-      project: 'TEST-project',
+      teamChoiceId: FILTER_TEAM,
+      projectChoiceId: f.project,
       status: 'todo',
     });
     assert.deepEqual(await fakeCardIds(ui, scope), ['fake-read']);
     assert.deepEqual(await fakeCardIds(ui, other), otherBefore);
     await applyFilters(ui, scope, {
-      team: 'TEST filter team',
-      project: 'TEST-project',
+      teamChoiceId: FILTER_TEAM,
+      projectChoiceId: f.project,
       status: 'todo',
       read: 'unread',
     });

@@ -382,7 +382,7 @@ export const FolderTree = ({
     if (n.kind === 'task' && task && identity) {
       return (
         <RowMenuOwner id={n.id}>
-          {({ deferAction, onCloseAutoFocus }) => (
+          {({ deferAction, onCloseAutoFocus, onMenuOpenChange }) => (
             <>
               <ContextMenuTrigger asChild>
                 <SidebarTaskItem
@@ -451,9 +451,10 @@ export const FolderTree = ({
                   )}
                   menuSlot={
                     <DropdownMenu
-                      onOpenChange={(open) =>
-                        panelController.hold(`menu:dropdown:${n.id}`, open)
-                      }
+                      onOpenChange={(open) => {
+                        onMenuOpenChange(open);
+                        panelController.hold(`menu:dropdown:${n.id}`, open);
+                      }}
                     >
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -511,7 +512,7 @@ export const FolderTree = ({
     }
     return (
       <RowMenuOwner id={n.id}>
-        {({ deferAction, onCloseAutoFocus }) => (
+        {({ deferAction, onCloseAutoFocus, onMenuOpenChange }) => (
           <>
             <ContextMenuTrigger asChild>
               <div
@@ -664,7 +665,10 @@ export const FolderTree = ({
                 )}
                 {menu.length > 0 && (
                   <DropdownMenu
-                    onOpenChange={(open) => panelController.hold(`menu:dropdown:${n.id}`, open)}
+                    onOpenChange={(open) => {
+                      onMenuOpenChange(open);
+                      panelController.hold(`menu:dropdown:${n.id}`, open);
+                    }}
                   >
                     <DropdownMenuTrigger asChild>
                       <Button
