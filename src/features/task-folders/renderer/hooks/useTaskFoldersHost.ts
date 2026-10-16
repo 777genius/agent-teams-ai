@@ -10,12 +10,11 @@ import {
   filterGlobalTasks,
   sortGlobalTasks,
 } from '@renderer/components/sidebar/taskViewPolicy';
-import { selectLeadOfflineTeamNames } from '@renderer/components/sidebar/teamActivitySelectors';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { clearTaskManualUnread, markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { useShallow } from 'zustand/react/shallow';
 
 import { moveRequest } from '../adapters/moveRequest';
 import { folderController, panelController } from '../composition';
@@ -41,9 +40,7 @@ export function useTaskFoldersHost(
   const repositoryGroups = useStore((s) => s.repositoryGroups);
   const teams = useStore((s) => s.teams);
   const teamByName = useStore((s) => s.teamByName);
-  const leadOfflineTeamNames = useStore(
-    useShallow((s) => selectLeadOfflineTeamNames(s.leadActivityByTeam))
-  );
+  const isTeamOffline = useTaskTeamStatus();
   const openDetail = useStore((s) => s.openGlobalTaskDetail);
   const local = useTaskLocalState();
   const readState = useReadStateSnapshot();
@@ -119,10 +116,6 @@ export function useTaskFoldersHost(
       return members ? (buildMemberColorMap(members).get(task.owner) ?? null) : undefined;
     },
     [teamByName]
-  );
-  const isTeamOffline = useCallback(
-    (teamName: string): boolean => leadOfflineTeamNames.includes(teamName),
-    [leadOfflineTeamNames]
   );
   const setViewSortOpen = useCallback(
     (open: boolean) => {

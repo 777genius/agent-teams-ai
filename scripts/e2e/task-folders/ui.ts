@@ -184,19 +184,51 @@ export class UI {
       'virtual tree presence',
       Math.max(1, deadline - Date.now())
     );
-    // Navigate the real virtual scroll container, including during an intercepted native drag.
-    await this.cdp.evaluate(`${el(selectors.tree)}.scrollTop=0`);
-    await this.awaitBrowserFrame('virtual tree navigation frame');
-    if (await exists()) return;
-    const steps = await this.value<number>(
-      `Math.ceil(${el(selectors.tree)}.scrollHeight / Math.max(100,${el(selectors.tree)}.clientHeight/2))+2`
-    );
-    for (let step = 0; step < steps && Date.now() < deadline; step++) {
-      await this.cdp.evaluate(
-        `${el(selectors.tree)}.scrollTop+=Math.max(100,${el(selectors.tree)}.clientHeight/2)`
+    // A scroll mutation and one RAF do not establish that React committed its virtual
+    // range. Hold each absolute waypoint until real row rectangles cover its viewport;
+    // a pinned drag source must not bridge a gap in the mounted range.
+    const visit = async (top: number): Promise<boolean> => {
+      while (Date.now() < deadline) {
+        const expected = await this.value<number>(`(() => {
+          const tree=${el(selectors.tree)};
+          const top=Math.max(0,Math.min(${top},tree.scrollHeight-tree.clientHeight));
+          if(tree.scrollTop!==top)tree.scrollTop=top;
+          return top;
+        })()`);
+        await this.awaitBrowserFrame('virtual tree navigation frame');
+        if (Date.now() >= deadline) break;
+        const committed = await this.value<boolean>(`(() => {
+          const tree=${el(selectors.tree)};
+          if(!tree || Math.abs(tree.scrollTop-${expected})>1 || tree.clientHeight<=0)return false;
+          const bounds=tree.getBoundingClientRect();
+          const content=tree.firstElementChild?.getBoundingClientRect();
+          if(!content || content.height<=0)return false;
+          let covered=bounds.top+tree.clientTop;
+          const bottom=Math.min(covered+tree.clientHeight,content.bottom);
+          const rows=Array.from(tree.querySelectorAll('[data-index]'))
+            .map(row=>row.getBoundingClientRect()).filter(r=>r.height>0)
+            .sort((a,b)=>a.top-b.top);
+          for(const row of rows){
+            if(row.bottom<=covered)continue;
+            if(row.top>covered+1)return false;
+            covered=Math.max(covered,row.bottom);
+            if(covered>=bottom-1)return true;
+          }
+          return false;
+        })()`);
+        if (committed) return await exists();
+      }
+      throw new Error(
+        'Missing selector after virtual tree navigation: ' + expression + ' (viewport commit deadline)'
       );
-      await this.awaitBrowserFrame('virtual tree navigation frame');
-      if (await exists()) return;
+    };
+    if (await visit(0)) return;
+    const stepHeight = await this.value<number>(`Math.max(100,${el(selectors.tree)}.clientHeight/2)`);
+    const steps = await this.value<number>(
+      `Math.ceil(${el(selectors.tree)}.scrollHeight / ${stepHeight})+2`
+    );
+    for (let step = 1; step <= steps && Date.now() < deadline; step++) {
+      if (await visit(step * stepHeight)) return;
     }
     throw new Error('Missing selector after virtual tree navigation: ' + expression);
   }

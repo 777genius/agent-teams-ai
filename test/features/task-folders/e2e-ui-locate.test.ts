@@ -12,42 +12,61 @@ type UIConstructor = ConstructorParameters<typeof UI>[0];
 const folderId = 'virtual-folder';
 const taskIdentity = ['virtual-team', 'virtual-task'] as const;
 
+function appendVirtualRow(tree: HTMLElement, row: HTMLElement, start: number, height = 100) {
+  const wrapper = document.createElement('div');
+  wrapper.dataset.index = String(start);
+  wrapper.style.transform = `translateY(${start}px)`;
+  wrapper.getBoundingClientRect = () => ({
+    top: start - tree.scrollTop,
+    bottom: start + height - tree.scrollTop,
+    height,
+  }) as DOMRect;
+  wrapper.append(row);
+  tree.append(wrapper);
+}
+
 function renderVirtualTree(tree: HTMLElement, scrollTop: number) {
   tree.replaceChildren();
   if (scrollTop < 200) {
     const row = document.createElement('div');
     row.setAttribute('data-folder-id', 'visible-before-scroll');
     row.setAttribute('data-task-key', JSON.stringify(['virtual-team', 'visible-before-scroll']));
-    tree.append(row);
+    appendVirtualRow(tree, row, scrollTop);
     return;
   }
   const folderRowElement = document.createElement('div');
   folderRowElement.setAttribute('data-folder-id', folderId);
-  tree.append(folderRowElement);
+  appendVirtualRow(tree, folderRowElement, scrollTop);
   if (scrollTop >= 300) {
     const row = document.createElement('div');
     row.setAttribute('data-task-key', JSON.stringify(taskIdentity));
-    tree.append(row);
+    appendVirtualRow(tree, row, scrollTop + 100);
   }
 }
 
-function createUi(onFrame?: () => void) {
+function createUi(
+  onFrame?: () => void,
+  renderTree = renderVirtualTree,
+  initialScrollTop = 0
+) {
   document.body.innerHTML = `<div data-testid="task-folders-tree"></div><div id="sidebar-tasks-panel"></div>`;
   const tree = document.querySelector<HTMLElement>(selectors.tree)!;
   const scrollTops: number[] = [];
-  let scrollTop = 0;
+  let scrollTop = initialScrollTop;
+  tree.getBoundingClientRect = () => ({ top: 0, bottom: 100, height: 100 }) as DOMRect;
   Object.defineProperty(tree, 'clientHeight', { configurable: true, value: 100 });
   Object.defineProperty(tree, 'scrollHeight', { configurable: true, value: 500 });
   Object.defineProperty(tree, 'scrollTop', {
     configurable: true,
     get: () => scrollTop,
     set: (value: number) => {
+      if (scrollTop === value) return;
       scrollTop = value;
       scrollTops.push(value);
-      renderVirtualTree(tree, value);
+      renderTree(tree, value);
     },
   });
-  renderVirtualTree(tree, scrollTop);
+  renderTree(tree, scrollTop);
   const evaluate = (expression: string) => {
     const run = new Function(
       'document',
@@ -93,6 +112,91 @@ describe('task-folders desktop UI target location', () => {
     expect(
       tree.querySelector(`[data-task-key='${JSON.stringify(taskIdentity)}']`)
     ).not.toBeNull();
+  });
+
+  it('holds a scroll waypoint until its real virtual range commits despite a pinned source', async () => {
+    let pending: number | undefined;
+    let frames = 0;
+    const renderRange = (target: HTMLElement, top: number) => {
+      target.replaceChildren();
+      const row = document.createElement('div');
+      row.setAttribute('data-folder-id', top === 0 ? folderId : 'old-range');
+      appendVirtualRow(target, row, top);
+      if (top !== 0) {
+        const pinned = document.createElement('div');
+        pinned.setAttribute('data-folder-id', 'pinned-source');
+        appendVirtualRow(target, pinned, 0, 20);
+      }
+    };
+    const fixture = createUi(
+      () => {
+        if (pending !== undefined && ++frames === 3) renderRange(fixture.tree, pending);
+      },
+      (target, top) => {
+        if (!target.firstElementChild) renderRange(target, top);
+        else {
+          pending = top;
+          frames = 0;
+        }
+      },
+      400
+    );
+    const { tree } = fixture;
+
+    await fixture.ui.locate(folderRow(folderId));
+
+    expect(fixture.scrollTops).toEqual([0]);
+    expect(frames).toBe(3);
+    expect(tree.querySelector(`[data-folder-id="${folderId}"]`)).not.toBeNull();
+  });
+
+  it('accepts a committed range shorter than the viewport without waiting for blank space', async () => {
+    vi.useFakeTimers();
+    let frames = 0;
+    const fixture = createUi(
+      () => {
+        vi.setSystemTime(Date.now() + 1000);
+        if (++frames === 2) {
+          fixture.tree.querySelector('[data-folder-id]')!.setAttribute('data-folder-id', folderId);
+        }
+      },
+      (tree) => {
+        if (tree.firstElementChild) return;
+        const row = document.createElement('div');
+        row.setAttribute('data-folder-id', 'before-commit');
+        appendVirtualRow(tree, row, 0, 20);
+      }
+    );
+    Object.defineProperty(fixture.tree, 'scrollHeight', { configurable: true, value: 100 });
+
+    await fixture.ui.locate(folderRow(folderId), Date.now() + 5000);
+
+    expect(frames).toBe(2);
+    expect(fixture.scrollTops).toEqual([]);
+  });
+
+  it('bounds an uncommitted viewport by the supplied readiness deadline', async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    const { ui, tree, scrollTops } = createUi(
+      () => {
+        vi.setSystemTime(Date.now() + 1000);
+      },
+      (target) => {
+        if (target.firstElementChild) return;
+        appendVirtualRow(target, document.createElement('div'), 400);
+        appendVirtualRow(target, document.createElement('div'), 0, 20);
+      },
+      400
+    );
+
+    await expect(ui.locate(folderRow(folderId), started + 5000)).rejects.toThrow(
+      'viewport commit deadline'
+    );
+
+    expect(Date.now() - started).toBe(5000);
+    expect(scrollTops).toEqual([0]);
+    expect(tree.querySelector(`[data-folder-id="${folderId}"]`)).toBeNull();
   });
 
   it('keeps non-tree helper targets on the bounded presence path', async () => {
@@ -171,7 +275,7 @@ describe('task-folders desktop UI target location', () => {
   it('requalifies the same folder when its highlight is lost after the initial wait', async () => {
     const { ui, tree } = createUi();
     tree.scrollTop = 200;
-    tree.firstElementChild!.classList.add('bg-blue-500/20');
+    tree.querySelector(`[data-folder-id="${folderId}"]`)!.classList.add('bg-blue-500/20');
     let samples = 0;
     mockFolderGeometry(tree, (row) => {
       samples++;
@@ -195,7 +299,7 @@ describe('task-folders desktop UI target location', () => {
     vi.useFakeTimers();
     const { ui, tree } = createUi();
     tree.scrollTop = 200;
-    tree.firstElementChild!.classList.add('bg-blue-500/20');
+    tree.querySelector(`[data-folder-id="${folderId}"]`)!.classList.add('bg-blue-500/20');
     let samples = 0;
     mockFolderGeometry(tree, (row) => {
       samples++;

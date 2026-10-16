@@ -1,17 +1,15 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   getNonEmptyTaskCategories,
   groupTasksByDate,
@@ -19,7 +17,6 @@ import {
   sortProjectGroupsByPin,
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
-import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { Archive, Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -33,6 +30,7 @@ import {
 } from './projectGroupPagination';
 import { ProjectTaskGroup } from './ProjectTaskGroup';
 import { SidebarTaskItem } from './SidebarTaskItem';
+import { selectSidebarTeamsDerived } from './sidebarTeamSelectors';
 import { TaskContextMenu } from './TaskContextMenu';
 import { buildTaskProjectFilterOptions } from './taskFilterOptions';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
@@ -44,10 +42,9 @@ import {
   sortGlobalTasks,
   type TaskSortMode,
 } from './taskViewPolicy';
-import { selectLeadOfflineTeamNames } from './teamActivitySelectors';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask, TeamSummary } from '@shared/types';
+import type { GlobalTask } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -118,18 +115,6 @@ const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
 };
 const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
 
-function buildTaskTeamSummary(task: GlobalTask): TeamSummary {
-  return {
-    teamName: task.teamName,
-    displayName: task.teamDisplayName,
-    description: '',
-    memberCount: 0,
-    taskCount: 0,
-    lastActivity: task.updatedAt ?? task.createdAt ?? null,
-    projectPath: task.projectPath,
-  };
-}
-
 function buildTaskLocalPresentationKey(task: GlobalTask): string {
   return `${task.teamName}:${task.id}`;
 }
@@ -170,7 +155,6 @@ type TaskRowDeleteAction = (teamName: string, taskId: string) => void | Promise<
 type TeamBooleanResolver = (teamName: string) => boolean;
 type TaskOwnerColorResolver = (task: GlobalTask) => string | null | undefined;
 type TeamHeaderFormatter = (teamDisplayName: string) => string;
-type TeamMemberColorInput = Parameters<typeof buildMemberColorMap>[0][number];
 
 interface TaskLocalPresentationState {
   key: string;
@@ -180,113 +164,6 @@ interface TaskLocalPresentationState {
 }
 
 type TaskLocalPresentationResolver = (task: GlobalTask) => TaskLocalPresentationState;
-interface SidebarTeamsDerived {
-  identityKey: string;
-  filterTeams: { teamName: string; displayName: string }[];
-  statusSummaries: TeamSummary[];
-  memberColorByTeam: Map<string, Map<string, string>>;
-}
-
-let cachedSidebarTeamsSignature: string | null = null;
-let cachedSidebarTeamsSource: readonly TeamSummary[] | null = null;
-let cachedSidebarTeamsDerived: SidebarTeamsDerived = {
-  identityKey: '',
-  filterTeams: [],
-  statusSummaries: [],
-  memberColorByTeam: new Map(),
-};
-const cachedSidebarTeamSignatureByTeam = new WeakMap<TeamSummary, string>();
-
-function encodeSignaturePart(part: unknown): string {
-  const text = part == null ? '' : String(part);
-  return `${text.length}:${text}|`;
-}
-
-function pushSignaturePart(parts: string[], part: unknown): void {
-  parts.push(encodeSignaturePart(part));
-}
-
-function getSidebarTeamSignature(team: TeamSummary): string {
-  const cached = cachedSidebarTeamSignatureByTeam.get(team);
-  if (cached !== undefined) return cached;
-
-  let signature = '';
-  signature += encodeSignaturePart(team.teamName);
-  signature += encodeSignaturePart(team.displayName);
-  signature += encodeSignaturePart(team.projectPath);
-  signature += encodeSignaturePart(team.lastActivity);
-  signature += encodeSignaturePart(team.partialLaunchFailure ? 1 : 0);
-  signature += encodeSignaturePart(team.teamLaunchState);
-  for (const member of team.members ?? []) {
-    const colorMember = member as TeamMemberColorInput;
-    signature += encodeSignaturePart(colorMember.name);
-    signature += encodeSignaturePart(colorMember.color);
-    signature += encodeSignaturePart(colorMember.agentType);
-    signature += encodeSignaturePart(colorMember.removedAt);
-  }
-
-  cachedSidebarTeamSignatureByTeam.set(team, signature);
-  return signature;
-}
-
-function buildSidebarTeamsSignature(teams: readonly TeamSummary[]): string {
-  let signature = '';
-  for (const team of teams) {
-    signature += getSidebarTeamSignature(team);
-  }
-  return signature;
-}
-
-function buildTeamNamesIdentityKey(teams: readonly TeamSummary[]): string {
-  const signatureParts: string[] = [];
-  for (const team of teams) {
-    pushSignaturePart(signatureParts, team.teamName);
-  }
-  return signatureParts.join('');
-}
-
-function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsDerived {
-  if (teams === cachedSidebarTeamsSource) {
-    return cachedSidebarTeamsDerived;
-  }
-
-  const signature = buildSidebarTeamsSignature(teams);
-  if (signature === cachedSidebarTeamsSignature) {
-    cachedSidebarTeamsSource = teams;
-    return cachedSidebarTeamsDerived;
-  }
-
-  const memberColorByTeam = new Map<string, Map<string, string>>();
-  for (const team of teams) {
-    if (team.members && team.members.length > 0) {
-      memberColorByTeam.set(team.teamName, buildMemberColorMap(team.members));
-    }
-  }
-
-  cachedSidebarTeamsSource = teams;
-  cachedSidebarTeamsSignature = signature;
-  cachedSidebarTeamsDerived = {
-    identityKey: buildTeamNamesIdentityKey(teams),
-    filterTeams: teams.map((team) => ({
-      teamName: team.teamName,
-      displayName: team.displayName,
-    })),
-    statusSummaries: teams.map((team) => ({
-      teamName: team.teamName,
-      displayName: team.displayName,
-      description: '',
-      memberCount: team.memberCount,
-      taskCount: team.taskCount,
-      projectPath: team.projectPath,
-      lastActivity: team.lastActivity,
-      partialLaunchFailure: team.partialLaunchFailure,
-      teamLaunchState: team.teamLaunchState,
-    })),
-    memberColorByTeam,
-  };
-  return cachedSidebarTeamsDerived;
-}
-
 interface GlobalTaskRowProps {
   contextId: string;
   task: GlobalTask;
@@ -692,8 +569,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     repositoryGroupsLoading,
     repositoryGroupsInitialized,
     repositoryGroupsError,
-    provisioningRuns,
-    currentProvisioningRunIdByTeam,
   } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
@@ -712,13 +587,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       repositoryGroupsLoading: s.repositoryGroupsLoading,
       repositoryGroupsInitialized: s.repositoryGroupsInitialized,
       repositoryGroupsError: s.repositoryGroupsError,
-      provisioningRuns: s.provisioningRuns,
-      currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
     }))
   );
-  const leadOfflineTeamNames = useStore(
-    useShallow((s) => selectLeadOfflineTeamNames(s.leadActivityByTeam))
-  );
+  const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
   const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
@@ -735,15 +606,12 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [renamingTaskKey, setRenamingTaskKey] = useState<string | null>(null);
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const [aliveTeamsInitialized, setAliveTeamsInitialized] = useState(false);
   const [projectRequestedVisibleCountByKey, setProjectRequestedVisibleCountByKey] = useState<
     Record<string, number>
   >({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const readState = useReadStateSnapshot();
   const taskLocalState = useTaskLocalState();
-  const electronMode = isElectronMode();
 
   useEffect(() => {
     if (searchVisible) {
@@ -790,20 +658,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [getTaskLocalPresentation]
   );
 
-  const provisioningState = useMemo(
-    () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
-    [currentProvisioningRunIdByTeam, provisioningRuns]
-  );
-
-  const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
-    if (!electronMode || !api.teams?.aliveList) return null;
-    try {
-      return await api.teams.aliveList();
-    } catch {
-      return null;
-    }
-  }, [electronMode]);
-
   // --- New-task animation tracking (same pattern as ChatHistory) ---
   const knownTaskIdsRef = useRef<Set<string>>(new Set());
   const isInitialTaskLoadRef = useRef(true);
@@ -841,90 +695,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [newTaskIds]
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, sidebarTeams.identityKey]);
-
-  const readyProgressRefreshKey = useMemo(() => {
-    return Object.entries(currentProvisioningRunIdByTeam)
-      .map(([teamName, runId]) => {
-        if (!runId) return null;
-        const progress = provisioningRuns[runId];
-        return progress?.state === 'ready'
-          ? `${teamName}:${progress.runId}:${progress.updatedAt}`
-          : null;
-      })
-      .filter((item): item is string => Boolean(item))
-      .join('|');
-  }, [currentProvisioningRunIdByTeam, provisioningRuns]);
-
-  useEffect(() => {
-    if (!readyProgressRefreshKey) return;
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, readyProgressRefreshKey]);
-
-  const offlineTeamNames = useMemo(() => {
-    const result = new Set<string>();
-    const leadOfflineTeams = new Set(leadOfflineTeamNames);
-    if (aliveTeamsInitialized) {
-      const teamSummariesByName = new Map<string, TeamSummary>();
-      for (const team of sidebarTeams.statusSummaries) {
-        teamSummariesByName.set(team.teamName, team);
-      }
-      for (const task of globalTasks) {
-        if (!teamSummariesByName.has(task.teamName)) {
-          teamSummariesByName.set(task.teamName, buildTaskTeamSummary(task));
-        }
-      }
-
-      for (const team of teamSummariesByName.values()) {
-        if (leadOfflineTeams.has(team.teamName)) {
-          result.add(team.teamName);
-          continue;
-        }
-        const status = resolveTeamStatus(
-          team,
-          team.teamName,
-          aliveTeams,
-          getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-          {}
-        );
-        if (!isTeamListStatusRunning(status)) {
-          result.add(team.teamName);
-        }
-      }
-    }
-    for (const teamName of leadOfflineTeamNames) {
-      result.add(teamName);
-    }
-    return result;
-  }, [
-    aliveTeams,
-    aliveTeamsInitialized,
-    globalTasks,
-    leadOfflineTeamNames,
-    provisioningState,
-    sidebarTeams.statusSummaries,
-  ]);
-
   const getOwnerColorName = useCallback(
     (task: GlobalTask): string | null | undefined => {
       if (!task.owner) return null;
@@ -932,10 +702,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       return teamColorMap ? (teamColorMap.get(task.owner) ?? null) : undefined;
     },
     [sidebarTeams.memberColorByTeam]
-  );
-  const isTeamOffline = useCallback(
-    (teamName: string): boolean => offlineTeamNames.has(teamName),
-    [offlineTeamNames]
   );
   const formatTeamHeader = useCallback(
     (teamDisplayName: string): string => t('tasksPanel.teamLabel', { team: teamDisplayName }),
