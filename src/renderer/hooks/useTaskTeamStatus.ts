@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
-import { api, isElectronMode } from '@renderer/api';
 import { selectSidebarTeamsDerived } from '@renderer/components/sidebar/sidebarTeamSelectors';
 import { selectLeadOfflineTeamNames } from '@renderer/components/sidebar/teamActivitySelectors';
+import { taskTeamLiveness } from '@renderer/services/taskTeamLiveness';
 import { useStore } from '@renderer/store';
 import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
@@ -35,63 +35,15 @@ export function useTaskTeamStatus(): (teamName: string) => boolean {
   const leadOfflineTeamNames = useStore(
     useShallow((s) => selectLeadOfflineTeamNames(s.leadActivityByTeam))
   );
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const [aliveTeamsInitialized, setAliveTeamsInitialized] = useState(false);
-  const electronMode = isElectronMode();
+  const { teams: aliveTeams, initialized: aliveTeamsInitialized } = useSyncExternalStore(
+    taskTeamLiveness.subscribe,
+    taskTeamLiveness.getSnapshot
+  );
 
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
   );
-
-  const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
-    if (!electronMode || !api.teams?.aliveList) return null;
-    try {
-      return await api.teams.aliveList();
-    } catch {
-      return null;
-    }
-  }, [electronMode]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, sidebarTeams.identityKey]);
-
-  const readyProgressRefreshKey = useMemo(() => {
-    return Object.entries(currentProvisioningRunIdByTeam)
-      .map(([teamName, runId]) => {
-        if (!runId) return null;
-        const progress = provisioningRuns[runId];
-        return progress?.state === 'ready'
-          ? `${teamName}:${progress.runId}:${progress.updatedAt}`
-          : null;
-      })
-      .filter((item): item is string => Boolean(item))
-      .join('|');
-  }, [currentProvisioningRunIdByTeam, provisioningRuns]);
-
-  useEffect(() => {
-    if (!readyProgressRefreshKey) return;
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, readyProgressRefreshKey]);
 
   const offlineTeamNames = useMemo(() => {
     const result = new Set<string>();

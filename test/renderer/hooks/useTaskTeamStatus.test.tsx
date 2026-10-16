@@ -100,6 +100,7 @@ it('keeps startup unknown until an authoritative list and uses task-team fallbac
   useStore.setState({ leadActivityByTeam: { 'forced-offline': 'offline' } });
   await flushReact(() => root.render(<Probe />));
   expectOffline(false);
+  expect(aliveList).toHaveBeenCalledTimes(1);
   expect(host.firstElementChild!.getAttribute('data-sidebar-forced')).toBe('true');
   expect(host.firstElementChild!.getAttribute('data-tree-forced')).toBe('true');
 
@@ -129,7 +130,7 @@ it.each(['cancelled', 'disconnected'] as const)(
 it('refreshes live status on team identity and ready progress while preserving provisioning grace', async () => {
   await flushReact(() => root.render(<Probe />));
   expectOffline(true);
-  expect(aliveList).toHaveBeenCalledTimes(2);
+  expect(aliveList).toHaveBeenCalledTimes(1);
 
   await flushReact(() =>
     useStore.setState({
@@ -138,20 +139,88 @@ it('refreshes live status on team identity and ready progress while preserving p
     })
   );
   expectOffline(false);
-  expect(aliveList).toHaveBeenCalledTimes(2);
+  expect(aliveList).toHaveBeenCalledTimes(1);
 
   await flushReact(() => useStore.setState({ provisioningRuns: { run: progress('ready') } }));
-  expect(aliveList).toHaveBeenCalledTimes(4);
+  expect(aliveList).toHaveBeenCalledTimes(2);
   expectOffline(false);
   const oldReady = { ...progress('ready'), updatedAt: new Date(Date.now() - 60_000).toISOString() };
   await flushReact(() => useStore.setState({ provisioningRuns: { run: oldReady } }));
-  expect(aliveList).toHaveBeenCalledTimes(6);
+  expect(aliveList).toHaveBeenCalledTimes(3);
   expectOffline(true);
 
   aliveList.mockResolvedValue([task.teamName]);
   await flushReact(() => useStore.setState({ teams: [team] }));
   expectOffline(false);
-  expect(aliveList).toHaveBeenCalledTimes(8);
+  expect(aliveList).toHaveBeenCalledTimes(4);
   await flushReact(() => useStore.setState({ teams: [{ ...team }] }));
-  expect(aliveList).toHaveBeenCalledTimes(8);
+  expect(aliveList).toHaveBeenCalledTimes(4);
+});
+
+function deferred() {
+  let resolve!: (teams: string[]) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<string[]>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+it('shares unknown status on an initial read error and recovers on the next invalidation', async () => {
+  const response = deferred();
+  aliveList.mockReturnValue(response.promise);
+  await flushReact(() => root.render(<Probe />));
+  expect(aliveList).toHaveBeenCalledTimes(1);
+  expectOffline(false);
+  await act(async () => {
+    response.reject(new Error('test alive-list failure'));
+    await response.promise.catch(() => undefined);
+  });
+  expectOffline(false);
+
+  aliveList.mockResolvedValue([]);
+  await flushReact(() => useStore.setState({ teams: [team] }));
+  expect(aliveList).toHaveBeenCalledTimes(2);
+  expectOffline(true);
+});
+
+it('shares the last authoritative list after a refresh error and ignores superseded responses', async () => {
+  aliveList.mockResolvedValue([task.teamName]);
+  await flushReact(() => root.render(<Probe />));
+  expectOffline(false);
+  expect(aliveList).toHaveBeenCalledTimes(1);
+
+  const older = deferred();
+  aliveList.mockReturnValueOnce(older.promise);
+  await flushReact(() => useStore.setState({ teams: [team] }));
+  expect(aliveList).toHaveBeenCalledTimes(2);
+
+  const latest = deferred();
+  aliveList.mockReturnValueOnce(latest.promise);
+  await flushReact(() =>
+    useStore.setState({
+      currentProvisioningRunIdByTeam: { [task.teamName]: 'run' },
+      provisioningRuns: {
+        run: { ...progress('ready'), updatedAt: new Date(Date.now() - 60_000).toISOString() },
+      },
+    })
+  );
+  expect(aliveList).toHaveBeenCalledTimes(3);
+  await act(async () => {
+    latest.reject(new Error('test refresh failure'));
+    await latest.promise.catch(() => undefined);
+  });
+  expectOffline(false);
+  await act(async () => {
+    older.resolve([]);
+    await older.promise;
+  });
+  expectOffline(false);
+  expect(aliveList).toHaveBeenCalledTimes(3);
+
+  aliveList.mockResolvedValue([]);
+  await flushReact(() => useStore.setState({ teams: [] }));
+  expect(aliveList).toHaveBeenCalledTimes(4);
+  expectOffline(true);
 });

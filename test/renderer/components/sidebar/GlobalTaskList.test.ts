@@ -57,19 +57,30 @@ function notifyStoreUpdate(): void {
 }
 
 vi.mock('../../../../src/renderer/store', () => ({
-  useStore: (selector: (state: StoreState) => unknown) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useState, useEffect } = require('react') as typeof import('react');
-    const [, setVersion] = useState(0);
-    useEffect(() => {
-      const listener = () => setVersion((v) => v + 1);
-      storeListeners.add(listener);
-      return () => {
-        storeListeners.delete(listener);
-      };
-    }, []);
-    return selector(storeState);
-  },
+  useStore: Object.assign(
+    (selector: (state: StoreState) => unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useState, useEffect } = require('react') as typeof import('react');
+      const [, setVersion] = useState(0);
+      useEffect(() => {
+        const listener = () => setVersion((v) => v + 1);
+        storeListeners.add(listener);
+        return () => {
+          storeListeners.delete(listener);
+        };
+      }, []);
+      return selector(storeState);
+    },
+    {
+      getState: () => storeState,
+      subscribe: (listener: () => void) => {
+        storeListeners.add(listener);
+        return () => {
+          storeListeners.delete(listener);
+        };
+      },
+    }
+  ),
 }));
 
 vi.mock('zustand/react/shallow', () => ({
