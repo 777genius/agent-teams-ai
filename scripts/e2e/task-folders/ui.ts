@@ -460,6 +460,38 @@ export class UI {
   async persisted(predicate: (s: Snapshot) => boolean, label: string) {
     await until(async () => predicate(await this.snapshot()), 'persisted ' + label);
   }
+  async assertFolderMode(enabled: boolean) {
+    await this.wait(
+      `${el(selectors.toggle)}?.getAttribute('aria-pressed') === ${JSON.stringify(String(enabled))}`,
+      `folder mode ${enabled ? 'enabled' : 'disabled'}`
+    );
+    assert.equal(await this.value(`!!${el(selectors.panel)}`), enabled, 'Mode and panel disagree');
+    const handles = `${el(selectors.sidebar)}?.querySelectorAll(${JSON.stringify(selectors.taskHandle)}).length ?? 0`;
+    assert.equal((await this.value<number>(handles)) > 0, enabled, 'Sidebar drag handles disagree with mode');
+  }
+  async attemptDisabledTaskDrag(team: string, id: string) {
+    await this.assertFolderMode(false);
+    const before = await this.snapshot();
+    this.desktop.takeDrag();
+    const source = `${taskRow(team, id, selectors.sidebar)}.querySelector('[data-task-card-field="status"]')`;
+    const start = await this.point(source);
+    await this.move(start);
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed', ...start, button: 'left', buttons: 1, clickCount: 1,
+    });
+    for (let step = 1; step <= 8; step++) {
+      await this.move({ x: start.x - step * 5, y: start.y + step }, 1);
+      await delay(30);
+    }
+    await this.move({ x: 10, y: 80 }, 1);
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased', x: 10, y: 80, button: 'left', clickCount: 1,
+    });
+    await delay(250);
+    assert.equal(this.desktop.takeDrag(), undefined, 'Disabled card initiated a native drag');
+    await this.assertFolderMode(false);
+    assert.deepEqual(await this.snapshot(), before, 'Disabled drag attempt changed folders');
+  }
   async open() {
     if (!(await this.value(`!!${el(selectors.panel)}`))) await this.click(el(selectors.toggle));
     await this.wait(el(selectors.tree), 'folder tree');

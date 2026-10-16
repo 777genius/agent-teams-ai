@@ -197,6 +197,7 @@ const SidebarTaskItemContent = ({
   );
 
   const showTeamRow = showTeamName && !hideTeamName;
+  const treeCard = cardScope === 'tree';
   const unreadBackgroundClass =
     unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.015]' : 'bg-blue-500/[0.025]') : '';
   const defaultDragHandle = (
@@ -219,6 +220,7 @@ const SidebarTaskItemContent = ({
         data-testid={`${cardScope ?? 'sidebar'}-task-card`}
         className={cn(
           'group/task-row sidebar-task-item relative flex w-full flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised',
+          treeCard && 'grid grid-cols-[20px_minmax(0,1fr)_20px] items-start gap-x-1',
           unreadBackgroundClass,
           task.teamDeleted && 'opacity-50',
           isArchived && 'text-text-muted opacity-60',
@@ -230,186 +232,213 @@ const SidebarTaskItemContent = ({
           containerProps?.onPointerEnter?.(event);
         }}
       >
-      {isRenaming ? (
-        <div className="flex w-full items-start gap-1.5">
-          <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
-          <input
-            ref={inputRef}
-            type="text"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (!isImeComposing(e) && e.key === 'Enter') {
-                e.preventDefault();
+        {isRenaming ? (
+          <div className="flex w-full items-start gap-1.5">
+            <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (!isImeComposing(e) && e.key === 'Enter') {
+                  e.preventDefault();
+                  const trimmed = editValue.trim();
+                  if (trimmed && trimmed !== task.subject) {
+                    onRenameComplete?.(task.teamName, task.id, trimmed);
+                  } else {
+                    onRenameCancel?.();
+                  }
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  onRenameCancel?.();
+                }
+              }}
+              onBlur={() => {
                 const trimmed = editValue.trim();
                 if (trimmed && trimmed !== task.subject) {
                   onRenameComplete?.(task.teamName, task.id, trimmed);
                 } else {
                   onRenameCancel?.();
                 }
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                onRenameCancel?.();
-              }
-            }}
-            onBlur={() => {
-              const trimmed = editValue.trim();
-              if (trimmed && trimmed !== task.subject) {
-                onRenameComplete?.(task.teamName, task.id, trimmed);
-              } else {
-                onRenameCancel?.();
-              }
-            }}
-            className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
-            style={{ color: 'var(--color-text-muted)' }}
-            onClick={(e) => e.stopPropagation()}
-            onFocus={preloadGlobalTaskDetailDialog}
-          />
-        </div>
-      ) : (
-        <>
-          <button
-            type="button"
-            data-testid="sidebar-task-detail"
-            className="flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
-            onFocus={preloadGlobalTaskDetailDialog}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (onOpenDetail) {
-                onOpenDetail(task.teamName, task.id);
-              } else {
-                clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
-                openGlobalTaskDetail(task.teamName, task.id);
-              }
-            }}
-          >
-            {/* Row 1: status + subject */}
-            <div className="w-full overflow-hidden">
-              <span
-                className="line-clamp-2 break-words text-[13px] font-medium leading-tight"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                <StatusIcon
-                  data-task-card-field="status"
-                  data-task-card-value={cfg.key}
-                  aria-label={cfg.key}
-                  className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)}
-                />
-                {isArchived && (
-                  <Archive
-                    aria-label={tCommon('taskFolders.archived')}
-                    className="mr-1 inline-block size-3 align-[-1px]"
-                  />
-                )}
-                <span aria-hidden className="mr-1 inline-block size-3 align-middle" />
-                {unreadCount > 0 &&
-                  (unreadCount === 1 ? (
-                    <span
-                      data-task-card-field="unread"
-                      className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle"
-                    />
-                  ) : (
-                    <span
-                      data-task-card-field="unread"
-                      className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white"
-                    >
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  ))}
-                <span data-task-card-field="subject">{displaySubject}</span>
-                {needsFix && (
-                  <span
-                    data-task-card-field="needsFix"
-                    data-task-card-value="needsFix"
-                    className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-                  >
-                    {tCommon('tasks.reviewState.needsFix')}
-                  </span>
-                )}
-              </span>
-            </div>
-
-            {/* Row 2: project + owner (when no team row) + date */}
-            <div
-              className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
+              }}
+              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
               style={{ color: 'var(--color-text-muted)' }}
-            >
-              {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
-              {projectLabel && (
-                <span
-                  data-task-card-field="project"
-                  className="min-w-0 truncate"
-                  style={projectColorSet ? { color: projectColorSet.text } : undefined}
-                >
-                  {projectLabel}
-                </span>
+              onClick={(e) => e.stopPropagation()}
+              onFocus={preloadGlobalTaskDetailDialog}
+            />
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              data-testid="sidebar-task-detail"
+              className={cn(
+                'flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left',
+                treeCard && 'col-start-2 row-start-1'
               )}
-              {!showTeamRow && (
-                <>
-                  {projectLabel && (
-                    <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
-                      ·
+              onFocus={preloadGlobalTaskDetailDialog}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (onOpenDetail) {
+                  onOpenDetail(task.teamName, task.id);
+                } else {
+                  clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
+                  openGlobalTaskDetail(task.teamName, task.id);
+                }
+              }}
+            >
+              {/* Row 1: status + subject */}
+              <div className="w-full overflow-hidden">
+                <span
+                  className={cn(
+                    'text-[13px] font-medium leading-tight',
+                    treeCard ? 'block' : 'line-clamp-2 break-words'
+                  )}
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <span className={treeCard ? 'flex items-start gap-1.5' : undefined}>
+                    <StatusIcon
+                      data-task-card-field="status"
+                      data-task-card-value={cfg.key}
+                      aria-label={cfg.key}
+                      className={cn(
+                        treeCard ? 'mt-0.5' : 'mr-1.5 inline-block align-[-1px]',
+                        statusIconClassName
+                      )}
+                    />
+                    {isArchived && (
+                      <Archive
+                        aria-label={tCommon('taskFolders.archived')}
+                        className="mr-1 inline-block size-3 align-[-1px]"
+                      />
+                    )}
+                    {!treeCard && (
+                      <span aria-hidden className="mr-1 inline-block size-3 align-middle" />
+                    )}
+                    {unreadCount > 0 &&
+                      (unreadCount === 1 ? (
+                        <span
+                          data-task-card-field="unread"
+                          className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle"
+                        />
+                      ) : (
+                        <span
+                          data-task-card-field="unread"
+                          className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white"
+                        >
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      ))}
+                    <span
+                      data-task-card-field="subject"
+                      className={treeCard ? 'line-clamp-2 min-w-0 flex-1 break-words' : undefined}
+                    >
+                      {displaySubject}
+                    </span>
+                  </span>
+                  {needsFix && (
+                    <span
+                      data-task-card-field="needsFix"
+                      data-task-card-value="needsFix"
+                      className={cn(
+                        'inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none',
+                        treeCard
+                          ? 'ml-[18px] mt-0.5 max-w-[calc(100%-18px)] break-words'
+                          : 'ml-1.5',
+                        REVIEW_STATE_DISPLAY.needsFix.bg,
+                        REVIEW_STATE_DISPLAY.needsFix.text
+                      )}
+                    >
+                      {tCommon('tasks.reviewState.needsFix')}
                     </span>
                   )}
+                </span>
+              </div>
+
+              {/* Row 2: project + owner (when no team row) + date */}
+              <div
+                className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
+                {projectLabel && (
+                  <span
+                    data-task-card-field="project"
+                    className="min-w-0 truncate"
+                    style={projectColorSet ? { color: projectColorSet.text } : undefined}
+                  >
+                    {projectLabel}
+                  </span>
+                )}
+                {!showTeamRow && (
+                  <>
+                    {projectLabel && (
+                      <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
+                        ·
+                      </span>
+                    )}
+                    <span
+                      data-task-card-field="owner"
+                      className="hidden min-w-0 shrink truncate opacity-100 group-hover/task-row:inline dark:opacity-60"
+                      style={ownerTextColor ? { color: ownerTextColor } : undefined}
+                    >
+                      {task.owner ?? t('tasks.unassigned')}
+                    </span>
+                  </>
+                )}
+                {dateLabel && exactDateLabel ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        data-task-card-field="updated"
+                        data-testid="sidebar-task-relative-time"
+                        dir="auto"
+                        className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
+                      >
+                        {dateLabel}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="whitespace-nowrap">
+                      {exactDateLabel}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+
+              {/* Row 3: Team: name · owner */}
+              {showTeamRow && (
+                <div
+                  className={cn(
+                    'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
+                    revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
+                  )}
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <span className="shrink-0 opacity-100 dark:opacity-50">
+                    {t('tasks.teamPrefix')}
+                  </span>
+                  <span
+                    data-task-card-field="team"
+                    className="min-w-0 shrink truncate"
+                    style={teamColor ? { color: teamColor.text } : undefined}
+                  >
+                    {task.teamDisplayName}
+                  </span>
+                  <span className="opacity-100 dark:opacity-40">·</span>
                   <span
                     data-task-card-field="owner"
-                    className="hidden min-w-0 shrink truncate opacity-100 group-hover/task-row:inline dark:opacity-60"
+                    className="min-w-0 shrink truncate opacity-100 dark:opacity-60"
                     style={ownerTextColor ? { color: ownerTextColor } : undefined}
                   >
                     {task.owner ?? t('tasks.unassigned')}
                   </span>
-                </>
+                </div>
               )}
-              {dateLabel && exactDateLabel ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      data-task-card-field="updated"
-                      data-testid="sidebar-task-relative-time"
-                      dir="auto"
-                      className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
-                    >
-                      {dateLabel}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="whitespace-nowrap">
-                    {exactDateLabel}
-                  </TooltipContent>
-                </Tooltip>
-              ) : null}
-            </div>
-
-            {/* Row 3: Team: name · owner */}
-            {showTeamRow && (
-              <div
-                className={cn(
-                  'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
-                  revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
-                )}
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-              <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>
-              <span
-                data-task-card-field="team"
-                className="min-w-0 shrink truncate"
-                style={teamColor ? { color: teamColor.text } : undefined}
-              >
-                  {task.teamDisplayName}
-                </span>
-                <span className="opacity-100 dark:opacity-40">·</span>
-                <span
-                  data-task-card-field="owner"
-                  className="min-w-0 shrink truncate opacity-100 dark:opacity-60"
-                  style={ownerTextColor ? { color: ownerTextColor } : undefined}
-                >
-                  {task.owner ?? t('tasks.unassigned')}
-                </span>
-              </div>
-            )}
-          </button>
-          {renderDragHandle ? renderDragHandle(defaultDragHandle) : defaultDragHandle}
-        </>
-      )}
+            </button>
+            {renderDragHandle ? renderDragHandle(defaultDragHandle) : defaultDragHandle}
+          </>
+        )}
         {menuSlot}
       </div>
     </Slot>

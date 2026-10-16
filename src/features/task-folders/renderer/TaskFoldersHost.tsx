@@ -245,11 +245,12 @@ export const TaskFoldersHost = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="ghost"
+            variant={model.panel.manual ? 'secondary' : 'ghost'}
             size="sm"
             data-testid="task-folders-toggle"
             aria-label={t('taskFolders.title')}
             aria-expanded={fallback ? fallbackOpen : visible}
+            aria-pressed={model.panel.manual}
             onClick={() => panelController.toggle()}
           >
             <FolderTreeIcon className="size-3.5" />
@@ -266,8 +267,8 @@ export const TaskFoldersHost = ({
             data-testid="task-folders-panel"
             role="region"
             aria-label={t('taskFolders.title')}
-            className="fixed z-40 flex flex-col overflow-hidden rounded-l-md border border-border bg-surface shadow-xl"
-            style={model.rect}
+            className="fixed z-40 flex flex-col overflow-hidden rounded-l-md border border-border shadow-xl"
+            style={{ ...model.rect, backgroundColor: 'var(--color-surface-sidebar)' }}
             onPointerEnter={() => panelController.hold('pointer', true)}
             onPointerLeave={() => panelController.hold('pointer', false)}
             onFocusCapture={() => panelController.hold('focus', true)}
@@ -286,12 +287,16 @@ export const TaskFoldersHost = ({
           if (!open) panelController.close();
         }}
       >
-        <DialogContent aria-modal="true">
+        <DialogContent
+          aria-modal="true"
+          style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
+        >
           <DialogTitle>{t('taskFolders.title')}</DialogTitle>
           <div
             ref={model.registerPanel}
             data-testid="task-folders-panel"
-            className="flex h-[60vh] flex-col"
+            className="flex h-[60vh] min-w-0 flex-col"
+            style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
             onPointerEnter={() => panelController.hold('pointer', true)}
             onPointerLeave={() => panelController.hold('pointer', false)}
             onFocusCapture={() => panelController.hold('focus', true)}

@@ -44,9 +44,31 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe('host lifecycle and vendor drop boundary', () => {
+  it('requires explicit mode and keeps it enabled through holds, drag cleanup and suspension', () => {
+    vi.useFakeTimers();
+    const panel = new PanelController();
+    panel.begin('off');
+    for (const reason of ['pointer', 'focus', 'dialog', 'menu'] as const) panel.hold(reason, true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false, dragSource: null });
+    panel.toggle();
+    panel.begin('on');
+    panel.end();
+    vi.advanceTimersByTime(5000);
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    panel.begin('suspended');
+    panel.suspend();
+    vi.runAllTimers();
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    panel.toggle();
+    for (const reason of ['pointer', 'focus', 'dialog', 'menu'] as const) panel.hold(reason, true);
+    panel.begin('stale');
+    vi.runAllTimers();
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false, dragSource: null });
+  });
   it('keeps a new drag active when an earlier drop finishes after event propagation', async () => {
     vi.useFakeTimers();
     const panel = new PanelController();
+    panel.toggle();
     panel.begin('task:a');
     panel.endAfterDrop();
     panel.begin('task:b');
@@ -60,7 +82,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.advanceTimersByTime(1999);
     expect(panel.getSnapshot().open).toBe(true);
     vi.advanceTimersByTime(1);
-    expect(panel.getSnapshot().open).toBe(false);
+    expect(panel.getSnapshot().open).toBe(true);
     panel.begin('task:c');
     panel.endAfterDrop();
     panel.endAfterDrop();
@@ -68,9 +90,10 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.runAllTimers();
     expect(panel.getSnapshot().open).toBe(false);
   });
-  it('gives the last hold a full grace period and prevents duplicate end/stale timer closure', () => {
+  it('keeps enabled mode pinned after the final hold and rejects stale drag completion', () => {
     vi.useFakeTimers();
     const panel = new PanelController();
+    panel.toggle();
     const first = panel.begin('task:a');
     panel.end(first);
     vi.advanceTimersByTime(1999);
@@ -91,7 +114,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.advanceTimersByTime(1999);
     expect(panel.getSnapshot().open).toBe(true);
     vi.advanceTimersByTime(1);
-    expect(panel.getSnapshot().open).toBe(false);
+    expect(panel.getSnapshot().open).toBe(true);
     panel.begin('folder:a');
     panel.dispose();
     vi.runAllTimers();
@@ -113,6 +136,7 @@ describe('host lifecycle and vendor drop boundary', () => {
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const source = childKey({ kind: 'task', identity });
     const target = { item: { getId: () => 'folder:a' } } as DragTarget<Node>;
@@ -211,6 +235,7 @@ describe('host lifecycle and vendor drop boundary', () => {
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
     const target = { item: { getId: () => 'unfiled' } } as DragTarget<Node>;
@@ -261,6 +286,7 @@ describe('host lifecycle and vendor drop boundary', () => {
         'computed'
       );
       const panel = new PanelController();
+      panel.toggle();
       const adapter = new TreeDropAdapter(() => projection, folders, panel);
       const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
       const target = {
@@ -324,6 +350,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     );
     let liveProjection = sorted;
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => liveProjection, folders, panel);
     const source = sorted.nodes.get(childKey({ kind: 'task', identity }))!;
     const sameParent = {
@@ -450,6 +477,7 @@ it.each(['foreign', 'internal'] as const)(
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const execute = vi.spyOn(folders, 'execute');
     const tree = createTree<Node>({

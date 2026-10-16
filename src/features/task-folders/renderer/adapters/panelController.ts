@@ -37,6 +37,11 @@ export class PanelController {
     this.generation++;
   }
   hold(reason: Hold, active: boolean): void {
+    if (reason === 'manual' && !active) {
+      this.close();
+      return;
+    }
+    if (reason !== 'manual' && !this.state.manual) return;
     if (active === this.holds.has(reason)) return;
     if (active) {
       this.holds.add(reason);
@@ -57,6 +62,7 @@ export class PanelController {
     }, 2000);
   }
   begin(source: string): number {
+    if (!this.state.manual) return this.state.session;
     this.cancelDropTimer();
     this.cancelTimer();
     this.holds.add('drag');
@@ -111,6 +117,13 @@ export class PanelController {
     this.cancelTimer();
     this.holds.clear();
     this.publish({ open: false, manual: false, dragSource: null });
+  }
+  suspend(): void {
+    this.cancelDropTimer();
+    this.cancelTimer();
+    this.holds.clear();
+    if (this.state.manual) this.holds.add('manual');
+    this.publish({ open: this.state.manual, dragSource: null, session: this.state.session + 1 });
   }
   dispose(): void {
     this.close();
