@@ -31,7 +31,7 @@ function renderVirtualTree(tree: HTMLElement, scrollTop: number) {
   }
 }
 
-function createUi() {
+function createUi(onFrame?: () => void) {
   document.body.innerHTML = `<div data-testid="task-folders-tree"></div><div id="sidebar-tasks-panel"></div>`;
   const tree = document.querySelector<HTMLElement>(selectors.tree)!;
   const scrollTops: number[] = [];
@@ -55,7 +55,10 @@ function createUi() {
       `return (${expression});`
     ) as (doc: Document, raf: (callback: () => void) => number) => unknown;
     return run(document, (callback) => {
-      queueMicrotask(callback);
+      queueMicrotask(() => {
+        onFrame?.();
+        callback();
+      });
       return 0;
     });
   };
@@ -73,6 +76,7 @@ function createUi() {
 
 describe('task-folders desktop UI target location', () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     document.body.innerHTML = '';
   });
@@ -137,6 +141,91 @@ describe('task-folders desktop UI target location', () => {
       'Runtime.releaseObject',
     ]);
     expect(calls[1].payload.arguments).toEqual([{ value: taskKey }]);
+  });
+
+  function mockFolderGeometry(tree: HTMLElement, onScroll: (row: HTMLElement) => void) {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 20,
+    } as DOMRect);
+    Object.defineProperty(HTMLElement.prototype, 'checkVisibility', {
+      configurable: true,
+      value(this: HTMLElement) {
+        return this.isConnected;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: HTMLElement) {
+        onScroll(this);
+      },
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => tree.querySelector(`[data-folder-id="${folderId}"]`),
+    });
+  }
+
+  it('requalifies the same folder when its highlight is lost after the initial wait', async () => {
+    const { ui, tree } = createUi();
+    tree.scrollTop = 200;
+    tree.firstElementChild!.classList.add('bg-blue-500/20');
+    let samples = 0;
+    mockFolderGeometry(tree, (row) => {
+      samples++;
+      row.classList.toggle('bg-blue-500/20', samples > 1);
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({
+      x: 10, y: samples * 20, width: 100, height: 20,
+    } as DOMRect));
+
+    await expect(ui.folderPoint(folderId, true)).resolves.toEqual({
+      x: 60,
+      y: 50,
+      folderId,
+      hitFolderId: folderId,
+      dragTargetHighlighted: true,
+    });
+    expect(samples).toBe(2);
+  });
+
+  it('rejects a permanently lost highlight within the fixed geometry deadline', async () => {
+    vi.useFakeTimers();
+    const { ui, tree } = createUi();
+    tree.scrollTop = 200;
+    tree.firstElementChild!.classList.add('bg-blue-500/20');
+    let samples = 0;
+    mockFolderGeometry(tree, (row) => {
+      samples++;
+      row.classList.remove('bg-blue-500/20');
+    });
+    const started = Date.now();
+    let settled = false;
+    const result = ui.folderPoint(folderId, true).finally(() => {
+      settled = true;
+    });
+    const failure = expect(result).rejects.toThrow('Vendor drag-target highlight missing');
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await failure;
+    expect(Date.now() - started).toBe(5000);
+    expect(samples).toBeGreaterThan(1);
+  });
+
+  it('allows initial tree discovery beyond 5s before starting geometry readiness', async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    const { ui, tree } = createUi(() => {
+      vi.setSystemTime(Date.now() + 2000);
+    });
+    mockFolderGeometry(tree, () => undefined);
+
+    await expect(ui.point(folderRow(folderId))).resolves.toEqual({ x: 60, y: 30 });
+    expect(Date.now() - started).toBe(6000);
   });
 
   it('reacquires the same virtual target when point geometry unmounts it', async () => {

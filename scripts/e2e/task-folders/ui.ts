@@ -203,9 +203,15 @@ export class UI {
   async point(expression: string, fraction = 0.5): Promise<Point> {
     return (await this.pointSample(expression, fraction)).point!;
   }
-  private async pointSample(expression: string, fraction = 0.5): Promise<PointSample> {
+  private async pointSample(
+    expression: string,
+    fraction = 0.5,
+    folder?: { id: string; requireDragTarget: boolean }
+  ): Promise<PointSample> {
+    // Initial discovery has its own bounded navigation/presence budget. Once found,
+    // all geometry retries and virtual reacquisitions share one readiness deadline.
+    await this.locate(expression);
     const deadline = Date.now() + POINT_READINESS_TIMEOUT_MS;
-    await this.locate(expression, deadline);
     let reason = 'Missing/hidden selector';
     while (Date.now() < deadline) {
       // Reacquire after scrolling/layout/portal transitions; geometry and hit belong to one sample.
@@ -229,8 +235,14 @@ export class UI {
           dragTargetHighlighted:e.classList.contains('bg-blue-500/20'),
         };
       })()`);
-      if (result.point) return result;
-      reason = result.reason;
+      if (result.point && folder && result.folderId !== folder.id)
+        reason = 'Folder point changed identity';
+      else if (result.point && folder && result.hitFolderId !== folder.id)
+        reason = 'Folder center was not the real hit target';
+      else if (result.point && folder?.requireDragTarget && !result.dragTargetHighlighted)
+        reason = 'Vendor drag-target highlight missing for ' + folder.id;
+      else if (result.point) return result;
+      else reason = result.reason;
       // Virtualization can unmount the same target between acquisition and geometry.
       // Reacquire only this exact helper expression within the existing readiness deadline.
       if (isTreeTargetExpression(expression) && Date.now() < deadline) {
@@ -253,7 +265,7 @@ export class UI {
       );
     }
     // Geometry, hit identity, and vendor highlight must come from one fresh DOM sample.
-    const sample = await this.pointSample(folderRow(id));
+    const sample = await this.pointSample(folderRow(id), 0.5, { id, requireDragTarget });
     assert.equal(sample.folderId, id, 'Folder point changed identity');
     assert.equal(sample.hitFolderId, id, 'Folder center was not the real hit target');
     if (requireDragTarget)

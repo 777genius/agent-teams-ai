@@ -13,24 +13,23 @@ export function applyVisibleTaskChildren(
   );
   const nodes = new Map<string, Node>();
   for (const [id, node] of projection.nodes) {
-    const taskSlots = node.children.flatMap((childId, index) => {
-      const child = projection.nodes.get(childId);
-      return child?.kind === 'task' ? [index] : [];
-    });
-    if (taskSlots.length === 0) {
+    if (!node.children.some((childId) => projection.nodes.get(childId)?.kind === 'task')) {
       nodes.set(id, node);
       continue;
     }
-    const visibleTasks = node.children.flatMap((childId) => {
+    const visibleTasks: GlobalTask[] = [];
+    const visibleChildren = node.children.filter((childId) => {
       const child = projection.nodes.get(childId);
-      const task = child?.task ?? taskById.get(childId);
-      return child?.kind === 'task' && task && isVisible(task) ? [task] : [];
+      if (child?.kind !== 'task') return true;
+      const task = child.task ?? taskById.get(childId);
+      if (!task || !isVisible(task)) return false;
+      visibleTasks.push(task);
+      return true;
     });
     const sortedVisibleTasks = sortVisibleTasks(visibleTasks);
-    const taskSlotSet = new Set(taskSlots);
     let visibleIndex = 0;
-    const children = node.children.flatMap((childId, index) => {
-      if (!taskSlotSet.has(index)) return [childId];
+    const children = visibleChildren.flatMap((childId) => {
+      if (projection.nodes.get(childId)?.kind !== 'task') return [childId];
       const task = sortedVisibleTasks[visibleIndex];
       if (!task) return [];
       visibleIndex += 1;

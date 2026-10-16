@@ -47,7 +47,7 @@ describe('Combobox', () => {
       const option = Array.from(
         listbox?.querySelectorAll<HTMLElement>('[role="option"]') ?? []
       ).find((candidate) => candidate.getAttribute('data-value') === PROJECT_CHOICE_ID);
-      expect(option).not.toBeNull();
+      expect(option).toBeDefined();
       expect(option?.textContent).toContain('TEST-project');
       expect(option?.textContent).toContain(PROJECT_CHOICE_ID);
 
@@ -87,7 +87,7 @@ describe('Combobox', () => {
       ).find(
         (candidate) => candidate.getAttribute('data-value') === PROJECT_RESET_CHOICE_ID
       );
-      expect(resetOption).not.toBeNull();
+      expect(resetOption).toBeDefined();
       expect(resetOption?.textContent).toContain('All Projects');
 
       flushSync(() => resetOption!.click());

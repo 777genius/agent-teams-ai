@@ -375,27 +375,37 @@ async function sidebarGrouping(ui: UI): Promise<'none' | 'project' | 'time'> {
   return mode === 'none' || mode === 'project' || mode === 'time' ? mode : 'project';
 }
 
-function scopedComboboxSettledExpression(content: string, popupId: string) {
-  return `(async()=>{const popupId=${JSON.stringify(popupId)};const content=${content};
-    const triggers=Array.from(content?.querySelectorAll('[role="combobox"]') ?? []);
-    const trigger=triggers.filter(e=>e.getAttribute('aria-controls')===popupId);
-    const sample=()=>{
-      if(trigger.length!==1 || document.getElementById(popupId)) return null;
-      const target=trigger[0];const rect=target.getBoundingClientRect();
-      if(target.getAttribute('aria-expanded')!=='false' || target.getAttribute('data-state')!=='closed' ||
-        document.activeElement!==target || !target.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) ||
-        rect.width<=0 || rect.height<=0) return null;
-      return [rect.x,rect.y,rect.width,rect.height];
+const WAIT_SCOPED_COMBOBOX_SETTLED = `
+  async function waitScopedComboboxSettledInBrowser(popupId) {
+    const triggers = Array.from(document.querySelectorAll('button[role="combobox"]')).filter(
+      (element) => element.getAttribute('aria-controls') === popupId
+    );
+    const sample = () => {
+      if (triggers.length !== 1 || document.getElementById(popupId)) return null;
+      const target = triggers[0];
+      const rect = target.getBoundingClientRect();
+      if (
+        target.getAttribute('aria-expanded') !== 'false' ||
+        target.getAttribute('data-state') !== 'closed' ||
+        document.activeElement !== target ||
+        !target.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) ||
+        rect.width <= 0 ||
+        rect.height <= 0
+      )
+        return null;
+      return [rect.x, rect.y, rect.width, rect.height];
     };
-    let previous=sample();if(!previous)return false;
-    for(let frame=0;frame<4;frame++){
-      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
-      const current=sample();
-      if(!current || current.some((value,index)=>value!==previous[index]))return false;
-      previous=current;
+    let previous = sample();
+    if (!previous) return false;
+    for (let frame = 0; frame < 4; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const current = sample();
+      if (!current || current.some((value, index) => value !== previous[index])) return false;
+      previous = current;
     }
-    return true;})()`;
-}
+    return true;
+  }
+`.trim();
 
 async function comboboxOption(ui: UI, content: string, choiceId: string) {
   await ui.wait(
@@ -413,8 +423,9 @@ async function comboboxOption(ui: UI, content: string, choiceId: string) {
     `Array.from(${listbox}.querySelectorAll('[role="option"]')).find(e=>e.getAttribute('data-value')===${JSON.stringify(choiceId)})`
   );
   await ui.wait(`!${popup}`, 'combobox options close');
-  await ui.wait(
-    scopedComboboxSettledExpression(content, trigger),
+  await ui.waitFunction(
+    WAIT_SCOPED_COMBOBOX_SETTLED,
+    [trigger],
     'combobox trigger focus and layout cleanup settled'
   );
 }

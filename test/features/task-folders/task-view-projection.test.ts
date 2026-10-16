@@ -107,6 +107,79 @@ describe('canonical task view projection', () => {
     expect(visible.nodes.get('task:["team","2"]')).toBe(canonical.nodes.get('task:["team","2"]'));
   });
 
+  it('keeps surviving task slots around subfolders when filtering and sorting', () => {
+    let snapshot = applyCommand(emptySnapshot(), {
+      type: 'create',
+      id: 'folder',
+      name: 'Folder',
+      parent: null,
+    });
+    snapshot = applyCommand(snapshot, {
+      type: 'moveTask',
+      identity: { teamName: 'team', taskId: '1' },
+      parent: 'folder',
+      anchor: append,
+    });
+    snapshot = applyCommand(snapshot, {
+      type: 'create',
+      id: 'subfolder',
+      name: 'Subfolder',
+      parent: 'folder',
+    });
+    for (const taskId of ['2', '3'])
+      snapshot = applyCommand(snapshot, {
+        type: 'moveTask',
+        identity: { teamName: 'team', taskId },
+        parent: 'folder',
+        anchor: append,
+      });
+    const canonical = projectFolders(snapshot, tasks, () => false, () => undefined, true);
+    const canonicalFolder = canonical.nodes.get('folder:folder')!;
+    const canonicalOrder = [
+      'task:["team","1"]',
+      'folder:subfolder',
+      'task:["team","2"]',
+      'task:["team","3"]',
+    ];
+    const manual = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      (candidate) => candidate.id !== '1',
+      (siblings) => siblings,
+      'manual'
+    );
+    const computed = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      (candidate) => candidate.id !== '1',
+      (siblings) => [...siblings].reverse(),
+      'computed'
+    );
+
+    expect(manual.nodes.get('folder:folder')!.children).toEqual([
+      'folder:subfolder',
+      'task:["team","2"]',
+      'task:["team","3"]',
+    ]);
+    expect(computed.nodes.get('folder:folder')!.children).toEqual([
+      'folder:subfolder',
+      'task:["team","3"]',
+      'task:["team","2"]',
+    ]);
+    expect(canonical.nodes.get('folder:folder')).toBe(canonicalFolder);
+    expect(canonicalFolder.children).toEqual(canonicalOrder);
+    for (const visible of [manual, computed]) {
+      expect(visible.snapshot).toBe(snapshot);
+      expect(visible.canonicalChildren).toBe(canonical.canonicalChildren);
+      expect(visible.canonicalChildren.get('folder:folder')).toEqual(canonicalOrder);
+      expect(visible.nodes.get('folder:subfolder')).toBe(canonical.nodes.get('folder:subfolder'));
+      for (const taskId of ['1', '2', '3']) {
+        const nodeId = `task:["team","${taskId}"]`;
+        expect(visible.nodes.get(nodeId)).toBe(canonical.nodes.get(nodeId));
+      }
+    }
+  });
+
   it('maps visible drop indices to canonical anchors without deleting hidden siblings', () => {
     let snapshot = applyCommand(emptySnapshot(), {
       type: 'create',
