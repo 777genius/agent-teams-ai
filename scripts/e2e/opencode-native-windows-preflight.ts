@@ -576,6 +576,50 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
     if (history[0]?.phase !== 'preparing' || history[0].elapsedMs !== 0) return null;
     return { elapsedMs: Number(value.elapsedMs), history };
   };
+  // Closed owner-initialization facts only: phases, timings, counts and byte totals.
+  const elapsedFact = (v: unknown) => Number.isSafeInteger(v) && Number(v) >= 0 && Number(v) <= 86400000 ? Number(v) : null;
+  const countFact = (v: unknown) => Number.isSafeInteger(v) && Number(v) >= 0 ? Number(v) : null;
+  const initializationPhases = ['bootstrap-before-log', 'bootstrap-before-messages', 'bootstrap-before-log-confirm',
+    'bootstrap-instruction-put', 'bootstrap-instruction-readback', 'bootstrap-after-log', 'bootstrap-after-messages',
+    'bootstrap-after-log-confirm', 'bootstrap-verify', 'MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority'];
+  const commandOperations = ['commandStart', 'commandRead', 'commandStatus', 'commandWriteStdin', 'commandEndStdin', 'commandRetire', 'commandClose'];
+  const commandFacts = (input: unknown) => {
+    const value = row(input);
+    if (Object.keys(value).sort().join(',') !== 'commands,firstFailedOperation,operations,starts' || countFact(value.starts) === null ||
+        !Array.isArray(value.operations) || value.operations.length > commandOperations.length ||
+        !Array.isArray(value.commands) || value.commands.length > 8) return null;
+    const operation = (v: unknown) => v === null ? null : one(v, commandOperations);
+    return { starts: countFact(value.starts), firstFailedOperation: operation(value.firstFailedOperation),
+      operations: value.operations.map((item) => {
+        const entry = row(item);
+        return { operation: one(entry.operation, commandOperations), requests: countFact(entry.requests),
+          failures: countFact(entry.failures), maxLatencyMs: elapsedFact(entry.maxLatencyMs) };
+      }),
+      commands: value.commands.map((item) => {
+        const entry = row(item);
+        return { startOffsetMs: Number.isSafeInteger(entry.startOffsetMs) && Math.abs(Number(entry.startOffsetMs)) <= 86400000 ? Number(entry.startOffsetMs) : null,
+          startLatencyMs: elapsedFact(entry.startLatencyMs), stdin: one(entry.stdin, ['pipe', 'ignore']),
+          stdinBytes: countFact(entry.stdinBytes), stdoutBytes: countFact(entry.stdoutBytes), stderrBytes: countFact(entry.stderrBytes),
+          stdoutEof: entry.stdoutEof === true, stderrEof: entry.stderrEof === true,
+          running: typeof entry.running === 'boolean' ? entry.running : null,
+          exitCode: Number.isSafeInteger(entry.exitCode) && Number(entry.exitCode) >= 0 && Number(entry.exitCode) <= 0xffffffff ? Number(entry.exitCode) : null,
+          failedOperation: operation(entry.failedOperation) };
+      }) };
+  };
+  const initializationFacts = (input: unknown) => {
+    const value = row(input), elapsedMs = elapsedFact(value.elapsedMs);
+    const history: { phase: string; elapsedMs: number }[] = [];
+    if (Array.isArray(value.history) && value.history.length <= initializationPhases.length && elapsedMs !== null) {
+      for (const item of value.history) {
+        const entry = row(item), phase = initializationPhases.find((name) => name === entry.phase), at = elapsedFact(entry.elapsedMs);
+        if (Object.keys(entry).sort().join(',') !== 'elapsedMs,phase' || !phase || at === null || at > elapsedMs ||
+            at < (history.at(-1)?.elapsedMs ?? 0) || history.some((previous) => previous.phase === phase)) { history.length = 0; break; }
+        history.push({ phase, elapsedMs: at });
+      }
+    }
+    return { phase: one(value.phase, initializationPhases), elapsedMs, ownerElapsedMs: elapsedFact(value.ownerElapsedMs),
+      history, commands: value.commands === undefined ? null : commandFacts(value.commands) };
+  };
   const collect = async () => {
     const fs = await import('node:fs/promises'), paths = await import('node:path');
     const run = row(value), binding = row(run.binding), root = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
@@ -723,6 +767,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data), native = row(data.native);
         const nativeStage = nativeStages.find((stage) => stage === native.stage);
         const startup = row(data.startup), acquisition = acquisitionTiming(data.acquisition);
+        const initialization = data.initialization === undefined ? null : initializationFacts(data.initialization);
         const startupElapsedMs = Number.isSafeInteger(startup.elapsedMs) && Number(startup.elapsedMs) >= 0 && Number(startup.elapsedMs) <= 86400000 ? Number(startup.elapsedMs) : null;
         const startupHistory: { stage: string; elapsedMs: number }[] = [];
         if (Array.isArray(startup.history) && startup.history.length <= 10) {
@@ -751,7 +796,9 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
           cleanupElapsedMs: Number.isSafeInteger(row(data.cleanup).elapsedMs) && Number(row(data.cleanup).elapsedMs) >= 0 && Number(row(data.cleanup).elapsedMs) <= 86400000 ? Number(row(data.cleanup).elapsedMs) : null,
           startupStderrKind: one(startup.nativeStderrKind, ['empty', 'entry_resolution', 'module_resolution', 'child_identity', 'child_pipe', 'access_denied', 'pipe_refused', 'pipe_missing', 'bun_error', 'unclassified', 'unavailable']),
           startupExitCode: Number.isSafeInteger(startup.nativeExitCode) && Number(startup.nativeExitCode) >= 0 && Number(startup.nativeExitCode) <= 0xffffffff ? startup.nativeExitCode : null,
-          initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
+          initializationPhase: initialization?.phase ?? null, initializationElapsedMs: initialization?.elapsedMs ?? null,
+          initializationOwnerElapsedMs: initialization?.ownerElapsedMs ?? null, initializationHistory: initialization?.history ?? [],
+          initializationCommands: initialization?.commands ?? null,
           acquisitionLastPhase: acquisition?.history.at(-1)?.phase ?? null,
           acquisitionElapsedMs: acquisition?.elapsedMs ?? null, acquisitionHistory: acquisition?.history ?? [] });
         if (diagnostics.length === 4) break;

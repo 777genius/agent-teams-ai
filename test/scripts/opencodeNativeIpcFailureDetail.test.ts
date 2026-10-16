@@ -361,6 +361,31 @@ describe('serialized native IPC failure details', () => {
       for (const phase of ['PRIVATE-TEST-secret', ['kernel-retirement']])
         expect(await project(undefined, 'timeout', undefined, { ...cleanup, phase })).toMatchObject({ cleanupPhase: 'unclassified', cleanupNativePhase: 'unclassified' });
       expect(await project(undefined, 'timeout', undefined, { ...cleanup, nativePhase: 'PRIVATE-TEST-secret', elapsedMs: -1 })).toMatchObject({ cleanupPhase: 'kernel-retirement', cleanupNativePhase: 'unclassified', cleanupElapsedMs: null });
+      const initialization = { phase: 'MCP-connect', elapsedMs: 30_041, ownerElapsedMs: 150,
+        history: [{ phase: 'bootstrap-before-log', elapsedMs: 9 }, { phase: 'MCP-connect', elapsedMs: 40 }],
+        commands: { starts: 1, firstFailedOperation: 'commandRead',
+          operations: [{ operation: 'commandRead', requests: 3, failures: 1, maxLatencyMs: 7 }],
+          commands: [{ startOffsetMs: -5, startLatencyMs: 7, stdin: 'pipe', stdinBytes: 120, stdoutBytes: 0, stderrBytes: 42,
+            stdoutEof: false, stderrEof: false, running: true, exitCode: null, failedOperation: 'commandRead' }] } };
+      const owner = async (value: unknown) => {
+        await writeFile(diagnostic, JSON.stringify({ schemaVersion: 1, phase: 'run-owner-initialization',
+          category: 'invalid_response', initialization: value }));
+        return (await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', [])).diagnostics[0] as unknown as Record<string, unknown>;
+      };
+      expect(await owner(initialization)).toMatchObject({ phase: 'run-owner-initialization', initializationPhase: 'MCP-connect',
+        initializationElapsedMs: 30_041, initializationOwnerElapsedMs: 150, initializationHistory: initialization.history,
+        initializationCommands: initialization.commands });
+      expect(await owner({ phase: 'bootstrap-after-log', elapsedMs: 1 })).toMatchObject({ initializationPhase: 'bootstrap-after-log',
+        initializationElapsedMs: 1, initializationOwnerElapsedMs: null, initializationHistory: [], initializationCommands: null });
+      const hostile = await owner({ ...initialization, phase: 'PRIVATE-TEST-phase', ownerElapsedMs: -1,
+        history: [initialization.history[1], initialization.history[0]],
+        commands: { ...initialization.commands, commands: [{ ...initialization.commands.commands[0], stdin: 'PRIVATE-TEST-stdin',
+          failedOperation: 'PRIVATE-TEST-operation', stdoutBytes: -1 }] } });
+      expect(hostile).toMatchObject({ initializationPhase: 'unclassified', initializationOwnerElapsedMs: null, initializationHistory: [],
+        initializationCommands: { commands: [{ stdin: 'unclassified', failedOperation: 'unclassified', stdoutBytes: null }] } });
+      expect(await owner({ ...initialization, commands: { ...initialization.commands, raw: 'PRIVATE-TEST-raw' } }))
+        .toMatchObject({ initializationPhase: 'MCP-connect', initializationCommands: null });
+      expect(JSON.stringify(hostile)).not.toContain('PRIVATE-TEST');
       const phases = [
         'preparing',
         'delivery-resolved',
