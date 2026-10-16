@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
+import { electronTeamPort, nativeCommandMatch } from '../../../../scripts/e2e/opencode-native-team-port';
+import { serializedFunction } from '../../../../scripts/e2e/release-updater/serialized-function.mts';
 
 import type { ElectronAPI } from '@shared/types/api';
 
@@ -143,4 +144,59 @@ it('relaunches a stopped TEST run after restart clears the active runtime pointe
   const reused = fixture(null, false, false, previous);
   await expect(reused.port.launchTeam(request, previous)).rejects.toThrow('fresh run identity required');
   reused.port.dispose();
+});
+
+
+it('projects bounded exact shell matcher facts before CDP without commands or results', async () => {
+  const secret = 'TEST_PRIVATE_COMMAND_OUTPUT';
+  const program = 'C:\\TEST-project\\bob-verify.cjs';
+  const marker = 'COMMAND_EXEC:TEST-nonce';
+  const execution = (command: string, paired = true, content = marker) => ({
+    toolCall: { id: secret, name: 'bash', input: { command } },
+    result: { toolUseId: paired ? secret : 'unpaired', isError: false, content },
+  });
+  const exact = execution(`node "${program}" ${secret}`);
+  const calls = [execution(`node other.cjs ${secret}`), execution(`other "${program}"`),
+    execution(`node "${program}"`, false), execution(`node "${program}"`, true, secret), exact];
+  const task = { id: 'owned', owner: 'bob', status: 'completed' };
+  const chunk = { chunkType: 'ai', responses: [{ type: 'assistant', model: 'test/model' }],
+    toolExecutions: calls, rawMessages: [] };
+  // Execute the actual serialized renderer closure, including its injected matcher.
+  const rendererPort = new Function('api', 'team', 'project',
+    `return ${serializedFunction(electronTeamPort)}(api, team, project, ${serializedFunction(nativeCommandMatch)});`) as typeof electronTeamPort;
+  const port = rendererPort({ teams: {
+    onProvisioningProgress: vi.fn(() => () => undefined),
+    getData: vi.fn(async () => ({ tasks: [task], members: [] })),
+    getTask: vi.fn(async () => task),
+    getTaskLogStream: vi.fn(async () => ({ segments: [
+      { actor: { memberName: 'alice', sessionId: 'foreign' }, chunks: [{ ...chunk, toolExecutions: Array(10).fill(exact) }] },
+      { actor: { memberName: 'bob', sessionId: 'original' }, chunks: [chunk] },
+    ] })), getMessagesPage: vi.fn(async () => ({ messages: [] })),
+  } } as unknown as ElectronAPI, 'test-opencode-commands', '/tmp/TEST-project');
+  try {
+    await port.getData();
+    const result = await port.getSafeTaskFailureSnapshot('owned', 'bob', {
+      session: 'original', program, marker, model: 'test/model',
+    });
+    const observed = result.commandObservation!;
+    expect(observed.shellCount).toBe(15);
+    expect(observed.tuples).toHaveLength(8);
+    expect(observed.exhaustive).toBe(false);
+    const owned = observed.tuples.filter((row) => row.actorMatches && row.sessionMatches);
+    expect(owned.map((row) => row.match)).toEqual(calls.map((call) =>
+      nativeCommandMatch(call as Parameters<typeof nativeCommandMatch>[0], program, marker)));
+    expect(owned.map((row) => [row.match.programMatches, row.match.nodeMatches,
+      row.match.resultPaired, row.match.markerMatches])).toEqual([
+      [false, true, true, true], [true, false, true, true], [true, true, false, true],
+      [true, true, true, false], [true, true, true, true],
+    ]);
+    expect(owned.every((row) => row.modelMatches && !row.modelMismatch)).toBe(true);
+    expect(observed.tuples.some((row) => !row.actorMatches && !row.sessionMatches)).toBe(true);
+    const output = JSON.stringify(result);
+    for (const raw of [secret, program, marker, 'test/model', 'original', 'foreign'])
+      expect(output).not.toContain(raw);
+    await expect(port.getSafeTaskFailureSnapshot('foreign-task', 'bob', {
+      session: 'original', program, marker, model: 'test/model',
+    })).rejects.toThrow('not owned');
+  } finally { port.dispose(); }
 });

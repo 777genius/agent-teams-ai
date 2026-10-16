@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
-import { electronTeamPort } from './opencode-native-team-port';
+import { electronTeamPort, nativeCommandMatch } from './opencode-native-team-port';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
 import { Cdp, waitFor } from './release-updater/cdp.mts';
 import { serializedFunction } from './release-updater/serialized-function.mts';
@@ -271,7 +271,7 @@ export async function prepareNativeDesktop() {
         );
         // This variable belongs only to this fresh renderer. No production hook.
         await cdp.evaluate(`window.__opencodeNativeProof = { port: ${serializedFunction(electronTeamPort)}(
-          window.electronAPI, ${JSON.stringify(teamName)}, ${JSON.stringify(projectPath)}), calls: {} }; true`);
+          window.electronAPI, ${JSON.stringify(teamName)}, ${JSON.stringify(projectPath)}, ${serializedFunction(nativeCommandMatch)}), calls: {} }; true`);
         let closed = false;
         return {
           pid: child.pid!,

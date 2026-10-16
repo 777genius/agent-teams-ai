@@ -1,12 +1,41 @@
 import type { ElectronAPI } from '@shared/types/api';
 import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
+type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
+export type NativeCommandExpectation = {
+  session: string; program: string; marker: string; model: string;
+};
+
+/** The exact acceptance predicates, also used for finite failure observations. */
+export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string) {
+  const command = execution.toolCall.input.command;
+  const shell = ['bash', 'shell', 'exec'].includes(execution.toolCall.name);
+  const programMatches = typeof command === 'string' && command.includes(program);
+  const nodeMatches = typeof command === 'string' && /\bnode(?:\.exe)?\b/i.test(command);
+  const resultPaired = execution.result?.toolUseId === execution.toolCall.id;
+  const resultSucceeded = execution.result?.isError === false;
+  const hasMarker = (content: unknown): boolean => {
+    if (typeof content !== 'string') return false;
+    if (content.split(/\r?\n/).includes(marker)) return true;
+    try {
+      const blocks: unknown = JSON.parse(content);
+      return Array.isArray(blocks) && blocks.some((block) => block && typeof block === 'object' &&
+        'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' &&
+        block.text.split(/\r?\n/).includes(marker));
+    } catch { return false; }
+  };
+  const markerMatches = hasMarker(execution.result?.content);
+  return { shell, programMatches, nodeMatches, resultPaired, resultSucceeded, markerMatches,
+    nativeMatches: shell && programMatches && nodeMatches,
+    succeeded: resultPaired && resultSucceeded && markerMatches };
+}
+
 /** Renderer adapter for the existing full-team scenario. The host driver must
  * first verify its owned Electron PID/CDP listener and isolated TEST profile.
  * This module does not launch Electron or establish that host ownership proof.
  * Importing it never submits work. All mutations are explicit and single-shot.
  */
-export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string) {
+export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string, matchCommand = nativeCommandMatch) {
   if (!/^test-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
   if (!projectPath || !/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(projectPath)) {
     throw new Error('TEST project required; host must also verify its opt-in marker');
@@ -184,7 +213,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       selectedTask(id);
       return api.teams.getTaskLogStream(teamName, id);
     },
-    async getSafeTaskFailureSnapshot(id: string, expectedOwner: 'alice' | 'bob') {
+    async getSafeTaskFailureSnapshot(id: string, expectedOwner: 'alice' | 'bob', command?: NativeCommandExpectation) {
       selectedTask(id);
       if (expectedOwner !== 'alice' && expectedOwner !== 'bob') throw new Error('TEST owner required');
       const [taskRead, dataRead, logRead, pageRead] = await Promise.allSettled([
@@ -192,6 +221,27 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         api.teams.getTaskLogStream(teamName, id),
         api.teams.getMessagesPage(teamName, { limit: 100, cursor: null }),
       ]);
+      const commandObservation = command && logRead.status === 'fulfilled' ? (() => {
+        let shellCount = 0;
+        const tuples: { tool: 'bash' | 'shell' | 'exec'; actorMatches: boolean; sessionMatches: boolean;
+          modelMatches: boolean; modelMismatch: boolean; match: ReturnType<typeof matchCommand> }[] = [];
+        for (const segment of logRead.value.segments) for (const chunk of segment.chunks) {
+          if (chunk.chunkType !== 'ai') continue;
+          const models = chunk.responses.filter((response) => response.type === 'assistant' || response.role === 'assistant')
+            .map((response) => response.model).filter((value): value is string => typeof value === 'string' && value.length > 0);
+          for (const execution of chunk.toolExecutions) {
+            const match = matchCommand(execution, command.program, command.marker);
+            const tool = (['bash', 'shell', 'exec'] as const).find((name) => name === execution.toolCall.name);
+            if (!tool) continue;
+            shellCount = Math.min(10_000, shellCount + 1);
+            tuples.push({ tool, actorMatches: segment.actor.memberName === expectedOwner,
+              sessionMatches: segment.actor.sessionId === command.session,
+              modelMatches: models.includes(command.model), modelMismatch: models.some((value) => value !== command.model), match });
+            if (tuples.length > 8) tuples.shift();
+          }
+        }
+        return { shellCount, tuples, exhaustive: shellCount <= 8 };
+      })() : null;
       const task = taskRead.status === 'fulfilled' ? taskRead.value : null;
       const data = dataRead.status === 'fulfilled' ? dataRead.value : null;
       const log = logRead.status === 'fulfilled' ? logRead.value : null;
@@ -413,6 +463,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       }));
       return {
         taskId: id,
+        commandObservation,
         taskStatus: task ? statuses.find((value) => value === task.status) ?? 'unknown' : 'missing',
         ownerMatches: !!task && task.owner === expectedOwner,
         commentCount: count(task?.comments?.length),

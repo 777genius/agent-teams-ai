@@ -31,7 +31,8 @@ import {
   seedWindowsTestModelOutputLimit,
 } from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
-import type { electronTeamPort } from './opencode-native-team-port';
+import { nativeCommandMatch } from './opencode-native-team-port';
+import type { electronTeamPort, NativeCommandExpectation } from './opencode-native-team-port';
 
 const execute = promisify(execFile);
 // The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
@@ -843,29 +844,6 @@ async function completed(
     420_000
   );
 }
-function resultHasMarker(content: unknown, marker: string): boolean {
-  if (typeof content !== 'string') return false;
-  if (content.split(/\r?\n/).includes(marker)) return true;
-  // Existing projector serializes V2 native text-content arrays as JSON.
-  try {
-    const blocks: unknown = JSON.parse(content);
-    return (
-      Array.isArray(blocks) &&
-      blocks.some(
-        (block) =>
-          block &&
-          typeof block === 'object' &&
-          'type' in block &&
-          block.type === 'text' &&
-          'text' in block &&
-          typeof block.text === 'string' &&
-          block.text.split(/\r?\n/).includes(marker)
-      )
-    );
-  } catch {
-    return false;
-  }
-}
 async function commandEvidence(
   app: App,
   taskId: string,
@@ -892,19 +870,10 @@ async function commandEvidence(
             'Actual assistant inference used a different model'
           );
           if (!assistantModels.includes(expectedModel)) continue;
-          const native = chunk.toolExecutions.filter((execution) => {
-            const command = execution.toolCall.input.command;
-            return (
-              ['bash', 'shell', 'exec'].includes(execution.toolCall.name) &&
-              typeof command === 'string' &&
-              command.includes(program) &&
-              /\bnode(?:\.exe)?\b/i.test(command)
-            );
-          });
+          const native = chunk.toolExecutions.filter((execution) =>
+            nativeCommandMatch(execution, program, marker).nativeMatches);
           const succeeded = (execution: (typeof chunk.toolExecutions)[number]) =>
-            execution.result?.toolUseId === execution.toolCall.id &&
-            execution.result.isError === false &&
-            resultHasMarker(execution.result.content, marker);
+            nativeCommandMatch(execution, program, marker).succeeded;
           if (native.some(succeeded)) return 'paired-native-shell-result';
           // V2 canonical CodeMode metadata proves an actual native invocation but
           // deliberately provides no child result. Keep the successful composite
@@ -1770,6 +1739,7 @@ async function main() {
         )
       : { bundledSdkSha: '', runtimeDigests: {} };
   const taskOwners = new Map<string, 'alice' | 'bob'>();
+  const commandExpectations = new Map<string, NativeCommandExpectation>();
   const nativeSessions = new Map<string, string>();
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
@@ -1939,6 +1909,7 @@ async function main() {
     });
     proof.taskIds.push(alice.id);
     taskOwners.set(alice.id, 'alice');
+    commandExpectations.set(alice.id, { session: sessions[0], program: path.join(desktop.projectPath, 'alice-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.alice, model });
     await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`, recordCompletion);
     const aliceCommandEvidence = await commandEvidence(
       app,
@@ -1992,6 +1963,7 @@ async function main() {
     });
     proof.taskIds.push(bob.id);
     taskOwners.set(bob.id, 'bob');
+    commandExpectations.set(bob.id, { session: sessions[1], program: path.join(desktop.projectPath, 'bob-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.bob, model });
     await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`, recordCompletion);
     const bobCommandEvidence = await commandEvidence(
       app,
@@ -2249,6 +2221,7 @@ async function main() {
     });
     proof.taskIds.push(task.id);
     taskOwners.set(task.id, 'alice');
+    commandExpectations.set(task.id, { session: newSessions[0], program: path.join(desktop.projectPath, 'new-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.new, model });
     await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`, recordCompletion);
     const freshCommandEvidence = await commandEvidence(
       app,
@@ -2467,7 +2440,7 @@ async function main() {
       try {
         const tasks = await Promise.race([
           Promise.all(
-            latestTasks.map(({ id, owner }) => app.call('getSafeTaskFailureSnapshot', id, owner))
+            latestTasks.map(({ id, owner }) => app.call('getSafeTaskFailureSnapshot', id, owner, commandExpectations.get(id)))
           ),
           new Promise<never>((_resolve, reject) => {
             timer = setTimeout(() => reject(new Error('TEST failure snapshot expired')), 10_000);
