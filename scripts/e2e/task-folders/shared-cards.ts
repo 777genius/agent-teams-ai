@@ -159,6 +159,36 @@ const FRAME_SHARED_CARDS = `
         });
         return textReady && statusReady && markerReady;
       });
+    const frameCard = (card) => {
+      card.scrollIntoView({ block: 'center', inline: 'center' });
+      for (
+        let ancestor = card.parentElement;
+        ancestor && ancestor !== document.body;
+        ancestor = ancestor.parentElement
+      ) {
+        const ancestorRect = ancestor.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        const overflowX =
+          cardRect.left < ancestorRect.left
+            ? cardRect.left - ancestorRect.left
+            : Math.max(0, cardRect.right - ancestorRect.right);
+        const overflowY =
+          cardRect.top < ancestorRect.top
+            ? cardRect.top - ancestorRect.top
+            : Math.max(0, cardRect.bottom - ancestorRect.bottom);
+        if (overflowX) ancestor.scrollLeft += overflowX;
+        if (overflowY) ancestor.scrollTop += overflowY;
+      }
+      const viewportRect = card.getBoundingClientRect();
+      window.scrollBy(
+        viewportRect.left < 0
+          ? viewportRect.left
+          : Math.max(0, viewportRect.right - innerWidth),
+        viewportRect.top < 0
+          ? viewportRect.top
+          : Math.max(0, viewportRect.bottom - innerHeight)
+      );
+    };
 
     for (let frame = 0; frame < 8; frame++) {
       const cards = [find(treeRoot, treeCardSelector), find(sidebarRoot, sidebarCardSelector)];
@@ -166,7 +196,7 @@ const FRAME_SHARED_CARDS = `
         await new Promise((resolve) => requestAnimationFrame(() => resolve()));
         continue;
       }
-      cards.forEach((card) => card.scrollIntoView({ block: 'center' }));
+      cards.forEach(frameCard);
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));
       const reacquired = [find(treeRoot, treeCardSelector), find(sidebarRoot, sidebarCardSelector)];
       if (
