@@ -364,7 +364,9 @@ describe('serialized native IPC failure details', () => {
       const initialization = { phase: 'MCP-connect', elapsedMs: 30_041, ownerElapsedMs: 150,
         history: [{ phase: 'bootstrap-before-log', elapsedMs: 9 }, { phase: 'MCP-connect', elapsedMs: 40 }],
         commands: { starts: 1, firstFailedOperation: 'commandRead',
-          operations: [{ operation: 'commandRead', requests: 3, failures: 1, maxLatencyMs: 7 }],
+          operations: [{ operation: 'commandStart', requests: 2, failures: 0, replyFailures: 0, maxLatencyMs: 7, pending: 1,
+            oldestPendingAgeMs: 107, oldestPendingStage: 'native' }, { operation: 'commandRead', requests: 3, failures: 1,
+            replyFailures: 1, maxLatencyMs: 7, pending: 0, oldestPendingAgeMs: null, oldestPendingStage: null }],
           commands: [{ startOffsetMs: -5, startLatencyMs: 7, stdin: 'pipe', stdinBytes: 120, stdoutBytes: 0, stderrBytes: 42,
             stdoutEof: false, stderrEof: false, running: true, exitCode: null, failedOperation: 'commandRead' }] } };
       const owner = async (value: unknown) => {
@@ -379,10 +381,11 @@ describe('serialized native IPC failure details', () => {
         initializationElapsedMs: 1, initializationOwnerElapsedMs: null, initializationHistory: [], initializationCommands: null });
       const hostile = await owner({ ...initialization, phase: 'PRIVATE-TEST-phase', ownerElapsedMs: -1,
         history: [initialization.history[1], initialization.history[0]],
-        commands: { ...initialization.commands, commands: [{ ...initialization.commands.commands[0], stdin: 'PRIVATE-TEST-stdin',
-          failedOperation: 'PRIVATE-TEST-operation', stdoutBytes: -1 }] } });
+        commands: { ...initialization.commands, operations: [{ ...initialization.commands.operations[0], oldestPendingStage: 'PRIVATE-TEST-stage', pending: -1 }],
+          commands: [{ ...initialization.commands.commands[0], stdin: 'PRIVATE-TEST-stdin', failedOperation: 'PRIVATE-TEST-operation', stdoutBytes: -1 }] } });
       expect(hostile).toMatchObject({ initializationPhase: 'unclassified', initializationOwnerElapsedMs: null, initializationHistory: [],
-        initializationCommands: { commands: [{ stdin: 'unclassified', failedOperation: 'unclassified', stdoutBytes: null }] } });
+        initializationCommands: { operations: [{ oldestPendingStage: 'unclassified', pending: null }],
+          commands: [{ stdin: 'unclassified', failedOperation: 'unclassified', stdoutBytes: null }] } });
       expect(await owner({ ...initialization, commands: { ...initialization.commands, raw: 'PRIVATE-TEST-raw' } }))
         .toMatchObject({ initializationPhase: 'MCP-connect', initializationCommands: null });
       expect(JSON.stringify(hostile)).not.toContain('PRIVATE-TEST');

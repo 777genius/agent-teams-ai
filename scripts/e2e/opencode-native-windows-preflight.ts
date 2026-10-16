@@ -593,7 +593,9 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       operations: value.operations.map((item) => {
         const entry = row(item);
         return { operation: one(entry.operation, commandOperations), requests: countFact(entry.requests),
-          failures: countFact(entry.failures), maxLatencyMs: elapsedFact(entry.maxLatencyMs) };
+          failures: countFact(entry.failures), replyFailures: countFact(entry.replyFailures), maxLatencyMs: elapsedFact(entry.maxLatencyMs),
+          pending: countFact(entry.pending), oldestPendingAgeMs: elapsedFact(entry.oldestPendingAgeMs),
+          oldestPendingStage: entry.oldestPendingStage === null ? null : one(entry.oldestPendingStage, ['assert-live', 'native', 'reply']) };
       }),
       commands: value.commands.map((item) => {
         const entry = row(item);
