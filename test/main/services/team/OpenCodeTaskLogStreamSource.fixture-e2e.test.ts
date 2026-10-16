@@ -257,6 +257,35 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
     expect(
       (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
     ).toMatchObject({ reportedErrorName: null, httpStatus: null, signals: [] });
+    const unsupportedParameter =
+      "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.";
+    for (const value of [unsupportedParameter, JSON.stringify(unsupportedParameter)]) {
+      reason = value;
+      expect(
+        (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+      ).toMatchObject({
+        parameterFailure: {
+          template: 'unsupported_max_tokens',
+          parameter: 'max_tokens',
+          replacement: 'max_completion_tokens',
+        },
+      });
+    }
+    reason = unsupportedParameter + ' sk-TEST-secret';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+        ?.parameterFailure
+    ).toBeNull();
+    reason = JSON.stringify(unsupportedParameter).padEnd(32768, ' ') + ' sk-TEST-secret';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+        ?.parameterFailure
+    ).toBeNull();
+    reason = 'max_tokens'.padEnd(108, ' ');
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+        ?.parameterFailure
+    ).toBeNull();
     reason = 'x'.repeat(40_000) + ' sk-TEST-secret';
     expect(
       (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure

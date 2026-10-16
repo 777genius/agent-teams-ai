@@ -48,6 +48,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       catch { /* Native reasons are often plain text. */ }
     }
     const root = record(parsed), error = record(root.error), data = record(error.data ?? root.data);
+    const unsupportedMaxTokens = "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.";
     const rows = [root, error, data];
     const errorNames = ['APIError', 'APICallError', 'AI_APICallError', 'ProviderAuthError',
       'MessageAbortedError', 'ContextOverflowError', 'StructuredOutputError', 'UnknownError',
@@ -80,6 +81,13 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     const tokens = (pattern: RegExp) => numeric(Number(pattern.exec(text)?.[1]), 1, 10_000_000);
     return {
       factsSource: 'bounded_original_reason_text' as const,
+      // Match the complete public provider template, including a JSON-quoted
+      // reason; length or a max_tokens mention alone is never this proof.
+      parameterFailure: (original === unsupportedMaxTokens ||
+        original === JSON.stringify(unsupportedMaxTokens))
+        ? { template: 'unsupported_max_tokens' as const, parameter: 'max_tokens' as const,
+          replacement: 'max_completion_tokens' as const }
+        : null,
       present: text.length > 0,
       inspectedCharacters: text.length,
       truncated: original.length > text.length,
