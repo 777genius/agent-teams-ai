@@ -7,8 +7,10 @@ on:
         required: true
         type: string
       model:
-        required: true
+        description: Explicit selected model required for native and source-only startup; unused for provider-only
+        required: false
         type: string
+        default: ''
       versions:
         type: string
         default: all
@@ -36,9 +38,10 @@ on:
         required: true
         type: string
       model:
-        description: Explicit authorized OpenRouter model ID including openrouter/ prefix
-        required: true
+        description: Explicit openrouter/ model required for native and source-only startup; unused for provider-only
+        required: false
         type: string
+        default: ''
       versions:
         description: 'Select existing real scenarios; all is the complete Windows acceptance run'
         type: choice
@@ -49,7 +52,7 @@ on:
         type: boolean
         default: false
       source_only:
-        description: Stop after source preflight without packaging or model tasks
+        description: Requires exact sdk_ref and explicit model; real startup/stop without packaging or model prompts
         type: boolean
         default: false
       runtime_candidate_run:
@@ -123,8 +126,8 @@ jobs:
         run: |
           if ($env:VERSIONS -cnotin @('all', 'v1', 'v2')) { throw 'Unknown Windows version selection' }
           if ($env:SOURCE_ONLY -eq 'true' -and $env:PROVIDER_ONLY -ne 'true' -and $env:VERSIONS -eq 'v1') { throw 'V1 has no V2 source-only scenario' }
-          if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required' }
-          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
+          if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required for native, source-only and provider-only runs' }
+          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required for native and source-only startup; no model prompts in source-only mode' }
           if ($env:PROVIDER_ONLY -eq 'true') {
             if ($env:RUNTIME_CANDIDATE_RUN -notmatch '^[0-9]+$' -or $env:RUNTIME_CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Explicit provider candidate CI run and exact source SHA required' }
             if ($env:RUNTIME_CANDIDATE_SHA -cne $env:SDK_REF) { throw 'Provider candidate must match selected SDK source' }

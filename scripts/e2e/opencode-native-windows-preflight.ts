@@ -1062,7 +1062,7 @@ assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.4.3');
 assert.equal(process.argv.length, 7);
 const selectedModel = process.argv[5]!;
-assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required');
+assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required for native startup, including source-only; no model prompts are submitted');
 const mcpNode = await realpath(path.resolve(process.argv[6]!));
 const mcpEntry = await realpath(path.resolve('mcp-server/dist/index.js'));
 const sdk = await realpath(path.resolve(process.argv[2]!));

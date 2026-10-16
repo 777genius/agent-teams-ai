@@ -1,5 +1,6 @@
 // @vitest-environment node
 // Static workflow contract checks. These do not claim PowerShell/Windows execution.
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -126,4 +127,45 @@ describe('Windows draft backfill workflow contract', () => {
     expect(integration).toContain('runtimeRelease: `runtime-v${runtimeVersion}`');
     expect(integration).toContain('const result = await delegate.run(input)');
   });
+});
+
+describe('native Windows dispatch input admission', () => {
+  it.skipIf(process.platform === 'win32')(
+    'executes the real Linux caller guard for omitted, source-only and provider-only inputs',
+    () => {
+      const caller = parse(readFileSync('.github/workflows/opencode-packaged-e2e.yml', 'utf8'));
+      const callee = parse(
+        readFileSync('.github/workflows/opencode-native-windows-e2e.yml', 'utf8')
+      );
+      const admission = caller.jobs['validate-native-inputs'];
+      const native = caller.jobs['native-real-tasks'];
+      expect(native.needs).toBe('validate-native-inputs');
+      expect(admission.if).toBe(native.if);
+      expect(caller.jobs['packaged-windows'].needs).toBeUndefined();
+      expect(callee.on.workflow_call.inputs.sdk_ref.required).toBe(true);
+      expect(callee.on.workflow_call.inputs.model).toMatchObject({ required: false, default: '' });
+      const script = admission.steps[0].run;
+      for (const provider of ['false', 'true']) {
+        for (const sha of ['', 'a'.repeat(40), 'main']) {
+          for (const model of [
+            '',
+            'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
+            'not-a-model',
+          ]) {
+            const result = spawnSync('/bin/bash', ['-c', script], {
+              encoding: 'utf8',
+              env: { ...process.env, SDK_REF: sha, SELECTED_MODEL: model, PROVIDER_ONLY: provider },
+            });
+            const accepted =
+              sha === 'a'.repeat(40) && (provider === 'true' || model.startsWith('openrouter/'));
+            expect(result.status, JSON.stringify({ provider, sha, model })).toBe(accepted ? 0 : 1);
+            if (!accepted)
+              expect(result.stdout).toContain(
+                sha !== 'a'.repeat(40) ? 'native_sdk_ref must' : 'native_model is required'
+              );
+          }
+        }
+      }
+    }
+  );
 });

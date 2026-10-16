@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       native_sdk_ref:
-        description: 'Exact reviewed native SDK SHA for real Windows tasks; empty keeps diagnostics'
+        description: 'Exact reviewed SDK SHA required for native tasks, source-only and provider-only; empty with both flags off keeps diagnostics'
         type: string
         default: ''
       native_model:
-        description: 'Explicit openrouter/provider-model for native real tasks'
+        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; unused for provider-only'
         type: string
         default: ''
       native_versions:
@@ -21,7 +21,7 @@ on:
         type: boolean
         default: false
       native_source_only:
-        description: 'Stop after the native source preflight; no packaging or model tasks'
+        description: 'Requires native_sdk_ref and native_model; real startup/stop only, no packaging or model prompts'
         type: boolean
         default: false
       runtime_candidate_run:
@@ -54,7 +54,28 @@ permissions:
   contents: read
 
 jobs:
+  validate-native-inputs:
+    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require exact native dispatch inputs before Windows allocation
+        shell: bash
+        env:
+          SDK_REF: ${{ inputs.native_sdk_ref }}
+          SELECTED_MODEL: ${{ inputs.native_model }}
+          PROVIDER_ONLY: ${{ inputs.native_provider_only }}
+        run: |
+          if [[ ! "$SDK_REF" =~ ^[a-f0-9]{40}$ ]]; then
+            echo '::error::native_sdk_ref must be an exact reviewed SDK SHA for native, source-only and provider-only runs'
+            exit 1
+          fi
+          if [[ "$PROVIDER_ONLY" != 'true' && ! "$SELECTED_MODEL" =~ ^openrouter/[a-zA-Z0-9_./:-]+$ ]]; then
+            echo '::error::native_model is required for native and source-only startup; source-only submits no model prompts'
+            exit 1
+          fi
   native-real-tasks:
+    needs: validate-native-inputs
     if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
     uses: ./.github/workflows/opencode-native-windows-e2e.yml
     with:
