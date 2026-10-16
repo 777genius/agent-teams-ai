@@ -14,6 +14,12 @@ const moduleMocks = vi.hoisted(() => ({
   openTaskFolderMove: vi.fn(),
   preloadGlobalTaskDetailDialog: vi.fn(),
   taskFolderEditingReady: true,
+  useUnreadCommentCount: vi.fn(
+    (
+      _identity: { contextId: string; teamName: string; taskId: string },
+      _comments?: readonly unknown[]
+    ) => 0
+  ),
 }));
 
 let unreadCountValue = 0;
@@ -24,7 +30,7 @@ vi.mock('../../../../src/renderer/store', () => ({
 }));
 
 vi.mock('../../../../src/renderer/hooks/useUnreadCommentCount', () => ({
-  useUnreadCommentCount: () => unreadCountValue,
+  useUnreadCommentCount: moduleMocks.useUnreadCommentCount,
 }));
 
 vi.mock('../../../../src/renderer/services/commentReadStorage', () => ({
@@ -102,6 +108,7 @@ vi.mock('zustand/react/shallow', () => ({
 vi.mock('lucide-react', () => {
   const Icon = (props: React.SVGProps<SVGSVGElement>) => React.createElement('svg', props);
   return {
+    Archive: Icon,
     GripVertical: Icon,
     CheckCircle2: Icon,
     Circle: Icon,
@@ -137,16 +144,14 @@ function makeTask(overrides: Partial<GlobalTask> = {}): GlobalTask {
     createdAt: '2026-04-18T10:00:00.000Z',
     updatedAt: '2026-04-18T10:10:00.000Z',
     reviewState: 'none',
-    reviewNotes: [],
     blockedBy: [],
     blocks: [],
     comments: [],
     attachments: [],
     workIntervals: [],
-    kanbanColumnId: null,
     projectPath: '/workspace/hookplex',
     ...overrides,
-  } as GlobalTask;
+  };
 }
 
 describe('SidebarTaskItem unread styling', () => {
@@ -156,6 +161,8 @@ describe('SidebarTaskItem unread styling', () => {
     storeState.openGlobalTaskDetail.mockReset();
     storeState.teamByName = {};
     moduleMocks.clearTaskManualUnread.mockReset();
+    moduleMocks.useUnreadCommentCount.mockReset();
+    moduleMocks.useUnreadCommentCount.mockImplementation(() => unreadCountValue);
     moduleMocks.openTaskFolderMove.mockReset();
     moduleMocks.preloadGlobalTaskDetailDialog.mockReset();
     moduleMocks.taskFolderEditingReady = true;
@@ -699,4 +706,99 @@ describe('SidebarTaskItem unread styling', () => {
       });
     }
   );
+
+  it('keeps injected tree presentation field-for-field synchronized with sidebar cards', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderCards = (source: GlobalTask, archived = false): void => {
+      root.render(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(SidebarTaskItem, {
+            contextId: 'local',
+            task: source,
+            isArchived: archived,
+            showTeamName: true,
+            displaySubjectOverride: source.subject,
+          }),
+          React.createElement(SidebarTaskItem, {
+            contextId: 'local',
+            task: source,
+            isArchived: archived,
+            showTeamName: true,
+            displaySubjectOverride: source.subject,
+            containerProps: {
+              role: 'treeitem',
+              className: 'tree-card-under-test',
+            },
+            renderDragHandle: () =>
+              React.createElement('button', {
+                type: 'button',
+                'data-testid': 'injected-tree-handle',
+              }),
+            menuSlot: React.createElement('button', {
+              type: 'button',
+              'data-testid': 'injected-tree-menu',
+            }),
+          })
+        )
+      );
+    };
+    const fields = (): Record<string, string> =>
+      Object.fromEntries(
+        [...host.querySelectorAll('[data-task-card-field]')]
+          .filter((field) => !field.closest('.tree-card-under-test'))
+          .map((field) => [
+            `${field.getAttribute('data-task-card-field')}:${field.textContent}`,
+            `${field.getAttribute('class')}:${field.getAttribute('data-task-card-field')}`,
+          ])
+      );
+    const treeFields = (): Record<string, string> =>
+      Object.fromEntries(
+        [...host.querySelectorAll('.tree-card-under-test [data-task-card-field]')].map((field) => [
+          `${field.getAttribute('data-task-card-field')}:${field.textContent}`,
+          `${field.getAttribute('class')}:${field.getAttribute('data-task-card-field')}`,
+        ])
+      );
+    await act(async () => {
+      renderCards(makeTask({ status: 'pending', owner: 'alice', subject: 'Before' }));
+      await Promise.resolve();
+    });
+    expect(moduleMocks.useUnreadCommentCount).toHaveBeenCalledWith(
+      { contextId: 'local', teamName: 'alpha-team', taskId: 'task-1' },
+      expect.any(Array)
+    );
+    expect(treeFields()).toEqual(fields());
+    expect(host.querySelector('[data-testid="injected-tree-handle"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="injected-tree-menu"]')).not.toBeNull();
+
+    unreadCountValue = 3;
+    await act(async () => {
+      renderCards(
+        makeTask({
+          status: 'completed',
+          owner: 'bob',
+          subject: 'After live update',
+          updatedAt: '2026-04-18T10:30:00.000Z',
+        }),
+        true
+      );
+      await Promise.resolve();
+    });
+    expect(treeFields()).toEqual(fields());
+    expect(fields()['subject:After live update']).toBeDefined();
+    expect(fields()['owner:bob']).toBeDefined();
+    expect(fields()['unread:3']).toBeDefined();
+    expect(
+      host.querySelector('.tree-card-under-test')!.className.includes('opacity-60')
+    ).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

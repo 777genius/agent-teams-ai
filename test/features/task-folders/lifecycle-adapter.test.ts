@@ -23,12 +23,21 @@ import {
   TreeDropAdapter,
 } from '../../../src/features/task-folders/renderer/adapters/treeDropAdapter';
 import { projectFolders } from '../../../src/features/task-folders/renderer/view-models/projection';
+import { applyVisibleTaskChildren } from '../../../src/features/task-folders/renderer/view-models/projectionView';
 
 import type { Node } from '../../../src/features/task-folders/renderer/view-models/projection';
 import type { DndDataRef, DragTarget } from '@headless-tree/core';
 import type { GlobalTask } from '@shared/types';
 const identity = { teamName: 't', taskId: '1' };
-const tasks = [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[];
+const makeGlobalTask = (id: string, overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id,
+  teamName: 't',
+  teamDisplayName: 'Team',
+  subject: id === '1' ? 'Task' : id,
+  status: 'pending',
+  ...overrides,
+});
+const tasks = [makeGlobalTask('1')];
 const folder = applyCommand(emptySnapshot(), { type: 'create', id: 'a', parent: null, name: 'A' });
 afterEach(() => {
   vi.useRealTimers();
@@ -144,7 +153,7 @@ describe('host lifecycle and vendor drop boundary', () => {
         parent: 'a',
         anchor: append,
       });
-    const all = ['1', '2', '3'].map((id) => ({ teamName: 't', id, subject: id })) as GlobalTask[];
+    const all = ['1', '2', '3'].map((id) => makeGlobalTask(id));
     const projection = projectFolders(
       s,
       all,
@@ -214,6 +223,138 @@ describe('host lifecycle and vendor drop boundary', () => {
     await adapter.dropInternal([source], target);
     expect(folders.getSnapshot().snapshot.folders[0].children).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['internal', 'foreign'] as const)(
+    'rejects %s same-parent reorder without mutation when computed task order is active',
+    async (origin) => {
+      let snapshot = folder;
+      for (const id of ['1', '2'])
+        snapshot = applyCommand(snapshot, {
+          type: 'moveTask',
+          identity: { teamName: 't', taskId: id },
+          parent: 'a',
+          anchor: append,
+        });
+      const save = vi.fn(async () => undefined);
+      const folders = new FolderController({
+        load: async () => ({ kind: 'valid', snapshot }),
+        save,
+      });
+      folders.setCatalog([
+        { teamName: 't', taskId: '1' },
+        { teamName: 't', taskId: '2' },
+      ]);
+      await folders.load();
+      const canonical = projectFolders(
+        snapshot,
+        [makeGlobalTask('1'), makeGlobalTask('2')],
+        () => false,
+        () => undefined,
+        true
+      );
+      const projection = applyVisibleTaskChildren(
+        canonical,
+        [makeGlobalTask('1'), makeGlobalTask('2')],
+        () => true,
+        (siblings) => [...siblings].reverse(),
+        'computed'
+      );
+      const panel = new PanelController();
+      const adapter = new TreeDropAdapter(() => projection, folders, panel);
+      const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
+      const target = {
+        item: { getId: () => 'folder:a' },
+        insertionIndex: 0,
+      } as DragTarget<Node>;
+      const transfer = {
+        types: [TASK_MIME],
+        getData: () => JSON.stringify({ version: 1, identity }),
+      } as unknown as DataTransfer;
+      panel.begin(source.id);
+
+      if (origin === 'internal') {
+        expect(adapter.canInternal([source], target)).toBe(false);
+        await expect(adapter.dropInternal([source], target)).rejects.toThrow('invalid-drop');
+      } else {
+        expect(adapter.canForeign(transfer, target, true)).toBe(false);
+        await expect(adapter.dropForeign(transfer, target)).rejects.toThrow('invalid-drop');
+      }
+      expect(save).not.toHaveBeenCalled();
+      expect(folders.getSnapshot().snapshot).toBe(snapshot);
+    }
+  );
+
+  it('keeps manual same-parent and computed cross-folder moves valid while reading live policy', async () => {
+    let snapshot = folder;
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'b', parent: null, name: 'B' });
+    snapshot = applyCommand(snapshot, {
+      type: 'moveTask',
+      identity,
+      parent: 'a',
+      anchor: append,
+    });
+    const save = vi.fn(async () => undefined);
+    const folders = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot }),
+      save,
+    });
+    folders.setCatalog([identity]);
+    await folders.load();
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
+    const sorted = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      () => true,
+      (siblings) => siblings,
+      'computed'
+    );
+    const manual = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      () => true,
+      (siblings) => siblings,
+      'manual'
+    );
+    let liveProjection = sorted;
+    const panel = new PanelController();
+    const adapter = new TreeDropAdapter(() => liveProjection, folders, panel);
+    const source = sorted.nodes.get(childKey({ kind: 'task', identity }))!;
+    const sameParent = {
+      item: { getId: () => 'folder:a' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+    const crossFolder = {
+      item: { getId: () => 'folder:b' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+    const folderReorder = {
+      item: { getId: () => 'root' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+
+    expect(adapter.canInternal([source], sameParent)).toBe(false);
+    liveProjection = manual;
+    expect(adapter.canInternal([source], sameParent)).toBe(true);
+    liveProjection = sorted;
+    expect(adapter.canInternal([source], crossFolder)).toBe(true);
+    expect(adapter.canInternal([sorted.nodes.get('folder:b')!], folderReorder)).toBe(true);
+
+    panel.begin(source.id);
+    await adapter.dropInternal([source], crossFolder);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(
+      folders.getSnapshot().snapshot.folders.find((candidate) => candidate.id === 'b')!.children
+    ).toEqual([{ kind: 'task', identity }]);
+    expect(
+      folders.getSnapshot().snapshot.folders.find((candidate) => candidate.id === 'a')!.children
+    ).toEqual([]);
   });
 });
 

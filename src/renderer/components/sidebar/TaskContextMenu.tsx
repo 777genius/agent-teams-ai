@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { taskFolderMoveRequest, useTaskFolderEditingReady } from '@features/task-folders/renderer';
@@ -9,7 +9,18 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@renderer/components/ui/context-menu';
-import { Archive, ArchiveRestore, Mail, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  FolderInput,
+  Mail,
+  Pencil,
+  Pin,
+  PinOff,
+  Trash2,
+} from 'lucide-react';
+
+import { buildTaskCardActions, type TaskCardAction } from './taskCardActions';
 
 import type { GlobalTask } from '@shared/types';
 
@@ -49,65 +60,46 @@ const TaskContextMenuLazyContent = ({
 }: TaskContextMenuContentProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const taskFolderEditingReady = useTaskFolderEditingReady();
+  const actions = buildTaskCardActions({
+    isPinned,
+    isArchived,
+    editingReady: taskFolderEditingReady,
+    handlers: {
+      onTogglePin,
+      onMove: () => taskFolderMoveRequest.open({ teamName: task.teamName, taskId: task.id }),
+      onRename,
+      onMarkUnread,
+      onToggleArchive,
+      onDelete,
+    },
+  });
+  const iconFor = (action: TaskCardAction) => {
+    if (action.id === 'pin') return isPinned ? PinOff : Pin;
+    if (action.id === 'move') return FolderInput;
+    if (action.id === 'rename') return Pencil;
+    if (action.id === 'markUnread') return Mail;
+    if (action.id === 'archive') return isArchived ? ArchiveRestore : Archive;
+    return Trash2;
+  };
 
   return (
     <ContextMenuContent onCloseAutoFocus={(e) => e.preventDefault()}>
-      <ContextMenuItem onSelect={onTogglePin}>
-        {isPinned ? (
-          <>
-            <PinOff className="size-3.5 shrink-0" />
-            <span>{t('taskContextMenu.unpin')}</span>
-          </>
-        ) : (
-          <>
-            <Pin className="size-3.5 shrink-0" />
-            <span>{t('taskContextMenu.pin')}</span>
-          </>
-        )}
-      </ContextMenuItem>
-
-      <ContextMenuItem
-        disabled={!taskFolderEditingReady}
-        onSelect={() => taskFolderMoveRequest.open({ teamName: task.teamName, taskId: task.id })}
-      >
-        <span>{t('taskFolders.move')}</span>
-      </ContextMenuItem>
-
-      <ContextMenuItem onSelect={onRename}>
-        <Pencil className="size-3.5 shrink-0" />
-        <span>{t('taskContextMenu.rename')}</span>
-      </ContextMenuItem>
-
-      <ContextMenuItem onSelect={onMarkUnread}>
-        <Mail className="size-3.5 shrink-0" />
-        <span>{t('taskContextMenu.markUnread')}</span>
-      </ContextMenuItem>
-
-      <ContextMenuSeparator />
-
-      <ContextMenuItem onSelect={onToggleArchive}>
-        {isArchived ? (
-          <>
-            <ArchiveRestore className="size-3.5 shrink-0" />
-            <span>{t('taskContextMenu.unarchive')}</span>
-          </>
-        ) : (
-          <>
-            <Archive className="size-3.5 shrink-0" />
-            <span>{t('taskContextMenu.archive')}</span>
-          </>
-        )}
-      </ContextMenuItem>
-
-      {onDelete && (
-        <>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={onDelete} className="text-red-400 focus:text-red-400">
-            <Trash2 className="size-3.5 shrink-0" />
-            <span>{t('taskContextMenu.deleteTask')}</span>
-          </ContextMenuItem>
-        </>
-      )}
+      {actions.map((action) => {
+        const Icon = iconFor(action);
+        return (
+          <Fragment key={action.id}>
+            {(action.id === 'archive' || action.id === 'delete') && <ContextMenuSeparator />}
+            <ContextMenuItem
+              disabled={action.disabled}
+              onSelect={action.run}
+              className={action.destructive ? 'text-red-400 focus:text-red-400' : undefined}
+            >
+              <Icon className="size-3.5 shrink-0" />
+              <span>{t(action.labelKey)}</span>
+            </ContextMenuItem>
+          </Fragment>
+        );
+      })}
     </ContextMenuContent>
   );
 };

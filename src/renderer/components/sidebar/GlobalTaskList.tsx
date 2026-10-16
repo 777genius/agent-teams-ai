@@ -1,18 +1,16 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskProjectFilterOptions } from '@renderer/hooks/useTaskProjectFilterOptions';
+import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { normalizePath } from '@renderer/utils/pathNormalize';
 import {
   getNonEmptyTaskCategories,
   groupTasksByDate,
@@ -20,23 +18,11 @@ import {
   sortProjectGroupsByPin,
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
-import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
-import {
-  Archive,
-  ArrowUpDown,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ListTodo,
-  Pin,
-  Search,
-  X,
-} from 'lucide-react';
+import { Archive, Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
-import { type ComboboxOption } from '../ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 import {
@@ -45,17 +31,20 @@ import {
 } from './projectGroupPagination';
 import { ProjectTaskGroup } from './ProjectTaskGroup';
 import { SidebarTaskItem } from './SidebarTaskItem';
+import { selectSidebarTeamsDerived } from './sidebarTeamSelectors';
 import { TaskContextMenu } from './TaskContextMenu';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
+import { defaultTaskFiltersState, useReadStateSnapshot } from './taskFiltersState';
+import { TaskSortPopover } from './TaskSortPopover';
 import {
-  defaultTaskFiltersState,
-  getTaskUnreadCount,
-  taskMatchesStatus,
-  useReadStateSnapshot,
-} from './taskFiltersState';
+  createTaskEffectiveSubjectAccessor,
+  filterGlobalTasks,
+  sortGlobalTasks,
+  type TaskSortMode,
+} from './taskViewPolicy';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask, LeadActivityState, TeamSummary } from '@shared/types';
+import type { GlobalTask } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -79,16 +68,7 @@ function saveGroupingMode(mode: TaskGroupingMode): void {
   }
 }
 
-export type TaskSortMode = 'time' | 'project' | 'team' | 'unread';
-
 const TASK_SORT_STORAGE_KEY = 'sidebarTasksSort';
-
-const SORT_OPTIONS = [
-  { id: 'time', labelKey: 'tasksPanel.sort.byTime' },
-  { id: 'unread', labelKey: 'tasksPanel.sort.byUnread' },
-  { id: 'project', labelKey: 'tasksPanel.sort.byProject' },
-  { id: 'team', labelKey: 'tasksPanel.sort.byTeam' },
-] as const satisfies readonly { id: TaskSortMode; labelKey: string }[];
 
 function loadSortMode(): TaskSortMode {
   try {
@@ -105,54 +85,6 @@ function saveSortMode(mode: TaskSortMode): void {
     localStorage.setItem(TASK_SORT_STORAGE_KEY, mode);
   } catch {
     /* ignore */
-  }
-}
-
-function applySortMode(
-  tasks: GlobalTask[],
-  mode: TaskSortMode,
-  contextId: string,
-  readState?: ReturnType<typeof useReadStateSnapshot>
-): GlobalTask[] {
-  const sorted = [...tasks];
-  switch (mode) {
-    case 'time':
-      return sortTasksByFreshness(sorted);
-    case 'unread':
-      return sorted.sort((a, b) => {
-        const ua = readState
-          ? getTaskUnreadCount(
-              readState,
-              { contextId, teamName: a.teamName, taskId: a.id },
-              a.comments
-            )
-          : 0;
-        const ub = readState
-          ? getTaskUnreadCount(
-              readState,
-              { contextId, teamName: b.teamName, taskId: b.id },
-              b.comments
-            )
-          : 0;
-        if (ub !== ua) return ub - ua;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    case 'project':
-      return sorted.sort((a, b) => {
-        const pa = a.projectPath ?? '';
-        const pb = b.projectPath ?? '';
-        const cmp = pa.localeCompare(pb);
-        if (cmp !== 0) return cmp;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    case 'team':
-      return sorted.sort((a, b) => {
-        const cmp = a.teamDisplayName.localeCompare(b.teamDisplayName);
-        if (cmp !== 0) return cmp;
-        return (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? '');
-      });
-    default:
-      return sortTasksByFreshness(sorted);
   }
 }
 
@@ -182,35 +114,6 @@ const EMPTY_DATE_GROUPS: ReturnType<typeof groupTasksByDate> = {
   Older: [],
 };
 const EMPTY_DATE_CATEGORIES: ReturnType<typeof getNonEmptyTaskCategories> = [];
-
-function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
-  if (!query.trim()) return tasks;
-  const q = query.toLowerCase();
-  return tasks.filter(
-    (t) =>
-      t.subject.toLowerCase().includes(q) ||
-      t.owner?.toLowerCase().includes(q) ||
-      t.teamDisplayName.toLowerCase().includes(q)
-  );
-}
-
-function applyProjectFilter(tasks: GlobalTask[], projectPath: string | null): GlobalTask[] {
-  if (!projectPath) return tasks;
-  const normalized = normalizePath(projectPath);
-  return tasks.filter((t) => t.projectPath && normalizePath(t.projectPath) === normalized);
-}
-
-function buildTaskTeamSummary(task: GlobalTask): TeamSummary {
-  return {
-    teamName: task.teamName,
-    displayName: task.teamDisplayName,
-    description: '',
-    memberCount: 0,
-    taskCount: 0,
-    lastActivity: task.updatedAt ?? task.createdAt ?? null,
-    projectPath: task.projectPath,
-  };
-}
 
 function buildTaskLocalPresentationKey(task: GlobalTask): string {
   return `${task.teamName}:${task.id}`;
@@ -252,7 +155,6 @@ type TaskRowDeleteAction = (teamName: string, taskId: string) => void | Promise<
 type TeamBooleanResolver = (teamName: string) => boolean;
 type TaskOwnerColorResolver = (task: GlobalTask) => string | null | undefined;
 type TeamHeaderFormatter = (teamDisplayName: string) => string;
-type TeamMemberColorInput = Parameters<typeof buildMemberColorMap>[0][number];
 
 interface TaskLocalPresentationState {
   key: string;
@@ -262,148 +164,6 @@ interface TaskLocalPresentationState {
 }
 
 type TaskLocalPresentationResolver = (task: GlobalTask) => TaskLocalPresentationState;
-interface SidebarTeamsDerived {
-  identityKey: string;
-  filterTeams: { teamName: string; displayName: string }[];
-  statusSummaries: TeamSummary[];
-  memberColorByTeam: Map<string, Map<string, string>>;
-}
-
-let cachedSidebarTeamsSignature: string | null = null;
-let cachedSidebarTeamsSource: readonly TeamSummary[] | null = null;
-let cachedSidebarTeamsDerived: SidebarTeamsDerived = {
-  identityKey: '',
-  filterTeams: [],
-  statusSummaries: [],
-  memberColorByTeam: new Map(),
-};
-const cachedSidebarTeamSignatureByTeam = new WeakMap<TeamSummary, string>();
-let cachedLeadOfflineTeamsSource: Partial<Record<string, LeadActivityState>> | null = null;
-let cachedLeadOfflineTeamsSignature = '';
-let cachedLeadOfflineTeamNames: string[] = [];
-
-function encodeSignaturePart(part: unknown): string {
-  const text = part == null ? '' : String(part);
-  return `${text.length}:${text}|`;
-}
-
-function pushSignaturePart(parts: string[], part: unknown): void {
-  parts.push(encodeSignaturePart(part));
-}
-
-function getSidebarTeamSignature(team: TeamSummary): string {
-  const cached = cachedSidebarTeamSignatureByTeam.get(team);
-  if (cached !== undefined) return cached;
-
-  let signature = '';
-  signature += encodeSignaturePart(team.teamName);
-  signature += encodeSignaturePart(team.displayName);
-  signature += encodeSignaturePart(team.projectPath);
-  signature += encodeSignaturePart(team.lastActivity);
-  signature += encodeSignaturePart(team.partialLaunchFailure ? 1 : 0);
-  signature += encodeSignaturePart(team.teamLaunchState);
-  for (const member of team.members ?? []) {
-    const colorMember = member as TeamMemberColorInput;
-    signature += encodeSignaturePart(colorMember.name);
-    signature += encodeSignaturePart(colorMember.color);
-    signature += encodeSignaturePart(colorMember.agentType);
-    signature += encodeSignaturePart(colorMember.removedAt);
-  }
-
-  cachedSidebarTeamSignatureByTeam.set(team, signature);
-  return signature;
-}
-
-function buildSidebarTeamsSignature(teams: readonly TeamSummary[]): string {
-  let signature = '';
-  for (const team of teams) {
-    signature += getSidebarTeamSignature(team);
-  }
-  return signature;
-}
-
-function buildTeamNamesIdentityKey(teams: readonly TeamSummary[]): string {
-  const signatureParts: string[] = [];
-  for (const team of teams) {
-    pushSignaturePart(signatureParts, team.teamName);
-  }
-  return signatureParts.join('');
-}
-
-function selectLeadOfflineTeamNames(
-  leadActivityByTeam: Partial<Record<string, LeadActivityState>>
-): string[] {
-  if (leadActivityByTeam === cachedLeadOfflineTeamsSource) {
-    return cachedLeadOfflineTeamNames;
-  }
-
-  const offlineTeamNames: string[] = [];
-  for (const [teamName, activity] of Object.entries(leadActivityByTeam)) {
-    if (activity === 'offline') {
-      offlineTeamNames.push(teamName);
-    }
-  }
-  offlineTeamNames.sort();
-
-  const signatureParts: string[] = [];
-  for (const teamName of offlineTeamNames) {
-    pushSignaturePart(signatureParts, teamName);
-  }
-  const signature = signatureParts.join('');
-
-  if (signature === cachedLeadOfflineTeamsSignature) {
-    cachedLeadOfflineTeamsSource = leadActivityByTeam;
-    return cachedLeadOfflineTeamNames;
-  }
-
-  cachedLeadOfflineTeamsSource = leadActivityByTeam;
-  cachedLeadOfflineTeamsSignature = signature;
-  cachedLeadOfflineTeamNames = offlineTeamNames;
-  return cachedLeadOfflineTeamNames;
-}
-
-function selectSidebarTeamsDerived(teams: readonly TeamSummary[]): SidebarTeamsDerived {
-  if (teams === cachedSidebarTeamsSource) {
-    return cachedSidebarTeamsDerived;
-  }
-
-  const signature = buildSidebarTeamsSignature(teams);
-  if (signature === cachedSidebarTeamsSignature) {
-    cachedSidebarTeamsSource = teams;
-    return cachedSidebarTeamsDerived;
-  }
-
-  const memberColorByTeam = new Map<string, Map<string, string>>();
-  for (const team of teams) {
-    if (team.members && team.members.length > 0) {
-      memberColorByTeam.set(team.teamName, buildMemberColorMap(team.members));
-    }
-  }
-
-  cachedSidebarTeamsSource = teams;
-  cachedSidebarTeamsSignature = signature;
-  cachedSidebarTeamsDerived = {
-    identityKey: buildTeamNamesIdentityKey(teams),
-    filterTeams: teams.map((team) => ({
-      teamName: team.teamName,
-      displayName: team.displayName,
-    })),
-    statusSummaries: teams.map((team) => ({
-      teamName: team.teamName,
-      displayName: team.displayName,
-      description: '',
-      memberCount: team.memberCount,
-      taskCount: team.taskCount,
-      projectPath: team.projectPath,
-      lastActivity: team.lastActivity,
-      partialLaunchFailure: team.partialLaunchFailure,
-      teamLaunchState: team.teamLaunchState,
-    })),
-    memberColorByTeam,
-  };
-  return cachedSidebarTeamsDerived;
-}
-
 interface GlobalTaskRowProps {
   contextId: string;
   task: GlobalTask;
@@ -536,6 +296,7 @@ const GlobalTaskRow = memo(
             revealTeamNameOnTaskHover={revealTeamNameOnTaskHover}
             isLight={isLight}
             teamOffline={teamOffline}
+            isArchived={isArchived}
             renamingKey={rowRenamingKey}
             onRenameComplete={onRenameComplete}
             onRenameCancel={onRenameCancel}
@@ -791,49 +552,17 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 }: GlobalTaskListProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
   const { isLight } = useTheme();
-  const {
-    globalTasks,
-    globalTasksLoading,
-    globalTasksInitialized,
-    fetchAllTasks,
-    fetchProjects,
-    fetchRepositoryGroups,
-    softDeleteTask,
-    projects,
-    projectsLoading,
-    projectsInitialized,
-    projectsError,
-    viewMode,
-    repositoryGroups,
-    repositoryGroupsLoading,
-    repositoryGroupsInitialized,
-    repositoryGroupsError,
-    provisioningRuns,
-    currentProvisioningRunIdByTeam,
-    leadOfflineTeamNames,
-  } = useStore(
-    useShallow((s) => ({
-      globalTasks: s.globalTasks,
-      globalTasksLoading: s.globalTasksLoading,
-      globalTasksInitialized: s.globalTasksInitialized,
-      fetchAllTasks: s.fetchAllTasks,
-      fetchProjects: s.fetchProjects,
-      fetchRepositoryGroups: s.fetchRepositoryGroups,
-      softDeleteTask: s.softDeleteTask,
-      projects: s.projects,
-      projectsLoading: s.projectsLoading,
-      projectsInitialized: s.projectsInitialized,
-      projectsError: s.projectsError,
-      viewMode: s.viewMode,
-      repositoryGroups: s.repositoryGroups,
-      repositoryGroupsLoading: s.repositoryGroupsLoading,
-      repositoryGroupsInitialized: s.repositoryGroupsInitialized,
-      repositoryGroupsError: s.repositoryGroupsError,
-      provisioningRuns: s.provisioningRuns,
-      currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
-      leadOfflineTeamNames: selectLeadOfflineTeamNames(s.leadActivityByTeam),
-    }))
-  );
+  const { globalTasks, globalTasksLoading, globalTasksInitialized, fetchAllTasks, softDeleteTask } =
+    useStore(
+      useShallow((s) => ({
+        globalTasks: s.globalTasks,
+        globalTasksLoading: s.globalTasksLoading,
+        globalTasksInitialized: s.globalTasksInitialized,
+        fetchAllTasks: s.fetchAllTasks,
+        softDeleteTask: s.softDeleteTask,
+      }))
+    );
+  const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
   const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
@@ -850,15 +579,12 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [renamingTaskKey, setRenamingTaskKey] = useState<string | null>(null);
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const [aliveTeamsInitialized, setAliveTeamsInitialized] = useState(false);
   const [projectRequestedVisibleCountByKey, setProjectRequestedVisibleCountByKey] = useState<
     Record<string, number>
   >({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const readState = useReadStateSnapshot();
   const taskLocalState = useTaskLocalState();
-  const electronMode = isElectronMode();
 
   useEffect(() => {
     if (searchVisible) {
@@ -899,19 +625,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     ]
   );
 
-  const provisioningState = useMemo(
-    () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
-    [currentProvisioningRunIdByTeam, provisioningRuns]
+  const getEffectiveSubject = useMemo(
+    () =>
+      createTaskEffectiveSubjectAccessor((task) => getTaskLocalPresentation(task).renamedSubject),
+    [getTaskLocalPresentation]
   );
-
-  const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
-    if (!electronMode || !api.teams?.aliveList) return null;
-    try {
-      return await api.teams.aliveList();
-    } catch {
-      return null;
-    }
-  }, [electronMode]);
 
   // --- New-task animation tracking (same pattern as ChatHistory) ---
   const knownTaskIdsRef = useRef<Set<string>>(new Set());
@@ -950,90 +668,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [newTaskIds]
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, sidebarTeams.identityKey]);
-
-  const readyProgressRefreshKey = useMemo(() => {
-    return Object.entries(currentProvisioningRunIdByTeam)
-      .map(([teamName, runId]) => {
-        if (!runId) return null;
-        const progress = provisioningRuns[runId];
-        return progress?.state === 'ready'
-          ? `${teamName}:${progress.runId}:${progress.updatedAt}`
-          : null;
-      })
-      .filter((item): item is string => Boolean(item))
-      .join('|');
-  }, [currentProvisioningRunIdByTeam, provisioningRuns]);
-
-  useEffect(() => {
-    if (!readyProgressRefreshKey) return;
-    let cancelled = false;
-    void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-        setAliveTeamsInitialized(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAliveTeams, readyProgressRefreshKey]);
-
-  const offlineTeamNames = useMemo(() => {
-    const result = new Set<string>();
-    const leadOfflineTeams = new Set(leadOfflineTeamNames);
-    if (aliveTeamsInitialized) {
-      const teamSummariesByName = new Map<string, TeamSummary>();
-      for (const team of sidebarTeams.statusSummaries) {
-        teamSummariesByName.set(team.teamName, team);
-      }
-      for (const task of globalTasks) {
-        if (!teamSummariesByName.has(task.teamName)) {
-          teamSummariesByName.set(task.teamName, buildTaskTeamSummary(task));
-        }
-      }
-
-      for (const team of teamSummariesByName.values()) {
-        if (leadOfflineTeams.has(team.teamName)) {
-          result.add(team.teamName);
-          continue;
-        }
-        const status = resolveTeamStatus(
-          team,
-          team.teamName,
-          aliveTeams,
-          getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-          {}
-        );
-        if (!isTeamListStatusRunning(status)) {
-          result.add(team.teamName);
-        }
-      }
-    }
-    for (const teamName of leadOfflineTeamNames) {
-      result.add(teamName);
-    }
-    return result;
-  }, [
-    aliveTeams,
-    aliveTeamsInitialized,
-    globalTasks,
-    leadOfflineTeamNames,
-    provisioningState,
-    sidebarTeams.statusSummaries,
-  ]);
-
   const getOwnerColorName = useCallback(
     (task: GlobalTask): string | null | undefined => {
       if (!task.owner) return null;
@@ -1041,10 +675,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       return teamColorMap ? (teamColorMap.get(task.owner) ?? null) : undefined;
     },
     [sidebarTeams.memberColorByTeam]
-  );
-  const isTeamOffline = useCallback(
-    (teamName: string): boolean => offlineTeamNames.has(teamName),
-    [offlineTeamNames]
   );
   const formatTeamHeader = useCallback(
     (teamDisplayName: string): string => t('tasksPanel.teamLabel', { team: teamDisplayName }),
@@ -1148,58 +778,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [fetchAllTasks, softDeleteTask, t]
   );
 
-  useEffect(() => {
-    if (!filtersPopoverOpen) {
-      return;
-    }
-    if (
-      viewMode === 'grouped' &&
-      !repositoryGroupsInitialized &&
-      !repositoryGroupsLoading &&
-      !repositoryGroupsError
-    ) {
-      void fetchRepositoryGroups();
-    } else if (viewMode === 'flat' && !projectsInitialized && !projectsLoading && !projectsError) {
-      void fetchProjects();
-    }
-  }, [
-    fetchProjects,
-    fetchRepositoryGroups,
-    filtersPopoverOpen,
-    projectsError,
-    projectsInitialized,
-    projectsLoading,
-    repositoryGroupsError,
-    repositoryGroupsInitialized,
-    repositoryGroupsLoading,
-    viewMode,
-  ]);
-
-  // Build project combobox options from available projects/repos
-  const projectFilterOptions = useMemo((): ComboboxOption[] => {
-    const items =
-      viewMode === 'grouped'
-        ? repositoryGroups
-            .filter((r) => r.totalSessions > 0)
-            .map((r) => ({
-              value: r.worktrees[0]?.path ?? r.id,
-              label: r.name,
-              path: r.worktrees[0]?.path,
-            }))
-        : projects
-            .filter((p) => (p.totalSessions ?? p.sessions.length) > 0)
-            .map((p) => ({
-              value: p.path,
-              label: p.name,
-              path: p.path,
-            }));
-
-    return items.map((item) => ({
-      value: item.value,
-      label: item.label,
-      description: item.path,
-    }));
-  }, [viewMode, repositoryGroups, projects]);
+  const projectFilterOptions = useTaskProjectFilterOptions(filtersPopoverOpen);
 
   // Resolve project filter from filters state
   const selectedProjectPath = filters.projectPath;
@@ -1210,49 +789,36 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const effectiveShowArchived = showArchived && hasArchivedTasks;
 
   const filtered = useMemo(() => {
-    let result = globalTasks;
-    result = applyProjectFilter(result, selectedProjectPath);
-    result = result.filter((t) => taskMatchesStatus(t, filters.statusIds));
-    if (filters.teamName) {
-      result = result.filter((t) => t.teamName === filters.teamName);
-    }
-    if (filters.readFilter === 'unread') {
-      result = result.filter(
-        (t) =>
-          getTaskUnreadCount(
-            readState,
-            { contextId, teamName: t.teamName, taskId: t.id },
-            t.comments
-          ) > 0
-      );
-    } else if (filters.readFilter === 'read') {
-      result = result.filter(
-        (t) =>
-          getTaskUnreadCount(
-            readState,
-            { contextId, teamName: t.teamName, taskId: t.id },
-            t.comments
-          ) === 0
-      );
-    }
-    result = applySearch(result, searchQuery);
-    // Archive filtering
-    if (effectiveShowArchived) {
-      result = result.filter((t) => getTaskLocalPresentation(t).archived);
-    } else {
-      result = result.filter((t) => !getTaskLocalPresentation(t).archived);
-    }
-    return result;
+    return filterGlobalTasks(
+      globalTasks,
+      {
+        contextId,
+        filters: {
+          statusIds: filters.statusIds,
+          teamName: filters.teamName,
+          projectPath: selectedProjectPath,
+          unreadOnly: filters.unreadOnly,
+          readFilter: filters.readFilter,
+        },
+        searchQuery,
+        archiveMode: effectiveShowArchived ? 'archived' : 'active',
+        getEffectiveSubject,
+      },
+      readState,
+      (task) => getTaskLocalPresentation(task).archived
+    );
   }, [
     contextId,
     globalTasks,
     selectedProjectPath,
     filters.statusIds,
     filters.teamName,
+    filters.unreadOnly,
     filters.readFilter,
     searchQuery,
     readState,
     effectiveShowArchived,
+    getEffectiveSubject,
     getTaskLocalPresentation,
   ]);
 
@@ -1270,7 +836,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const sortedFlat = useMemo(
     () =>
       groupingMode === 'none'
-        ? applySortMode(normalTasks, sortMode, contextId, readState)
+        ? sortGlobalTasks(normalTasks, sortMode, contextId, readState)
         : EMPTY_TASKS,
     [contextId, groupingMode, normalTasks, sortMode, readState]
   );
@@ -1390,44 +956,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             <TooltipContent side="bottom">{t('tasksPanel.searchPlaceholder')}</TooltipContent>
           </Tooltip>
 
-          <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary data-[state=open]:bg-surface-raised data-[state=open]:text-text"
-              >
-                <ArrowUpDown className="size-3.5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-40 p-1" align="end" sideOffset={6}>
-              <div className="flex flex-col">
-                {SORT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setSortMode(opt.id);
-                      setSortPopoverOpen(false);
-                    }}
-                    className={cn(
-                      'flex items-center gap-2 rounded px-2 py-1.5 text-[12px] transition-colors',
-                      sortMode === opt.id
-                        ? 'bg-surface-raised text-text'
-                        : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
-                    )}
-                  >
-                    <Check
-                      className={cn(
-                        'size-3 shrink-0',
-                        sortMode === opt.id ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                    {t(opt.labelKey)}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <TaskSortPopover
+            open={sortPopoverOpen}
+            onOpenChange={setSortPopoverOpen}
+            mode={sortMode}
+            testId="sidebar-task-view-sort"
+            onModeChange={(mode) => {
+              if (mode !== 'manual') setSortMode(mode);
+            }}
+          />
 
           <Popover open={groupingPopoverOpen} onOpenChange={setGroupingPopoverOpen}>
             <PopoverTrigger asChild>
@@ -1505,6 +1042,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             <TaskFiltersPopover
               open={filtersPopoverOpen}
               onOpenChange={setFiltersPopoverOpen}
+              testId="sidebar-task-view-filters"
               teams={taskFilterTeams}
               projectOptions={projectFilterOptions}
               filters={filters}

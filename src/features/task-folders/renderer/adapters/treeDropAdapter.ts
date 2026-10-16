@@ -7,6 +7,14 @@ import type { Node, Projection } from '../view-models/projection';
 import type { PanelController } from './panelController';
 import type { DragTarget } from '@headless-tree/core';
 export const TASK_MIME = 'application/x-agent-teams-task-v1';
+function canonicalTaskParent(projection: Projection, identity: TaskIdentity): string | null {
+  const key = taskKey(identity);
+  return (
+    projection.snapshot.folders.find((folder) =>
+      folder.children.some((child) => child.kind === 'task' && taskKey(child.identity) === key)
+    )?.id ?? null
+  );
+}
 export function translateTarget(
   projection: Projection,
   parentId: string,
@@ -26,14 +34,19 @@ export function translateTarget(
   if (target.id === ROOT || target.id === UNFILED) {
     if (source.kind === 'task') return { parent: null, anchor: append };
   }
-  const siblings = target.children.filter((id) => id !== source.id && id !== UNFILED);
+  const visibleSiblings = target.children.filter((id) => id !== source.id && id !== UNFILED);
   let insertion = index;
   if (foreign && insertion !== undefined) {
     const old = target.children.indexOf(source.id);
     if (old >= 0 && old < insertion) insertion--;
   }
-  const next = insertion === undefined ? undefined : siblings[insertion];
-  const anchor: Anchor = next ? { before: nodeChild(projection.nodes.get(next)!) } : append;
+  const next = insertion === undefined ? undefined : visibleSiblings[insertion];
+  const canonicalNext = next
+    ? (projection.canonicalChildren.get(parentId) ?? target.children).find((id) => id === next)
+    : undefined;
+  const anchor: Anchor = canonicalNext
+    ? { before: nodeChild(projection.nodes.get(canonicalNext)!) }
+    : append;
   return { parent: target.folderId ?? null, anchor };
 }
 export class TreeDropAdapter {
@@ -43,13 +56,20 @@ export class TreeDropAdapter {
     private panel: PanelController
   ) {}
   private command(source: Node, target: DragTarget<Node>, foreign: boolean): Command {
+    const projection = this.projection();
     const destination = translateTarget(
-      this.projection(),
+      projection,
       target.item.getId(),
       'insertionIndex' in target ? target.insertionIndex : undefined,
       source,
       foreign
     );
+    if (
+      source.kind === 'task' &&
+      projection.taskOrder === 'computed' &&
+      canonicalTaskParent(projection, source.identity!) === destination.parent
+    )
+      throw new Error('computed-task-sort');
     return source.kind === 'folder'
       ? { type: 'moveFolder', id: source.folderId!, ...destination }
       : { type: 'moveTask', identity: source.identity!, ...destination };

@@ -9,6 +9,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Desktop, delay, fixture, json } from './task-folders/runtime.ts';
 import { narrowViewport } from './task-folders/narrow.ts';
+import {
+  filteredSidebarNativeMove,
+  scopedSortAndFilters,
+  sharedCardLiveUpdates,
+  sharedCardParity,
+} from './task-folders/shared-cards.ts';
 import { UI, el, folderRow, label, selectors, taskRow } from './task-folders/ui.ts';
 import type { Snapshot } from '../../src/features/task-folders/core/domain/folders.ts';
 
@@ -32,6 +38,10 @@ const declared = [
   'narrow-viewport',
   'missing-reference-reappears',
   'full-process-restart-persistence',
+  'shared-card-panel-parity',
+  'shared-card-live-actions',
+  'scoped-task-sorting-and-filters',
+  'filtered-sidebar-native-move',
   'no-runtime-launch-or-renderer-faults',
 ] as const;
 type Check = (typeof declared)[number];
@@ -52,6 +62,7 @@ async function main() {
     'scripts/e2e/task-folders/deny-runtime.ts',
     'scripts/e2e/task-folders/shutdown.ts',
     'scripts/e2e/task-folders/narrow.ts',
+    'scripts/e2e/task-folders/shared-cards.ts',
     'scripts/tsconfig/tsconfig.desktop-e2e.json',
   ];
   const harnessHashes = Object.fromEntries(
@@ -77,9 +88,12 @@ async function main() {
   );
   const desktop = new Desktop(repo, f);
   const ui = new UI(desktop);
+  const sharedUI = new UI(desktop);
   const checks: { name: Check; passedAt: string; evidence?: unknown }[] = [];
   const screenshots: string[] = [];
+  const sharedCardScreenshots: string[] = [];
   const snapshots: { label: string; snapshot: Snapshot }[] = [];
+  let runtimeAuditUnexpectedCount = 0;
   let passed = false;
   let failure: string | undefined;
   const check = async (name: Check, operation: () => Promise<unknown>) => {
@@ -93,11 +107,22 @@ async function main() {
     await ui.cdp.screenshot(file);
     screenshots.push(file);
   };
+  const sharedScreenshot = async (name: string) => {
+    const file = path.join(f.root, 'screenshots', name + '.png');
+    await sharedUI.cdp.screenshot(file);
+    sharedCardScreenshots.push(file);
+  };
   const capture = async (name: string) => {
     const s = await ui.snapshot();
     snapshots.push({ label: name, snapshot: s });
     return s;
   };
+  const screenshotNames = () =>
+    [...screenshots, ...sharedCardScreenshots].map((file) => path.basename(file));
+  const trustedDragCount = () =>
+    [...ui.dragEvidence, ...sharedUI.dragEvidence].filter((e) =>
+      e.observedDragStarts.some((start) => start.trusted)
+    ).length;
   const receipt = async () =>
     json(path.join(f.root, 'receipt.json'), {
       kind: 'task-folders-desktop-v1',
@@ -110,10 +135,19 @@ async function main() {
       harnessHashes,
       initialTaskFileHashes: taskHashes,
       screenshots,
+      sharedCardScreenshots,
       snapshots,
       failure,
       consoleFaults: desktop.faults,
       nativeDrags: ui.dragEvidence,
+      sharedCardNativeDrags: sharedUI.dragEvidence,
+      finalCounts: {
+        checks: checks.length,
+        screenshots: screenshotNames().length,
+        trustedDrags: trustedDragCount(),
+        runtimeAuditUnexpected: runtimeAuditUnexpectedCount,
+        rendererFaults: desktop.faults.length,
+      },
       ownership: desktop.ownership,
       fixture: {
         root: f.root,
@@ -598,6 +632,14 @@ async function main() {
       await capture('after-restart');
       return { origin, accessibility: accessible };
     });
+    await check('shared-card-panel-parity', () =>
+      sharedCardParity(sharedUI, f, sharedScreenshot)
+    );
+    await check('shared-card-live-actions', () => sharedCardLiveUpdates(sharedUI, f));
+    await check('scoped-task-sorting-and-filters', () => scopedSortAndFilters(sharedUI, f));
+    await check('filtered-sidebar-native-move', async () =>
+      filteredSidebarNativeMove(sharedUI, f, await sharedUI.snapshot())
+    );
     await check('no-runtime-launch-or-renderer-faults', async () => {
       const audit = (await readFile(f.audit, 'utf8'))
         .split('\n')
@@ -636,6 +678,36 @@ async function main() {
       screenshots.map((file) => path.basename(file)),
       ['adjacent-panel.png', 'nested-tree-archived.png', 'narrow-360.png', 'narrow-440.png']
     );
+    const finalAudit = (await readFile(f.audit, 'utf8'))
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as string[]);
+    const runtimeAuditUnexpected = finalAudit.filter(
+      (args) =>
+        !(
+          args[0] === '--version' ||
+          (args[0] === 'runtime' &&
+            ['status', 'providers', 'opencode-command'].includes(args[1]))
+        )
+    );
+    runtimeAuditUnexpectedCount = runtimeAuditUnexpected.length;
+    assert.equal(checks.length, 23, 'Expected exactly 23 passed checks');
+    assert.deepEqual(
+      screenshotNames(),
+      [
+        'adjacent-panel.png',
+        'nested-tree-archived.png',
+        'narrow-360.png',
+        'narrow-440.png',
+        'shared-cards-live.png',
+      ],
+      'Expected exactly 5 receipts: 4 original plus 1 shared-card screenshot'
+    );
+    assert.equal(ui.dragEvidence.length, 12, 'Original suite must retain 12 native drags');
+    assert.equal(sharedUI.dragEvidence.length, 1, 'Shared suite must add exactly 1 native drag');
+    assert.equal(trustedDragCount(), 13, 'Expected exactly 13 trusted native drags');
+    assert.equal(runtimeAuditUnexpectedCount, 0, 'Unexpected runtime audit entries');
+    assert.equal(desktop.faults.length, 0, 'Renderer exceptions or console errors');
     passed = true;
   } catch (error) {
     failure = error instanceof Error ? error.stack : String(error);

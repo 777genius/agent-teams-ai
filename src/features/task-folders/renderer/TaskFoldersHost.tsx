@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskFiltersPopover } from '@renderer/components/sidebar/TaskFiltersPopover';
+import { TaskSortPopover } from '@renderer/components/sidebar/TaskSortPopover';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { FolderTree as FolderTreeIcon, X } from 'lucide-react';
+import { FolderTree as FolderTreeIcon, Search, X } from 'lucide-react';
 
 import { moveRequest } from './adapters/moveRequest';
 import { useTaskFoldersHost } from './hooks/useTaskFoldersHost';
@@ -29,6 +31,7 @@ export const TaskFoldersHost = ({
   const { t } = useAppTranslation('common');
   const panelRef = useRef<HTMLDivElement | null>(null);
   const model = useTaskFoldersHost(contextId, sidebar, collapsed, panelRef);
+  const { closeViewControls, move } = model;
   const [action, setAction] = useState<FolderDialog | null>(null);
   const [focus, setFocus] = useState<TreeFocusRequest | null>(null);
   const dialog = (next: FolderDialog): void => {
@@ -36,15 +39,16 @@ export const TaskFoldersHost = ({
     setAction(next);
   };
   useEffect(() => {
-    panelController.hold('dialog', !!action || !!model.move);
-  }, [action, model.move]);
+    panelController.hold('dialog', !!action || !!move);
+  }, [action, move]);
   useEffect(() => {
     if (collapsed) {
       // Collapsing the host cancels its owned overlay workflows.
       setAction(null);
       moveRequest.close();
+      closeViewControls();
     }
-  }, [collapsed]);
+  }, [collapsed, closeViewControls]);
   useEffect(() => {
     let lastPointer: { x: number; y: number } | undefined;
     let sessionPointer: { point: { x: number; y: number }; session: number } | undefined;
@@ -148,6 +152,55 @@ export const TaskFoldersHost = ({
           />
           {t('taskFolders.showArchived')}
         </label>
+        <div
+          className="flex w-full flex-wrap items-center gap-1"
+          data-testid="task-folders-task-controls"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border px-1.5">
+            <Search className="size-3 shrink-0 text-text-muted" />
+            <input
+              type="search"
+              value={model.view.searchQuery}
+              aria-label={t('tasksPanel.searchPlaceholder')}
+              placeholder={t('tasksPanel.searchPlaceholder')}
+              className="min-w-0 flex-1 bg-transparent py-1 text-xs outline-none"
+              onChange={(event) => model.view.setSearchQuery(event.target.value)}
+            />
+          </div>
+          <TaskSortPopover
+            open={model.view.sortOpen}
+            onOpenChange={model.view.setSortOpen}
+            mode={model.view.sortMode}
+            onModeChange={model.view.setSortMode}
+            includeManual
+            testId="tree-task-view-sort"
+          />
+          <TaskFiltersPopover
+            open={model.view.filtersOpen}
+            onOpenChange={model.view.setFiltersOpen}
+            testId="tree-task-view-filters"
+            teams={model.taskFilterTeams}
+            projectOptions={model.projectFilterOptions}
+            filters={model.view.filters}
+            onFiltersChange={model.view.setFilters}
+            onApply={() => undefined}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t('taskFilters.clearAll')}
+                className="size-6"
+                onClick={model.view.reset}
+              >
+                <X className="size-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('taskFilters.clearAll')}</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
       {model.state.status === 'loading' && (
         <p role="status" className="p-2 text-xs">

@@ -642,7 +642,8 @@
       "byTime": "Wg czasu",
       "byUnread": "Wg nieprzeczytanych",
       "byProject": "Wg projektu",
-      "byTeam": "Wg zespołu"
+      "byTeam": "Wg zespołu",
+      "manualOrder": "Ręczna kolejność"
     }
   },
   "toolViewer": {

@@ -642,7 +642,8 @@
       "byTime": "După timp",
       "byUnread": "După necitite",
       "byProject": "După proiect",
-      "byTeam": "După echipă"
+      "byTeam": "După echipă",
+      "manualOrder": "Ordine manuală"
     }
   },
   "toolViewer": {

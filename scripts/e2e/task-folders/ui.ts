@@ -6,6 +6,7 @@ export const selectors = {
   toggle: '[data-testid="task-folders-toggle"]',
   panel: '[data-testid="task-folders-panel"]',
   create: '[data-testid="task-folders-new-folder"]',
+  newFolderName: '[role="dialog"] input[aria-label="Folder name"]',
   tree: '[data-testid="task-folders-tree"]',
   archived: '[data-testid="task-folders-show-archived"]',
   sidebar: '#sidebar-tasks-panel',
@@ -23,6 +24,7 @@ export const folderRow = (id: string) =>
   `Array.from(${el(selectors.tree)}?.querySelectorAll('[data-folder-id]') ?? []).find(e=>e.getAttribute('data-folder-id')===${JSON.stringify(id)})`;
 export const taskRow = (team: string, id: string, root = selectors.tree) =>
   `Array.from(${el(root)}.querySelectorAll('[data-task-key]')).find(e=>e.getAttribute('data-task-key')===${JSON.stringify(JSON.stringify([team, id]))})`;
+export const taskKeyData = (team: string, id: string) => JSON.stringify([team, id]);
 // Helper expressions embed the selector through JSON.stringify, so the raw
 // selector text alone does not identify generated virtual-tree targets.
 const escapedTreeSelector = JSON.stringify(selectors.tree).slice(1, -1);
@@ -58,6 +60,7 @@ interface PointSample extends Partial<FolderPoint> {
   reason: string;
 }
 const TARGET_PRESENCE_TIMEOUT_MS = 5000;
+const POINT_READINESS_TIMEOUT_MS = 5000;
 const TREE_NAVIGATION_TIMEOUT_MS = 30_000;
 const NATIVE_DRAGOVER_RETRY_DEADLINE_MS = 2000;
 const NATIVE_DRAGOVER_MAX_RETRIES = 8;
@@ -70,6 +73,7 @@ const boundedPresence = async (probe: () => Promise<boolean>, timeout: number) =
   }
   return probe();
 };
+type RuntimeCallArgument = { value: unknown } | { unserializableValue: 'undefined' };
 export class UI {
   dragEvidence: NativeDragEvidence[] = [];
   constructor(readonly desktop: Desktop) {}
@@ -98,6 +102,54 @@ export class UI {
       name
     );
   }
+  async callFunction<T>(functionDeclaration: string, args: readonly unknown[] = []): Promise<T> {
+    assert.equal(
+      functionDeclaration,
+      functionDeclaration.trim(),
+      'Runtime.callFunctionOn function declaration must be static and normalized'
+    );
+    const target = (await this.cdp.send('Runtime.evaluate', {
+      expression: 'globalThis',
+      returnByValue: false,
+    })) as { result: { objectId?: string } };
+    const objectId = target.result.objectId;
+    assert(objectId, 'Missing globalThis Runtime.callFunctionOn target');
+    try {
+      const callArguments = args.map<RuntimeCallArgument>((value) =>
+        value === undefined ? { unserializableValue: 'undefined' } : { value }
+      );
+      assert(
+        callArguments.every(
+          (argument) =>
+            (Object.hasOwn(argument, 'value') && !('unserializableValue' in argument)) ||
+            (!Object.hasOwn(argument, 'value') && 'unserializableValue' in argument)
+        ),
+        'Runtime.callFunctionOn arguments must be structured data'
+      );
+      const result = (await this.cdp.send('Runtime.callFunctionOn', {
+        functionDeclaration,
+        objectId,
+        arguments: callArguments,
+        returnByValue: true,
+        awaitPromise: true,
+      })) as { result: { value?: T }; exceptionDetails?: unknown };
+      assert(
+        !result.exceptionDetails,
+        'Runtime.callFunctionOn failed: ' + JSON.stringify(result.exceptionDetails)
+      );
+      return result.result.value as T;
+    } finally {
+      await this.cdp.send('Runtime.releaseObject', { objectId });
+    }
+  }
+  async waitFunction(
+    functionDeclaration: string,
+    args: readonly unknown[],
+    name: string,
+    timeout?: number
+  ) {
+    await until(() => this.callFunction<boolean>(functionDeclaration, args), name, timeout);
+  }
   async wait(expression: string, name: string, timeout?: number) {
     const limit = timeout ?? 30_000;
     await until(
@@ -117,7 +169,7 @@ export class UI {
       limit
     );
   }
-  async locate(expression: string) {
+  async locate(expression: string, deadline = Date.now() + TREE_NAVIGATION_TIMEOUT_MS) {
     const exists = () =>
       this.value<boolean>(`(() => {try{return !!(${expression});}catch{return false;}})()`);
     if (await exists()) return;
@@ -130,31 +182,68 @@ export class UI {
     await until(
       () => this.value<boolean>(`!!${el(selectors.tree)}`),
       'virtual tree presence',
-      TARGET_PRESENCE_TIMEOUT_MS
+      Math.max(1, deadline - Date.now())
     );
-    // Navigate the real virtual scroll container, including during an intercepted native drag.
-    await this.cdp.evaluate(`${el(selectors.tree)}.scrollTop=0`);
-    await this.awaitBrowserFrame('virtual tree navigation frame');
-    if (await exists()) return;
-    const steps = await this.value<number>(
-      `Math.ceil(${el(selectors.tree)}.scrollHeight / Math.max(100,${el(selectors.tree)}.clientHeight/2))+2`
-    );
-    const deadline = Date.now() + TREE_NAVIGATION_TIMEOUT_MS;
-    for (let step = 0; step < steps && Date.now() < deadline; step++) {
-      await this.cdp.evaluate(
-        `${el(selectors.tree)}.scrollTop+=Math.max(100,${el(selectors.tree)}.clientHeight/2)`
+    // A scroll mutation and one RAF do not establish that React committed its virtual
+    // range. Hold each absolute waypoint until real row rectangles cover its viewport;
+    // a pinned drag source must not bridge a gap in the mounted range.
+    const visit = async (top: number): Promise<boolean> => {
+      while (Date.now() < deadline) {
+        const expected = await this.value<number>(`(() => {
+          const tree=${el(selectors.tree)};
+          const top=Math.max(0,Math.min(${top},tree.scrollHeight-tree.clientHeight));
+          if(tree.scrollTop!==top)tree.scrollTop=top;
+          return top;
+        })()`);
+        await this.awaitBrowserFrame('virtual tree navigation frame');
+        if (Date.now() >= deadline) break;
+        const committed = await this.value<boolean>(`(() => {
+          const tree=${el(selectors.tree)};
+          if(!tree || Math.abs(tree.scrollTop-${expected})>1 || tree.clientHeight<=0)return false;
+          const bounds=tree.getBoundingClientRect();
+          const content=tree.firstElementChild?.getBoundingClientRect();
+          if(!content || content.height<=0)return false;
+          let covered=bounds.top+tree.clientTop;
+          const bottom=Math.min(covered+tree.clientHeight,content.bottom);
+          const rows=Array.from(tree.querySelectorAll('[data-index]'))
+            .map(row=>row.getBoundingClientRect()).filter(r=>r.height>0)
+            .sort((a,b)=>a.top-b.top);
+          for(const row of rows){
+            if(row.bottom<=covered)continue;
+            if(row.top>covered+1)return false;
+            covered=Math.max(covered,row.bottom);
+            if(covered>=bottom-1)return true;
+          }
+          return false;
+        })()`);
+        if (committed) return await exists();
+      }
+      throw new Error(
+        'Missing selector after virtual tree navigation: ' + expression + ' (viewport commit deadline)'
       );
-      await this.awaitBrowserFrame('virtual tree navigation frame');
-      if (await exists()) return;
+    };
+    if (await visit(0)) return;
+    const stepHeight = await this.value<number>(`Math.max(100,${el(selectors.tree)}.clientHeight/2)`);
+    const steps = await this.value<number>(
+      `Math.ceil(${el(selectors.tree)}.scrollHeight / ${stepHeight})+2`
+    );
+    for (let step = 1; step <= steps && Date.now() < deadline; step++) {
+      if (await visit(step * stepHeight)) return;
     }
     throw new Error('Missing selector after virtual tree navigation: ' + expression);
   }
   async point(expression: string, fraction = 0.5): Promise<Point> {
     return (await this.pointSample(expression, fraction)).point!;
   }
-  private async pointSample(expression: string, fraction = 0.5): Promise<PointSample> {
+  private async pointSample(
+    expression: string,
+    fraction = 0.5,
+    folder?: { id: string; requireDragTarget: boolean }
+  ): Promise<PointSample> {
+    // Initial discovery has its own bounded navigation/presence budget. Once found,
+    // all geometry retries and virtual reacquisitions share one readiness deadline.
     await this.locate(expression);
-    const deadline = Date.now() + 5000;
+    const deadline = Date.now() + POINT_READINESS_TIMEOUT_MS;
     let reason = 'Missing/hidden selector';
     while (Date.now() < deadline) {
       // Reacquire after scrolling/layout/portal transitions; geometry and hit belong to one sample.
@@ -178,8 +267,23 @@ export class UI {
           dragTargetHighlighted:e.classList.contains('bg-blue-500/20'),
         };
       })()`);
-      if (result.point) return result;
-      reason = result.reason;
+      if (result.point && folder && result.folderId !== folder.id)
+        reason = 'Folder point changed identity';
+      else if (result.point && folder && result.hitFolderId !== folder.id)
+        reason = 'Folder center was not the real hit target';
+      else if (result.point && folder?.requireDragTarget && !result.dragTargetHighlighted)
+        reason = 'Vendor drag-target highlight missing for ' + folder.id;
+      else if (result.point) return result;
+      else reason = result.reason;
+      // Virtualization can unmount the same target between acquisition and geometry.
+      // Reacquire only this exact helper expression within the existing readiness deadline.
+      if (isTreeTargetExpression(expression) && Date.now() < deadline) {
+        try {
+          await this.locate(expression, deadline);
+        } catch (error) {
+          if (!String(error).includes('Missing selector after virtual tree navigation')) throw error;
+        }
+      }
       await delay(50);
     }
     throw new Error(`${reason} after 5000ms hit readiness wait: ${expression}`);
@@ -193,7 +297,7 @@ export class UI {
       );
     }
     // Geometry, hit identity, and vendor highlight must come from one fresh DOM sample.
-    const sample = await this.pointSample(folderRow(id));
+    const sample = await this.pointSample(folderRow(id), 0.5, { id, requireDragTarget });
     assert.equal(sample.folderId, id, 'Folder point changed identity');
     assert.equal(sample.hitFolderId, id, 'Folder center was not the real hit target');
     if (requireDragTarget)
@@ -367,8 +471,8 @@ export class UI {
   async create(name: string, parent?: string) {
     if (parent) await this.menu(folderRow(parent), 'New subfolder');
     else await this.click(el(selectors.create));
-    await this.wait('document.querySelector(\'[role="dialog"] input\')', 'new folder dialog');
-    await this.fill(el('[role="dialog"] input'), name);
+    await this.wait(el(selectors.newFolderName), 'labelled new folder name input');
+    await this.fill(el(selectors.newFolderName), name);
     await this.key('Enter');
     await this.persisted((s) => s.folders.some((f) => f.name === name), 'folder creation ' + name);
     return (await this.snapshot()).folders.find((f) => f.name === name)!.id;
