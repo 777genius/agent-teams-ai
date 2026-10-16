@@ -326,7 +326,9 @@ export const FolderTree = ({
       if (editSession.current === session) setSaving(false);
     }
   };
-  const actions = (n: Node): { label: string; run(): void; restoreFocus: boolean }[] =>
+  const actions = (
+    n: Node
+  ): { label: string; run(): void; restoreFocus: boolean; disabled?: boolean }[] =>
     n.kind === 'folder'
       ? [
           {
@@ -368,6 +370,7 @@ export const FolderTree = ({
             label: t(action.labelKey),
             run: action.run,
             restoreFocus: action.restoreFocus,
+            disabled: action.disabled,
           }))
         : [];
   const row = (item: ItemInstance<Node>): React.JSX.Element => {
@@ -477,7 +480,7 @@ export const FolderTree = ({
                         {menu.map((action) => (
                           <DropdownMenuItem
                             key={action.label}
-                            disabled={model.state.status !== 'ready'}
+                            disabled={action.disabled}
                             onSelect={() => deferAction(action.run, action.restoreFocus)}
                           >
                             {action.label}
@@ -497,7 +500,7 @@ export const FolderTree = ({
                   {menu.map((action) => (
                     <ContextMenuItem
                       key={action.label}
-                      disabled={model.state.status !== 'ready'}
+                      disabled={action.disabled}
                       onSelect={() => deferAction(action.run, action.restoreFocus)}
                     >
                       {action.label}

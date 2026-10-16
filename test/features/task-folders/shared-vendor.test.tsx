@@ -566,6 +566,52 @@ it.each([
   }
 );
 
+it.each([
+  ['context', 'corrupt'],
+  ['dropdown', 'corrupt'],
+  ['context', 'unsupported-version'],
+  ['dropdown', 'unsupported-version'],
+] as const)(
+  'keeps local task menu actions available in the %s menu with %s folder storage',
+  async (kind, status) => {
+    const fixture = treeHarness([makeGlobalTask()]);
+    await act(async () => root.render(<fixture.Harness />));
+    await act(async () => fixture.update({ status }));
+    const row = host.querySelector('[data-task-key]') as HTMLElement;
+    expect(
+      row.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!.disabled
+    ).toBe(true);
+    await act(async () => {
+      if (kind === 'context')
+        row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }));
+      else
+        row
+          .querySelector('[aria-label="taskFolders.actions"]')!
+          .dispatchEvent(
+            new PointerEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false })
+          );
+    });
+    const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    for (const label of ['pin', 'rename', 'markUnread', 'archive']) {
+      const action = items.find((item) => item.textContent === `taskContextMenu.${label}`);
+      expect(action).toBeDefined();
+      expect(action!.getAttribute('aria-disabled')).not.toBe('true');
+    }
+    const move = items.find((item) => item.textContent === 'taskFolders.move');
+    expect(move).toBeDefined();
+    expect(move!.getAttribute('aria-disabled')).toBe('true');
+    await act(async () =>
+      items.find((item) => item.textContent === 'taskContextMenu.pin')!.click()
+    );
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem('taskPinnedIds')!)).toEqual(['t:1']);
+      });
+    });
+    expect(fixture.openTask).not.toHaveBeenCalled();
+  }
+);
+
 it.each(['context', 'dropdown'] as const)(
   'releases an open real portaled %s menu on catalog removal with a full grace period',
   async (kind) => {

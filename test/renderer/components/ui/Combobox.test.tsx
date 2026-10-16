@@ -15,7 +15,7 @@ const projectOptions: ComboboxOption[] = [
 ];
 
 describe('Combobox', () => {
-  it('binds its trigger to the popup listbox and selects options by cmdk value', () => {
+  it('binds its trigger to a dialog popup with a searchable listbox and selects by cmdk value', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -36,13 +36,22 @@ describe('Combobox', () => {
 
       const trigger = host.querySelector<HTMLButtonElement>('[role="combobox"]');
       expect(trigger).not.toBeNull();
+      expect(trigger!.getAttribute('aria-haspopup')).toBe('dialog');
       flushSync(() => trigger!.click());
+      expect(trigger!.getAttribute('aria-expanded')).toBe('true');
 
       const popup = document.getElementById(trigger!.getAttribute('aria-controls') ?? '');
       expect(popup).not.toBeNull();
+      expect(popup!.getAttribute('role')).toBe('dialog');
 
       const listbox = popup?.querySelector<HTMLElement>('[cmdk-list][role="listbox"]');
       expect(listbox).not.toBeNull();
+      expect(listbox!.id).not.toBe(popup!.id);
+      expect(popup!.querySelectorAll('[role="listbox"]')).toHaveLength(1);
+      const search = popup!.querySelector<HTMLInputElement>('input[role="combobox"]');
+      expect(search).not.toBeNull();
+      expect(search!.getAttribute('aria-controls')).toBe(listbox!.id);
+      expect(document.getElementById(listbox!.id)).toBe(listbox);
 
       const option = Array.from(
         listbox?.querySelectorAll<HTMLElement>('[role="option"]') ?? []
