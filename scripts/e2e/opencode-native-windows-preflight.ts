@@ -919,15 +919,19 @@ async function verifyProbePreparation(
         if (typeof current.deadline !== 'number' || !Number.isFinite(current.deadline))
           throw new Error('TEST probe startup response invalid');
         // Leave the existing 30s public stop budget inside the original probe deadline.
-        const readinessMs = Math.min(control.OPEN_CODE_V2_RUN_INITIALIZATION_MS, current.deadline - Date.now() - 30_000);
-        if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
-        let readinessFailure: unknown;
-        const readiness = await Promise.allSettled(members.map(async member => {
+        const readinessDeadline = Math.min(Date.now() + control.OPEN_CODE_V2_RUN_INITIALIZATION_MS, current.deadline - 30_000);
+        if (readinessDeadline <= Date.now()) throw new Error('TEST probe readiness budget exhausted');
+        let readinessFailure: unknown, readinessFailed = false;
+        // One retained native broker serves this cohort. Avoid duplicate status
+        // exchanges queued behind each other with already-running RPC deadlines.
+        for (const member of members) {
         try {
+        const readinessMs = Math.floor(readinessDeadline - Date.now());
+        if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
         const ready = await control.awaitOpenCodeV2RunMemberReadiness(returnedOwner, {
           memberId: String(member.memberId), originalSessionId: String(member.originalSessionId),
           selectedModel, selectedVariant: 'default', pin: expectedVersion,
-        }, Math.floor(readinessMs));
+        }, readinessMs);
         if (!ready) throw new Error('TEST probe member not ready');
         const memberStatus = record(ready);
         if (typeof memberStatus.runtimePid !== 'number' || !Number.isSafeInteger(memberStatus.runtimePid) ||
@@ -965,9 +969,9 @@ async function verifyProbePreparation(
         if (afterLeaf.dev !== beforeLeaf.dev || afterLeaf.ino !== beforeLeaf.ino ||
             afterDll.dev !== beforeDll.dev || afterDll.ino !== beforeDll.ino)
           throw new Error('TEST private DLL custody changed');
-        } catch (error) { readinessFailure ??= error; throw error; }
-        }));
-        if (readiness.some(result => result.status === 'rejected')) throw readinessFailure;
+        } catch (error) { readinessFailed = true; readinessFailure ??= error; }
+        }
+        if (readinessFailed) throw readinessFailure;
         facts.memberReady = readyPids.size === members.length; update();
       } catch (error) {
         primary = error;
