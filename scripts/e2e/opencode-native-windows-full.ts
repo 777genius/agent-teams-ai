@@ -6,8 +6,18 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, open, opendir, readFile, realpath, writeFile } from 'node:fs/promises';
+import {
+  lstat,
+  mkdir,
+  open,
+  opendir,
+  readFile,
+  realpath,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
@@ -27,6 +37,328 @@ const execute = promisify(execFile);
 // The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
 const BUNDLED_MANIFEST_MAX_BYTES = 32 * 1024 * 1024;
 const BUNDLED_MANIFEST_MAX_ENTRIES = 131_072;
+const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
+// Only existing SDK read-only history/parser modules are imported. In
+// particular this never imports the profile/session bridge or prepares a host.
+export const V1_OFFLINE_TRANSCRIPT_SCRIPT = String.raw`
+import assert from 'node:assert/strict';
+import {lstat,readFile,realpath,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const input=JSON.parse(process.env.OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT);
+const same=(a,b)=>process.platform==='win32'?path.resolve(a).toLowerCase()===path.resolve(b).toLowerCase():path.resolve(a)===path.resolve(b);
+const file=async(p,cap)=>{const s=await lstat(p);assert(s.isFile()&&!s.isSymbolicLink()&&s.size<=cap&&same(await realpath(p),p));return readFile(p,'utf8')};
+const store=JSON.parse(await file(path.join(input.dataRoot,'opencode','session-store.json'),4194304));
+assert(store.schemaVersion===1&&store.records&&typeof store.records==='object'&&!Array.isArray(store.records));
+const matches=Object.entries(store.records).filter(([key,r])=>r&&key===r.teamId+'::'+(r.laneId??'primary')+'::'+r.memberName&&r.teamId===input.teamName&&r.memberName===input.member&&r.opencodeSessionId===input.sessionId&&r.runId===input.runId&&same(r.projectPath,input.projectPath));
+assert(matches.length===1);
+const record=matches[0][1];
+assert(typeof record.profileRootKey==='string'&&/^[A-Za-z0-9._-]{1,256}$/.test(record.profileRootKey)&&!['.','..'].includes(record.profileRootKey));
+const {OpenCodeOfflineSessionReader}=await import(pathToFileURL(path.join(input.sdkRoot,'src/services/opencode/OpenCodeOfflineSessionReader.ts')).href);
+const {openCodeTranscriptProjector}=await import(pathToFileURL(path.join(input.sdkRoot,'src/services/opencode/OpenCodeTranscriptProjector.ts')).href);
+const reader=new OpenCodeOfflineSessionReader(input.dataRoot);
+const db=reader.resolveDbPath(record.profileRootKey);
+assert(db&&same(await realpath(db),db)&&(await lstat(db)).isFile());
+const history=await reader.readSession(record);
+assert(history&&history.historyShape==='supported'&&history.historyComplete===true&&history.sessionIdentity?.sessionId===input.sessionId&&same(history.sessionIdentity.directory,input.projectPath));
+assert(history.messages.length<=32&&history.rawParts.length<=512);
+const projection=openCodeTranscriptProjector.projectSessionMessages({sessionId:input.sessionId,messages:history.messages});
+for(const message of projection.messages){
+ const raw=history.messages.find(row=>row.info.id===message.id);
+ assert(raw);
+ if(raw.info.error){message.errorMessage=JSON.stringify(raw.info.error);message.errorName=raw.info.error.name??message.errorName;message.hasError=true}
+ message.nativeTokens=raw.info.tokens;
+ for(const tool of message.toolCalls){
+  const parts=raw.parts.filter(part=>part.type==='tool'&&part.callID===tool.callId);
+  assert(parts.length===1);
+  tool.nativeStatus=parts[0].state?.status;
+  if(parts[0].state?.error)tool.outputText=typeof parts[0].state.error==='string'?parts[0].state.error:JSON.stringify(parts[0].state.error);
+ }
+}
+const output=JSON.stringify({schemaVersion:1,providerId:'opencode',transcript:{...projection,durableState:record.lastKnownDurableState}});
+assert(Buffer.byteLength(output)<=2097152);
+await writeFile(input.output,output,{flag:'wx',mode:0o600});
+`;
+
+/** TEST-only projection of the existing SDK canonical transcript, before Stop.
+ * Keep native turn boundaries that the display/task-log projection omits. */
+export function projectV1NativeTranscript(
+  value: unknown,
+  expected: { sessionId: string; teamName: string; taskId: string }
+) {
+  const record = (input: unknown): Record<string, unknown> =>
+    input && typeof input === 'object' && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  const root = record(value),
+    transcript = record(root.transcript);
+  assert(root.schemaVersion === 1 && root.providerId === 'opencode');
+  assert(transcript.sessionId === expected.sessionId && Array.isArray(transcript.messages));
+  assert(/^test-opencode-[a-zA-Z0-9-]+$/.test(expected.teamName));
+  assert(/^[a-f0-9-]{36}$/.test(expected.taskId));
+  assert(transcript.messages.length <= 32);
+  const messages = transcript.messages.map(record);
+  const tools = (message: Record<string, unknown>) => {
+    assert(Array.isArray(message.toolCalls) && message.toolCalls.length <= 64);
+    return message.toolCalls.map(record);
+  };
+  const toolName = (input: unknown) => {
+    const normalized =
+      typeof input === 'string'
+        ? input
+            .toLowerCase()
+            .replace(/^proxy_/, '')
+            .replace(/^(?:mcp__agent[-_]teams__|agent[-_]teams_)/, '')
+        : '';
+    return (
+      [
+        'task_get',
+        'task_list',
+        'task_add_comment',
+        'task_complete',
+        'message_send',
+        'read',
+        'bash',
+        'edit',
+        'write',
+        'apply_patch',
+        'glob',
+        'grep',
+        'list',
+        'question',
+        'todoread',
+        'todowrite',
+        'runtime_bootstrap_checkin',
+        'member_briefing',
+      ].find((name) => name === normalized) ?? 'other'
+    );
+  };
+  // Native canonical error messages can retain provider JSON that the delivery
+  // ledger has already reduced to plain text. Never emit that original JSON.
+  const failure = (message: unknown, nativeName?: unknown, allowDetail = false) => {
+    const original = typeof message === 'string' ? message : '';
+    const text = original.slice(0, 32_768);
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(text);
+    } catch {
+      try {
+        decoded = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+      } catch {
+        /* Plain native error message. */
+      }
+    }
+    const parsed = record(decoded),
+      error = record(parsed.error);
+    const rows = [parsed, error, record(error.data ?? parsed.data)];
+    const names = [
+      'APIError',
+      'APICallError',
+      'AI_APICallError',
+      'ProviderAuthError',
+      'MessageAbortedError',
+      'ContextOverflowError',
+      'StructuredOutputError',
+      'UnknownError',
+      'NoOutputGeneratedError',
+      'NoObjectGeneratedError',
+      'InvalidResponseDataError',
+      'TypeValidationError',
+      'InvalidPromptError',
+      'UnsupportedFunctionalityError',
+      'ModelNotFoundError',
+    ];
+    const codes = [
+      'insufficient_credits',
+      'insufficient_quota',
+      'rate_limit_exceeded',
+      'invalid_api_key',
+      'context_length_exceeded',
+      'max_tokens_exceeded',
+      'model_not_found',
+      'invalid_request_error',
+      'invalid_request',
+      'authentication_error',
+      'permission_denied',
+      'server_error',
+      'overloaded_error',
+      'billing_error',
+    ];
+    const integer = (input: unknown, min: number, max: number) =>
+      Number.isSafeInteger(input) && Number(input) >= min && Number(input) <= max
+        ? Number(input)
+        : null;
+    const tokens = (pattern: RegExp) => integer(Number(pattern.exec(text)?.[1]), 1, 10_000_000);
+    return {
+      present: original.length > 0 || typeof nativeName === 'string',
+      inspectedCharacters: text.length,
+      truncated: original.length > text.length,
+      name:
+        names.find((name) => nativeName === name || rows.some((row) => row.name === name)) ?? null,
+      providerCode: codes.find((code) => rows.some((row) => row.code === code)) ?? null,
+      httpStatus:
+        rows
+          .flatMap((row) => [row.statusCode, row.status, row.code])
+          .map((code) => integer(code, 100, 599))
+          .find((code) => code !== null) ?? null,
+      retryable:
+        rows.map((row) => row.isRetryable).find((flag) => typeof flag === 'boolean') ?? null,
+      requestedTokens: tokens(/requested(?: up to)?\s+(\d+)\s+tokens/i),
+      affordableTokens: tokens(/can only afford\s+(\d+)/i),
+      maximumContextTokens: tokens(/maximum context length(?: is| of)?\s+(\d+)\s+tokens/i),
+      resultingTokens: tokens(/(?:resulted in|requested)\s+(\d+)\s+tokens/i),
+      detail: allowDetail
+        ? sanitize(
+            rows.map((row) => row.message).find((detail) => typeof detail === 'string') ??
+              (typeof decoded === 'string'
+                ? decoded
+                : decoded === undefined && !text.includes('{') && !text.includes('[')
+                  ? original
+                  : null)
+          )
+        : null,
+      nativeHttpAndUsage: 'only_if_retained_inside_canonical_error' as const,
+    };
+  };
+  const taskUserIndex = messages.findLastIndex(
+    (message) =>
+      message.role === 'user' &&
+      typeof message.text === 'string' &&
+      message.text.includes(expected.taskId)
+  );
+  const taskUser = messages[taskUserIndex];
+  const nextUserIndex = messages.findIndex(
+    (message, index) => index > taskUserIndex && message.role === 'user'
+  );
+  const taskTurnEndIndex = nextUserIndex < 0 ? messages.length : nextUserIndex;
+  const taskUserBinding =
+    typeof taskUser?.id === 'string' &&
+    taskUser.id.length > 0 &&
+    messages.filter((message) => message.id === taskUser.id).length === 1;
+  const safeTaskContext =
+    taskUserBinding &&
+    messages.flatMap(tools).every((tool) => {
+      const input = record(tool.input);
+      return (
+        toolName(tool.toolName) === 'task_get' &&
+        input.taskId === expected.taskId &&
+        input.teamName === expected.teamName
+      );
+    });
+  const previewAllowed = safeTaskContext;
+  const sanitize = (text: unknown) => {
+    if (typeof text !== 'string') return null;
+    return redactLaunchFailureArtifactText(text)
+      .replaceAll(String.fromCharCode(27), '')
+      .replace(/[A-Za-z]:[\\/][^\s"'<>),;]*/g, '[path]')
+      .replace(/\\\\[^\s"'<>),;]*/g, '[path]')
+      .replace(/\/[^\s"'<>),;]+/g, '[path]')
+      .replace(/[A-Za-z0-9_+./=-]{24,}/g, '[opaque]')
+      .slice(0, 2048);
+  };
+  const finiteTime = (time: unknown) =>
+    typeof time === 'number' && Number.isFinite(time) && time >= 0 && time <= 8_640_000_000_000_000
+      ? time
+      : null;
+  return {
+    source: 'existing_sdk_readonly_offline_history_before_stop' as const,
+    sessionMatches: true,
+    taskUserIndex,
+    taskUserBinding,
+    taskTurnEndIndex,
+    durableState:
+      ['idle', 'running', 'retrying', 'blocked', 'error', 'reply_pending', 'unknown'].find(
+        (state) => transcript.durableState === state
+      ) ?? 'unknown',
+    durableStateSource: 'stored_sdk_record_last_observation' as const,
+    nativeToolStateError: 'retained_from_exact_native_tool_part' as const,
+    messageCount: messages.length,
+    previewPolicy: previewAllowed ? 'owned_task_get_or_no_tools' : 'withheld_unproven_tool_context',
+    messages: messages.map((message, index) => ({
+      index,
+      parentIndex: messages.findIndex(
+        (parent) => typeof parent.id === 'string' && parent.id === message.parentId
+      ),
+      role:
+        ['user', 'assistant', 'system', 'tool'].find((role) => message.role === role) ?? 'other',
+      agent:
+        ['teammate', 'teammate-bootstrap'].find((agent) => message.agent === agent) ??
+        (message.agent === null ? null : 'other'),
+      createdAt: finiteTime(message.createdAt),
+      completedAt: finiteTime(message.completedAt),
+      tokens: Object.fromEntries(
+        ['input', 'output', 'reasoning'].map((key) => {
+          const value = record(message.nativeTokens)[key];
+          return [
+            key,
+            Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 100_000_000
+              ? Number(value)
+              : null,
+          ];
+        })
+      ),
+      finishReason:
+        [
+          'stop',
+          'length',
+          'tool-calls',
+          'content-filter',
+          'error',
+          'unknown',
+          'end_turn',
+          'max_tokens',
+          'tool_use',
+          'pause_turn',
+        ].find((reason) => message.finishReason === reason) ??
+        (message.finishReason === null ? null : 'other'),
+      hasError: message.hasError === true,
+      error: failure(
+        message.errorMessage,
+        message.errorName,
+        safeTaskContext &&
+          index > taskUserIndex &&
+          index < taskTurnEndIndex &&
+          message.parentId === taskUser?.id
+      ),
+      successorAssistantIndex: messages.findIndex(
+        (next, nextIndex) => nextIndex > index && next.role === 'assistant'
+      ),
+      assistantText:
+        message.role === 'assistant' &&
+        index > taskUserIndex &&
+        index < taskTurnEndIndex &&
+        message.parentId === taskUser?.id
+          ? previewAllowed
+            ? sanitize(message.text)
+            : null
+          : null,
+      tools: tools(message).map((tool) => ({
+        name: toolName(tool.toolName),
+        status:
+          ['running', 'completed', 'errored', 'unknown'].find((status) => tool.status === status) ??
+          'other',
+        isError: tool.isError === true,
+        nativeStatus:
+          ['pending', 'running', 'completed', 'error'].find(
+            (status) => tool.nativeStatus === status
+          ) ?? null,
+        startedAt: finiteTime(tool.startedAt),
+        completedAt: finiteTime(tool.completedAt),
+        error:
+          tool.isError === true
+            ? failure(
+                tool.outputText,
+                null,
+                safeTaskContext &&
+                  index > taskUserIndex &&
+                  index < taskTurnEndIndex &&
+                  message.parentId === taskUser?.id
+              )
+            : null,
+      })),
+    })),
+  };
+}
 let preproofStage = 'arguments';
 const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
@@ -1161,6 +1493,7 @@ async function main() {
         )
       : { bundledSdkSha: '', runtimeDigests: {} };
   const taskOwners = new Map<string, 'alice' | 'bob'>();
+  const nativeSessions = new Map<string, string>();
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
     scope: short ? 'Windows real packaged short task only' : 'Windows real packaged full team',
@@ -1176,6 +1509,19 @@ async function main() {
       tasks: Awaited<
         ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>
       >[];
+    },
+    nativeTranscriptFailure: null as null | {
+      observation: 'captured' | 'unavailable';
+      member: 'alice' | 'bob';
+      stage: 'source_sdk' | 'image_hash' | 'offline_read' | 'file_read' | 'projection';
+      packet?: ReturnType<typeof projectV1NativeTranscript>;
+      failure?: {
+        classification: string;
+        exitCode: number | null;
+        signal: string | null;
+        killed: boolean;
+      };
+      rawFileRemoved?: boolean;
     },
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
@@ -1302,6 +1648,7 @@ async function main() {
     const sessions = members.map((name) => {
       const member = initial.members[name];
       assert(member?.alive && member.runtimeModel === model && member.runtimeSessionId);
+      nativeSessions.set(name, member.runtimeSessionId);
       return member.runtimeSessionId;
     });
     assert.equal(new Set(sessions).size, members.length);
@@ -1607,6 +1954,7 @@ async function main() {
           member.runtimeSessionId &&
           !sessions.includes(member.runtimeSessionId)
       );
+      nativeSessions.set(name, member.runtimeSessionId);
       return member.runtimeSessionId;
     });
     assert.equal(new Set(newSessions).size, 2);
@@ -1667,6 +2015,161 @@ async function main() {
       const owner = taskOwners.get(id);
       return owner ? [{ id, owner }] : [];
     });
+    const failedTask = latestTasks.at(-1);
+    const nativeSession = failedTask && nativeSessions.get(failedTask.owner);
+    if (version.startsWith('1.') && sdk === 'bundled' && failedTask && nativeSession) {
+      // Read the exact native persistence through existing SDK parser modules,
+      // without preparing a profile/host or importing a prompt-capable service.
+      const output = path.join(desktop.root, `native-transcript-${randomUUID()}.json`);
+      const bunConfig = output + '.bunfig.toml';
+      let captureStage: NonNullable<typeof proof.nativeTranscriptFailure>['stage'] = 'source_sdk';
+      try {
+        const sdkRoot = process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT;
+        assert(
+          sdkRoot && path.isAbsolute(sdkRoot) && /(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(sdkRoot)
+        );
+        const gitOptions = {
+          env: desktop.env,
+          cwd: desktop.projectPath,
+          timeout: 5000,
+          maxBuffer: 4096,
+        };
+        assert.equal(
+          (await execute('git', ['-C', sdkRoot, 'rev-parse', 'HEAD'], gitOptions)).stdout.trim(),
+          bundled.bundledSdkSha
+        );
+        const sourceClosure = [
+          'OpenCodeOfflineSessionReader',
+          'OpenCodeTranscriptProjector',
+          'OpenCodeManagedPaths',
+          'OpenCodeBridgePath',
+          'OpenCodeAppManagedBootstrapMessage',
+        ].flatMap((name) => ['ts', 'js'].map((ext) => `src/services/opencode/${name}.${ext}`));
+        assert.equal(
+          (
+            await execute(
+              'git',
+              [
+                '-C',
+                sdkRoot,
+                'status',
+                '--porcelain',
+                '--untracked-files=all',
+                '--ignored=matching',
+                '--',
+                ...sourceClosure,
+              ],
+              gitOptions
+            )
+          ).stdout,
+          ''
+        );
+        captureStage = 'image_hash';
+        const bun = path.join(
+          path.dirname(await realpath(executable)),
+          'resources',
+          'runtime',
+          'bun',
+          'bun.exe'
+        );
+        const cliStat = await lstat(bun);
+        assert(
+          cliStat.isFile() &&
+            !cliStat.isSymbolicLink() &&
+            (await realpath(bun)).toLowerCase() === bun.toLowerCase()
+        );
+        const cliHash = createHash('sha256');
+        for await (const bytes of createReadStream(bun)) cliHash.update(bytes);
+        assert.equal(cliHash.digest('hex'), bundled.runtimeDigests['bun/bun.exe']);
+        await writeFile(bunConfig, '', { flag: 'wx', mode: 0o600 });
+        captureStage = 'offline_read';
+        await execute(
+          bun,
+          ['--no-env-file', `--config=${bunConfig}`, '--eval', V1_OFFLINE_TRANSCRIPT_SCRIPT],
+          {
+            env: {
+              ...desktop.env,
+              OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify({
+                sdkRoot,
+                dataRoot: desktop.env.CLAUDE_MULTIMODEL_DATA_HOME,
+                projectPath: desktop.projectPath,
+                teamName: desktop.teamName,
+                member: failedTask.owner,
+                sessionId: nativeSession,
+                runId: proof.runIds.at(-1),
+                output,
+              }),
+            },
+            cwd: desktop.projectPath,
+            timeout: 20_000,
+            maxBuffer: 16_384,
+          }
+        );
+        captureStage = 'file_read';
+        const stat = await lstat(output);
+        assert(
+          stat.isFile() &&
+            !stat.isSymbolicLink() &&
+            stat.nlink === 1 &&
+            stat.size <= V1_TRANSCRIPT_MAX_BYTES &&
+            (await realpath(output)) === output
+        );
+        captureStage = 'projection';
+        proof.nativeTranscriptFailure = {
+          observation: 'captured',
+          member: failedTask.owner,
+          stage: captureStage,
+          packet: projectV1NativeTranscript(JSON.parse(await readFile(output, 'utf8')), {
+            sessionId: nativeSession,
+            teamName: desktop.teamName,
+            taskId: failedTask.id,
+          }),
+        };
+      } catch (captureError: unknown) {
+        const failure =
+          captureError && typeof captureError === 'object'
+            ? (captureError as Record<string, unknown>)
+            : {};
+        proof.nativeTranscriptFailure = {
+          observation: 'unavailable',
+          member: failedTask.owner,
+          stage: captureStage,
+          failure: {
+            classification:
+              captureError instanceof assert.AssertionError
+                ? 'assertion_failed'
+                : ([
+                    'ENOENT',
+                    'EACCES',
+                    'EPERM',
+                    'ETIMEDOUT',
+                    'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+                  ].find((code) => failure.code === code) ??
+                  (failure.killed === true
+                    ? 'process_killed'
+                    : Number.isSafeInteger(failure.code)
+                      ? 'process_exit'
+                      : 'unknown')),
+            exitCode: Number.isSafeInteger(failure.code) ? Number(failure.code) : null,
+            signal:
+              ['SIGTERM', 'SIGKILL', 'SIGABRT'].find((signal) => failure.signal === signal) ?? null,
+            killed: failure.killed === true,
+          },
+        };
+      } finally {
+        // Raw canonical messages include tool payloads and never enter proof.json.
+        const removed = await unlink(output).then(
+          () => true,
+          (failure: unknown) =>
+            typeof failure === 'object' &&
+            failure !== null &&
+            'code' in failure &&
+            failure.code === 'ENOENT'
+        );
+        if (proof.nativeTranscriptFailure) proof.nativeTranscriptFailure.rawFileRemoved = removed;
+        await unlink(bunConfig).catch(() => undefined);
+      }
+    }
     if (latestTasks.length) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
@@ -1803,10 +2306,17 @@ async function main() {
   await checkpoint('complete');
   console.log(`Windows full proof: ${proofFile}`);
 }
-void main().catch((error: unknown) => {
-  console.error(
-    'Windows full qualification failed; preserve TEST state',
-    JSON.stringify({ ...proofFailure(error, preproofStage), ...preproofFacts })
-  );
-  process.exitCode = 1;
-});
+const entryUrl = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href;
+if (
+  entryUrl &&
+  (process.platform === 'win32'
+    ? import.meta.url.toLowerCase() === entryUrl.toLowerCase()
+    : import.meta.url === entryUrl)
+)
+  void main().catch((error: unknown) => {
+    console.error(
+      'Windows full qualification failed; preserve TEST state',
+      JSON.stringify({ ...proofFailure(error, preproofStage), ...preproofFacts })
+    );
+    process.exitCode = 1;
+  });

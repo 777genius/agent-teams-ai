@@ -1,9 +1,17 @@
 // @vitest-environment node
-import { readFile } from 'fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import { promisify } from 'node:util';
+
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
+import {
+  projectV1NativeTranscript,
+  V1_OFFLINE_TRANSCRIPT_SCRIPT,
+} from '../../../../scripts/e2e/opencode-native-windows-full';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { assertOpenCodeRuntimeStopEffective } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
@@ -130,6 +138,355 @@ function createSource(params: {
 }
 
 describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
+  it.skipIf(
+    !process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT ||
+      !process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH
+  )(
+    'reads native persistence through the actual SDK read-only reader and projector without preparing a profile',
+    async () => {
+      const { DatabaseSync } = await import('node:sqlite');
+      const root = await realpath(
+        await mkdtemp(path.join(os.tmpdir(), 'TEST-native-offline-fixture-'))
+      );
+      const input = {
+        sdkRoot: process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT!,
+        dataRoot: path.join(root, 'runtime-data'),
+        projectPath: path.join(root, 'TEST-project'),
+        teamName: 'test-opencode-native-fixture',
+        member: 'alice',
+        runId: 'TEST-owned-run',
+        sessionId: 'ses_TEST_owned',
+        taskId: '04e22e8f-7108-42cc-9e11-850da1036dff',
+        output: path.join(root, 'native-private.json'),
+      };
+      const dbPath = path.join(
+        input.dataRoot,
+        'opencode/profiles/scope-TEST/data/opencode/opencode.db'
+      );
+      try {
+        await mkdir(path.dirname(dbPath), { recursive: true });
+        await mkdir(input.projectPath);
+        const db = new DatabaseSync(dbPath);
+        db.exec(
+          'CREATE TABLE session(id TEXT,project_id TEXT,directory TEXT);CREATE TABLE project(id TEXT,worktree TEXT,vcs TEXT);CREATE TABLE message(id TEXT,session_id TEXT,time_created INTEGER,time_updated INTEGER,data TEXT);CREATE TABLE part(id TEXT,message_id TEXT,session_id TEXT,time_created INTEGER,time_updated INTEGER,data TEXT)'
+        );
+        db.prepare('INSERT INTO session VALUES(?,?,?)').run(
+          input.sessionId,
+          'TEST-project',
+          input.projectPath
+        );
+        db.prepare('INSERT INTO project VALUES(?,?,?)').run(
+          'TEST-project',
+          input.projectPath,
+          'git'
+        );
+        const message = (id: string, time: number, data: unknown) =>
+          db
+            .prepare('INSERT INTO message VALUES(?,?,?,?,?)')
+            .run(id, input.sessionId, time, time, JSON.stringify(data));
+        const part = (id: string, messageId: string, time: number, data: unknown) =>
+          db
+            .prepare('INSERT INTO part VALUES(?,?,?,?,?,?)')
+            .run(id, messageId, input.sessionId, time, time, JSON.stringify(data));
+        message('msg_user', 1000, { role: 'user', agent: 'teammate', time: { created: 1000 } });
+        part('prt_user', 'msg_user', 1000, { type: 'text', text: `Do task ${input.taskId}` });
+        message('msg_get', 1100, {
+          role: 'assistant',
+          agent: 'teammate',
+          parentID: 'msg_user',
+          finish: 'tool-calls',
+          time: { created: 1100, completed: 1200 },
+          tokens: { input: 2300, output: 40, reasoning: 12 },
+        });
+        part('prt_tool', 'msg_get', 1101, {
+          type: 'tool',
+          callID: 'call_TEST',
+          tool: 'agent-teams_task_get',
+          state: {
+            status: 'error',
+            error:
+              'Original native task_get failure: permission denied C:\\TEST-private\\never-publish sk-123456789012345678901234567890',
+            input: { teamName: input.teamName, taskId: input.taskId },
+            time: { start: 1101, end: 1199 },
+          },
+        });
+        message('msg_successor', 1300, {
+          role: 'assistant',
+          agent: 'teammate',
+          parentID: 'msg_user',
+          finish: 'error',
+          time: { created: 1300, completed: 1400 },
+          error: {
+            name: 'APIError',
+            data: {
+              statusCode: 403,
+              message:
+                'Original provider message: Forbidden C:\\TEST-private\\never-publish sk-123456789012345678901234567890',
+              isRetryable: false,
+            },
+          },
+        });
+        part('prt_assistant', 'msg_successor', 1300, {
+          type: 'text',
+          text: 'The tool returned an error and I cannot continue.',
+        });
+        db.close();
+        const record = {
+          teamId: input.teamName,
+          memberName: input.member,
+          laneId: 'primary',
+          runId: input.runId,
+          projectPath: input.projectPath,
+          profileRootKey: 'scope-TEST',
+          opencodeSessionId: input.sessionId,
+        };
+        await writeFile(
+          path.join(input.dataRoot, 'opencode/session-store.json'),
+          JSON.stringify({
+            schemaVersion: 1,
+            records: { [`${input.teamName}::primary::alice`]: record },
+          })
+        );
+        const originalDb = await readFile(dbPath);
+        const env = {
+          ...process.env,
+          OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify(input),
+        };
+        const config = path.join(root, 'empty-bunfig.toml');
+        await writeFile(config, '');
+        await promisify(execFile)(
+          process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH!,
+          ['--no-env-file', `--config=${config}`, '--eval', V1_OFFLINE_TRANSCRIPT_SCRIPT],
+          { env, cwd: root, timeout: 20_000, maxBuffer: 16_384 }
+        );
+        expect(await readFile(dbPath)).toEqual(originalDb);
+        const packet = projectV1NativeTranscript(
+          JSON.parse(await readFile(input.output, 'utf8')),
+          input
+        );
+        expect(packet.messages[0]).toMatchObject({ role: 'user', agent: 'teammate' });
+        expect(packet.messages[1]).toMatchObject({
+          finishReason: 'tool-calls',
+          successorAssistantIndex: 2,
+          tokens: { input: 2300, output: 40, reasoning: 12 },
+          tools: [
+            {
+              status: 'errored',
+              nativeStatus: 'error',
+              error: {
+                detail: expect.stringContaining(
+                  'Original native task_get failure: permission denied'
+                ),
+              },
+            },
+          ],
+        });
+        expect(packet.messages[2]).toMatchObject({
+          finishReason: 'error',
+          completedAt: 1400,
+          hasError: true,
+          error: {
+            name: 'APIError',
+            httpStatus: 403,
+            retryable: false,
+            detail: expect.stringContaining('Original provider message: Forbidden'),
+          },
+        });
+        expect(packet.messages[2]?.assistantText).toContain('cannot continue');
+        expect(JSON.stringify(packet)).not.toMatch(/TEST-private|never-publish|sk-123/);
+        await expect(
+          promisify(execFile)(
+            process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH!,
+            ['--no-env-file', `--config=${config}`, '--eval', V1_OFFLINE_TRANSCRIPT_SCRIPT],
+            {
+              env: {
+                ...env,
+                OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify({
+                  ...input,
+                  runId: 'foreign-run',
+                }),
+              },
+              cwd: root,
+              timeout: 20_000,
+              maxBuffer: 16_384,
+            }
+          )
+        ).rejects.toThrow();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+  it('retains native task_get completion and the actual successor turn, without treating projected tool output as a final response', () => {
+    // Canonical fields/statuses follow SDK's committed relay-works-10-jack
+    // native transcript fixture, before its display projection adds tool rows.
+    const expected = {
+      sessionId: 'ses_TEST_owned',
+      teamName: 'test-opencode-native-turn',
+      taskId: '04e22e8f-7108-42cc-9e11-850da1036dff',
+    };
+    const native = {
+      id: 'msg_TEST_user',
+      parentId: null as string | null,
+      role: 'user',
+      agent: 'teammate',
+      createdAt: 1000,
+      completedAt: null,
+      finishReason: null,
+      text: `Work on ${expected.taskId}`,
+      toolCalls: [],
+      hasError: false,
+      errorName: null as string | null,
+      errorMessage: null as string | null,
+    };
+    const tool = {
+      callId: 'call_TEST_get',
+      toolName: 'agent-teams_task_get',
+      status: 'completed',
+      input: { teamName: expected.teamName, taskId: expected.taskId },
+      startedAt: 1100,
+      completedAt: 1200,
+      isError: false,
+      outputText: 'PRIVATE_TOOL_RESULT_NEVER_EMITTED',
+    };
+    const transcript = {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      transcript: {
+        sessionId: expected.sessionId,
+        durableState: 'idle',
+        messages: [
+          native,
+          {
+            ...native,
+            id: 'msg_TEST_assistant',
+            parentId: native.id,
+            role: 'assistant',
+            createdAt: 1050,
+            completedAt: 1300,
+            finishReason: 'tool-calls',
+            text: 'I will read the assigned task first.',
+            toolCalls: [tool],
+          },
+          {
+            ...native,
+            id: 'msg_TEST_successor',
+            parentId: native.id,
+            role: 'assistant',
+            createdAt: 1301,
+            completedAt: 1400,
+            finishReason: 'stop',
+            text: 'The task requires a native read tool; it is unavailable. C:\\TEST-private\\secret.txt /tmp/TEST-private/secret.txt sk-123456789012345678901234567890',
+          },
+        ],
+      },
+    };
+    const packet = projectV1NativeTranscript(transcript, expected);
+    expect(packet).toMatchObject({
+      taskUserIndex: 0,
+      previewPolicy: 'owned_task_get_or_no_tools',
+      durableState: 'idle',
+      messageCount: 3,
+      sessionMatches: true,
+    });
+    expect(packet.messages[0]).toMatchObject({ agent: 'teammate', role: 'user' });
+    expect(packet.messages[1]).toMatchObject({
+      parentIndex: 0,
+      finishReason: 'tool-calls',
+      completedAt: 1300,
+      successorAssistantIndex: 2,
+      tools: [{ name: 'task_get', status: 'completed', isError: false, completedAt: 1200 }],
+    });
+    expect(packet.messages[2]).toMatchObject({ finishReason: 'stop', successorAssistantIndex: -1 });
+    expect(packet.messages[2]?.assistantText).toContain('native read tool; it is unavailable');
+    expect(JSON.stringify(packet)).not.toMatch(
+      /PRIVATE_TOOL_RESULT|TEST-private|secret.txt|sk-123/
+    );
+    transcript.transcript.messages.pop();
+    const unfinished = projectV1NativeTranscript(transcript, expected);
+    expect(unfinished.messages[1]?.successorAssistantIndex).toBe(-1);
+    expect(unfinished.messages[1]?.finishReason).toBe('tool-calls');
+    transcript.transcript.messages[1]!.agent = 'teammate-bootstrap';
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]?.agent).toBe(
+      'teammate-bootstrap'
+    );
+    tool.status = 'errored';
+    tool.isError = true;
+    tool.outputText = JSON.stringify({
+      name: 'APIError',
+      data: {
+        statusCode: 402,
+        code: 'insufficient_credits',
+        isRetryable: false,
+        message:
+          'Requested up to 8192 tokens, can only afford 1200. sk-TEST-private-123456789012345678901234',
+      },
+    });
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]?.tools[0]).toMatchObject({
+      status: 'errored',
+      isError: true,
+      error: {
+        name: 'APIError',
+        httpStatus: 402,
+        providerCode: 'insufficient_credits',
+        retryable: false,
+        requestedTokens: 8192,
+        affordableTokens: 1200,
+      },
+    });
+    transcript.transcript.messages[1]!.hasError = true;
+    transcript.transcript.messages[1]!.errorName = 'APIError';
+    transcript.transcript.messages[1]!.errorMessage = tool.outputText;
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]?.error).toMatchObject({
+      name: 'APIError',
+      httpStatus: 402,
+      requestedTokens: 8192,
+    });
+    expect(JSON.stringify(projectV1NativeTranscript(transcript, expected))).not.toContain(
+      'sk-TEST-private'
+    );
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]?.error.detail).toContain(
+      'can only afford 1200'
+    );
+    transcript.transcript.messages.push(
+      { ...native, id: 'msg_TEST_unrelated', text: 'Other user' },
+      {
+        ...native,
+        id: 'msg_TEST_other_assistant',
+        parentId: 'msg_TEST_unrelated',
+        role: 'assistant',
+        text: 'PRIVATE_UNRELATED_ASSISTANT',
+        errorMessage: 'PRIVATE_OTHER_ERROR',
+      }
+    );
+    expect(projectV1NativeTranscript(transcript, expected).messages[3]).toMatchObject({
+      assistantText: null,
+      error: { detail: null },
+    });
+    transcript.transcript.messages.splice(2);
+    transcript.transcript.messages[1]!.parentId = 'foreign-user';
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]).toMatchObject({
+      assistantText: null,
+      error: { detail: null },
+    });
+    transcript.transcript.messages[1]!.parentId = native.id;
+    tool.toolName = 'bash';
+    expect(projectV1NativeTranscript(transcript, expected)).toMatchObject({
+      previewPolicy: 'withheld_unproven_tool_context',
+      messages: [{ assistantText: null }, { assistantText: null }],
+    });
+    tool.toolName = 'agent-teams_task_get';
+    tool.input.taskId = 'foreign-task';
+    expect(projectV1NativeTranscript(transcript, expected).messages[1]?.assistantText).toBeNull();
+    expect(() =>
+      projectV1NativeTranscript(transcript, { ...expected, sessionId: 'foreign' })
+    ).toThrow();
+    transcript.transcript.messages[0]!.text = 'Unrelated owned session message';
+    expect(projectV1NativeTranscript(transcript, expected)).toMatchObject({
+      taskUserIndex: -1,
+      previewPolicy: 'withheld_unproven_tool_context',
+    });
+  });
   it('preserves finite native session-error and same-run Stop facts when the production task chunks drop error metadata', async () => {
     const teamName = 'test-opencode-v1-native-error',
       projectPath = 'C:\\TEST-run\\TEST-project';

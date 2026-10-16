@@ -468,6 +468,7 @@ jobs:
         env:
           SELECTED_MODEL: ${{ inputs.model }}
           VERSIONS: ${{ inputs.versions }}
+          OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT: ${{ github.workspace }}/TEST-native-sdk
         run: |
           $ErrorActionPreference = 'Stop'
           $env:TEMP = $env:RUNNER_TEMP
