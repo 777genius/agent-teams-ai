@@ -678,7 +678,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             errno: one(row(data.failure).errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),
             operation: one(row(data.failure).operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
           }, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
-            ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+            ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'waiting-for-activation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
           startupElapsedMs, startupHistory, graphFailure: await graphFailureCoverage(startup.graphFailure, plan, nativeLaunches, sdkRoot, executionOwner),
           cleanupPhase: one(row(data.cleanup).phase, ['dispose-transport', 'send-close', 'force-kill', 'wait-exit', 'read-birth', 'kernel-retirement', 'process-retirement', 'closed-ack', 'kernel-proof', 'kernel-binding']),
           cleanupElapsedMs: Number.isSafeInteger(row(data.cleanup).elapsedMs) && Number(row(data.cleanup).elapsedMs) >= 0 && Number(row(data.cleanup).elapsedMs) <= 86400000 ? Number(row(data.cleanup).elapsedMs) : null,
@@ -718,7 +718,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
               try {
                 const event = row(JSON.parse(message));
                 if (event.event === 'opencode-v2-startup') childStartup = {
-                  stage: one(event.stage, ['waiting-for-prepare', 'delivery-resolution', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
+                  stage: one(event.stage, ['waiting-for-prepare', 'delivery-resolution', 'profile-validation', 'native-validation', 'graph-validation', 'waiting-for-activation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
                   cause: one(event.cause, ['execution_contract_invalid', 'execution_identity_mismatch', 'execution_entry_changed', 'v2_compiled_runtime_unsupported', 'v2_execution_layout_unsupported', 'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing', 'execution_containment_identity_mismatch', 'execution_timeout', 'execution_cancelled']),
                   reason: one(event.reason, ['timeout', 'failed']),
                   elapsedMs: Number.isSafeInteger(event.elapsedMs) && Number(event.elapsedMs) >= 0 ? Number(event.elapsedMs) : null,

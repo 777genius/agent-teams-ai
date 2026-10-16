@@ -216,6 +216,7 @@ describe('serialized native IPC failure details', () => {
         acquisitionElapsedMs: number | null;
         acquisitionHistory: { phase: string; elapsedMs: number }[];
         acquisitionLastPhase: string | null;
+        startupStage: string | null;
       }[];
     }>;
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-acquisition-timing-')));
@@ -237,7 +238,11 @@ describe('serialized native IPC failure details', () => {
         JSON.stringify({ binding, state: 'starting', members: [] })
       );
       const diagnostic = path.join(diagnostics, `${randomUUID()}.json`);
-      const project = async (acquisition: unknown, category = 'execution_timeout') => {
+      const project = async (
+        acquisition: unknown,
+        category = 'execution_timeout',
+        startup?: unknown
+      ) => {
         await writeFile(
           diagnostic,
           JSON.stringify({
@@ -245,6 +250,7 @@ describe('serialized native IPC failure details', () => {
             phase: 'execution-host-startup',
             category,
             acquisition,
+            ...(startup === undefined ? {} : { startup }),
           })
         );
         return (await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', []))
@@ -280,6 +286,15 @@ describe('serialized native IPC failure details', () => {
         acquisitionHistory: timing.history,
         acquisitionLastPhase: 'start-sent',
       });
+      expect(
+        (
+          await project(timing, 'execution_timeout', {
+            reason: 'timeout',
+            stage: 'waiting-for-activation',
+            elapsedMs: 120_006,
+          })
+        ).startupStage
+      ).toBe('waiting-for-activation');
       for (const category of [
         'run_acquisition_timeout',
         'run_initialization_timeout',

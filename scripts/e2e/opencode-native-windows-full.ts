@@ -1196,6 +1196,7 @@ async function packagedStartupSnapshot(
     'profile-validation',
     'native-validation',
     'graph-validation',
+    'waiting-for-activation',
     'runtime-import',
     'server-start',
     'effect-import',
