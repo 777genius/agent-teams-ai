@@ -359,6 +359,8 @@ jobs:
         shell: pwsh
         env:
           AGENT_TEAMS_INSTALL_PROFILE: ${{ inputs.source_only && 'node-ci' || 'desktop' }}
+          # Source controller packages need the same private-copy shape as portable staging.
+          pnpm_config_package_import_method: copy
         run: |
           $ErrorActionPreference = 'Stop'
           node scripts/ci/install-dependencies-with-retry.mjs

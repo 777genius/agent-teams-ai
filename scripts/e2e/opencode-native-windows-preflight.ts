@@ -258,8 +258,9 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
     // This public license was the exact failed immutable graph row. Inspect only
     // matching bytes; post-stop metadata is not evidence of grants at failure.
     const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-    const licenseSha256 = 'b4f9adb7c568904834d0dd6cc98d16c390d21ca32fc17ae7a267715269bd5529';
-    const licensePath = p.join(delivery.root, 'node_modules', '@ai-sdk', 'alibaba', 'LICENSE');
+    const licenseSha256 = '5b3af80f317313a8b8c227b0c8bffae67728cfec1786137b0553e625f2affec9';
+    const licensePath = p.join(p.dirname(delivery.root), 'TEST-native-source', 'node_modules', '.pnpm',
+      '@borewit+text-codec@0.2.1', 'node_modules', '@borewit', 'text-codec', 'LICENSE.txt');
     const selected = files.map(row).filter(file => file.path === licensePath && file.sha256 === licenseSha256);
     const chain: { path: string; relativeDepth: number; pathSha256: string; type: string; symbolicLink: boolean; nlink: number; fileIdSha256: string }[] = [];
     let targetObservation = 'graph_row_unavailable';
@@ -267,7 +268,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
       targetObservation = 'bytes_unavailable';
       try {
         const before = await fs.lstat(licensePath, { bigint: true });
-        if (before.isFile() && !before.isSymbolicLink() && before.size === 552n && digest(await fs.readFile(licensePath)) === licenseSha256) {
+        if (before.isFile() && !before.isSymbolicLink() && before.size === 1082n && digest(await fs.readFile(licensePath)) === licenseSha256) {
           const after = await fs.lstat(licensePath, { bigint: true });
           if (before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs) {
             for (let target = licensePath, relativeDepth = 0; relativeDepth < 9; target = p.dirname(target), relativeDepth++) {
