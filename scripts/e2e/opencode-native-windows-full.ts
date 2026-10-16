@@ -46,39 +46,259 @@ import {lstat,readFile,realpath,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 const input=JSON.parse(process.env.OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT);
-const same=(a,b)=>process.platform==='win32'?path.resolve(a).toLowerCase()===path.resolve(b).toLowerCase():path.resolve(a)===path.resolve(b);
-const file=async(p,cap)=>{const s=await lstat(p);assert(s.isFile()&&!s.isSymbolicLink()&&s.size<=cap&&same(await realpath(p),p));return readFile(p,'utf8')};
+const diagnostic={stage:'store_read',constraint:null,checks:[],counts:{},reader:null,error:null};
+const check=(constraint,passed)=>{const previous=diagnostic.checks.find(row=>row.constraint===constraint);if(previous)previous.passed&&=!!passed;else diagnostic.checks.push({constraint,passed:!!passed});if(!passed){diagnostic.constraint=constraint;throw new Error(constraint)}};
+const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&(process.platform==='win32'?path.resolve(a).toLowerCase()===path.resolve(b).toLowerCase():path.resolve(a)===path.resolve(b));
+const file=async(p,cap)=>{const s=await lstat(p);check('store_file',s.isFile()&&!s.isSymbolicLink()&&s.size<=cap&&same(await realpath(p),p));return readFile(p,'utf8')};
+try{
 const store=JSON.parse(await file(path.join(input.dataRoot,'opencode','session-store.json'),4194304));
-assert(store.schemaVersion===1&&store.records&&typeof store.records==='object'&&!Array.isArray(store.records));
-const matches=Object.entries(store.records).filter(([key,r])=>r&&key===r.teamId+'::'+(r.laneId??'primary')+'::'+r.memberName&&r.teamId===input.teamName&&r.memberName===input.member&&r.opencodeSessionId===input.sessionId&&r.runId===input.runId&&same(r.projectPath,input.projectPath));
-assert(matches.length===1);
+check('store_schema',store.schemaVersion===1&&store.records&&typeof store.records==='object'&&!Array.isArray(store.records));
+diagnostic.stage='store_binding';
+const entries=Object.entries(store.records),canonical=entries.filter(([key,r])=>r&&key===r.teamId+'::'+(r.laneId??'primary')+'::'+r.memberName);
+const owned=canonical.filter(([,r])=>r.teamId===input.teamName&&r.memberName===input.member&&r.opencodeSessionId===input.sessionId);
+const matches=owned.filter(([,r])=>r.runId===input.runId&&same(r.projectPath,input.projectPath));
+diagnostic.counts={records:entries.length,canonical:canonical.length,team:canonical.filter(([,r])=>r.teamId===input.teamName).length,member:canonical.filter(([,r])=>r.teamId===input.teamName&&r.memberName===input.member).length,session:owned.length,run:owned.filter(([,r])=>r.runId===input.runId).length,project:owned.filter(([,r])=>same(r.projectPath,input.projectPath)).length,exact:matches.length};
+check('input_run_present',typeof input.runId==='string'&&input.runId.length>0);
+check('exact_record',matches.length===1);
 const record=matches[0][1];
-assert(typeof record.profileRootKey==='string'&&/^[A-Za-z0-9._-]{1,256}$/.test(record.profileRootKey)&&!['.','..'].includes(record.profileRootKey));
+diagnostic.stage='profile_key';
+check('profile_key',typeof record.profileRootKey==='string'&&/^[A-Za-z0-9._-]{1,256}$/.test(record.profileRootKey)&&!['.','..'].includes(record.profileRootKey));
+diagnostic.stage='reader_import';
 const {OpenCodeOfflineSessionReader}=await import(pathToFileURL(path.join(input.sdkRoot,'src/services/opencode/OpenCodeOfflineSessionReader.ts')).href);
 const {openCodeTranscriptProjector}=await import(pathToFileURL(path.join(input.sdkRoot,'src/services/opencode/OpenCodeTranscriptProjector.ts')).href);
+const {resolveClaudeMultimodelPaths}=await import(pathToFileURL(path.join(input.sdkRoot,'src/services/opencode/OpenCodeManagedPaths.ts')).href);
+check('data_root_resolver',same(resolveClaudeMultimodelPaths().data,input.dataRoot));
 const reader=new OpenCodeOfflineSessionReader(input.dataRoot);
+diagnostic.stage='db_identity';
 const db=reader.resolveDbPath(record.profileRootKey);
-assert(db&&same(await realpath(db),db)&&(await lstat(db)).isFile());
+check('db_resolved',typeof db==='string');
+check('db_identity',same(await realpath(db),db)&&(await lstat(db)).isFile());
+diagnostic.stage='history_read';
 const history=await reader.readSession(record);
-assert(history&&history.historyShape==='supported'&&history.historyComplete===true&&history.sessionIdentity?.sessionId===input.sessionId&&same(history.sessionIdentity.directory,input.projectPath));
-assert(history.messages.length<=32&&history.rawParts.length<=512);
+diagnostic.reader=history?{historyShape:history.historyShape??null,historyComplete:history.historyComplete??null,sessionPresent:!!history.sessionIdentity,sessionMatches:history.sessionIdentity?.sessionId===input.sessionId,directoryMatches:typeof history.sessionIdentity?.directory==='string'?same(history.sessionIdentity.directory,input.projectPath):null,snapshotEvidenceSupported:history.sessionIdentity?.snapshotEvidenceSupported??null,unsupportedReasons:history.sessionIdentity?.unsupportedReasons??[],diagnostics:history.diagnostics.slice(0,16).map(value=>value.slice(0,8192))}:null;
+if(history)Object.assign(diagnostic.counts,{messages:history.messages.length,rawMessages:history.rawMessages.length,rawParts:history.rawParts.length});
+check('history_present',!!history);
+diagnostic.stage='history_supported';check('history_supported',history.historyShape==='supported');
+diagnostic.stage='history_complete';check('history_complete',history.historyComplete===true);
+diagnostic.stage='session_identity';check('session_identity',history.sessionIdentity?.sessionId===input.sessionId);
+diagnostic.stage='project_identity';check('project_identity',same(history.sessionIdentity.directory,input.projectPath));
+diagnostic.stage='history_budget';check('message_budget',history.messages.length<=32);check('part_budget',history.rawParts.length<=512);
+diagnostic.stage='projector';
 const projection=openCodeTranscriptProjector.projectSessionMessages({sessionId:input.sessionId,messages:history.messages});
 for(const message of projection.messages){
  const raw=history.messages.find(row=>row.info.id===message.id);
- assert(raw);
+ check('projected_message',!!raw);
  if(raw.info.error){message.errorMessage=JSON.stringify(raw.info.error);message.errorName=raw.info.error.name??message.errorName;message.hasError=true}
  message.nativeTokens=raw.info.tokens;
  for(const tool of message.toolCalls){
   const parts=raw.parts.filter(part=>part.type==='tool'&&part.callID===tool.callId);
-  assert(parts.length===1);
+  check('projected_tool',parts.length===1);
   tool.nativeStatus=parts[0].state?.status;
   if(parts[0].state?.error)tool.outputText=typeof parts[0].state.error==='string'?parts[0].state.error:JSON.stringify(parts[0].state.error);
  }
 }
-const output=JSON.stringify({schemaVersion:1,providerId:'opencode',transcript:{...projection,durableState:record.lastKnownDurableState}});
-assert(Buffer.byteLength(output)<=2097152);
+diagnostic.stage='output';
+const output=JSON.stringify({schemaVersion:1,providerId:'opencode',captureDiagnostic:diagnostic,transcript:{...projection,durableState:record.lastKnownDurableState}});
+check('output_budget',Buffer.byteLength(output)<=2097152);
 await writeFile(input.output,output,{flag:'wx',mode:0o600});
+}catch(error){
+ diagnostic.error={name:typeof error?.name==='string'?error.name.slice(0,128):null,code:typeof error?.code==='string'||typeof error?.code==='number'?error.code:null,message:typeof error?.message==='string'?error.message.slice(0,8192):null,stack:typeof error?.stack==='string'?error.stack.slice(0,16384):null};
+ await writeFile(input.output,JSON.stringify({schemaVersion:1,providerId:'opencode',captureDiagnostic:diagnostic}),{flag:'wx',mode:0o600});
+ process.exitCode=1;
+}
 `;
+
+/** Only this TEST helper's original closed constraints and scrubbed errors. */
+export function projectV1OfflineCaptureDiagnostic(value: unknown) {
+  const row = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const input = row(value),
+    reader = row(input.reader),
+    error = row(input.error);
+  const stages = [
+    'store_read',
+    'store_binding',
+    'profile_key',
+    'reader_import',
+    'db_identity',
+    'history_read',
+    'history_supported',
+    'history_complete',
+    'session_identity',
+    'project_identity',
+    'history_budget',
+    'projector',
+    'output',
+  ];
+  const constraints = [
+    'store_file',
+    'store_schema',
+    'input_run_present',
+    'exact_record',
+    'profile_key',
+    'data_root_resolver',
+    'db_resolved',
+    'db_identity',
+    'history_present',
+    'history_supported',
+    'history_complete',
+    'session_identity',
+    'project_identity',
+    'message_budget',
+    'part_budget',
+    'projected_message',
+    'projected_tool',
+    'output_budget',
+  ];
+  const scrub = (value: unknown) => {
+    if (typeof value !== 'string') return null;
+    let text = value.slice(0, 8192);
+    const prefix = [
+      'unsupported-opencode-history-shape',
+      'sqlite-busy',
+      'snapshot-project-identity-missing',
+      'snapshot-project-not-git',
+      'snapshot-session-directory-outside-worktree',
+      'snapshot-project-worktree-mismatch',
+    ].find((code) => text.startsWith(`${code}:`));
+    if (prefix) text = text.slice(prefix.length + 1).trimStart();
+    if (text.includes('{') || text.trimStart().startsWith('[')) {
+      try {
+        const parsed = row(JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)));
+        const message = [parsed, row(parsed.error), row(parsed.data), row(row(parsed.error).data)]
+          .map((value) => value.message)
+          .find((value) => typeof value === 'string');
+        if (typeof message !== 'string') return null;
+        text = message;
+      } catch {
+        return null;
+      }
+    }
+    if (text.includes('{') || text.trimStart().startsWith('[')) return null;
+    const detail = redactLaunchFailureArtifactText(text)
+      .replaceAll(String.fromCharCode(27), '')
+      .replace(/[A-Za-z]:[\\/][^\s"'<>),;]*/g, '[path]')
+      .replace(/\\\\[^\s"'<>),;]*/g, '[path]')
+      .replace(/\/[^\s"'<>),;]+/g, '[path]')
+      .replace(/[A-Za-z0-9_+./=-]{24,}/g, '[opaque]')
+      .slice(0, 2048);
+    return prefix ? `${prefix}: ${detail}` : detail;
+  };
+  const integer = (value: unknown, max = 1_000_000) =>
+    Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= max
+      ? Number(value)
+      : null;
+  const boolean = (value: unknown) => (typeof value === 'boolean' ? value : null);
+  const sources = [
+    'OpenCodeOfflineSessionReader',
+    'OpenCodeTranscriptProjector',
+    'OpenCodeManagedPaths',
+    'OpenCodeBridgePath',
+    'OpenCodeAppManagedBootstrapMessage',
+  ];
+  const stack = typeof error.stack === 'string' ? error.stack.slice(0, 16384) : '';
+  const frame =
+    /(?:\[eval\]|(OpenCodeOfflineSessionReader|OpenCodeTranscriptProjector|OpenCodeManagedPaths|OpenCodeBridgePath|OpenCodeAppManagedBootstrapMessage)\.ts):(\d+):(\d+)/.exec(
+      stack
+    );
+  const unsupported = [
+    'snapshot-project-identity-missing',
+    'snapshot-project-not-git',
+    'snapshot-session-directory-outside-worktree',
+    'snapshot-project-worktree-mismatch',
+  ];
+  return {
+    stage: stages.find((stage) => stage === input.stage) ?? 'unknown',
+    constraint: constraints.find((constraint) => constraint === input.constraint) ?? null,
+    checks: Array.isArray(input.checks)
+      ? input.checks.slice(0, constraints.length).flatMap((value) => {
+          const check = row(value),
+            constraint = constraints.find((constraint) => constraint === check.constraint);
+          return constraint && typeof check.passed === 'boolean'
+            ? [{ constraint, passed: check.passed }]
+            : [];
+        })
+      : [],
+    counts: Object.fromEntries(
+      [
+        'records',
+        'canonical',
+        'team',
+        'member',
+        'session',
+        'run',
+        'project',
+        'exact',
+        'messages',
+        'rawMessages',
+        'rawParts',
+      ].map((key) => [key, integer(row(input.counts)[key])])
+    ),
+    reader: input.reader
+      ? {
+          historyShape:
+            ['supported', 'unsupported'].find((shape) => shape === reader.historyShape) ?? null,
+          historyComplete: boolean(reader.historyComplete),
+          sessionPresent: boolean(reader.sessionPresent),
+          sessionMatches: boolean(reader.sessionMatches),
+          directoryMatches: boolean(reader.directoryMatches),
+          snapshotEvidenceSupported: boolean(reader.snapshotEvidenceSupported),
+          unsupportedReasons: Array.isArray(reader.unsupportedReasons)
+            ? unsupported.filter((reason) =>
+                (reader.unsupportedReasons as unknown[]).includes(reason)
+              )
+            : [],
+          diagnostics: Array.isArray(reader.diagnostics)
+            ? reader.diagnostics.slice(0, 16).map(scrub)
+            : [],
+        }
+      : null,
+    error: input.error
+      ? {
+          name:
+            [
+              'Error',
+              'AssertionError',
+              'SyntaxError',
+              'TypeError',
+              'RangeError',
+              'SQLiteError',
+              'SystemError',
+            ].find((name) => name === error.name) ?? null,
+          code:
+            [
+              'ENOENT',
+              'EACCES',
+              'EPERM',
+              'EINVAL',
+              'EISDIR',
+              'ENOTDIR',
+              'ERR_MODULE_NOT_FOUND',
+              'MODULE_NOT_FOUND',
+              'ERR_SQLITE_ERROR',
+              'SQLITE_ERROR',
+              'SQLITE_BUSY',
+              'SQLITE_LOCKED',
+              'SQLITE_CANTOPEN',
+              'SQLITE_CORRUPT',
+              'SQLITE_NOTADB',
+              'SQLITE_SCHEMA',
+              'SQLITE_READONLY',
+            ].find((code) => code === error.code) ?? integer(error.code, 0xffffffff),
+          detail: scrub(error.message),
+          sourceFrame: frame
+            ? {
+                source: sources.find((source) => source === frame[1]) ?? 'helper',
+                line: integer(Number(frame[2])),
+                column: integer(Number(frame[3])),
+              }
+            : null,
+        }
+      : null,
+  };
+}
 
 /** TEST-only projection of the existing SDK canonical transcript, before Stop.
  * Keep native turn boundaries that the display/task-log projection omits. */
@@ -1514,6 +1734,7 @@ async function main() {
       observation: 'captured' | 'unavailable';
       member: 'alice' | 'bob';
       stage: 'source_sdk' | 'image_hash' | 'offline_read' | 'file_read' | 'projection';
+      diagnostic?: ReturnType<typeof projectV1OfflineCaptureDiagnostic>;
       packet?: ReturnType<typeof projectV1NativeTranscript>;
       failure?: {
         classification: string;
@@ -2023,6 +2244,8 @@ async function main() {
       const output = path.join(desktop.root, `native-transcript-${randomUUID()}.json`);
       const bunConfig = output + '.bunfig.toml';
       let captureStage: NonNullable<typeof proof.nativeTranscriptFailure>['stage'] = 'source_sdk';
+      let readProcessError: unknown;
+      let captureDiagnostic: ReturnType<typeof projectV1OfflineCaptureDiagnostic> | undefined;
       try {
         const sdkRoot = process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT;
         assert(
@@ -2104,7 +2327,9 @@ async function main() {
             timeout: 20_000,
             maxBuffer: 16_384,
           }
-        );
+        ).catch((error: unknown) => {
+          readProcessError = error;
+        });
         captureStage = 'file_read';
         const stat = await lstat(output);
         assert(
@@ -2114,12 +2339,20 @@ async function main() {
             stat.size <= V1_TRANSCRIPT_MAX_BYTES &&
             (await realpath(output)) === output
         );
+        const captured = JSON.parse(await readFile(output, 'utf8'));
+        captureDiagnostic = projectV1OfflineCaptureDiagnostic(captured.captureDiagnostic);
+        if (!captured.transcript) {
+          captureStage = 'offline_read';
+          throw readProcessError ?? new Error('TEST offline capture failed');
+        }
+        assert(!readProcessError, 'TEST offline capture process failed');
         captureStage = 'projection';
         proof.nativeTranscriptFailure = {
           observation: 'captured',
           member: failedTask.owner,
           stage: captureStage,
-          packet: projectV1NativeTranscript(JSON.parse(await readFile(output, 'utf8')), {
+          diagnostic: captureDiagnostic,
+          packet: projectV1NativeTranscript(captured, {
             sessionId: nativeSession,
             teamName: desktop.teamName,
             taskId: failedTask.id,
@@ -2127,13 +2360,15 @@ async function main() {
         };
       } catch (captureError: unknown) {
         const failure =
-          captureError && typeof captureError === 'object'
-            ? (captureError as Record<string, unknown>)
+          (readProcessError ?? captureError) &&
+          typeof (readProcessError ?? captureError) === 'object'
+            ? ((readProcessError ?? captureError) as Record<string, unknown>)
             : {};
         proof.nativeTranscriptFailure = {
           observation: 'unavailable',
           member: failedTask.owner,
           stage: captureStage,
+          diagnostic: captureDiagnostic,
           failure: {
             classification:
               captureError instanceof assert.AssertionError

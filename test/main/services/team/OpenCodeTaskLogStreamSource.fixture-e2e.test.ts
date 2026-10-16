@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
 import {
   projectV1NativeTranscript,
+  projectV1OfflineCaptureDiagnostic,
   V1_OFFLINE_TRANSCRIPT_SCRIPT,
 } from '../../../../scripts/e2e/opencode-native-windows-full';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
@@ -138,6 +139,79 @@ function createSource(params: {
 }
 
 describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
+  it('preserves original offline constraint, reader reason and source frame without private errors or raw JSON', () => {
+    const packet = projectV1OfflineCaptureDiagnostic({
+      stage: 'history_complete',
+      constraint: 'history_complete',
+      checks: [
+        { constraint: 'history_present', passed: true },
+        { constraint: 'history_complete', passed: false },
+        { constraint: 'raw-private', passed: false },
+      ],
+      counts: { messages: 3, rawMessages: 3, rawParts: 9, private: 'TEST-secret' },
+      reader: {
+        historyShape: 'supported',
+        historyComplete: false,
+        sessionPresent: true,
+        unsupportedReasons: ['snapshot-project-worktree-mismatch', 'C:\\TEST-private'],
+        diagnostics: [
+          'OpenCode SQLite read failed - database is locked C:\\TEST-private\\opencode.db sk-123456789012345678901234567890',
+        ],
+      },
+      error: {
+        name: 'Error',
+        code: 'SQLITE_BUSY',
+        message:
+          'database is locked C:\\TEST-private\\opencode.db sk-123456789012345678901234567890',
+        stack:
+          'Error: private\n at readSession (C:\\TEST-private\\OpenCodeOfflineSessionReader.ts:205:17)',
+      },
+      stderr: 'never-publish',
+    });
+    expect(packet).toMatchObject({
+      stage: 'history_complete',
+      constraint: 'history_complete',
+      checks: [
+        { constraint: 'history_present', passed: true },
+        { constraint: 'history_complete', passed: false },
+      ],
+      counts: { messages: 3, rawMessages: 3, rawParts: 9 },
+      reader: {
+        historyComplete: false,
+        unsupportedReasons: ['snapshot-project-worktree-mismatch'],
+        diagnostics: [expect.stringContaining('database is locked')],
+      },
+      error: {
+        code: 'SQLITE_BUSY',
+        detail: expect.stringContaining('database is locked'),
+        sourceFrame: { source: 'OpenCodeOfflineSessionReader', line: 205, column: 17 },
+      },
+    });
+    expect(JSON.stringify(packet)).not.toMatch(
+      /TEST-private|sk-123|never-publish|raw-private|TEST-secret/
+    );
+    expect(
+      projectV1OfflineCaptureDiagnostic({
+        error: {
+          message: JSON.stringify({
+            headers: { Authorization: 'never-publish' },
+            error: { message: 'Original safe cause' },
+          }),
+        },
+      }).error?.detail
+    ).toBe('Original safe cause');
+    expect(
+      projectV1OfflineCaptureDiagnostic({
+        error: { message: '{"headers":{"Authorization":"never-publish"}}' },
+      }).error?.detail
+    ).toBeNull();
+    expect(
+      projectV1OfflineCaptureDiagnostic({
+        error: { code: 'raw-private-code', stack: 'private.ts:2:3' },
+      }).error
+    ).toMatchObject({ code: null, sourceFrame: null });
+  });
+
   it.skipIf(
     !process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT ||
       !process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH
@@ -250,6 +324,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
         const originalDb = await readFile(dbPath);
         const env = {
           ...process.env,
+          CLAUDE_MULTIMODEL_DATA_HOME: input.dataRoot,
           OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify(input),
         };
         const config = path.join(root, 'empty-bunfig.toml');
@@ -294,6 +369,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
         });
         expect(packet.messages[2]?.assistantText).toContain('cannot continue');
         expect(JSON.stringify(packet)).not.toMatch(/TEST-private|never-publish|sk-123/);
+        const foreignOutput = path.join(root, 'foreign-private.json');
         await expect(
           promisify(execFile)(
             process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH!,
@@ -304,6 +380,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
                 OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify({
                   ...input,
                   runId: 'foreign-run',
+                  output: foreignOutput,
                 }),
               },
               cwd: root,
@@ -312,6 +389,48 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
             }
           )
         ).rejects.toThrow();
+        const foreign = JSON.parse(await readFile(foreignOutput, 'utf8'));
+        expect(foreign.transcript).toBeUndefined();
+        expect(projectV1OfflineCaptureDiagnostic(foreign.captureDiagnostic)).toMatchObject({
+          stage: 'store_binding',
+          constraint: 'exact_record',
+          counts: { session: 1, run: 0, project: 1, exact: 0 },
+          error: { name: 'Error', detail: 'exact_record', sourceFrame: { source: 'helper' } },
+        });
+        const unsupportedDb = new DatabaseSync(dbPath);
+        unsupportedDb.exec('DROP TABLE part');
+        unsupportedDb.close();
+        const unsupportedOutput = path.join(root, 'unsupported-private.json');
+        await expect(
+          promisify(execFile)(
+            process.env.OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH!,
+            ['--no-env-file', `--config=${config}`, '--eval', V1_OFFLINE_TRANSCRIPT_SCRIPT],
+            {
+              env: {
+                ...env,
+                OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT: JSON.stringify({
+                  ...input,
+                  output: unsupportedOutput,
+                }),
+              },
+              cwd: root,
+              timeout: 20_000,
+              maxBuffer: 16_384,
+            }
+          )
+        ).rejects.toThrow();
+        const unsupported = projectV1OfflineCaptureDiagnostic(
+          JSON.parse(await readFile(unsupportedOutput, 'utf8')).captureDiagnostic
+        );
+        expect(unsupported).toMatchObject({
+          stage: 'history_supported',
+          constraint: 'history_supported',
+          reader: { historyShape: 'unsupported', historyComplete: null, sessionPresent: false },
+          error: { name: 'Error', detail: 'history_supported' },
+        });
+        expect(unsupported.reader?.diagnostics).toContain(
+          'unsupported-opencode-history-shape: OpenCode SQLite part.id missing'
+        );
       } finally {
         await rm(root, { recursive: true, force: true });
       }
