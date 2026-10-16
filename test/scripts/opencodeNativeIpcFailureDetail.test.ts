@@ -1,5 +1,7 @@
-import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import { createHash, randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { compileFunction, constants, runInNewContext } from 'node:vm';
@@ -485,4 +487,67 @@ it('accepts only the bounded final Stop causal suffix with its original error pr
     'team_stop_unconfirmed:x' + marker + JSON.stringify(packet) + '\nforeign',
     'team_stop_unconfirmed:x' + marker + 'x'.repeat(2049)])
     expect(projectIpcCausalFailure(value)).toBeNull();
+});
+
+
+it('actual bundled verifier hashes every file with at most eight readers and drains failures', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  const ast = ts.createSourceFile('full.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find((node) => node.name?.text === 'bundledRuntime')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-runtime-hash-')));
+  try {
+    const base = path.join(root, 'resources/runtime');
+    await mkdir(base, { recursive: true });
+    const executable = path.join(root, 'app.exe');
+    await writeFile(executable, 'TEST-app');
+    const sdkSha = 'a'.repeat(40);
+    const files: Record<string, string> = {};
+    for (const [name, bytes] of [['COMMIT_SHA', sdkSha], ['claude-multimodel.exe', 'TEST-cli'],
+      ...Array.from({ length: 18 }, (_, index) => [`file-${index}.txt`, `TEST-content-${index}`])]) {
+      await writeFile(path.join(base, name), bytes);
+      files[name] = createHash('sha256').update(bytes).digest('hex');
+    }
+    const manifest = path.join(root, 'manifest.json');
+    await writeFile(manifest, JSON.stringify({ sdkSha, files }));
+    let active = 0, maximum = 0, claimed = 0;
+    let fail: Error | null = null;
+    const verify = compileFunction(`let preproofStage;const preproofFacts={};
+      const BUNDLED_MANIFEST_MAX_BYTES=33554432,BUNDLED_MANIFEST_MAX_ENTRIES=131072;
+      ${compiled};return bundledRuntime;`, ['assert', 'path', 'lstat', 'realpath', 'readFile', 'createHash', 'createReadStream'])(
+      assert, path, async (file: string) => {
+        if (file !== manifest) { claimed++; if (fail && file.endsWith('COMMIT_SHA')) throw fail; }
+        return lstat(file);
+      }, realpath, readFile, createHash, (file: string) => {
+        const stream = createReadStream(file);
+        active++; maximum = Math.max(maximum, active);
+        stream.once('close', () => { active--; });
+        return stream;
+      }
+    ) as (executable: string, manifest: string) => Promise<{runtimeDigests: Record<string, string>}>;
+    const result = await verify(executable, manifest);
+    expect(result.runtimeDigests).toEqual(files);
+    expect(Object.keys(result.runtimeDigests)).toEqual(Object.keys(files));
+    expect(maximum).toBeGreaterThan(1);
+    expect(maximum).toBeLessThanOrEqual(8);
+    expect(active).toBe(0);
+    claimed = 0;
+    fail = new Error('TEST-original-read-error');
+    await expect(verify(executable, manifest)).rejects.toBe(fail);
+    expect(claimed).toBeLessThanOrEqual(8);
+    expect(active).toBe(0);
+    fail = null;
+    await writeFile(path.join(base, 'file-0.txt'), 'TAMPER');
+    await expect(verify(executable, manifest)).rejects.toThrow('Bundled runtime byte mismatch');
+    expect(active).toBe(0);
+    await rm(path.join(base, 'file-0.txt'));
+    await symlink(path.join(base, 'file-1.txt'), path.join(base, 'file-0.txt'));
+    await expect(verify(executable, manifest)).rejects.toThrow();
+    expect(active).toBe(0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

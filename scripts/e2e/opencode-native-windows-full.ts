@@ -960,27 +960,41 @@ async function bundledRuntime(executable: string, manifestFile: string) {
       manifest.files['claude-multimodel.exe'],
     'Complete bundled executable provenance required'
   );
-  const digests: Record<string, string> = {};
+  const observedDigests = new Array<string>(entries.length);
+  let next = 0;
+  let failed = false;
+  let originalError: unknown;
   preproofStage = 'runtime_hashes';
-  for (const [relative, expected] of entries) {
-    assert(
-      relative &&
-        !relative.includes('\\') &&
-        relative.split('/').every((part) => part && part !== '.' && part !== '..') &&
-        !path.isAbsolute(relative) &&
-        !relative.includes(':')
-    );
-    assert(/^[a-f0-9]{64}$/.test(expected));
-    const file = path.join(base, relative);
-    const fileStat = await lstat(file);
-    assert(fileStat.isFile() && !fileStat.isSymbolicLink());
-    assert.equal((await realpath(file)).toLowerCase(), file.toLowerCase());
-    const hash = createHash('sha256');
-    for await (const bytes of createReadStream(file)) hash.update(bytes);
-    const observed = hash.digest('hex');
-    assert.equal(observed, expected, 'Bundled runtime byte mismatch');
-    digests[relative] = observed;
-  }
+  const worker = async () => {
+    while (!failed && next < entries.length) {
+      const index = next++;
+      const [relative, expected] = entries[index];
+      try {
+        assert(
+          relative &&
+            !relative.includes('\\') &&
+            relative.split('/').every((part) => part && part !== '.' && part !== '..') &&
+            !path.isAbsolute(relative) &&
+            !relative.includes(':')
+        );
+        assert(/^[a-f0-9]{64}$/.test(expected));
+        const file = path.join(base, relative);
+        const fileStat = await lstat(file);
+        assert(fileStat.isFile() && !fileStat.isSymbolicLink());
+        assert.equal((await realpath(file)).toLowerCase(), file.toLowerCase());
+        const hash = createHash('sha256');
+        for await (const bytes of createReadStream(file)) hash.update(bytes);
+        const observed = hash.digest('hex');
+        assert.equal(observed, expected, 'Bundled runtime byte mismatch');
+        observedDigests[index] = observed;
+      } catch (error: unknown) {
+        if (!failed) { failed = true; originalError = error; }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(8, entries.length) }, () => worker()));
+  if (failed) throw originalError;
+  const digests = Object.fromEntries(entries.map(([relative], index) => [relative, observedDigests[index]]));
   preproofStage = 'runtime_commit';
   assert.equal((await readFile(path.join(base, 'COMMIT_SHA'), 'utf8')).trim(), manifest.sdkSha);
   return { bundledSdkSha: manifest.sdkSha, runtimeDigests: digests };
