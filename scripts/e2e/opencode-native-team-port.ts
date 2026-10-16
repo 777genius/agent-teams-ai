@@ -602,7 +602,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       check();
       return api.teams.processAlive(teamName);
     },
-    async launchTeam(request: Parameters<ElectronAPI['teams']['launchTeam']>[0]) {
+    async launchTeam(request: Parameters<ElectronAPI['teams']['launchTeam']>[0], stoppedRunId?: string) {
       check();
       if (
         relaunchAttempted ||
@@ -612,14 +612,17 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       )
         throw new Error('same owned team relaunch required');
       relaunchAttempted = true;
-      // A confirmed TEST app restart creates a fresh renderer adapter. Recover
-      // the stopped team's persisted run identity through the normal API.
+      // Confirmed Stop clears the active pointer. The TEST host retains the
+      // exact previous run across its already-verified stop and app restart.
       if (!runId) {
         const retained = await api.teams.getTeamAgentRuntime(teamName);
-        if (!retained.runId || (await api.teams.processAlive(teamName))) {
+        if (!stoppedRunId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(stoppedRunId)
+          || (retained.runId !== null && retained.runId !== stoppedRunId)
+          || Object.values(retained.members).some((member) => member.alive)
+          || (await api.teams.processAlive(teamName))) {
           throw new Error('retained stopped TEST run required');
         }
-        runId = retained.runId;
+        runId = stoppedRunId;
       }
       const previous = runId;
       submitted = true;

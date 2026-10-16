@@ -47,6 +47,7 @@ describe('Electron TEST delivery status privacy boundary', () => {
         responsePending: true,
         ledgerStatus: 'retry_scheduled',
         responseState: 'not_observed',
+        nativeSessionFailure: null,
         reasonCode: 'contract_violation',
         diagnosticCodes: [
           'contract_violation',
@@ -78,7 +79,7 @@ describe('Electron TEST delivery status privacy boundary', () => {
     const port = electronTeamPort({ teams: {
       onProvisioningProgress: vi.fn(() => () => undefined),
       getData: vi.fn(async () => data), getTask: vi.fn(async () => task),
-      getTaskLogStream: vi.fn(async () => ({ segments: [{ chunks: [secret] }],
+      getTaskLogStream: vi.fn(async () => ({ segments: [{ actor: { memberName: 'alice' }, chunks: [{ rawMessages: [{ uuid: 'secret-message', type: 'assistant', content: secret, toolResults: [], toolCalls: [] }] }] }],
         runtimeProjection: { projectedMessageCount: 2, nativeToolCount: 1 } })),
       getMessagesPage: vi.fn(async () => ({ messages: [
         { to: 'alice', messageId: 'foreign-task', taskRefs: [{ ...ref, taskId: 'foreign' }] },
@@ -107,4 +108,39 @@ describe('Electron TEST delivery status privacy boundary', () => {
     } finally { port.dispose(); }
   });
 
+});
+
+
+it('relaunches a stopped TEST run after restart clears the active runtime pointer', async () => {
+  const teamName = 'test-opencode-relaunch';
+  const cwd = '/tmp/TEST-relaunch/project';
+  const previous = '196af1bd-0e0b-4caf-815f-f050cd1d8b2a';
+  const fresh = '296af1bd-0e0b-4caf-815f-f050cd1d8b2a';
+  const request = { teamName, cwd, providerId: 'opencode' as const };
+  const fixture = (runId: string | null, alive: boolean, processAlive: boolean, result = fresh) => {
+    const launchTeam = vi.fn(async () => ({ runId: result }));
+    return { launchTeam, port: electronTeamPort({ teams: {
+      onProvisioningProgress: () => () => undefined,
+      getTeamAgentRuntime: async () => ({ runId, members: { alice: { alive } } }),
+      processAlive: async () => processAlive,
+      launchTeam,
+    } } as unknown as ElectronAPI, teamName, cwd) };
+  };
+  const valid = fixture(null, false, false);
+  await expect(valid.port.launchTeam(request, previous)).resolves.toMatchObject({ runId: fresh });
+  expect(valid.launchTeam).toHaveBeenCalledExactlyOnceWith(request);
+  await expect(valid.port.launchTeam(request, previous)).rejects.toThrow('same owned team');
+  valid.port.dispose();
+  for (const [retained, alive, processAlive, saved] of [
+    [null, false, false, undefined], [null, false, false, '------------------------------------'], [fresh, false, false, previous], ['', false, false, previous],
+    [null, true, false, previous], [null, false, true, previous],
+  ] as const) {
+    const invalid = fixture(retained, alive, processAlive);
+    await expect(invalid.port.launchTeam(request, saved)).rejects.toThrow('retained stopped TEST run');
+    expect(invalid.launchTeam).not.toHaveBeenCalled();
+    invalid.port.dispose();
+  }
+  const reused = fixture(null, false, false, previous);
+  await expect(reused.port.launchTeam(request, previous)).rejects.toThrow('fresh run identity required');
+  reused.port.dispose();
 });

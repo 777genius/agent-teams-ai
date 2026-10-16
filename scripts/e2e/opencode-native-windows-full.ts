@@ -2218,7 +2218,7 @@ async function main() {
       providerId: 'opencode',
       model,
       skipPermissions: true,
-    });
+    }, launch.runId);
     assert.notEqual(relaunch.runId, launch.runId);
     proof.runIds.push(relaunch.runId);
     await provisioned(app, relaunch.runId);
