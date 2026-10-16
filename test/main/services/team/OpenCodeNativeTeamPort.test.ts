@@ -151,8 +151,9 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
   const secret = 'TEST_PRIVATE_COMMAND_OUTPUT';
   const program = 'C:\\TEST-project\\bob-verify.cjs';
   const marker = 'COMMAND_EXEC:TEST-nonce';
-  const execution = (command: string, paired = true, content = marker) => ({
-    toolCall: { id: secret, name: 'bash', input: { command } },
+  const execution = (command: string, paired = true, content = marker): Parameters<typeof nativeCommandMatch>[0] => ({
+    startTime: new Date(0),
+    toolCall: { id: secret, name: 'bash', input: { command }, isTask: false },
     result: { toolUseId: paired ? secret : 'unpaired', isError: false, content },
   });
   const exact = execution(`node "${program}" ${secret}`);
@@ -184,7 +185,7 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     expect(observed.exhaustive).toBe(false);
     const owned = observed.tuples.filter((row) => row.actorMatches && row.sessionMatches);
     expect(owned.map((row) => row.match)).toEqual(calls.map((call) =>
-      nativeCommandMatch(call as Parameters<typeof nativeCommandMatch>[0], program, marker)));
+      nativeCommandMatch(call, program, marker)));
     expect(owned.map((row) => [row.match.programMatches, row.match.nodeMatches,
       row.match.resultPaired, row.match.markerMatches])).toEqual([
       [false, true, true, true], [true, false, true, true], [true, true, false, true],

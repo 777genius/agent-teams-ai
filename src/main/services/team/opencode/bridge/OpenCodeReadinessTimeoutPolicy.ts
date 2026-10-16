@@ -59,8 +59,9 @@ function isLocalOpenCodeLaunchModel(selectedModel: string): boolean {
 }
 
 export function resolveOpenCodeLaunchTimeoutMs(
-  input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members'>,
-  configuredTimeoutMs?: number
+  input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members' | 'executionProof'>,
+  configuredTimeoutMs?: number,
+  platform: NodeJS.Platform = process.platform
 ): number {
   if (configuredTimeoutMs !== undefined) {
     return configuredTimeoutMs;
@@ -71,16 +72,20 @@ export function resolveOpenCodeLaunchTimeoutMs(
   ) {
     return LOCAL_OPENCODE_LAUNCH_TIMEOUT_MS;
   }
+  const defaultLaunchMs = Math.max(
+    OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch,
+    platform === 'win32' && input.executionProof?.opencodeVersion?.startsWith('2.') ? 300_000 : 0
+  );
   const usesSerialNativeSubscriptionCli =
     input.selectedModel.startsWith('cursor-acp/') || input.selectedModel.startsWith('kiro/');
   if (!usesSerialNativeSubscriptionCli) {
-    return OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch;
+    return defaultLaunchMs;
   }
   const participantCount = Math.max(1, input.members.length + 1);
   return Math.min(
     MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS,
     Math.max(
-      OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch,
+      defaultLaunchMs,
       input.selectedModel.startsWith('cursor-acp/')
         ? participantCount * CURSOR_HANDOFF_ALLOWANCE_MS + CURSOR_PHASE_RESERVE_MS
         : participantCount * NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS
