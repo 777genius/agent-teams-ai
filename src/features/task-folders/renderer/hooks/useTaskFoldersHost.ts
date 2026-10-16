@@ -52,8 +52,15 @@ export function useTaskFoldersHost(
     width: number;
   } | null>(null);
   const canonicalProjection = useMemo(
-    () => projectFolders(state.snapshot, tasks, local.isArchived, local.getRenamedSubject, true),
-    [state.snapshot, tasks, local]
+    () =>
+      projectFolders(
+        state.snapshot,
+        sortGlobalTasks(tasks, 'time', contextId),
+        local.isArchived,
+        local.getRenamedSubject,
+        true
+      ),
+    [state.snapshot, tasks, local, contextId]
   );
   const getEffectiveSubject = useMemo(
     () =>

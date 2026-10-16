@@ -176,6 +176,60 @@ it.each([0, 80, 239])(
     ).toBe('true');
   }
 );
+it('keeps Manual Unfiled fresh while preserving authored folder order and persisted snapshot', async () => {
+  const tasks = ['old', 'filed-old', 'middle', 'filed-new', 'new'].map((id, index) =>
+    makeGlobalTask({ id, updatedAt: `2026-01-0${index + 1}T00:00:00.000Z` })
+  );
+  useStore.setState({ globalTasks: tasks });
+  folderController.setCatalog(tasks.map(({ teamName, id }) => ({ teamName, taskId: id })));
+  await folderController.execute({ type: 'create', id: 'ordered', name: 'Ordered', parent: null });
+  for (const taskId of ['filed-old', 'filed-new']) {
+    await folderController.execute({
+      type: 'moveTask',
+      identity: { teamName: 't', taskId },
+      parent: 'ordered',
+      anchor: { append: true },
+    });
+  }
+  const snapshot = folderController.getSnapshot().snapshot;
+  const persisted = localStorage.getItem('taskFolders:v1');
+  await renderAt(300);
+  await act(() => Promise.resolve(panelController.hold('manual', true)));
+  const tree = document.querySelector('[data-testid="task-folders-tree"]')!;
+  await act(() =>
+    Promise.resolve(
+      tree
+        .querySelector<HTMLButtonElement>(
+          '[data-folder-id="ordered"] [aria-label="taskFolders.expand"]'
+        )!
+        .click()
+    )
+  );
+  const visibleOrder = () =>
+    [...tree.querySelectorAll('[data-task-key]')].map(
+      (row) => (JSON.parse(row.getAttribute('data-task-key')!) as [string, string])[1]
+    );
+  expect(visibleOrder()).toEqual(['filed-old', 'filed-new', 'new', 'middle', 'old']);
+
+  await act(() =>
+    Promise.resolve(
+      useStore.setState({
+        globalTasks: tasks.map((task) =>
+          task.id === 'old' ? { ...task, updatedAt: '2026-01-06T00:00:00.000Z' } : task
+        ),
+      })
+    )
+  );
+  expect(visibleOrder()).toEqual(['filed-old', 'filed-new', 'old', 'new', 'middle']);
+  expect(folderController.getSnapshot().snapshot).toBe(snapshot);
+  expect(snapshot.folders[0].children).toEqual([
+    { kind: 'task', identity: { teamName: 't', taskId: 'filed-old' } },
+    { kind: 'task', identity: { teamName: 't', taskId: 'filed-new' } },
+  ]);
+  expect(localStorage.getItem('taskFolders:v1')).toBe(persisted);
+  expect(tasks.map((task) => task.id)).toEqual(['old', 'filed-old', 'middle', 'filed-new', 'new']);
+});
+
 it('keeps a same-window drag nonmodal with an adjacent usable panel at 240px', async () => {
   await renderAt(240);
   await startSidebarDrag();
