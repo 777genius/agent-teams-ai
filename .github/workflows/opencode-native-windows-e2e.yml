@@ -321,7 +321,7 @@ jobs:
           path: TEST-bun-download-cache
           key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
       - name: Qualify native command isolation before desktop installation
-        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        if: ${{ !inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
         working-directory: TEST-native-sdk
         shell: pwsh
         run: |
@@ -331,7 +331,7 @@ jobs:
           bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
           if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
       - name: Qualify native ownership and command retirement
-        if: ${{ !inputs.provider_only }}
+        if: ${{ !inputs.provider_only && inputs.versions != 'v1' }}
         working-directory: TEST-native-sdk
         shell: pwsh
         run: |

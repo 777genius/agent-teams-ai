@@ -349,6 +349,26 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         !Number.isSafeInteger(value.predicate) || Number(value.predicate) < 0 || Number(value.predicate) > 4) return null;
     return { operation: value.operation, sourceLine: value.sourceLine, predicate: value.predicate, passed: false };
   };
+  const acquisitionTiming = (input: unknown) => {
+    const value = row(input);
+    const phases = ['preparing', 'delivery-resolved', 'profile-validated', 'native-validated', 'graph-validated',
+      'resolution-prepared', 'controller-prepared', 'prepared', 'mapping', 'child-bound', 'start-sent',
+      'ready', 'catalog-ready', 'auth-ready', 'selection-ready'];
+    if (Object.keys(value).sort().join(',') !== 'elapsedMs,history' || !Number.isSafeInteger(value.elapsedMs) ||
+        Number(value.elapsedMs) < 0 || Number(value.elapsedMs) > 86400000 ||
+        !Array.isArray(value.history) || value.history.length < 1 || value.history.length > 15) return null;
+    const history: { phase: string; elapsedMs: number }[] = [];
+    for (const item of value.history) {
+      const entry = row(item);
+      if (Object.keys(entry).sort().join(',') !== 'elapsedMs,phase' || typeof entry.phase !== 'string' ||
+          !phases.includes(entry.phase) || !Number.isSafeInteger(entry.elapsedMs) ||
+          Number(entry.elapsedMs) < (history.at(-1)?.elapsedMs ?? 0) || Number(entry.elapsedMs) > Number(value.elapsedMs) ||
+          history.some(previous => previous.phase === entry.phase)) return null;
+      history.push({ phase: entry.phase, elapsedMs: Number(entry.elapsedMs) });
+    }
+    if (history[0]?.phase !== 'preparing' || history[0].elapsedMs !== 0) return null;
+    return { elapsedMs: Number(value.elapsedMs), history };
+  };
   const collect = async () => {
     const fs = await import('node:fs/promises'), paths = await import('node:path');
     const run = row(value), binding = row(run.binding), root = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
@@ -392,7 +412,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       'run_owner_stale', 'run_process_unknown', 'execution_owner_unknown', 'cleanup_unknown', 'execution_timeout',
       'terminal_cut_unknown', 'session_selection_changed', 'execution_profile_changed', 'execution_selected_auth_changed'];
     // Exact closed producer categories; do not classify arbitrary error text here.
-    const providerCodes = ['execution_path_alias', 'timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
+    const providerCodes = ['run_acquisition_timeout', 'run_initialization_timeout', 'run_stopped', 'cancelled', 'execution_path_alias', 'timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
   'provider_catalog_scope_changed', 'provider_catalog_location_changed', 'provider_integration_changed', 'provider_credential_identity_changed',
   'provider_owned_connection_unknown', 'provider_active_connection_changed', 'provider_auth_publication_changed', 'provider_auth_publication_unknown',
   'provider_selected_model_missing', 'provider_original_connect_unknown', 'provider_original_execution_pending', 'provider_execution_target_changed',
@@ -470,7 +490,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         if (!/^[a-f0-9-]{36}\.json$/.test(entry.name)) continue;
         const result = await read(diagnosticRoot, entry.name, 16384), data = row(result.data), native = row(data.native);
         const nativeStage = nativeStages.find((stage) => stage === native.stage);
-        const startup = row(data.startup);
+        const startup = row(data.startup), acquisition = acquisitionTiming(data.acquisition);
         const startupElapsedMs = Number.isSafeInteger(startup.elapsedMs) && Number(startup.elapsedMs) >= 0 && Number(startup.elapsedMs) <= 86400000 ? Number(startup.elapsedMs) : null;
         const startupHistory: { stage: string; elapsedMs: number }[] = [];
         if (Array.isArray(startup.history) && startup.history.length <= 10) {
@@ -498,10 +518,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
           startupStderrKind: one(startup.nativeStderrKind, ['empty', 'entry_resolution', 'module_resolution', 'child_identity', 'child_pipe', 'access_denied', 'pipe_refused', 'pipe_missing', 'bun_error', 'unclassified', 'unavailable']),
           startupExitCode: Number.isSafeInteger(startup.nativeExitCode) && Number(startup.nativeExitCode) >= 0 && Number(startup.nativeExitCode) <= 0xffffffff ? startup.nativeExitCode : null,
           initializationPhase: data.initialization === undefined ? null : one(row(data.initialization).phase, ['MCP-connect', 'MCP-readback', 'controller-tools', 'probe-authority']),
-          acquisitionLastPhase: data.acquisition === undefined ? null : one(
-            row(Array.isArray(row(data.acquisition).history) ? (row(data.acquisition).history as unknown[]).at(-1) : null).phase,
-            ['preparing', 'delivery-resolved', 'profile-validated', 'native-validated', 'graph-validated', 'resolution-prepared',
-              'controller-prepared', 'prepared', 'mapping', 'child-bound', 'start-sent', 'ready', 'catalog-ready', 'auth-ready', 'selection-ready']) });
+          acquisitionLastPhase: acquisition?.history.at(-1)?.phase ?? null,
+          acquisitionElapsedMs: acquisition?.elapsedMs ?? null, acquisitionHistory: acquisition?.history ?? [] });
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
