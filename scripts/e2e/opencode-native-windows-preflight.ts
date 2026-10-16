@@ -692,7 +692,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorKinds?: string[]; moduleTargetRole?: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const profileRoot = row(selectedMember.profile).root;
       if (matches.length !== 1 || typeof profileRoot !== 'string' ||
@@ -711,6 +711,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
+        const errorKinds: string[] = [];
+        let moduleTargetRole: string | undefined;
         let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
@@ -738,8 +740,11 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             }
             if (!/^(?:error|Error): /.test(message)) continue;
             kind = 'bun_error';
+            readTargetKind = readErrorCode = readTargetLocation = undefined;
+            readTargetAncestorDistance = undefined;
+            moduleTargetRole = undefined;
             // Fixed TEST diagnostic roles only: never publish the denied path.
-            if (readTargetKind === undefined && /^error: (?:EPERM reading |Cannot read file )/.test(message)) {
+            if (/^error: (?:EPERM reading |Cannot read file )/.test(message)) {
               const match = /["'`]([^"'`]+)["'`](?::\s*(EPERM|EACCES|ENOENT|ENOTDIR|EISDIR))?\s*$/.exec(message);
               const target = match?.[1]; readErrorCode = match?.[2];
               if (target !== undefined && paths.win32.isAbsolute(target)) {
@@ -763,7 +768,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
                 leaf?.endsWith('.dll') ? 'native_library' : /\.[cm]?js$/.test(leaf ?? '') ? 'javascript_module' :
                 /\.[cm]?tsx?$/.test(leaf ?? '') ? 'typescript_module' : 'other';
             }
-            if (errorLine === undefined) {
+            {
               // TEST-only text: sanitize the complete bounded line before truncation.
               let clean = message.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
               if (clean.includes('\x1b')) clean = 'error: [terminal control text redacted]';
@@ -792,10 +797,23 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
               ['EACCES', 'access_denied'], ['EPERM', 'access_denied'], ['Access is denied', 'access_denied'],
               ['ECONNREFUSED', 'pipe_refused'], ['connect ENOENT', 'pipe_missing']] as const;
             const matched = rules.find(([token]) => message.includes(token));
-            if (matched) { kind = matched[1]; break; }
+            if (matched) kind = matched[1];
+            if (!errorKinds.includes(kind) && errorKinds.length < 9) errorKinds.push(kind);
+            if (kind === 'module_resolution') {
+              const target = /Cannot find module ["'`]([^"'`]+)["'`]/.exec(message)?.[1];
+              moduleTargetRole = target === '@opencode/client' ? '@opencode/client' :
+                target === '@opencode/client-v2-floor' ? '@opencode/client-v2-floor' :
+                target === '@modelcontextprotocol/sdk' || target?.startsWith('@modelcontextprotocol/sdk/') ? 'mcp_sdk' :
+                target === 'effect' || target?.startsWith('effect/') ? 'effect' : 'other';
+              if (target && paths.win32.isAbsolute(target)) {
+                const relative = paths.win32.relative(sdkRoot, target);
+                if (!paths.win32.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..\\'))
+                  moduleTargetRole = relative.split(/[\\/]/)[0] === 'node_modules' ? 'sdk_node_modules' : 'sdk_source';
+              }
+            }
           }
         }
-        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }), ...(readTargetLocation === undefined ? {} : { readTargetLocation }), ...(readTargetAncestorDistance === undefined ? {} : { readTargetAncestorDistance }), ...(childStartup === undefined ? {} : { childStartup }) };
+        stdio = { observation: one(result.observation, ['read', 'missing', 'unavailable']), kind, errorKinds, ...(moduleTargetRole === undefined ? {} : { moduleTargetRole }), ...(errorLine === undefined ? {} : { errorLine }), ...(readTargetKind === undefined ? {} : { readTargetKind }), ...(readErrorCode === undefined ? {} : { readErrorCode }), ...(readTargetLocation === undefined ? {} : { readTargetLocation }), ...(readTargetAncestorDistance === undefined ? {} : { readTargetAncestorDistance }), ...(childStartup === undefined ? {} : { childStartup }) };
       }
       for (let index = 0; index < parents.length; index++) {
         const parent = parents[index]!;

@@ -243,6 +243,31 @@ describe('serialized native IPC failure details', () => {
         JSON.stringify({ binding, state: 'starting', members: [] })
       );
       const diagnostic = path.join(diagnostics, `${randomUUID()}.json`);
+      const profileRoot = path.join(root, 'opencode/v2/profiles', 'a'.repeat(16) + '-' + randomUUID());
+      const stdioRoot = path.join(profileRoot, '.opencode-v2-execution-owner', 'native-stdio-' + randomUUID());
+      await mkdir(stdioRoot, { recursive: true });
+      await writeFile(path.join(stdioRoot, 'main.stderr'), [
+        'error: Cannot read file "C:\\TEST-sdk\\": EPERM',
+        'error: Cannot find module "@opencode/client-v2-floor" from "C:\\TEST-private\\entry.ts"',
+        JSON.stringify({ event: 'opencode-v2-startup', stage: 'runtime-import',
+          cause: 'execution_graph_dependency_missing', reason: 'failed', errno: 'ENOENT',
+          operation: 'open', errorName: 'Error', elapsedMs: 123 }),
+      ].join('\n'));
+      const stdioPacket = await snapshot({ directory, binding }, 'TEST-session', {
+        members: [{ originalSessionId: 'TEST-session', profile: { root: profileRoot } }],
+      }, 'C:\\TEST-sdk', []) as unknown as { stdio: {
+        kind: string; errorKinds: string[]; errorLine: string; moduleTargetRole: string;
+        readTargetKind?: string; childStartup: { stage: string; cause: string };
+      } };
+      expect(stdioPacket.stdio).toMatchObject({ kind: 'module_resolution',
+        errorKinds: ['access_denied', 'module_resolution'], moduleTargetRole: '@opencode/client-v2-floor',
+        childStartup: { stage: 'runtime-import', cause: 'execution_graph_dependency_missing' } });
+      expect(stdioPacket.stdio.readTargetKind).toBeUndefined();
+      expect(stdioPacket.stdio.errorLine).toContain('Cannot find module');
+      expect(stdioPacket.stdio.errorLine.length).toBeLessThanOrEqual(256);
+      expect(stdioPacket.stdio.errorKinds.length).toBeLessThanOrEqual(9);
+      expect(JSON.stringify(stdioPacket.stdio)).not.toMatch(/TEST-private|TEST-sdk|entry\.ts/);
+
       const project = async (
         acquisition: unknown,
         category = 'execution_timeout',
