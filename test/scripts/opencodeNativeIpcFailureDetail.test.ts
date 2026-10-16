@@ -17,6 +17,76 @@ const project = (value: string): string =>
   ) as string;
 
 describe('serialized native IPC failure details', () => {
+  it('keeps actual target ACL projection bounded and strips raw paths, SIDs and extra fields', async () => {
+    const source = await readFile(
+      path.resolve('scripts/e2e/opencode-native-windows-preflight.ts'),
+      'utf8'
+    );
+    const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+    let projector = '';
+    const visit = (node: ts.Node) => {
+      if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'targetAclFacts')
+        projector = node.initializer!.getText(ast);
+      ts.forEachChild(node, visit);
+    };
+    visit(ast);
+    expect(projector).not.toBe('');
+    const compiled = ts.transpileModule(`const project = ${projector};`, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    }).outputText;
+    const metadata = {
+      relativeDepth: 0,
+      pathSha256: 'a'.repeat(64),
+      fileIdSha256: 'b'.repeat(64),
+      type: 'file',
+      symbolicLink: false,
+      nlink: 2,
+    };
+    const project = compileFunction(`${compiled}\nreturn project;`, ['chain', 'principals', 'row'])(
+      [{ ...metadata, path: 'C:\\TEST-private\\LICENSE' }],
+      ['current_user'],
+      (value: unknown) => (value && typeof value === 'object' ? value : {})
+    ) as (input: unknown) => unknown;
+    const ace = { sidSha256: 'c'.repeat(64), kind: 'AccessAllowed', mask: 0xffffffff, flags: 255 };
+    const input = [
+      {
+        relativeDepth: 0,
+        reparsePoint: false,
+        control: 0x8004,
+        ownerClass: 'current_user',
+        nullDacl: false,
+        aces: [{ ...ace, sid: 'S-1-15-2-TEST', rawPath: 'C:\\TEST-private' }],
+        rawSddl: 'TEST-private',
+      },
+    ];
+    expect(project(input)).toEqual([
+      {
+        ...metadata,
+        reparsePoint: false,
+        control: 0x8004,
+        ownerClass: 'current_user',
+        nullDacl: false,
+        aces: [ace],
+      },
+    ]);
+    expect(JSON.stringify(project(input))).not.toMatch(/TEST-private|S-1-15|rawSddl/);
+    for (const change of [
+      { control: 65536 },
+      { control: -1 },
+      { relativeDepth: 1 },
+      { reparsePoint: 'false' },
+      { aces: Array.from({ length: 65 }, () => ace) },
+      { aces: [{ ...ace, mask: 0x100000000 }] },
+      { aces: [{ ...ace, sidSha256: 'raw-SID' }] },
+    ]) {
+      expect(() => project([{ ...input[0], ...change }])).toThrow(
+        'TEST target ACL response invalid'
+      );
+    }
+    expect(() => project([])).toThrow('TEST target ACL response invalid');
+    expect(() => project([...input, ...input])).toThrow('TEST target ACL response invalid');
+  });
+
   it('preserves complete validated acquisition timing from the actual serialized preflight snapshot', async () => {
     const source = await readFile(
       path.resolve('scripts/e2e/opencode-native-windows-preflight.ts'),
@@ -40,7 +110,7 @@ describe('serialized native IPC failure details', () => {
       launches: unknown[]
     ) => Promise<{
       diagnostics: {
-          category: string;
+        category: string;
         acquisitionElapsedMs: number | null;
         acquisitionHistory: { phase: string; elapsedMs: number }[];
         acquisitionLastPhase: string | null;
@@ -108,7 +178,12 @@ describe('serialized native IPC failure details', () => {
         acquisitionHistory: timing.history,
         acquisitionLastPhase: 'start-sent',
       });
-      for (const category of ['run_acquisition_timeout', 'run_initialization_timeout', 'run_stopped', 'cancelled'])
+      for (const category of [
+        'run_acquisition_timeout',
+        'run_initialization_timeout',
+        'run_stopped',
+        'cancelled',
+      ])
         expect((await project(timing, category)).category).toBe(category);
       expect((await project(timing, 'PRIVATE-TEST-unknown')).category).toBe('unclassified');
       expect(await project({ elapsedMs: 0, history: [timing.history[0]] })).toMatchObject({

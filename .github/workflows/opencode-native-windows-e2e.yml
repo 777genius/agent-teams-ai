@@ -296,7 +296,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ((git rev-parse HEAD) -ne $env:SDK_REF) { throw 'SDK checkout identity mismatch' }
-          bun install --frozen-lockfile --linker hoisted
+          # Match portable runtime staging's private copies, including cached downloads.
+          bun install --frozen-lockfile --linker hoisted --backend=copyfile
           if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
           bun test src/services/opencode/execution/OpenCodeV2AdmissionService.test.ts -t 'host filesystem'
           if ($LASTEXITCODE -ne 0) { throw 'Windows admission journal filesystem regression failed' }
