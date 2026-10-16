@@ -13,6 +13,24 @@ import {
 
 import type { AttachmentPayload, ResolvedTeamMember } from '@shared/types';
 
+export function attachmentTargetForMember(member: ResolvedTeamMember, projectPath: string | null) {
+  return {
+    model: member.model,
+    projectPath:
+      member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
+        ? member.cwd?.trim() || projectPath
+        : projectPath || member.cwd?.trim() || null,
+  };
+}
+
+export interface MemberAttachmentDeclaration {
+  declaredInputModalities: readonly string[] | null;
+  unavailableReason?: string;
+}
+export type MemberAttachmentDeclarationLookup = (
+  member: ResolvedTeamMember
+) => MemberAttachmentDeclaration;
+
 export interface MemberAttachmentCapabilityResult {
   capability: AgentAttachmentCapability;
   providerId: string;
@@ -42,7 +60,8 @@ function isSupportedVideoMime(mimeType: string, supported: readonly string[]): b
 }
 
 export function resolveMemberAttachmentCapability(
-  member: ResolvedTeamMember
+  member: ResolvedTeamMember,
+  declaration?: MemberAttachmentDeclaration
 ): MemberAttachmentCapabilityResult {
   const providerId = getMemberProviderId(member);
   const model = member.model ?? '';
@@ -52,6 +71,7 @@ export function resolveMemberAttachmentCapability(
     capability: resolveAgentAttachmentCapability({
       providerId,
       model,
+      declaredInputModalities: declaration?.declaredInputModalities,
       nativeInboxTextAttachmentsSupported:
         !isLeadMember(member) &&
         member.nativeInboxAttachmentsSupported === true &&
@@ -80,12 +100,14 @@ export function getAttachmentInputAcceptForMember(
 export function validateAttachmentFilesForMember(input: {
   member: ResolvedTeamMember | null | undefined;
   files: FileList | File[];
+  resolveDeclaration?: MemberAttachmentDeclarationLookup;
 }): string | null {
   const unavailable = getMemberAttachmentUnavailableReason(input.member);
   if (unavailable) return unavailable;
   // Text eligibility requires original bytes; defer it to the payload boundary.
   return validateAttachmentPayloadsForMember({
     member: input.member,
+    resolveDeclaration: input.resolveDeclaration,
     attachments: Array.from(input.files)
       .filter((file) => getEffectiveMimeType(file) !== 'text/plain')
       .map((file) => ({
@@ -101,6 +123,7 @@ export function validateAttachmentFilesForMember(input: {
 export function validateAttachmentPayloadsForMember(input: {
   member: ResolvedTeamMember | null | undefined;
   attachments: readonly AttachmentPayload[];
+  resolveDeclaration?: MemberAttachmentDeclarationLookup;
 }): string | null {
   const member = input.member;
   if (!member || input.attachments.length === 0) {
@@ -108,7 +131,8 @@ export function validateAttachmentPayloadsForMember(input: {
   }
   const unavailable = getMemberAttachmentUnavailableReason(member);
   if (unavailable) return unavailable;
-  const { capability } = resolveMemberAttachmentCapability(member);
+  const declaration = input.resolveDeclaration?.(member);
+  const { capability } = resolveMemberAttachmentCapability(member, declaration);
 
   let imageCount = 0;
   let fileCount = 0;
@@ -144,7 +168,7 @@ export function validateAttachmentPayloadsForMember(input: {
     if (isImageMime(attachment.mimeType)) {
       imageCount += 1;
       if (!capability.supportsImages) {
-        return capability.displayText;
+        return declaration?.unavailableReason ?? capability.displayText;
       }
       if (!isSupportedImageMime(attachment.mimeType, capability.supportedImageMimeTypes)) {
         return 'This image type is not supported by the selected model.';
@@ -157,7 +181,7 @@ export function validateAttachmentPayloadsForMember(input: {
     if (isVideoMime(attachment.mimeType)) {
       videoCount += 1;
       if (!capability.supportsVideo) {
-        return capability.videoDisplayText;
+        return declaration?.unavailableReason ?? capability.videoDisplayText;
       }
       if (!isSupportedVideoMime(attachment.mimeType, capability.supportedVideoMimeTypes)) {
         return 'This video type is not supported by the selected model.';

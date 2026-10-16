@@ -16,11 +16,13 @@ import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   AgentActionMode,
   AttachmentPayload,
   InboxMessage,
   OpenCodeRuntimeDeliveryUserVisibleImpact,
+  PersistedTeamLaunchSnapshot,
   TaskRef,
   TeamConfig,
   TeamMember,
@@ -118,6 +120,7 @@ export interface OpenCodeMemberInboxDelivery {
 }
 
 export interface OpenCodeMemberDirectory {
+  launchSnapshot?: Pick<PersistedTeamLaunchSnapshot, 'members'> | null;
   config: TeamConfig | null;
   teamMeta: {
     launchIdentity?: {
@@ -153,10 +156,12 @@ export type OpenCodeMemberIdentityResolution =
       reason: 'recipient_is_not_opencode' | 'recipient_removed' | 'opencode_recipient_unavailable';
     };
 
-interface DeliverableTrackedRun {
+export interface DeliverableTrackedRun {
+  launchIdentity?: { resolvedLaunchModel?: string | null; selectedModel?: string | null } | null;
+  allEffectiveMembers?: readonly { name: string; model?: string }[];
   mixedSecondaryLanes: readonly {
     laneId: string;
-    member: { name: string };
+    member: { name: string; model?: string };
     runId?: string | null;
   }[];
 }
@@ -170,6 +175,7 @@ export interface OpenCodeLeadTurnActivityNotification {
 }
 
 export interface OpenCodeMemberMessageDeliveryServiceDependencies {
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration;
   getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null;
   readOpenCodeMemberDirectory(teamName: string): Promise<OpenCodeMemberDirectory>;
   resolveOpenCodeMemberIdentityFromDirectory(

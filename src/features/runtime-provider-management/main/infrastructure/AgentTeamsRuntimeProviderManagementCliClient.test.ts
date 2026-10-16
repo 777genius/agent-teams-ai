@@ -100,6 +100,27 @@ describe('AgentTeamsRuntimeProviderManagementCliClient model refresh generations
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
+  it('preserves the original snapshot deadline on cache hits', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    try {
+      execCliMock.mockResolvedValue({ stdout: modelResponse('fresh'), stderr: '' });
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const input = {
+        runtimeId: 'opencode' as const,
+        providerId: 'openrouter',
+        projectPath: '/TEST/cache',
+      };
+      const first = await client.loadModels(input);
+      clock.mockReturnValue(1_060_000);
+      const cached = await client.loadModels(input);
+      expect(cached.models?.freshUntil).toBe(first.models?.freshUntil);
+      expect(Date.parse(cached.models!.freshUntil!)).toBe(1_120_000);
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it('fences recovered model JSON from a superseded generation', async () => {
     const oldRequest = deferred<{ stdout: string; stderr: string }>();
     const refreshRequest = deferred<{ stdout: string; stderr: string }>();
@@ -422,11 +443,20 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
   }
 
   function succeed(child: ReturnType<typeof childProcess>) {
-    child.stdout.write(JSON.stringify({
-      schemaVersion: 1,
-      runtimeId: 'opencode',
-      provider: { runtimeId: 'opencode', providerId: 'groq', authenticated: true, actions: [], authMethods: [], ownership: [] },
-    }));
+    child.stdout.write(
+      JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        provider: {
+          runtimeId: 'opencode',
+          providerId: 'groq',
+          authenticated: true,
+          actions: [],
+          authMethods: [],
+          ownership: [],
+        },
+      })
+    );
     child.emit('close', 0);
   }
 
@@ -440,7 +470,9 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
   it('allows a native key connection to finish after the old 90-second boundary', async () => {
     const child = childProcess();
     let stdin = '';
-    child.stdin.on('data', (chunk: Buffer) => { stdin += chunk.toString(); });
+    child.stdin.on('data', (chunk: Buffer) => {
+      stdin += chunk.toString();
+    });
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
     await vi.advanceTimersByTimeAsync(0);
     expect(spawnCliMock).toHaveBeenCalledTimes(1);

@@ -371,6 +371,12 @@ export class TeamMemberResolver {
         providerId: effectiveProviderId,
         providerBackendId,
         model:
+          (effectiveProviderId === 'opencode'
+            ? (launchMember?.launchIdentity?.resolvedLaunchModel ??
+              (memberIsLead || launchMember?.laneKind === 'primary'
+                ? options?.leadRuntimeSettings?.model
+                : undefined))
+            : undefined) ??
           launchMember?.model ??
           configMember?.model ??
           metaMember?.model ??
@@ -406,7 +412,7 @@ export class TeamMemberResolver {
         laneId: launchMember?.laneId ?? plannedLane.laneId,
         laneKind: launchMember?.laneKind ?? plannedLane.laneKind,
         laneOwnerProviderId: launchMember?.laneOwnerProviderId ?? plannedLane.laneOwnerProviderId,
-        cwd: configMember?.cwd ?? metaMember?.cwd,
+        cwd: launchMember?.cwd ?? configMember?.cwd ?? metaMember?.cwd,
         removedAt: configMember?.removedAt ?? metaMember?.removedAt,
       });
     }
