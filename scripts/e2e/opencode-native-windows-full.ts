@@ -466,6 +466,56 @@ async function packagedStartupSnapshot(
     Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffffff
       ? Number(value)
       : null;
+  // The packet commits one immutable SDK graph row; it conveys no path or authority.
+  const graphFailure = (input: unknown) => {
+    const value = row(input);
+    const integer = (item: unknown, min: number, max: number): item is number =>
+      Number.isSafeInteger(item) && Number(item) >= min && Number(item) <= max;
+    const hash = (item: unknown): item is string =>
+      typeof item === 'string' && /^[a-f0-9]{64}$/.test(item);
+    if (
+      ![
+        'contentSha256,index,pathSha256,readPhase,total',
+        'contentSha256,index,pathSha256,readPhase,realpath,total',
+      ].includes(Object.keys(value).sort().join(',')) ||
+      (value.readPhase !== 'realpath' && value.readPhase !== 'hash') ||
+      !integer(value.total, 1, 65536) ||
+      !integer(value.index, 0, value.total - 1) ||
+      !hash(value.pathSha256) ||
+      !hash(value.contentSha256)
+    )
+      return null;
+    const native = row(value.realpath);
+    if (
+      value.realpath !== undefined &&
+      (Object.keys(native).sort().join(',') !==
+        'anchorCount,matchingAnchorIndex,operation,status,win32' ||
+        !integer(native.status, 1, 4) ||
+        !integer(native.operation, 0, 25) ||
+        !integer(native.win32, 0, 0xffffffff) ||
+        !integer(native.anchorCount, 0, 4096) ||
+        !integer(native.matchingAnchorIndex, -1, native.anchorCount - 1))
+    )
+      return null;
+    return {
+      index: value.index,
+      total: value.total,
+      readPhase: value.readPhase,
+      pathSha256: value.pathSha256,
+      contentSha256: value.contentSha256,
+      ...(value.realpath === undefined
+        ? {}
+        : {
+            realpath: {
+              status: native.status,
+              operation: native.operation,
+              win32: native.win32,
+              anchorCount: native.anchorCount,
+              matchingAnchorIndex: native.matchingAnchorIndex,
+            },
+          }),
+    };
+  };
   const same = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) =>
     a.dev === b.dev && a.ino === b.ino;
   assert(
@@ -812,6 +862,7 @@ async function packagedStartupSnapshot(
               errno: one(event.errno, ['EPERM', 'EACCES', 'ENOENT', 'EINVAL', 'UNKNOWN']),
               operation: one(event.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
               elapsedMs: number(event.elapsedMs),
+              graphFailure: graphFailure(event.graphFailure),
             };
         } catch {
           /* Arbitrary stderr never crosses this boundary. */
@@ -879,6 +930,7 @@ async function packagedStartupSnapshot(
       startupStage: one(startup.stage, stages),
       startupReason: one(startup.reason, ['timeout', 'failed']),
       startupElapsedMs: number(startup.elapsedMs),
+      graphFailure: graphFailure(startup.graphFailure),
       startupExitCode: number(startup.nativeExitCode),
       startupStderrKind: one(startup.nativeStderrKind, [
         'empty',

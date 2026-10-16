@@ -74,7 +74,8 @@ function observeNativeBrokerFailures(
   spyOn: (target: typeof module, key: 'createWindowsNativeBroker') => {
     mockImplementation(fn: typeof module.createWindowsNativeBroker): void; mockRestore(): void;
   },
-  failures: WeakMap<object, string>
+  failures: WeakMap<object, string>,
+  launches: unknown[]
 ) {
   const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire',
     'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
@@ -88,6 +89,7 @@ function observeNativeBrokerFailures(
   const observer = spyOn(module, 'createWindowsNativeBroker');
   observer.mockImplementation(function (this: unknown, artifact) {
     const broker = Reflect.apply(originalFactory, this, [artifact]);
+    let launch: Record<string, unknown> | undefined;
     const descriptors = Object.getOwnPropertyDescriptors(broker), request = broker.request;
     if (!descriptors.request || typeof request !== 'function') throw new Error('TEST native broker shape invalid');
     descriptors.request = { ...descriptors.request, value: function (...args: Parameters<typeof request>) {
@@ -98,12 +100,97 @@ function observeNativeBrokerFailures(
         }
         throw error;
       };
-      try { return Reflect.apply(request, broker, args).catch(rejected); }
+      try { return Reflect.apply(request, broker, args).then((result) => {
+        // Retain only this TEST launch's selected roots and validated prepare
+        // anchors. Never retain the launch environment or alter an RPC result.
+        try {
+          const input = args[1], value = input?.value;
+          if (args[0] === 'launch' && input) launch = {
+            entry: input.entry, cwd: input.cwd, executable: input.executable,
+            nonce: input.nonce, leaseOwnerId: input.leaseOwnerId,
+            readOnlyRoots: input.readOnlyRoots, writableRoots: input.writableRoots,
+          };
+          if (args[0] === 'send' && launch && value && typeof value === 'object' &&
+              'type' in value && value.type === 'prepare' && 'nonce' in value && value.nonce === launch.nonce &&
+              'leaseOwnerId' in value && value.leaseOwnerId === launch.leaseOwnerId &&
+              'realpathAnchors' in value && launches.length < 8) {
+            launches.push(structuredClone({ ...launch, realpathAnchors: value.realpathAnchors }));
+          }
+        } catch { /* Diagnostic capture cannot change launch or transport semantics. */ }
+        return result;
+      }, rejected); }
       catch (error) { return rejected(error); }
     } };
     return Object.freeze(Object.create(Object.getPrototypeOf(broker), descriptors)) as typeof broker;
   });
   return observer;
+}
+
+// Parent joins only exact immutable graph rows to the actual native launch.
+// All paths remain local; receipts contain fixed roles, indices and hashes.
+async function graphFailureCoverage(value: unknown, planValue: unknown, launches: unknown[], sdkRoot: string, ownerValue: unknown): Promise<unknown> {
+  const row = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
+  const keys = (v: Record<string, unknown>, allowed: string[]) => Object.keys(v).every(key => allowed.includes(key));
+  const integer = (v: unknown, minimum: number, maximum: number): v is number => Number.isSafeInteger(v) && Number(v) >= minimum && Number(v) <= maximum;
+  const hash = (v: unknown): v is string => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
+  const failure = row(value), realpath = row(failure.realpath);
+  if (!keys(failure, ['index', 'total', 'pathSha256', 'contentSha256', 'readPhase', 'realpath']) || (failure.readPhase !== 'realpath' && failure.readPhase !== 'hash') ||
+      !integer(failure.total, 1, 65536) || !integer(failure.index, 0, failure.total - 1) || !hash(failure.pathSha256) || !hash(failure.contentSha256) ||
+      (failure.realpath !== undefined && (!keys(realpath, ['status', 'operation', 'win32', 'anchorCount', 'matchingAnchorIndex']) ||
+        !integer(realpath.status, 1, 4) || !integer(realpath.operation, 0, 25) || !integer(realpath.win32, 0, 0xffffffff) ||
+        !integer(realpath.anchorCount, 0, 4096) || !integer(realpath.matchingAnchorIndex, -1, realpath.anchorCount - 1)))) return undefined;
+  const packet = { index: failure.index, total: failure.total, pathSha256: failure.pathSha256, contentSha256: failure.contentSha256, readPhase: failure.readPhase,
+    ...(failure.realpath === undefined ? {} : { realpath: { status: realpath.status, operation: realpath.operation, win32: realpath.win32,
+      anchorCount: realpath.anchorCount, matchingAnchorIndex: realpath.matchingAnchorIndex } }) };
+  try {
+    const p = await import('node:path'), { createHash } = await import('node:crypto'), { pathToFileURL } = await import('node:url');
+    const digest = (text: string) => createHash('sha256').update(text).digest('hex');
+    const plan = row(planValue), members = plan.members;
+    if (!Array.isArray(members) || members.length !== 1) throw new Error();
+    const member = row(members[0]), native = row(member.native), profile = row(member.profile), source = row(plan.source), files = row(native.graph).files;
+    if (!Array.isArray(files) || files.length !== failure.total || typeof source.entryPath !== 'string') throw new Error();
+    const sorted = files.map(row).sort((a, b) => String(a.path) < String(b.path) ? -1 : String(a.path) > String(b.path) ? 1 : 0), target = sorted[failure.index]!;
+    if (typeof target.path !== 'string' || digest(target.path) !== failure.pathSha256 || target.sha256 !== failure.contentSha256)
+      return { ...packet, coverage: { observation: 'graph_row_mismatch' } };
+    const { resolveOpenCodeV2ExecutionDelivery } = await import(pathToFileURL(p.join(sdkRoot, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href);
+    const delivery = await resolveOpenCodeV2ExecutionDelivery(pathToFileURL(source.entryPath).href, 'execution');
+    if (delivery.entrySha256 !== native.entrySha256) throw new Error();
+    const owner = row(ownerValue);
+    if (owner.schema !== 1 || owner.generation !== 'v2' || owner.profileRoot !== profile.root || owner.databasePath !== profile.databasePath ||
+        owner.profileEpoch !== profile.epoch || owner.graphSha256 !== row(native.graph).sha256)
+      return { ...packet, coverage: { observation: 'owner_unavailable' } };
+    const matching = launches.map(row).filter(launch => launch.entry === delivery.entryPath && launch.cwd === profile.directory &&
+      launch.executable === row(native.bun).path && launch.nonce === owner.hostInstanceId && launch.leaseOwnerId === owner.leaseOwnerId);
+    if (matching.length !== 1) return { ...packet, coverage: { observation: 'launch_unavailable' } };
+    const launch = matching[0]!, receipt = row(launch.realpathAnchors), anchors = receipt.anchors;
+    const readOnlyRoots = launch.readOnlyRoots, writableRoots = launch.writableRoots;
+    const rootPath = (v: unknown): v is string => typeof v === 'string' && p.win32.isAbsolute(v) && v.length <= 32767 && !v.includes('\0');
+    if (!Array.isArray(readOnlyRoots) || !Array.isArray(writableRoots) || readOnlyRoots.length + writableRoots.length > 4096 ||
+        !readOnlyRoots.every(rootPath) || !writableRoots.every(rootPath) || !Array.isArray(anchors) || anchors.length < 1 || anchors.length > 4096 || receipt.nonce !== launch.nonce) throw new Error();
+    const expected = new Set([...readOnlyRoots.map(root => `readOnly:${root}`), ...writableRoots.map(root => `writable:${root}`)]);
+    const held = anchors.map(row);
+    if (held.length !== expected.size || held.some(anchor => (anchor.kind !== 'readOnly' && anchor.kind !== 'writable') || !rootPath(anchor.admittedPath) ||
+        !rootPath(anchor.dosPath) || p.win32.relative(anchor.admittedPath, anchor.dosPath) !== '' || !expected.delete(`${anchor.kind}:${anchor.admittedPath}`)) || expected.size !== 0) throw new Error();
+    const contains = (root: string, leaf: string) => { const relative = p.win32.relative(root, leaf); return relative === '' || relative !== '..' && !relative.startsWith('..\\') && !p.win32.isAbsolute(relative); };
+    const depth = (root: string, leaf: string) => p.win32.relative(root, leaf).split('\\').filter(Boolean).length;
+    const covering = held.map((anchor, index) => ({ anchor, index })).filter(({ anchor }) => contains(String(anchor.dosPath), String(target.path)));
+    const first = covering[0];
+    let longest = first;
+    for (const entry of covering) if (!longest || String(entry.anchor.dosPath).length > String(longest.anchor.dosPath).length) longest = entry;
+    const selected = longest?.anchor, roots = selected?.kind === 'writable' ? writableRoots : readOnlyRoots;
+    const metadataOnlyResolutionAncestors = [];
+    for (let ancestor = p.win32.dirname(target.path); p.win32.dirname(ancestor) !== ancestor; ancestor = p.win32.dirname(ancestor)) {
+      if (p.win32.basename(ancestor).toLowerCase() === 'node_modules' && !held.some(anchor => contains(String(anchor.dosPath), ancestor)) &&
+          held.some(anchor => contains(ancestor, String(anchor.dosPath))) && metadataOnlyResolutionAncestors.length < 16)
+        metadataOnlyResolutionAncestors.push({ pathSha256: digest(ancestor), relativeDepth: depth(ancestor, target.path) });
+    }
+    return { ...packet, coverage: { observation: 'matched', readOnlyRootCount: readOnlyRoots.length, writableRootCount: writableRoots.length,
+      contentRole: selected?.kind ?? 'none', rootIndex: selected ? roots.indexOf(String(selected.admittedPath)) : null,
+      rootPathSha256: selected ? digest(String(selected.dosPath)) : null, relativeDepth: selected ? depth(String(selected.dosPath), target.path) : null,
+      anchorCount: held.length, firstAnchorIndex: first?.index ?? -1, longestAnchorIndex: longest?.index ?? -1,
+      childAnchorCountMatches: failure.realpath === undefined ? null : realpath.anchorCount === held.length,
+      childFirstAnchorMatches: failure.realpath === undefined ? null : realpath.matchingAnchorIndex === (first?.index ?? -1), metadataOnlyResolutionAncestors } };
+  } catch { return { ...packet, coverage: { observation: 'unavailable' } }; }
 }
 
 // Serialized after TypeScript transpilation; no ambient closure or credentials.
@@ -248,7 +335,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
 }
 
 // Diagnostic observation only: never substitutes for authenticated stop or retirement.
-async function snapshotStartupFailure(value: unknown, session: string, plan: unknown, sdkRoot: string): Promise<unknown> {
+async function snapshotStartupFailure(value: unknown, session: string, plan: unknown, sdkRoot: string, nativeLaunches: unknown[]): Promise<unknown> {
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
@@ -359,6 +446,11 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         errors: Array.isArray(member.errors) ? member.errors.slice(0, 8).map((code) => one(code,
           ['tombstone_unknown', 'cancel_or_interrupt_unknown', 'readers_unknown', 'physical_cleanup_unknown', 'run_tombstone_unknown'])) : [] };
     }) : [];
+    const selectedMembers = row(plan).members, selectedMember = Array.isArray(selectedMembers) && selectedMembers.length === 1 ? row(selectedMembers[0]) : {};
+    const selectedProfileRoot = row(selectedMember.profile).root;
+    const executionOwner = typeof selectedProfileRoot === 'string' && paths.dirname(selectedProfileRoot) === paths.join(root, 'opencode', 'v2', 'profiles') &&
+        /^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(paths.basename(selectedProfileRoot))
+      ? row((await read(paths.join(selectedProfileRoot, '.opencode-v2-execution-owner'), 'owner.json', 16384)).data) : {};
     const diagnostics = [], diagnosticRoot = paths.join(root, 'opencode', 'v2', 'provider-diagnostics');
     try {
       const listing = await fs.opendir(diagnosticRoot);
@@ -388,7 +480,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             operation: one(row(data.failure).operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
           }, startupReason: data.startup === undefined ? null : one(row(data.startup).reason, ['timeout', 'failed']), startupStage: data.startup === undefined ? null : one(row(data.startup).stage,
             ['windows-cohort', 'windows-profile', 'windows-roots', 'windows-dll', 'windows-process', 'windows-owned-pair', 'windows-published', 'windows-connected', 'windows-prepare', 'windows-assert', 'waiting-for-prepare', 'profile-validation', 'native-validation', 'graph-validation', 'runtime-import', 'server-start', 'effect-import', 'selected-oauth-import', 'scope-acquisition', 'ready-identity']),
-          startupElapsedMs, startupHistory,
+          startupElapsedMs, startupHistory, graphFailure: await graphFailureCoverage(startup.graphFailure, plan, nativeLaunches, sdkRoot, executionOwner),
           cleanupPhase: one(row(data.cleanup).phase, ['dispose-transport', 'send-close', 'force-kill', 'wait-exit', 'read-birth', 'kernel-retirement', 'process-retirement', 'closed-ack', 'kernel-proof', 'kernel-binding']),
           cleanupElapsedMs: Number.isSafeInteger(row(data.cleanup).elapsedMs) && Number(row(data.cleanup).elapsedMs) >= 0 && Number(row(data.cleanup).elapsedMs) <= 86400000 ? Number(row(data.cleanup).elapsedMs) : null,
           startupStderrKind: one(startup.nativeStderrKind, ['empty', 'entry_resolution', 'module_resolution', 'child_identity', 'child_pipe', 'access_denied', 'pipe_refused', 'pipe_missing', 'bun_error', 'unclassified', 'unavailable']),
@@ -401,7 +493,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         if (diagnostics.length === 4) break;
       } } finally { await listing.close().catch(() => {}); }
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
-    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } } = { observation: 'unavailable', kind: 'unavailable' };
+    let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } } = { observation: 'unavailable', kind: 'unavailable' };
     try {
       const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
       const members = Array.isArray(selected.members) ? selected.members : [];
@@ -423,7 +515,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       if (leaves.length !== 1) stdio = { observation: leaves.length === 0 ? 'missing' : 'unavailable', kind: 'unavailable' };
       else {
         const result = await read(paths.join(ownerRoot, leaves[0]!), 'main.stderr', 16384, false, true);
-        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } | undefined;
+        let kind = 'unavailable', errorLine: string | undefined, readTargetKind: string | undefined, readErrorCode: string | undefined, readTargetLocation: string | undefined, readTargetAncestorDistance: number | undefined, childStartup: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } | undefined;
         if (result.observation === 'read' && typeof result.body === 'string') {
           kind = result.body.length === 0 ? 'empty' : 'unclassified';
           for (const line of result.body.split('\n')) {
@@ -439,6 +531,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
                   graph: { phase: one(row(event.graph).phase, ['hash', 'closure']),
                     completed: Number.isSafeInteger(row(event.graph).completed) && Number(row(event.graph).completed) >= 0 && Number(row(event.graph).completed) <= 65536 ? Number(row(event.graph).completed) : null,
                     total: Number.isSafeInteger(row(event.graph).total) && Number(row(event.graph).total) >= 0 && Number(row(event.graph).total) <= 65536 ? Number(row(event.graph).total) : null },
+                  graphFailure: await graphFailureCoverage(event.graphFailure, plan, nativeLaunches, sdkRoot, executionOwner),
                   errno: one(event.errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),
                   operation: one(event.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
                   errorName: one(event.errorName, ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'AbortError']),
@@ -790,11 +883,13 @@ let startupFailureState = null;
 let startupBeforeStop = null;
 let readOnlyAclObservation = null;
 const nativeFailures = new WeakMap();
+const nativeLaunches = [];
+const graphFailureCoverage = (${graphFailureCoverage.toString()});
 let nativeObserver, exitCode = 0;
 try {
  const nativeModule = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/windows/OpenCodeV2WindowsNativeBroker.ts')).href)});
  const { spyOn: observeFactory } = await import('bun:test');
- nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures);
+ nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures, nativeLaunches);
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
  const cleanup = await executeSelectedOpenCodeBridgeCommandEnvelope({
@@ -842,10 +937,10 @@ try {
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
-       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)});
+       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches);
        return;
      }
-     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)});
+     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches);
      const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
      readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
    });
