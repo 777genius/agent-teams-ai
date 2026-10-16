@@ -304,6 +304,17 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
           type: 'text',
           text: 'The tool returned an error and I cannot continue.',
         });
+        // The real Windows session contained 45 ordinary messages. Keep the
+        // complete history available for diagnosis, including unrelated turns.
+        for (let index = 0; index < 42; index++) {
+          message(`msg_prior_${index}`, 100 + index, {
+            role: 'user',
+            time: { created: 100 + index },
+          });
+          part(`prt_prior_${index}`, `msg_prior_${index}`, 100 + index, {
+            type: 'text', text: 'Unrelated prior notification',
+          });
+        }
         db.close();
         const record = {
           teamId: input.teamName,
@@ -313,6 +324,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
           projectPath: input.projectPath,
           profileRootKey: 'scope-TEST',
           opencodeSessionId: input.sessionId,
+          opencodeVersion: '1.19.0',
         };
         await writeFile(
           path.join(input.dataRoot, 'opencode/session-store.json'),
@@ -335,14 +347,16 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
           { env, cwd: root, timeout: 20_000, maxBuffer: 16_384 }
         );
         expect(await readFile(dbPath)).toEqual(originalDb);
-        const packet = projectV1NativeTranscript(
-          JSON.parse(await readFile(input.output, 'utf8')),
-          input
-        );
-        expect(packet.messages[0]).toMatchObject({ role: 'user', agent: 'teammate' });
-        expect(packet.messages[1]).toMatchObject({
+        const captured = JSON.parse(await readFile(input.output, 'utf8'));
+        expect(projectV1OfflineCaptureDiagnostic(captured.captureDiagnostic).recordVersionClass).toBe('v1');
+        const packet = projectV1NativeTranscript(captured, input);
+        expect(packet.messageCount).toBe(45);
+        expect(packet.messages).toHaveLength(45);
+        const ownedMessages = packet.messages.slice(42);
+        expect(ownedMessages[0]).toMatchObject({ role: 'user', agent: 'teammate' });
+        expect(ownedMessages[1]).toMatchObject({
           finishReason: 'tool-calls',
-          successorAssistantIndex: 2,
+          successorAssistantIndex: 44,
           tokens: { input: 2300, output: 40, reasoning: 12 },
           tools: [
             {
@@ -356,7 +370,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
             },
           ],
         });
-        expect(packet.messages[2]).toMatchObject({
+        expect(ownedMessages[2]).toMatchObject({
           finishReason: 'error',
           completedAt: 1400,
           hasError: true,
@@ -367,7 +381,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
             detail: expect.stringContaining('Original provider message: Forbidden'),
           },
         });
-        expect(packet.messages[2]?.assistantText).toContain('cannot continue');
+        expect(ownedMessages[2]?.assistantText).toContain('cannot continue');
         expect(JSON.stringify(packet)).not.toMatch(/TEST-private|never-publish|sk-123/);
         const foreignOutput = path.join(root, 'foreign-private.json');
         await expect(

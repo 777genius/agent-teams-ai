@@ -46,7 +46,7 @@ import {lstat,readFile,realpath,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 const input=JSON.parse(process.env.OPENCODE_TEST_NATIVE_TRANSCRIPT_INPUT);
-const diagnostic={stage:'store_read',constraint:null,checks:[],counts:{},reader:null,error:null};
+const diagnostic={stage:'store_read',constraint:null,checks:[],counts:{},recordVersionClass:null,reader:null,error:null};
 const check=(constraint,passed)=>{const previous=diagnostic.checks.find(row=>row.constraint===constraint);if(previous)previous.passed&&=!!passed;else diagnostic.checks.push({constraint,passed:!!passed});if(!passed){diagnostic.constraint=constraint;throw new Error(constraint)}};
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&(process.platform==='win32'?path.resolve(a).toLowerCase()===path.resolve(b).toLowerCase():path.resolve(a)===path.resolve(b));
 const file=async(p,cap)=>{const s=await lstat(p);check('store_file',s.isFile()&&!s.isSymbolicLink()&&s.size<=cap&&same(await realpath(p),p));return readFile(p,'utf8')};
@@ -61,6 +61,7 @@ diagnostic.counts={records:entries.length,canonical:canonical.length,team:canoni
 check('input_run_present',typeof input.runId==='string'&&input.runId.length>0);
 check('exact_record',matches.length===1);
 const record=matches[0][1];
+diagnostic.recordVersionClass=typeof record.opencodeVersion!=='string'||!record.opencodeVersion?'missing':record.opencodeVersion.startsWith('1.')?'v1':record.opencodeVersion.startsWith('2.')?'v2':'other';
 diagnostic.stage='profile_key';
 check('profile_key',typeof record.profileRootKey==='string'&&/^[A-Za-z0-9._-]{1,256}$/.test(record.profileRootKey)&&!['.','..'].includes(record.profileRootKey));
 diagnostic.stage='reader_import';
@@ -82,7 +83,7 @@ diagnostic.stage='history_supported';check('history_supported',history.historySh
 diagnostic.stage='history_complete';check('history_complete',history.historyComplete===true);
 diagnostic.stage='session_identity';check('session_identity',history.sessionIdentity?.sessionId===input.sessionId);
 diagnostic.stage='project_identity';check('project_identity',same(history.sessionIdentity.directory,input.projectPath));
-diagnostic.stage='history_budget';check('message_budget',history.messages.length<=32);check('part_budget',history.rawParts.length<=512);
+diagnostic.stage='history_budget';check('message_budget',history.messages.length<=128);check('part_budget',history.rawParts.length<=512);
 diagnostic.stage='projector';
 const projection=openCodeTranscriptProjector.projectSessionMessages({sessionId:input.sessionId,messages:history.messages});
 for(const message of projection.messages){
@@ -212,6 +213,7 @@ export function projectV1OfflineCaptureDiagnostic(value: unknown) {
   return {
     stage: stages.find((stage) => stage === input.stage) ?? 'unknown',
     constraint: constraints.find((constraint) => constraint === input.constraint) ?? null,
+    recordVersionClass: ['v1', 'v2', 'missing', 'other'].find((value) => value === input.recordVersionClass) ?? null,
     checks: Array.isArray(input.checks)
       ? input.checks.slice(0, constraints.length).flatMap((value) => {
           const check = row(value),
@@ -316,7 +318,7 @@ export function projectV1NativeTranscript(
   assert(transcript.sessionId === expected.sessionId && Array.isArray(transcript.messages));
   assert(/^test-opencode-[a-zA-Z0-9-]+$/.test(expected.teamName));
   assert(/^[a-f0-9-]{36}$/.test(expected.taskId));
-  assert(transcript.messages.length <= 32);
+  assert(transcript.messages.length <= 128);
   const messages = transcript.messages.map(record);
   const tools = (message: Record<string, unknown>) => {
     assert(Array.isArray(message.toolCalls) && message.toolCalls.length <= 64);
