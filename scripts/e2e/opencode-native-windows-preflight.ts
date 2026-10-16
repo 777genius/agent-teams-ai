@@ -989,8 +989,10 @@ async function verifyProbePreparation(
             const retired = Array.isArray(stopped.members) ? stopped.members.map(record) : [];
             const complete = retired.length === members.length && new Set(retired.map(member => member.memberId)).size === members.length &&
               members.every(member => {
-                const stoppedMember = retired.find(value => value.memberId === member.memberId), cleanup = record(stoppedMember?.cleanup);
-                return stoppedMember && Array.isArray(stoppedMember.errors) && stoppedMember.errors.length === 0 &&
+                const stoppedMember = retired.find(value => value.memberId === member.memberId);
+                if (!stoppedMember || stoppedMember.cleanup === null || stoppedMember.cleanup === undefined) return false;
+                const cleanup = record(stoppedMember.cleanup);
+                return Array.isArray(stoppedMember.errors) && stoppedMember.errors.length === 0 &&
                   cleanup.scopeClosed === true && cleanup.processRetired === true && cleanup.descendantsRetired === true &&
                   (!readyPids.has(member.memberId) || cleanup.pid === readyPids.get(member.memberId));
               });
