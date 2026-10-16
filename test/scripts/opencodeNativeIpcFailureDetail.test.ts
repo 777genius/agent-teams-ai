@@ -17,6 +17,108 @@ const project = (value: string): string =>
   ) as string;
 
 describe('serialized native IPC failure details', () => {
+  it('keeps original prelaunch primary and all cleanup native facts through real aggregate identities', async () => {
+    const source = await readFile(
+      path.resolve('scripts/e2e/opencode-native-windows-preflight.ts'),
+      'utf8'
+    );
+    const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+    const declaration = ast.statements
+      .filter(ts.isFunctionDeclaration)
+      .find((node) => node.name?.text === 'safeSourceGateFailure')!;
+    const compiled = ts.transpileModule(declaration.getText(ast), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    }).outputText;
+    const project = compileFunction(`${compiled}\nreturn safeSourceGateFailure;`)() as (
+      error: unknown,
+      failures?: WeakMap<object, string>
+    ) => { causal: { failures: Record<string, unknown>[]; truncated: boolean } };
+    const primary = new Error('execution_owner_not_private:private_acl_owner:5:private_dir_2');
+    const directory = Object.assign(
+      new Error('execution_native_unknown:owner_metadata_cleanup:6'),
+      {
+        nativeOperation: 'ownerCloseDirectory',
+        nativeStatus: 0xc0000022,
+        path: 'C:\\TEST-secret',
+        sid: 'S-1-5-TEST',
+      }
+    );
+    const broker = new Error('cleanup_unknown');
+    const closed = Object.assign(
+      new AggregateError([directory, broker], 'cleanup_unknown', { cause: directory }),
+      { cleanupBoundary: 'probe_store_close', primaryFailure: false }
+    );
+    const outer = Object.assign(
+      new AggregateError([primary, closed], 'cleanup_unknown', { cause: primary }),
+      { cleanupBoundary: 'probe_release', primaryFailure: true }
+    );
+    const originals = new WeakMap<object, string>([[primary, 'ownerAssertDirectory']]);
+    const before = Object.getOwnPropertyDescriptors(primary);
+    const packet = project(outer, originals).causal;
+    expect(packet.truncated).toBe(false);
+    expect(packet.failures).toHaveLength(5);
+    expect(packet.failures[1]).toMatchObject({
+      parent: 0,
+      role: 'primary',
+      category: 'execution_owner_not_private',
+      nativeOperation: 'ownerAssertDirectory',
+      native: { stage: 'private_acl_owner', nativeCode: 5 },
+      privateDirectoryIndex: 2,
+    });
+    expect(packet.failures[2]).toMatchObject({
+      parent: 0,
+      role: 'cleanup',
+      boundary: 'probe_store_close',
+    });
+    expect(packet.failures[3]).toMatchObject({
+      parent: 2,
+      role: 'cleanup',
+      nativeOperation: 'ownerCloseDirectory',
+      native: { stage: 'owner_metadata_cleanup', nativeCode: 6, nativeStatus: 0xc0000022 },
+    });
+    expect(packet.failures[4]).toMatchObject({
+      parent: 2,
+      role: 'cleanup',
+      category: 'cleanup_unknown',
+    });
+    expect(Object.getOwnPropertyDescriptors(primary)).toEqual(before);
+    expect(JSON.stringify(packet)).not.toMatch(/TEST-secret|S-1-5|stack|message/);
+    const unknown = Object.assign(new Error('TEST-secret:untrusted:5'), {
+      nativeOperation: 'TEST-secret',
+      code: 'TEST-secret',
+    });
+    expect(project(unknown).causal.failures[0]).toMatchObject({
+      category: 'unclassified',
+      nativeOperation: 'unknown',
+      native: null,
+      errno: null,
+    });
+    for (const [message, stage, nativeCode] of [
+      ['cleanup_unknown:close:995', 'close', 995],
+      ['execution_owner_not_private:private_acl_owner_run_v2:5', 'private_acl_owner_run_v2', 5],
+      ['run_control_connect_unknown:connect:5', 'connect', 5],
+    ] as const)
+      expect(project(new Error(message)).causal.failures[0]).toMatchObject({
+        native: { stage, nativeCode },
+      });
+    expect(
+      project(new Error('execution_native_unknown:arbitrary_stage_123:5')).causal.failures[0]
+    ).toMatchObject({ native: null });
+    const many = Object.assign(
+      new AggregateError(
+        Array.from({ length: 30 }, () => new Error('cleanup_unknown')),
+        'cleanup_unknown'
+      ),
+      { cleanupBoundary: 'probe_store_close', primaryFailure: false }
+    );
+    expect(project(many).causal.truncated).toBe(true);
+    expect(project(many).causal.failures).toHaveLength(16);
+    let deep: Error = new Error('cleanup_unknown');
+    for (let i = 0; i < 7; i++) deep = new Error('cleanup_unknown', { cause: deep });
+    expect(project(deep).causal.truncated).toBe(true);
+    expect(project(deep).causal.failures).toHaveLength(5);
+  });
+
   it('keeps actual target ACL projection bounded and strips raw paths, SIDs and extra fields', async () => {
     const source = await readFile(
       path.resolve('scripts/e2e/opencode-native-windows-preflight.ts'),

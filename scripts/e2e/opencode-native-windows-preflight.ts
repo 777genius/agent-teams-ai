@@ -14,7 +14,7 @@ type ReadinessExecutor = (
   executeV1: (input: unknown) => Promise<unknown>
 ) => Promise<unknown>;
 
-function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, string>): { reason: string; errno: string | null; primaryNativeOperation: string } {
+function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, string>): { reason: string; errno: string | null; primaryNativeOperation: string; causal: unknown } {
   const row = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
   const message = typeof row.message === 'string' ? row.message : '';
   const localReasons: Record<string, string> = {
@@ -62,8 +62,129 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
     'ETIMEDOUT',
     'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
   ];
+  // Traverse only retained original failures. No message, stack, path or raw native DTO crosses this boundary.
+  const categories = new Set(['execution_native_command_environment_alias', 'execution_native_command_output_limit', 'execution_native_command_stdin_unknown',
+    'run_control_accept_timeout', 'run_control_accept_unknown', 'run_control_connect_unknown', 'run_control_connection_limit',
+    'run_control_frame_invalid', 'run_control_frame_oversize', 'run_control_frame_utf8', 'run_control_held_identity', 'run_control_held_inputs',
+    'run_control_hmac_unknown', 'run_control_image_changed', 'run_control_image_hash', 'run_control_listen_unknown', 'run_control_owner_identity',
+    'run_control_package_peer_identity', 'run_control_parent_birth', 'run_control_path_alias', 'run_control_peer_identity', 'run_control_pipe_name',
+    'run_control_pipe_security', 'run_control_read_unknown', 'run_control_write_partial', 'run_control_write_unknown',
+    'run_state_acl_unknown', 'run_state_challenge_changed', 'run_state_challenge_unknown', 'run_state_record_collision', 'run_state_record_encoding',
+    'run_state_record_name', 'run_state_record_read', 'run_state_record_size', 'run_state_record_temporary', 'run_state_record_unknown', 'run_state_record_write',
+    'execution_containment_identity_mismatch', 'execution_database_alias', 'run_control_config_budget',
+    'run_control_config_identity', 'run_control_endpoint_changed', 'run_control_parent_join', 'run_control_selection_budget',
+    'run_control_selection_changed', 'run_control_selection_missing', 'run_controller_config_unknown', 'run_controller_inbox_unknown',
+    'run_process_appcontainer', 'run_state_absent', 'run_state_endpoint_changed', 'run_state_endpoint_missing', 'run_state_held_inputs',
+    'run_state_identity_changed', 'run_state_missing', 'run_state_record_absent', 'run_state_record_changed', 'run_state_start_changed', 'run_state_unknown',
+    'run_acquisition_timeout', 'run_initialization_timeout', 'run_stopped', 'cancelled', 'execution_path_alias', 'timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
+  'provider_catalog_scope_changed', 'provider_catalog_location_changed', 'provider_integration_changed', 'provider_credential_identity_changed',
+  'provider_owned_connection_unknown', 'provider_active_connection_changed', 'provider_auth_publication_changed', 'provider_auth_publication_unknown',
+  'provider_selected_model_missing', 'provider_original_connect_unknown', 'provider_original_execution_pending', 'provider_execution_target_changed',
+  'provider_saved_proof_changed', 'provider_saved_proof_unqualified', 'provider_physical_cleanup_unknown', 'provider_mutation_unknown',
+  'provider_response_invalid', 'provider_authority_changed', 'provider_directory_changed', 'provider_rollback_peer_changed',
+  'provider_rollback_publication_changed', 'provider_rollback_unknown', 'provider_rollback_publication_unknown',
+  'run_control_timeout', 'run_control_disconnected', 'run_control_changed', 'run_control_foreign', 'run_control_invalid',
+  'run_control_frame_too_large', 'run_owner_stale', 'run_process_unknown', 'run_process_changed',
+  'run_deadline_expired', 'run_readiness_changed', 'run_readiness_unknown', 'run_operation_unknown',
+  'execution_selected_auth_required', 'execution_selected_auth_unbound', 'execution_selected_auth_changed',
+  'execution_selected_auth_missing', 'execution_selected_auth_unsupported', 'execution_selected_auth_location_changed',
+  'execution_selected_auth_provider_unknown', 'execution_selected_auth_existing_or_unsupported',
+  'execution_selected_auth_readback_unknown', 'execution_selected_auth_profile_changed',
+  'execution_selected_oauth_readback_unknown', 'execution_selected_oauth_recovery_required', 'execution_selected_oauth_windows_unqualified',
+  'execution_selected_oauth_provider_unknown', 'execution_selected_oauth_integration_unknown',
+  'execution_selected_oauth_connection_unknown', 'execution_selected_oauth_model_unknown',
+  'execution_lease_not_owned', 'execution_host_unavailable', 'execution_containment_unqualified', 'execution_invalid_response', 'execution_identity_mismatch', 'execution_identity_unknown',
+  'execution_profile_changed', 'execution_graph_changed', 'execution_graph_incomplete', 'execution_graph_dependency_missing',
+  'execution_timeout', 'execution_owner_unknown', 'cleanup_unknown', 'selection_mismatch', 'authority_mismatch',
+  'graph_mismatch', 'identity_mismatch', 'unqualified_version', 'invalid_response', 'invalid_model',
+  'http_failure', 'transport_failure', 'media_type', 'deadline', 'authority_or_deadline', 'disposed', 'provider_operation_unknown',
+  'execution_cancelled', 'execution_containment_dll_identity', 'execution_containment_filesystem_denied',
+  'execution_containment_helper_closed', 'execution_containment_helper_failed', 'execution_containment_helper_identity',
+  'execution_containment_launcher_denied', 'execution_containment_pipe_denied', 'execution_containment_profile_denied',
+  'execution_containment_unavailable', 'execution_native_command_unknown', 'execution_native_stdio_owner_unknown',
+  'execution_native_timeout', 'execution_native_unknown', 'execution_owner_alias',
+  'execution_owner_archive_identity_mismatch', 'execution_owner_archive_path_mismatch', 'execution_owner_archive_reopen_identity_mismatch',
+  'execution_owner_archive_unknown', 'execution_owner_local_volume_required', 'execution_owner_metadata_budget',
+  'execution_owner_metadata_changed', 'execution_owner_metadata_invalid', 'execution_owner_metadata_missing',
+  'execution_owner_metadata_purpose_invalid', 'execution_owner_not_private', 'execution_owner_ntfs_required',
+  'execution_owner_path_invalid', 'execution_owner_record_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
+  'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending', 'probe_store_foreign', 'probe_store_invalid', 'probe_source_changed', 'probe_cached_target_changed', 'probe_controller_state_foreign', 'probe_plan_invalid', 'probe_original_owner_changed', 'probe_physical_cleanup_unknown', 'probe_observation_unknown', 'probe_failure_invalid', 'execution_owner_platform_pending', 'execution_profile_owned', 'run_selected_auth_changed', 'run_source_symlink', 'run_source_budget']);
+  const stages = new Set(['accept', 'close', 'connect', 'listen', 'process_alive', 'process_alive_wait', 'read', 'write',
+    'record_create', 'record_open', 'run_state_record_rename', 'command_stdin_complete', 'command_stdin_wait', 'command_stdin_write',
+    'identity', 'run_namespace_open', 'run_state_directory', 'shared_acl_mutex_ace_role',
+    'shared_acl_mutex_control', 'shared_acl_mutex_mask', 'shared_acl_mutex_owner',
+    'alias_predicate', 'assert_mapping', 'assert_stopped', 'assert_broker', 'retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
+  'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants',
+  'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata', 'process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
+  'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
+  'shared_acl_mutex_encoding', 'shared_acl_mutex_authority', 'shared_acl_mutex_wait', 'shared_acl_mutex',
+  'owner_archive_nt_rename', 'owner_canonical_open', 'owner_directory_create',
+  'owner_directory_open', 'owner_identity_links', 'owner_identity_reparse',
+  'owner_identity_type', 'owner_metadata_cleanup', 'owner_metadata_open',
+  'owner_metadata_publish', 'owner_parent_duplicate', 'owner_prepared_create',
+  'owner_verification_open', 'private_acl_foreign_allow', 'private_acl_owner',
+  'private_acl_owner_run_data_root', 'private_acl_owner_run_leaf', 'private_acl_owner_run_opencode',
+  'private_acl_owner_run_runs', 'private_acl_owner_run_v2', 'private_image_open',
+  'private_image_protected_dacl', 'private_dll_owner', 'private_owner_acquire', 'private_owner_cohort',
+  'private_owner_controller_tasks', 'private_owner_controller_teams', 'private_owner_discover_selection',
+  'private_owner_reserve_selection', 'private_owner_selected_selection',
+      'private_readonly_root', 'private_writable_root', 'private_protected_root',
+      'ancestor_metadata_control', 'ancestor_metadata_foreign', 'ancestor_metadata_group', 'ancestor_metadata_member', 'ancestor_metadata_open', 'ancestor_metadata_owner', 'ancestor_metadata_ace', 'ancestor_metadata_descriptor', 'ancestor_metadata_security', 'ancestor_metadata_package', 'ancestor_metadata_read', 'ancestor_metadata_changed', 'ancestor_metadata_cleanup_unproven', 'ancestor_metadata_intent', 'ancestor_metadata_acl_size', 'ancestor_metadata_acl', 'ancestor_metadata_write', 'ancestor_metadata_identity', 'ancestor_metadata_pin',
+  'shared_readonly_security', 'shared_readonly_acl', 'shared_readonly_owner', 'shared_readonly_file',
+      'shared_readonly_control', 'shared_readonly_ace', 'shared_readonly_package', 'shared_readonly_foreign_write',
+      'shared_readonly_grant_open', 'shared_readonly_grant_read', 'shared_readonly_grant_merge', 'shared_readonly_grant_write',
+      'shared_readonly_owner_changed', 'shared_readonly_control_changed', 'shared_readonly_foreign_changed', 'shared_readonly_member_missing']);
+  const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire', 'selfImageCustody',
+    'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
+    'ownerValidateSelectedProfile', 'ownerSelectConfig', 'ownerInspectProfileConfig', 'ownerArchive',
+    'ownerCreatePreparedDatabase', 'ownerWritePreparedConfig', 'ownerWritePreparedAuth', 'ownerReadMetadata', 'ownerWriteMetadata',
+    'ownerReadRecord', 'ownerWriteExclusive', 'runStateAcquire', 'runStateSelect', 'runStateDiscover',
+    'runStateReserve', 'runStateReadRecord', 'runStateWriteRecord', 'runStateReadStop', 'runStateOwnerRetired',
+    'runStateProcessIdentity', 'runStateValidateEndpoint', 'runStateRequest', 'runStateListen',
+    'runStateRespond', 'runStatePoisonConnection', 'runStateClose', 'runStateReadControllerInbox']);
+  const boundaries = new Set(['private_directories_close', 'private_directory_broker_close', 'prepared_member_close',
+    'probe_store_open', 'probe_store_close', 'probe_guard_close', 'probe_release', 'native_artifact_close']);
+  const failures: { parent: number | null; role: string; category: string; boundary: string | null;
+    nativeOperation: string; native: { stage: string; nativeCode: number; nativeStatus: number | null } | null;
+    privateDirectoryIndex: number | null; errno: string | null }[] = [];
+  const pending: { value: unknown; parent: number | null; role: string; depth: number }[] = [
+    { value: error, parent: null, role: 'primary', depth: 0 },
+  ];
+  const seen = new WeakSet<object>();
+  let truncated = false;
+  while (pending.length) {
+    const next = pending.shift()!;
+    if (next.value && typeof next.value === 'object' && seen.has(next.value)) continue;
+    if (next.depth > 4 || failures.length === 16) { truncated = true; continue; }
+    const original = next.value && typeof next.value === 'object' ? next.value as Record<string, unknown> : {};
+    if (next.value && typeof next.value === 'object') seen.add(next.value);
+    const text = typeof original.message === 'string' ? original.message : '';
+    const match = /^([a-z_]{1,96})(?::([a-z_][a-z_0-9]{0,63}):(0|[1-9][0-9]{0,9}))?(?::private_dir_([0-9]{1,2}))?$/.exec(text);
+    const category = match && categories.has(match[1]!) ? match[1]! : 'unclassified';
+    const nativeCode = match?.[3] === undefined ? -1 : Number(match[3]);
+    const operation = next.value && typeof next.value === 'object'
+      ? nativeFailures?.get(next.value) ?? original.nativeOperation : undefined;
+    const boundary = typeof original.cleanupBoundary === 'string' && boundaries.has(original.cleanupBoundary)
+      ? original.cleanupBoundary : null;
+    const index = failures.length;
+    failures.push({ parent: next.parent, role: next.role, category, boundary,
+      nativeOperation: typeof operation === 'string' && operations.has(operation) ? operation : 'unknown',
+      native: category !== 'unclassified' && match?.[2] && stages.has(match[2]) &&
+        Number.isSafeInteger(nativeCode) && nativeCode >= 0 && nativeCode <= 0xffffffff
+        ? { stage: match[2], nativeCode, nativeStatus: Number.isSafeInteger(original.nativeStatus) &&
+          Number(original.nativeStatus) >= 0 && Number(original.nativeStatus) <= 0xffffffff ? Number(original.nativeStatus) : null } : null,
+      privateDirectoryIndex: category !== 'unclassified' && match?.[4] !== undefined && Number(match[4]) < 64 ? Number(match[4]) : null,
+      errno: errnos.find(value => value === original.code) ?? null });
+    if (boundary && text === 'cleanup_unknown' && typeof original.primaryFailure === 'boolean' && Array.isArray(original.errors)) {
+      if (original.errors.length > 16) truncated = true;
+      for (let i = 0; i < Math.min(16, original.errors.length); i++)
+        pending.push({ value: original.errors[i], parent: index, role: i === 0 && original.primaryFailure ? 'primary' : 'cleanup', depth: next.depth + 1 });
+    }
+    if (original.cause !== undefined)
+      pending.push({ value: original.cause, parent: index, role: boundary && original.primaryFailure === false ? 'cleanup' : 'cause', depth: next.depth + 1 });
+  }
   return { reason, errno: errnos.find((value) => value === row.code) ?? null,
-    primaryNativeOperation: error && typeof error === 'object' ? nativeFailures?.get(error) ?? 'unknown' : 'unknown' };
+    primaryNativeOperation: error && typeof error === 'object' ? nativeFailures?.get(error) ?? 'unknown' : 'unknown', causal: { failures, truncated } };
 }
 
 // Observe rejection identity only; no request data, error text, or history is retained.
@@ -77,14 +198,14 @@ function observeNativeBrokerFailures(
   failures: WeakMap<object, string>,
   launches: unknown[]
 ) {
-  const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire',
+  const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire', 'selfImageCustody',
     'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
     'ownerValidateSelectedProfile', 'ownerSelectConfig', 'ownerInspectProfileConfig', 'ownerArchive',
-    'ownerCreatePreparedDatabase', 'ownerWritePreparedConfig', 'ownerReadMetadata', 'ownerWriteMetadata',
+    'ownerCreatePreparedDatabase', 'ownerWritePreparedConfig', 'ownerWritePreparedAuth', 'ownerReadMetadata', 'ownerWriteMetadata',
     'ownerReadRecord', 'ownerWriteExclusive', 'runStateAcquire', 'runStateSelect', 'runStateDiscover',
     'runStateReserve', 'runStateReadRecord', 'runStateWriteRecord', 'runStateReadStop', 'runStateOwnerRetired',
     'runStateProcessIdentity', 'runStateValidateEndpoint', 'runStateRequest', 'runStateListen',
-    'runStateRespond', 'runStatePoisonConnection', 'runStateClose']);
+    'runStateRespond', 'runStatePoisonConnection', 'runStateClose', 'runStateReadControllerInbox']);
   const originalFactory = module.createWindowsNativeBroker;
   const observer = spyOn(module, 'createWindowsNativeBroker');
   observer.mockImplementation(function (this: unknown, artifact) {
