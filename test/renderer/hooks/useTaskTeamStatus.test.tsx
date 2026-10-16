@@ -34,6 +34,11 @@ const initialStore = useStore.getState();
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 
+// Keep React's async act scope open while effects and alive-list promises settle.
+function flushReact(callback: () => void): Promise<void> {
+  return act(() => Promise.resolve(callback()));
+}
+
 function Probe() {
   const sidebar = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -79,7 +84,7 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(async () => {
-  await act(async () => root.unmount());
+  await flushReact(() => root.unmount());
   host.remove();
   useStore.setState(initialStore);
   localStorage.clear();
@@ -88,18 +93,20 @@ afterEach(async () => {
 
 it('keeps startup unknown until an authoritative list and uses task-team fallbacks in both views', async () => {
   let resolve!: (teams: string[]) => void;
-  aliveList.mockReturnValue(
-    new Promise<string[]>((done) => {
-      resolve = done;
-    })
-  );
+  const response = new Promise<string[]>((done) => {
+    resolve = done;
+  });
+  aliveList.mockReturnValue(response);
   useStore.setState({ leadActivityByTeam: { 'forced-offline': 'offline' } });
-  await act(async () => root.render(<Probe />));
+  await flushReact(() => root.render(<Probe />));
   expectOffline(false);
   expect(host.firstElementChild!.getAttribute('data-sidebar-forced')).toBe('true');
   expect(host.firstElementChild!.getAttribute('data-tree-forced')).toBe('true');
 
-  await act(async () => resolve([]));
+  await act(async () => {
+    resolve([]);
+    await response;
+  });
   expectOffline(true);
 });
 
@@ -107,9 +114,9 @@ it.each(['cancelled', 'disconnected'] as const)(
   'marks a %s team offline in both views despite a stale alive list and no offline lead flag',
   async (state) => {
     aliveList.mockResolvedValue([task.teamName]);
-    await act(async () => root.render(<Probe />));
+    await flushReact(() => root.render(<Probe />));
     expectOffline(false);
-    await act(async () =>
+    await flushReact(() =>
       useStore.setState({
         currentProvisioningRunIdByTeam: { [task.teamName]: 'run' },
         provisioningRuns: { run: progress(state) },
@@ -120,11 +127,11 @@ it.each(['cancelled', 'disconnected'] as const)(
 );
 
 it('refreshes live status on team identity and ready progress while preserving provisioning grace', async () => {
-  await act(async () => root.render(<Probe />));
+  await flushReact(() => root.render(<Probe />));
   expectOffline(true);
   expect(aliveList).toHaveBeenCalledTimes(2);
 
-  await act(async () =>
+  await flushReact(() =>
     useStore.setState({
       currentProvisioningRunIdByTeam: { [task.teamName]: 'run' },
       provisioningRuns: { run: progress('verifying') },
@@ -133,18 +140,18 @@ it('refreshes live status on team identity and ready progress while preserving p
   expectOffline(false);
   expect(aliveList).toHaveBeenCalledTimes(2);
 
-  await act(async () => useStore.setState({ provisioningRuns: { run: progress('ready') } }));
+  await flushReact(() => useStore.setState({ provisioningRuns: { run: progress('ready') } }));
   expect(aliveList).toHaveBeenCalledTimes(4);
   expectOffline(false);
   const oldReady = { ...progress('ready'), updatedAt: new Date(Date.now() - 60_000).toISOString() };
-  await act(async () => useStore.setState({ provisioningRuns: { run: oldReady } }));
+  await flushReact(() => useStore.setState({ provisioningRuns: { run: oldReady } }));
   expect(aliveList).toHaveBeenCalledTimes(6);
   expectOffline(true);
 
   aliveList.mockResolvedValue([task.teamName]);
-  await act(async () => useStore.setState({ teams: [team] }));
+  await flushReact(() => useStore.setState({ teams: [team] }));
   expectOffline(false);
   expect(aliveList).toHaveBeenCalledTimes(8);
-  await act(async () => useStore.setState({ teams: [{ ...team }] }));
+  await flushReact(() => useStore.setState({ teams: [{ ...team }] }));
   expect(aliveList).toHaveBeenCalledTimes(8);
 });

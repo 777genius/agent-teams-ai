@@ -575,13 +575,13 @@ it.each([
   'keeps local task menu actions available in the %s menu with %s folder storage',
   async (kind, status) => {
     const fixture = treeHarness([makeGlobalTask()]);
-    await act(async () => root.render(<fixture.Harness />));
-    await act(async () => fixture.update({ status }));
-    const row = host.querySelector('[data-task-key]') as HTMLElement;
+    act(() => root.render(<fixture.Harness />));
+    act(() => fixture.update({ status }));
+    const row = host.querySelector<HTMLElement>('[data-task-key]')!;
     expect(
       row.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!.disabled
     ).toBe(true);
-    await act(async () => {
+    act(() => {
       if (kind === 'context')
         row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }));
       else
@@ -600,7 +600,7 @@ it.each([
     const move = items.find((item) => item.textContent === 'taskFolders.move');
     expect(move).toBeDefined();
     expect(move!.getAttribute('aria-disabled')).toBe('true');
-    await act(async () =>
+    act(() =>
       items.find((item) => item.textContent === 'taskContextMenu.pin')!.click()
     );
     await act(async () => {
