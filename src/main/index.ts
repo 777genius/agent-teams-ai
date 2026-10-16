@@ -1,13 +1,4 @@
-/**
- * Main process entry point for Agent Teams AI.
- *
- * Responsibilities:
- * - Initialize Electron app and main window
- * - Set up IPC handlers for data access
- * - Initialize ServiceContextRegistry with local context
- * - Start file watcher for live updates
- * - Manage application lifecycle
- */
+/** Composes the Electron desktop services, IPC and application lifecycle. */
 
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
@@ -98,6 +89,7 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import { createOpenCodeInputDeclarationResolver } from '@features/runtime-provider-management';
 import {
   createRuntimeProviderManagementFeature,
   inspectOpenCodeLocalModelRuntimeReadiness,
@@ -2011,7 +2003,24 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = createDefaultTeamProvisioningService(() => teamGroupChatsFeature);
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+    },
+    emitOAuthProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
+    },
+    emitProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
+    },
+  });
+  const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
+    runtimeProviderManagementFeature.loadModels
+  );
+  teamProvisioningService = createDefaultTeamProvisioningService(
+    () => teamGroupChatsFeature,
+    resolveOpenCodeInputDeclaration
+  );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
@@ -2360,17 +2369,6 @@ async function initializeServices(): Promise<void> {
     teamDataService,
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
-  });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
-    openExternal: async (url) => {
-      await shell.openExternal(url);
-    },
-    emitOAuthProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
-    },
-    emitProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
-    },
   });
   terminalWorkspaceFeature = createTerminalWorkspaceFeature({
     teamsBasePath: getTeamsBasePath(),
@@ -2893,7 +2891,6 @@ async function initializeServices(): Promise<void> {
 
   registerExternalAgentConnectionIpc(ipcMain, externalAgentConnection);
 
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -2942,7 +2939,8 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     teamBackupService ?? undefined,
     launchIoGovernor ?? undefined,
-    memberWorkSyncFeature ?? undefined
+    memberWorkSyncFeature ?? undefined,
+    resolveOpenCodeInputDeclaration
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
@@ -2958,13 +2956,11 @@ async function initializeServices(): Promise<void> {
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
-  // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
   });
 
-  // Forward notification events to HTTP SSE clients
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
   });

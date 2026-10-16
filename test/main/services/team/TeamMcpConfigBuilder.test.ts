@@ -186,7 +186,12 @@ describe('TeamMcpConfigBuilder', () => {
     const tsxCli = getWorkspaceTsxCli();
     const builtEntry = getBuiltWorkspaceEntry();
     mockPathExists([sourceEntry, tsxPackageJson, tsxCli, builtEntry], { strict: true });
-    return { sourceEntry, tsxPackageJson, tsxCli, builtEntry };
+    return {
+      sourceEntry: fs.realpathSync(sourceEntry),
+      tsxPackageJson,
+      tsxCli: fs.realpathSync(tsxCli),
+      builtEntry,
+    };
   }
 
   function mockBuiltWorkspaceEntryAvailable(): string {
@@ -293,6 +298,35 @@ describe('TeamMcpConfigBuilder', () => {
 
     const server = parsed.mcpServers?.['agent-teams'];
     expectNodeTsxSourceEntry(server, tsxCli, sourceEntry);
+  });
+
+  it('uses physical runner and source paths when workspace dependencies are symlinked', async () => {
+    const workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-symlinks-')));
+    createdDirs.push(workspace);
+    const runnerDir = path.join(workspace, 'store', 'tsx');
+    const sourceDir = path.join(workspace, 'controller-source');
+    fs.mkdirSync(path.join(runnerDir, 'dist'), { recursive: true });
+    fs.mkdirSync(sourceDir, { recursive: true });
+    const physicalRunner = path.join(runnerDir, 'dist', 'cli.mjs');
+    const physicalSource = path.join(sourceDir, 'index.ts');
+    fs.writeFileSync(physicalRunner, '// TEST TypeScript runner');
+    fs.writeFileSync(physicalSource, '// TEST MCP source');
+    fs.writeFileSync(
+      path.join(runnerDir, 'package.json'),
+      JSON.stringify({ bin: { tsx: 'dist/cli.mjs' } })
+    );
+    const workspaceServer = path.join(workspace, 'mcp-server');
+    fs.mkdirSync(path.join(workspaceServer, 'node_modules'), { recursive: true });
+    fs.symlinkSync(runnerDir, path.join(workspaceServer, 'node_modules', 'tsx'), 'junction');
+    fs.symlinkSync(sourceDir, path.join(workspaceServer, 'src'), 'junction');
+    vi.spyOn(process, 'cwd').mockReturnValue(workspace);
+
+    const launch = await resolveAgentTeamsMcpLaunchSpec();
+
+    expect(launch.args).toEqual([physicalRunner, physicalSource]);
+    expect(launch.args).not.toContain(
+      path.join(workspaceServer, 'node_modules', 'tsx', 'dist', 'cli.mjs')
+    );
   });
 
   it('pins the MCP controller to the active Claude base path', async () => {
@@ -1496,7 +1530,9 @@ describe('TeamMcpConfigBuilder', () => {
       });
       createdPaths.push(configPath);
       expect(readGeneratedServer(configPath)?.env).toMatchObject(resolved);
-    } finally { revoke(); }
+    } finally {
+      revoke();
+    }
   });
 
   it('ignores malformed user MCP file', async () => {
