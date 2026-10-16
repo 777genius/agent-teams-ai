@@ -191,13 +191,15 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
 function observeNativeBrokerFailures(
   module: { createWindowsNativeBroker(artifact: unknown): {
     request(operation: string, input?: Readonly<Record<string, unknown>>, deadline?: number, signal?: AbortSignal): Promise<unknown>;
+    ended?(): boolean; events?: { on(event: 'close', listener: (code: unknown) => void): unknown };
   } },
   spyOn: (target: typeof module, key: 'createWindowsNativeBroker') => {
     mockImplementation(fn: typeof module.createWindowsNativeBroker): void; mockRestore(): void;
   },
   failures: WeakMap<object, string>,
   launches: unknown[],
-  statuses: unknown[] = []
+  statuses: unknown[] = [],
+  brokerTrace: unknown[] = []
 ) {
   const operations = new Set(['identity', 'assertLive', 'launch', 'send', 'retire', 'selfImageCustody',
     'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerAssertDirectory', 'ownerCloseDirectory',
@@ -208,15 +210,65 @@ function observeNativeBrokerFailures(
     'runStateProcessIdentity', 'runStateValidateEndpoint', 'runStateRequest', 'runStateListen',
     'runStateRespond', 'runStatePoisonConnection', 'runStateClose', 'runStateReadControllerInbox']);
   const observedAt = Date.now();
+  // Last 24 run-control exchanges across all created brokers: closed codes, remaining
+  // deadline, helper liveness at call time and helper exit. No inputs or results.
+  const tracedOperations = new Set(['runStateDiscover', 'runStateSelect', 'runStateValidateEndpoint',
+    'runStateProcessIdentity', 'runStateRequest', 'runStateReadStop', 'runStateOwnerRetired']);
+  const traceCodes = new Set(['execution_native_timeout', 'execution_native_unknown', 'execution_cancelled',
+    'execution_containment_helper_closed', 'execution_containment_helper_failed', 'execution_invalid_response',
+    'run_deadline_expired', 'run_control_timeout', 'run_control_disconnected', 'run_control_connect_unknown',
+    'run_control_foreign', 'run_control_endpoint_changed', 'run_state_unknown', 'run_state_missing', 'cleanup_unknown']);
+  const traceElapsed = () => Math.max(0, Math.min(86400000, Date.now() - observedAt));
+  const retainTrace = (event: Record<string, unknown>) => {
+    brokerTrace.push(event);
+    if (brokerTrace.length > 24) brokerTrace.shift();
+  };
+  let createdBrokers = 0;
   const originalFactory = module.createWindowsNativeBroker;
   const observer = spyOn(module, 'createWindowsNativeBroker');
   observer.mockImplementation(function (this: unknown, artifact) {
     const broker = Reflect.apply(originalFactory, this, [artifact]);
+    const brokerIndex = Math.min(createdBrokers++, 4095);
+    let traced = false;
+    try {
+      broker.events?.on('close', (code) => {
+        try {
+          if (traced) retainTrace({ kind: 'helper_close', broker: brokerIndex,
+            exitCode: Number.isSafeInteger(code) && Number(code) >= -2147483648 && Number(code) <= 4294967295 ? Number(code) : null,
+            elapsedMs: traceElapsed() });
+        } catch { /* Diagnostic capture cannot change helper lifetime. */ }
+      });
+    } catch { /* Diagnostic capture cannot change helper lifetime. */ }
     let launch: Record<string, unknown> | undefined;
     const descriptors = Object.getOwnPropertyDescriptors(broker), request = broker.request;
     if (!descriptors.request || typeof request !== 'function') throw new Error('TEST native broker shape invalid');
     descriptors.request = { ...descriptors.request, value: function (...args: Parameters<typeof request>) {
-      const rejected = (error: unknown): never => {
+      let event: Record<string, unknown> | undefined;
+      try {
+        if (tracedOperations.has(args[0])) {
+          traced = true;
+          event = { kind: 'request', broker: brokerIndex, operation: args[0],
+            budgetMs: typeof args[2] === 'number' && Number.isFinite(args[2])
+              ? Math.max(-1, Math.min(60000, Math.round(args[2] - Date.now()))) : null,
+            endedAtCall: typeof broker.ended === 'function' ? broker.ended() === true : null,
+            startElapsedMs: traceElapsed(), outcome: 'pending' };
+          retainTrace(event);
+        }
+      } catch { event = undefined; }
+      const settle = (ok: boolean, error: unknown, sync: boolean) => {
+        try {
+          if (!event) return;
+          const text = !ok && error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string'
+            ? (error as { message: string }).message : '';
+          const match = /^([a-z_]{1,96})(?::[a-z_][a-z_0-9]{0,63}:(0|[1-9][0-9]{0,9}))?$/.exec(text);
+          const closed = !ok && match !== null && traceCodes.has(match[1]!);
+          Object.assign(event, { outcome: ok ? 'ok' : closed ? match[1] : 'other',
+            nativeCode: closed && match[2] !== undefined && Number(match[2]) <= 0xffffffff ? Number(match[2]) : null,
+            sync, settledElapsedMs: traceElapsed() });
+        } catch { /* Diagnostic capture cannot change transport semantics. */ }
+      };
+      const rejected = (error: unknown, sync = false): never => {
+        settle(false, error, sync);
         if (error && typeof error === 'object') {
           const operation = operations.has(args[0]) ? args[0] : 'unknown', previous = failures.get(error);
           failures.set(error, previous && previous !== operation ? 'unknown' : operation);
@@ -224,6 +276,7 @@ function observeNativeBrokerFailures(
         throw error;
       };
       try { return Reflect.apply(request, broker, args).then((result) => {
+        settle(true, undefined, false);
         // Retain only this TEST launch's selected roots and validated prepare
         // anchors. Never retain the launch environment or alter an RPC result.
         try {
@@ -280,7 +333,7 @@ function observeNativeBrokerFailures(
         } catch { /* Diagnostic capture cannot change launch or transport semantics. */ }
         return result;
       }, rejected); }
-      catch (error) { return rejected(error); }
+      catch (error) { return rejected(error, true); }
     } };
     return Object.freeze(Object.create(Object.getPrototypeOf(broker), descriptors)) as typeof broker;
   });
@@ -1252,12 +1305,13 @@ let publicStopFailure = null;
 const nativeFailures = new WeakMap();
 const nativeLaunches = [];
 const liveStatuses = [];
+const nativeBrokerTrace = [];
 const graphFailureCoverage = (${graphFailureCoverage.toString()});
 let nativeObserver, exitCode = 0;
 try {
  const nativeModule = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/windows/OpenCodeV2WindowsNativeBroker.ts')).href)});
  const { spyOn: observeFactory } = await import('bun:test');
- nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures, nativeLaunches, liveStatuses);
+ nativeObserver = (${observeNativeBrokerFailures.toString()})(nativeModule, observeFactory, nativeFailures, nativeLaunches, liveStatuses, nativeBrokerTrace);
  const { executeOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(handlerModuleUrl)});
  const { executeSelectedOpenCodeBridgeCommandEnvelope } = await import(${JSON.stringify(selectedBridgeModuleUrl)});
  const cleanup = await executeSelectedOpenCodeBridgeCommandEnvelope({
@@ -1324,7 +1378,7 @@ try {
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,nativeBrokerTrace,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
    publicStopFailure:publicStopFailure===null?null:(${safeSourceGateFailure.toString()})(publicStopFailure,nativeFailures),
    ...(${safeSourceGateFailure.toString()})(error,nativeFailures)}));

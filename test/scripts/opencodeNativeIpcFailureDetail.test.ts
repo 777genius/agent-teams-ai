@@ -746,3 +746,52 @@ it('expired readiness still issues one original public Stop and retains its exac
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it('native broker trace keeps closed exchange facts, helper exit and broker liveness at Stop entry', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+  const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find((node) => node.name?.text === 'observeNativeBrokerFailures')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const { EventEmitter } = await import('node:events');
+  const events = new EventEmitter();
+  let ended = false;
+  const reply = { value: 'PRIVATE_REPLY' };
+  const timeout = new Error('execution_native_timeout'), unknown = new Error('execution_native_unknown');
+  const broker = {
+    events, ended: () => ended,
+    request: (...args: [operation: string, input?: unknown, deadline?: number]): Promise<unknown> => {
+      const [operation] = args;
+      if (operation === 'runStateReadStop') throw unknown;
+      return operation === 'runStateProcessIdentity' ? Promise.reject(timeout) : Promise.resolve(reply);
+    },
+  };
+  const module = { createWindowsNativeBroker: () => broker };
+  const failures = new WeakMap<object, string>(), trace: Record<string, unknown>[] = [];
+  const observed = compileFunction(`${compiled}
+    const spyOn = (target, key) => ({ mockImplementation(fn) { target[key] = fn; }, mockRestore() {} });
+    observeNativeBrokerFailures(module, spyOn, failures, [], [], trace);
+    return module.createWindowsNativeBroker(null);`, ['module', 'failures', 'trace'])(module, failures, trace) as typeof broker;
+  const deadline = Date.now() + 5_000;
+  expect(await observed.request('runStateValidateEndpoint', { endpointHash: 'PRIVATE_HASH' }, deadline)).toBe(reply);
+  await expect(observed.request('runStateProcessIdentity', { pid: 1 }, deadline)).rejects.toBe(timeout);
+  ended = true;
+  events.emit('close', 0);
+  // The real broker rejects an ended helper synchronously, before any promise exists.
+  expect(() => observed.request('runStateReadStop', { endpointHash: 'PRIVATE_HASH' }, deadline + 25_000)).toThrow(unknown);
+  expect(failures.get(unknown)).toBe('runStateReadStop');
+  expect(trace.map(({ kind, operation, outcome, sync, endedAtCall, exitCode }) =>
+    ({ kind, operation, outcome, sync, endedAtCall, exitCode }))).toEqual([
+    { kind: 'request', operation: 'runStateValidateEndpoint', outcome: 'ok', sync: false, endedAtCall: false, exitCode: undefined },
+    { kind: 'request', operation: 'runStateProcessIdentity', outcome: 'execution_native_timeout', sync: false, endedAtCall: false, exitCode: undefined },
+    { kind: 'helper_close', operation: undefined, outcome: undefined, sync: undefined, endedAtCall: undefined, exitCode: 0 },
+    { kind: 'request', operation: 'runStateReadStop', outcome: 'execution_native_unknown', sync: true, endedAtCall: true, exitCode: undefined },
+  ]);
+  expect(trace.at(-1)!.budgetMs).toBeGreaterThan(29_000);
+  expect(trace.at(-1)!.budgetMs).toBeLessThanOrEqual(30_000);
+  for (let index = 0; index < 30; index++) await observed.request('runStateValidateEndpoint', {}, deadline);
+  expect(trace).toHaveLength(24);
+  expect(JSON.stringify(trace)).not.toMatch(/PRIVATE/);
+});
