@@ -15,6 +15,12 @@ on:
       source_only:
         type: boolean
         default: false
+      runtime_candidate_run:
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        type: string
+        default: ''
     secrets:
       RUNTIME_BUILD_DISPATCH_TOKEN:
         required: false
@@ -31,13 +37,21 @@ on:
         required: true
         type: string
       provider_only:
-        description: Compare verified 118/119 runtimes with official npm V1 provider commands only
+        description: Compare verified 118 and explicit CI candidate with official npm V1 provider commands only
         type: boolean
         default: false
       source_only:
         description: Stop after source preflight without packaging or model tasks
         type: boolean
         default: false
+      runtime_candidate_run:
+        description: Exact completed Windows packaged-delivery CI producer run for provider-only verification
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        description: Exact candidate source SHA matching sdk_ref for provider-only verification
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -94,9 +108,15 @@ jobs:
           SDK_REF: ${{ inputs.sdk_ref }}
           SELECTED_MODEL: ${{ inputs.model }}
           PROVIDER_ONLY: ${{ inputs.provider_only }}
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
         run: |
           if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required' }
           if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
+          if ($env:PROVIDER_ONLY -eq 'true') {
+            if ($env:RUNTIME_CANDIDATE_RUN -notmatch '^[0-9]+$' -or $env:RUNTIME_CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Explicit provider candidate CI run and exact source SHA required' }
+            if ($env:RUNTIME_CANDIDATE_SHA -cne $env:SDK_REF) { throw 'Provider candidate must match selected SDK source' }
+          }
       - uses: actions/checkout@v6
         with:
           repository: 777genius/agent_teams_orchestrator
@@ -170,15 +190,18 @@ jobs:
           if (!$found) { @{observation='three_roots_only'; foreignWrite=$false} | ConvertTo-Json -Compress | Write-Output }
           } catch { @{observation='unavailable'; reason='acl_measurement_failed'} | ConvertTo-Json -Compress | Write-Output }
           if ($found) { throw 'native_readonly_acl_shape_rejected' }
-      - name: Compare published Windows V1 provider behavior without inference
+      - name: Compare verified Windows V1 provider behavior without inference
         if: ${{ inputs.provider_only }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-          RUNTIME_CANDIDATE_RUN: '38691843263'
-          RUNTIME_CANDIDATE_SHA: 'df1a9695fcaaaececb07d6a16550ee5f3bad6c1c'
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+          RUNTIME_CANDIDATE_BUN_VERSION: '1.4.3'
         run: |
           $ErrorActionPreference = 'Stop'
+          $comparisonRoot = Join-Path $env:RUNNER_TEMP ("TEST-opencode-provider-" + $env:GITHUB_RUN_ID + '-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory $comparisonRoot | Out-Null
           $originalLock = Get-Content runtime.lock.json -Raw
           try {
             $lock = $originalLock | ConvertFrom-Json
@@ -189,17 +212,17 @@ jobs:
             $lock | ConvertTo-Json -Depth 20 | Set-Content runtime.lock.json -Encoding utf8NoBOM
             node scripts/stage-runtime.mjs --platform win32-x64
             if ($LASTEXITCODE -ne 0) { throw 'Verified 118 staging failed' }
-            New-Item -ItemType Directory TEST-provider | Out-Null
-            Move-Item resources/runtime TEST-provider/runtime118
+            Move-Item resources/runtime (Join-Path $comparisonRoot 'runtime118')
             New-Item -ItemType Directory resources/runtime | Out-Null
             node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
-            if ($LASTEXITCODE -ne 0) { throw 'Verified 119 candidate staging failed' }
+            if ($LASTEXITCODE -ne 0) { throw 'Verified candidate staging failed' }
             $candidate = Get-Content runtime-candidate-evidence.json -Raw | ConvertFrom-Json
-            if ($candidate.artifactId -ne 11952374623 -or $candidate.artifactDigest -cne 'sha256:92daae1ea428a0e5002a516b62d5307645d2fab123ed20f02a11d354fac13aee' -or $candidate.sourceSha -cne $env:RUNTIME_CANDIDATE_SHA) { throw '119 candidate pin changed' }
-            Move-Item resources/runtime TEST-provider/runtime119
-            npm install --global --prefix TEST-provider/npm --no-audit --no-fund opencode-ai@1.18.31
+            if ($candidate.runId -cne $env:RUNTIME_CANDIDATE_RUN -or $candidate.sourceSha -cne $env:RUNTIME_CANDIDATE_SHA) { throw 'Explicit candidate selection changed' }
+            Move-Item resources/runtime (Join-Path $comparisonRoot 'candidate')
+            $npmRoot = Join-Path $comparisonRoot 'npm'
+            npm install --global --prefix $npmRoot --no-audit --no-fund opencode-ai@1.18.31
             if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
-            $npmLockPath = 'TEST-provider/npm/node_modules/.package-lock.json'
+            $npmLockPath = Join-Path $npmRoot 'node_modules/.package-lock.json'
             if (Test-Path $npmLockPath -PathType Leaf) {
               $npmLock = Get-Content $npmLockPath -Raw | ConvertFrom-Json
               $wrapper = $npmLock.packages.'node_modules/opencode-ai'
@@ -207,11 +230,10 @@ jobs:
               if ($wrapper.version -cne '1.18.31' -or $wrapper.integrity -cne 'sha512-J95feefeWwtIaw3irx76WjzWcgQXxmuHmDVphvs5ep9X30fBJ6T6bFhw50i9Kx50MG/xPn5w2pafXIfNtdry9w==') { throw 'Official npm wrapper integrity changed' }
               if ($native.Count -ne 1 -or $native[0].Value.version -cne '1.18.31' -or $native[0].Value.integrity -cne 'sha512-1Za7uKeGLonNUkUIGHD7xfV5omi7ju/7z2WYfS5YvDLTr1iU/W1PPVHzHXiwiyV4gMxsWGwHHLubWdH99D7pSA==') { throw 'Official npm native integrity changed' }
             }
-            $baseline = (Resolve-Path TEST-provider/runtime118/claude-multimodel.exe).Path
-            $candidateBinary = (Resolve-Path TEST-provider/runtime119/claude-multimodel.exe).Path
-            $official = (Resolve-Path TEST-provider/npm/opencode.cmd).Path
-            $receipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-v1-provider-comparison.json'
-            node ../TEST-native-sdk/scripts/smoke/windows-runtime-opencode-provider-json.mjs --actual-provider-compare $baseline $candidateBinary $official $receipt (Resolve-Path scripts/e2e/opencode-native-test-auth.ts).Path
+            $baseline = (Resolve-Path (Join-Path $comparisonRoot 'runtime118/claude-multimodel.exe')).Path
+            $candidateBinary = (Resolve-Path (Join-Path $comparisonRoot 'candidate/claude-multimodel.exe')).Path
+            $official = (Resolve-Path (Join-Path $npmRoot 'opencode.cmd')).Path
+            node ../TEST-native-sdk/scripts/opencode-v1-provider-regression.ts $comparisonRoot $official $candidateBinary $baseline
             if ($LASTEXITCODE -ne 0) { throw 'Real V1 provider comparison failed; inspect finite receipt' }
           } finally { Set-Content runtime.lock.json $originalLock -Encoding utf8NoBOM }
       - name: Preserve finite V1 provider comparison
@@ -220,7 +242,10 @@ jobs:
         with:
           name: windows-v1-provider-comparison-${{ github.sha }}
           if-no-files-found: error
-          path: ${{ runner.temp }}/TEST-windows-v1-provider-comparison.json
+          path: |
+            ${{ runner.temp }}/TEST-opencode-provider-*/baseline-summary.json
+            ${{ runner.temp }}/TEST-opencode-provider-*/candidate-summary.json
+            TEST-native-source/runtime-candidate-evidence.json
       - name: Seed private runner-local TEST provider auth
         if: ${{ !inputs.source_only && !inputs.provider_only }}
         env:

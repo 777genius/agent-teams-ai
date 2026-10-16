@@ -8,6 +8,12 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { extractArchive, publishRuntimePayload } from '../../lib/runtime-payload-cache.mjs';
 
+function candidateBunVersion(value) {
+  const version = value === undefined ? '1.3.11' : value;
+  assert(['1.3.11', '1.4.3'].includes(version), 'Unsupported candidate Bun version');
+  return version;
+}
+
 // Bound API work and reject partial/changing listings before selecting a producer or artifact.
 export function candidatePages(api, endpoint, key) {
   const perPage = 100;
@@ -47,6 +53,7 @@ export function candidatePages(api, endpoint, key) {
 export async function verifyCandidatePayload(root, expected, { packaged = false } = {}) {
   assert(expected?.testOnly === true && /^[a-f0-9]{40}$/.test(expected.sourceSha ?? ''));
   assert(/^\d+\.\d+\.\d+$/.test(expected.sourceVersion ?? ''));
+  const bunVersion = candidateBunVersion(expected.bunVersion);
   const digest = async (relative) => {
     const file = path.join(root, relative);
     const leaf = await lstat(file);
@@ -62,12 +69,13 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
     delivery.schema === 1 &&
       delivery.platform === 'win32' &&
       delivery.arch === 'x64' &&
-      delivery.bunVersion === '1.3.11'
+      delivery.bunVersion === bunVersion
   );
   assert(/^[a-f0-9]{64}$/.test(delivery.bunSha256) && /^[a-f0-9]{64}$/.test(delivery.entrySha256));
   const binary = await readFile(path.join(root, 'claude-multimodel.exe'));
   assert(binary.length > 1024 && binary.subarray(0, 2).toString() === 'MZ');
   const identity = {
+    bunVersion,
     binarySha256: await digest('claude-multimodel.exe'),
     entrySha256: await digest('local-cli/cli.js'),
     bunSha256: await digest('bun/bun.exe'),
@@ -143,6 +151,7 @@ async function stageCandidate() {
   const repo = '777genius/agent_teams_orchestrator';
   const runId = process.env.RUNTIME_CANDIDATE_RUN;
   const sha = process.env.RUNTIME_CANDIDATE_SHA;
+  const bunVersion = candidateBunVersion(process.env.RUNTIME_CANDIDATE_BUN_VERSION);
   assert(process.env.GITHUB_ACTIONS === 'true' && process.platform === 'win32');
   assert(/^\d+$/.test(runId ?? ''), 'Expected numeric candidate CI run');
   assert(/^[a-f0-9]{40}$/.test(sha ?? ''), 'Expected exact candidate source SHA');
@@ -201,6 +210,7 @@ async function stageCandidate() {
       runId,
       sourceSha: sha,
       sourceVersion,
+      bunVersion,
       publishedVersion: lock.version,
       producerJobId: producers[0].id,
       artifactId: artifact.id,

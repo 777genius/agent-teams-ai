@@ -57,6 +57,8 @@ jobs:
       model: ${{ inputs.native_model }}
       source_only: ${{ inputs.native_source_only }}
       provider_only: ${{ inputs.native_provider_only }}
+      runtime_candidate_run: ${{ inputs.runtime_candidate_run }}
+      runtime_candidate_sha: ${{ inputs.runtime_candidate_sha }}
     secrets:
       RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

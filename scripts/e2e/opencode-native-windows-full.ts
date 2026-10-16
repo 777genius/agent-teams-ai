@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, open, opendir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -16,7 +16,10 @@ import {
   prepareNativeDesktop,
   safeIpcFailureDetail,
 } from './opencode-native-desktop-host';
-import { protectWindowsTestDirectory } from './opencode-native-test-auth';
+import {
+  protectWindowsTestDirectory,
+  seedWindowsTestModelOutputLimit,
+} from './opencode-native-test-auth';
 import { waitFor } from './release-updater/cdp.mts';
 import type { electronTeamPort } from './opencode-native-team-port';
 
@@ -445,6 +448,559 @@ async function stopped(app: App, observe: (value: StopObservation) => Promise<vo
   assert(Object.values(settled.runtime.members).every((member) => !member.alive));
 }
 
+/** Observation only: a fresh desktop TEST root belongs to this one launch.
+ * Never emits producer text, paths, session IDs, environment or credentials. */
+async function packagedStartupSnapshot(
+  testRoot: string,
+  dataRoot: string,
+  team: string,
+  runId: string
+) {
+  const row = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const one = (value: unknown, allowed: readonly string[]) =>
+    allowed.find((item) => item === value) ?? 'unclassified';
+  const number = (value: unknown) =>
+    Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffffff
+      ? Number(value)
+      : null;
+  const same = (a: { dev: bigint; ino: bigint }, b: { dev: bigint; ino: bigint }) =>
+    a.dev === b.dev && a.ino === b.ino;
+  assert(
+    path.basename(testRoot).startsWith('TEST-oc-') &&
+      dataRoot === path.join(testRoot, 'runtime-data')
+  );
+  assert(/^test-opencode-[a-f0-9-]+$/.test(team) && /^[a-f0-9-]{36}$/.test(runId));
+  const read = async (directory: string, name: string, plain = false) => {
+    try {
+      const parent = await lstat(directory, { bigint: true });
+      if (
+        !parent.isDirectory() ||
+        parent.isSymbolicLink() ||
+        (await realpath(directory)) !== directory
+      )
+        return null;
+      const file = path.join(directory, name),
+        before = await lstat(file, { bigint: true });
+      if (
+        !before.isFile() ||
+        before.isSymbolicLink() ||
+        before.nlink !== 1n ||
+        before.size > 65536n ||
+        (await realpath(file)) !== file
+      )
+        return null;
+      const held = await open(file, 'r');
+      try {
+        if (!same(before, await held.stat({ bigint: true }))) return null;
+        const bytes = Buffer.alloc(65537),
+          result = await held.read(bytes, 0, bytes.length, 0);
+        const after = await held.stat({ bigint: true });
+        if (
+          result.bytesRead > 65536 ||
+          !same(before, after) ||
+          before.size !== after.size ||
+          before.mtimeNs !== after.mtimeNs ||
+          !same(before, await lstat(file, { bigint: true })) ||
+          !same(parent, await lstat(directory, { bigint: true }))
+        )
+          return null;
+        const body = bytes.subarray(0, result.bytesRead).toString('utf8');
+        return plain ? { body } : row(JSON.parse(body));
+      } finally {
+        await held.close();
+      }
+    } catch {
+      return null;
+    }
+  };
+  const stages = [
+    'run-owner-entry',
+    'windows-cohort',
+    'windows-profile',
+    'windows-roots',
+    'windows-dll',
+    'windows-process',
+    'windows-owned-pair',
+    'windows-published',
+    'windows-connected',
+    'windows-prepare',
+    'windows-assert',
+    'waiting-for-prepare',
+    'profile-validation',
+    'native-validation',
+    'graph-validation',
+    'runtime-import',
+    'server-start',
+    'effect-import',
+    'selected-oauth-import',
+    'scope-acquisition',
+    'ready-identity',
+  ];
+  // Exact producer literals from the SDK's finite native/startup/selected-auth diagnostics.
+  const categories = [
+    'execution_timeout',
+    'execution_cancelled',
+    'execution_native_timeout',
+    'execution_host_unavailable',
+    'execution_identity_mismatch',
+    'execution_owner_not_private',
+    'execution_containment_filesystem_denied',
+    'run_control_process_identity',
+    'cleanup_unknown',
+    'provider_operation_unknown',
+    'provider_auth',
+    'provider_quota',
+    'timeout',
+    'run_acquisition_timeout',
+    'run_initialization_timeout',
+    'run_control_timeout',
+    'run_control_disconnected',
+    'run_control_changed',
+    'run_control_foreign',
+    'run_control_invalid',
+    'run_control_frame_too_large',
+    'run_owner_stale',
+    'run_process_unknown',
+    'run_process_changed',
+    'run_deadline_expired',
+    'run_readiness_changed',
+    'run_readiness_unknown',
+    'run_operation_unknown',
+    'execution_selected_auth_required',
+    'execution_selected_auth_unbound',
+    'execution_selected_auth_changed',
+    'execution_selected_auth_missing',
+    'execution_selected_auth_unsupported',
+    'execution_selected_auth_location_changed',
+    'execution_selected_auth_provider_unknown',
+    'execution_selected_auth_existing_or_unsupported',
+    'execution_selected_auth_readback_unknown',
+    'execution_selected_auth_profile_changed',
+    'execution_selected_oauth_readback_unknown',
+    'execution_selected_oauth_recovery_required',
+    'execution_selected_oauth_windows_unqualified',
+    'execution_selected_oauth_provider_unknown',
+    'execution_selected_oauth_integration_unknown',
+    'execution_selected_oauth_connection_unknown',
+    'execution_selected_oauth_model_unknown',
+    'execution_lease_not_owned',
+    'execution_containment_unqualified',
+    'execution_invalid_response',
+    'execution_identity_unknown',
+    'execution_profile_changed',
+    'execution_graph_changed',
+    'execution_graph_incomplete',
+    'execution_graph_dependency_missing',
+    'execution_owner_unknown',
+    'execution_owner_record_invalid',
+    'execution_path_alias',
+    'execution_containment_dll_identity',
+    'execution_containment_helper_closed',
+    'execution_containment_helper_failed',
+    'execution_containment_helper_identity',
+    'execution_containment_launcher_denied',
+    'execution_containment_pipe_denied',
+    'execution_containment_profile_denied',
+    'execution_containment_unavailable',
+    'execution_native_command_unknown',
+    'execution_native_stdio_owner_unknown',
+    'execution_native_unknown',
+    'execution_owner_alias',
+    'execution_owner_archive_identity_mismatch',
+    'execution_owner_archive_path_mismatch',
+    'execution_owner_archive_reopen_identity_mismatch',
+    'execution_owner_archive_unknown',
+    'execution_owner_local_volume_required',
+    'execution_owner_metadata_budget',
+    'execution_owner_metadata_changed',
+    'execution_owner_metadata_invalid',
+    'execution_owner_metadata_missing',
+    'execution_owner_metadata_purpose_invalid',
+    'execution_owner_ntfs_required',
+    'execution_owner_path_invalid',
+    'execution_owner_prepared_invalid',
+    'execution_owner_prepared_purpose_invalid',
+    'execution_owner_read_only',
+    'execution_owner_write_through_pending',
+  ];
+  const nativeStages = [
+    'process_alive',
+    'process_alive_wait',
+    'process_image_path',
+    'process_image_open',
+    'process_birth_changed',
+    'private_acl_owner',
+    'private_dll_owner',
+    'retire_grants',
+    'retire_wait',
+    'retire_job',
+    'assert_mapping',
+    'assert_stopped',
+    'assert_broker',
+    'process_birth',
+    'shared_acl_mutex_descriptor',
+    'shared_acl_mutex_create',
+    'shared_acl_mutex_security',
+    'shared_acl_mutex_encoding',
+    'shared_acl_mutex_authority',
+    'shared_acl_mutex_wait',
+    'shared_acl_mutex',
+    'owner_archive_nt_rename',
+    'owner_canonical_open',
+    'owner_directory_create',
+    'owner_directory_open',
+    'owner_identity_links',
+    'owner_identity_reparse',
+    'owner_identity_type',
+    'owner_metadata_cleanup',
+    'owner_metadata_open',
+    'owner_metadata_publish',
+    'owner_parent_duplicate',
+    'owner_prepared_create',
+    'owner_verification_open',
+    'private_acl_foreign_allow',
+    'private_acl_owner_run_data_root',
+    'private_acl_owner_run_leaf',
+    'private_acl_owner_run_opencode',
+    'private_acl_owner_run_runs',
+    'private_acl_owner_run_v2',
+    'private_image_open',
+    'private_image_protected_dacl',
+    'private_owner_acquire',
+    'private_owner_cohort',
+    'private_owner_controller_tasks',
+    'private_owner_controller_teams',
+    'private_owner_discover_selection',
+    'private_owner_reserve_selection',
+    'private_owner_selected_selection',
+    'private_readonly_root',
+    'private_writable_root',
+    'private_protected_root',
+    'ancestor_metadata_control',
+    'ancestor_metadata_foreign',
+    'ancestor_metadata_group',
+    'ancestor_metadata_member',
+    'ancestor_metadata_open',
+    'ancestor_metadata_owner',
+    'ancestor_metadata_ace',
+    'ancestor_metadata_descriptor',
+    'ancestor_metadata_security',
+    'ancestor_metadata_package',
+    'ancestor_metadata_read',
+    'ancestor_metadata_changed',
+    'ancestor_metadata_cleanup_unproven',
+    'ancestor_metadata_intent',
+    'ancestor_metadata_acl_size',
+    'ancestor_metadata_acl',
+    'ancestor_metadata_write',
+    'ancestor_metadata_identity',
+    'ancestor_metadata_pin',
+    'shared_readonly_security',
+    'shared_readonly_acl',
+    'shared_readonly_owner',
+    'shared_readonly_file',
+    'shared_readonly_control',
+    'shared_readonly_ace',
+    'shared_readonly_package',
+    'shared_readonly_foreign_write',
+    'shared_readonly_grant_open',
+    'shared_readonly_grant_read',
+    'shared_readonly_grant_merge',
+    'shared_readonly_grant_write',
+    'shared_readonly_owner_changed',
+    'shared_readonly_control_changed',
+    'shared_readonly_foreign_changed',
+    'shared_readonly_member_missing',
+    'retire_broker_state',
+    'retire_broker_write',
+    'retire_io_join',
+    'retire_main_exit',
+    'retire_owned_pair',
+    'retire_commands',
+    'retire_receipt',
+    'retire_grants_dll',
+    'retire_grants_roots',
+    'retire_grants_metadata',
+  ];
+  const list = async (directory: string, pattern: RegExp) => {
+    try {
+      if ((await realpath(directory)) !== directory || (await lstat(directory)).isSymbolicLink())
+        return [];
+      const entries = await opendir(directory),
+        names: string[] = [];
+      let visited = 0;
+      try {
+        for await (const entry of entries) {
+          if (++visited > 64) break;
+          if (pattern.test(entry.name)) names.push(entry.name);
+        }
+      } finally {
+        await entries.close().catch(() => {});
+      }
+      return names;
+    } catch {
+      return [];
+    }
+  };
+  // Read the owned launch manifest first; never follow a pointer outside this TEST team.
+  const artifacts = path.join(testRoot, 'claude', 'teams', team, 'launch-failure-artifacts');
+  const latest = await read(artifacts, 'latest.json');
+  let launchManifest: Record<string, unknown> = { observation: 'missing_or_unavailable' };
+  if (
+    typeof latest?.manifestPath === 'string' &&
+    path.basename(latest.manifestPath) === 'manifest.json' &&
+    path.dirname(path.dirname(latest.manifestPath)) === artifacts
+  ) {
+    const manifest = await read(path.dirname(latest.manifestPath), 'manifest.json');
+    if (manifest && manifest.teamName === team && manifest.runId === runId) {
+      const breadcrumb = row(manifest.bootstrapTransportBreadcrumb);
+      launchManifest = {
+        observation: 'read',
+        classification: one(row(manifest.classification).code, [
+          'provider_quota',
+          'provider_auth',
+          'model_no_bootstrap',
+          'process_exited',
+          'opencode_runtime_readiness_timeout',
+          'opencode_protocol',
+          'unknown',
+        ]),
+        bootstrapSubmitted: breadcrumb.bootstrapSubmitted === true,
+        submitRejected: breadcrumb.submitRejected === true,
+        memberSpawnStatuses: Object.values(row(manifest.memberSpawnStatuses))
+          .slice(0, 4)
+          .map((value) => ({
+            status: one(row(value).status, [
+              'offline',
+              'waiting',
+              'spawning',
+              'online',
+              'error',
+              'skipped',
+            ]),
+            launchState: one(row(value).launchState, [
+              'starting',
+              'runtime_pending_bootstrap',
+              'runtime_pending_permission',
+              'confirmed_alive',
+              'failed_to_start',
+              'skipped_for_launch',
+            ]),
+          })),
+      };
+    }
+  }
+  const stdio = [];
+  const profilesRoot = path.join(dataRoot, 'opencode', 'v2', 'profiles');
+  for (const profile of await list(profilesRoot, /^[a-f0-9]{16}-[a-f0-9-]{36}$/)) {
+    const owner = path.join(profilesRoot, profile, '.opencode-v2-execution-owner');
+    for (const leaf of await list(owner, /^native-stdio-[a-f0-9-]{36}$/)) {
+      const content = await read(path.join(owner, leaf), 'main.stderr', true);
+      const body = typeof content?.body === 'string' ? content.body : null;
+      let childStartup: Record<string, unknown> | null = null;
+      for (const line of body?.split('\n').slice(0, 128) ?? []) {
+        try {
+          const event = row(JSON.parse(line));
+          if (event.event === 'opencode-v2-startup')
+            childStartup = {
+              stage: one(event.stage, stages),
+              reason: one(event.reason, ['timeout', 'failed']),
+              cause: one(event.cause, categories),
+              errno: one(event.errno, ['EPERM', 'EACCES', 'ENOENT', 'EINVAL', 'UNKNOWN']),
+              operation: one(event.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
+              elapsedMs: number(event.elapsedMs),
+            };
+        } catch {
+          /* Arbitrary stderr never crosses this boundary. */
+        }
+      }
+      stdio.push({
+        role: 'original_execution_child_stderr',
+        observation: body === null ? 'missing_or_unavailable' : 'read',
+        kind:
+          body === null
+            ? 'unavailable'
+            : body.length === 0
+              ? 'empty'
+              : /Cannot find module|ModuleNotFound|ERR_MODULE_NOT_FOUND/.test(body)
+                ? 'module_resolution'
+                : /EACCES|Access is denied/.test(body)
+                  ? 'access_denied'
+                  : 'unclassified',
+        childStartup,
+      });
+      if (stdio.length === 4) break;
+    }
+    if (stdio.length === 4) break;
+  }
+  const diagnostics = [];
+  const diagnosticRoot = path.join(dataRoot, 'opencode', 'v2', 'provider-diagnostics');
+  for (const name of await list(diagnosticRoot, /^[a-f0-9-]{36}\.json$/)) {
+    const data = await read(diagnosticRoot, name);
+    if (!data) continue;
+    const startup = row(data.startup),
+      native = row(data.native),
+      failure = row(data.failure);
+    diagnostics.push({
+      scope: 'isolated_TEST_root_not_run_authority',
+      role: startup.stage === 'run-owner-entry' ? 'original_run_owner' : 'execution_host',
+      phase: one(data.phase, [
+        'execution-host-startup',
+        'run-owner-initialization',
+        'run-member-retirement',
+      ]),
+      category: one(data.category, categories),
+      nativeStage: one(native.stage, nativeStages),
+      nativeCode: number(native.nativeCode),
+      failure: {
+        name: one(failure.name, [
+          'Error',
+          'TypeError',
+          'ReferenceError',
+          'RangeError',
+          'AbortError',
+        ]),
+        errno: one(failure.errno, [
+          'EPERM',
+          'EACCES',
+          'ENOENT',
+          'ENOTDIR',
+          'EISDIR',
+          'EINVAL',
+          'UNKNOWN',
+          'EIO',
+          'ENOSYS',
+        ]),
+        operation: one(failure.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
+      },
+      startupStage: one(startup.stage, stages),
+      startupReason: one(startup.reason, ['timeout', 'failed']),
+      startupElapsedMs: number(startup.elapsedMs),
+      startupExitCode: number(startup.nativeExitCode),
+      startupStderrKind: one(startup.nativeStderrKind, [
+        'empty',
+        'entry_resolution',
+        'module_resolution',
+        'child_identity',
+        'child_pipe',
+        'access_denied',
+        'pipe_refused',
+        'pipe_missing',
+        'bun_error',
+        'unclassified',
+        'unavailable',
+      ]),
+      startupHistory: Array.isArray(startup.history)
+        ? startup.history.slice(0, 24).map((value) => ({
+            stage: one(row(value).stage, stages),
+            elapsedMs: number(row(value).elapsedMs),
+          }))
+        : [],
+      acquisitionHistory: Array.isArray(row(data.acquisition).history)
+        ? (row(data.acquisition).history as unknown[]).slice(0, 24).map((value) => ({
+            phase: one(row(value).phase, [
+              'preparing',
+              'delivery-resolved',
+              'profile-validated',
+              'native-validated',
+              'graph-validated',
+              'resolution-prepared',
+              'controller-prepared',
+              'prepared',
+              'mapping',
+              'child-bound',
+              'start-sent',
+              'ready',
+              'catalog-ready',
+              'auth-ready',
+              'selection-ready',
+            ]),
+            elapsedMs: number(row(value).elapsedMs),
+          }))
+        : [],
+      cleanupPhase: one(row(data.cleanup).phase, [
+        'dispose-transport',
+        'send-close',
+        'force-kill',
+        'wait-exit',
+        'read-birth',
+        'kernel-retirement',
+        'process-retirement',
+        'closed-ack',
+        'kernel-proof',
+        'kernel-binding',
+      ]),
+      initializationPhase: one(row(data.initialization).phase, [
+        'MCP-connect',
+        'MCP-readback',
+        'controller-tools',
+        'probe-authority',
+      ]),
+    });
+    if (diagnostics.length === 12) break;
+  }
+  const runs = [],
+    runsRoot = path.join(dataRoot, 'opencode', 'v2', 'runs');
+  for (const name of await list(runsRoot, /^[a-f0-9]{32}$/)) {
+    const directory = path.join(runsRoot, name),
+      state = await read(directory, 'state.json');
+    const binding = row(state?.binding);
+    if (binding.teamId !== team || binding.runId !== runId) continue;
+    const bound = async (file: string) => {
+      const data = await read(directory, file);
+      return row(data?.binding).teamId === team && row(data?.binding).runId === runId ? data : null;
+    };
+    const operation = await bound('operation-failure.json'),
+      stop = await bound('stop.json');
+    const stopReceipt = row(stop?.receipt);
+    const stoppedMembers = Array.isArray(stopReceipt.members) ? stopReceipt.members : [];
+    runs.push({
+      bindingMatches: true,
+      state: one(state?.state, ['starting', 'active', 'stopping', 'stopped', 'cleanup_unknown']),
+      operation: one(operation?.operation, [
+        'status',
+        'stop',
+        'session.create',
+        'session.prompt',
+        'session.abort',
+      ]),
+      category: one(operation?.category, categories),
+      stopState: one(stopReceipt.state, ['stopped', 'cleanup_unknown']),
+      // Durable stop.json omits the later authenticated owner-retirement observation.
+      ownerRetired: typeof stopReceipt.ownerRetired === 'boolean' ? stopReceipt.ownerRetired : null,
+      members: Array.isArray(state?.members)
+        ? state.members.slice(0, 4).map((value) => {
+            const member = row(value);
+            const retired = stoppedMembers.find(
+              (entry) =>
+                typeof member.memberId === 'string' && row(entry).memberId === member.memberId
+            );
+            const cleanup = row(row(retired).cleanup);
+            return {
+              state: one(member.state, ['accepted', 'unknown', 'rejected']),
+              bootstrapVerified: row(member.bootstrap).verified === true,
+              scopeClosed: cleanup.scopeClosed === true,
+              processRetired: cleanup.processRetired === true,
+              descendantsRetired: cleanup.descendantsRetired === true,
+            };
+          })
+        : [],
+    });
+    if (runs.length === 4) break;
+  }
+  return {
+    observation: 'before_stop_snapshot_only',
+    authority: 'no_authority_minted',
+    launchManifest,
+    stdio,
+    diagnostics,
+    runs,
+  };
+}
+
 async function main() {
   assert.equal(process.platform, 'win32');
   const [executable, sdk, binary, model, authFile, mode] = process.argv.slice(2);
@@ -469,6 +1025,7 @@ async function main() {
     model.split('/')[0],
     path.join(desktop.env.XDG_DATA_HOME!, 'opencode')
   );
+  await seedWindowsTestModelOutputLimit(path.join(desktop.env.XDG_CONFIG_HOME!, 'opencode'), model);
   preproofStage = 'version_read';
   const measured = await execute(desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH!, ['--version'], {
     env: desktop.env,
@@ -500,7 +1057,12 @@ async function main() {
     version,
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
-    taskFailureSnapshot: null as null | { unavailable: boolean; tasks: Awaited<ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>>[] },
+    taskFailureSnapshot: null as null | {
+      unavailable: boolean;
+      tasks: Awaited<
+        ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>
+      >[];
+    },
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
     stopFailureObservationUnavailable: null as boolean | null,
@@ -517,6 +1079,7 @@ async function main() {
     finalStopConfirmed: false,
     failure: null as ProofFailure | null,
     launchFailure: null as Record<string, string | boolean> | null,
+    startupFailureSnapshot: null as unknown,
     cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
@@ -991,17 +1554,41 @@ async function main() {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         const tasks = await Promise.race([
-          Promise.all(latestTasks.map(({ id, owner }) =>
-            app.call('getSafeTaskFailureSnapshot', id, owner))),
+          Promise.all(
+            latestTasks.map(({ id, owner }) => app.call('getSafeTaskFailureSnapshot', id, owner))
+          ),
           new Promise<never>((_resolve, reject) => {
             timer = setTimeout(() => reject(new Error('TEST failure snapshot expired')), 10_000);
           }),
         ]);
         proof.taskFailureSnapshot = { unavailable: false, tasks };
-      } catch { proof.taskFailureSnapshot = { unavailable: true, tasks: [] }; }
-      finally { clearTimeout(timer); }
+      } catch {
+        proof.taskFailureSnapshot = { unavailable: true, tasks: [] };
+      } finally {
+        clearTimeout(timer);
+      }
     }
     if (proof.stage === 'create_team' || proof.stage === 'provision') {
+      if (version.startsWith('2.') && proof.runIds.length) {
+        let snapshotTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          proof.startupFailureSnapshot = await Promise.race([
+            packagedStartupSnapshot(
+              desktop.root,
+              desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!,
+              desktop.teamName,
+              proof.runIds.at(-1)!
+            ),
+            new Promise((resolve) => {
+              snapshotTimer = setTimeout(() => resolve({ observation: 'unavailable' }), 8000);
+            }),
+          ]);
+        } catch {
+          proof.startupFailureSnapshot = { observation: 'unavailable' };
+        } finally {
+          clearTimeout(snapshotTimer);
+        }
+      }
       try {
         const diagnostics = await app.call('getSafeLaunchFailure');
         const boundaries = ['not_submitted', 'project_registration', 'team_create', 'created'];
@@ -1052,13 +1639,19 @@ async function main() {
             const snapshot = await Promise.race([
               readStopObservation(app),
               new Promise<never>((_resolve, reject) => {
-                timer = setTimeout(() => reject(new Error('TEST stop observation expired')), 10_000);
+                timer = setTimeout(
+                  () => reject(new Error('TEST stop observation expired')),
+                  10_000
+                );
               }),
             ]);
             proof.stopFailureObservationUnavailable = false;
             await recordStop(snapshot.observation);
-          } catch { proof.stopFailureObservationUnavailable = true; }
-          finally { clearTimeout(timer); }
+          } catch {
+            proof.stopFailureObservationUnavailable = true;
+          } finally {
+            clearTimeout(timer);
+          }
           await checkpoint(proof.stage);
         }
       }

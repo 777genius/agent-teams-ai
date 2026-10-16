@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { lstat, mkdtemp, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +97,31 @@ foreach ($rule in $rules) {
       `Private Windows TEST ACL qualification failed: reason=${reason}; phase=${phase}; errno=${errno}; exit=${exit}`
     );
   }
+}
+
+/** Bound real TEST requests through the selected model's native V1/V2 config.
+ * V1 requires context alongside output; this matches the SDK override default. */
+export async function seedWindowsTestModelOutputLimit(
+  directory: string,
+  model: string
+): Promise<void> {
+  assert.equal(process.platform, 'win32');
+  assert(path.isAbsolute(directory) && /(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(directory));
+  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model));
+  const separator = model.indexOf('/');
+  const provider = model.slice(0, separator);
+  const modelId = model.slice(separator + 1);
+  await mkdir(directory, { recursive: true });
+  await protectWindowsTestDirectory(directory);
+  await writeFile(
+    path.join(directory, 'opencode.json'),
+    JSON.stringify({
+      provider: {
+        [provider]: { models: { [modelId]: { limit: { context: 32_000, output: 8192 } } } },
+      },
+    }),
+    { mode: 0o600, flag: 'wx' }
+  );
 }
 
 async function seedOpenRouter(): Promise<void> {
