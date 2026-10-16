@@ -7,7 +7,7 @@ import { compileFunction, constants, runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-import { safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
+import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 
@@ -420,4 +420,69 @@ describe('serialized native IPC failure details', () => {
     expect(project('EACCES: mkdir \\\\PRIVATE-SERVER\\PRIVATE-SHARE')).not.toContain('PRIVATE');
     expect(project('EPERM: open /PRIVATE-USER/secret')).not.toContain('PRIVATE');
   });
+});
+
+
+it('projects lifecycle causal facts before crossing CDP and rejects raw foreign details', () => {
+  const raw = { phase: 'dispatch', errno: 'ENOENT', cleanupErrno: 'EACCES',
+    reason: 'Bridge handshake identity hash mismatch',
+    sourceFrame: { source: 'OpenCodeBridgeCommandClient.ts', line: 123, column: 4, path: 'C:\\TEST-secret' },
+    message: 'secret-token', stack: 'private stack', headers: { Authorization: 'private' } };
+  const packet = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})(${JSON.stringify(raw)})`);
+  expect(packet).toEqual({ phase: 'dispatch', errno: 'ENOENT', cleanupErrno: 'EACCES',
+    reason: 'Bridge handshake identity hash mismatch',
+    sourceFrame: { source: 'OpenCodeBridgeCommandClient.ts', line: 123, column: 4 } });
+  expect(JSON.stringify(packet)).not.toMatch(/TEST-secret|secret-token|private|Authorization/);
+  expect(projectIpcCausalFailure({ ...raw, phase: 'raw-private-phase' })).toBeNull();
+  expect(projectIpcCausalFailure({ ...raw, errno: 'EPRIVATE_TOKEN', reason: 'private reason',
+    sourceFrame: { source: 'private.ts', line: 0, column: 999999 } })).toMatchObject({ errno: null, reason: null, sourceFrame: null });
+});
+
+
+it('actual renderer IPC catch transports only the closed causal packet', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-desktop-host.ts', 'utf8');
+  const ast = ts.createSourceFile('host.ts', source, ts.ScriptTarget.Latest, true);
+  let arrow: ts.ArrowFunction | undefined;
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'start'
+      && node.initializer && ts.isArrowFunction(node.initializer)) arrow = node.initializer;
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  expect(arrow).toBeDefined();
+  const compiled = ts.transpileModule(`const start=${arrow!.getText(ast)};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const original = Object.assign(new Error('team_stop_unconfirmed:stop_failed:internal_error'), {
+    details: { causalFailure: { phase: 'lease_release', errno: 'EIO', reason: null,
+      sourceFrame: null, raw: 'secret-token' }, secret: 'private' },
+  });
+  // Electron contextBridge reconstructs Error and drops custom properties.
+  const snapshot = original.details.causalFailure;
+  const reconstructed = new Error(original.message + '\nOPENCODE_STOP_CAUSE_V1=' + JSON.stringify(snapshot));
+  const state = { calls: {} as Record<string, Record<string, unknown>>, port: {
+    stop: async () => { throw reconstructed; },
+  } };
+  const start = compileFunction(`${compiled}return start;`, ['window'])({ __opencodeNativeProof: state });
+  start('owned-call', 'stop', [], [], safeIpcFailureDetail,
+    redactLaunchFailureArtifactText, projectIpcCausalFailure);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(state.calls['owned-call']).toMatchObject({ state: 'failed', causalFailure: {
+    phase: 'lease_release', errno: 'EIO', reason: null, sourceFrame: null,
+  } });
+  expect(JSON.stringify(state.calls)).not.toMatch(/secret-token|private|details|stack/);
+  expect(original.details.secret).toBe('private');
+});
+
+
+it('accepts only the bounded final Stop causal suffix with its original error prefix', () => {
+  const packet = { phase: 'dispatch', errno: 'ENOENT', reason: null, sourceFrame: null };
+  const marker = '\nOPENCODE_STOP_CAUSE_V1=';
+  expect(projectIpcCausalFailure('team_stop_unconfirmed:stop_failed' + marker + JSON.stringify(packet)))
+    .toMatchObject(packet);
+  for (const value of ['foreign' + marker + JSON.stringify(packet),
+    'team_stop_unconfirmed:x' + marker + '{',
+    'team_stop_unconfirmed:x' + marker + JSON.stringify(packet) + '\nforeign',
+    'team_stop_unconfirmed:x' + marker + 'x'.repeat(2049)])
+    expect(projectIpcCausalFailure(value)).toBeNull();
 });

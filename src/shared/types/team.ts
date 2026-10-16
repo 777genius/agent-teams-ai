@@ -614,7 +614,17 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
   messageId: string;
 };
 
+/** Finite observation of a failed OpenCode bridge operation; never stop authority. */
+export interface OpenCodeStopCausalFailure {
+  phase: string;
+  reason: string | null;
+  errno: string | null;
+  cleanupErrno?: string | null;
+  sourceFrame: { source: string; line: number; column: number } | null;
+}
+
 export interface TeamForceStopResult {
+  causalFailure?: OpenCodeStopCausalFailure;
   /**
    * Outcome of the bounded regular stop attempt.
    * `runtime_already_down`: the recorded runtime hosts exited before the

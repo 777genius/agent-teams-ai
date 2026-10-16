@@ -341,6 +341,7 @@ async function runTeamStopFlow(
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let causalFailure: TeamForceStopResult['causalFailure'];
   let timedOut = false;
   let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
@@ -367,6 +368,7 @@ async function runTeamStopFlow(
             `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
           );
           if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
+            causalFailure = error.causalFailure;
             diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
           }
           diagnostics.push(`Regular stop failed: ${message}`);
@@ -456,6 +458,7 @@ async function runTeamStopFlow(
   await markStopped(teamName, ports, diagnostics, publicationAuthority);
   return {
     stopOutcome,
+    ...(causalFailure ? { causalFailure } : {}),
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
     killedRuntimePids,
     clearedPendingDeliveries,

@@ -105,6 +105,118 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   leaseAcquireRetryDelayMs?: number;
 }
 
+const causalSnapshots = new WeakSet<object>();
+const causalFailures = new WeakMap<object, { phase: string; cleanupErrno?: string | null }>();
+function rememberFailure(error: unknown, phase: string): void {
+  if (error && typeof error === 'object' && !causalFailures.has(error))
+    causalFailures.set(error, { phase });
+}
+/** Closed causal facts only; the original exception remains the thrown object. */
+export function projectOpenCodeStateChangingFailure(error: unknown) {
+  const object = error && typeof error === 'object' ? error : {};
+  const code = 'code' in object ? object.code : null;
+  const errno =
+    [
+      'EACCES',
+      'EPERM',
+      'ENOENT',
+      'ENOSPC',
+      'EIO',
+      'EROFS',
+      'EEXIST',
+      'ENOTDIR',
+      'EISDIR',
+      'EMFILE',
+      'ENFILE',
+      'EBUSY',
+      'EINVAL',
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'EPIPE',
+      'ABORT_ERR',
+      'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+    ].find((value) => value === code) ?? null;
+  const message = error instanceof Error ? error.message : '';
+  const reason =
+    [
+      'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',
+      'OpenCode lifecycle command requires a persisted lane capability snapshot',
+      'OpenCode lifecycle capability snapshot does not match the persisted lane manifest',
+      'Bridge handshake client identity mismatch',
+      'Bridge server capability snapshot mismatch',
+      'Bridge server active run mismatch',
+      'Bridge server runtime manifest high watermark is stale',
+      'Bridge handshake identity hash mismatch',
+      'OpenCode lifecycle command body does not match its persisted lane identity',
+      'Invalid OpenCode Stop domain result; exact-target reconciliation required',
+      'Invalid durable Stop result; reconciliation required',
+      'Stop binding mismatch; reconciliation required',
+      'Stop receipt target/runtime mismatch; reconciliation required',
+      'Invalid original Stop identity; reconciliation unknown',
+      'Stop reconciliation unknown: original session set missing',
+      'Ambiguous original Stop session set',
+      'Invalid original Stop capability/behavior identity',
+      'Bridge handshake protocol version mismatch',
+      'Unsupported Stop recovery capability/version; reconciliation unknown',
+      'Stop target changed before dispatch; reconciliation required',
+      'OpenCode bridge command outcome must be reconciled before retry',
+      'OpenCode bridge command already started',
+      'OpenCode bridge command completed concurrently; retry recovery',
+      'OpenCode bridge command already completed; recover through commandStatus',
+      'Invalid Stop recovery object; reconciliation required',
+      'Unsupported Stop recovery contract version',
+      'Stop observation session-set token mismatch',
+      'Stop recovery requires a validated success envelope',
+      'OpenCode Stop requires authoritative exact-target reconciliation; no durable outcome',
+      'OpenCode Stop recovery target or outcome mismatch; reconciliation required',
+      'Stop receipt envelope identity mismatch; reconciliation required',
+      'OpenCode bridge idempotency key reused with different payload',
+      'OpenCode bridge command lease was not created',
+    ].find((value) => value === message) ?? null;
+  const frame =
+    error instanceof Error
+      ? /(?:^|[/\\])((?:OpenCodeStateChangingBridgeCommandService|OpenCodeBridgeCommandClient|OpenCodeBridgeHandshakeClient|OpenCodeBridgeCommandLedgerStore|OpenCodeLifecycleManifestBinding|OpenCodeRuntimeStopProtocol|OpenCodeStopOutcomeRecovery)\.ts):(\d{1,7}):(\d{1,5})(?:\)|$)/m.exec(
+          error.stack ?? ''
+        )
+      : null;
+  const snapshot = {
+    ...(causalFailures.get(object) ?? { phase: 'unclassified' }),
+    reason,
+    errno,
+    sourceFrame: frame
+      ? Object.freeze({ source: frame[1], line: Number(frame[2]), column: Number(frame[3]) })
+      : null,
+  };
+  Object.freeze(snapshot);
+  causalSnapshots.add(snapshot);
+  return snapshot;
+}
+export function ownedOpenCodeStateChangingFailure(value: unknown) {
+  return value && typeof value === 'object' && causalSnapshots.has(value)
+    ? (value as ReturnType<typeof projectOpenCodeStateChangingFailure>)
+    : undefined;
+}
+
+export function formatOpenCodeStopCausalSuffix(value: unknown): string {
+  const snapshot = ownedOpenCodeStateChangingFailure(value);
+  if (!snapshot) return '';
+  const json = JSON.stringify(snapshot);
+  return json.length <= 2048 ? '\nOPENCODE_STOP_CAUSE_V1=' + json : '';
+}
+
+type StateChangingInput<TBody> = {
+  command: OpenCodeBridgeCommandName;
+  teamName: string;
+  laneId?: string | null;
+  runId: string | null;
+  capabilitySnapshotId: string | null;
+  behaviorFingerprint: string | null;
+  body: TBody;
+  cwd: string;
+  timeoutMs: number;
+};
+
 export class OpenCodeStateChangingBridgeCommandService {
   private readonly expectedClientIdentity: OpenCodeBridgePeerIdentity;
   private readonly handshakePort: OpenCodeBridgeHandshakePort;
@@ -138,17 +250,22 @@ export class OpenCodeStateChangingBridgeCommandService {
       options.leaseAcquireRetryDelayMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS;
   }
 
-  async execute<TBody, TData>(input: {
-    command: OpenCodeBridgeCommandName;
-    teamName: string;
-    laneId?: string | null;
-    runId: string | null;
-    capabilitySnapshotId: string | null;
-    behaviorFingerprint: string | null;
-    body: TBody;
-    cwd: string;
-    timeoutMs: number;
-  }): Promise<OpenCodeBridgeResult<TData>> {
+  async execute<TBody, TData>(
+    input: StateChangingInput<TBody>
+  ): Promise<OpenCodeBridgeResult<TData>> {
+    const context = { phase: 'manifest' };
+    try {
+      return await this.executeTracked<TBody, TData>(input, context);
+    } catch (error) {
+      rememberFailure(error, context.phase);
+      throw error;
+    }
+  }
+
+  private async executeTracked<TBody, TData>(
+    input: StateChangingInput<TBody>,
+    context: { phase: string }
+  ): Promise<OpenCodeBridgeResult<TData>> {
     assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(
@@ -156,6 +273,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       normalizedLaneId,
       input.command === 'opencode.stopTeam'
     );
+    context.phase = 'binding';
     const { capabilitySnapshotId, body: commandBody } = bindLifecycleManifest(input, manifest);
     // Preserve caller identity in the ledger; committed behavior fences runtime effects.
     const behaviorFingerprint =
@@ -179,6 +297,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       body: commandBody,
     });
     if (input.command === 'opencode.stopTeam') {
+      context.phase = 'stop_ledger_lookup';
       const existing = await this.ledger.getByIdempotencyKey(idempotencyKey);
       if (existing) {
         const lease = await this.acquireLease({
@@ -188,7 +307,9 @@ export class OpenCodeStateChangingBridgeCommandService {
           command: input.command,
           ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
         });
+        let primary: unknown;
         try {
+          context.phase = 'stop_recovery';
           const current = await this.manifestReader.read(input.teamName, normalizedLaneId, true);
           const bound = bindLifecycleManifest(input, current);
           return await recoverRuntimeStop<TData>({
@@ -212,11 +333,24 @@ export class OpenCodeStateChangingBridgeCommandService {
             ledger: this.ledger,
             timeoutMs: input.timeoutMs,
           });
+        } catch (error) {
+          primary = error;
+          rememberFailure(error, context.phase);
+          throw error;
         } finally {
-          await this.leaseStore.release(lease.leaseId);
+          await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
+            if (primary && typeof primary === 'object')
+              causalFailures.get(primary)!.cleanupErrno =
+                projectOpenCodeStateChangingFailure(cleanup).errno;
+            else {
+              rememberFailure(cleanup, 'lease_release');
+              throw cleanup;
+            }
+          });
         }
       }
     }
+    context.phase = 'handshake';
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
@@ -237,6 +371,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           }
         : {}),
     });
+    context.phase = 'handshake_validation';
     const handshakeValidation = validateOpenCodeBridgeHandshake({
       handshake,
       expectedClient: this.expectedClientIdentity,
@@ -268,6 +403,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         !handshake.server.bridgeProtocol.supportedCommands.includes('opencode.reconcileStop'))
     )
       throw new Error('Unsupported Stop recovery capability/version; reconciliation unknown');
+    context.phase = 'lease_acquire';
     const commandRequestId = this.requestIdFactory();
     const lease = await this.acquireLease({
       teamName: input.teamName,
@@ -278,6 +414,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     });
 
     try {
+      context.phase = 'stop_target';
       const stopManifest =
         input.command === 'opencode.stopTeam'
           ? await this.manifestReader.read(input.teamName, normalizedLaneId, true)
@@ -329,6 +466,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         }
       );
 
+      context.phase = 'ledger_begin';
       const begin = await this.ledger.begin({
         idempotencyKey,
         requestId: commandRequestId,
@@ -357,6 +495,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         );
       }
 
+      context.phase = 'dispatch';
       const result = await this.bridge.execute<typeof bodyWithPreconditions, TData>(
         input.command,
         bodyWithPreconditions,
@@ -367,6 +506,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         }
       );
 
+      context.phase = 'failure_persistence';
       if (!result.ok) {
         if (isOpenCodeBridgeUnknownOutcomeFailure(result)) {
           await this.ledger.markUnknownAfterTimeout({
@@ -394,6 +534,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         return result;
       }
 
+      context.phase = 'result_validation';
       try {
         assertBridgeEvidenceCanCommitToRuntimeStores({
           result,
@@ -485,17 +626,24 @@ export class OpenCodeStateChangingBridgeCommandService {
           return ambiguousResult;
         }
       }
+      context.phase = 'stop_result_validation';
       if (input.command === 'opencode.stopTeam') assertStopDomainResult(result);
       if (stopRequest) validateRuntimeStopData(result.data, stopRequest);
+      context.phase = 'ledger_complete';
       await this.ledger.markCompleted({
         idempotencyKey,
         response: result,
         ...(stopTarget ? { stopRecovery: { target: stopTarget, result } } : {}),
       });
+      context.phase = 'lease_release';
       await this.leaseStore.release(lease.leaseId);
       return result;
     } catch (error) {
-      await this.leaseStore.release(lease.leaseId).catch(() => undefined);
+      rememberFailure(error, context.phase);
+      await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
+        const original = error && typeof error === 'object' ? causalFailures.get(error) : undefined;
+        if (original) original.cleanupErrno = projectOpenCodeStateChangingFailure(cleanup).errno;
+      });
       throw error;
     }
   }

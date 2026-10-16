@@ -592,6 +592,8 @@ type ProofFailure = {
   errno?: string;
   detail?: string;
   causes?: ProofFailure[];
+  identityObservation?: ReturnType<typeof projectHeldIdentityFailure>;
+  causalFailure?: NativeDesktopIpcError['causalFailure'];
 };
 function proofFailure(error: unknown, stage: string, depth = 0): ProofFailure {
   if (error instanceof NativeDesktopIpcError)
@@ -600,7 +602,11 @@ function proofFailure(error: unknown, stage: string, depth = 0): ProofFailure {
       operation: error.operation,
       classification: error.classification,
       detail: error.detail,
+      causalFailure: error.causalFailure,
     };
+  if (error instanceof HeldIdentityError) return {
+    stage, classification: 'held_identity_observation_failed', identityObservation: error.observation,
+  };
   const result: ProofFailure = { stage, classification: 'unclassified' };
   if (error instanceof Error)
     result.detail = safeIpcFailureDetail(error.message, redactLaunchFailureArtifactText);
@@ -619,25 +625,59 @@ function proofFailure(error: unknown, stage: string, depth = 0): ProofFailure {
     result.errno = error.code;
   return result;
 }
-const ps = async (script: string) =>
-  execute(
-    'powershell.exe',
-    [
-      '-NoProfile',
-      '-NonInteractive',
-      '-EncodedCommand',
+export function projectHeldIdentityFailure(value: unknown) {
+  const error = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const stderr = typeof error.stderr === 'string' ? error.stderr.slice(0, 16_384) : '';
+  const classes = ['CommandNotFoundException', 'CimException', 'UnauthorizedAccessException',
+    'MethodInvocationException', 'MethodException', 'PropertyNotFoundException', 'RuntimeException'];
+  const reasons = ['CommandNotFoundException', 'AccessDenied', 'InvalidNamespace', 'InvalidClass',
+    'InvalidQuery', 'HRESULT', 'Process identity unavailable'];
+  return {
+    stage: 'held_process_identity',
+    exception: classes.find((name) => stderr.includes(name)) ?? null,
+    reason: reasons.find((name) => stderr.includes(name)) ?? null,
+    command: stderr.includes('Get-CimInstance') ? 'Get-CimInstance' : null,
+    fullyQualifiedErrorId: ['CommandNotFoundException', 'GetWMICOMException', 'CimJob_BrokenCimSession',
+      'InvokeMethodOnNull', 'MethodNotFound', 'PropertyNotFoundStrict'].find((name) =>
+      stderr.includes(name)) ?? null,
+    exitCode: Number.isSafeInteger(error.code) ? Number(error.code) : null,
+    errno: ['EACCES', 'EPERM', 'ENOENT', 'ENOSPC', 'EIO', 'EROFS', 'EEXIST', 'ENOTDIR',
+      'EISDIR', 'EMFILE', 'ENFILE', 'EBUSY', 'EINVAL', 'ETIMEDOUT', 'ECONNRESET',
+      'ECONNREFUSED', 'EPIPE', 'ABORT_ERR', 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER']
+      .find((code) => code === error.code) ?? null,
+    signal: ['SIGTERM', 'SIGKILL', 'SIGABRT'].find((signal) => error.signal === signal) ?? null,
+    killed: error.killed === true,
+  };
+}
+class HeldIdentityError extends Error {
+  constructor(readonly observation: ReturnType<typeof projectHeldIdentityFailure>) {
+    super('Owned TEST process identity observation failed');
+  }
+}
+const ps = async (script: string) => {
+  // Reuse the PowerShell 7 installation required by TEST ACL setup.
+  const programFiles = process.env.ProgramFiles;
+  assert(programFiles && path.win32.isAbsolute(programFiles));
+  const powershellRoot = path.win32.join(programFiles, 'PowerShell', '7');
+  try {
+    return await execute(path.win32.join(powershellRoot, 'pwsh.exe'), [
+      '-NoProfile', '-NonInteractive', '-EncodedCommand',
       Buffer.from(script, 'utf16le').toString('base64'),
-    ],
-    {
-      env: Object.fromEntries(
-        ['SystemRoot', 'WINDIR', 'PATH', 'Path', 'PATHEXT', 'COMSPEC', 'TMP', 'TEMP']
-          .filter((key) => process.env[key])
-          .map((key) => [key, process.env[key]])
-      ),
+    ], {
+      env: {
+        ...Object.fromEntries(
+          ['SystemRoot', 'WINDIR', 'PATH', 'Path', 'PATHEXT', 'COMSPEC', 'TMP', 'TEMP']
+            .filter((key) => process.env[key]).map((key) => [key, process.env[key]])
+        ),
+        PSModulePath: path.win32.join(powershellRoot, 'Modules'),
+      },
       timeout: 10_000,
       maxBuffer: 16_384,
-    }
-  );
+    });
+  } catch (error: unknown) {
+    throw new HeldIdentityError(projectHeldIdentityFailure(error));
+  }
+};
 
 async function identity(pid: number): Promise<Identity | null> {
   assert(Number.isSafeInteger(pid) && pid > 1);

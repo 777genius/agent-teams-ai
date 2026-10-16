@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 
+import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import {
   freshOpenCodeExecutionProof,
   openCodeReadinessArtifactKey,
@@ -913,6 +914,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         runId: input.runId,
         teamName: input.teamName,
         stopped: data.stopped,
+        causalFailure: ownedOpenCodeStateChangingFailure(data.causalFailure),
         members: Object.fromEntries(
           Object.entries(data.members).map(([memberName, member]) => [
             memberName,

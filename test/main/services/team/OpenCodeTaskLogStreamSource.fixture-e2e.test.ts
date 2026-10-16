@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
 import {
+  projectHeldIdentityFailure,
   projectV1NativeTranscript,
   projectV1OfflineCaptureDiagnostic,
   V1_OFFLINE_TRANSCRIPT_SCRIPT,
@@ -1359,4 +1360,19 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
       }
     }
   });
+});
+
+
+it('retains original held identity observer failure facts without raw PowerShell data', () => {
+  const failure = projectHeldIdentityFailure({
+    stderr: 'Get-CimInstance : UnauthorizedAccessException AccessDenied FullyQualifiedErrorId : GetWMICOMException C:\\TEST-private\\never-publish secret-token',
+    stdout: 'private process commandline', code: 1, signal: null, killed: false,
+  });
+  expect(failure).toMatchObject({ stage: 'held_process_identity',
+    exception: 'UnauthorizedAccessException', reason: 'AccessDenied', command: 'Get-CimInstance',
+    fullyQualifiedErrorId: 'GetWMICOMException', exitCode: 1, killed: false });
+  expect(JSON.stringify(failure)).not.toMatch(/TEST-private|never-publish|secret-token|commandline/);
+  expect(projectHeldIdentityFailure({ code: 'EPRIVATE_TOKEN' }).errno).toBeNull();
+  expect(projectHeldIdentityFailure({ code: 'ENOENT', stderr: 'foreign-private-exception', killed: true, signal: 'SIGTERM' }))
+    .toMatchObject({ errno: 'ENOENT', exception: null, reason: null, exitCode: null, killed: true, signal: 'SIGTERM' });
 });

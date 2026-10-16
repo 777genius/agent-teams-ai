@@ -1,11 +1,14 @@
 import { isProcessAlive } from '@main/utils/processHealth';
 
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+
+import type { OpenCodeStopCausalFailure, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 /** Only confirmed Stop or validated runtime reconciliation authorizes lane cleanup.
  * PID absence and capability mismatch are not proof of the original Stop result. */
 
 export interface OpenCodeRuntimeStopResultLike {
+  causalFailure?: OpenCodeStopCausalFailure;
   stopped?: unknown;
   diagnostics?: unknown;
   warnings?: unknown;
@@ -50,8 +53,10 @@ export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
 
 export class OpenCodeRuntimeStopUnconfirmedError extends Error {
   readonly diagnosticCodes: readonly string[];
-  constructor(message: string, diagnostics: unknown) {
+  readonly causalFailure?: OpenCodeStopCausalFailure;
+  constructor(message: string, diagnostics: unknown, causalFailure?: OpenCodeStopCausalFailure) {
     super(message);
+    this.causalFailure = ownedOpenCodeStateChangingFailure(causalFailure);
     this.diagnosticCodes = Object.freeze(openCodeStopFailureCodes(diagnostics));
   }
 }
@@ -129,7 +134,8 @@ export function assertOpenCodeRuntimeStopEffective(input: {
         : ' (no recorded host pid to verify)';
     throw new OpenCodeRuntimeStopUnconfirmedError(
       `${input.message}${suffix}${alive}`,
-      input.result?.diagnostics
+      input.result?.diagnostics,
+      input.result?.causalFailure
     );
   }
   return outcome;

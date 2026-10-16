@@ -64,12 +64,86 @@ export function safeIpcFailureDetail(value: string, redact: (text: string) => st
     .slice(0, 500);
   return (label + detail).slice(0, 500);
 }
+export function projectIpcCausalFailure(value: unknown) {
+  const row = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  let candidate = value;
+  if (typeof value === 'string') {
+    const marker = '\nOPENCODE_STOP_CAUSE_V1=';
+    const index = value.lastIndexOf(marker);
+    if (index < 0 || !value.slice(0, index).startsWith('team_stop_unconfirmed:')) return null;
+    const encoded = value.slice(index + marker.length);
+    if (encoded.length > 2048 || /[\r\n]/.test(encoded)) return null;
+    try { candidate = JSON.parse(encoded); } catch { return null; }
+  }
+  const input = row(candidate);
+  const phases = ['manifest', 'binding', 'stop_ledger_lookup', 'stop_recovery', 'handshake',
+    'handshake_validation', 'lease_acquire', 'stop_target', 'ledger_begin', 'dispatch',
+    'failure_persistence', 'result_validation', 'stop_result_validation', 'ledger_complete',
+    'lease_release', 'unclassified'];
+  const phase = phases.find((phase) => phase === input.phase);
+  if (!phase) return null;
+  const errno = (value: unknown) => ['EACCES', 'EPERM', 'ENOENT', 'ENOSPC', 'EIO', 'EROFS',
+    'EEXIST', 'ENOTDIR', 'EISDIR', 'EMFILE', 'ENFILE', 'EBUSY', 'EINVAL', 'ETIMEDOUT',
+    'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ABORT_ERR', 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER']
+    .find((code) => code === value) ?? null;
+  const frame = row(input.sourceFrame);
+  const source = ['OpenCodeStateChangingBridgeCommandService.ts', 'OpenCodeBridgeCommandClient.ts',
+    'OpenCodeBridgeHandshakeClient.ts', 'OpenCodeBridgeCommandLedgerStore.ts',
+    'OpenCodeLifecycleManifestBinding.ts', 'OpenCodeRuntimeStopProtocol.ts',
+    'OpenCodeStopOutcomeRecovery.ts'].find((source) => source === frame.source);
+  return {
+    phase, errno: errno(input.errno),
+    ...(Object.hasOwn(input, 'cleanupErrno') ? { cleanupErrno: errno(input.cleanupErrno) } : {}),
+    reason: [
+      'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',
+      'OpenCode lifecycle command requires a persisted lane capability snapshot',
+      'OpenCode lifecycle capability snapshot does not match the persisted lane manifest',
+      'Bridge handshake client identity mismatch',
+      'Bridge server capability snapshot mismatch',
+      'Bridge server active run mismatch',
+      'Bridge server runtime manifest high watermark is stale',
+      'Bridge handshake identity hash mismatch',
+      'OpenCode lifecycle command body does not match its persisted lane identity',
+      'Invalid OpenCode Stop domain result; exact-target reconciliation required',
+      'Invalid durable Stop result; reconciliation required',
+      'Stop binding mismatch; reconciliation required',
+      'Stop receipt target/runtime mismatch; reconciliation required',
+      'Invalid original Stop identity; reconciliation unknown',
+      'Stop reconciliation unknown: original session set missing',
+      'Ambiguous original Stop session set',
+      'Invalid original Stop capability/behavior identity',
+      'Bridge handshake protocol version mismatch',
+      'Unsupported Stop recovery capability/version; reconciliation unknown',
+      'Stop target changed before dispatch; reconciliation required',
+      'OpenCode bridge command outcome must be reconciled before retry',
+      'OpenCode bridge command already started',
+      'OpenCode bridge command completed concurrently; retry recovery',
+      'OpenCode bridge command already completed; recover through commandStatus',
+      'Invalid Stop recovery object; reconciliation required',
+      'Unsupported Stop recovery contract version',
+      'Stop observation session-set token mismatch',
+      'Stop recovery requires a validated success envelope',
+      'OpenCode Stop requires authoritative exact-target reconciliation; no durable outcome',
+      'OpenCode Stop recovery target or outcome mismatch; reconciliation required',
+      'Stop receipt envelope identity mismatch; reconciliation required',
+      'OpenCode bridge idempotency key reused with different payload',
+      'OpenCode bridge command lease was not created',
+    ].find((reason) => reason === input.reason) ?? null,
+    sourceFrame: source && Number.isSafeInteger(frame.line) && Number(frame.line) >= 1 && Number(frame.line) <= 9_999_999
+      && Number.isSafeInteger(frame.column) && Number(frame.column) >= 1 && Number(frame.column) <= 99_999
+      ? { source, line: Number(frame.line), column: Number(frame.column) } : null,
+  };
+}
+
 export class NativeDesktopIpcError extends Error {
   readonly operation: Operation;
   readonly classification: string;
   readonly detail?: string;
-  constructor(operation: Operation, classification: string | undefined, detail?: string) {
+  readonly causalFailure: ReturnType<typeof projectIpcCausalFailure>;
+  constructor(operation: Operation, classification: string | undefined, detail?: string, causalFailure?: unknown) {
     super('Owned desktop IPC failed');
+    this.causalFailure = projectIpcCausalFailure(causalFailure);
     this.operation = operation;
     this.classification =
       IPC_FAILURE_CLASSIFICATIONS.find((reason) => reason === classification) ?? 'unclassified';
@@ -86,7 +160,7 @@ interface RendererState {
   port: Port;
   calls: Record<
     string,
-    { state: 'pending' | 'done' | 'failed'; result?: unknown; failure?: string; detail?: string }
+    { state: 'pending' | 'done' | 'failed'; result?: unknown; failure?: string; detail?: string; causalFailure?: ReturnType<typeof projectIpcCausalFailure> }
   >;
 }
 
@@ -209,7 +283,8 @@ export async function prepareNativeDesktop() {
               args: unknown[],
               reasons: readonly string[],
               safeDetail: typeof safeIpcFailureDetail,
-              redact: typeof redactLaunchFailureArtifactText
+              redact: typeof redactLaunchFailureArtifactText,
+              safeCausal: typeof projectIpcCausalFailure
             ) => {
               const state = (window as unknown as { __opencodeNativeProof: RendererState })
                 .__opencodeNativeProof;
@@ -238,12 +313,17 @@ export async function prepareNativeDesktop() {
                     state: 'failed',
                     failure,
                     detail: safeDetail(message, redact),
+                    causalFailure: safeCausal(message) ?? safeCausal(
+                      error && typeof error === 'object' && 'details' in error
+                      && error.details && typeof error.details === 'object' && 'causalFailure' in error.details
+                        ? error.details.causalFailure : null
+                    ),
                   };
                 });
               return true;
             };
             await cdp!.evaluate(
-              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)}, ${JSON.stringify(IPC_FAILURE_CLASSIFICATIONS)}, ${serializedFunction(safeIpcFailureDetail)}, ${serializedFunction(redactLaunchFailureArtifactText)})`
+              `${serializedFunction(start)}(${JSON.stringify(id)}, ${JSON.stringify(operation)}, ${JSON.stringify(args)}, ${JSON.stringify(IPC_FAILURE_CLASSIFICATIONS)}, ${serializedFunction(safeIpcFailureDetail)}, ${serializedFunction(redactLaunchFailureArtifactText)}, ${serializedFunction(projectIpcCausalFailure)})`
             );
             const completed = await waitFor(
               async () => {
@@ -252,9 +332,10 @@ export async function prepareNativeDesktop() {
                   result?: Result<K>;
                   failure?: string;
                   detail?: string;
+                  causalFailure?: ReturnType<typeof projectIpcCausalFailure>;
                 }>(`window.__opencodeNativeProof.calls[${JSON.stringify(id)}]`);
                 if (entry.state === 'failed')
-                  throw new NativeDesktopIpcError(operation, entry.failure, entry.detail);
+                  throw new NativeDesktopIpcError(operation, entry.failure, entry.detail, entry.causalFailure);
                 return entry.state === 'done' ? { value: entry.result } : null;
               },
               `single ${operation} IPC result`,

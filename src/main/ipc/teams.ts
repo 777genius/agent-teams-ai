@@ -18,6 +18,8 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { formatOpenCodeStopCausalSuffix } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeStopUnconfirmedError } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
@@ -4023,8 +4025,10 @@ async function handleStopTeam(
           (value) => value === result.stopOutcome
         ) ?? 'unknown';
       const codes = openCodeStopFailureCodes(result.diagnostics);
-      throw new Error(
-        `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}`
+      throw new OpenCodeRuntimeStopUnconfirmedError(
+        `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}${formatOpenCodeStopCausalSuffix(result.causalFailure)}`,
+        result.diagnostics,
+        result.causalFailure
       );
     }
   });
