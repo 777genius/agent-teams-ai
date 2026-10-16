@@ -10,12 +10,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bounded, delay, rows } from '../../fixtures/native-teammate-attachments/harnessProof.ts';
 import {
-  literal,
   terminateOwnedApp,
   type HarnessCdp,
 } from '../../fixtures/native-teammate-attachments/harnessSupport.ts';
 // @ts-expect-error Shared existing CDP client has no declaration file.
 import { CdpClient } from '../comment-notification/cdp.mjs';
+import { browserCall, type Locator } from './cdpArguments.ts';
 import { nativeTitleSource, startModel, type ModelObservation } from './model.ts';
 import {
   decodeQueueIndex,
@@ -124,47 +124,50 @@ function assertSingleOriginalDelivery(
   }
   return { delivery, auxiliaryTitles };
 }
-async function api<T>(expression: string, timeoutMs?: number): Promise<T> {
+async function api<T>(
+  path: string[],
+  args: unknown[] = [],
+  timeoutMs?: number,
+  source = 'api'
+): Promise<T> {
   assert(cdp);
   const key = `TEST_pending_${randomUUID().replaceAll('-', '')}`;
-  await cdp.evaluate(
-    `(() => { window[${literal(key)}] = {done:false}; Promise.resolve(${expression}).then(value => window[${literal(key)}]={done:true,value}, error => window[${literal(key)}]={done:true,error:String(error)}); return true; })()`
-  );
-  const result = await bounded<{ value?: T; error?: string }>(
+  await browserCall(cdp, 'api-start', [key, source, path, args]);
+  const result = await bounded<{ result?: T; error?: string }>(
     'actual IPC completion',
-    () => cdp!.evaluate(`window[${literal(key)}]?.done ? window[${literal(key)}] : null`),
+    () => browserCall(cdp!, 'pending-read', [key]),
     timeoutMs
   );
-  await cdp.evaluate(`delete window[${literal(key)}]`);
+  await browserCall(cdp, 'pending-delete', [key]);
   assert(!result.error, result.error);
-  return result.value as T;
+  return result.result as T;
 }
-async function click(expression: string): Promise<void> {
+async function waitExists(locator: Locator, label: string, timeoutMs = 30000): Promise<void> {
+  await bounded(label, () => browserCall<boolean>(cdp!, 'exists', [locator]), timeoutMs);
+}
+async function click(locator: Locator): Promise<void> {
   let previousRect: string | undefined;
   const point = await bounded<{ x: number; y: number }>(
-    `actionable click target ${expression}`,
+    `actionable click target ${JSON.stringify(locator)}`,
     async () => {
-      // Attachment previews animate from zero size; DOM presence precedes clickability.
-      const rect = await cdp!.evaluate<{
+      const rect = await browserCall<{
         x: number;
         y: number;
         width: number;
         height: number;
-      } | null>(
-        `(() => { const el=${expression}; if (!(el instanceof HTMLElement)) return null; el.scrollIntoView({block:'center'}); const r=el.getBoundingClientRect(); return r.width && r.height ? {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}:null; })()`
-      );
-      receipt.lastClickTarget = { expression, rect };
+      } | null>(cdp!, 'point', [locator]);
+      receipt.lastClickTarget = { locator, rect };
       if (!rect) {
         previousRect = undefined;
         return null;
       }
-      // Hover reveals the real remove control. Reacquire after movement/animation;
-      // only the final press/release below performs an action.
       await cdp!.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
-      const probe = await cdp!.evaluate<{ ready: boolean; opacity: string; hit: string | null }>(
-        `(() => { const el=${expression}; if (!(el instanceof HTMLElement)) return {ready:false,opacity:'0',hit:null}; const r=el.getBoundingClientRect(); const hit=document.elementFromPoint(${rect.x},${rect.y}); const style=getComputedStyle(el); return {ready:r.width===${rect.width} && r.height===${rect.height} && r.x+r.width/2===${rect.x} && r.y+r.height/2===${rect.y} && Number(style.opacity)>0 && style.visibility==='visible' && !el.matches(':disabled') && Boolean(hit && (hit===el || el.contains(hit))),opacity:style.opacity,hit:hit?.getAttribute('aria-label') ?? hit?.tagName ?? null}; })()`
+      const probe = await browserCall<{ ready: boolean; opacity: string; hit: string | null }>(
+        cdp!,
+        'hit',
+        [locator, rect]
       );
-      receipt.lastClickTarget = { expression, rect, probe };
+      receipt.lastClickTarget = { locator, rect, probe };
       const key = JSON.stringify(rect);
       const stable = previousRect === key;
       previousRect = key;
@@ -204,8 +207,10 @@ async function navigateToTeam(): Promise<void> {
     async () => {
       // Vite can reload the document after the first lazy team import optimizes a dependency.
       // Rebind only navigation; provisioning and sends are never replayed.
-      const current = await cdp!.evaluate<{ timeOrigin: number; ready: boolean } | null>(
-        `(async()=>{ const store=window.__agentTeamsDevStore; if (!store || !window.electronAPI?.teams) return null; let s=store.getState(); if(s.getActiveTab()?.type!=='team' || s.getActiveTab()?.teamName!==${literal(team)}) s.openTeamTab(${literal(team)},${literal(project)}); s=store.getState(); s.setMessagesPanelMode('sidebar'); if(s.selectedTeamName!==${literal(team)} || (!s.selectedTeamData && !s.selectedTeamLoading)) await s.selectTeam(${literal(team)},{skipProjectAutoSelect:true}); s=store.getState(); const active=s.getActiveTab(); const row=Array.from(document.querySelectorAll('button')).some(b=>b.offsetParent!==null && b.getAttribute('aria-label')?.startsWith('image,')); return {timeOrigin:performance.timeOrigin,ready:active?.type==='team' && active.teamName===${literal(team)} && s.selectedTeamName===${literal(team)} && s.selectedTeamData?.teamName===${literal(team)} && !s.selectedTeamLoading && ${literal(specs.map((spec) => spec.name))}.every(name=>s.selectedTeamData.members.some(member=>member.name===name)) && row}; })()`
+      const current = await browserCall<{ timeOrigin: number; ready: boolean } | null>(
+        cdp!,
+        'navigate',
+        [team, project, specs.map((spec) => spec.name)]
       );
       if (!current?.ready) {
         stableSince = 0;
@@ -222,15 +227,12 @@ async function navigateToTeam(): Promise<void> {
   receipt.navigation = await captureUi('team-navigation');
 }
 async function openRecipient(name: string): Promise<void> {
-  const back = `Array.from(document.querySelectorAll('button')).find(b=>b.offsetParent!==null && b.getAttribute('aria-label')==='Back to chats')`;
-  if (await cdp!.evaluate(`Boolean(${back})`)) await click(back);
-  const row = `Array.from(document.querySelectorAll('button')).find(b=>b.offsetParent!==null && b.getAttribute('aria-label')?.startsWith(${literal(`${name},`)}))`;
-  await cdp!.waitFor(`Boolean(${row})`, `personal chat ${name}`);
+  const back: Locator = { label: 'Back to chats' };
+  if (await browserCall<boolean>(cdp!, 'exists', [back])) await click(back);
+  const row: Locator = { prefix: `${name},` };
+  await waitExists(row, `personal chat ${name}`);
   await click(row);
-  await cdp!.waitFor(
-    `document.querySelector('.message-composer-target-selectors')?.textContent?.trim()===${literal(name)}`,
-    'locked recipient'
-  );
+  await bounded('locked recipient', () => browserCall<boolean>(cdp!, 'recipient', [name]), 30000);
   await cdp!.evaluate(
     `new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))`
   );
@@ -245,13 +247,13 @@ async function stage(file: string): Promise<void> {
   await cdp!.send('DOM.setFileInputFiles', { nodeId: input.nodeId, files: [file] });
 }
 async function fill(text: string): Promise<void> {
-  await click(`document.querySelector('textarea[id^="compose-"]')`);
+  await click({ selector: 'textarea[id^="compose-"]' });
   await cdp!.send('Input.insertText', { text });
 }
 const sendDisabled = `document.querySelector('.message-composer-send-button')?.matches(':disabled')`;
 const previewCount = `document.querySelectorAll('button[aria-label^="Remove TEST."]').length`;
 async function shortcutQueue(): Promise<void> {
-  await click(`document.querySelector('textarea[id^="compose-"]')`);
+  await click({ selector: 'textarea[id^="compose-"]' });
   for (const type of ['rawKeyDown', 'keyUp'])
     await cdp!.send('Input.dispatchKeyEvent', {
       type,
@@ -264,9 +266,7 @@ async function shortcutQueue(): Promise<void> {
 }
 async function readManualQueue(scope: QueueScope) {
   // Existing keyval-store/keyval schema; version must already exist. Never upgrade or write.
-  const raw = await cdp!.evaluate<unknown>(
-    `(async()=>{ const info=(await indexedDB.databases()).find(db=>db.name==='keyval-store'); if(!info?.version) throw Error('Existing queue database missing'); return new Promise((resolve,reject)=>{ const request=indexedDB.open('keyval-store',info.version); request.onupgradeneeded=()=>{request.transaction?.abort();reject(Error('Queue database upgrade forbidden'));}; request.onerror=()=>reject(request.error); request.onsuccess=()=>{const db=request.result;if(!db.objectStoreNames.contains('keyval')){db.close();reject(Error('Existing queue store missing'));return;}const tx=db.transaction('keyval','readonly');const read=tx.objectStore('keyval').get(${literal(queueScopeKey(scope))});let value;read.onsuccess=()=>{value=read.result;};tx.oncomplete=()=>{db.close();resolve(value);};tx.onerror=()=>{db.close();reject(tx.error);};tx.onabort=()=>{db.close();reject(tx.error ?? Error('Queue read aborted'));};};});})()`
-  );
+  const raw = await browserCall<unknown>(cdp!, 'queue-read', [queueScopeKey(scope)]);
   return decodeQueueIndex(raw, scope);
 }
 function queueItemProof(item: QueueItem) {
@@ -295,9 +295,7 @@ function queueItemProof(item: QueueItem) {
   };
 }
 async function stageRendererTarget(model: string, cwd: string): Promise<void> {
-  await cdp!.evaluate(
-    `(() => { const store=window.__agentTeamsDevStore; const data=store.getState().selectedTeamData; if (!window.TEST_originalTeamData) window.TEST_originalTeamData=data; store.setState({selectedTeamData:{...data,config:{...data.config,projectPath:${literal(cwd)}},members:data.members.map(m=>m.name==='both'?{...m,model:${literal(model)},cwd:${literal(cwd)}}:m)}}); return true; })()`
-  );
+  await browserCall(cdp!, 'stage-target', [model, cwd]);
 }
 try {
   const nativeModels = Object.fromEntries(
@@ -488,7 +486,23 @@ try {
   const createTeamTimeoutMs = Math.min(900_000, Math.max(120_000, specs.length * 110_000)) + 30_000;
   receipt.createTeamObservationBudget = { members: specs.length, timeoutMs: createTeamTimeoutMs };
   const launch = await api<TeamCreateResponse>(
-    `window.electronAPI.teams.createTeam(${literal({ teamName: team, cwd: project, providerId: 'opencode', model: specs[2].model, syncModelsWithLead: false, prompt: 'TEST only. Reply READY and wait. Do not create tasks or inspect files.', members: specs.map((row) => ({ name: row.name, providerId: 'opencode', model: row.model, role: 'TEST scripted transport observer' })) })})`,
+    ['teams', 'createTeam'],
+    [
+      {
+        teamName: team,
+        cwd: project,
+        providerId: 'opencode',
+        model: specs[2].model,
+        syncModelsWithLead: false,
+        prompt: 'TEST only. Reply READY and wait. Do not create tasks or inspect files.',
+        members: specs.map((row) => ({
+          name: row.name,
+          providerId: 'opencode',
+          model: row.model,
+          role: 'TEST scripted transport observer',
+        })),
+      },
+    ],
     createTeamTimeoutMs
   );
   assert(launch.runId);
@@ -498,11 +512,13 @@ try {
     async () => {
       model.check();
       const progress = await api<TeamProvisioningProgress>(
-        `window.electronAPI.teams.getProvisioningStatus(${literal(launch.runId)})`
+        ['teams', 'getProvisioningStatus'],
+        [launch.runId]
       );
       assert(!['failed', 'cancelled'].includes(progress.state), `Provisioning ${progress.state}`);
       const statuses = await api<MemberSpawnStatusesSnapshot>(
-        `window.electronAPI.teams.getMemberSpawnStatuses(${literal(team)})`
+        ['teams', 'getMemberSpawnStatuses'],
+        [team]
       );
       receipt.progress = progress;
       receipt.spawnStatuses = statuses;
@@ -522,12 +538,23 @@ try {
     },
     240000
   );
-  await api('window.__agentTeamsDevStore.getState().fetchTeams()');
+  await api(['fetchTeams'], [], undefined, 'store');
   await navigateToTeam();
   // Warm the same actual main catalog key before the hook's first single upload.
   // Each recipient still resolves its declaration through the production hook.
   await api(
-    `window.electronAPI.runtimeProviderManagement.loadModels(${literal({ runtimeId: 'opencode', providerId: 'openrouter', projectPath: project, query: null, limit: null, cursor: null, refresh: false })})`
+    ['runtimeProviderManagement', 'loadModels'],
+    [
+      {
+        runtimeId: 'opencode',
+        providerId: 'openrouter',
+        projectPath: project,
+        query: null,
+        limit: null,
+        cursor: null,
+        refresh: false,
+      },
+    ]
   );
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
@@ -551,7 +578,7 @@ try {
     // Paste uses the real handler and bypasses file-picker accept only, never main admission.
     for (const item of media) {
       const expected = !!spec.input?.includes(item.mime.startsWith('image/') ? 'image' : 'video');
-      const preview = `Boolean(document.querySelector('button[aria-label="Remove ${path.basename(item.file)}"]'))`;
+      const preview: Locator = { label: `Remove ${path.basename(item.file)}` };
       assert.equal(
         await cdp.evaluate<number>(previewCount),
         0,
@@ -559,7 +586,7 @@ try {
       );
       await stage(item.file); // One upload; readiness polling must never repeat this side effect.
       if (expected) {
-        await cdp.waitFor(preview, 'supported media admitted by real composer', 10000);
+        await waitExists(preview, 'supported media admitted by real composer', 10000);
         assert.equal(
           await cdp.evaluate<number>(previewCount),
           1,
@@ -571,13 +598,11 @@ try {
           'distinct unsupported/unknown UI explanation'
         );
       }
-      const admitted: boolean = await cdp.evaluate<boolean>(preview);
+      const admitted: boolean = await browserCall<boolean>(cdp, 'exists', [preview]);
       matrix.push({ member: spec.name, mime: item.mime, admitted });
       assert.equal(admitted, expected);
       if (admitted) {
-        await click(
-          `document.querySelector('button[aria-label="Remove ${path.basename(item.file)}"]')`
-        );
+        await click(preview);
         await cdp.waitFor(`${previewCount}===0`, 'matrix attachment removed before next upload');
       }
     }
@@ -602,7 +627,7 @@ try {
     const teamDir = path.join(home, '.claude', 'teams', team);
     const existingIds = new Set((await rows(teamDir, spec.name)).map((row) => row.messageId));
     const before = model.observations.length;
-    await click(`document.querySelector('.message-composer-send-button')`);
+    await click({ selector: '.message-composer-send-button' });
     // The renderer can re-encode images. Establish expected provider bytes from the
     // independent persisted admission envelope, never from the downstream model request.
     const persisted = await bounded(
@@ -764,7 +789,11 @@ try {
       let refused: string | undefined;
       try {
         result = await api<SendMessageResult>(
-          `window.electronAPI.teams.sendMessage(${literal(team)},${literal({ member: spec.name, messageId, text: 'TEST forbidden media', attachments: [payload] })})`
+          ['teams', 'sendMessage'],
+          [
+            team,
+            { member: spec.name, messageId, text: 'TEST forbidden media', attachments: [payload] },
+          ]
         );
       } catch (error) {
         refused = String(error);
@@ -787,9 +816,22 @@ try {
   await cdp.waitFor(`${previewCount}===2 && !${sendDisabled}`, 'both supported previews');
   // Same exact cache key as the hook, deliberately without a renderer requestGroupId.
   // The main subscriber must retain the shared request when the UI cancels its own group.
-  await cdp.evaluate(
-    `(() => { window.TEST_mainCatalogRead={done:false}; window.electronAPI.runtimeProviderManagement.loadModels(${literal({ runtimeId: 'opencode', providerId: 'openrouter', projectPath: delayedProject, query: null, limit: null, cursor: null, refresh: false })}).then(result=>window.TEST_mainCatalogRead={done:true,result},error=>window.TEST_mainCatalogRead={done:true,error:String(error)}); return true; })()`
-  );
+  await browserCall(cdp, 'api-start', [
+    'TEST_mainCatalogRead',
+    'api',
+    ['runtimeProviderManagement', 'loadModels'],
+    [
+      {
+        runtimeId: 'opencode',
+        providerId: 'openrouter',
+        projectPath: delayedProject,
+        query: null,
+        limit: null,
+        cursor: null,
+        refresh: false,
+      },
+    ],
+  ]);
   await bounded('ungrouped main catalog subscriber is pending', async () =>
     (await readFile(journal, 'utf8')).includes('"event":"pending"')
   );
@@ -875,10 +917,7 @@ try {
     beforeRichQueue,
     'Queue shortcut must not dispatch rich draft'
   );
-  for (const item of media)
-    await click(
-      `document.querySelector('button[aria-label="Remove ${path.basename(item.file)}"]')`
-    );
+  for (const item of media) await click({ label: `Remove ${path.basename(item.file)}` });
   await cdp.waitFor(`${previewCount}===0`, 'rich draft attachments removed before text queue');
   await fill(` TEST queued-text-${suffix}`);
   await shortcutQueue();
@@ -887,9 +926,7 @@ try {
     'persisted plain text queued'
   );
   assert.equal(model.observations.length, beforeRichQueue, 'Enqueue must not dispatch');
-  const queueRoot = await api<{ resolvedPath: string }>(
-    'window.electronAPI.config.getClaudeRootInfo()'
-  );
+  const queueRoot = await api<{ resolvedPath: string }>(['config', 'getClaudeRootInfo']);
   assert.equal(await realpath(queueRoot.resolvedPath), await realpath(path.join(home, '.claude')));
   const queueScope: QueueScope = {
     transport: 'desktop-local-teams-v1',
@@ -912,32 +949,23 @@ try {
   receipt.queueObservation = queueEvidence;
   // Queued text survives the current target becoming a model with no media inputs.
   await stageRendererTarget(specs[3].model, project);
-  const manualSend = `${queueSection}?.querySelector('button[aria-label="Send"]')`;
+  const manualSend: Locator = {
+    selector: 'section[aria-label="Queued messages"] button[aria-label="Send"]',
+  };
   await cdp.waitFor(
-    `Boolean(${manualSend}) && !${manualSend}.matches(':disabled')`,
+    `Boolean(document.querySelector('section[aria-label="Queued messages"] button[aria-label="Send"]:not(:disabled)'))`,
     'manual queued text Send remains enabled'
   );
-  // Observe one real activation without intercepting handlers or dispatching an extra action.
-  await cdp.evaluate(
-    `(()=>{const button=${manualSend};if(!(button instanceof HTMLButtonElement))throw Error('Queue Send missing');const events=[];const names=['focusin','focusout','keydown','keypress','keyup','pointerdown','mousedown','pointerup','mouseup','click','pointercancel'];const listener=event=>{const target=event.target instanceof Element?event.target:null;const r=button.getBoundingClientRect();const entry={rect:{x:r.x,y:r.y,width:r.width,height:r.height},activeQueueSend:document.activeElement===button,key:event instanceof KeyboardEvent?event.key:undefined,type:event.type,isTrusted:event.isTrusted,targetsQueueSend:target===button||button.contains(target),buttonConnected:button.isConnected,targetLabel:target?.closest('button')?.getAttribute('aria-label')??null,button:event.button,buttons:event.buttons,defaultPrevented:event.defaultPrevented};events.push(entry);queueMicrotask(()=>{entry.defaultPrevented=event.defaultPrevented;});};for(const name of names)document.addEventListener(name,listener,{capture:true,passive:true});window.TEST_queueActivation={events,stop:()=>{for(const name of names)document.removeEventListener(name,listener,true);}};return true;})()`
-  );
+  await browserCall(cdp, 'queue-observe', [manualSend]);
   let claimedMessageId: string | undefined;
   try {
     // R13 proved the pointer hit target changed before mouseup. Focus first,
     // settle the focus-dependent footer, then activate this real button once by keyboard.
-    assert(
-      await cdp.evaluate(
-        `(()=>{const button=${manualSend};if(!(button instanceof HTMLButtonElement)||button.disabled)return false;button.focus({preventScroll:true});return document.activeElement===button;})()`
-      )
-    );
+    assert(await browserCall(cdp, 'focus', [manualSend]));
     await cdp.evaluate(
       `new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))`
     );
-    assert(
-      await cdp.evaluate(
-        `document.activeElement===${manualSend} && !document.activeElement.matches(':disabled')`
-      )
-    );
+    assert(await browserCall(cdp, 'focused', [manualSend]));
     for (const type of ['keyDown', 'keyUp'])
       await cdp.send('Input.dispatchKeyEvent', {
         type,
@@ -1060,7 +1088,7 @@ try {
   if (teamAttempted && cdp) {
     for (const method of ['stop', 'deleteTeam']) {
       try {
-        cleanup[method] = await api(`window.electronAPI.teams.${method}(${literal(team)})`);
+        cleanup[method] = await api(['teams', method], [team]);
       } catch (error) {
         cleanup[method] = String(error);
       }
