@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { buildTaskProjectFilterOptions } from '../../../../src/renderer/components/sidebar/taskFilterOptions';
 import {
   defaultTaskFiltersState,
   type TaskFiltersState,
@@ -54,6 +55,67 @@ const comment = (id: string) => ({
 
 describe('shared task view policy', () => {
   beforeEach(() => localStorage.clear());
+
+  it('offers every eligible repository worktree as an exact task-filter path', () => {
+    const options = buildTaskProjectFilterOptions({
+      viewMode: 'grouped',
+      projects: [],
+      repositoryGroups: [
+        {
+          id: 'repo',
+          name: 'Repository',
+          totalSessions: 1,
+          worktrees: [{ path: '/work/main' }, { path: '/work/feature' }],
+        },
+        { id: 'missing-worktrees', name: 'Missing', totalSessions: 1, worktrees: [] },
+        {
+          id: 'no-sessions',
+          name: 'No sessions',
+          totalSessions: 0,
+          worktrees: [{ path: '/work/ignored' }],
+        },
+      ],
+    });
+    expect(options).toEqual([
+      { value: '/work/main', label: 'Repository', description: '/work/main' },
+      { value: '/work/feature', label: 'Repository', description: '/work/feature' },
+    ]);
+    const selected = options.find((option) => option.value === '/work/feature');
+    expect(selected).toBeDefined();
+    expect(
+      filterGlobalTasks(
+        [
+          task('main', { projectPath: '/work/main' }),
+          task('feature', { projectPath: '/work/feature/' }),
+        ],
+        {
+          contextId,
+          filters: filters({ projectPath: selected!.value }),
+          searchQuery: '',
+          archiveMode: 'all',
+        },
+        getSnapshot()
+      ).map((candidate) => candidate.id)
+    ).toEqual(['feature']);
+  });
+
+  it('preserves flat project paths and explicit or fallback session eligibility', () => {
+    expect(
+      buildTaskProjectFilterOptions({
+        viewMode: 'flat',
+        repositoryGroups: [],
+        projects: [
+          { path: '/work/fallback', name: 'Fallback', sessions: ['session'] },
+          { path: '/work/count', name: 'Count', sessions: [], totalSessions: 2 },
+          { path: '/work/zero', name: 'Zero', sessions: ['session'], totalSessions: 0 },
+          { path: '/work/empty', name: 'Empty', sessions: [] },
+        ],
+      })
+    ).toEqual([
+      { value: '/work/fallback', label: 'Fallback', description: '/work/fallback' },
+      { value: '/work/count', label: 'Count', description: '/work/count' },
+    ]);
+  });
 
   it('searches the effective subject with one trimmed and lowercased query', () => {
     const renamed = task('renamed', {

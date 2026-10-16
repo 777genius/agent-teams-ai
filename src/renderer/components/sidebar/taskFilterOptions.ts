@@ -26,11 +26,13 @@ export function buildTaskProjectFilterOptions({
     viewMode === 'grouped'
       ? repositoryGroups
           .filter((repository) => repository.totalSessions > 0)
-          .map((repository) => ({
-            value: repository.worktrees[0]?.path ?? repository.id,
-            label: repository.name,
-            path: repository.worktrees[0]?.path,
-          }))
+          .flatMap((repository) =>
+            repository.worktrees.map(({ path }) => ({
+              value: path,
+              label: repository.name,
+              path,
+            }))
+          )
       : projects
           .filter((project) => (project.totalSessions ?? project.sessions.length) > 0)
           .map((project) => ({
