@@ -100,7 +100,8 @@ foreach ($rule in $rules) {
 }
 
 /** Bound real TEST requests through the selected model's native V1/V2 config.
- * V1 requires context alongside output; this matches the SDK override default. */
+ * V1 requires context alongside output. Preserve the qualified model capacity
+ * so the output cap does not force compaction immediately after a tool call. */
 export async function seedWindowsTestModelOutputLimit(
   directory: string,
   model: string
@@ -111,13 +112,17 @@ export async function seedWindowsTestModelOutputLimit(
   const separator = model.indexOf('/');
   const provider = model.slice(0, separator);
   const modelId = model.slice(separator + 1);
+  // Public OpenRouter catalogue captured 2026-10-16; both official pins agree.
+  const context = model === 'openrouter/nvidia/nemotron-3-super-120b-a12b:free'
+    ? 262_144
+    : 32_000;
   await mkdir(directory, { recursive: true });
   await protectWindowsTestDirectory(directory);
   await writeFile(
     path.join(directory, 'opencode.json'),
     JSON.stringify({
       provider: {
-        [provider]: { models: { [modelId]: { limit: { context: 32_000, output: 8192 } } } },
+        [provider]: { models: { [modelId]: { limit: { context, output: 8192 } } } },
       },
     }),
     { mode: 0o600, flag: 'wx' }
